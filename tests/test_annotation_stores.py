@@ -464,12 +464,20 @@ def test_add_area_column(fill_store):
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
     store.add_area_column()
+    assert "area" in store.indexes()
     assert "area" in store._get_table_columns()
 
     # check the results are properly sorted by area
     result = store.query((0, 0, 100, 100))
     areas = [ann.geometry.area for ann in result.values()]
     assert areas == sorted(areas, reverse=True)
+
+    # check add index option of add_area_column
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    assert "area" not in store.indexes()
+    store.add_area_column(False)
+    assert "area" not in store.indexes()
 
 
 def test_query_min_area(fill_store):
