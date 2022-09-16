@@ -14,7 +14,7 @@ __version__ = "1.2.1"
 # C:\Users\USER\.tiatoolbox
 # /home/USER/.tiatoolbox
 
-# Initialize internal logging facilities, such that models and etc.
+# Initialize internal logging facilities, such that models etc.
 # can have reporting mechanism, may need to change protocol
 import logging
 

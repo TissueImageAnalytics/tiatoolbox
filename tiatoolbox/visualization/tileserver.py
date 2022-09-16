@@ -98,7 +98,7 @@ class TileServer(Flask):
         Args:
             layer (str | ndarray | WSIReader):
                 A reference to an image or annotations to be displayed.
-            meta (WSImeta):
+            meta (WSIMeta):
                 The metadata of the base slide.
 
         Returns:
@@ -112,7 +112,7 @@ class TileServer(Flask):
                 # Assume it's a low-res heatmap.
                 layer = np.array(Image.open(layer_path))
             elif layer_path.suffix == ".db":
-                # Assume its an annotation store.
+                # Assume it's an annotation store.
                 layer = AnnotationTileGenerator(
                     meta, SQLiteStore(layer_path), self.renderer
                 )

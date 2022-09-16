@@ -1,5 +1,6 @@
 import pathlib
 
+import cv2
 import numpy as np
 import pytest
 
@@ -52,6 +53,32 @@ def test_extract_features(fixed_image, moving_image, dfbr_features):
     assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
     assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
+
+
+def test_feature_mapping(fixed_image, moving_image, dfbr_features):
+    """Test for CNN based feature matching function."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
+    moving_img = cv2.warpAffine(
+        moving_img, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
+    )
+
+    df = DFBRegister()
+    features = df.extract_features(fixed_img, moving_img)
+    fixed_matched_points, moving_matched_points, _ = df.feature_mapping(features)
+    output = df.estimate_affine_transform(fixed_matched_points, moving_matched_points)
+    expected = np.array(
+        [[0.98843, 0.00184, 1.75437], [-0.00472, 0.96973, 5.38854], [0, 0, 1]]
+    )
+    assert np.mean(output - expected) < 1.0e-6
+
+    del features["block5_pool"]
+    with pytest.raises(
+        ValueError,
+        match=r".*The feature mapping step expects 3 blocks of features.*",
+    ):
+        _, _, _ = df.feature_mapping(features)
 
 
 def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):

@@ -44,6 +44,7 @@ def get_pretrained_model(
         pretrained_model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. The models currently supported:
+
                 - alexnet
                 - resnet18
                 - resnet34
@@ -62,18 +63,19 @@ def get_pretrained_model(
                 - mobilenet_v3_small
                 - googlenet
 
-          Each model has been trained on the Kather100K and PCam
-          datasets. The format of pretrained_model is
-          <model_name>-<dataset_name>. For example, to use a resnet18
-          model trained on Kather100K, use `resnet18-kather100k and to
-          use an alexnet model trained on PCam, use `alexnet-pcam`.
+            Each model has been trained on the Kather100K and PCam
+            datasets. The format of pretrained_model is
+            <model_name>-<dataset_name>. For example, to use a resnet18
+            model trained on Kather100K, use `resnet18-kather100k and to
+            use an alexnet model trained on PCam, use `alexnet-pcam`.
 
+            By default, the corresponding pretrained weights will also be
+            downloaded. However, you can override with your own set of
+            weights via the `pretrained_weights` argument. Argument is case-insensitive.
 
-        By default, the corresponding pretrained weights will also be
-        downloaded. However, you can override with your own set of
-        weights via the `pretrained_weights` argument. Argument is case
-        insensitive. pretrained_weights (str): Path to the weight of the
-        corresponding `pretrained_model`.
+        pretrained_weights (str):
+            Path to the weight of the corresponding `pretrained_model`.
+
         overwrite (bool):
             To always overwriting downloaded weights.
 
