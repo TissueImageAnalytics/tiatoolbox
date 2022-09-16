@@ -80,7 +80,8 @@ class ConvBnRelu(nn.Module):
 
         """
         return self.conv_bn_relu(input_tensor)
-
+    
+    @staticmethod
     def get_block(
         self,
         in_channels,
@@ -92,6 +93,20 @@ class ConvBnRelu(nn.Module):
         activation,
         do_batchnorm,
     ):
+        """Function for acquire the convolutional block.
+        Args:
+            in_channels (int): Number of channels in input.
+            out_channels (int): Number of channels in output.
+            kernel_size (list): Size of the kernel in the acquired convolution block.
+            strds (int): Size of stride in the convolution layer.
+            use_bias (bool): Whether to use bias in the convolution layer.
+            dilatation_rates (list): Dilation rate for each convolution layer.
+            activation (str): Name of the activation function to use.
+            do_batchnorm (bool): Whether to do batch normalization after the
+        convolution layer.
+        Returns:
+            torch.nn.Sequential: a pytorch layer
+        """
         conv1 = nn.Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -196,7 +211,6 @@ class MultiscaleConvBlock(nn.Module):
         Returns:
             output (torch.Tensor): The inference output.
         """
-
         conv0 = input_map
 
         conv1 = self.conv_block_1(conv0)
@@ -267,9 +281,7 @@ class ResidualConv(nn.Module):
             input_tensor (torch.Tensor): Input, the tensor is of the shape NCHW.
         Returns:
             output (torch.Tensor): The inference output.
-
         """
-
         conv1 = self.conv_block_1(input_tensor)
         conv2 = self.conv_block_2(conv1)
         out = torch.add(conv1, conv2)
