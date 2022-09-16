@@ -111,6 +111,8 @@ Neural Network Architectures
 - :obj:`HoVerNet <tiatoolbox.models.architecture.hovernet.HoVerNet>`
 - :obj:`HoVerNet+ <tiatoolbox.models.architecture.hovernetplus.HoVerNetPlus>`
 - :obj:`MicroNet <tiatoolbox.models.architecture.micronet.MicroNet>`
+- :obj:`MapDe <tiatoolbox.models.architecture.mapde.MapDe>`
+- :obj:`SCCNN <tiatoolbox.models.architecture.sccnn.SCCNN>`
 
 Pipelines:
     - :obj:`IDARS <tiatoolbox.models.architecture.idars>`
@@ -119,8 +121,10 @@ Pipelines:
 Utilities
 ^^^^^^^^^
 
-- :obj:`Image <tiatoolbox.utils.image>`
-- :obj:`Transforms <tiatoolbox.utils.transforms>`
-- :obj:`Miscellaneous <tiatoolbox.utils.misc>`
+- :obj:`Environment Detection <tiatoolbox.utils.env_detection>`
 - :obj:`Exceptions <tiatoolbox.utils.exceptions>`
+- :obj:`Image <tiatoolbox.utils.image>`
+- :obj:`Metrics <tiatoolbox.utils.metrics>`
+- :obj:`Miscellaneous <tiatoolbox.utils.misc>`
+- :obj:`Transforms <tiatoolbox.utils.transforms>`
 - :obj:`Visualization <tiatoolbox.utils.visualization>`

@@ -32,9 +32,8 @@ def split_path_name_ext(full_path):
             - :py:obj:`list(str)` - File extensions
 
     Examples:
-        >>> from tiatoolbox import utils
-        >>> dir_path, file_name, extensions =
-        ...     utils.misc.split_path_name_ext(full_path)
+        >>> from tiatoolbox.utils.misc import split_path_name_ext
+        >>> dir_path, file_name, extensions = split_path_name_ext(full_path)
 
     """
     input_path = pathlib.Path(full_path)
@@ -376,7 +375,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
 
 def __numpy_array_to_table(input_table):
     """Checks numpy array to be 2 or 3 columns.
-    If it has two columns then class should be assign None.
+    If it has two columns then class should be assigned None.
 
     Args:
         input_table (np.ndarray): input table.
@@ -782,13 +781,13 @@ def get_bounding_box(img):
     """
     rows = np.any(img, axis=1)
     cols = np.any(img, axis=0)
-    rmin, rmax = np.where(rows)[0][[0, -1]]
-    cmin, cmax = np.where(cols)[0][[0, -1]]
+    r_min, r_max = np.where(rows)[0][[0, -1]]
+    c_min, cmax = np.where(cols)[0][[0, -1]]
     # due to python indexing, need to add 1 to max
     # else accessing will be 1px in the box, not out
-    rmax += 1
+    r_max += 1
     cmax += 1
-    return np.array([cmin, rmin, cmax, rmax])
+    return np.array([c_min, r_min, cmax, r_max])
 
 
 def string_to_tuple(in_str):
@@ -812,7 +811,7 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
     Args:
         ppu (int):
             Pixels per unit.
-        units (Uniont[str, int]):
+        units (Union[str, int]):
             Units of pixels per unit. Valid options are "cm",
             "centimeter", "inch", 2 (inches), 3(cm).
 

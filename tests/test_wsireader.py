@@ -1,6 +1,7 @@
 # skipcq: PTC-W6004
 """Tests for reading whole-slide images."""
 
+import json
 import os
 import pathlib
 import random
@@ -18,7 +19,7 @@ import pytest
 import zarr
 from click.testing import CliRunner
 from skimage.filters import threshold_otsu
-from skimage.metrics import peak_signal_noise_ratio
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.morphology import binary_dilation, disk, remove_small_objects
 from skimage.registration import phase_cross_correlation
 
@@ -31,11 +32,14 @@ from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsireader import (
     ArrayView,
     DICOMWSIReader,
+    NGFFWSIReader,
     OmnyxJP2WSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
     WSIReader,
+    is_ngff,
+    is_zarr,
 )
 
 # -------------------------------------------------------------------------------------
@@ -675,12 +679,17 @@ def test_read_rect_jp2_levels(sample_jp2):
     width, height = size
     for level in range(wsi.info.level_count):
         level_width, level_height = wsi.info.level_dimensions[level]
-        im_region = wsi.read_rect(location, size, resolution=level, units="level")
+        im_region = wsi.read_rect(
+            location,
+            size,
+            resolution=level,
+            units="level",
+            pad_mode=None,
+        )
 
         assert isinstance(im_region, np.ndarray)
         assert im_region.dtype == "uint8"
-        assert pytest.approx(
-            im_region.shape,
+        assert im_region.shape == pytest.approx(
             (
                 min(height, level_height),
                 min(width, level_width),
@@ -1650,7 +1659,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
 
 
 @pytest.mark.skipif(
-    utils.env_detection.running_on_travis(),
+    utils.env_detection.running_on_ci(),
     reason="No need to display image on travis.",
 )
 def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
@@ -1830,6 +1839,56 @@ def test_tiled_tiff_tifffile(remote_sample):
     assert isinstance(wsi, wsireader.TIFFWSIReader)
 
 
+def test_is_zarr_empty_dir(tmp_path):
+    """Test is_zarr is false for an empty .zarr directory."""
+    zarr_dir = tmp_path / "zarr.zarr"
+    zarr_dir.mkdir()
+    assert not is_zarr(zarr_dir)
+
+
+def test_is_zarr_array(tmp_path):
+    """Test is_zarr is true for a .zarr directory with an array."""
+    zarr_dir = tmp_path / "zarr.zarr"
+    zarr_dir.mkdir()
+    _zarray_path = zarr_dir / ".zarray"
+    minimal_zarray = {
+        "shape": [1, 1, 1],
+        "dtype": "uint8",
+        "compressor": {
+            "id": "lz4",
+        },
+        "chunks": [1, 1, 1],
+        "fill_value": 0,
+        "order": "C",
+        "filters": None,
+        "zarr_format": 2,
+    }
+    with open(_zarray_path, "w") as f:
+        json.dump(minimal_zarray, f)
+    assert is_zarr(zarr_dir)
+
+
+def test_is_zarr_group(tmp_path):
+    """Test is_zarr is true for a .zarr directory with an group."""
+    zarr_dir = tmp_path / "zarr.zarr"
+    zarr_dir.mkdir()
+    _zgroup_path = zarr_dir / ".zgroup"
+    minimal_zgroup = {
+        "zarr_format": 2,
+    }
+    with open(_zgroup_path, "w") as f:
+        json.dump(minimal_zgroup, f)
+    assert is_zarr(zarr_dir)
+
+
+def test_is_ngff_regular_zarr(tmp_path):
+    """Test is_ngff is false for a regular zarr."""
+    zarr_path = tmp_path / "zarr.zarr"
+    zarr.open(zarr_path, "w")
+    assert is_zarr(zarr_path)
+    assert not is_ngff(zarr_path)
+
+
 class TestReader:
     scenarios = [
         (
@@ -1840,6 +1899,15 @@ class TestReader:
             },
         ),
         ("DICOMReader", {"reader_class": DICOMWSIReader, "sample_key": "dicom-1"}),
+        ("NGFFWSIReader", {"reader_class": NGFFWSIReader, "sample_key": "ngff-1"}),
+        (
+            "OpenSlideWSIReader (Small SVS)",
+            {"reader_class": OpenSlideWSIReader, "sample_key": "svs-1-small"},
+        ),
+        (
+            "OmnyxJP2WSIReader",
+            {"reader_class": OmnyxJP2WSIReader, "sample_key": "jp2-omnyx-1"},
+        ),
     ]
 
     @staticmethod
@@ -1983,6 +2051,22 @@ class TestReader:
         )
         # Make the regions the same size for comparison of content
         roi2 = imresize(roi2, output_size=[2000, 2000])
-        cc = np.corrcoef(roi1[..., 0].flatten(), roi2[..., 0].flatten())
-        # This control the harshness of similarity test, how much should be?
-        assert np.min(cc) > 0.95
+
+        # Check MSE
+        mse = np.mean((roi1 - roi2) ** 2)
+        assert mse < 100
+
+        # Check PSNR
+        psnr = peak_signal_noise_ratio(roi1, roi2)
+        assert psnr > 25
+
+        # Check SSIM (skip very small roi regions)
+        if np.greater(roi1.shape[2], 16).all():
+            ssim = structural_similarity(roi1, roi2, multichannel=True)
+            assert ssim > 0.9
+
+    @staticmethod
+    def test_file_path_does_not_exist(sample_key, reader_class):
+        """Test that FileNotFoundError is raised when file does not exist."""
+        with pytest.raises(FileNotFoundError):
+            _ = reader_class("./foo.bar")

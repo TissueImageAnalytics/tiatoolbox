@@ -1,11 +1,13 @@
 """Detection methods for the current environment.
 
 This module contains methods for detecting aspects of the current
-environment. Some things which this module can detect are:
- - Whether the current environment is interactive.
- - Whether the current environment is a conda environment.
- - Whether the current environment is running on Travis, Kaggle, or
-   Colab.
+environment.
+
+Some things which this module can detect are:
+    - Whether the current environment is interactive.
+    - Whether the current environment is a conda environment.
+    - Whether the current environment is running on Travis, Kaggle, or
+      Colab.
 
 Note that these detections may not be correct 100% of the time but are
 as accurate as can be reasonably be expected depending on what is being
@@ -95,13 +97,15 @@ def is_notebook() -> bool:
 
     """
     try:
+        from IPython import get_ipython
+
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
             return True  # Jupyter notebook or qtconsole
         if shell == "TerminalInteractiveShell":  # noqa: PIE801
             return False  # Terminal running IPython
         return False  # Other type (?)
-    except NameError:
+    except (NameError, ImportError):
         return False  # Probably standard Python interpreter
 
 
@@ -127,6 +131,49 @@ def running_on_travis() -> bool:
 
     """
     return os.environ.get("TRAVIS") == "true" and os.environ.get("CI") == "true"
+
+
+def running_on_github() -> bool:
+    """Detect if the current environment is running on GitHub Actions.
+
+    Returns:
+        bool:
+            True if the current environment is on GitHub, False
+            otherwise.
+
+    """
+    return os.environ.get("GITHUB_ACTIONS") == "true"
+
+
+def running_on_circleci() -> bool:
+    """Detect if the current environment is running on CircleCI.
+
+    Returns:
+        bool:
+            True if the current environment is on CircleCI, False
+            otherwise.
+
+    """
+    return os.environ.get("CIRCLECI") == "true"
+
+
+def running_on_ci() -> bool:
+    """Detect if the current environment is running on continuous integration (CI).
+
+    Returns:
+        bool:
+            True if the current environment is on CI, False
+            otherwise.
+
+    """
+    return any(
+        (
+            os.environ.get("CI") == "true",
+            running_on_travis(),
+            running_on_github(),
+            running_on_circleci(),
+        )
+    )
 
 
 def running_on_kaggle() -> bool:
@@ -271,7 +318,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
             versions = [version_to_tuple(match) for match in matches]
     if platform.system() == "Darwin" and shutil.which("port") and not versions:
         # Using macports to check for pixman. Also checks the platform
-        # is Darwin, as macports is only available on MacOS.
+        # is Darwin, as macports is only available on macOS.
         using = "port"
         port_list = subprocess.Popen(("port", "installed"), stdout=subprocess.PIPE)
         port_pixman = subprocess.check_output(

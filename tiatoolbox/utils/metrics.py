@@ -27,13 +27,13 @@ def pair_coordinates(set_a, set_b, radius):
     Returns:
         tuple:
             - :class:`numpy.ndarray` - Pairing:
-                An array of shape Kx2, each item in K contains indices
-                where point at index [0] in set A paired with point in
-                set B at index [1].
+                    An array of shape Kx2, each item in K contains indices
+                    where point at index [0] in set A paired with point in
+                    set B at index [1].
             - :class:`numpy.ndarray` - Unpaired A:
-                Indices of unpaired points in set A.
+                    Indices of unpaired points in set A.
             - :class:`numpy.ndarray` - Unpaired B:
-                Indices of unpaired points in set B.
+                    Indices of unpaired points in set B.
 
     """
     # * Euclidean distance as the cost matrix
@@ -45,7 +45,7 @@ def pair_coordinates(set_a, set_b, radius):
     # return, thus the unique pairing is ensured.
     indices_a, paired_indices_b = linear_sum_assignment(pair_distance)
 
-    # Extract the paired cost and remove instances outside of designated
+    # Extract the paired cost and remove instances outside designated
     # radius.
     pair_cost = pair_distance[indices_a, paired_indices_b]
 
@@ -66,3 +66,34 @@ def f1_detection(true, pred, radius):
     fp = len(unpaired_pred)
     fn = len(unpaired_true)
     return tp / (tp + 0.5 * fp + 0.5 * fn)
+
+
+def dice(gt_mask, pred_mask):
+    r"""This function computes `Sørensen–Dice coefficient
+    <https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient>`_,
+    between the two masks.
+
+    .. math::
+        DSC = 2 * |X ∩ Y| / |X| + |Y|
+
+    Args:
+        gt_mask (:class:`numpy.ndarray`):
+            A binary ground truth mask
+        pred_mask (:class:`numpy.ndarray`):
+            A binary predicted mask
+
+    Returns:
+        :class:`float`:
+            A dice overlap
+
+    """
+
+    if gt_mask.shape != pred_mask.shape:
+        raise ValueError(f'{"Shape mismatch between the two masks."}')
+
+    gt_mask = gt_mask.astype(np.bool)
+    pred_mask = pred_mask.astype(np.bool)
+    sum_masks = gt_mask.sum() + pred_mask.sum()
+    if sum_masks == 0:
+        return np.NAN
+    return 2 * np.logical_and(gt_mask, pred_mask).sum() / sum_masks

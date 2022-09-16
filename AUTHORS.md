@@ -1,8 +1,6 @@
-Credits
-=======
+# Credits
 
-Development Lead
-----------------
+## Development Lead
 
 - TIA Centre led by Nasir Rajpoot <tia@dcs.warwick.ac.uk>
 - Shan E Ahmed Raza  <shaneahmed>
@@ -18,8 +16,7 @@ Development Lead
 - Wenqi Lu <wenqi006>
 - Saad Bashir <rajasaad>
 
-Contributors
-------------
+## Contributors
 
 - Rob Jewsbury <R-J96>
 - Mohsin Bilal <mbhahsmi>

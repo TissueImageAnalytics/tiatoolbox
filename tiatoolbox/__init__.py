@@ -7,14 +7,14 @@ import yaml
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "1.1.0"
+__version__ = "1.2.1"
 
 # This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux
 # C:\Users\USER\.tiatoolbox
 # /home/USER/.tiatoolbox
 
-# Initialize internal logging facilities, such that models and etc.
+# Initialize internal logging facilities, such that models etc.
 # can have reporting mechanism, may need to change protocol
 import logging
 

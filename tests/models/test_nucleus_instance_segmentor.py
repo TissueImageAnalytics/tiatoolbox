@@ -432,7 +432,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_travis() or not ON_GPU,
+    toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
 def test_functionality_local(remote_sample, tmp_path):

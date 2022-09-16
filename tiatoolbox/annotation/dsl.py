@@ -3,7 +3,7 @@
 This module facilitates conversion from a restricted subset of python
 to another domain specific language, for example SQL. This is done using
 `eval` and a set of provided globals and locals. Mainly used for
-construction of predicate statemtents for AnnotationStore queries but
+construction of predicate statements for AnnotationStore queries but
 also used in statements for the creation of indexes to accelerate
 queries.
 
@@ -48,15 +48,16 @@ Unsupported operations:
     - Imports: `import re`
     - List length: `len(props["key"])` (support planned)
 
-Some mathematical functions will not function if the compile option
-`ENABLE_MATH_FUNCTIONS` is not set. These are:
+Compile options:
+    Some mathematical functions will not function if the compile option
+    `ENABLE_MATH_FUNCTIONS` is not set. These are:
+
     - `//` (floor division)
 
 """
 import json
 import operator
 import re
-from abc import ABC
 from dataclasses import dataclass
 from numbers import Number
 from typing import Any, Callable, Optional, Union
@@ -64,7 +65,7 @@ from typing import Any, Callable, Optional, Union
 
 @dataclass
 class SQLNone:
-    """Sentinal object for SQL NULL within expressions."""
+    """Sentinel object for SQL NULL within expressions."""
 
     def __str__(self) -> str:
         return "NULL"
@@ -73,8 +74,10 @@ class SQLNone:
         return str(self)  # pragma: no cover
 
 
-class SQLExpression(ABC):
+class SQLExpression:
     """SQL expression base class."""
+
+    __hash__ = None
 
     def __repr__(self):
         return str(self)  # pragma: no cover
@@ -195,7 +198,7 @@ class SQLTriplet(SQLExpression):
             operator.or_: lambda a, b: f"({a} OR {b})",
             operator.abs: lambda a, _: f"ABS({a})",
             operator.not_: lambda a, _: f"NOT({a})",
-            operator.eq: lambda a, b: f"({a} = {b})",
+            operator.eq: lambda a, b: f"({a} == {b})",
             operator.ne: lambda a, b: f"({a} != {b})",
             operator.pow: lambda a, p: f"POWER({a}, {p})",
             operator.mod: lambda a, b: f"({a} % {b})",
@@ -210,6 +213,9 @@ class SQLTriplet(SQLExpression):
     def __str__(self) -> str:
         lhs = self.lhs
         rhs = self.rhs
+        if isinstance(rhs, str):
+            # is this ok? fixes categorical where predicate
+            rhs = f'"{rhs}"'
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
         raise ValueError("Invalid SQLTriplet.")
@@ -229,7 +235,7 @@ class SQLJSONDictionary(SQLExpression):
             key_str = f"[{key}]"
         else:
             key_str = str(key)
-        joiner = "." if self.acc and not isinstance(key, (int)) else ""
+        joiner = "." if self.acc and not isinstance(key, int) else ""
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):

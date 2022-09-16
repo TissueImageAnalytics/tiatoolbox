@@ -1,3 +1,7 @@
-nbsphinx
-sphinx_gallery
-sphinx_toolbox
+docutils>=0.17.1
+furo>=2022.6.21
+jinja2<3.1.0
+myst-parser>=0.17.0
+nbsphinx>=0.8.9
+sphinx-toolbox>=3.1.2
+sphinx_design>=0.3.0

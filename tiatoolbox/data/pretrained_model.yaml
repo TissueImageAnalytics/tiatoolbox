@@ -611,6 +611,31 @@ fcn_resnet50_unet-bcss:
             stride_shape: [256, 256]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
+unet_tissue_mask_tsef:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/registration/UNET-v0.0-TSEF.pth
+    description: >
+      These weights can be used to segment a grayscale image to
+      create a tissue mask excluding the fatty region. TSEF stands for tissue
+      segmentation excluding fat.
+    architecture:
+        class: unet.UNetModel
+        kwargs:
+            num_input_channels: 3
+            num_output_channels: 3
+            encoder: "resnet50"
+            decoder_block: [3, 3]
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'baseline', 'resolution': 1.0}
+            output_resolutions:
+                - {'units': 'baseline', 'resolution': 1.0}
+            patch_input_shape: [1024, 1024]
+            patch_output_shape: [512, 512]
+            stride_shape: [256, 256]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
 hovernet_fast-pannuke:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-pannuke.pth
     architecture:
@@ -746,3 +771,47 @@ micronet-consep:
             patch_output_shape: [252, 252]
             stride_shape: [150, 150]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
+
+mapde-crchisto:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-crchisto.pth
+    architecture:
+        class: mapde.MapDe
+        kwargs:
+            num_input_channels: 3
+            min_distance: 4
+            threshold_abs: 250
+            num_class: 1
+
+mapde-conic:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-conic.pth
+    architecture:
+        class: mapde.MapDe
+        kwargs:
+            num_input_channels: 3
+            min_distance: 3
+            threshold_abs: 205
+            num_class: 1
+
+sccnn-crchisto:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-crchisto.pth
+    architecture:
+        class: sccnn.SCCNN
+        kwargs:
+            num_input_channels: 3
+            out_height: 13
+            out_width: 13
+            radius: 12
+            min_distance: 6
+            threshold_abs: 0.20
+
+sccnn-conic:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-conic.pth
+    architecture:
+        class: sccnn.SCCNN
+        kwargs:
+            num_input_channels: 3
+            out_height: 13
+            out_width: 13
+            radius: 12
+            min_distance: 5
+            threshold_abs: 0.05
