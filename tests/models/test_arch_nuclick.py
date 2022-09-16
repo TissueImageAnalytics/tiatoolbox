@@ -33,7 +33,6 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     # test inference
     # create image patch, inclusion and exclusion maps
     patch = img[63:191, 750:878, :]
-    plt.figure(), plt.imshow(patch)
     inclusion_map = np.zeros((128, 128))
     inclusion_map[64, 64] = 1
 
