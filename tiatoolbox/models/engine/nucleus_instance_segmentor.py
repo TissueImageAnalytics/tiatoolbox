@@ -190,7 +190,7 @@ def _process_instance_predictions(
 
 
 # Python is yet to be able to natively pickle Object method/static
-# method. Only top-level function is passable to multi-processing as
+# method. Only top-level function is passable to multiprocessing as
 # caller. May need 3rd party libraries to use method/static method
 # otherwise.
 def _process_tile_predictions(
@@ -235,7 +235,7 @@ def _process_tile_predictions(
             - 2: Horizontal tile strip that stands between two normal
                  tiles (flag 0). It has the same width as normal tile
                  but less height (hence horizontal strip).
-            - 3: Tile strip stands at the cross section of four normal
+            - 3: Tile strip stands at the cross-section of four normal
                  tiles (flag 0).
         tile_output (list):
             A list of patch predictions, that lie within this tile, to
@@ -276,7 +276,7 @@ def _process_tile_predictions(
 
     tile_shape = tile_br - tile_tl  # in width height
 
-    # As the placement output is calculated wrt highest possible
+    # As the placement output is calculated wrt the highest possible
     # resolution within input, the output will need to re-calibrate if
     # it is at different resolution than the input.
     ioconfig = ioconfig.to_baseline()
@@ -406,6 +406,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # adding more runtime placeholder
         self._wsi_inst_info = None
+        self._futures = []
 
     @staticmethod
     def _get_tile_info(
@@ -610,7 +611,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 in the WSI image. The coordinates are in the highest
                 resolution defined in `self.ioconfig`.
             patch_outputs (list):
-                A list of corrdinates in `[start_x, start_y, end_x,
+                A list of coordinates in `[start_x, start_y, end_x,
                 end_y]` format indicating the write location of the
                 patch in the WSI image. The coordinates are in the
                 highest resolution defined in `self.ioconfig`.
@@ -651,7 +652,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 sample_datas,
                 self._on_gpu,
             )
-            # repackage so that its a N list, each contains
+            # repackage so that it's a N list, each contains
             # L x etc. output
             sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
             sample_outputs = list(zip(*sample_outputs))
@@ -796,7 +797,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 continue
 
             # some errors happen, log it and propagate exception
-            # ! this will lead to discard a whole bunch of
+            # ! this will lead to discard a bunch of
             # ! inferred tiles within this current WSI
             if future.exception() is not None:
                 raise future.exception()
