@@ -106,7 +106,7 @@ class ConvBnRelu(nn.Module):
         convolution layer.
         Returns:
             torch.nn.Sequential: a pytorch layer
-            
+
         """
         conv1 = nn.Conv2d(
             in_channels=in_channels,
@@ -537,7 +537,7 @@ class NuClick(ModelABC):
         Returns:
             masks (ndarray): pixel-wise nuclei instance segmentation
                 prediction, shape:(no.patch, h, w).
-                
+
         """
         masks = preds > thresh
         masks = remove_small_objects(masks, min_size=min_size)
@@ -568,7 +568,7 @@ class NuClick(ModelABC):
             on_gpu (bool): Whether to run inference on a GPU.
         Returns:
             Pixel-wise nuclei prediction for each patch, shape: (no.patch, h, w).
-            
+
         """
         model.eval()
         device = misc.select_device(on_gpu)
