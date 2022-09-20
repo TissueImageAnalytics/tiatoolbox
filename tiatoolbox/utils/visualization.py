@@ -167,7 +167,7 @@ def overlay_prediction_mask(
     ax.imshow(overlay)
     ax.axis("off")
     # Generate colour bar
-    cbar = plt.colorbar(**colorbar_params)
+    cbar = plt.colorbar(**colorbar_params, ax=ax)
     cbar.ax.set_yticklabels(name_list)
     cbar.ax.tick_params(labelsize=12)
 
@@ -297,7 +297,7 @@ def overlay_probability_map(
     ax.imshow(overlay)
     ax.axis("off")
     # generate colour bar
-    cbar = plt.colorbar(**colorbar_params)
+    cbar = plt.colorbar(**colorbar_params, ax=ax)
     cbar.ax.tick_params(labelsize=12)
 
     return ax
