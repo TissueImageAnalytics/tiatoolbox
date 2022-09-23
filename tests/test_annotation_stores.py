@@ -859,7 +859,7 @@ class TestStore:
         """Test translating a store."""
 
         def test_translation(geom):
-            """Performas a translation of input geometry."""
+            """Performs a translation of input geometry."""
             return affinity.translate(geom, 100, 100)
 
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
