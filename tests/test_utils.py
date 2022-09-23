@@ -1393,7 +1393,7 @@ def test_from_dat(tmp_path):
 
 
 def test_from_dat_type_dict(tmp_path):
-    """Test generating an annotation store from a .dat file with a typedict."""
+    """Test generating an annotation store from a .dat file with a type dict."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
