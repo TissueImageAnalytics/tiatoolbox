@@ -1,38 +1,40 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
-</p>
-<h1 align="center">TIA Toolbox</h1>
-  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/pip-install.yml">
-    <img src="https://img.shields.io/pypi/pyversions/tiatoolbox.svg" />
+<div style="text-align: center;">
+  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png" alt="TIAToolbox Logo">
+</div>
+<div style="text-align: center;">TIA Toolbox</div>
+  <a href="https://badge.fury.io/py/tiatoolbox">
+    <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
+  </a>
+    <a href="https://pepy.tech/project/tiatoolbox">
+      <img src="https://static.pepy.tech/personalized-badge/tiatoolbox?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads" alt="pypi Downloads"/>
+    </a>
+    <br>
+    <a href="https://anaconda.org/conda-forge/tiatoolbox">
+      <img src="https://img.shields.io/conda/vn/conda-forge/tiatoolbox"  alt="conda-forge badge"/>
+    </a>
+    <a href="https://anaconda.org/conda-forge/tiatoolbox">
+        <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/downloads.svg"  alt="conda-forge downloads"/>
+    </a>
+  <br>
+  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
+      <img src="https://img.shields.io/badge/license-BSD--3--clause-orange"  alt="License BSD-3-Clause"/>
   </a>
   <br>
+  <br>
+  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/pip-install.yml">
+    <img src="https://img.shields.io/pypi/pyversions/tiatoolbox.svg"  alt="Supported Python versions"/>
+  </a>
+ <a href="https://github.com/psf/black">
+      <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style black"/>
+    </a>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml">
-    <img src="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml/badge.svg" />
+    <img src="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml/badge.svg"  alt="GitHub Workflow passing"/>
   </a>
   <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
     <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
   </a>
   <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
-      <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
-  </a>
-  <br>
-  <br>
-  <a href="https://badge.fury.io/py/tiatoolbox">
-    <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
-  </a>
-    <a href="https://pepy.tech/project/tiatoolbox">
-      <img src="https://static.pepy.tech/personalized-badge/tiatoolbox?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads"/>
-    </a>
-    <br>
-    <a href="https://anaconda.org/conda-forge/tiatoolbox">
-      <img src="https://img.shields.io/conda/vn/conda-forge/tiatoolbox" />
-    </a>
-    <a href="https://anaconda.org/conda-forge/tiatoolbox">
-        <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/downloads.svg" />
-    </a>
-  <br>
-  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
-      <img src="https://img.shields.io/badge/license-BSD--3--clause-orange" />
+      <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm" alt="Code Coverage"/>
   </a>
   <br><br>
   <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2021.12.23.474029-blue" alt="DOI"></a>
