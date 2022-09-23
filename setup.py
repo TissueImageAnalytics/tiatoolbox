@@ -15,8 +15,6 @@ with open("HISTORY.md") as history_file:
 with open("requirements.txt") as requirements_file:
     requirements = requirements_file.read().splitlines()
 
-install_requires = requirements[2:]
-
 # dependency_links = []
 #
 # if sys.platform != "darwin":
