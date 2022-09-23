@@ -46,7 +46,7 @@ setup(
         "Programming Language :: Python :: 3.10",
     ],
     description="Computational pathology toolbox developed by TIA Centre.",
-    dependency_links=dependency_links,
+    # dependency_links=dependency_links,
     entry_points={
         "console_scripts": [
             "tiatoolbox=tiatoolbox.cli:main",
