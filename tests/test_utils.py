@@ -1454,7 +1454,7 @@ def test_invalid_poly(tmp_path):
     assert next(iter(result.values())).geometry.is_valid
 
 
-def test_from_multihead_dat_typedict(tmp_path):
+def test_from_multi_head_dat_type_dict(tmp_path):
     """Test generating a store from a .dat file with multiple heads, with typedict."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
