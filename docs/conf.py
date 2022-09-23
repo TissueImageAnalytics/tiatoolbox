@@ -42,6 +42,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    "sphinx_copybutton",
     "sphinx_toolbox.collapse",
     "myst_nb",
     "sphinx_design",
