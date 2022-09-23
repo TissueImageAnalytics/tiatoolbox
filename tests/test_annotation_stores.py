@@ -500,6 +500,7 @@ def test_auto_commit(fill_store, tmp_path):
 
     Check that if auto-commit is False, the changes are not committed until
     commit() is called.
+
     """
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     store.close()
