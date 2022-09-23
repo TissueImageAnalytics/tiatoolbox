@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 """The setup script."""
-# import sys
-# from pathlib import Path
+import sys
+from pathlib import Path
 
 from setuptools import find_packages, setup
 
@@ -12,13 +12,16 @@ with open("README.md") as readme_file:
 with open("HISTORY.md") as history_file:
     history = history_file.read()
 
-with open("requirements.txt") as requirements_file:
-    install_requires = requirements_file.read().splitlines()
+install_requires = [
+    line
+    for line in Path("requirements.txt").read_text().splitlines()
+    if line and line[0] not in ("-", "#")
+]
 
-# dependency_links = []
-#
-# if sys.platform != "darwin":
-#     dependency_links = ["https://download.pytorch.org/whl/cu113"]
+dependency_links = []
+
+if sys.platform != "darwin":
+    dependency_links = ["https://download.pytorch.org/whl/cu113"]
 
 setup_requirements = [
     "pytest-runner",
@@ -43,7 +46,7 @@ setup(
         "Programming Language :: Python :: 3.10",
     ],
     description="Computational pathology toolbox developed by TIA Centre.",
-    # dependency_links=dependency_links,
+    dependency_links=dependency_links,
     entry_points={
         "console_scripts": [
             "tiatoolbox=tiatoolbox.cli:main",
