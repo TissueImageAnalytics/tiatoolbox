@@ -459,6 +459,16 @@ def test_remove_area_column(fill_store):
     assert len(result) == 200
 
 
+def test_remove_area_column_indexed(fill_store):
+    """Test removing an area column if theres an index on it."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.create_index("area", '"area"')
+    store.remove_area_column()
+    assert "area" not in store._get_table_columns()
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200
+
+
 def test_add_area_column(fill_store):
     """Test adding an area column."""
     _, store = fill_store(SQLiteStore, ":memory:")

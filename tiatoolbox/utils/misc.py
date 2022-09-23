@@ -896,7 +896,18 @@ def store_from_dat(
 
 
 def make_valid_poly(poly, relative_to=None):
-    """Helper function to make a valid polygon."""
+    """Helper function to make a valid polygon.
+
+    Args:
+        poly (Polygon):
+            The polygon to make valid.
+        relative_to (Tuple[float, float]):
+            The x and y coordinates to use as the origin for the annotation.
+
+    Returns:
+        A valid geometry.
+
+    """
     if relative_to is not None:
         # transform coords to be relative to given pt.
         poly = translate(poly, -relative_to[0], -relative_to[1])
@@ -907,9 +918,26 @@ def make_valid_poly(poly, relative_to=None):
 
 
 def anns_from_hoverdict(data, props, typedict, relative_to, scale_factor):
-    """Helper function to create list of Annotation objects from a
-    hovernet-style dict of segmentations, mapping types using typedict
-    if provided.
+    """Helper function to create list of Annotation objects.
+
+    Creates annotations from a hovernet-style dict of segmentations, mapping types
+    using type dict if provided.
+
+    Args:
+        data (dict):
+            A dictionary of segmentations
+        props (list):
+            A list of properties
+        typedict (dict):
+            A dictionary mapping annotation types to more descriptive names.
+        relative_to (tuple):
+            The x and y coordinates to use as the origin for the annotations.
+        scale_factor (float):
+            The scale factor to use when loading the annotations. All coordinates
+            will be multiplied by this factor.
+    Returns:
+        A list of Annotation objects.
+
     """
     return [
         Annotation(
@@ -941,6 +969,15 @@ def make_default_dict(data, subcat):
     types from different heads of a multi-head model.
     For example, types 1,2, etc in the 'Gland' head will become
     'Gla: 1', 'Gla: 2', etc.
+
+    Args:
+        data (dict):
+            The data loaded from the .dat file.
+        subcat:
+            The subcategory of the data, eg 'Gland' or 'Nuclei'.
+    Returns:
+        A dictionary mapping types to more descriptive names.
+
     """
     types = {
         data[subcat][ann_id]["type"]
@@ -979,6 +1016,7 @@ def add_from_dat(
                 'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
         relative_to [float, float]:
             The x and y coordinates to use as the origin for the annotations.
+
     """
 
     data = joblib.load(fp)

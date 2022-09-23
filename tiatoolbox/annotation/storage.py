@@ -2544,6 +2544,8 @@ class SQLiteStore(AnnotationStore):
 
     def remove_area_column(self):
         """Remove the area column from the store."""
+        if "area" in self.indexes():
+            self.drop_index("area")
         cur = self.con.cursor()
         cur.execute(
             """
