@@ -1392,7 +1392,7 @@ def test_from_dat(tmp_path):
     assert len(store) == 2
 
 
-def test_from_dat_typedict(tmp_path):
+def test_from_dat_type_dict(tmp_path):
     """Test generating an annotation store from a .dat file with a typedict."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
