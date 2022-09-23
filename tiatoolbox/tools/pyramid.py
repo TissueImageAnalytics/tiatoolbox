@@ -20,10 +20,9 @@ from typing import Iterable, Tuple, Union
 
 import defusedxml
 import numpy as np
-from PIL import Image, ImageOps
-from shapely.geometry import Polygon
+from PIL import Image
 
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore
+from tiatoolbox.annotation.storage import AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
@@ -507,9 +506,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         """
         slide_dims = np.array(self.info.slide_dimensions)
-        tile_dim = self.tile_size + self.overlap
         scale = self.level_downsample(self.level_count - 1)
-        out_dims = np.round(slide_dims / slide_dims.max() * tile_dim).astype(int)
         bounds = (0, 0, *slide_dims)
         thumb = self.renderer.render_annotations(self.store, bounds, scale)
         return Image.fromarray(thumb)
@@ -610,7 +607,6 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             raise IndexError
 
         bounds = locsize2bounds(coord, [self.output_tile_size * scale] * 2)
-        # bound_geom = Polygon.from_bounds(*bounds)
         tile = self.renderer.render_annotations(
             self.store, bounds, scale, res, self.overlap
         )

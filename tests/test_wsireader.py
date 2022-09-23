@@ -39,7 +39,6 @@ from tiatoolbox.wsicore.wsireader import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
-    WSIMeta,
     WSIReader,
     is_ngff,
     is_zarr,
@@ -60,6 +59,17 @@ SVS_TEST_TISSUE_SIZE = (1000, 1000)
 JP2_TEST_TISSUE_BOUNDS = (32768, 42880, 33792, 43904)
 JP2_TEST_TISSUE_LOCATION = (32768, 42880)
 JP2_TEST_TISSUE_SIZE = (1024, 1024)
+
+COLOR_DICT = (
+    {
+        0: (200, 0, 0, 255),
+        1: (0, 200, 0, 255),
+        2: (0, 0, 200, 255),
+        3: (155, 155, 0, 255),
+        4: (155, 0, 155, 255),
+        5: (0, 155, 155, 255),
+    },
+)
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
@@ -1880,14 +1890,7 @@ class TestReader:
                 "kwargs": {
                     "renderer": AnnotationRenderer(
                         "type",
-                        {
-                            0: (200, 0, 0, 255),
-                            1: (0, 200, 0, 255),
-                            2: (0, 0, 200, 255),
-                            3: (155, 155, 0, 255),
-                            4: (155, 0, 155, 255),
-                            5: (0, 155, 155, 255),
-                        },
+                        COLOR_DICT,
                     ),
                     "base_wsi_reader": WSIReader.open(
                         _fetch_remote_sample("svs-1-small")

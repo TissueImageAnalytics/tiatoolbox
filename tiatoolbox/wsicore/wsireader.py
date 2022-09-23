@@ -17,11 +17,10 @@ import openslide
 import pandas as pd
 import tifffile
 import zarr
-from PIL import Image, ImageOps
-from shapely.geometry import Polygon
+from PIL import Image
 
 from tiatoolbox import utils
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
@@ -4393,7 +4392,6 @@ class AnnotationStoreReader(WSIReader):
         **kwargs,
     ):
         super().__init__(path, **kwargs)
-        # self.store = store
         self.store = SQLiteStore(path)
         if info is None:
             if base_wsi_reader is not None:
@@ -4403,9 +4401,10 @@ class AnnotationStoreReader(WSIReader):
                 # try to get metadata from store
                 try:
                     self.info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
-                except:
+                except KeyError:
                     raise ValueError(
-                        "No metadata found in store. Please provide either info or base slide."
+                        """No metadata found in store. Please provide either
+                        info or base slide."""
                     )
         else:
             self.info = info
@@ -4467,7 +4466,6 @@ class AnnotationStoreReader(WSIReader):
         bounds = utils.transforms.locsize2bounds(
             location=location, size=baseline_read_size
         )
-        # bound_geom = Polygon.from_bounds(*bounds)
         im_region = self.renderer.render_annotations(
             self.store, bounds, np.rint(self.info.level_downsamples[read_level])
         )
@@ -4479,9 +4477,8 @@ class AnnotationStoreReader(WSIReader):
             interpolation=interpolation,
         )
 
-        # return utils.transforms.background_composite(image=im_region)
         if self.base_wsi_reader is not None:
-            # overlay imregion on the base wsi
+            # overlay image region on the base wsi
             base_region = self.base_wsi_reader.read_rect(
                 location,
                 size,
@@ -4539,7 +4536,6 @@ class AnnotationStoreReader(WSIReader):
                 bounds_at_baseline, resolution=resolution, units=units
             )
 
-        # bound_geom = Polygon.from_bounds(*bounds_at_baseline)
         im_region = self.renderer.render_annotations(
             self.store,
             bounds_at_baseline,
@@ -4558,7 +4554,7 @@ class AnnotationStoreReader(WSIReader):
                 output_size=size_at_requested,
             )
         if self.base_wsi_reader is not None:
-            # overlay imregion on the base wsi
+            # overlay image region on the base wsi
             base_region = self.base_wsi_reader.read_bounds(
                 bounds,
                 resolution=resolution,
