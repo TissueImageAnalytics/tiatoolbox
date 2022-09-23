@@ -12,7 +12,7 @@ with open("README.md") as readme_file:
 with open("HISTORY.md") as history_file:
     history = history_file.read()
 
-requirements = [
+install_requires = [
     line
     for line in Path("requirements.txt").read_text().splitlines()
     if line and line[0] not in ("-", "#")
@@ -52,7 +52,7 @@ setup(
             "tiatoolbox=tiatoolbox.cli:main",
         ],
     },
-    install_requires=requirements,
+    install_requires=install_requires,
     long_description=readme + "\n\n" + history,
     long_description_content_type="text/markdown",
     include_package_data=True,
