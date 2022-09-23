@@ -81,7 +81,6 @@ class ConvBnRelu(nn.Module):
         """
         return self.conv_bn_relu(input_tensor)
 
-    @staticmethod
     def get_block(
         self,
         in_channels,
