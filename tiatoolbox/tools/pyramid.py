@@ -222,9 +222,6 @@ class TilePyramidGenerator:
                 pad_mode=pad_mode,
                 interpolation=interpolation,
             )
-        # is this needed? get rid of it or do a better way
-        alph = 255 - np.all(tile == 0, axis=2).astype("uint8") * 255
-        tile = np.dstack((tile, alph))
         return Image.fromarray(tile)
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
@@ -440,7 +437,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
         """
         g = self.tile_group(level, x, y)
         z = level
-        return Path(f"TileGroup{g}") / f"{z}-{x}-{y}@1x.jpg"
+        return Path(f"TileGroup{g}") / f"{z}-{x}-{y}.jpg"
 
 
 class AnnotationTileGenerator(ZoomifyGenerator):
