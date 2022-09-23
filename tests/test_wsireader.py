@@ -60,16 +60,15 @@ JP2_TEST_TISSUE_BOUNDS = (32768, 42880, 33792, 43904)
 JP2_TEST_TISSUE_LOCATION = (32768, 42880)
 JP2_TEST_TISSUE_SIZE = (1024, 1024)
 
-COLOR_DICT = (
-    {
-        0: (200, 0, 0, 255),
-        1: (0, 200, 0, 255),
-        2: (0, 0, 200, 255),
-        3: (155, 155, 0, 255),
-        4: (155, 0, 155, 255),
-        5: (0, 155, 155, 255),
-    },
-)
+COLOR_DICT = {
+    0: (200, 0, 0, 255),
+    1: (0, 200, 0, 255),
+    2: (0, 0, 200, 255),
+    3: (155, 155, 0, 255),
+    4: (155, 0, 155, 255),
+    5: (0, 155, 155, 255),
+}
+
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
@@ -2081,14 +2080,7 @@ class TestReader:
             units="baseline",
         )
         # Make the regions the same size for comparison of content
-        import matplotlib.pyplot as plt
-
         roi2 = imresize(roi2, output_size=[2000, 2000])
-        plt.subplot(1, 2, 1)
-        plt.imshow(roi1)
-        plt.subplot(1, 2, 2)
-        plt.imshow(roi2)
-        plt.show()
 
         # Check MSE
         mse = np.mean((roi1 - roi2) ** 2)
