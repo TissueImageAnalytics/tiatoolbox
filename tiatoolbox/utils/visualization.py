@@ -493,7 +493,7 @@ def plot_graph(
 
 def to_int_rgb(rgb):
     """Helper to convert from float to int rgb(a) tuple"""
-    return tuple([int(255 * v) for v in rgb])
+    return tuple(int(255 * v) for v in rgb)
 
 
 class AnnotationRenderer:
@@ -865,8 +865,8 @@ class AnnotationRenderer:
                 self.where,
             )
 
-            for i, (key, bounds) in enumerate(bounding_boxes.items()):
-                area = (bounds[0] - bounds[2]) * (bounds[1] - bounds[3])
+            for i, (key, box) in enumerate(bounding_boxes.items()):
+                area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area:
                     ann = store[key]
                     self.render_by_type(tile, ann, top_left, scale / res)

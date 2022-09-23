@@ -229,7 +229,8 @@ def test_sub_tile_levels(fill_store, tmp_path):
     class MockTileGenerator(AnnotationTileGenerator):
         """Mock generator with specific subtile_level."""
 
-        def tile_path(self, level: int, x: int, y: int) -> Path:
+        @staticmethod
+        def tile_path(level: int, x: int, y: int) -> Path:
             """Tile path."""
             return Path(level, x, y)
 

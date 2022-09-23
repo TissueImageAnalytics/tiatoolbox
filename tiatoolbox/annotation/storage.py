@@ -2068,6 +2068,7 @@ class SQLiteStore(AnnotationStore):
         """
 
         def add_props_to_result(result, properties):
+            """Add the properties to the appropriate set in result."""
             # Get the selected values
             selection = select(properties)
             # Wrap scalar values into a tuple

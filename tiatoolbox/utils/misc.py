@@ -980,7 +980,6 @@ def add_from_dat(
         relative_to [float, float]:
             The x and y coordinates to use as the origin for the annotations.
     """
-
     data = joblib.load(fp)
     props = list(data[list(data.keys())[0]].keys())
     if "contour" not in props:
