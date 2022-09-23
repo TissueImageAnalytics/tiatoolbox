@@ -864,6 +864,7 @@ def store_from_dat(
     cls: AnnotationStore = SQLiteStore,
 ) -> "AnnotationStore":
     """Load annotations from a hovernet-style .dat file.
+
     Args:
         fp (Union[IO, str, Path]):
             The file path or handle to load from.
