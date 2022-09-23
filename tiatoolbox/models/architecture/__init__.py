@@ -44,6 +44,7 @@ def get_pretrained_model(
         pretrained_model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. The models currently supported:
+
                 - alexnet
                 - resnet18
                 - resnet34
