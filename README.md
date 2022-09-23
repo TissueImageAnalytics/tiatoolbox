@@ -5,9 +5,17 @@
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/pip-install.yml">
     <img src="https://img.shields.io/pypi/pyversions/tiatoolbox.svg" />
   </a>
+  <br>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml">
     <img src="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml/badge.svg" />
   </a>
+  <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
+    <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
+  </a>
+  <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
+      <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
+  </a>
+  <br>
   <br>
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
@@ -23,22 +31,11 @@
         <img src="https://anaconda.org/conda-forge/tiatoolbox/badges/downloads.svg" />
     </a>
   <br>
-  <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
-    <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
-  </a>
-
-<a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
-      <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm"/>
-  </a>
-  <a href="https://github.com/psf/black">
-      <img src="https://img.shields.io/badge/code%20style-black-000000.svg"/>
-  </a>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
       <img src="https://img.shields.io/badge/license-BSD--3--clause-orange" />
   </a>
-  <br>
+  <br><br>
   <a href="https://doi.org/10.1101/2021.12.23.474029"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2021.12.23.474029-blue" alt="DOI"></a>
-  <a href="https://zenodo.org/badge/latestdoi/267705904"><img src="https://zenodo.org/badge/267705904.svg" alt="DOI"></a>
 
 Computational Pathology Toolbox developed at the TIA Centre
 
