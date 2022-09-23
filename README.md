@@ -1,7 +1,7 @@
-<div style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png" alt="TIAToolbox Logo">
-</div>
-<div style="text-align: center;">TIA Toolbox</div>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
+</p>
+<h1 align="center">TIA Toolbox</h1>
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
