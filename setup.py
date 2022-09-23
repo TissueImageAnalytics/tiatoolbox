@@ -13,7 +13,7 @@ with open("HISTORY.md") as history_file:
     history = history_file.read()
 
 with open("requirements.txt") as requirements_file:
-    requirements = requirements_file.read().splitlines()
+    install_requires = requirements_file.read().splitlines()
 
 # dependency_links = []
 #
