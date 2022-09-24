@@ -1,2 +1,8 @@
 """Module initialisation."""
-from tiatoolbox.annotation import dsl, storage
+from pathlib import Path
+
+from tiatoolbox import _lazy_import
+
+location = Path(__file__)
+dsl = _lazy_import("dsl", location)
+storage = _lazy_import("storage", location)

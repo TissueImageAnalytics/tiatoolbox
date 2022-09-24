@@ -1,6 +1,9 @@
 """Top-level package for TIA Toolbox."""
 
 import os
+import sys
+from importlib import util
+from pathlib import Path
 
 import pkg_resources
 import yaml
@@ -46,7 +49,22 @@ with open(PRETRAINED_FILES_REGISTRY_PATH) as registry_handle:
 rcParam["pretrained_model_info"] = PRETRAINED_INFO
 
 
-from tiatoolbox import models, tiatoolbox, tools, utils, wsicore
+def _lazy_import(name, location):
+    spec = util.spec_from_file_location(name, location)
+    loader = util.LazyLoader(spec.loader)
+    spec.loader = loader
+    module = util.module_from_spec(spec)
+    sys.modules[name] = module
+    loader.exec_module(module)
+    return module
+
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))
+    location = Path(__file__)
+    annotation = _lazy_import("annotation", location)
+    models = _lazy_import("models", location)
+    tiatoolbox = _lazy_import("tiatoolbox", location)
+    tools = _lazy_import("tools", location)
+    utils = _lazy_import("utils", location)
+    wsicore = _lazy_import("wsicore", location)
