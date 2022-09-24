@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tiatoolbox import _lazy_import
 
-location = Path(__file__)
+location = Path(__file__).parent
 
 graph = _lazy_import("graph", location)
 patchextraction = _lazy_import("patchextraction", location)

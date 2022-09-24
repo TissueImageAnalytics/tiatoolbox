@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tiatoolbox import _lazy_import
 
-location = Path(__file__)
+location = Path(__file__).parent
 
 env_detection = _lazy_import("env_detection", location)
 exceptions = _lazy_import("exceptions", location)

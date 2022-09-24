@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tiatoolbox import _lazy_import
 
-location = Path(__file__)
+location = Path(__file__).parent
 
 metadata = _lazy_import("metadata", location)
 save_tiles = _lazy_import("save_tiles", location)
