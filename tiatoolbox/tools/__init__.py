@@ -2,14 +2,15 @@
 from pathlib import Path
 
 from tiatoolbox import _lazy_import
+from tiatoolbox.tools import (
+    graph,
+    patchextraction,
+    pyramid,
+    stainaugment,
+    stainextract,
+    stainnorm,
+    tissuemask,
+)
 
 location = Path(__file__).parent
-
-graph = _lazy_import("graph", location)
-patchextraction = _lazy_import("patchextraction", location)
-pyramid = _lazy_import("pyramid", location)
 registration = _lazy_import("registration", location)
-stainaugment = _lazy_import("stainaugment", location)
-stainextract = _lazy_import("stainextract", location)
-stainnorm = _lazy_import("stainnorm", location)
-tissuemask = _lazy_import("tissuemask", location)
