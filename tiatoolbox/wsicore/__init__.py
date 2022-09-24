@@ -2,11 +2,8 @@
 from pathlib import Path
 
 from tiatoolbox import _lazy_import
+from tiatoolbox.wsicore import save_tiles, slide_info, wsimeta, wsireader
 
 location = Path(__file__).parent
 
 metadata = _lazy_import("metadata", location)
-save_tiles = _lazy_import("save_tiles", location)
-slide_info = _lazy_import("slide_info", location)
-wsimeta = _lazy_import("wsimeta", location)
-wsireader = _lazy_import("wsireader", location)
