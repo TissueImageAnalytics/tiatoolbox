@@ -49,8 +49,8 @@ with open(PRETRAINED_FILES_REGISTRY_PATH) as registry_handle:
 rcParam["pretrained_model_info"] = PRETRAINED_INFO
 
 
-def _lazy_import(name, location):
-    spec = util.spec_from_file_location(name, location)
+def _lazy_import(name: str, module_location: Path):
+    spec = util.spec_from_file_location(name, module_location)
     loader = util.LazyLoader(spec.loader)
     spec.loader = loader
     module = util.module_from_spec(spec)
