@@ -8,9 +8,9 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-from PIL import Image
+from PIL import Image, ImageFilter
 from scipy.ndimage import label
-from shapely.geometry import LineString, MultiPoint, Polygon
+from shapely.geometry import LineString, MultiPoint, MultiPolygon, Polygon
 from shapely.geometry.point import Point
 from skimage import data
 
@@ -50,17 +50,21 @@ def fill_store(cell_grid, points_grid):
         store = store_class(path)
 
         cells = [
-            Annotation(cell, {"type": "cell", "prob": np.random.rand(1)[0]})
+            Annotation(
+                cell, {"type": "cell", "prob": np.random.rand(1)[0], "color": (0, 1, 0)}
+            )
             for cell in cell_grid
         ]
         points = [
-            Annotation(point, {"type": "pt", "prob": np.random.rand(1)[0]})
+            Annotation(
+                point, {"type": "pt", "prob": np.random.rand(1)[0], "color": (1, 0, 0)}
+            )
             for point in points_grid
         ]
         lines = [
             Annotation(
                 LineString(((x, x + 500) for x in range(100, 400, 10))),
-                {"type": "line", "prob": 0.75},
+                {"type": "line", "prob": 0.75, "color": (0, 0, 1)},
             )
         ]
 
@@ -333,3 +337,82 @@ def test_colour_prop_warning(fill_store, tmp_path):
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     with pytest.warns(UserWarning, match="not found in properties"):
         tg.get_tile(1, 0, 0)
+
+
+def test_blur(fill_store, tmp_path):
+    """Test blur."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(blur_radius=5, edge_thickness=0)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tile_blurred = tg.get_tile(1, 0, 0)
+    renderer = AnnotationRenderer(edge_thickness=0)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tile = tg.get_tile(1, 0, 0)
+    blur_filter = ImageFilter.GaussianBlur(5)
+    # blurring our un-blurred tile should give almost same result
+    assert np.allclose(tile_blurred, tile.filter(blur_filter), atol=1)
+
+
+def test_direct_color(fill_store, tmp_path):
+    """Test direct color."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    thumb = tg.get_thumb_tile()
+    _, num = label(np.array(thumb)[:, :, 1])
+    assert num == 25  # expect 25 green objects
+    _, num = label(np.array(thumb)[:, :, 0])
+    assert num == 49  # expect 49 red objects
+    _, num = label(np.array(thumb)[:, :, 2])
+    assert num == 1  # expect 1 blue objects
+
+
+def test_secondary_cmap(fill_store, tmp_path):
+    """Test secondary cmap."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    cmap_dict = {"type": "line", "score_prop": "prob", "mapper": cm.get_cmap("viridis")}
+    renderer = AnnotationRenderer(
+        score_prop="type", secondary_cmap=cmap_dict, edge_thickness=0
+    )
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tile = np.array(tg.get_tile(1, 0, 1))  # line here with prob=0.75
+    color = tile[np.any(tile, axis=2), :3]
+    color = color[0, :]
+    viridis_mapper = cm.get_cmap("viridis")
+    assert np.all(
+        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
+    )  # expect rendered color to be viridis(0.75)
+
+
+def test_unfilled_polys(fill_store, tmp_path):
+    """Test unfilled polygons."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    renderer = AnnotationRenderer(thickness=1)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tile_outline = np.array(tg.get_tile(1, 0, 0))
+    tg.renderer.edge_thickness = -1
+    tile_filled = np.array(tg.get_tile(1, 0, 0))
+    # expect sum of filled polys to be much greater than sum of outlines
+    assert np.sum(tile_filled) > 2 * np.sum(tile_outline)
+
+
+def test_multipolygon_render(cell_grid, tmp_path):
+    """Test multipolygon rendering."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    store = SQLiteStore(tmp_path / "test.db")
+    # add a multi-polygon
+    store.append(Annotation(MultiPolygon(cell_grid), {"color": (1, 0, 0)}))
+    renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tile = np.array(tg.get_tile(1, 0, 0))
+    _, num = label(np.array(tile)[:, :, 0])
+    assert num == 25  # expect 25 red objects
