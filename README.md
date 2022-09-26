@@ -2,6 +2,8 @@
   <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
 </p>
 <h1 align="center">TIA Toolbox</h1>
+<h3 align="center">Computational Pathology Toolbox developed at the TIA Centre</h3>
+
   <a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
@@ -16,9 +18,8 @@
             <img src="https://shields.io/conda/dn/conda-forge/tiatoolbox"  alt="conda-forge downloads"/>
     </a>
   <br>
-  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
-      <img src="https://img.shields.io/badge/license-BSD--3--clause-orange"  alt="License BSD-3-Clause"/>
-  </a>
+  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/blob/develop/LICENSE">
+    <img alt="GitHub license" src="https://img.shields.io/github/license/TissueImageAnalytics/tiatoolbox"></a>
   <br>
   <br>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/pip-install.yml">
@@ -37,11 +38,8 @@
       <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm" alt="Code Coverage"/>
   </a>
   <br><br>
-  <a href="https://doi.org/10.1038/s43856-022-00186-5"><img src="https://img.shields.io/badge/DOI-10.1038%2Fs43856--022--00186--5-blue" alt="DOI"></a>
-
-Computational Pathology Toolbox developed at the TIA Centre
-
-\[Cite this repository\](#Cite this repository)
+  <a href="#cite-this-repository"><img src="https://img.shields.io/badge/Cite%20this%20repository-BibTeX-brightgreen" alt="DOI"></a> <a href="https://doi.org/10.1038/s43856-022-00186-5"><img src="https://img.shields.io/badge/DOI-10.1038%2Fs43856--022--00186--5-blue" alt="DOI"></a>
+<br>
 
 ## Getting Started
 
@@ -135,8 +133,6 @@ The full text of the licence is included in [LICENSE](https://raw.githubusercont
 ### Cite this repository
 
 If you find TIAToolbox useful or use it in your research, please consider citing our paper:
-
-Pocock, J. et al. TIAToolbox as an end-to-end library for advanced tissue image analytics. Communications Medicine 2, 120 (2022).
 
 ```
 @article{
