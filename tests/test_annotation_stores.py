@@ -458,6 +458,12 @@ def test_remove_area_column(fill_store):
     result = store.query((0, 0, 1000, 1000))
     assert len(result) == 200
 
+    store.add_area_column()
+    assert "area" in store.indexes()
+    store.remove_area_column()
+    # Check that the index is removed if its there
+    assert "area" not in store.indexes()
+
 
 def test_add_area_column(fill_store):
     """Test adding an area column."""

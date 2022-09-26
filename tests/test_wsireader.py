@@ -1879,6 +1879,10 @@ def test_is_ngff_regular_zarr(tmp_path):
     assert is_zarr(zarr_path)
     assert not is_ngff(zarr_path)
 
+    # check we get the appropriate error message if open it
+    with pytest.raises(FileNotSupported, match="does not appear to be a v0.4"):
+        WSIReader.open(zarr_path)
+
 
 def test_store_reader_no_info(tmp_path):
     """Test AnnotationStoreReader with no info."""
@@ -1892,7 +1896,7 @@ def test_store_reader_explicit_info(remote_sample, tmp_path):
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     reader = AnnotationStoreReader(tmp_path / "store.db", wsi_reader.info)
-    assert reader.info.as_dict() == wsi_reader.info.as_dict()
+    assert reader._info().as_dict() == wsi_reader.info.as_dict()
 
 
 def test_store_reader_alpha(remote_sample):
@@ -1904,12 +1908,19 @@ def test_store_reader_alpha(remote_sample):
         base_wsi_reader=wsi_reader,
     )
     wsi_thumb = wsi_reader.slide_thumbnail()
+    wsi_tile = wsi_reader.read_rect((500, 500), (1000, 1000))
     store_thumb = store_reader.slide_thumbnail()
+    store_tile = store_reader.read_rect((500, 500), (1000, 1000))
     store_reader.alpha = 0.2
     store_thumb_alpha = store_reader.slide_thumbnail()
+    store_tile_alpha = store_reader.read_rect((500, 500), (1000, 1000))
     # the thumbnail with low alpha should be closer to wsi_thumb
     assert np.mean(np.abs(store_thumb_alpha - wsi_thumb)) < np.mean(
         np.abs(store_thumb - wsi_thumb)
+    )
+    # the tile with low alpha should be closer to wsi_tile
+    assert np.mean(np.abs(store_tile_alpha - wsi_tile)) < np.mean(
+        np.abs(store_tile - wsi_tile)
     )
 
 
