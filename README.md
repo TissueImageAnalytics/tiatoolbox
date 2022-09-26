@@ -4,7 +4,7 @@
 <h1 align="center">TIA Toolbox</h1>
 <h3 align="center">Computational Pathology Toolbox developed at the TIA Centre</h3>
 
-  <a href="https://badge.fury.io/py/tiatoolbox">
+<a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
     <a href="https://pepy.tech/project/tiatoolbox">
