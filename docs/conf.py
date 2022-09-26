@@ -1891,8 +1891,8 @@ html_theme_options = {
         },
     ],
     "announcement": "Paper available at "
-    "<a href='https://doi.org/10.1101/2021.12.23.474029'>"
-    "https://doi.org/10.1101/2021.12.23.474029</a>",
+    "<a href='https://doi.org/10.1038/s43856-022-00186-5'>"
+    "https://doi.org/10.1038/s43856-022-00186-5</a>",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

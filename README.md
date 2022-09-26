@@ -41,29 +41,7 @@
 
 Computational Pathology Toolbox developed at the TIA Centre
 
-## Cite this repository
-
-If you find TIAToolbox useful or use it in your research, please consider citing our paper:
-
-Pocock, J. et al. TIAToolbox as an end-to-end library for advanced tissue image analytics. Communications Medicine 2, 120 (2022).
-
-```
-@article{
-    Pocock2022,
-    author = {Pocock, Johnathan and Graham, Simon and Vu, Quoc Dang and Jahanifar, Mostafa and Deshpande, Srijay and Hadjigeorghiou, Giorgos and Shephard, Adam and Bashir, Raja Muhammad Saad and Bilal, Mohsin and Lu, Wenqi and Epstein, David and Minhas, Fayyaz and Rajpoot, Nasir M and Raza, Shan E Ahmed},
-    doi = {10.1038/s43856-022-00186-5},
-    issn = {2730-664X},
-    journal = {Communications Medicine},
-    month = {sep},
-    number = {1},
-    pages = {120},
-    publisher = {Springer US},
-    title = {{TIAToolbox as an end-to-end library for advanced tissue image analytics}},
-    url = {https://www.nature.com/articles/s43856-022-00186-5},
-    volume = {2},
-    year = {2022}
-}
-```
+\[Cite this repository\](#Cite this repository)
 
 ## Getting Started
 
@@ -153,6 +131,30 @@ or
 The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [The 3-Clause BSD License].
 
 The full text of the licence is included in [LICENSE](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE).
+
+### Cite this repository
+
+If you find TIAToolbox useful or use it in your research, please consider citing our paper:
+
+Pocock, J. et al. TIAToolbox as an end-to-end library for advanced tissue image analytics. Communications Medicine 2, 120 (2022).
+
+```
+@article{
+    Pocock2022,
+    author = {Pocock, Johnathan and Graham, Simon and Vu, Quoc Dang and Jahanifar, Mostafa and Deshpande, Srijay and Hadjigeorghiou, Giorgos and Shephard, Adam and Bashir, Raja Muhammad Saad and Bilal, Mohsin and Lu, Wenqi and Epstein, David and Minhas, Fayyaz and Rajpoot, Nasir M and Raza, Shan E Ahmed},
+    doi = {10.1038/s43856-022-00186-5},
+    issn = {2730-664X},
+    journal = {Communications Medicine},
+    month = {sep},
+    number = {1},
+    pages = {120},
+    publisher = {Springer US},
+    title = {{TIAToolbox as an end-to-end library for advanced tissue image analytics}},
+    url = {https://www.nature.com/articles/s43856-022-00186-5},
+    volume = {2},
+    year = {2022}
+}
+```
 
 ### Auxiliary Files
 
