@@ -41,7 +41,7 @@
 
 Computational Pathology Toolbox developed at the TIA Centre
 
-## Reference
+## Cite this repository
 
 If you find TIAToolbox useful or use it in your research, please consider citing our paper:
 
