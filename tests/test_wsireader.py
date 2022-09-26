@@ -24,6 +24,7 @@ from skimage.morphology import binary_dilation, disk, remove_small_objects
 from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, rcParam, utils
+from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
@@ -1879,10 +1880,52 @@ def test_is_ngff_regular_zarr(tmp_path):
     assert not is_ngff(zarr_path)
 
 
+def test_store_reader_no_info(tmp_path):
+    """Test AnnotationStoreReader with no info."""
+    SQLiteStore(tmp_path / "store.db")
+    with pytest.raises(ValueError, match="No metadata found"):
+        AnnotationStoreReader(tmp_path / "store.db")
+
+
+def test_store_reader_explicit_info(remote_sample, tmp_path):
+    """Test AnnotationStoreReader with explicit info."""
+    SQLiteStore(tmp_path / "store.db")
+    wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
+    reader = AnnotationStoreReader(tmp_path / "store.db", wsi_reader.info)
+    assert reader.info.as_dict() == wsi_reader.info.as_dict()
+
+
+def test_store_reader_alpha(remote_sample):
+    """Test AnnotationStoreReader with alpha channel."""
+    wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
+    store_reader = AnnotationStoreReader(
+        remote_sample("annotation_store_svs_1"),
+        wsi_reader.info,
+        base_wsi_reader=wsi_reader,
+    )
+    wsi_thumb = wsi_reader.slide_thumbnail()
+    store_thumb = store_reader.slide_thumbnail()
+    store_reader.alpha = 0.2
+    store_thumb_alpha = store_reader.slide_thumbnail()
+    # the thumbnail with low alpha should be closer to wsi_thumb
+    assert np.mean(np.abs(store_thumb_alpha - wsi_thumb)) < np.mean(
+        np.abs(store_thumb - wsi_thumb)
+    )
+
+
+def test_store_reader_no_types(tmp_path, remote_sample):
+    """Test AnnotationStoreReader with no types."""
+    SQLiteStore(tmp_path / "store.db")
+    wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
+    reader = AnnotationStoreReader(tmp_path / "store.db", wsi_reader.info)
+    # shouldn't try to color by type if not present
+    assert reader.renderer.score_prop is None
+
+
 class TestReader:
     scenarios = [
         (
-            "AnnotationReader",
+            "AnnotationReaderOverlaid",
             {
                 "reader_class": AnnotationStoreReader,
                 "sample_key": "annotation_store_svs_1",
@@ -1895,6 +1938,20 @@ class TestReader:
                         _fetch_remote_sample("svs-1-small")
                     ),
                     "alpha": 0.5,
+                },
+            },
+        ),
+        (
+            "AnnotationReaderMaskOnly",
+            {
+                "reader_class": AnnotationStoreReader,
+                "sample_key": "annotation_store_svs_1",
+                "kwargs": {
+                    "renderer": AnnotationRenderer(
+                        "type",
+                        COLOR_DICT,
+                        blur_radius=3,
+                    ),
                 },
             },
         ),

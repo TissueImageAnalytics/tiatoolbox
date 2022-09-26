@@ -4616,7 +4616,7 @@ class AnnotationStoreReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            im_region = self._read_rect_at_resolution(
+            return self._read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -4625,7 +4625,6 @@ class AnnotationStoreReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return utils.transforms.background_composite(image=im_region)
 
         # Find parameters for optimal read
         (
