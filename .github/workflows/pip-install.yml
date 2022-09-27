@@ -2,7 +2,9 @@
 
 name: pip Install
 
-on: push
+on:
+    push:
+        paths: [ "requirements*.yml", "conda-env-create.yml", "requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
 
 jobs:
   build:
