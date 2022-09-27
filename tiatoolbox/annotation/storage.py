@@ -1366,6 +1366,7 @@ class AnnotationStore(ABC, MutableMapping):
             transform (callable[Geometry, Geometry]):
                 A function that takes a geometry and returns a new
                 transformed geometry.
+
         """
         transformed_geoms = {
             key: transform(annotation.geometry) for key, annotation in self.items()
