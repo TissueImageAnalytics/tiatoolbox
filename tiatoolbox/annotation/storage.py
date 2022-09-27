@@ -1791,6 +1791,7 @@ class SQLiteStore(AnnotationStore):
                     NULL, :key, :geom_type,
                     :cx, :cy, :geometry, :properties, :area
                 )
+
                 """,
             token,
         )
