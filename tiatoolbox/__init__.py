@@ -1,8 +1,8 @@
 """Top-level package for TIA Toolbox."""
 
+import importlib.util
 import os
 import sys
-from importlib import util
 from pathlib import Path
 
 import pkg_resources
@@ -50,10 +50,10 @@ rcParam["pretrained_model_info"] = PRETRAINED_INFO
 
 
 def _lazy_import(name: str, module_location: Path):
-    spec = util.spec_from_file_location(name, module_location)
-    loader = util.LazyLoader(spec.loader)
+    spec = importlib.util.spec_from_file_location(name, module_location)
+    loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
-    module = util.module_from_spec(spec)
+    module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     loader.exec_module(module)
     return module
