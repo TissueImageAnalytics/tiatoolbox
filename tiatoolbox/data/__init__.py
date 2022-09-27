@@ -11,8 +11,6 @@ import pkg_resources
 import requests
 import yaml
 
-from tiatoolbox.utils.misc import imread
-
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
     "tiatoolbox", "data/remote_samples.yaml"
@@ -107,4 +105,6 @@ def _local_sample_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
 
 def stain_norm_target() -> np.ndarray:
     """Target image for stain normalization."""
+    from tiatoolbox.utils.misc import imread
+
     return imread(_local_sample_path("target_image.png"))
