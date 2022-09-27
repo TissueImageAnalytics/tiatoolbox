@@ -997,7 +997,6 @@ def add_from_dat(
     relative_to=None,
 ) -> None:
     """Add annotations from a .dat file to an existing store. Make
-    a best effort to create valid shapely geometries from provided contours.
 
     Args:
         fp (Union[IO, str, Path]):
