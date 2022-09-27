@@ -1162,6 +1162,7 @@ class AnnotationStore(ABC, MutableMapping):
                 at non-baseline resolution.
             relative_to [float, float]:
                 The x and y coordinates to use as the origin for the annotations.
+
         """
 
         def transform_geom(geom):
