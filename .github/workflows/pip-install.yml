@@ -1,16 +1,10 @@
-# This workflow will install the package as is on the GitHub default branch using pip
+# This workflow will install the package as is on the github default branch using pip
 
 name: pip Install
 
 on:
     push:
-        paths: [ "requirements*.yml",
-                 "conda-env-create.yml",
-                 "requirement*.txt",
-                 "setup*py",
-                 "setup*cfg",
-                 "pytproject*toml",
-                 "MANIFEST*in"]
+        paths: [ "requirements*.yml", "conda-env-create.yml", "requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
 
 jobs:
   build:
