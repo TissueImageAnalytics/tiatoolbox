@@ -1605,6 +1605,7 @@ class SQLiteStore(AnnotationStore):
                 properties TEXT,         -- JSON properties
                 area INTEGER NOT NULL    -- Area (for ordering)
             )
+
             """
         )
         if self.auto_commit:
