@@ -1164,7 +1164,6 @@ class AnnotationStore(ABC, MutableMapping):
                 The x and y coordinates to use as the origin for the annotations.
 
         """
-
         def transform_geom(geom):
             """Helper function to transform a geometry if needed."""
             if relative_to is not None:
