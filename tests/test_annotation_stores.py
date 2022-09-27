@@ -867,6 +867,7 @@ class TestStore:
     @staticmethod
     def test_transform_db(fill_store, tmp_path, store_cls):
         """Test translating a store."""
+
         def test_translation(geom):
             """Performs a translation of input geometry."""
             return affinity.translate(geom, 100, 100)
