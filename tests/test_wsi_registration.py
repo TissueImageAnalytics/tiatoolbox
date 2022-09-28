@@ -237,4 +237,3 @@ def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
 
     df = DFBRegister()
     _ = df.register(fixed_img, moving_img, fixed_msk, moving_msk)
-    print("hello")
