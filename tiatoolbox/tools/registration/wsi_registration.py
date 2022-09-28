@@ -773,46 +773,51 @@ class DFBRegister:
             moving_mask, tissue_transform[0:-1][:], fixed_tissue.shape[:2][::-1]
         )
 
-        blocks_bbox = [
+        blocks_bounding_box = [
             [
                 0,
-                np.floor(fixed_tissue.shape[0] / 2),
+                int(np.floor(fixed_tissue.shape[0] / 2)),
                 0,
-                np.floor(fixed_tissue.shape[1] / 2),
+                int(np.floor(fixed_tissue.shape[1] / 2)),
             ],
             [
                 0,
-                np.floor(fixed_tissue.shape[0] / 2),
-                np.ceil(fixed_tissue.shape[1] / 2),
+                int(np.floor(fixed_tissue.shape[0] / 2)),
+                int(np.ceil(fixed_tissue.shape[1] / 2)),
                 fixed_tissue.shape[1],
             ],
             [
-                np.ceil(fixed_tissue.shape[0] / 2),
+                int(np.ceil(fixed_tissue.shape[0] / 2)),
                 fixed_tissue.shape[0],
                 0,
-                np.floor(fixed_tissue.shape[1] / 2),
+                int(np.floor(fixed_tissue.shape[1] / 2)),
             ],
             [
-                np.ceil(fixed_tissue.shape[0] / 2),
+                int(np.ceil(fixed_tissue.shape[0] / 2)),
                 fixed_tissue.shape[0],
-                np.ceil(fixed_tissue.shape[1] / 2),
+                int(np.ceil(fixed_tissue.shape[1] / 2)),
                 fixed_tissue.shape[1],
             ],
         ]
         fixed_matched_points, moving_matched_points, quality = [], [], []
-        for _index, block in enumerate(blocks_bbox):
-            bbox = [int(x) for x in block]
-            fixed_block = fixed_tissue[bbox[0] : bbox[1], bbox[2] : bbox[3], :]
-            moving_block = moving_tissue[bbox[0] : bbox[1], bbox[2] : bbox[3], :]
+        for _index, bounding_box in enumerate(blocks_bounding_box):
+            fixed_block = fixed_tissue[
+                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
+            ]
+            moving_block = moving_tissue[
+                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
+            ]
             features = self.extract_features(fixed_block, moving_block)
             (
                 fixed_block_matched_points,
                 moving_block_matched_points,
                 block_quality,
             ) = self.feature_mapping(features)
-            fixed_matched_points.append(fixed_block_matched_points + [bbox[2], bbox[0]])
+            fixed_matched_points.append(
+                fixed_block_matched_points + [bounding_box[2], bounding_box[0]]
+            )
             moving_matched_points.append(
-                moving_block_matched_points + [bbox[2], bbox[0]]
+                moving_block_matched_points + [bounding_box[2], bounding_box[0]]
             )
             quality.append(block_quality)
         fixed_matched_points, moving_matched_points, quality = (

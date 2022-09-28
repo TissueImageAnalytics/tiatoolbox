@@ -235,6 +235,10 @@ def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
         moving_msk, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
     )
 
+    expected = np.array(
+        [[0.99683, 0.00333, -0.58767], [0.03201, 0.98420, 3.84398], [0, 0, 1]]
+    )
     df = DFBRegister()
-    _ = df.register(fixed_img, moving_img, fixed_msk, moving_msk)
-    print("hello")
+    output = df.register(fixed_img, moving_img, fixed_msk, moving_msk)
+    assert output.shape == (3, 3)
+    assert np.abs(np.mean((expected - output)) == 0) < 1e-5
