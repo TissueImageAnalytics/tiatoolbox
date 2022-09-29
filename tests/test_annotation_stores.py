@@ -465,6 +465,16 @@ def test_remove_area_column(fill_store):
     assert "area" not in store.indexes()
 
 
+def test_remove_area_column_indexed(fill_store):
+    """Test removing an area column if theres an index on it."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.create_index("area", '"area"')
+    store.remove_area_column()
+    assert "area" not in store._get_table_columns()
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200
+
+
 def test_add_area_column(fill_store):
     """Test adding an area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
@@ -506,6 +516,7 @@ def test_auto_commit(fill_store, tmp_path):
 
     Check that if auto-commit is False, the changes are not committed until
     commit() is called.
+
     """
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     store.close()
@@ -846,7 +857,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_path_transform(fill_store, tmp_path, store_cls):
-        """Test loading from geojson with a transform"""
+        """Test loading from geojson with a transform."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
         store.to_geojson(tmp_path / "polygon.json")
@@ -864,7 +875,7 @@ class TestStore:
         """Test translating a store."""
 
         def test_translation(geom):
-            """Performas a translation of input geometry."""
+            """Performs a translation of input geometry."""
             return affinity.translate(geom, 100, 100)
 
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
@@ -891,7 +902,7 @@ class TestStore:
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.json", "w") as fh:
-            geojson = store.to_geojson(fp=fh)
+            geojson = store.to_geojson(full_path=fh)
         assert geojson is None
         with open(tmp_path / "polygon.json", "r") as fh:
             geodict = json.load(fh)
@@ -904,7 +915,7 @@ class TestStore:
     def test_to_geojson_path(fill_store, tmp_path, store_cls):
         """Test exporting to geojson with a file path."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        geojson = store.to_geojson(fp=tmp_path / "polygon.json")
+        geojson = store.to_geojson(full_path=tmp_path / "polygon.json")
         assert geojson is None
         with open(tmp_path / "polygon.json", "r") as fh:
             geodict = json.load(fh)
@@ -930,7 +941,7 @@ class TestStore:
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.ndjson", "w") as fh:
-            ndjson = store.to_ndjson(fp=fh)
+            ndjson = store.to_ndjson(full_path=fh)
         assert ndjson is None
         with open(tmp_path / "polygon.ndjson", "r") as fh:
             for line in fh.readlines():
@@ -944,7 +955,7 @@ class TestStore:
     def test_to_ndjson_path(fill_store, tmp_path, store_cls):
         """Test exporting to ndjson with a file path."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        ndjson = store.to_ndjson(fp=tmp_path / "polygon.ndjson")
+        ndjson = store.to_ndjson(full_path=tmp_path / "polygon.ndjson")
         assert ndjson is None
         with open(tmp_path / "polygon.ndjson", "r") as fh:
             for line in fh.readlines():

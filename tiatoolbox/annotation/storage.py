@@ -22,6 +22,8 @@ Properties
     Key-value pairs associated with a geometry.
 
 """
+from __future__ import annotations
+
 import contextlib
 import copy
 import io
@@ -291,11 +293,11 @@ class AnnotationStore(ABC, MutableMapping):
 
     @classmethod  # noqa: A003
     @abstractmethod
-    def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStore":  # noqa: A003
+    def open(cls, full_path: Union[Path, str, IO]) -> "AnnotationStore":  # noqa: A003
         """Load a store object from a path or file-like object.
 
         Args:
-            fp(Path or str or IO): The file path or file handle.
+            full_path(Path or str or IO): The file path or file handle.
 
         Returns:
             AnnotationStoreABC:
@@ -345,11 +347,11 @@ class AnnotationStore(ABC, MutableMapping):
         """Commit any in-memory changes to disk."""
 
     @abstractmethod
-    def dump(self, fp: Union[Path, str, IO]) -> None:
+    def dump(self, full_path: Union[Path, str, IO]) -> None:
         """Serialise a copy of the whole store to a file-like object.
 
         Args:
-            fp(Path or str or IO):
+            full_path(Path or str or IO):
                 A file path or file handle object for output to disk.
 
         """
@@ -1072,61 +1074,61 @@ class AnnotationStore(ABC, MutableMapping):
 
     @staticmethod
     def _dump_cases(
-        fp: Union[IO, str, Path, None],
+        full_path: Union[IO, str, Path, None],
         file_fn: Callable[[IO], None],
         none_fn: Callable[[], Union[str, bytes]],
     ) -> Optional[Union[str, bytes]]:
         """Helper function to handle cases for dumping.
 
         Args:
-            fp:
+            full_path:
                 The file path or handle to dump to.
             file_fn(Callable):
-                The function to call when fp is a file handle.
+                The function to call when full_path is a file handle.
             none_fn(Callable):
-                The function to call when fp is None.
+                The function to call when full_path is None.
 
         Returns:
             Any:
                 The result of dump. Depends on the provided functions.
 
         """
-        if fp is not None:
+        if full_path is not None:
             # It is a file-like object, write to it
-            if hasattr(fp, "write"):
-                return file_fn(fp)
+            if hasattr(full_path, "write"):
+                return file_fn(full_path)
             # Turn a path into a file handle, then write to it
-            with open(fp, "w", encoding="utf-8") as file_handle:
+            with open(full_path, "w", encoding="utf-8") as file_handle:
                 return file_fn(file_handle)
         # Return as str or bytes if no handle/path is given
         return none_fn()
 
     @staticmethod
     def _load_cases(
-        fp: Union[IO, str, Path],
+        full_path: Union[IO, str, Path],
         string_fn: Callable[[Union[str, bytes]], Any],
         file_fn: Callable[[IO], Any],
     ) -> Any:
         with contextlib.suppress(OSError):
-            if isinstance(fp, (Path, str)) and Path(fp).exists():
-                with open(fp) as file_handle:
+            if isinstance(full_path, (Path, str)) and Path(full_path).exists():
+                with open(full_path) as file_handle:
                     return file_fn(file_handle)
-        if isinstance(fp, (str, bytes)):
-            return string_fn(fp)
-        if hasattr(fp, "read"):
-            return file_fn(fp)
+        if isinstance(full_path, (str, bytes)):
+            return string_fn(full_path)
+        if hasattr(full_path, "read"):
+            return file_fn(full_path)
         raise IOError("Invalid file handle or path.")
 
     @classmethod
     def from_geojson(
         cls,
-        fp: Union[IO, str],
-        scale_factor=1,
-        relative_to=None,
+        full_path: Union[IO, str],
+        scale_factor: float = 1,
+        relative_to: Tuple[float, float] = None,
     ) -> "AnnotationStore":
         """Create a new database with annotations loaded from a geoJSON file.
         Args:
-            fp (Union[IO, str, Path]):
+            full_path (Union[IO, str, Path]):
                 The file path or handle to load from.
             scale_factor (float):
                 The scale factor to use when loading the annotations. All coordinates
@@ -1141,20 +1143,20 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         store = cls()
-        store.add_from_geojson(fp, scale_factor, relative_to=relative_to)
+        store.add_from_geojson(full_path, scale_factor, relative_to=relative_to)
         return store
 
     def add_from_geojson(
         self,
-        fp: Union[IO, str],
-        scale_factor=1,
-        relative_to=None,
+        full_path: Union[IO, str],
+        scale_factor: float = 1,
+        relative_to: Tuple[float, float] = None,
     ) -> None:
         """Add annotations from a .geojson file to an existing store. Make
         a best effort to create valid shapely geometries from provided contours.
 
         Args:
-            fp (Union[IO, str, Path]):
+            full_path (Union[IO, str, Path]):
                 The file path or handle to load from.
             scale_factor (float):
                 The scale factor to use when loading the annotations. All coordinates
@@ -1162,6 +1164,7 @@ class AnnotationStore(ABC, MutableMapping):
                 at non-baseline resolution.
             relative_to [float, float]:
                 The x and y coordinates to use as the origin for the annotations.
+
         """
 
         def transform_geom(geom):
@@ -1179,12 +1182,12 @@ class AnnotationStore(ABC, MutableMapping):
             return geom
 
         geojson = self._load_cases(
-            fp=fp,
+            full_path=full_path,
             string_fn=json.loads,
             file_fn=json.load,
         )
 
-        anns = [
+        annotations = [
             Annotation(
                 transform_geom(
                     feature2geometry(feature["geometry"]),
@@ -1194,10 +1197,10 @@ class AnnotationStore(ABC, MutableMapping):
             for feature in geojson["features"]
         ]
 
-        print(f"added {len(anns)} annotations")
-        self.append_many(anns)
+        print(f"added {len(annotations)} annotations")
+        self.append_many(annotations)
 
-    def to_geojson(self, fp: Optional[IO] = None) -> Optional[str]:
+    def to_geojson(self, full_path: Optional[IO] = None) -> Optional[str]:
         """Serialise the store to geoJSON.
 
         For more information on the geoJSON format see:
@@ -1205,13 +1208,13 @@ class AnnotationStore(ABC, MutableMapping):
         - https://tools.ietf.org/html/rfc7946
 
         Args:
-             fp (IO):
+             full_path (IO):
                 A file-like object supporting `.read`. Defaults to None
                 which returns geoJSON as a string.
 
         Returns:
             Optional[str]:
-                None if writing to file or the geoJSON string if `fp` is
+                None if writing to file or the geoJSON string if `full_path` is
                 None.
 
         """
@@ -1237,12 +1240,12 @@ class AnnotationStore(ABC, MutableMapping):
             file_handle.write("]}")
 
         return self._dump_cases(
-            fp=fp,
+            full_path=full_path,
             file_fn=write_geojson_to_file_handle,
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
 
-    def to_ndjson(self, fp: Optional[IO] = None) -> Optional[str]:
+    def to_ndjson(self, full_path: Optional[IO] = None) -> Optional[str]:
         """Serialise to New Line Delimited JSON.
 
         Each line contains a JSON object with the following format:
@@ -1271,12 +1274,12 @@ class AnnotationStore(ABC, MutableMapping):
 
 
         Args:
-            fp (IO): A file-like object supporting `.read`. Defaults to
+            full_path (IO): A file-like object supporting `.read`. Defaults to
                 None which returns geoJSON as a string.
 
         Returns:
             Optional[str]:
-                None if writing to file or the geoJSON string if`fp` is
+                None if writing to file or the geoJSON string if`full_path` is
                 None.
 
         """
@@ -1286,13 +1289,13 @@ class AnnotationStore(ABC, MutableMapping):
             for key, annotation in self.items()
         )
         return self._dump_cases(
-            fp=fp,
-            file_fn=lambda fp: fp.writelines(string_lines_generator),
+            full_path=full_path,
+            file_fn=lambda full_path: full_path.writelines(string_lines_generator),
             none_fn=lambda: "".join(string_lines_generator),
         )
 
     @classmethod
-    def from_ndjson(cls, fp: Union[IO, str]) -> "AnnotationStore":
+    def from_ndjson(cls, full_path: Union[IO, str]) -> "AnnotationStore":
         """Load annotations from NDJSON.
 
         Expects each line to be a JSON object with the following format:
@@ -1315,7 +1318,7 @@ class AnnotationStore(ABC, MutableMapping):
         annotation.
 
         Args:
-            fp (IO): A file-like object supporting `.read`.
+            full_path (IO): A file-like object supporting `.read`.
 
         Returns:
             AnnotationStore:
@@ -1324,9 +1327,9 @@ class AnnotationStore(ABC, MutableMapping):
         """
         store = cls()
         for line in cls._load_cases(
-            fp=fp,
-            string_fn=lambda fp: fp.splitlines(),
-            file_fn=lambda fp: fp.readlines(),
+            full_path=full_path,
+            string_fn=lambda full_path: full_path.splitlines(),
+            file_fn=lambda full_path: full_path.readlines(),
         ):
             dictionary = json.loads(line)
             key = dictionary.get("key", uuid.uuid4().hex)
@@ -1365,6 +1368,7 @@ class AnnotationStore(ABC, MutableMapping):
             transform (callable[Geometry, Geometry]):
                 A function that takes a geometry and returns a new
                 transformed geometry.
+
         """
         transformed_geoms = {
             key: transform(annotation.geometry) for key, annotation in self.items()
@@ -1401,6 +1405,7 @@ class SQLiteMetadata(MutableMapping):
             Path object.
         con (sqlite3.Connection):
             The sqlite3 database connection.
+
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
@@ -1456,15 +1461,15 @@ class SQLiteStore(AnnotationStore):
     """
 
     @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str]) -> "SQLiteStore":  # noqa: A003
-        return SQLiteStore(fp)
+    def open(cls, full_path: Union[Path, str]) -> "SQLiteStore":  # noqa: A003
+        return SQLiteStore(full_path)
 
     def __init__(
         self,
         connection: Union[Path, str, IO] = ":memory:",
-        compression="zlib",
-        compression_level=9,
-        auto_commit=True,
+        compression: str = "zlib",
+        compression_level: int = 9,
+        auto_commit: bool = True,
     ) -> None:
         super().__init__()
         # Check that JSON and RTree support is enabled
@@ -1603,6 +1608,7 @@ class SQLiteStore(AnnotationStore):
                 properties TEXT,         -- JSON properties
                 area INTEGER NOT NULL    -- Area (for ordering)
             )
+
             """
         )
         if self.auto_commit:
@@ -1787,6 +1793,7 @@ class SQLiteStore(AnnotationStore):
                     NULL, :key, :geom_type,
                     :cx, :cy, :geometry, :properties, :area
                 )
+
                 """,
             token,
         )
@@ -2583,10 +2590,10 @@ class SQLiteStore(AnnotationStore):
     def commit(self) -> None:
         self.con.commit()
 
-    def dump(self, fp: Union[Path, str, IO]) -> None:
-        if hasattr(fp, "write"):
-            fp = fp.name
-        target = sqlite3.connect(fp)
+    def dump(self, full_path: Union[Path, str, IO]) -> None:
+        if hasattr(full_path, "write"):
+            full_path = full_path.name
+        target = sqlite3.connect(full_path)
         self.con.backup(target)
 
     def dumps(self) -> str:
@@ -2686,9 +2693,9 @@ class DictionaryStore(AnnotationStore):
         self.path = self._connection_to_path(connection)
         if self.connection not in [None, ":memory:"] and self.path.exists():
             for line in self._load_cases(
-                fp=self.connection,
-                string_fn=lambda fp: fp.splitlines(),
-                file_fn=lambda fp: fp.readlines(),
+                full_path=self.connection,
+                string_fn=lambda full_path: full_path.splitlines(),
+                file_fn=lambda full_path: full_path.readlines(),
             ):
                 dictionary = json.loads(line)
                 key = dictionary.get("key", uuid.uuid4().hex)
@@ -2745,8 +2752,8 @@ class DictionaryStore(AnnotationStore):
         return len(self._rows)
 
     @classmethod  # noqa: A003
-    def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":  # noqa: A003
-        return cls.from_ndjson(fp)
+    def open(cls, full_path: Union[Path, str, IO]) -> "DictionaryStore":  # noqa: A003
+        return cls.from_ndjson(full_path)
 
     def commit(self) -> None:
         if str(self.connection) == ":memory:":
@@ -2756,8 +2763,8 @@ class DictionaryStore(AnnotationStore):
             self.path.touch()
         self.dump(self.connection)
 
-    def dump(self, fp: Union[Path, str, IO]) -> None:
-        return self.to_ndjson(fp)
+    def dump(self, full_path: Union[Path, str, IO]) -> None:
+        return self.to_ndjson(full_path)
 
     def dumps(self) -> str:
         return self.to_ndjson()

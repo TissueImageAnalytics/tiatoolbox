@@ -1392,8 +1392,8 @@ def test_from_dat(tmp_path):
     assert len(store) == 2
 
 
-def test_from_dat_typedict(tmp_path):
-    """Test generating an annotation store from a .dat file with a typedict."""
+def test_from_dat_type_dict(tmp_path):
+    """Test generating an annotation store from a .dat file with a type dict."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
@@ -1417,7 +1417,7 @@ def test_from_dat_transformed(tmp_path):
     assert np.rint(poly.geometry.centroid.y) == 150
 
 
-def test_from_multihead_dat(tmp_path):
+def test_from_multi_head_dat(tmp_path):
     """Test generating an annotation store from a .dat file with multiple heads."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
@@ -1425,7 +1425,7 @@ def test_from_multihead_dat(tmp_path):
         "A": head_a,
         "B": head_b,
         "resolution": 0.5,
-        "othermetadata": {"foo": "bar"},
+        "other_meta_data": {"foo": "bar"},
     }
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(tmp_path / "test.dat")
@@ -1454,7 +1454,7 @@ def test_invalid_poly(tmp_path):
     assert next(iter(result.values())).geometry.is_valid
 
 
-def test_from_multihead_dat_typedict(tmp_path):
+def test_from_multi_head_dat_type_dict(tmp_path):
     """Test generating a store from a .dat file with multiple heads, with typedict."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])

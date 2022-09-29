@@ -5,7 +5,7 @@ import os
 import pathlib
 import warnings
 import zipfile
-from typing import IO, Union
+from typing import IO, Dict, Optional, Tuple, Union
 
 import cv2
 import joblib
@@ -857,15 +857,16 @@ def select_cv2_interpolation(scale_factor):
 
 
 def store_from_dat(
-    fp: Union[IO, str],
-    scale_factor=1,
-    typedict=None,
-    relative_to=None,
+    full_path: Union[IO, str],
+    scale_factor: float = 1,
+    typedict: Optional[Dict] = None,
+    relative_to: Optional[Tuple[float, float]] = None,
     cls: AnnotationStore = SQLiteStore,
 ) -> "AnnotationStore":
     """Load annotations from a hovernet-style .dat file.
+
     Args:
-        fp (Union[IO, str, Path]):
+        full_path (Union[IO, str, Path]):
             The file path or handle to load from.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
@@ -891,12 +892,25 @@ def store_from_dat(
 
     """
     store = cls()
-    add_from_dat(store, fp, scale_factor, typedict=typedict, relative_to=relative_to)
+    add_from_dat(
+        store, full_path, scale_factor, typedict=typedict, relative_to=relative_to
+    )
     return store
 
 
 def make_valid_poly(poly, relative_to=None):
-    """Helper function to make a valid polygon."""
+    """Helper function to make a valid polygon.
+
+    Args:
+        poly (Polygon):
+            The polygon to make valid.
+        relative_to (Tuple[float, float]):
+            The x and y coordinates to use as the origin for the annotation.
+
+    Returns:
+        A valid geometry.
+
+    """
     if relative_to is not None:
         # transform coords to be relative to given pt.
         poly = translate(poly, -relative_to[0], -relative_to[1])
@@ -907,9 +921,26 @@ def make_valid_poly(poly, relative_to=None):
 
 
 def anns_from_hoverdict(data, props, typedict, relative_to, scale_factor):
-    """Helper function to create list of Annotation objects from a
-    hovernet-style dict of segmentations, mapping types using typedict
-    if provided.
+    """Helper function to create list of Annotation objects.
+
+    Creates annotations from a hovernet-style dict of segmentations, mapping types
+    using type dict if provided.
+
+    Args:
+        data (dict):
+            A dictionary of segmentations
+        props (list):
+            A list of properties
+        typedict (dict):
+            A dictionary mapping annotation types to more descriptive names.
+        relative_to (tuple):
+            The x and y coordinates to use as the origin for the annotations.
+        scale_factor (float):
+            The scale factor to use when loading the annotations. All coordinates
+            will be multiplied by this factor.
+    Returns:
+        A list of Annotation objects.
+
     """
     return [
         Annotation(
@@ -941,6 +972,15 @@ def make_default_dict(data, subcat):
     types from different heads of a multi-head model.
     For example, types 1,2, etc in the 'Gland' head will become
     'Gla: 1', 'Gla: 2', etc.
+
+    Args:
+        data (dict):
+            The data loaded from the .dat file.
+        subcat:
+            The subcategory of the data, eg 'Gland' or 'Nuclei'.
+    Returns:
+        A dictionary mapping types to more descriptive names.
+
     """
     types = {
         data[subcat][ann_id]["type"]
@@ -953,16 +993,17 @@ def make_default_dict(data, subcat):
 
 def add_from_dat(
     store,
-    fp: Union[IO, str],
-    scale_factor=1,
-    typedict=None,
-    relative_to=None,
+    full_path: Union[IO, str],
+    scale_factor: float = 1,
+    typedict: Optional[Dict] = None,
+    relative_to: Optional[Tuple[float, float]] = None,
 ) -> None:
-    """Add annotations from a .dat file to an existing store. Make
-    a best effort to create valid shapely geometries from provided contours.
+    """Add annotations from a .dat file to an existing store.
+
+    Make a best effort to create valid shapely geometries from provided contours.
 
     Args:
-        fp (Union[IO, str, Path]):
+        full_path (Union[IO, str, Path]):
             The file path or handle to load from.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
@@ -979,8 +1020,10 @@ def add_from_dat(
                 'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
         relative_to [float, float]:
             The x and y coordinates to use as the origin for the annotations.
+
     """
-    data = joblib.load(fp)
+
+    data = joblib.load(full_path)
     props = list(data[list(data.keys())[0]].keys())
     if "contour" not in props:
         # assume cerberus format with objects subdivided into categories
