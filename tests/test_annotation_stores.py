@@ -851,7 +851,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_path_transform(fill_store, tmp_path, store_cls):
-        """Test loading from geojson with a transform"""
+        """Test loading from geojson with a transform."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
         store.to_geojson(tmp_path / "polygon.json")

@@ -998,8 +998,9 @@ def add_from_dat(
     typedict: Optional[Dict] = None,
     relative_to: Optional[tuple[float, float]] = None,
 ) -> None:
-    """Add annotations from a .dat file to an existing store. Make
-    a best effort to create valid shapely geometries from provided contours.
+    """Add annotations from a .dat file to an existing store.
+
+    Make a best effort to create valid shapely geometries from provided contours.
 
     Args:
         full_path (Union[IO, str, Path]):

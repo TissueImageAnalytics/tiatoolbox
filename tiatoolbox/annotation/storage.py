@@ -1164,6 +1164,7 @@ class AnnotationStore(ABC, MutableMapping):
                 at non-baseline resolution.
             relative_to [float, float]:
                 The x and y coordinates to use as the origin for the annotations.
+
         """
 
         def transform_geom(geom):
@@ -1367,6 +1368,7 @@ class AnnotationStore(ABC, MutableMapping):
             transform (callable[Geometry, Geometry]):
                 A function that takes a geometry and returns a new
                 transformed geometry.
+
         """
         transformed_geoms = {
             key: transform(annotation.geometry) for key, annotation in self.items()
@@ -1403,6 +1405,7 @@ class SQLiteMetadata(MutableMapping):
             Path object.
         con (sqlite3.Connection):
             The sqlite3 database connection.
+
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
@@ -1605,6 +1608,7 @@ class SQLiteStore(AnnotationStore):
                 properties TEXT,         -- JSON properties
                 area INTEGER NOT NULL    -- Area (for ordering)
             )
+
             """
         )
         if self.auto_commit:
@@ -1789,6 +1793,7 @@ class SQLiteStore(AnnotationStore):
                     NULL, :key, :geom_type,
                     :cx, :cy, :geometry, :properties, :area
                 )
+
                 """,
             token,
         )
