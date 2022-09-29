@@ -553,6 +553,7 @@ class AnnotationRenderer:
         edge_thickness=1,
         secondary_cmap=None,
         blur_radius=0,
+        score_prop_edge=None,
     ):
         if mapper is None:
             mapper = cm.get_cmap("jet")
@@ -566,7 +567,7 @@ class AnnotationRenderer:
         else:
             self.mapper = mapper
         self.score_prop = score_prop
-        self.score_prop_edge = None
+        self.score_prop_edge = score_prop_edge
         self.where = where
         self.score_fn = score_fn
         self.max_scale = max_scale
