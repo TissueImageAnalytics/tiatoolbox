@@ -5,7 +5,7 @@ import os
 import pathlib
 import warnings
 import zipfile
-from typing import IO, Union
+from typing import IO, Dict, Optional, Union
 
 import cv2
 import joblib
@@ -857,16 +857,16 @@ def select_cv2_interpolation(scale_factor):
 
 
 def store_from_dat(
-    fp: Union[IO, str],
-    scale_factor=1,
-    typedict=None,
-    relative_to=None,
+    full_path: Union[IO, str],
+    scale_factor: float = 1,
+    typedict: Optional[Dict] = None,
+    relative_to: Optional[tuple[float, float]] = None,
     cls: AnnotationStore = SQLiteStore,
 ) -> "AnnotationStore":
     """Load annotations from a hovernet-style .dat file.
 
     Args:
-        fp (Union[IO, str, Path]):
+        full_path (Union[IO, str, Path]):
             The file path or handle to load from.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
@@ -892,7 +892,9 @@ def store_from_dat(
 
     """
     store = cls()
-    add_from_dat(store, fp, scale_factor, typedict=typedict, relative_to=relative_to)
+    add_from_dat(
+        store, full_path, scale_factor, typedict=typedict, relative_to=relative_to
+    )
     return store
 
 
@@ -991,16 +993,16 @@ def make_default_dict(data, subcat):
 
 def add_from_dat(
     store,
-    fp: Union[IO, str],
-    scale_factor=1,
-    typedict=None,
-    relative_to=None,
+    full_path: Union[IO, str],
+    scale_factor: float = 1,
+    typedict: Optional[Dict] = None,
+    relative_to: Optional[tuple[float, float]] = None,
 ) -> None:
     """Add annotations from a .dat file to an existing store. Make
     a best effort to create valid shapely geometries from provided contours.
 
     Args:
-        fp (Union[IO, str, Path]):
+        full_path (Union[IO, str, Path]):
             The file path or handle to load from.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
@@ -1020,7 +1022,7 @@ def add_from_dat(
 
     """
 
-    data = joblib.load(fp)
+    data = joblib.load(full_path)
     props = list(data[list(data.keys())[0]].keys())
     if "contour" not in props:
         # assume cerberus format with objects subdivided into categories
