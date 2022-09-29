@@ -1124,7 +1124,7 @@ class AnnotationStore(ABC, MutableMapping):
         cls,
         full_path: Union[IO, str],
         scale_factor: float = 1,
-        relative_to: tuple[float, float] = None,
+        relative_to: Tuple[float, float] = None,
     ) -> "AnnotationStore":
         """Create a new database with annotations loaded from a geoJSON file.
         Args:
@@ -1150,7 +1150,7 @@ class AnnotationStore(ABC, MutableMapping):
         self,
         full_path: Union[IO, str],
         scale_factor: float = 1,
-        relative_to: tuple[float, float] = None,
+        relative_to: Tuple[float, float] = None,
     ) -> None:
         """Add annotations from a .geojson file to an existing store. Make
         a best effort to create valid shapely geometries from provided contours.

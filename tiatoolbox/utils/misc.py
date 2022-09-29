@@ -5,7 +5,7 @@ import os
 import pathlib
 import warnings
 import zipfile
-from typing import IO, Dict, Optional, Union
+from typing import IO, Dict, Optional, Tuple, Union
 
 import cv2
 import joblib
@@ -860,7 +860,7 @@ def store_from_dat(
     full_path: Union[IO, str],
     scale_factor: float = 1,
     typedict: Optional[Dict] = None,
-    relative_to: Optional[tuple[float, float]] = None,
+    relative_to: Optional[Tuple[float, float]] = None,
     cls: AnnotationStore = SQLiteStore,
 ) -> "AnnotationStore":
     """Load annotations from a hovernet-style .dat file.
@@ -996,7 +996,7 @@ def add_from_dat(
     full_path: Union[IO, str],
     scale_factor: float = 1,
     typedict: Optional[Dict] = None,
-    relative_to: Optional[tuple[float, float]] = None,
+    relative_to: Optional[Tuple[float, float]] = None,
 ) -> None:
     """Add annotations from a .dat file to an existing store.
 
