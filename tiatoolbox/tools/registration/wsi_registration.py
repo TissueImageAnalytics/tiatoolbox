@@ -316,14 +316,6 @@ class DFBRegister:
                 The expected format is {layer_name: features}.
 
         """
-        if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
-            raise ValueError(
-                "The required shape for fixed and moving images is n x m x 3."
-            )
-
-        if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
-            raise ValueError("The input images are expected to have 3 channels.")
-
         self.x_scale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
         self.y_scale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
         fixed_cnn = imresize(
@@ -706,10 +698,15 @@ class DFBRegister:
             )
             duplicate_ind = np.hstack([duplicate_ind, repeated_idx.ravel()])
 
-        duplicate_ind = duplicate_ind.astype(int)
-        fixed_matched_points = np.delete(fixed_matched_points, duplicate_ind, axis=0)
-        moving_matched_points = np.delete(moving_matched_points, duplicate_ind, axis=0)
-        quality = np.delete(quality, duplicate_ind)
+        if len(duplicate_ind) > 0:
+            duplicate_ind = duplicate_ind.astype(int)
+            fixed_matched_points = np.delete(
+                fixed_matched_points, duplicate_ind, axis=0
+            )
+            moving_matched_points = np.delete(
+                moving_matched_points, duplicate_ind, axis=0
+            )
+            quality = np.delete(quality, duplicate_ind)
 
         return fixed_matched_points, moving_matched_points, quality
 
@@ -740,6 +737,14 @@ class DFBRegister:
                 An affine transformation matrix.
 
         """
+        if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
+            raise ValueError(
+                "The required shape for fixed and moving images is n x m x 3."
+            )
+
+        if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
+            raise ValueError("The input images are expected to have 3 channels.")
+
         (
             fixed_tissue,
             fixed_mask,

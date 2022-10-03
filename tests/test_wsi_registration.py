@@ -14,24 +14,7 @@ from tiatoolbox.utils.misc import imread
 
 def test_extract_features(fixed_image, moving_image, dfbr_features):
     """Test for CNN based feature extraction function."""
-
-    fixed_img = imread(fixed_image)
-    moving_img = imread(moving_image)
-
     df = DFBRegister()
-    with pytest.raises(
-        ValueError,
-        match=r".*The required shape for fixed and moving images is n x m x 3.*",
-    ):
-        _ = df.extract_features(fixed_img[:, :, 0], moving_img[:, :, 0])
-
-    fixed_img = np.expand_dims(fixed_img[:, :, 0], axis=2)
-    moving_img = np.expand_dims(moving_img[:, :, 0], axis=2)
-    with pytest.raises(
-        ValueError, match=r".*The input images are expected to have 3 channels.*"
-    ):
-        _ = df.extract_features(fixed_img, moving_img)
-
     fixed_img = np.repeat(
         np.expand_dims(
             np.repeat(
@@ -227,6 +210,20 @@ def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
     fixed_msk = imread(fixed_mask)
     moving_msk = imread(moving_mask)
 
+    df = DFBRegister()
+    with pytest.raises(
+        ValueError,
+        match=r".*The required shape for fixed and moving images is n x m x 3.*",
+    ):
+        _ = df.register(fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk, moving_msk)
+
+    with pytest.raises(
+        ValueError, match=r".*The input images are expected to have 3 channels.*"
+    ):
+        _ = df.register(
+            fixed_img[:, :, :1], moving_img[:, :, :1], fixed_msk, moving_msk
+        )
+
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
     moving_img = cv2.warpAffine(
         moving_img, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
@@ -238,7 +235,7 @@ def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
     expected = np.array(
         [[0.99683, 0.00333, -0.58767], [0.03201, 0.98420, 3.84398], [0, 0, 1]]
     )
-    df = DFBRegister()
+
     output = df.register(fixed_img, moving_img, fixed_msk, moving_msk)
     assert output.shape == (3, 3)
     assert np.abs(np.mean((expected - output)) == 0) < 1e-5
