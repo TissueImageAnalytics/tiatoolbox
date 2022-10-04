@@ -146,10 +146,10 @@ def prealignment(
         return all_transform[all_dice.index(max(all_dice))]
 
     warnings.warn(
-        "Not able to find the best transformation. Try changing the values for"
-        " 'dice_overlap' and 'rotation_step'."
+        "Not able to find the best transformation for pre-alignment. "
+        "Try changing the values for 'dice_overlap' and 'rotation_step'."
     )
-    return None
+    return np.eye(3)
 
 
 def match_histograms(
@@ -531,9 +531,8 @@ class DFBRegister:
         y = np.hstack([points_1[:num_points], np.ones((num_points, 1))])
 
         matrix = np.linalg.lstsq(x, y, rcond=-1)[0].T
-        matrix[-1, :] = [0, 0, 1]
 
-        return matrix
+        return matrix[:2, :]
 
     @staticmethod
     def get_tissue_regions(
@@ -716,6 +715,7 @@ class DFBRegister:
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
+        transform_initializer: np.ndarray = None,
     ) -> np.ndarray:
         """Image Registration.
 
@@ -731,6 +731,8 @@ class DFBRegister:
                 A binary tissue mask for the fixed image.
             moving_mask (:class:`numpy.ndarray`):
                 A binary tissue mask for the moving image.
+            transform_initializer (:class:`numpy.ndarray`):
+                A rigid transformation matrix.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -745,6 +747,18 @@ class DFBRegister:
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
             raise ValueError("The input images are expected to have 3 channels.")
 
+        if not transform_initializer:
+            transform_initializer = prealignment(
+                fixed_img[:, :, 0], moving_img[:, :, 0], fixed_mask, moving_mask
+            )
+
+        moving_img = cv2.warpAffine(
+            moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+        )
+        moving_mask = cv2.warpAffine(
+            moving_mask, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+        )
+
         (
             fixed_tissue,
             fixed_mask,
@@ -756,6 +770,7 @@ class DFBRegister:
         fixed_matched_points, moving_matched_points, quality = self.feature_mapping(
             features
         )
+
         (
             fixed_matched_points,
             moving_matched_points,
@@ -771,11 +786,12 @@ class DFBRegister:
         tissue_transform = DFBRegister.estimate_affine_transform(
             fixed_matched_points, moving_matched_points
         )
+
         moving_tissue = cv2.warpAffine(
-            moving_tissue, tissue_transform[0:-1][:], fixed_tissue.shape[:2][::-1]
+            moving_tissue, tissue_transform, fixed_tissue.shape[:2][::-1]
         )
         moving_mask = cv2.warpAffine(
-            moving_mask, tissue_transform[0:-1][:], fixed_tissue.shape[:2][::-1]
+            moving_mask, tissue_transform, fixed_tissue.shape[:2][::-1]
         )
 
         blocks_bounding_box = [
@@ -859,7 +875,12 @@ class DFBRegister:
                 [0, 0, 1],
             ]
         )
+        tissue_transform = np.vstack([tissue_transform, np.array([0, 0, 1])])
+        block_transform = np.vstack([block_transform, np.array([0, 0, 1])])
         return np.matmul(
-            np.matmul(np.matmul(translation, block_transform), tissue_transform),
-            translation_,
+            np.matmul(
+                np.matmul(np.matmul(translation, block_transform), tissue_transform),
+                translation_,
+            ),
+            transform_initializer,
         )
