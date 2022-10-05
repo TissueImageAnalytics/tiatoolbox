@@ -18,7 +18,7 @@ import pandas as pd
 import tifffile
 import zarr
 
-from tiatoolbox import tools, utils
+from tiatoolbox import utils
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
@@ -1293,6 +1293,8 @@ class WSIReader:
                 Extra kwargs passed to the masker class.
 
         """
+        from tiatoolbox.tools import tissuemask
+
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
             raise ValueError(f"Invalid tissue masking method: {method}.")
@@ -1303,11 +1305,11 @@ class WSIReader:
                 mpp = resolution
             elif units == "power":
                 power = resolution
-            masker = tools.tissuemask.MorphologicalMasker(
+            masker = tissuemask.MorphologicalMasker(
                 mpp=mpp, power=power, **masker_kwargs
             )
         elif method == "otsu":
-            masker = tools.tissuemask.OtsuTissueMasker(**masker_kwargs)
+            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         mask_img = masker.fit_transform([thumbnail])[0]
         return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
