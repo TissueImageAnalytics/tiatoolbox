@@ -71,14 +71,9 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
     fixed_mask = imread(fixed_mask)
     moving_mask = imread(moving_mask)
 
-    with pytest.raises(
-        ValueError, match=r".*The input images should be grayscale images.*"
-    ):
-        _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask)
-
     expected = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
-    output = prealignment(
+    output, _, _, _ = prealignment(
         fixed_img,
         moving_img,
         fixed_mask,
@@ -86,9 +81,7 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
         dice_overlap=0.5,
         rotation_step=10,
     )
-    assert output.shape == (3, 3)
-    assert np.mean((expected[:2, :2] - output[:2, :2])) <= 0.98
-    assert np.mean(output[:2, 2] - expected[:2, 2]) < 1.0
+    assert np.linalg.norm(expected - output) < 0.05
 
     no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
     no_moving_mask = np.zeros(shape=moving_img.shape, dtype=int)
@@ -225,17 +218,16 @@ def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
         )
 
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
-    moving_img = cv2.warpAffine(
-        moving_img, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
-    )
-    moving_msk = cv2.warpAffine(
-        moving_msk, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
-    )
 
     expected = np.array(
-        [[0.99683, 0.00333, -0.58767], [0.03201, 0.98420, 3.84398], [0, 0, 1]]
+        [[-0.99683, -0.00333, 338.69983], [-0.03201, -0.98420, 770.22941], [0, 0, 1]]
     )
 
-    output = df.register(fixed_img, moving_img, fixed_msk, moving_msk)
-    assert output.shape == (3, 3)
-    assert np.abs(np.mean((expected - output)) == 0) < 1e-5
+    output = df.register(
+        fixed_img,
+        moving_img,
+        fixed_msk,
+        moving_msk,
+        transform_initializer=pre_transform,
+    )
+    assert np.linalg.norm(expected - output) < 0.05

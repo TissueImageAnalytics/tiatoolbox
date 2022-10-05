@@ -8,7 +8,6 @@ import torch
 import torchvision
 from matplotlib import path
 from skimage import exposure, filters
-from skimage.measure import regionprops
 from skimage.util import img_as_float
 
 from tiatoolbox.utils.metrics import dice
@@ -20,34 +19,44 @@ def _check_dims(
     moving_img: np.ndarray,
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
-) -> None:
+) -> Tuple[np.ndarray, np.ndarray]:
     """Check the dimensionality of images and mask.
+
+    This function verify the dimensionality of images and their corresponding masks.
+    If the input images are RGB images, it converts them to grayscale images.
 
     Args:
         fixed_img (:class:`numpy.ndarray`):
-            A grayscale fixed image.
+            A fixed image.
         moving_img (:class:`numpy.ndarray`):
-            A grayscale moving image.
+            A moving image.
         fixed_mask (:class:`numpy.ndarray`):
             A binary tissue mask for the fixed image.
         moving_mask (:class:`numpy.ndarray`):
             A binary tissue mask for the moving image.
 
     Returns:
-        None
+        tuple:
+            - :class:`numpy.ndarray`: A grayscale fixed image.
+            - :class:`numpy.ndarray`: A grayscale moving image.
 
     """
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(moving_mask)) == 1:
         raise ValueError("The foreground is missing in the mask.")
 
-    if len(fixed_img.shape) != 2 or len(moving_img.shape) != 2:
-        raise ValueError("The input images should be grayscale images.")
-
     if (
-        fixed_img.shape[:] != fixed_mask.shape[:]
-        or moving_img.shape[:] != moving_mask.shape[:]
+        fixed_img.shape[:2] != fixed_mask.shape
+        or moving_img.shape[:2] != moving_mask.shape
     ):
         raise ValueError("Mismatch of shape between image and its corresponding mask.")
+
+    if len(fixed_img.shape) == 3:
+        fixed_img = cv2.cvtColor(fixed_img, cv2.COLOR_BGR2GRAY)
+
+    if len(moving_img.shape) == 3:
+        moving_img = cv2.cvtColor(moving_img, cv2.COLOR_BGR2GRAY)
+
+    return fixed_img, moving_img
 
 
 def prealignment(
@@ -57,7 +66,7 @@ def prealignment(
     moving_mask: np.ndarray,
     dice_overlap: float = 0.5,
     rotation_step: int = 10,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """Coarse registration of an image pair.
 
     This function performs initial alignment of a moving image with respect to a
@@ -65,9 +74,9 @@ def prealignment(
 
     Args:
         fixed_img (:class:`numpy.ndarray`):
-            A grayscale fixed image.
+            A fixed image.
         moving_img (:class:`numpy.ndarray`):
-            A grayscale moving image.
+            A moving image.
         fixed_mask (:class:`numpy.ndarray`):
             A binary tissue mask for the fixed image.
         moving_mask (:class:`numpy.ndarray`):
@@ -79,22 +88,26 @@ def prealignment(
             Rotation_step defines an increment in the rotation angles.
 
     Returns:
-        :class:`numpy.ndarray`:
-            A rigid transform matrix.
+        tuple:
+            - class:`numpy.ndarray`: A rigid transform matrix.
+            - class:`numpy.ndarray`: Transformed moving image.
+            - class:`numpy.ndarray`: Transformed moving mask.
+            - float: Dice overlap
 
     """
+    orig_fixed_img, orig_moving_img = fixed_img, moving_img
+
     if len(fixed_mask.shape) != 2:
         fixed_mask = fixed_mask[:, :, 0]
     if len(moving_mask.shape) != 2:
         moving_mask = moving_mask[:, :, 0]
 
-    fixed_img = np.squeeze(fixed_img)
-    moving_img = np.squeeze(moving_img)
-
     fixed_mask = np.uint8(fixed_mask > 0)
     moving_mask = np.uint8(moving_mask > 0)
 
-    _check_dims(fixed_img, moving_img, fixed_mask, moving_mask)
+    fixed_img = np.squeeze(fixed_img)
+    moving_img = np.squeeze(moving_img)
+    fixed_img, moving_img = _check_dims(fixed_img, moving_img, fixed_mask, moving_mask)
 
     if rotation_step < 10 or rotation_step > 20:
         raise ValueError("Please select the rotation step in between 10 and 20.")
@@ -104,6 +117,24 @@ def prealignment(
 
     fixed_img = exposure.rescale_intensity(img_as_float(fixed_img), in_range=(0, 1))
     moving_img = exposure.rescale_intensity(img_as_float(moving_img), in_range=(0, 1))
+
+    # Resizing of fixed and moving masks so that dice can be computed
+    height = np.max((fixed_mask.shape[0], moving_mask.shape[0]))
+    width = np.max((fixed_mask.shape[1], moving_mask.shape[1]))
+    padded_fixed_mask = np.pad(
+        fixed_mask,
+        pad_width=[(0, height - fixed_mask.shape[0]), (0, width - fixed_mask.shape[1])],
+        mode="constant",
+    )
+    padded_moving_mask = np.pad(
+        moving_mask,
+        pad_width=[
+            (0, height - moving_mask.shape[0]),
+            (0, width - moving_mask.shape[1]),
+        ],
+        mode="constant",
+    )
+    dice_before = dice(padded_fixed_mask, padded_moving_mask)
 
     cy, cx = ndi.center_of_mass((1 - fixed_img) * fixed_mask)
     fixed_com = [cx, cy]
@@ -143,13 +174,21 @@ def prealignment(
         all_transform.append(transform)
 
     if max(all_dice) >= dice_overlap:
-        return all_transform[all_dice.index(max(all_dice))]
+        dice_after = max(all_dice)
+        pre_transform = all_transform[all_dice.index(dice_after)]
+        moving_img = cv2.warpAffine(
+            orig_moving_img, pre_transform[0:-1][:], orig_fixed_img.shape[:2][::-1]
+        )
+        moving_mask = cv2.warpAffine(
+            moving_mask, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        )
+        return pre_transform, moving_img, moving_mask, dice_after
 
     warnings.warn(
         "Not able to find the best transformation for pre-alignment. "
         "Try changing the values for 'dice_overlap' and 'rotation_step'."
     )
-    return np.eye(3)
+    return np.eye(3), moving_img, moving_mask, dice_before
 
 
 def match_histograms(
@@ -531,8 +570,9 @@ class DFBRegister:
         y = np.hstack([points_1[:num_points], np.ones((num_points, 1))])
 
         matrix = np.linalg.lstsq(x, y, rcond=-1)[0].T
+        matrix[-1, :] = [0, 0, 1]
 
-        return matrix[:2, :]
+        return matrix
 
     @staticmethod
     def get_tissue_regions(
@@ -573,10 +613,11 @@ class DFBRegister:
         fixed_mask = np.uint8(fixed_mask > 0)
         moving_mask = np.uint8(moving_mask > 0)
 
-        regions = regionprops(fixed_mask)
-        fixed_minr, fixed_minc, fixed_maxr, fixed_maxc = regions[0].bbox
-        regions = regionprops(moving_mask)
-        moving_minr, moving_minc, moving_maxr, moving_maxc = regions[0].bbox
+        fixed_minc, fixed_minr, width, height = cv2.boundingRect(fixed_mask)
+        fixed_maxc, fixed_maxr = fixed_minc + width, fixed_minr + height
+        moving_minc, moving_minr, width, height = cv2.boundingRect(moving_mask)
+        moving_maxc, moving_maxr = moving_minc + width, moving_minr + height
+
         minc, maxc, minr, maxr = (
             np.min([fixed_minc, moving_minc]),
             np.max([fixed_maxc, moving_maxc]),
@@ -709,6 +750,177 @@ class DFBRegister:
 
         return fixed_matched_points, moving_matched_points, quality
 
+    def perform_dfbregister(
+        self,
+        fixed_img: np.ndarray,
+        moving_img: np.ndarray,
+        fixed_mask: np.ndarray,
+        moving_mask: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Perform DFBR to align a pair of image.
+
+        This function aligns a pair of images using Deep
+        Feature based Registration (DFBR) method.
+
+        Args:
+            fixed_img (:class:`numpy.ndarray`):
+                A fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                A moving image.
+            fixed_mask (:class:`numpy.ndarray`):
+                A binary tissue mask for the fixed image.
+            moving_mask (:class:`numpy.ndarray`):
+                A binary tissue mask for the moving image.
+
+        Returns:
+            tuple:
+                - :class:`numpy.ndarray` - An affine transformation matrix.
+                - :class:`numpy.ndarray` - A transformed moving image.
+                - :class:`numpy.ndarray` - A transformed moving mask.
+
+        """
+        features = self.extract_features(fixed_img, moving_img)
+        fixed_matched_points, moving_matched_points, quality = self.feature_mapping(
+            features
+        )
+
+        (
+            fixed_matched_points,
+            moving_matched_points,
+            quality,
+        ) = self.filtering_matching_points(
+            fixed_mask,
+            moving_mask,
+            fixed_matched_points,
+            moving_matched_points,
+            quality,
+        )
+
+        tissue_transform = DFBRegister.estimate_affine_transform(
+            fixed_matched_points, moving_matched_points
+        )
+
+        moving_img = cv2.warpAffine(
+            moving_img, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        )
+        moving_mask = cv2.warpAffine(
+            moving_mask, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        )
+        return tissue_transform, moving_img, moving_mask
+
+    def perform_dfbregister_blockwise(
+        self,
+        fixed_img: np.ndarray,
+        moving_img: np.ndarray,
+        fixed_mask: np.ndarray,
+        moving_mask: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Perform DFBR to align a pair of images in a blockwise manner.
+
+        This function divides the images into four equal parts and then
+        perform feature matching for each part from the tissue and moving
+        images. Matching features of all the parts are then concatenated
+        for the estimation of affine transform.
+
+        Args:
+            fixed_img (:class:`numpy.ndarray`):
+                A fixed image.
+            moving_img (:class:`numpy.ndarray`):
+                A moving image.
+            fixed_mask (:class:`numpy.ndarray`):
+                A binary tissue mask for the fixed image.
+            moving_mask (:class:`numpy.ndarray`):
+                A binary tissue mask for the moving image.
+
+        Returns:
+            tuple:
+                - :class:`numpy.ndarray` - An affine transformation matrix.
+                - :class:`numpy.ndarray` - A transformed moving image.
+                - :class:`numpy.ndarray` - A transformed moving mask.
+
+        """
+        left_upper_bounding_bbox = [
+            0,
+            int(np.floor(fixed_img.shape[0] / 2)),
+            0,
+            int(np.floor(fixed_img.shape[1] / 2)),
+        ]
+        right_upper_bounding_bbox = [
+            0,
+            int(np.floor(fixed_img.shape[0] / 2)),
+            int(np.ceil(fixed_img.shape[1] / 2)),
+            fixed_img.shape[1],
+        ]
+        left_lower_bounding_bbox = [
+            int(np.ceil(fixed_img.shape[0] / 2)),
+            fixed_img.shape[0],
+            0,
+            int(np.floor(fixed_img.shape[1] / 2)),
+        ]
+        right_lower_bounding_bbox = [
+            int(np.ceil(fixed_img.shape[0] / 2)),
+            fixed_img.shape[0],
+            int(np.ceil(fixed_img.shape[1] / 2)),
+            fixed_img.shape[1],
+        ]
+        blocks_bounding_box = [
+            left_upper_bounding_bbox,
+            right_upper_bounding_bbox,
+            left_lower_bounding_bbox,
+            right_lower_bounding_bbox,
+        ]
+
+        fixed_matched_points, moving_matched_points, quality = [], [], []
+        for _index, bounding_box in enumerate(blocks_bounding_box):
+            fixed_block = fixed_img[
+                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
+            ]
+            moving_block = moving_img[
+                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
+            ]
+            features = self.extract_features(fixed_block, moving_block)
+            (
+                fixed_block_matched_points,
+                moving_block_matched_points,
+                block_quality,
+            ) = self.feature_mapping(features)
+            fixed_matched_points.append(
+                fixed_block_matched_points + [bounding_box[2], bounding_box[0]]
+            )
+            moving_matched_points.append(
+                moving_block_matched_points + [bounding_box[2], bounding_box[0]]
+            )
+            quality.append(block_quality)
+        fixed_matched_points, moving_matched_points, quality = (
+            np.concatenate(fixed_matched_points),
+            np.concatenate(moving_matched_points),
+            np.concatenate(quality),
+        )
+        (
+            fixed_matched_points,
+            moving_matched_points,
+            _,
+        ) = self.filtering_matching_points(
+            fixed_mask,
+            moving_mask,
+            fixed_matched_points,
+            moving_matched_points,
+            quality,
+        )
+
+        block_transform = DFBRegister.estimate_affine_transform(
+            fixed_matched_points, moving_matched_points
+        )
+
+        moving_img = cv2.warpAffine(
+            moving_img, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        )
+        moving_mask = cv2.warpAffine(
+            moving_mask, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        )
+
+        return block_transform, moving_img, moving_mask
+
     def register(
         self,
         fixed_img: np.ndarray,
@@ -717,7 +929,7 @@ class DFBRegister:
         moving_mask: np.ndarray,
         transform_initializer: np.ndarray = None,
     ) -> np.ndarray:
-        """Image Registration.
+        """Perform whole slide image registration.
 
         This function aligns a pair of images using Deep
         Feature based Registration (DFBR) method.
@@ -747,140 +959,81 @@ class DFBRegister:
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
             raise ValueError("The input images are expected to have 3 channels.")
 
-        if not transform_initializer:
-            transform_initializer = prealignment(
-                fixed_img[:, :, 0], moving_img[:, :, 0], fixed_mask, moving_mask
+        # Perform Pre-alignment
+        if transform_initializer is None:
+            transform_initializer, moving_img, moving_mask, before_dice = prealignment(
+                fixed_img, moving_img, fixed_mask, moving_mask
             )
+        else:
+            moving_img = cv2.warpAffine(
+                moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+            )
+            moving_mask = cv2.warpAffine(
+                moving_mask, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+            )
+            before_dice = dice(fixed_mask, moving_mask)
 
-        moving_img = cv2.warpAffine(
-            moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
-        )
-        moving_mask = cv2.warpAffine(
-            moving_mask, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
-        )
-
+        # Estimate transform using tissue regions
         (
-            fixed_tissue,
-            fixed_mask,
-            moving_tissue,
-            moving_mask,
+            fixed_tissue_img,
+            fixed_tissue_mask,
+            moving_tissue_img,
+            moving_tissue_mask,
             tissue_top_left_coord,
         ) = self.get_tissue_regions(fixed_img, fixed_mask, moving_img, moving_mask)
-        features = self.extract_features(fixed_tissue, moving_tissue)
-        fixed_matched_points, moving_matched_points, quality = self.feature_mapping(
-            features
-        )
-
         (
-            fixed_matched_points,
-            moving_matched_points,
-            quality,
-        ) = self.filtering_matching_points(
-            fixed_mask,
-            moving_mask,
-            fixed_matched_points,
-            moving_matched_points,
-            quality,
+            tissue_transform,
+            transform_tissue_img,
+            transform_tissue_mask,
+        ) = self.perform_dfbregister(
+            fixed_tissue_img, moving_tissue_img, fixed_tissue_mask, moving_tissue_mask
         )
 
-        tissue_transform = DFBRegister.estimate_affine_transform(
-            fixed_matched_points, moving_matched_points
-        )
-
-        moving_tissue = cv2.warpAffine(
-            moving_tissue, tissue_transform, fixed_tissue.shape[:2][::-1]
-        )
-        moving_mask = cv2.warpAffine(
-            moving_mask, tissue_transform, fixed_tissue.shape[:2][::-1]
-        )
-
-        blocks_bounding_box = [
-            [
-                0,
-                int(np.floor(fixed_tissue.shape[0] / 2)),
-                0,
-                int(np.floor(fixed_tissue.shape[1] / 2)),
-            ],
-            [
-                0,
-                int(np.floor(fixed_tissue.shape[0] / 2)),
-                int(np.ceil(fixed_tissue.shape[1] / 2)),
-                fixed_tissue.shape[1],
-            ],
-            [
-                int(np.ceil(fixed_tissue.shape[0] / 2)),
-                fixed_tissue.shape[0],
-                0,
-                int(np.floor(fixed_tissue.shape[1] / 2)),
-            ],
-            [
-                int(np.ceil(fixed_tissue.shape[0] / 2)),
-                fixed_tissue.shape[0],
-                int(np.ceil(fixed_tissue.shape[1] / 2)),
-                fixed_tissue.shape[1],
-            ],
-        ]
-        fixed_matched_points, moving_matched_points, quality = [], [], []
-        for _index, bounding_box in enumerate(blocks_bounding_box):
-            fixed_block = fixed_tissue[
-                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
-            ]
-            moving_block = moving_tissue[
-                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
-            ]
-            features = self.extract_features(fixed_block, moving_block)
-            (
-                fixed_block_matched_points,
-                moving_block_matched_points,
-                block_quality,
-            ) = self.feature_mapping(features)
-            fixed_matched_points.append(
-                fixed_block_matched_points + [bounding_box[2], bounding_box[0]]
+        # Use tissue transform if it improves DICE overlap
+        after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
+        if after_dice > before_dice:
+            moving_tissue_img, moving_tissue_mask = (
+                transform_tissue_img,
+                transform_tissue_mask,
             )
-            moving_matched_points.append(
-                moving_block_matched_points + [bounding_box[2], bounding_box[0]]
-            )
-            quality.append(block_quality)
-        fixed_matched_points, moving_matched_points, quality = (
-            np.concatenate(fixed_matched_points),
-            np.concatenate(moving_matched_points),
-            np.concatenate(quality),
-        )
+            before_dice = after_dice
+        else:
+            tissue_transform = np.eye(3, 3)
+
+        # Perform transform using tissue regions in a block-wise manner
         (
-            fixed_matched_points,
-            moving_matched_points,
-            quality,
-        ) = self.filtering_matching_points(
-            fixed_mask,
-            moving_mask,
-            fixed_matched_points,
-            moving_matched_points,
-            quality,
-        )
-        block_transform = DFBRegister.estimate_affine_transform(
-            fixed_matched_points, moving_matched_points
+            block_transform,
+            transform_tissue_img,
+            transform_tissue_mask,
+        ) = self.perform_dfbregister_blockwise(
+            fixed_tissue_img, moving_tissue_img, fixed_tissue_mask, moving_tissue_mask
         )
 
-        translation_ = np.array(
+        # Use block-wise tissue transform if it improves DICE overlap
+        after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
+        if after_dice < before_dice:
+            block_transform = np.eye(3, 3)
+
+        # Combining tissue and block transform
+        tissue_transform = block_transform @ tissue_transform
+
+        # tissue_transform is computed for cropped images (tissue region only).
+        # It is converted using the tissue crop coordinates, so that it can be
+        # applied to the full image.
+        forward_translation = np.array(
             [
                 [1, 0, -tissue_top_left_coord[1]],
                 [0, 1, -tissue_top_left_coord[0]],
                 [0, 0, 1],
             ]
         )
-        translation = np.array(
+        reverse_translation = np.array(
             [
                 [1, 0, tissue_top_left_coord[1]],
                 [0, 1, tissue_top_left_coord[0]],
                 [0, 0, 1],
             ]
         )
-        tissue_transform = np.vstack([tissue_transform, np.array([0, 0, 1])])
-        block_transform = np.vstack([block_transform, np.array([0, 0, 1])])
-        return np.matmul(
-            np.matmul(
-                np.matmul(np.matmul(translation, block_transform), tissue_transform),
-                translation_,
-            ),
-            transform_initializer,
-        )
+        image_transform = reverse_translation @ tissue_transform @ forward_translation
+
+        return image_transform @ transform_initializer
