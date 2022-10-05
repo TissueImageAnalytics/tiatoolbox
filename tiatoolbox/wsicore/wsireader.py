@@ -18,8 +18,7 @@ import pandas as pd
 import tifffile
 import zarr
 
-from tiatoolbox import utils
-from tiatoolbox.tools import tissuemask
+from tiatoolbox import tools, utils
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
@@ -1304,11 +1303,11 @@ class WSIReader:
                 mpp = resolution
             elif units == "power":
                 power = resolution
-            masker = tissuemask.MorphologicalMasker(
+            masker = tools.tissuemask.MorphologicalMasker(
                 mpp=mpp, power=power, **masker_kwargs
             )
         elif method == "otsu":
-            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
+            masker = tools.tissuemask.OtsuTissueMasker(**masker_kwargs)
         mask_img = masker.fit_transform([thumbnail])[0]
         return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
