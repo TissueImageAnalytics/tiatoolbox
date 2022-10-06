@@ -831,6 +831,9 @@ class AnnotationRenderer:
                 geometry_predicate="bbox_intersects",
             )
 
+            for ann in anns.values():
+                self.render_by_type(tile, ann, top_left, scale / res)
+
         if self.blur is None:
             return tile
         return np.array(

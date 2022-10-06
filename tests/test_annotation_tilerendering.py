@@ -155,7 +155,7 @@ def test_filter_by_expression(fill_store, tmp_path):
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
-    assert num == 25  # expect 25 cell objects
+    assert num == 25  # expect 25 cell objects, as the added one is too small
 
 
 def test_zoomed_out_rendering(fill_store, tmp_path):
@@ -163,18 +163,19 @@ def test_zoomed_out_rendering(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+    small_annotation = Annotation(
+        Polygon([(9, 9), (9, 10), (10, 10), (10, 9)]),
+        {"type": "cell", "prob": 0.75, "color": (0, 0, 1)},
+    )
+    store.append(small_annotation)
     renderer = AnnotationRenderer(
-        max_scale=1, edge_thickness=0, zoomed_out_strat="decimate"
+        max_scale=1, edge_thickness=0, zoomed_out_strat="scale"
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
     thumb = tg.get_tile(1, 0, 0)
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
-    assert num == 25  # expect 25 boxes in top left quadrant
-
-    thumb = tg.get_tile(1, 0, 1)
-    _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
-    assert num == 1  # expect 1 line in bottom left quadrant
+    assert num == 25  # expect 25 cells in top left quadrant
 
 
 def test_decimation(fill_store, tmp_path):
