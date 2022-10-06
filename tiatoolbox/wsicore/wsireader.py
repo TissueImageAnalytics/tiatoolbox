@@ -4412,9 +4412,9 @@ class AnnotationStoreReader(WSIReader):
         if renderer is None:
             types = self.store.pquery("props['type']")
             if len(types) == 0:
-                renderer = AnnotationRenderer()
+                renderer = AnnotationRenderer(max_scale=1000)
             else:
-                renderer = AnnotationRenderer("type", list(types))
+                renderer = AnnotationRenderer("type", list(types), max_scale=1000)
         renderer.edge_thickness = 0
         self.renderer = renderer
         self.base_wsi_reader = base_wsi_reader
