@@ -81,7 +81,7 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
         dice_overlap=0.5,
         rotation_step=10,
     )
-    assert np.linalg.norm(expected - output) < 0.05
+    assert np.linalg.norm(expected - output) < 0.2
 
     no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
     no_moving_mask = np.zeros(shape=moving_img.shape, dtype=int)
@@ -230,4 +230,4 @@ def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
         moving_msk,
         transform_initializer=pre_transform,
     )
-    assert np.linalg.norm(expected - output) < 0.05
+    assert np.linalg.norm(expected - output) < 0.2

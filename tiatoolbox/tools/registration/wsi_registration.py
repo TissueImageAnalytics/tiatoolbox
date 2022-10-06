@@ -6,12 +6,13 @@ import numpy as np
 import scipy.ndimage as ndi
 import torch
 import torchvision
-from matplotlib import path
 from skimage import exposure, filters
 from skimage.util import img_as_float
 
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 
 def _check_dims(
@@ -662,14 +663,14 @@ class DFBRegister:
         """
         kernel = np.ones((25, 25), np.uint8)
         mask = cv2.dilate(mask, kernel, iterations=1)
-        bound_points, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        mask_reader = VirtualWSIReader(mask)
 
-        included_points_ind = []
-        for bound_p in bound_points:
-            bound_p = path.Path(np.squeeze(bound_p))
-            ind = bound_p.contains_points(points).nonzero()
-            included_points_ind = np.hstack([included_points_ind, ind[0]])
-        return included_points_ind.astype(int)
+        # convert coordinates of shape [N, 2] to [N, 4]
+        end_x_y = points[:, 0:2] + 1
+        bbox_coord = np.c_[points, end_x_y].astype(int)
+        return PatchExtractor.filter_coordinates_fast(
+            mask_reader, bbox_coord, 1.0, "baseline", 1.0
+        )
 
     def filtering_matching_points(
         self,
