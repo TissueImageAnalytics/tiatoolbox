@@ -3,6 +3,7 @@ from tiatoolbox.tools import (
     graph,
     patchextraction,
     pyramid,
+    registration,
     stainaugment,
     stainextract,
     stainnorm,
