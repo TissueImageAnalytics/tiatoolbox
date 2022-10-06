@@ -12,7 +12,7 @@ from tiatoolbox.tools.registration.wsi_registration import (
 from tiatoolbox.utils.misc import imread
 
 
-def test_extract_features(fixed_image, moving_image, dfbr_features):
+def test_extract_features(dfbr_features):
     """Test for CNN based feature extraction function."""
     df = DFBRegister()
     fixed_img = np.repeat(
@@ -38,7 +38,7 @@ def test_extract_features(fixed_image, moving_image, dfbr_features):
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
 
 
-def test_feature_mapping(fixed_image, moving_image, dfbr_features):
+def test_feature_mapping(fixed_image, moving_image):
     """Test for CNN based feature matching function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -56,6 +56,22 @@ def test_feature_mapping(fixed_image, moving_image, dfbr_features):
     )
     assert np.mean(output - expected) < 1.0e-6
 
+
+def test_dfbr_features():
+    """Test for feature input to feature_mapping function."""
+    df = DFBRegister()
+    fixed_img = np.repeat(
+        np.expand_dims(
+            np.repeat(
+                np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1), 64, axis=1
+            ),
+            axis=2,
+        ),
+        3,
+        axis=2,
+    )
+    features = df.extract_features(fixed_img, fixed_img)
+
     del features["block5_pool"]
     with pytest.raises(
         ValueError,
@@ -64,7 +80,53 @@ def test_feature_mapping(fixed_image, moving_image, dfbr_features):
         _, _, _ = df.feature_mapping(features)
 
 
-def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
+def test_prealignment_mask():
+    """Test for mask inputs to prealignment function."""
+    fixed_img = np.random.rand(10, 10)
+    moving_img = np.random.rand(10, 10)
+    no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
+    no_moving_mask = np.zeros(shape=moving_img.shape, dtype=int)
+    with pytest.raises(ValueError, match=r".*The foreground is missing in the mask.*"):
+        _ = prealignment(fixed_img, moving_img, no_fixed_mask, no_moving_mask)
+
+
+def test_prealignment_input_shape():
+    """Test for inputs to prealignment function."""
+    fixed_img = np.random.rand(10, 10)
+    moving_img = np.random.rand(15, 10)
+    fixed_mask = np.random.choice([0, 1], size=(15, 10))
+    moving_mask = np.random.choice([0, 1], size=(10, 10))
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Mismatch of shape between image and its corresponding mask.*",
+    ):
+        _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask)
+
+
+def test_prealignment_rotation_step():
+    """Test for rotation step input to prealignment function."""
+    fixed_img = np.random.rand(10, 10)
+    moving_img = np.random.rand(10, 10)
+    fixed_mask = np.random.choice([0, 1], size=(10, 10))
+    moving_mask = np.random.choice([0, 1], size=(10, 10))
+
+    with pytest.raises(
+        ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
+    ):
+        _ = prealignment(
+            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=9
+        )
+
+    with pytest.raises(
+        ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
+    ):
+        _ = prealignment(
+            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=21
+        )
+
+
+def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask):
     """Test for prealignment of an image pair"""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -83,34 +145,9 @@ def test_prealignment(fixed_image, moving_image, fixed_mask, moving_mask):
     )
     assert np.linalg.norm(expected - output) < 0.2
 
-    no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
-    no_moving_mask = np.zeros(shape=moving_img.shape, dtype=int)
-    with pytest.raises(ValueError, match=r".*The foreground is missing in the mask.*"):
-        _ = prealignment(fixed_img, moving_img, no_fixed_mask, no_moving_mask)
-
-    with pytest.raises(
-        ValueError,
-        match=r".*Mismatch of shape between image and its corresponding mask.*",
-    ):
-        _ = prealignment(fixed_img, moving_img, moving_mask, fixed_mask)
-
-    with pytest.raises(
-        ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
-    ):
-        _ = prealignment(
-            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=9
-        )
-
-    with pytest.raises(
-        ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
-    ):
-        _ = prealignment(
-            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=21
-        )
-
 
 def test_dice_overlap_range():
-    """Test if the value of rotation step is within the range"""
+    """Test if the value of dice_overlap is within the range."""
     fixed_img = np.random.randint(20, size=(256, 256))
     moving_img = np.random.randint(20, size=(256, 256))
     fixed_mask = np.random.randint(2, size=(256, 256))
@@ -135,6 +172,7 @@ def test_warning(
     fixed_mask,
     moving_mask,
 ):
+    """Test for displaying warning in prealignment function."""
     fixed_img = imread(pathlib.Path(fixed_image))
     moving_img = imread(pathlib.Path(moving_image))
     fixed_mask = imread(pathlib.Path(fixed_mask))
@@ -146,8 +184,8 @@ def test_warning(
         )
 
 
-def test_match_histograms():
-    """Test for preprocessing/normalization of an image pair."""
+def test_match_histogram_inputs():
+    """Test for inputs to match_histogram function."""
     image_a = np.random.randint(256, size=(256, 256, 3))
     image_b = np.random.randint(256, size=(256, 256, 3))
     with pytest.raises(
@@ -155,6 +193,9 @@ def test_match_histograms():
     ):
         _, _ = match_histograms(image_a, image_b)
 
+
+def test_match_histograms():
+    """Test for preprocessing/normalization of an image pair."""
     image_a = np.random.randint(256, size=(256, 256))
     image_b = np.random.randint(256, size=(256, 256))
     _, _ = match_histograms(image_a, image_b, 3)
@@ -197,26 +238,45 @@ def test_match_histograms():
     assert np.all(norm_image_b == image_b)
 
 
-def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
-    fixed_img = imread(fixed_image)
-    moving_img = imread(moving_image)
-    fixed_msk = imread(fixed_mask)
-    moving_msk = imread(moving_mask)
+def test_register_input():
+    """Test for inputs to register function."""
+    fixed_img = np.random.rand(32, 32)
+    moving_img = np.random.rand(32, 32)
+    fixed_mask = np.random.choice([0, 1], size=(32, 32))
+    moving_mask = np.random.choice([0, 1], size=(32, 32))
 
     df = DFBRegister()
     with pytest.raises(
         ValueError,
         match=r".*The required shape for fixed and moving images is n x m x 3.*",
     ):
-        _ = df.register(fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk, moving_msk)
+        _ = df.register(fixed_img, moving_img, fixed_mask, moving_mask)
 
+
+def test_register_input_channels():
+    """Test for checking inputs' number of channels for register function."""
+    fixed_img = np.random.rand(32, 32, 1)
+    moving_img = np.random.rand(32, 32, 1)
+    fixed_mask = np.random.choice([0, 1], size=(32, 32))
+    moving_mask = np.random.choice([0, 1], size=(32, 32))
+
+    df = DFBRegister()
     with pytest.raises(
         ValueError, match=r".*The input images are expected to have 3 channels.*"
     ):
         _ = df.register(
-            fixed_img[:, :, :1], moving_img[:, :, :1], fixed_msk, moving_msk
+            fixed_img[:, :, :1], moving_img[:, :, :1], fixed_mask, moving_mask
         )
 
+
+def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
+    """Test for register function."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    df = DFBRegister()
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
 
     expected = np.array(
