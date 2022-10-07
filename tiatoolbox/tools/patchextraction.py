@@ -10,7 +10,6 @@ from pandas import DataFrame
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class PatchExtractorABC(ABC):
@@ -37,8 +36,7 @@ class PatchExtractor(PatchExtractorABC):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or
-        :obj:`WSIReader`):
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the input_mask.
@@ -107,7 +105,7 @@ class PatchExtractor(PatchExtractorABC):
             Stride in (x, y) direction for patch extraction. Not used
             for :obj:`PointsPatchExtractor`
         min_mask_ratio (float):
-            Only patches with postive area percentage above this value are included
+            Only patches with positive area percentage above this value are included
 
     """
 
@@ -115,7 +113,7 @@ class PatchExtractor(PatchExtractorABC):
         self,
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, WSIReader] = None,
+        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
         resolution: Union[int, float, Tuple[float, float]] = 0,
         units: str = "level",
         pad_mode: str = "constant",
@@ -236,7 +234,7 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def filter_coordinates_fast(
-        mask_reader: VirtualWSIReader,
+        mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
         coordinate_resolution: float,
         coordinate_units: str,
@@ -272,8 +270,8 @@ class PatchExtractor(PatchExtractorABC):
                 i.e., `coordinate_units`. If not provided, a default
                 value will be selected based on `coordinate_units`.
             min_mask_ratio (float):
-                Only patches with postive area percentage above this value are included.
-                Defaults to 0.
+                Only patches with positive area percentage above this value are
+                included. Defaults to 0.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -331,7 +329,7 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def filter_coordinates(
-        mask_reader: VirtualWSIReader,
+        mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
         func: Callable = None,
         resolution: float = None,
@@ -419,16 +417,14 @@ class PatchExtractor(PatchExtractorABC):
                 extracted from mother image at desired `resolution` and
                 `units`. This argument is also expected to be in (width,
                 height) format.
-            patch_output_shape (tuple (int, int) or
-            :class:`numpy.ndarray` of shape (2,)):
+            patch_output_shape (tuple (int, int) or :class:`numpy.ndarray`):
                 Specifies the output shape of requested patches to be
                 extracted from mother image at desired `resolution` and
                 `units`. This argument is also expected to be in (width,
                 height) format. If this is not provided,
                 `patch_output_shape` will be the same as
                 `patch_input_shape`.
-            stride_shape (tuple (int, int) or :class:`numpy.ndarray`
-            of shape (2,)):
+            stride_shape (tuple (int, int) or :class:`numpy.ndarray`):
                 The stride that is used to calculate the patch location
                 during the patch extraction. If `patch_output_shape` is
                 provided, next stride location will base on the output
@@ -536,8 +532,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or
-        :obj:`WSIReader`):
+        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the `input_mask`.
@@ -578,7 +573,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Stride in (x, y) direction for patch extraction, default =
             `patch_size`.
         min_mask_ratio (float):
-            Only patches with postive area percentage above this value are included.
+            Only patches with positive area percentage above this value are included.
             Defaults to 0.
 
     Attributes:
@@ -591,7 +586,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         self,
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, WSIReader] = None,
+        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
         resolution: Union[int, float, Tuple[float, float]] = 0,
         units: str = "level",
         stride: Union[int, Tuple[int, int]] = None,

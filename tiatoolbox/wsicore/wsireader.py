@@ -19,7 +19,6 @@ import tifffile
 import zarr
 
 from tiatoolbox import utils
-from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
@@ -463,18 +462,22 @@ class WSIReader:
 
         Returns:
             tuple:
-                Parameters for reading the requested region
+                Parameters for reading the requested region.
+
                 - :py:obj:`int` - Optimal read level.
+
                 - :py:obj:`tuple` - Read location in level coordinates.
                     - :py:obj:`int` - X location.
                     - :py:obj:`int` - Y location.
+
                 - :py:obj:`tuple` - Region size in level coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.
-                - :py:obj:`tuple` - Scaling to apply after level read to
-                  achieve desired output resolution.
+
+                - :py:obj:`tuple` - Scaling to apply after level read.
                     - :py:obj:`float` - X scale factor.
                     - :py:obj:`float` - Y scale factor.
+
                 - :py:obj:`tuple` - Region size in baseline coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.
@@ -1290,6 +1293,8 @@ class WSIReader:
                 Extra kwargs passed to the masker class.
 
         """
+        from tiatoolbox.tools import tissuemask
+
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
             raise ValueError(f"Invalid tissue masking method: {method}.")

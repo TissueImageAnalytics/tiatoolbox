@@ -19,8 +19,8 @@ def centre_crop(
         img (:class:`numpy.ndarray`, torch.tensor):
             Input image, should be of 3 channels.
         crop_shape (:class:`numpy.ndarray`, torch.tensor):
-            The substracted amount in the form of `[substracted height,
-            substracted width]`.
+            The subtracted amount in the form of `[subtracted height,
+            subtracted width]`.
         data_format (str):
             Either `"NCHW"` or `"NHWC"`.
 

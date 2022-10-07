@@ -71,7 +71,7 @@ class IDaRS(CNNModel):
                 An image of shape HWC.
 
         Return:
-            img (torch.Tensor):
+            img (:class:`torch.Tensor`):
                 An image of shape HWC.
 
         """
