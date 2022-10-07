@@ -134,6 +134,16 @@ def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask)
     moving_mask = imread(moving_mask)
 
     expected = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
+    output, _, _, _ = prealignment(
+        fixed_img,
+        moving_img,
+        fixed_mask,
+        moving_mask,
+        dice_overlap=0.5,
+        rotation_step=10,
+    )
+    assert np.linalg.norm(expected - output) < 0.2
+
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
     output, _, _, _ = prealignment(
         fixed_img,
@@ -269,8 +279,8 @@ def test_register_input_channels():
         )
 
 
-def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
-    """Test for register function."""
+def test_register_with_initializer(fixed_image, moving_image, fixed_mask, moving_mask):
+    """Test for register function with initialzer."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
     fixed_msk = imread(fixed_mask)
@@ -291,3 +301,45 @@ def test_register(fixed_image, moving_image, fixed_mask, moving_mask):
         transform_initializer=pre_transform,
     )
     assert np.linalg.norm(expected - output) < 0.2
+
+
+def test_register_without_initializer(
+    fixed_image, moving_image, fixed_mask, moving_mask
+):
+    """Test for register function without initializer."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    df = DFBRegister()
+    expected = np.array(
+        [[-0.99683, -0.00189, 336.79039], [0.00691, -0.99810, 765.98081], [0, 0, 1]]
+    )
+
+    output = df.register(
+        fixed_img,
+        moving_img,
+        fixed_msk,
+        moving_msk,
+    )
+    assert np.linalg.norm(expected - output) < 0.2
+
+
+def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving_mask):
+    """Test for the estimated tissue transform in register function."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    df = DFBRegister()
+    pre_transform = np.eye(3)
+
+    _ = df.register(
+        fixed_img,
+        moving_img,
+        fixed_msk,
+        moving_msk,
+        transform_initializer=pre_transform,
+    )

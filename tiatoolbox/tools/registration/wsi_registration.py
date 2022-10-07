@@ -166,6 +166,8 @@ def prealignment(
             ),
             com_transform,
         )
+
+        # Apply transformation
         warped_moving_mask = cv2.warpAffine(
             moving_mask, transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
@@ -177,6 +179,8 @@ def prealignment(
     if max(all_dice) >= dice_overlap:
         dice_after = max(all_dice)
         pre_transform = all_transform[all_dice.index(dice_after)]
+
+        # Apply transformation to both image and mask
         moving_img = cv2.warpAffine(
             orig_moving_img, pre_transform[0:-1][:], orig_fixed_img.shape[:2][::-1]
         )
@@ -801,6 +805,7 @@ class DFBRegister:
             fixed_matched_points, moving_matched_points
         )
 
+        # Apply transformation
         moving_img = cv2.warpAffine(
             moving_img, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
@@ -913,6 +918,7 @@ class DFBRegister:
             fixed_matched_points, moving_matched_points
         )
 
+        # Apply transformation
         moving_img = cv2.warpAffine(
             moving_img, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
@@ -966,6 +972,7 @@ class DFBRegister:
                 fixed_img, moving_img, fixed_mask, moving_mask
             )
         else:
+            # Apply transformation to both image and mask
             moving_img = cv2.warpAffine(
                 moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
             )
@@ -1012,7 +1019,7 @@ class DFBRegister:
 
         # Use block-wise tissue transform if it improves DICE overlap
         after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
-        if after_dice < before_dice:
+        if after_dice <= before_dice:
             block_transform = np.eye(3, 3)
 
         # Combining tissue and block transform
@@ -1028,13 +1035,13 @@ class DFBRegister:
                 [0, 0, 1],
             ]
         )
-        reverse_translation = np.array(
+        inverse_translation = np.array(
             [
                 [1, 0, tissue_top_left_coord[1]],
                 [0, 1, tissue_top_left_coord[0]],
                 [0, 0, 1],
             ]
         )
-        image_transform = reverse_translation @ tissue_transform @ forward_translation
+        image_transform = inverse_translation @ tissue_transform @ forward_translation
 
         return image_transform @ transform_initializer
