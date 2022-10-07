@@ -805,7 +805,7 @@ class DFBRegister:
             fixed_matched_points, moving_matched_points
         )
 
-        # Apply Affine transformation
+        # Apply transformation
         moving_img = cv2.warpAffine(
             moving_img, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
@@ -918,7 +918,7 @@ class DFBRegister:
             fixed_matched_points, moving_matched_points
         )
 
-        # Apply Affine transformation
+        # Apply transformation
         moving_img = cv2.warpAffine(
             moving_img, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
