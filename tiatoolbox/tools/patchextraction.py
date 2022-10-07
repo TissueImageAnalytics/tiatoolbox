@@ -10,7 +10,6 @@ from pandas import DataFrame
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class PatchExtractorABC(ABC):
@@ -114,7 +113,7 @@ class PatchExtractor(PatchExtractorABC):
         self,
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, WSIReader] = None,
+        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
         resolution: Union[int, float, Tuple[float, float]] = 0,
         units: str = "level",
         pad_mode: str = "constant",
@@ -235,7 +234,7 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def filter_coordinates_fast(
-        mask_reader: VirtualWSIReader,
+        mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
         coordinate_resolution: float,
         coordinate_units: str,
@@ -330,7 +329,7 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def filter_coordinates(
-        mask_reader: VirtualWSIReader,
+        mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
         func: Callable = None,
         resolution: float = None,
@@ -587,7 +586,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         self,
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, WSIReader] = None,
+        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
         resolution: Union[int, float, Tuple[float, float]] = 0,
         units: str = "level",
         stride: Union[int, Tuple[int, int]] = None,
