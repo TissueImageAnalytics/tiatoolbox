@@ -22,8 +22,6 @@ Properties
     Key-value pairs associated with a geometry.
 
 """
-from __future__ import annotations
-
 import contextlib
 import copy
 import io
@@ -1458,6 +1456,12 @@ class SQLiteStore(AnnotationStore):
 
     Uses and rtree index for fast spatial queries.
 
+    Version History:
+    1.0.0:
+        Initial version.
+    1.0.1 (07/10/2022):
+        Added support for Area column and queries sorted/filtered by area.
+
     """
 
     @classmethod  # noqa: A003
@@ -1516,7 +1520,7 @@ class SQLiteStore(AnnotationStore):
         # Set up metadata
         self.metadata = SQLiteMetadata(self.con)
         if not exists:
-            self.metadata["version"] = "1.0.0"
+            self.metadata["version"] = "1.0.1"
             self.metadata["compression"] = compression
             self.metadata["compression_level"] = compression_level
 
