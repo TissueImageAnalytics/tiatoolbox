@@ -1012,7 +1012,7 @@ class DFBRegister:
 
         # Use block-wise tissue transform if it improves DICE overlap
         after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
-        if after_dice < before_dice:
+        if after_dice <= before_dice:
             block_transform = np.eye(3, 3)
 
         # Combining tissue and block transform
