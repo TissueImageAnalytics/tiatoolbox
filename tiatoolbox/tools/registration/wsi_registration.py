@@ -166,6 +166,8 @@ def prealignment(
             ),
             com_transform,
         )
+
+        # Apply transformation
         warped_moving_mask = cv2.warpAffine(
             moving_mask, transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
@@ -177,6 +179,8 @@ def prealignment(
     if max(all_dice) >= dice_overlap:
         dice_after = max(all_dice)
         pre_transform = all_transform[all_dice.index(dice_after)]
+
+        # Apply transformation to both image and mask
         moving_img = cv2.warpAffine(
             orig_moving_img, pre_transform[0:-1][:], orig_fixed_img.shape[:2][::-1]
         )
@@ -801,6 +805,7 @@ class DFBRegister:
             fixed_matched_points, moving_matched_points
         )
 
+        # Apply Affine transformation
         moving_img = cv2.warpAffine(
             moving_img, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
@@ -913,6 +918,7 @@ class DFBRegister:
             fixed_matched_points, moving_matched_points
         )
 
+        # Apply Affine transformation
         moving_img = cv2.warpAffine(
             moving_img, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
         )
@@ -966,6 +972,7 @@ class DFBRegister:
                 fixed_img, moving_img, fixed_mask, moving_mask
             )
         else:
+            # Apply transformation to both image and mask
             moving_img = cv2.warpAffine(
                 moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
             )
