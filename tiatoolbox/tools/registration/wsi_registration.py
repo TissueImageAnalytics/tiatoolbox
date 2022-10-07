@@ -1035,13 +1035,13 @@ class DFBRegister:
                 [0, 0, 1],
             ]
         )
-        reverse_translation = np.array(
+        inverse_translation = np.array(
             [
                 [1, 0, tissue_top_left_coord[1]],
                 [0, 1, tissue_top_left_coord[0]],
                 [0, 0, 1],
             ]
         )
-        image_transform = reverse_translation @ tissue_transform @ forward_translation
+        image_transform = inverse_translation @ tissue_transform @ forward_translation
 
         return image_transform @ transform_initializer
