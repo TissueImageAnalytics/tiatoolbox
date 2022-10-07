@@ -3,11 +3,8 @@
 name: pip Install
 
 on:
-  push:
-    branches: [ develop, pre-release, master, main ]
-    tags: v*
-  pull_request:
-    branches: [ develop, pre-release, master, main ]
+    push:
+        paths: [ "requirements*.yml", "conda-env-create.yml", "requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
 
 jobs:
   build:
@@ -75,10 +72,10 @@ jobs:
       run: opj_dump -h
     - name: pip Install From GitHub Repo on Linux and macOS
       if: runner.os != 'Windows'
-      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_HEAD_REF}
+      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_REF_NAME}
     - name: pip Install From GitHub on Windows
       if: runner.os == 'Windows'
-      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_HEAD_REF
+      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_REF_NAME
     - name: Test TIAToolbox Import
       shell: python
       run: |
