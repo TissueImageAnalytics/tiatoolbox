@@ -4264,9 +4264,12 @@ class NGFFWSIReader(WSIReader):
             return None
 
         # Check that datasets is non-empty and has at least one coordinateTransformation
-        if not multiscales.datasets or not multiscales.datasets[0].coordinateTransformations:
+        if (
+            not multiscales.datasets
+            or not multiscales.datasets[0].coordinateTransformations
+        ):
             return None
-        
+
         # Currently assuming the first is mpp
         transforms = multiscales.datasets[0].coordinateTransformations[0]
         for t in transforms:
