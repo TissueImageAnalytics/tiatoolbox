@@ -4264,15 +4264,17 @@ class NGFFWSIReader(WSIReader):
             return None
 
         # Check that datasets is non-empty and has at least one coordinateTransformation
-        if multiscales.datasets and multiscales.datasets[0].coordinateTransformations:
-            # Currently assuming the first is mpp
-            transforms = multiscales.datasets[0].coordinateTransformations[0]
-            for t in transforms:
-                if hasattr("scale", t) and t.type == "scale":
-                    x_index = multiscales.axes.index(x)
-                    y_index = multiscales.axes.index(y)
-                    mpp = (t.scale[x_index], t.scale[y_index])
-        return mpp
+        if not multiscales.datasets or not multiscales.datasets[0].coordinateTransformations:
+            return None
+        
+        # Currently assuming the first is mpp
+        transforms = multiscales.datasets[0].coordinateTransformations[0]
+        for t in transforms:
+            if hasattr("scale", t) and t.type == "scale":
+                x_index = multiscales.axes.index(x)
+                y_index = multiscales.axes.index(y)
+                return (t.scale[x_index], t.scale[y_index])
+        return None
 
     def read_rect(
         self,
