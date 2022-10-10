@@ -11,10 +11,14 @@ Reading WSI Image Data
 ^^^^^^^^^^^^^^^^^^^^^^
 
 - :obj:`wsireader <tiatoolbox.wsicore.wsireader>`
-- :obj:`OpenSlideWSIReader <tiatoolbox.wsicore.wsireader.OpenSlideWSIReader>`
-- :obj:`OmnyxJP2WSIReader <tiatoolbox.wsicore.wsireader.OmnyxJP2WSIReader>`
-- :obj:`VirtualWSIReader <tiatoolbox.wsicore.wsireader.VirtualWSIReader>`
-- :obj:`TIFFWSIReader <tiatoolbox.wsicore.wsireader.TIFFWSIReader>`
+- :obj:`WSIReader <tiatoolbox.wsicore.wsireader.WSIReader>`
+
+    - :obj:`DICOMWSIReader <tiatoolbox.wsicore.wsireader.DICOMWSIReader>`
+    - :obj:`NGFFWSIReader <tiatoolbox.wsicore.wsireader.NGFFWSIReader>`
+    - :obj:`OmnyxJP2WSIReader <tiatoolbox.wsicore.wsireader.OmnyxJP2WSIReader>`
+    - :obj:`OpenSlideWSIReader <tiatoolbox.wsicore.wsireader.OpenSlideWSIReader>`
+    - :obj:`TIFFWSIReader <tiatoolbox.wsicore.wsireader.TIFFWSIReader>`
+    - :obj:`VirtualWSIReader <tiatoolbox.wsicore.wsireader.VirtualWSIReader>`
 
 ^^^^^^^^^^^^^^^^^^
 Accessing Metadata
@@ -60,7 +64,7 @@ Tissue Masking
 Stain Augmentation
 ^^^^^^^^^^^^^^^^^^
 
-- :obj:`Augmentation <tiatoolbox.tools.stainaugment>`
+- :obj:`Stain Augmentation <tiatoolbox.tools.stainaugment>`
 
 ^^^^^^^^^^^^^^^^^^
 Patch Extraction
