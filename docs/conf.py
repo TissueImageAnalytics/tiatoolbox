@@ -42,9 +42,9 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    "sphinx_copybutton",
     "sphinx_toolbox.collapse",
-    "myst_parser",
-    "nbsphinx",
+    "myst_nb",
     "sphinx_design",
 ]
 
@@ -67,11 +67,17 @@ templates_path = ["_templates"]
 #
 source_suffix = {
     ".rst": "restructuredtext",
-    ".txt": "markdown",
-    ".md": "markdown",
+    ".txt": "myst-nb",
+    ".md": "myst-nb",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
 }
 
+suppress_warnings = ["misc.highlighting_failure"]
+
+myst_commonmark_only = True
 myst_enable_extensions = ["colon_fence"]
+nb_execution_mode = "off"
 
 # The master toctree document.
 master_doc = "index"
@@ -99,8 +105,13 @@ language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-# This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "requirements*.txt"]
+# These patterns also affect html_static_path and html_extra_path
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "requirements*.txt",
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
@@ -1880,14 +1891,14 @@ html_theme_options = {
         },
     ],
     "announcement": "Paper available at "
-    "<a href='https://doi.org/10.1101/2021.12.23.474029'>"
-    "https://doi.org/10.1101/2021.12.23.474029</a>",
+    "<a href='https://doi.org/10.1038/s43856-022-00186-5'>"
+    "https://doi.org/10.1038/s43856-022-00186-5</a>",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+html_static_path = []
 
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
@@ -1969,7 +1980,6 @@ autodoc_type_aliases = {
     "ArrayLike": "ArrayLike",
 }
 
-
 print("=" * 43)
 print("Copy example notebooks into docs/_notebooks")
 print("=" * 43)
@@ -1990,6 +2000,25 @@ PROJ_ROOT = pathlib.Path(DOC_ROOT).parent
 shutil.rmtree(os.path.join(PROJ_ROOT, "docs/_notebooks"), ignore_errors=True)
 shutil.copytree(
     os.path.join(PROJ_ROOT, "examples"),
-    os.path.join(PROJ_ROOT, "docs/_notebooks"),
+    os.path.join(PROJ_ROOT, "docs/_notebooks/jnb"),
     ignore=all_but_ipynb,
 )
+
+# shutil.copy(
+#     os.path.join(PROJ_ROOT, "docs/notebooks.rst"),
+#     os.path.join(PROJ_ROOT, "docs/_notebooks/notebooks.rst"),
+# )
+
+# Read in the file
+with open("../examples/README.md", "r") as file:
+    file_data = file.read()
+
+# Replace the target string
+file_data = file_data.replace(".rst", ".html")
+file_data = file_data.replace(".ipynb", ".html")
+file_data = file_data.replace("../docs/", "../")
+file_data = file_data.replace("](./", "](./jnb/")
+
+# Write the file out again
+with open("_notebooks/README.md", "w") as file:
+    file.write(file_data)
