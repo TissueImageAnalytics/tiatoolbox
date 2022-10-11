@@ -2084,3 +2084,10 @@ class TestReader:
         """Test that FileNotFoundError is raised when file does not exist."""
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
+
+    @staticmethod
+    def test_read_mpp(sample_key, reader_class):
+        """Test that the mpp is read correctly."""
+        sample = _fetch_remote_sample(sample_key)
+        wsi = reader_class(sample)
+        assert wsi.info.mpp == pytest.approx(0.25, 1)
