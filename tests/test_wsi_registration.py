@@ -248,6 +248,27 @@ def test_match_histograms():
     assert np.all(norm_image_b == image_b)
 
 
+def test_filtering_matching_points():
+    """Test test_filtering_matching_points function."""
+    fixed_mask = np.zeros((50, 50))
+    fixed_mask[20:40, 20:40] = 255
+    moving_mask = np.zeros((50, 50))
+    moving_mask[20:40, 20:40] = 255
+
+    fixed_points = np.array(
+        [[25, 25], [25, 25], [25, 25], [30, 25], [25, 30], [30, 35], [21, 37]]
+    )
+    moving_points = np.array(
+        [[30, 25], [32, 36], [31, 20], [30, 35], [30, 35], [30, 35], [26, 27]]
+    )
+    quality = np.ones((7, 1))
+
+    df = DFBRegister()
+    _ = df.filtering_matching_points(
+        fixed_mask, moving_mask, fixed_points, moving_points, quality
+    )
+
+
 def test_register_input():
     """Test for inputs to register function."""
     fixed_img = np.random.rand(32, 32)
@@ -279,7 +300,9 @@ def test_register_input_channels():
         )
 
 
-def test_register_with_initializer(fixed_image, moving_image, fixed_mask, moving_mask):
+def test_register_output_with_initializer(
+    fixed_image, moving_image, fixed_mask, moving_mask
+):
     """Test for register function with initialzer."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -303,7 +326,7 @@ def test_register_with_initializer(fixed_image, moving_image, fixed_mask, moving
     assert np.linalg.norm(expected - output) < 0.2
 
 
-def test_register_without_initializer(
+def test_register_output_without_initializer(
     fixed_image, moving_image, fixed_mask, moving_mask
 ):
     """Test for register function without initializer."""
