@@ -610,14 +610,6 @@ class DFBRegister:
                 - tuple - Bounding box (min_row, min_col, max_row, max_col).
 
         """
-        if len(fixed_mask.shape) != 2:
-            fixed_mask = fixed_mask[:, :, 0]
-        if len(moving_mask.shape) != 2:
-            moving_mask = moving_mask[:, :, 0]
-
-        fixed_mask = np.uint8(fixed_mask > 0)
-        moving_mask = np.uint8(moving_mask > 0)
-
         fixed_minc, fixed_min_r, width, height = cv2.boundingRect(fixed_mask)
         fixed_max_c, fixed_max_r = fixed_minc + width, fixed_min_r + height
         moving_minc, moving_min_r, width, height = cv2.boundingRect(moving_mask)
@@ -965,6 +957,14 @@ class DFBRegister:
 
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
             raise ValueError("The input images are expected to have 3 channels.")
+
+        if len(fixed_mask.shape) != 2:
+            fixed_mask = fixed_mask[:, :, 0]
+        if len(moving_mask.shape) != 2:
+            moving_mask = moving_mask[:, :, 0]
+
+        fixed_mask = np.uint8(fixed_mask > 0)
+        moving_mask = np.uint8(moving_mask > 0)
 
         # Perform Pre-alignment
         if transform_initializer is None:

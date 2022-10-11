@@ -142,7 +142,8 @@ def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask)
         dice_overlap=0.5,
         rotation_step=10,
     )
-    assert np.linalg.norm(expected - output) < 0.2
+    assert np.linalg.norm(expected[:2, :2] - output[:2, :2]) < 0.1
+    assert np.linalg.norm(expected[:2, 2] - output[:2, 2]) < 10
 
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
     output, _, _, _ = prealignment(
@@ -323,7 +324,8 @@ def test_register_output_with_initializer(
         moving_msk,
         transform_initializer=pre_transform,
     )
-    assert np.linalg.norm(expected - output) < 0.2
+    assert np.linalg.norm(expected[:2, :2] - output[:2, :2]) < 0.1
+    assert np.linalg.norm(expected[:2, 2] - output[:2, 2]) < 10
 
 
 def test_register_output_without_initializer(
@@ -346,7 +348,8 @@ def test_register_output_without_initializer(
         fixed_msk,
         moving_msk,
     )
-    assert np.linalg.norm(expected - output) < 0.2
+    assert np.linalg.norm(expected[:2, :2] - output[:2, :2]) < 0.1
+    assert np.linalg.norm(expected[:2, 2] - output[:2, 2]) < 10
 
 
 def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving_mask):
