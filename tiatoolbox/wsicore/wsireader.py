@@ -4271,12 +4271,12 @@ class NGFFWSIReader(WSIReader):
             return None
 
         # Currently assuming the first is mpp
-        transforms = multiscales.datasets[0].coordinateTransformations[0]
+        transforms = multiscales.datasets[0].coordinateTransformations
         for t in transforms:
-            if hasattr("scale", t) and t.type == "scale":
+            if "scale" in t and t.get("type") == "scale":
                 x_index = multiscales.axes.index(x)
                 y_index = multiscales.axes.index(y)
-                return (t.scale[x_index], t.scale[y_index])
+                return (t["scale"][x_index], t["scale"][y_index])
         return None
 
     def read_rect(
