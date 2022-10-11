@@ -2,7 +2,9 @@
   <img src="https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/docs/tiatoolbox-logo.png">
 </p>
 <h1 align="center">TIA Toolbox</h1>
-  <a href="https://badge.fury.io/py/tiatoolbox">
+<h3 align="center">Computational Pathology Toolbox developed at the TIA Centre</h3>
+
+<a href="https://badge.fury.io/py/tiatoolbox">
     <img src="https://badge.fury.io/py/tiatoolbox.svg" alt="PyPI Status" />
   </a>
     <a href="https://pepy.tech/project/tiatoolbox">
@@ -16,9 +18,8 @@
             <img src="https://shields.io/conda/dn/conda-forge/tiatoolbox"  alt="conda-forge downloads"/>
     </a>
   <br>
-  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/tree/master#license">
-      <img src="https://img.shields.io/badge/license-BSD--3--clause-orange"  alt="License BSD-3-Clause"/>
-  </a>
+  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/blob/develop/LICENSE">
+    <img alt="GitHub license" src="https://img.shields.io/github/license/TissueImageAnalytics/tiatoolbox"></a>
   <br>
   <br>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/pip-install.yml">
@@ -37,33 +38,8 @@
       <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm" alt="Code Coverage"/>
   </a>
   <br><br>
-  <a href="https://doi.org/10.1038/s43856-022-00186-5"><img src="https://img.shields.io/badge/DOI-10.1038%2Fs43856--022--00186--5-blue" alt="DOI"></a>
-
-Computational Pathology Toolbox developed at the TIA Centre
-
-## Cite this repository
-
-If you find TIAToolbox useful or use it in your research, please consider citing our paper:
-
-Pocock, J. et al. TIAToolbox as an end-to-end library for advanced tissue image analytics. Communications Medicine 2, 120 (2022).
-
-```
-@article{
-    Pocock2022,
-    author = {Pocock, Johnathan and Graham, Simon and Vu, Quoc Dang and Jahanifar, Mostafa and Deshpande, Srijay and Hadjigeorghiou, Giorgos and Shephard, Adam and Bashir, Raja Muhammad Saad and Bilal, Mohsin and Lu, Wenqi and Epstein, David and Minhas, Fayyaz and Rajpoot, Nasir M and Raza, Shan E Ahmed},
-    doi = {10.1038/s43856-022-00186-5},
-    issn = {2730-664X},
-    journal = {Communications Medicine},
-    month = {sep},
-    number = {1},
-    pages = {120},
-    publisher = {Springer US},
-    title = {{TIAToolbox as an end-to-end library for advanced tissue image analytics}},
-    url = {https://www.nature.com/articles/s43856-022-00186-5},
-    volume = {2},
-    year = {2022}
-}
-```
+  <a href="#cite-this-repository"><img src="https://img.shields.io/badge/Cite%20this%20repository-BibTeX-brightgreen" alt="DOI"></a> <a href="https://doi.org/10.1038/s43856-022-00186-5"><img src="https://img.shields.io/badge/DOI-10.1038%2Fs43856--022--00186--5-blue" alt="DOI"></a>
+<br>
 
 ## Getting Started
 
@@ -153,6 +129,28 @@ or
 The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [The 3-Clause BSD License].
 
 The full text of the licence is included in [LICENSE](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE).
+
+### Cite this repository
+
+If you find TIAToolbox useful or use it in your research, please consider citing our paper:
+
+```
+@article{
+    Pocock2022,
+    author = {Pocock, Johnathan and Graham, Simon and Vu, Quoc Dang and Jahanifar, Mostafa and Deshpande, Srijay and Hadjigeorghiou, Giorgos and Shephard, Adam and Bashir, Raja Muhammad Saad and Bilal, Mohsin and Lu, Wenqi and Epstein, David and Minhas, Fayyaz and Rajpoot, Nasir M and Raza, Shan E Ahmed},
+    doi = {10.1038/s43856-022-00186-5},
+    issn = {2730-664X},
+    journal = {Communications Medicine},
+    month = {sep},
+    number = {1},
+    pages = {120},
+    publisher = {Springer US},
+    title = {{TIAToolbox as an end-to-end library for advanced tissue image analytics}},
+    url = {https://www.nature.com/articles/s43856-022-00186-5},
+    volume = {2},
+    year = {2022}
+}
+```
 
 ### Auxiliary Files
 

@@ -618,22 +618,22 @@ class DFBRegister:
         fixed_mask = np.uint8(fixed_mask > 0)
         moving_mask = np.uint8(moving_mask > 0)
 
-        fixed_minc, fixed_minr, width, height = cv2.boundingRect(fixed_mask)
-        fixed_maxc, fixed_maxr = fixed_minc + width, fixed_minr + height
-        moving_minc, moving_minr, width, height = cv2.boundingRect(moving_mask)
-        moving_maxc, moving_maxr = moving_minc + width, moving_minr + height
+        fixed_minc, fixed_min_r, width, height = cv2.boundingRect(fixed_mask)
+        fixed_max_c, fixed_max_r = fixed_minc + width, fixed_min_r + height
+        moving_minc, moving_min_r, width, height = cv2.boundingRect(moving_mask)
+        moving_max_c, moving_max_r = moving_minc + width, moving_min_r + height
 
-        minc, maxc, minr, maxr = (
+        minc, max_c, min_r, max_r = (
             np.min([fixed_minc, moving_minc]),
-            np.max([fixed_maxc, moving_maxc]),
-            np.min([fixed_minr, moving_minr]),
-            np.max([fixed_maxr, moving_maxr]),
+            np.max([fixed_max_c, moving_max_c]),
+            np.min([fixed_min_r, moving_min_r]),
+            np.max([fixed_max_r, moving_max_r]),
         )
 
-        fixed_tissue_image = fixed_image[minr:maxr, minc:maxc]
-        fixed_tissue_mask = fixed_mask[minr:maxr, minc:maxc]
-        moving_tissue_image = moving_image[minr:maxr, minc:maxc]
-        moving_tissue_mask = moving_mask[minr:maxr, minc:maxc]
+        fixed_tissue_image = fixed_image[min_r:max_r, minc:max_c]
+        fixed_tissue_mask = fixed_mask[min_r:max_r, minc:max_c]
+        moving_tissue_image = moving_image[min_r:max_r, minc:max_c]
+        moving_tissue_mask = moving_mask[min_r:max_r, minc:max_c]
         moving_tissue_image[np.all(moving_tissue_image == (0, 0, 0), axis=-1)] = (
             243,
             243,
@@ -644,7 +644,7 @@ class DFBRegister:
             fixed_tissue_mask,
             moving_tissue_image,
             moving_tissue_mask,
-            (minr, minc, maxr, maxc),
+            (min_r, minc, max_r, max_c),
         )
 
     @staticmethod
@@ -708,21 +708,21 @@ class DFBRegister:
                 - np.ndarray - Quality of matching points.
 
         """
-        included_indx = self.find_points_inside_boundary(
+        included_index = self.find_points_inside_boundary(
             fixed_mask, fixed_matched_points
         )
         fixed_matched_points, moving_matched_points, quality = (
-            fixed_matched_points[included_indx, :],
-            moving_matched_points[included_indx, :],
-            quality[included_indx],
+            fixed_matched_points[included_index, :],
+            moving_matched_points[included_index, :],
+            quality[included_index],
         )
-        included_indx = self.find_points_inside_boundary(
+        included_index = self.find_points_inside_boundary(
             moving_mask, moving_matched_points
         )
         fixed_matched_points, moving_matched_points, quality = (
-            fixed_matched_points[included_indx, :],
-            moving_matched_points[included_indx, :],
-            quality[included_indx],
+            fixed_matched_points[included_index, :],
+            moving_matched_points[included_index, :],
+            quality[included_index],
         )
 
         # remove duplicate matching points
@@ -814,14 +814,14 @@ class DFBRegister:
         )
         return tissue_transform, moving_img, moving_mask
 
-    def perform_dfbregister_blockwise(
+    def perform_dfbregister_block_wise(
         self,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Perform DFBR to align a pair of images in a blockwise manner.
+        """Perform DFBR to align a pair of images in a block wise manner.
 
         This function divides the images into four equal parts and then
         perform feature matching for each part from the tissue and moving
@@ -1008,12 +1008,12 @@ class DFBRegister:
         else:
             tissue_transform = np.eye(3, 3)
 
-        # Perform transform using tissue regions in a block-wise manner
+        # Perform transform using tissue regions in a block wise manner
         (
             block_transform,
             transform_tissue_img,
             transform_tissue_mask,
-        ) = self.perform_dfbregister_blockwise(
+        ) = self.perform_dfbregister_block_wise(
             fixed_tissue_img, moving_tissue_img, fixed_tissue_mask, moving_tissue_mask
         )
 
