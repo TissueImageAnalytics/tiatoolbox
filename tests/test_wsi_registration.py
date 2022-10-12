@@ -365,7 +365,7 @@ def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving
     _ = df.register(
         fixed_img,
         moving_img,
-        fixed_msk,
-        moving_msk,
+        fixed_msk[:, :, 0],
+        moving_msk[:, :, 0],
         transform_initializer=pre_transform,
     )
