@@ -1,10 +1,10 @@
 import warnings
 from typing import Dict, Tuple
 
-import SimpleITK as sitk
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
+import SimpleITK as sitk
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1049,13 +1049,15 @@ class DFBRegister:
 
 
 def estimate_bspline_transform(
-    fixed_image: np.ndarray, moving_image: np.ndarray,
-    fixed_mask: np.ndarray, moving_mask: np.ndarray,
+    fixed_image: np.ndarray,
+    moving_image: np.ndarray,
+    fixed_mask: np.ndarray,
+    moving_mask: np.ndarray,
     grid_space: float = 50.0,
     scale_factors: list = [1, 2, 5],
     shrink_factor: list = [4, 2, 1],
     smooth_sigmas: list = [4, 2, 1],
-    num_iterations : int = 100,
+    num_iterations: int = 100,
 ):
     # Inverting intensity values
     fixed_image_inv = 255 - fixed_image
@@ -1076,11 +1078,20 @@ def estimate_bspline_transform(
     moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
 
     # Determine the number of BSpline control points using physical spacing
-    grid_physical_spacing = [grid_space, grid_space, grid_space]  # A control point every 50mm
-    image_physical_size = [size*spacing for size, spacing in zip(fixed_image.GetSize(), fixed_image.GetSpacing())]
-    mesh_size = [int(image_size/grid_spacing + 0.5) \
-                 for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)]
-    mesh_size = [int(sz/4 + 0.5) for sz in mesh_size]
+    grid_physical_spacing = [
+        grid_space,
+        grid_space,
+        grid_space,
+    ]  # A control point every 50mm
+    image_physical_size = [
+        size * spacing
+        for size, spacing in zip(fixed_image.GetSize(), fixed_image.GetSpacing())
+    ]
+    mesh_size = [
+        int(image_size / grid_spacing + 0.5)
+        for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)
+    ]
+    mesh_size = [int(sz / 4 + 0.5) for sz in mesh_size]
     tx = sitk.BSplineTransformInitializer(
         image1=fixed_image_inv_sitk, transformDomainMeshSize=mesh_size
     )
@@ -1095,7 +1106,10 @@ def estimate_bspline_transform(
     R.SetShrinkFactorsPerLevel(shrink_factor)
     R.SetSmoothingSigmasPerLevel(smooth_sigmas)
     R.SetOptimizerAsGradientDescentLineSearch(
-        learningRate=0.5, numberOfIterations=num_iterations, convergenceMinimumValue=1e-4, convergenceWindowSize=5
+        learningRate=0.5,
+        numberOfIterations=num_iterations,
+        convergenceMinimumValue=1e-4,
+        convergenceWindowSize=5,
     )
     R.SetInterpolator(sitk.sitkLinear)
     return R.Execute(fixed_image_inv_sitk, moving_image_inv_sitk)
