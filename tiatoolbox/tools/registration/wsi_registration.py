@@ -958,9 +958,9 @@ class DFBRegister:
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
             raise ValueError("The input images are expected to have 3 channels.")
 
-        if len(fixed_mask.shape) != 2:
+        if len(fixed_mask.shape) > 2:
             fixed_mask = fixed_mask[:, :, 0]
-        if len(moving_mask.shape) != 2:
+        if len(moving_mask.shape) > 2:
             moving_mask = moving_mask[:, :, 0]
 
         fixed_mask = np.uint8(fixed_mask > 0)
