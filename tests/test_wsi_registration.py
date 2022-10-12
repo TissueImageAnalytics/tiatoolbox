@@ -6,6 +6,7 @@ import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import (
     DFBRegister,
+    estimate_bspline_transform,
     match_histograms,
     prealignment,
 )
@@ -368,4 +369,25 @@ def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving
         fixed_msk,
         moving_msk,
         transform_initializer=pre_transform,
+    )
+
+
+def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
+    """Test for estimate_bspline_transform function."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    rigid_transform = np.array(
+        [[-0.99683, -0.00333, 338.69983], [-0.03201, -0.98420, 770.22941], [0, 0, 1]]
+    )
+    moving_img = cv2.warpAffine(
+        moving_img, rigid_transform[0:-1][:], fixed_img.shape[:2][::-1]
+    )
+    moving_msk = cv2.warpAffine(
+        moving_msk, rigid_transform[0:-1][:], fixed_img.shape[:2][::-1]
+    )
+    _ = estimate_bspline_transform(
+        fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk, moving_msk
     )

@@ -1,7 +1,7 @@
 import warnings
 from typing import Dict, Tuple
 
-import SimpleITK as sitk
+import SimpleITK as Sitk
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
@@ -1049,53 +1049,81 @@ class DFBRegister:
 
 
 def estimate_bspline_transform(
-    fixed_image: np.ndarray, moving_image: np.ndarray,
-    fixed_mask: np.ndarray, moving_mask: np.ndarray,
+    fixed_image: np.ndarray,
+    moving_image: np.ndarray,
+    fixed_mask: np.ndarray,
+    moving_mask: np.ndarray,
     grid_space: float = 50.0,
-    scale_factors: list = [1, 2, 5],
-    shrink_factor: list = [4, 2, 1],
-    smooth_sigmas: list = [4, 2, 1],
-    num_iterations : int = 100,
+    scale_factors: list = (1, 2, 5),
+    shrink_factor: list = (4, 2, 1),
+    smooth_sigmas: list = (4, 2, 1),
+    num_iterations: int = 100,
+    sampling_percent: float = 0.2,
 ):
+    fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
+    if len(fixed_image.shape) == 3 or len(moving_image.shape) == 3:
+        raise ValueError("The input images should be grayscale images.")
+
     # Inverting intensity values
     fixed_image_inv = 255 - fixed_image
     moving_image_inv = 255 - moving_image
 
-    # Background Removal
+    if len(fixed_mask.shape) > 2:
+        fixed_mask = fixed_mask[:, :, 0]
+    if len(moving_mask.shape) > 2:
+        moving_mask = moving_mask[:, :, 0]
     fixed_mask = np.array(fixed_mask != 0, dtype=np.uint8)
     moving_mask = np.array(moving_mask != 0, dtype=np.uint8)
+
+    # Background Removal
     fixed_image_inv = cv2.bitwise_and(fixed_image_inv, fixed_image_inv, mask=fixed_mask)
     moving_image_inv = cv2.bitwise_and(
         moving_image_inv, moving_image_inv, mask=moving_mask
     )
 
     # Getting SimpleITK Images from numpy arrays
-    fixed_image_inv_sitk = sitk.GetImageFromArray(fixed_image_inv)
-    moving_image_inv_sitk = sitk.GetImageFromArray(moving_image_inv)
-    fixed_image_inv_sitk = sitk.Cast(fixed_image_inv_sitk, sitk.sitkFloat32)
-    moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
+    fixed_image_inv_sitk = Sitk.GetImageFromArray(fixed_image_inv)
+    moving_image_inv_sitk = Sitk.GetImageFromArray(moving_image_inv)
+    fixed_image_inv_sitk = Sitk.Cast(fixed_image_inv_sitk, Sitk.sitkFloat32)
+    moving_image_inv_sitk = Sitk.Cast(moving_image_inv_sitk, Sitk.sitkFloat32)
 
     # Determine the number of BSpline control points using physical spacing
-    grid_physical_spacing = [grid_space, grid_space, grid_space]  # A control point every 50mm
-    image_physical_size = [size*spacing for size, spacing in zip(fixed_image.GetSize(), fixed_image.GetSpacing())]
-    mesh_size = [int(image_size/grid_spacing + 0.5) \
-                 for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)]
-    mesh_size = [int(sz/4 + 0.5) for sz in mesh_size]
-    tx = sitk.BSplineTransformInitializer(
+    grid_physical_spacing = [
+        grid_space,
+        grid_space,
+    ]  # A control point every grid_space (mm)
+    image_physical_size = [
+        size * spacing
+        for size, spacing in zip(
+            fixed_image_inv_sitk.GetSize(), fixed_image_inv_sitk.GetSpacing()
+        )
+    ]
+    mesh_size = [
+        int(image_size / grid_spacing + 0.5)
+        for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)
+    ]
+    mesh_size = [int(sz / 4 + 0.5) for sz in mesh_size]
+
+    tx = Sitk.BSplineTransformInitializer(
         image1=fixed_image_inv_sitk, transformDomainMeshSize=mesh_size
     )
-    print("Initial Number of Parameters: {0}".format(tx.GetNumberOfParameters()))
+    print(f"Initial Number of Parameters: {tx.GetNumberOfParameters()}")
 
-    R = sitk.ImageRegistrationMethod()
-    R.SetInitialTransformAsBSpline(tx, inPlace=True, scaleFactors=scale_factors)
-    R.SetMetricAsMattesMutualInformation(50)
-    R.SetMetricSamplingStrategy(R.RANDOM)
-    R.SetMetricSamplingPercentage(0.2)
-
-    R.SetShrinkFactorsPerLevel(shrink_factor)
-    R.SetSmoothingSigmasPerLevel(smooth_sigmas)
-    R.SetOptimizerAsGradientDescentLineSearch(
-        learningRate=0.5, numberOfIterations=num_iterations, convergenceMinimumValue=1e-4, convergenceWindowSize=5
+    registration_method = Sitk.ImageRegistrationMethod()
+    registration_method.SetInitialTransformAsBSpline(
+        tx, inPlace=True, scaleFactors=scale_factors
     )
-    R.SetInterpolator(sitk.sitkLinear)
-    return R.Execute(fixed_image_inv_sitk, moving_image_inv_sitk)
+    registration_method.SetMetricAsMattesMutualInformation(50)
+    registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
+    registration_method.SetMetricSamplingPercentage(sampling_percent)
+
+    registration_method.SetShrinkFactorsPerLevel(shrink_factor)
+    registration_method.SetSmoothingSigmasPerLevel(smooth_sigmas)
+    registration_method.SetOptimizerAsGradientDescentLineSearch(
+        learningRate=0.5,
+        numberOfIterations=num_iterations,
+        convergenceMinimumValue=1e-4,
+        convergenceWindowSize=5,
+    )
+    registration_method.SetInterpolator(Sitk.sitkLinear)
+    return registration_method.Execute(fixed_image_inv_sitk, moving_image_inv_sitk)
