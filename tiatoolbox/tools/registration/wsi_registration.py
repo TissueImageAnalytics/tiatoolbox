@@ -1,10 +1,10 @@
 import warnings
 from typing import Dict, Tuple
 
-import SimpleITK as Sitk
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
+import SimpleITK as Sitk
 import torch
 import torchvision
 from skimage import exposure, filters
