@@ -3,7 +3,6 @@ from typing import Dict, Tuple
 
 import cv2
 import numpy as np
-import scipy.ndimage as ndi
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -58,6 +57,27 @@ def _check_dims(
         moving_img = cv2.cvtColor(moving_img, cv2.COLOR_BGR2GRAY)
 
     return fixed_img, moving_img
+
+
+def compute_center_of_mass(mask: np.ndarray) -> list:
+    """Compute center of mass.
+
+    Args:
+        mask: (:class:`numpy.ndarray`):
+            A binary mask.
+
+    Returns:
+        list:
+            x- and y- coordinates representing center of mass.
+
+    """
+    mask = np.uint8(mask > 0)
+    contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    biggest_contour = max(contours, key=cv2.contourArea)
+    moments = cv2.moments(biggest_contour)
+    x_coord_center = moments["m10"] / moments["m00"]
+    y_coord_center = moments["m01"] / moments["m00"]
+    return [x_coord_center, y_coord_center]
 
 
 def prealignment(
@@ -137,11 +157,8 @@ def prealignment(
     )
     dice_before = dice(padded_fixed_mask, padded_moving_mask)
 
-    cy, cx = ndi.center_of_mass((1 - fixed_img) * fixed_mask)
-    fixed_com = [cx, cy]
-
-    cy, cx = ndi.center_of_mass((1 - moving_img) * moving_mask)
-    moving_com = [cx, cy]
+    fixed_com = compute_center_of_mass((1 - fixed_img) * fixed_mask)
+    moving_com = compute_center_of_mass((1 - moving_img) * moving_mask)
 
     com_transform = np.array(
         [
