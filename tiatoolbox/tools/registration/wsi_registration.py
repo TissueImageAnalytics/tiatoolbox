@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
-import SimpleITK as Sitk
+import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1100,10 +1100,10 @@ def estimate_bspline_transform(
     )
 
     # Getting SimpleITK Images from numpy arrays
-    fixed_image_inv_sitk = Sitk.GetImageFromArray(fixed_image_inv)
-    moving_image_inv_sitk = Sitk.GetImageFromArray(moving_image_inv)
-    fixed_image_inv_sitk = Sitk.Cast(fixed_image_inv_sitk, Sitk.sitkFloat32)
-    moving_image_inv_sitk = Sitk.Cast(moving_image_inv_sitk, Sitk.sitkFloat32)
+    fixed_image_inv_sitk = sitk.GetImageFromArray(fixed_image_inv)
+    moving_image_inv_sitk = sitk.GetImageFromArray(moving_image_inv)
+    fixed_image_inv_sitk = sitk.Cast(fixed_image_inv_sitk, sitk.sitkFloat32)
+    moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
 
     # Determine the number of BSpline control points using physical spacing
     grid_physical_spacing = [
@@ -1122,12 +1122,12 @@ def estimate_bspline_transform(
     ]
     mesh_size = [int(sz / 4 + 0.5) for sz in mesh_size]
 
-    tx = Sitk.BSplineTransformInitializer(
+    tx = sitk.BSplineTransformInitializer(
         image1=fixed_image_inv_sitk, transformDomainMeshSize=mesh_size
     )
     print(f"Initial Number of Parameters: {tx.GetNumberOfParameters()}")
 
-    registration_method = Sitk.ImageRegistrationMethod()
+    registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetInitialTransformAsBSpline(
         tx, inPlace=True, scaleFactors=scale_factors
     )
@@ -1143,5 +1143,5 @@ def estimate_bspline_transform(
         convergenceMinimumValue=1e-4,
         convergenceWindowSize=5,
     )
-    registration_method.SetInterpolator(Sitk.sitkLinear)
+    registration_method.SetInterpolator(sitk.sitkLinear)
     return registration_method.Execute(fixed_image_inv_sitk, moving_image_inv_sitk)
