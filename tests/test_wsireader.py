@@ -1932,7 +1932,6 @@ def test_ngff_zattrs_missing_axes(tmp_path):
     assert wsi.info.mpp is None
 
 
-
 class TestReader:
     scenarios = [
         (
