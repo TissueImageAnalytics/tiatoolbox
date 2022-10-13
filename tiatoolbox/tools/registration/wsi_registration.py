@@ -61,6 +61,24 @@ def _check_dims(
     return fixed_img, moving_img
 
 
+def compute_center_of_mass(mask: np.ndarray) -> list:
+    """Compute center of mass.
+
+    Args:
+        mask: (:class:`numpy.ndarray`):
+            A binary mask.
+
+    Returns:
+        list:
+            x- and y- coordinates representing center of mass.
+
+    """
+    moments = cv2.moments(mask)
+    x_coord_center = moments["m10"] / moments["m00"]
+    y_coord_center = moments["m01"] / moments["m00"]
+    return [x_coord_center, y_coord_center]
+
+
 def prealignment(
     fixed_img: np.ndarray,
     moving_img: np.ndarray,
@@ -141,8 +159,8 @@ def prealignment(
     cy, cx = ndi.center_of_mass((1 - fixed_img) * fixed_mask)
     fixed_com = [cx, cy]
 
-    cy, cx = ndi.center_of_mass((1 - moving_img) * moving_mask)
-    moving_com = [cx, cy]
+    fixed_com = compute_center_of_mass((1 - fixed_img) * fixed_mask)
+    moving_com = compute_center_of_mass((1 - moving_img) * moving_mask)
 
     com_transform = np.array(
         [
