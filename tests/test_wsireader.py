@@ -1958,7 +1958,9 @@ def test_nff_no_scale_transforms_mpp(tmp_path):
     with open(sample_copy / ".zattrs", "r") as fh:
         zattrs = json.load(fh)
     for i, _ in enumerate(zattrs["multiscales"][0]["datasets"]):
-        zattrs["multiscales"][0]["datasets"][i]["coordinateTransformations"][0]["type"] = "identity"
+        zattrs["multiscales"][0]["datasets"][i]["coordinateTransformations"][0][
+            "type"
+        ] = "identity"
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
