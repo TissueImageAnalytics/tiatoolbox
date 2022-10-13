@@ -4270,7 +4270,7 @@ class NGFFWSIReader(WSIReader):
         ):
             return None
 
-        # Currently assuming the first is mpp
+        # Currently simply using the first scale transform
         transforms = multiscales.datasets[0].coordinateTransformations
         for t in transforms:
             if "scale" in t and t.get("type") == "scale":
