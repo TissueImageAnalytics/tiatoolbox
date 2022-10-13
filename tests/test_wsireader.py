@@ -1903,6 +1903,36 @@ def test_is_ngff_regular_zarr(tmp_path):
     assert not is_ngff(zarr_path)
 
 
+def test_ngff_zattrs_non_micrometer_scale(tmp_path):
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample with a non-micrometer scale
+    sample_copy = tmp_path / "ngff-1"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    zattrs["multiscales"][0]["axes"][0]["unit"] = "foo"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with pytest.warns(UserWarning, match="micrometer"):
+        wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert wsi.info.mpp is None
+
+
+def test_ngff_zattrs_missing_axes(tmp_path):
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample with no axes
+    sample_copy = tmp_path / "ngff-1"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    zattrs["multiscales"][0]["axes"] = []
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert wsi.info.mpp is None
+
+
+
 class TestReader:
     scenarios = [
         (
