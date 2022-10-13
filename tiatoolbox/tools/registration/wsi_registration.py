@@ -71,10 +71,7 @@ def compute_center_of_mass(mask: np.ndarray) -> list:
             x- and y- coordinates representing center of mass.
 
     """
-    mask = np.uint8(mask > 0)
-    contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    biggest_contour = max(contours, key=cv2.contourArea)
-    moments = cv2.moments(biggest_contour)
+    moments = cv2.moments(mask)
     x_coord_center = moments["m10"] / moments["m00"]
     y_coord_center = moments["m01"] / moments["m00"]
     return [x_coord_center, y_coord_center]
