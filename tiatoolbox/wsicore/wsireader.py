@@ -4239,7 +4239,7 @@ class NGFFWSIReader(WSIReader):
         )
 
     def _get_mpp(self) -> Optional[Tuple[float, float]]:
-        """Get the mpp of the slide.
+        """Get the microns-per-pixel (MPP) of the slide.
 
         Returns:
             Tuple[float, float]:
