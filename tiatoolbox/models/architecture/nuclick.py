@@ -106,7 +106,7 @@ class ConvBnRelu(nn.Module):
         activation,
         do_batchnorm,
     ):
-        """Function for acquire the convolutional block.
+        """Function to acquire a convolutional block.
 
         Args:
             in_channels (int):
@@ -181,13 +181,13 @@ class MultiscaleConvBlock(nn.Module):
 
     def __init__(
         self,
-        num_input_channels,
-        kernel_sizes,
-        dilation_rates,
-        num_output_channels=32,
-        strides=(1, 1),
-        activation="relu",
-        use_bias=False,
+        num_input_channels: int,
+        kernel_sizes: Union[Tuple[int, int], np.ndarray],
+        dilation_rates: Union[Tuple[int, int], np.ndarray],
+        num_output_channels: int = 32,
+        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        activation: str = "relu",
+        use_bias: bool = False,
     ):
 
         super().__init__()
@@ -279,12 +279,12 @@ class ResidualConv(nn.Module):
 
     def __init__(
         self,
-        num_input_channels,
-        num_output_channels=32,
-        kernel_size=(3, 3),
-        strides=(1, 1),
-        use_bias=False,
-        dilation_rate=(1, 1),
+        num_input_channels: int,
+        num_output_channels: int = 32,
+        kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
+        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        use_bias: bool = False,
+        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
     ):
         super().__init__()
 
@@ -350,7 +350,7 @@ class NuClick(ModelABC):
 
     """
 
-    def __init__(self, num_input_channels, num_output_channels):
+    def __init__(self, num_input_channels: int, num_output_channels: int):
         super().__init__()
         self.net_name = "NuClick"
 
