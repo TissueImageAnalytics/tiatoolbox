@@ -24,8 +24,8 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     _pretrained_path = f"{tmp_path}/weights.pth"
     fetch_pretrained_weights("nuclick_original-pannuke", _pretrained_path)
 
-    with pytest.raises(ValueError, match=r".*input channels number error*"):
-        model = NuClick(num_input_channels=-1, num_output_channels=-1)
+    # with pytest.raises(ValueError, match=r".*input channels number error*"):
+    #     model = NuClick(num_input_channels=-1, num_output_channels=-1)
 
     # test creation
     model = NuClick(num_input_channels=5, num_output_channels=1)

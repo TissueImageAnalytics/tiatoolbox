@@ -119,3 +119,5 @@ files:
     url: [ *testdata, "registration/HE_1_level8_mask.png" ]
   moving_mask:
     url: [ *testdata, "registration/HE_2_level8_mask.png" ]
+  nuclick-output:
+    url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
