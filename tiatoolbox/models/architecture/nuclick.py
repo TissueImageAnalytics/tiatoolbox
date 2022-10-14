@@ -34,12 +34,12 @@ class ConvBnRelu(nn.Module):
             Number of channels in output.
         kernel_size (int):
             Size of the kernel in the convolution layer.
-        strds (int):
+        strides (int):
             Size of the stride in the convolution layer.
         use_bias (bool):
             Whether to use bias in the convolution layer.
-        dilatation_rate (int):
-            Dilatation rate in the convolution layer.
+        dilation_rate (int):
+            Dilation rate in the convolution layer.
         activation (str):
             Name of the activation function to use.
         do_batchnorm (bool):
@@ -55,9 +55,9 @@ class ConvBnRelu(nn.Module):
         num_input_channels: int,
         num_output_channels: int,
         kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
-        strds: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
         use_bias: bool = False,
-        dilatation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
         activation: str = "relu",
         do_batchnorm: bool = True,
     ):
@@ -65,16 +65,16 @@ class ConvBnRelu(nn.Module):
         super().__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
-        if isinstance(strds, int):
-            strds = (strds, strds)
+        if isinstance(strides, int):
+            strides = (strides, strides)
 
         self.conv_bn_relu = self.get_block(
             num_input_channels,
             num_output_channels,
             kernel_size,
-            strds,
+            strides,
             use_bias,
-            dilatation_rate,
+            dilation_rate,
             activation,
             do_batchnorm,
         )
@@ -100,9 +100,9 @@ class ConvBnRelu(nn.Module):
         in_channels,
         out_channels,
         kernel_size,
-        strds,
+        strides,
         use_bias,
-        dilatation_rate,
+        dilation_rate,
         activation,
         do_batchnorm,
     ):
@@ -115,11 +115,11 @@ class ConvBnRelu(nn.Module):
                 Number of channels in output.
             kernel_size (list):
                 Size of the kernel in the acquired convolution block.
-            strds (int):
+            strides (int):
                 Size of stride in the convolution layer.
             use_bias (bool):
                 Whether to use bias in the convolution layer.
-            dilatation_rates (list):
+            dilation_rates (list):
                 Dilation rate for each convolution layer.
             activation (str):
                 Name of the activation function to use.
@@ -134,8 +134,8 @@ class ConvBnRelu(nn.Module):
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
-            stride=strds,
-            dilation=dilatation_rate,
+            stride=strides,
+            dilation=dilation_rate,
             bias=use_bias,
             padding="same",
             padding_mode="zeros",
@@ -164,11 +164,11 @@ class MultiscaleConvBlock(nn.Module):
             Number of channels in output.
         kernel_sizes (list):
             Size of the kernel in each convolution layer.
-        strds (int):
+        strides (int):
             Size of stride in the convolution layer.
         use_bias (bool):
             Whether to use bias in the convolution layer.
-        dilatation_rates (list):
+        dilation_rates (list):
             Dilation rate for each convolution layer.
         activation (str):
             Name of the activation function to use.
@@ -183,9 +183,9 @@ class MultiscaleConvBlock(nn.Module):
         self,
         num_input_channels,
         kernel_sizes,
-        dilatation_rates,
+        dilation_rates,
         num_output_channels=32,
-        strds=(1, 1),
+        strides=(1, 1),
         activation="relu",
         use_bias=False,
     ):
@@ -196,40 +196,40 @@ class MultiscaleConvBlock(nn.Module):
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[0],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[0], dilatation_rates[0]),
+            dilation_rate=(dilation_rates[0], dilation_rates[0]),
         )
 
         self.conv_block_2 = ConvBnRelu(
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[1],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[1], dilatation_rates[1]),
+            dilation_rate=(dilation_rates[1], dilation_rates[1]),
         )
 
         self.conv_block_3 = ConvBnRelu(
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[2],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[2], dilatation_rates[2]),
+            dilation_rate=(dilation_rates[2], dilation_rates[2]),
         )
 
         self.conv_block_4 = ConvBnRelu(
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[3],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[3], dilatation_rates[3]),
+            dilation_rate=(dilation_rates[3], dilation_rates[3]),
         )
 
     def forward(self, input_map):
@@ -265,11 +265,11 @@ class ResidualConv(nn.Module):
             Number of channels in output.
         kernel_size (int):
             Size of the kernel in all convolution layers.
-        strds (int):
+        strides (int):
             Size of the stride in all convolution layers.
         use_bias (bool):
             Whether to use bias in the convolution layers.
-        dilatation_rate (int):
+        dilation_rate (int):
             Dilation rate in all convolution layers.
     Returns:
         model (torch.nn.Module):
@@ -282,9 +282,9 @@ class ResidualConv(nn.Module):
         num_input_channels,
         num_output_channels=32,
         kernel_size=(3, 3),
-        strds=(1, 1),
+        strides=(1, 1),
         use_bias=False,
-        dilatation_rate=(1, 1),
+        dilation_rate=(1, 1),
     ):
         super().__init__()
 
@@ -292,20 +292,20 @@ class ResidualConv(nn.Module):
             num_input_channels,
             num_output_channels,
             kernel_size=kernel_size,
-            strds=strds,
+            strides=strides,
             activation="None",
             use_bias=use_bias,
-            dilatation_rate=dilatation_rate,
+            dilation_rate=dilation_rate,
             do_batchnorm=True,
         )
         self.conv_block_2 = ConvBnRelu(
             num_output_channels,
             num_output_channels,
             kernel_size=kernel_size,
-            strds=strds,
+            strides=strides,
             activation="None",
             use_bias=use_bias,
-            dilatation_rate=dilatation_rate,
+            dilation_rate=dilation_rate,
             do_batchnorm=True,
         )
 
@@ -378,7 +378,7 @@ class NuClick(ModelABC):
             num_input_channels=32,
             num_output_channels=self.n_classes,
             kernel_size=(1, 1),
-            strds=1,
+            strides=1,
             activation=None,
             use_bias=True,
             do_batchnorm=False,
@@ -446,21 +446,21 @@ class NuClick(ModelABC):
             num_input_channels=128,
             num_output_channels=32,
             kernel_sizes=[3, 3, 5, 5],
-            dilatation_rates=[1, 3, 3, 6],
+            dilation_rates=[1, 3, 3, 6],
         )
 
         self.multiscale_block_2 = MultiscaleConvBlock(
             num_input_channels=256,
             num_output_channels=64,
             kernel_sizes=[3, 3, 5, 5],
-            dilatation_rates=[1, 3, 2, 3],
+            dilation_rates=[1, 3, 2, 3],
         )
 
         self.multiscale_block_3 = MultiscaleConvBlock(
             num_input_channels=64,
             num_output_channels=16,
             kernel_sizes=[3, 3, 5, 7],
-            dilatation_rates=[1, 3, 2, 6],
+            dilation_rates=[1, 3, 2, 6],
         )
 
         # -------------Max Pooling blocks------------
