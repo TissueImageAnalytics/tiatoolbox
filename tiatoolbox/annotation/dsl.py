@@ -48,8 +48,10 @@ Unsupported operations:
     - Imports: `import re`
     - List length: `len(props["key"])` (support planned)
 
-Some mathematical functions will not function if the compile option
-`ENABLE_MATH_FUNCTIONS` is not set. These are:
+Compile options:
+    Some mathematical functions will not function if the compile option
+    `ENABLE_MATH_FUNCTIONS` is not set. These are:
+
     - `//` (floor division)
 
 """
@@ -63,7 +65,7 @@ from typing import Any, Callable, Optional, Union
 
 @dataclass
 class SQLNone:
-    """Sentinal object for SQL NULL within expressions."""
+    """Sentinel object for SQL NULL within expressions."""
 
     def __str__(self) -> str:
         return "NULL"
@@ -233,7 +235,7 @@ class SQLJSONDictionary(SQLExpression):
             key_str = f"[{key}]"
         else:
             key_str = str(key)
-        joiner = "." if self.acc and not isinstance(key, (int)) else ""
+        joiner = "." if self.acc and not isinstance(key, int) else ""
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):

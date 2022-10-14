@@ -19,7 +19,6 @@ import tifffile
 import zarr
 
 from tiatoolbox import utils
-from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
@@ -463,18 +462,22 @@ class WSIReader:
 
         Returns:
             tuple:
-                Parameters for reading the requested region
+                Parameters for reading the requested region.
+
                 - :py:obj:`int` - Optimal read level.
+
                 - :py:obj:`tuple` - Read location in level coordinates.
                     - :py:obj:`int` - X location.
                     - :py:obj:`int` - Y location.
+
                 - :py:obj:`tuple` - Region size in level coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.
-                - :py:obj:`tuple` - Scaling to apply after level read to
-                  achieve desired output resolution.
+
+                - :py:obj:`tuple` - Scaling to apply after level read.
                     - :py:obj:`float` - X scale factor.
                     - :py:obj:`float` - Y scale factor.
+
                 - :py:obj:`tuple` - Region size in baseline coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.
@@ -1290,6 +1293,8 @@ class WSIReader:
                 Extra kwargs passed to the masker class.
 
         """
+        from tiatoolbox.tools import tissuemask
+
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
             raise ValueError(f"Invalid tissue masking method: {method}.")
@@ -4195,7 +4200,15 @@ class NGFFWSIReader(WSIReader):
             multiscales=ngff.Multiscales(
                 version=multiscales.get("version"),
                 axes=[ngff.Axis(**axis) for axis in axes],
-                datasets=[ngff.Dataset(**dataset) for dataset in datasets],
+                datasets=[
+                    ngff.Dataset(
+                        path=dataset["path"],
+                        coordinateTransformations=dataset.get(
+                            "coordinateTransformations",
+                        ),
+                    )
+                    for dataset in datasets
+                ],
             ),
             omero=ngff.Omero(
                 name=omero.get("name"),
@@ -4212,8 +4225,9 @@ class NGFFWSIReader(WSIReader):
         }
 
     def _info(self):
+        multiscales = self.zattrs.multiscales
         return WSIMeta(
-            axes="".join(axis.name.upper() for axis in self.zattrs.multiscales.axes),
+            axes="".join(axis.name.upper() for axis in multiscales.axes),
             level_dimensions=[
                 array.shape[:2][::-1]
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
@@ -4221,7 +4235,49 @@ class NGFFWSIReader(WSIReader):
             slide_dimensions=self._zarr_group[0].shape[:2][::-1],
             vendor=self.zattrs._creator.name,  # skipcq
             raw=self._zarr_group.attrs,
+            mpp=self._get_mpp(),
         )
+
+    def _get_mpp(self) -> Optional[Tuple[float, float]]:
+        """Get the microns-per-pixel (MPP) of the slide.
+
+        Returns:
+            Tuple[float, float]:
+                The mpp of the slide an x,y tuple. None if not available.
+
+        """
+        # Check that the required axes are present
+        multiscales = self.zattrs.multiscales
+        axes_dict = {a.name.lower(): a for a in multiscales.axes}
+        if "x" not in axes_dict or "y" not in axes_dict:
+            return None
+        x = axes_dict["x"]
+        y = axes_dict["y"]
+
+        # Check the units,
+        # Currently only handle micrometer units
+        if x.unit != y.unit != "micrometer":
+            warnings.warn(
+                f"Expected units of micrometer, got {x.unit} and {y.unit}",
+                UserWarning,
+            )
+            return None
+
+        # Check that datasets is non-empty and has at least one coordinateTransformation
+        if (
+            not multiscales.datasets
+            or not multiscales.datasets[0].coordinateTransformations
+        ):
+            return None
+
+        # Currently simply using the first scale transform
+        transforms = multiscales.datasets[0].coordinateTransformations
+        for t in transforms:
+            if "scale" in t and t.get("type") == "scale":
+                x_index = multiscales.axes.index(x)
+                y_index = multiscales.axes.index(y)
+                return (t["scale"][x_index], t["scale"][y_index])
+        return None
 
     def read_rect(
         self,

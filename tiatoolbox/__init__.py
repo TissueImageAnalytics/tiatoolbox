@@ -1,6 +1,9 @@
 """Top-level package for TIA Toolbox."""
 
+import importlib.util
 import os
+import sys
+from pathlib import Path
 
 import pkg_resources
 import yaml
@@ -14,7 +17,7 @@ __version__ = "1.2.1"
 # C:\Users\USER\.tiatoolbox
 # /home/USER/.tiatoolbox
 
-# Initialize internal logging facilities, such that models and etc.
+# Initialize internal logging facilities, such that models etc.
 # can have reporting mechanism, may need to change protocol
 import logging
 
@@ -46,7 +49,22 @@ with open(PRETRAINED_FILES_REGISTRY_PATH) as registry_handle:
 rcParam["pretrained_model_info"] = PRETRAINED_INFO
 
 
-from tiatoolbox import models, tiatoolbox, tools, utils, wsicore
+def _lazy_import(name: str, module_location: Path):
+    spec = importlib.util.spec_from_file_location(name, module_location)
+    loader = importlib.util.LazyLoader(spec.loader)
+    spec.loader = loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    loader.exec_module(module)
+    return module
+
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))
+    location = Path(__file__).parent
+    annotation = _lazy_import("annotation", location)
+    models = _lazy_import("models", location)
+    tiatoolbox = _lazy_import("tiatoolbox", location)
+    tools = _lazy_import("tools", location)
+    utils = _lazy_import("utils", location)
+    wsicore = _lazy_import("wsicore", location)

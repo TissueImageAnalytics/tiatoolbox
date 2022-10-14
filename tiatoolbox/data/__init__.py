@@ -3,7 +3,6 @@
 import pathlib
 import tempfile
 import zipfile
-from importlib.resources import path
 from typing import Optional, Union
 from urllib.parse import urlparse
 
@@ -11,8 +10,6 @@ import numpy as np
 import pkg_resources
 import requests
 import yaml
-
-from tiatoolbox.utils.misc import imread
 
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
@@ -95,7 +92,7 @@ def _local_sample_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
 
 
     Example:
-        >>> # Get the path to a sample target image for performaing
+        >>> # Get the path to a sample target image for performing
         >>> # stain normalization.
         >>> from tiatoolbox.data import stain_norm_target
         >>> img = stainnorm_target()
@@ -108,4 +105,6 @@ def _local_sample_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
 
 def stain_norm_target() -> np.ndarray:
     """Target image for stain normalization."""
+    from tiatoolbox.utils.misc import imread
+
     return imread(_local_sample_path("target_image.png"))
