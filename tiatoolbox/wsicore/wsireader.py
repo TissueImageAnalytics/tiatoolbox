@@ -3248,8 +3248,8 @@ class TIFFWSIReader(WSIReader):
             and res_units.value != 1
         ):
             mpp = [
-                utils.misc.ppu2mpp(res_x.value[0], res_units.value),
-                utils.misc.ppu2mpp(res_y.value[0], res_units.value),
+                utils.misc.ppu2mpp(res_x.value[0] / res_x.value[1], res_units.value),
+                utils.misc.ppu2mpp(res_y.value[0] / res_y.value[1], res_units.value),
             ]
 
         return {
@@ -4200,7 +4200,15 @@ class NGFFWSIReader(WSIReader):
             multiscales=ngff.Multiscales(
                 version=multiscales.get("version"),
                 axes=[ngff.Axis(**axis) for axis in axes],
-                datasets=[ngff.Dataset(**dataset) for dataset in datasets],
+                datasets=[
+                    ngff.Dataset(
+                        path=dataset["path"],
+                        coordinateTransformations=dataset.get(
+                            "coordinateTransformations",
+                        ),
+                    )
+                    for dataset in datasets
+                ],
             ),
             omero=ngff.Omero(
                 name=omero.get("name"),
@@ -4217,8 +4225,9 @@ class NGFFWSIReader(WSIReader):
         }
 
     def _info(self):
+        multiscales = self.zattrs.multiscales
         return WSIMeta(
-            axes="".join(axis.name.upper() for axis in self.zattrs.multiscales.axes),
+            axes="".join(axis.name.upper() for axis in multiscales.axes),
             level_dimensions=[
                 array.shape[:2][::-1]
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
@@ -4226,7 +4235,49 @@ class NGFFWSIReader(WSIReader):
             slide_dimensions=self._zarr_group[0].shape[:2][::-1],
             vendor=self.zattrs._creator.name,  # skipcq
             raw=self._zarr_group.attrs,
+            mpp=self._get_mpp(),
         )
+
+    def _get_mpp(self) -> Optional[Tuple[float, float]]:
+        """Get the microns-per-pixel (MPP) of the slide.
+
+        Returns:
+            Tuple[float, float]:
+                The mpp of the slide an x,y tuple. None if not available.
+
+        """
+        # Check that the required axes are present
+        multiscales = self.zattrs.multiscales
+        axes_dict = {a.name.lower(): a for a in multiscales.axes}
+        if "x" not in axes_dict or "y" not in axes_dict:
+            return None
+        x = axes_dict["x"]
+        y = axes_dict["y"]
+
+        # Check the units,
+        # Currently only handle micrometer units
+        if x.unit != y.unit != "micrometer":
+            warnings.warn(
+                f"Expected units of micrometer, got {x.unit} and {y.unit}",
+                UserWarning,
+            )
+            return None
+
+        # Check that datasets is non-empty and has at least one coordinateTransformation
+        if (
+            not multiscales.datasets
+            or not multiscales.datasets[0].coordinateTransformations
+        ):
+            return None
+
+        # Currently simply using the first scale transform
+        transforms = multiscales.datasets[0].coordinateTransformations
+        for t in transforms:
+            if "scale" in t and t.get("type") == "scale":
+                x_index = multiscales.axes.index(x)
+                y_index = multiscales.axes.index(y)
+                return (t["scale"][x_index], t["scale"][y_index])
+        return None
 
     def read_rect(
         self,
