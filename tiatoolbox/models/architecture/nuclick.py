@@ -38,6 +38,7 @@ class ConvBnRelu(nn.Module):
     Returns:
         model (torch.nn.Module): a pytorch model.
 
+
     """
 
     def __init__(
@@ -69,18 +70,19 @@ class ConvBnRelu(nn.Module):
             do_batchnorm,
         )
 
-    def forward(self, input_tensor):
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
         This method defines how layers are used in forward operation.
         Args:
             input_tensor (torch.Tensor): Input, the tensor is of the shape NCHW.
         Returns:
             output (torch.Tensor): The inference output.
+
         """
         return self.conv_bn_relu(input_tensor)
 
+    @staticmethod
     def get_block(
-        self,
         in_channels,
         out_channels,
         kernel_size,
@@ -90,6 +92,21 @@ class ConvBnRelu(nn.Module):
         activation,
         do_batchnorm,
     ):
+        """Function for acquire the convolutional block.
+        Args:
+            in_channels (int): Number of channels in input.
+            out_channels (int): Number of channels in output.
+            kernel_size (list): Size of the kernel in the acquired convolution block.
+            strds (int): Size of stride in the convolution layer.
+            use_bias (bool): Whether to use bias in the convolution layer.
+            dilatation_rates (list): Dilation rate for each convolution layer.
+            activation (str): Name of the activation function to use.
+            do_batchnorm (bool): Whether to do batch normalization after the
+        convolution layer.
+        Returns:
+            torch.nn.Sequential: a pytorch layer
+
+        """
         conv1 = nn.Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -128,7 +145,8 @@ class MultiscaleConvBlock(nn.Module):
         dilatation_rates (list): Dilation rate for each convolution layer.
         activation (str): Name of the activation function to use.
     Returns:
-        model (torch.nn.Module): a pytorch model.
+        torch.nn.Module:
+            A PyTorch model.
 
     """
 
@@ -193,7 +211,6 @@ class MultiscaleConvBlock(nn.Module):
         Returns:
             output (torch.Tensor): The inference output.
         """
-
         conv0 = input_map
 
         conv1 = self.conv_block_1(conv0)
@@ -265,7 +282,6 @@ class ResidualConv(nn.Module):
         Returns:
             output (torch.Tensor): The inference output.
         """
-
         conv1 = self.conv_block_1(input_tensor)
         conv2 = self.conv_block_2(conv1)
         out = torch.add(conv1, conv2)
@@ -285,6 +301,8 @@ class NuClick(ModelABC):
     Examples:
         >>> # instantiate a NuClick model for interactive nucleus segmentation.
         >>> NuClick(num_input_channels = 5, num_output_channels = 1)
+
+
     """
 
     def __init__(self, num_input_channels, num_output_channels):
@@ -449,6 +467,7 @@ class NuClick(ModelABC):
             imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
         Returns:
             output (torch.Tensor): The inference output.
+
         """
         conv1 = self.conv_block_1(imgs)
         pool1 = self.pool_block_1(conv1)
@@ -517,6 +536,7 @@ class NuClick(ModelABC):
         Returns:
             masks (ndarray): pixel-wise nuclei instance segmentation
                 prediction, shape:(no.patch, h, w).
+
         """
         masks = preds > thresh
         masks = remove_small_objects(masks, min_size=min_size)
@@ -547,6 +567,7 @@ class NuClick(ModelABC):
             on_gpu (bool): Whether to run inference on a GPU.
         Returns:
             Pixel-wise nuclei prediction for each patch, shape: (no.patch, h, w).
+
         """
         model.eval()
         device = misc.select_device(on_gpu)
