@@ -1,8 +1,9 @@
-"""Define orginal NuClick architecture#
+"""Define original NuClick architecture
 
 Koohbanani, N. A., Jahanifar, M., Tajadin, N. Z., & Rajpoot, N. (2020).
 NuClick: a deep learning framework for interactive segmentation of microscopic images.
 Medical Image Analysis, 65, 101771.
+
 """
 import warnings
 from typing import Tuple, Union
@@ -24,7 +25,30 @@ bn_axis = 1
 
 
 class ConvBnRelu(nn.Module):
-    """Convolution -> Batch Normalization -> ReLu/Sigmoid
+        """Performs Convolution, Batch Normalization and activation.
+    
+    Convolution -> Batch Normalization -> ReLu/Sigmoid
+    
+    Args:
+        num_input_channels (int): 
+            Number of channels in input.
+        num_output_channels (int): 
+            Number of channels in output.
+        kernel_size (int): 
+            Size of the kernel in the convolution layer.
+        strds (int): 
+            Size of the stride in the convolution layer.
+        use_bias (bool): 
+            Whether to use bias in the convolution layer.
+        dilatation_rate (int): 
+            Dilatation rate in the convolution layer.
+        activation (str): 
+            Name of the activation function to use.
+        do_batchnorm (bool): 
+            Whether to do batch normalization after the convolution layer.
+            
+    Returns:
+        model (torch.nn.Module): a pytorch model.
     Args:
         num_input_channels (int): Number of channels in input.
         num_output_channels (int): Number of channels in output.
@@ -37,6 +61,7 @@ class ConvBnRelu(nn.Module):
         convolution layer.
     Returns:
         model (torch.nn.Module): a pytorch model.
+
 
 
     """
@@ -72,11 +97,16 @@ class ConvBnRelu(nn.Module):
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
+        
         This method defines how layers are used in forward operation.
+        
         Args:
-            input_tensor (torch.Tensor): Input, the tensor is of the shape NCHW.
+            input_tensor (torch.Tensor): 
+                    Input, the tensor is of the shape NCHW.
         Returns:
-            output (torch.Tensor): The inference output.
+            output (torch.Tensor): 
+                        The inference output.
+
 
         """
         return self.conv_bn_relu(input_tensor)
@@ -93,10 +123,31 @@ class ConvBnRelu(nn.Module):
         do_batchnorm,
     ):
         """Function for acquire the convolutional block.
+        
+        Args:
+            in_channels (int): 
+                Number of channels in input.
+            out_channels (int): 
+                Number of channels in output.
+            kernel_size (list): 
+                Size of the kernel in the acquired convolution block.
+            strds (int): 
+                Size of stride in the convolution layer.
+            use_bias (bool): 
+                Whether to use bias in the convolution layer.
+            dilatation_rates (list): 
+                Dilation rate for each convolution layer.
+            activation (str): 
+                Name of the activation function to use.
+            do_batchnorm (bool): 
+                Whether to do batch normalization after the convolution layer.
+                
+        Returns:
+            torch.nn.Sequential: a pytorch layer
         Args:
             in_channels (int): Number of channels in input.
             out_channels (int): Number of channels in output.
-            kernel_size (list): Size of the kernel in the acquired convolution block.
+            kernel_size (Union[int, Tuple[int, int]]): Size of the kernel in the acquired convolution block.
             strds (int): Size of stride in the convolution layer.
             use_bias (bool): Whether to use bias in the convolution layer.
             dilatation_rates (list): Dilation rate for each convolution layer.
@@ -132,7 +183,29 @@ class ConvBnRelu(nn.Module):
 
 
 class MultiscaleConvBlock(nn.Module):
-    """Multiscale convolution block
+    """Defines Multiscale convolution block.
+    
+    Defines four convolution layers.
+    
+    Args:
+        num_input_channels (int): 
+            Number of channels in input.
+        num_output_channels (int): 
+            Number of channels in output.
+        kernel_sizes (list): 
+            Size of the kernel in each convolution layer.
+        strds (int): 
+            Size of stride in the convolution layer.
+        use_bias (bool): 
+            Whether to use bias in the convolution layer.
+        dilatation_rates (list): 
+            Dilation rate for each convolution layer.
+        activation (str): 
+            Name of the activation function to use.
+            
+    Returns:
+        torch.nn.Module:
+            A PyTorch model.
     Defines four convolution layers.
     Args:
         num_input_channels (int): Number of channels in input.
@@ -205,7 +278,7 @@ class MultiscaleConvBlock(nn.Module):
         """Logic for using layers defined in init.
         This method defines how layers are used in forward operation.
         Args:
-            input (torch.Tensor): Input, the tensor is of the shape NCHW.
+            input_map (torch.Tensor): Input, the tensor is of the shape NCHW.
         Returns:
             output (torch.Tensor): The inference output.
         """
@@ -274,6 +347,7 @@ class ResidualConv(nn.Module):
             input_tensor (torch.Tensor): Input, the tensor is of the shape NCHW.
         Returns:
             output (torch.Tensor): The inference output.
+
         """
         conv1 = self.conv_block_1(input_tensor)
         conv2 = self.conv_block_2(conv1)
@@ -294,6 +368,7 @@ class NuClick(ModelABC):
     Examples:
         >>> # instantiate a NuClick model for interactive nucleus segmentation.
         >>> NuClick(num_input_channels = 5, num_output_channels = 1)
+
 
 
     """
