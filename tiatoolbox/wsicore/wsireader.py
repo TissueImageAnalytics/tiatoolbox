@@ -3249,7 +3249,7 @@ class TIFFWSIReader(WSIReader):
         ):
             mpp = [
                 utils.misc.ppu2mpp(res_x.value[0] / res_x.value[1], res_units.value),
-                utils.misc.ppu2mpp(res_x.value[0] / res_x.value[1], res_units.value),
+                utils.misc.ppu2mpp(res_y.value[0] / res_y.value[1], res_units.value),
             ]
 
         return {
