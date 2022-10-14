@@ -228,7 +228,6 @@ class ResidualConv(nn.Module):
         strds (int): Size of the stride in all convolution layers.
         use_bias (bool): Whether to use bias in the convolution layers.
         dilatation_rate (int): Dilation rate in all convolution layers.
-        activation (str): Name of the activation function to use.
     Returns:
         model (torch.nn.Module): a pytorch model.
 
@@ -240,7 +239,6 @@ class ResidualConv(nn.Module):
         num_output_channels=32,
         kernel_size=(3, 3),
         strds=(1, 1),
-        activation="relu",
         use_bias=False,
         dilatation_rate=(1, 1),
     ):

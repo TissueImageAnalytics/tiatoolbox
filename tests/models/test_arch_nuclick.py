@@ -3,6 +3,7 @@
 import pathlib
 
 import numpy as np
+import pytest
 import torch
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
@@ -59,3 +60,14 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     assert (
         np.count_nonzero(postproc_masks * gt_mask) / np.count_nonzero(gt_mask) > 0.999
     )
+
+    # test post-processing without reconstruction
+    _ = model.postproc(output)
+
+    # test failed reconstruction in post-processing
+    inclusion_map = np.zeros((128, 128))
+    inclusion_map[0, 0] = 1
+    with pytest.warns(UserWarning, match=r"Nuclei reconstruction was not done"):
+        _ = model.postproc(
+            output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+        )
