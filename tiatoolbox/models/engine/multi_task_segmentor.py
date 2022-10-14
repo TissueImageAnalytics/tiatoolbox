@@ -255,6 +255,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         )
 
         self.output_types = output_types
+        self._futures = None
 
         if pretrained_model is not None:
             if "hovernetplus" in pretrained_model:
