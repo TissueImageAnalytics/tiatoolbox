@@ -26,27 +26,27 @@ bn_axis = 1
 
 class ConvBnRelu(nn.Module):
         """Performs Convolution, Batch Normalization and activation.
-    
+
     Convolution -> Batch Normalization -> ReLu/Sigmoid
-    
+
     Args:
-        num_input_channels (int): 
+        num_input_channels (int):
             Number of channels in input.
-        num_output_channels (int): 
+        num_output_channels (int):
             Number of channels in output.
-        kernel_size (int): 
+        kernel_size (int):
             Size of the kernel in the convolution layer.
-        strds (int): 
+        strds (int):
             Size of the stride in the convolution layer.
-        use_bias (bool): 
+        use_bias (bool):
             Whether to use bias in the convolution layer.
-        dilatation_rate (int): 
+        dilatation_rate (int):
             Dilatation rate in the convolution layer.
-        activation (str): 
+        activation (str):
             Name of the activation function to use.
-        do_batchnorm (bool): 
+        do_batchnorm (bool):
             Whether to do batch normalization after the convolution layer.
-            
+
     Returns:
         model (torch.nn.Module): a pytorch model.
     Args:
@@ -97,14 +97,14 @@ class ConvBnRelu(nn.Module):
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
-        
+
         This method defines how layers are used in forward operation.
-        
+
         Args:
-            input_tensor (torch.Tensor): 
+            input_tensor (torch.Tensor):
                     Input, the tensor is of the shape NCHW.
         Returns:
-            output (torch.Tensor): 
+            output (torch.Tensor):
                         The inference output.
 
 
@@ -123,25 +123,25 @@ class ConvBnRelu(nn.Module):
         do_batchnorm,
     ):
         """Function for acquire the convolutional block.
-        
+
         Args:
-            in_channels (int): 
+            in_channels (int):
                 Number of channels in input.
-            out_channels (int): 
+            out_channels (int):
                 Number of channels in output.
-            kernel_size (list): 
+            kernel_size (list):
                 Size of the kernel in the acquired convolution block.
-            strds (int): 
+            strds (int):
                 Size of stride in the convolution layer.
-            use_bias (bool): 
+            use_bias (bool):
                 Whether to use bias in the convolution layer.
-            dilatation_rates (list): 
+            dilatation_rates (list):
                 Dilation rate for each convolution layer.
-            activation (str): 
+            activation (str):
                 Name of the activation function to use.
-            do_batchnorm (bool): 
+            do_batchnorm (bool):
                 Whether to do batch normalization after the convolution layer.
-                
+
         Returns:
             torch.nn.Sequential: a pytorch layer
         Args:
@@ -184,25 +184,25 @@ class ConvBnRelu(nn.Module):
 
 class MultiscaleConvBlock(nn.Module):
     """Defines Multiscale convolution block.
-    
+
     Defines four convolution layers.
-    
+
     Args:
-        num_input_channels (int): 
+        num_input_channels (int):
             Number of channels in input.
-        num_output_channels (int): 
+        num_output_channels (int):
             Number of channels in output.
-        kernel_sizes (list): 
+        kernel_sizes (list):
             Size of the kernel in each convolution layer.
-        strds (int): 
+        strds (int):
             Size of stride in the convolution layer.
-        use_bias (bool): 
+        use_bias (bool):
             Whether to use bias in the convolution layer.
-        dilatation_rates (list): 
+        dilatation_rates (list):
             Dilation rate for each convolution layer.
-        activation (str): 
+        activation (str):
             Name of the activation function to use.
-            
+
     Returns:
         torch.nn.Module:
             A PyTorch model.
