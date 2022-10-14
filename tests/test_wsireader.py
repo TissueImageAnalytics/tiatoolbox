@@ -1889,6 +1889,69 @@ def test_is_ngff_regular_zarr(tmp_path):
     assert not is_ngff(zarr_path)
 
 
+def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path):
+    """Test that mpp is None if scale is not in micrometers."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample with a non-micrometer scale
+    sample_copy = tmp_path / "ngff-1"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    zattrs["multiscales"][0]["axes"][0]["unit"] = "foo"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with pytest.warns(UserWarning, match="micrometer"):
+        wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert wsi.info.mpp is None
+
+
+def test_ngff_zattrs_missing_axes_mpp(tmp_path):
+    """Test that mpp is None if axes are missing."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample with no axes
+    sample_copy = tmp_path / "ngff-1"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    zattrs["multiscales"][0]["axes"] = []
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert wsi.info.mpp is None
+
+
+def test_ngff_empty_datasets_mpp(tmp_path):
+    """Test that mpp is None if there are no datasets."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample with no axes
+    sample_copy = tmp_path / "ngff-1"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    zattrs["multiscales"][0]["datasets"] = []
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert wsi.info.mpp is None
+
+
+def test_nff_no_scale_transforms_mpp(tmp_path):
+    """Test that mpp is None if no scale transforms are present."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample with no axes
+    sample_copy = tmp_path / "ngff-1"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    for i, _ in enumerate(zattrs["multiscales"][0]["datasets"]):
+        datasets = zattrs["multiscales"][0]["datasets"][i]
+        datasets["coordinateTransformations"][0]["type"] = "identity"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert wsi.info.mpp is None
+
+
 class TestReader:
     scenarios = [
         (
@@ -2070,3 +2133,10 @@ class TestReader:
         """Test that FileNotFoundError is raised when file does not exist."""
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
+
+    @staticmethod
+    def test_read_mpp(sample_key, reader_class):
+        """Test that the mpp is read correctly."""
+        sample = _fetch_remote_sample(sample_key)
+        wsi = reader_class(sample)
+        assert wsi.info.mpp == pytest.approx(0.25, 1)
