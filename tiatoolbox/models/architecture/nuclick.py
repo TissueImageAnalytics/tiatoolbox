@@ -267,8 +267,7 @@ class ResidualConv(nn.Module):
             do_batchnorm=True,
         )
 
-        if activation == "relu":
-            self.activation = nn.ReLU()
+        self.activation = nn.ReLU()
 
     def forward(self, input_tensor):
         """Logic for using layers defined in init.
