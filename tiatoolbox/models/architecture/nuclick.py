@@ -127,8 +127,6 @@ class ConvBnRelu(nn.Module):
 
         if activation == "relu":
             layers.append(nn.ReLU())
-        elif activation == "sigmoid":
-            layers.append(nn.Sigmoid())
 
         return nn.Sequential(*layers)
 
@@ -271,8 +269,6 @@ class ResidualConv(nn.Module):
 
         if activation == "relu":
             self.activation = nn.ReLU()
-        elif activation == "sigmoid":
-            self.activation = nn.Sigmoid()
 
     def forward(self, input_tensor):
         """Logic for using layers defined in init.
@@ -333,6 +329,7 @@ class NuClick(ModelABC):
             num_input_channels=32,
             num_output_channels=self.n_classes,
             kernel_size=(1, 1),
+            strds=1,
             activation=None,
             use_bias=True,
             do_batchnorm=False,

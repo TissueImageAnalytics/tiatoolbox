@@ -49,7 +49,9 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     pretrained = torch.load(_pretrained_path, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
-    postproc_masks = model.postproc(output)
+    postproc_masks = model.postproc(
+        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+    )
 
     gt_path = pathlib.Path(remote_sample("nuclick-output"))
     gt_mask = np.load(gt_path)
