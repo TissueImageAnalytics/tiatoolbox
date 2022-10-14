@@ -357,10 +357,6 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                     index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
                 ]
 
-                # Empty tile
-                if len(sel_indices) == 0:
-                    continue
-
                 tile_patch_inputs = patch_inputs[sel_indices]
                 tile_patch_outputs = patch_outputs[sel_indices]
                 self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
