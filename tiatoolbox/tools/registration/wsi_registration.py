@@ -1,10 +1,10 @@
 import warnings
 from typing import Dict, Tuple
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1078,6 +1078,24 @@ def estimate_bspline_transform(
     num_iterations: int = 100,
     sampling_percent: float = 0.2,
 ):
+    """
+
+    Args:
+        fixed_image:
+        moving_image:
+        fixed_mask:
+        moving_mask:
+        grid_space:
+        scale_factors:
+        shrink_factor:
+        smooth_sigmas:
+        num_iterations:
+        sampling_percent:
+
+    Returns:
+        2D deformation transformation represented by a grid of control points.
+
+    """
     fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
     if len(fixed_image.shape) == 3 or len(moving_image.shape) == 3:
         raise ValueError("The input images should be grayscale images.")
@@ -1145,3 +1163,26 @@ def estimate_bspline_transform(
     )
     registration_method.SetInterpolator(sitk.sitkLinear)
     return registration_method.Execute(fixed_image_inv_sitk, moving_image_inv_sitk)
+
+
+def apply_bspline_transform(fixed_image, moving_image, transform):
+    """
+
+    Args:
+        fixed_image:
+        moving_image:
+        transform:
+
+    Returns:
+
+    """
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetReferenceImage(fixed_image)
+    resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetDefaultPixelValue(1)
+    resampler.SetTransform(transform)
+
+    moving_image_sitk = sitk.GetImageFromArray(moving_image)
+    sitk_registered_image_sitk = resampler.Execute(moving_image_sitk)
+    return sitk.GetArrayFromImage(sitk_registered_image_sitk)
+
