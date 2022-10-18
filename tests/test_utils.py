@@ -1408,7 +1408,7 @@ def test_from_dat_transformed(tmp_path):
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat", scale_factor=2, relative_to=(50, 50)
+        tmp_path / "test.dat", scale_factor=2, origin=(50, 50)
     )
     result = store.query(where="props['type'] == 1")
     # check centroid is at 150,150

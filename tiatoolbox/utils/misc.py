@@ -857,21 +857,21 @@ def select_cv2_interpolation(scale_factor):
 
 
 def store_from_dat(
-    full_path: Union[IO, str],
-    scale_factor: float = 1,
+    fp: Union[IO, str],
+    scale_factor: Tuple[float, float] = (1, 1),
     typedict: Optional[Dict] = None,
-    relative_to: Optional[Tuple[float, float]] = None,
+    origin: Tuple[float, float] = (0, 0),
     cls: AnnotationStore = SQLiteStore,
 ) -> "AnnotationStore":
     """Load annotations from a hovernet-style .dat file.
 
     Args:
-        full_path (Union[IO, str, Path]):
+        fp (Union[IO, str, Path]):
             The file path or handle to load from.
-        scale_factor (float):
-            The scale factor to use when loading the annotations. All coordinates
-            will be multiplied by this factor to allow import of annotations saved
-            at non-baseline resolution.
+        scale_factor (Tuple[float, float]):
+            The scale factor in each dimension to use when loading the annotations.
+            All coordinates will be multiplied by this factor to allow import of
+            annotations saved at non-baseline resolution.
         typedict (Dict[str, str]):
             A dictionary mapping annotation types to annotation keys. Annotations
             with a type that is a key in the dictionary, will have their type
@@ -881,7 +881,7 @@ def store_from_dat(
             For multi-head output, should be a dict of dicts, eg:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
                 'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
-        relative_to [float, float]:
+        origin (Tuple[float, float]):
             The x and y coordinates to use as the origin for the annotations.
         cls (AnnotationStore):
             The class to use for the annotation store. Defaults to SQLiteStore.
@@ -892,35 +892,33 @@ def store_from_dat(
 
     """
     store = cls()
-    add_from_dat(
-        store, full_path, scale_factor, typedict=typedict, relative_to=relative_to
-    )
+    add_from_dat(store, fp, scale_factor, typedict=typedict, origin=origin)
     return store
 
 
-def make_valid_poly(poly, relative_to=None):
+def make_valid_poly(poly, origin=None):
     """Helper function to make a valid polygon.
 
     Args:
         poly (Polygon):
             The polygon to make valid.
-        relative_to (Tuple[float, float]):
+        origin (Tuple[float, float]):
             The x and y coordinates to use as the origin for the annotation.
 
     Returns:
         A valid geometry.
 
     """
-    if relative_to is not None:
+    if origin != (0, 0):
         # transform coords to be relative to given pt.
-        poly = translate(poly, -relative_to[0], -relative_to[1])
+        poly = translate(poly, -origin[0], -origin[1])
     if poly.is_valid:
         return poly
     warnings.warn("Invalid geometry found, fix using buffer().")
     return poly.buffer(0.01)
 
 
-def anns_from_hoverdict(data, props, typedict, relative_to, scale_factor):
+def anns_from_hoverdict(data, props, typedict, origin, scale_factor):
     """Helper function to create list of Annotation objects.
 
     Creates annotations from a hovernet-style dict of segmentations, mapping types
@@ -933,7 +931,7 @@ def anns_from_hoverdict(data, props, typedict, relative_to, scale_factor):
             A list of properties
         typedict (dict):
             A dictionary mapping annotation types to more descriptive names.
-        relative_to (tuple):
+        origin (tuple):
             The x and y coordinates to use as the origin for the annotations.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
@@ -951,7 +949,7 @@ def anns_from_hoverdict(data, props, typedict, relative_to, scale_factor):
                         "coordinates": scale_factor * np.array([ann["contour"]]),
                     }
                 ),
-                relative_to,
+                origin,
             ),
             {
                 prop: typedict[ann[prop]]
@@ -993,17 +991,17 @@ def make_default_dict(data, subcat):
 
 def add_from_dat(
     store,
-    full_path: Union[IO, str],
-    scale_factor: float = 1,
+    fp: Union[IO, str],
+    scale_factor: Tuple[float, float] = (1, 1),
     typedict: Optional[Dict] = None,
-    relative_to: Optional[Tuple[float, float]] = None,
+    origin: Tuple[float, float] = (0, 0),
 ) -> None:
     """Add annotations from a .dat file to an existing store.
 
     Make a best effort to create valid shapely geometries from provided contours.
 
     Args:
-        full_path (Union[IO, str, Path]):
+        fp (Union[IO, str, Path]):
             The file path or handle to load from.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
@@ -1018,12 +1016,12 @@ def add_from_dat(
             For multi-head output, should be a dict of dicts, eg:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
                 'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
-        relative_to [float, float]:
+        origin [float, float]:
             The x and y coordinates to use as the origin for the annotations.
 
     """
 
-    data = joblib.load(full_path)
+    data = joblib.load(fp)
     props = list(data[list(data.keys())[0]].keys())
     if "contour" not in props:
         # assume cerberus format with objects subdivided into categories
@@ -1042,11 +1040,11 @@ def add_from_dat(
                 typedict_sub = typedict[subcat]
             anns.extend(
                 anns_from_hoverdict(
-                    data[subcat], props, typedict_sub, relative_to, scale_factor
+                    data[subcat], props, typedict_sub, origin, scale_factor
                 )
             )
     else:
-        anns = anns_from_hoverdict(data, props, typedict, relative_to, scale_factor)
+        anns = anns_from_hoverdict(data, props, typedict, origin, scale_factor)
 
     print(f"added {len(anns)} annotations")
     store.append_many(anns)

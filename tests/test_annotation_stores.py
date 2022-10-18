@@ -861,9 +861,9 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
         store.to_geojson(tmp_path / "polygon.json")
-        # load the store translated relative to (100,100) and scaled by 2
+        # load the store translated so that origin is (100,100) and scaled by 2
         store2 = store_cls.from_geojson(
-            tmp_path / "polygon.json", scale_factor=2, relative_to=(100, 100)
+            tmp_path / "polygon.json", scale_factor=(2, 2), origin=(100, 100)
         )
         assert len(store) == len(store2)
         com2 = annotations_center_of_mass(list(store2.values()))
@@ -871,7 +871,7 @@ class TestStore:
         assert com2.y == pytest.approx((com.y - 100) * 2)
 
     @staticmethod
-    def test_transform_db(fill_store, tmp_path, store_cls):
+    def test_transform(fill_store, tmp_path, store_cls):
         """Test translating a store."""
 
         def test_translation(geom):
@@ -880,7 +880,7 @@ class TestStore:
 
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
-        store.transform_db(test_translation)
+        store.transform(test_translation)
         com2 = annotations_center_of_mass(list(store.values()))
         assert com2.x - com.x == pytest.approx(100)
         assert com2.y - com.y == pytest.approx(100)
@@ -902,7 +902,7 @@ class TestStore:
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.json", "w") as fh:
-            geojson = store.to_geojson(full_path=fh)
+            geojson = store.to_geojson(fp=fh)
         assert geojson is None
         with open(tmp_path / "polygon.json", "r") as fh:
             geodict = json.load(fh)
@@ -915,7 +915,7 @@ class TestStore:
     def test_to_geojson_path(fill_store, tmp_path, store_cls):
         """Test exporting to geojson with a file path."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        geojson = store.to_geojson(full_path=tmp_path / "polygon.json")
+        geojson = store.to_geojson(fp=tmp_path / "polygon.json")
         assert geojson is None
         with open(tmp_path / "polygon.json", "r") as fh:
             geodict = json.load(fh)
@@ -941,7 +941,7 @@ class TestStore:
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         with open(tmp_path / "polygon.ndjson", "w") as fh:
-            ndjson = store.to_ndjson(full_path=fh)
+            ndjson = store.to_ndjson(fp=fh)
         assert ndjson is None
         with open(tmp_path / "polygon.ndjson", "r") as fh:
             for line in fh.readlines():
@@ -955,7 +955,7 @@ class TestStore:
     def test_to_ndjson_path(fill_store, tmp_path, store_cls):
         """Test exporting to ndjson with a file path."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        ndjson = store.to_ndjson(full_path=tmp_path / "polygon.ndjson")
+        ndjson = store.to_ndjson(fp=tmp_path / "polygon.ndjson")
         assert ndjson is None
         with open(tmp_path / "polygon.ndjson", "r") as fh:
             for line in fh.readlines():
