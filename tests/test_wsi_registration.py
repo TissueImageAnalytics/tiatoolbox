@@ -404,6 +404,10 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     moving_msk = cv2.warpAffine(
         moving_msk, rigid_transform[0:-1][:], fixed_img.shape[:2][::-1]
     )
+    _ = estimate_bspline_transform(
+        fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk[:, :, 0], moving_msk[:, :, 0]
+    )
+
     transform = estimate_bspline_transform(
         fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk, moving_msk
     )
