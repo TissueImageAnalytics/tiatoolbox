@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from shapely import affinity
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPoint, Polygon
 from shapely.geometry.point import Point
 
 from tiatoolbox.annotation.storage import (
@@ -123,6 +123,12 @@ def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
 
     """
     return (props.get("class"), props.get("class") % 2)
+
+
+def annotations_center_of_mass(annotations):
+    """Compute the mean of the annotation centroids."""
+    centroids = [annotation.geometry.centroid for annotation in annotations]
+    return MultiPoint(centroids).centroid
 
 
 # Fixtures
@@ -363,6 +369,12 @@ def test_sqlite_store_wkb_deserialisation(sample_triangle):
     assert geom == sample_triangle
 
 
+def test_sqlite_store_metadata_get_key():
+    """Test getting a metadata entry."""
+    store = SQLiteStore()
+    assert store.metadata["compression"] == "zlib"
+
+
 def test_sqlite_store_metadata_get_keyerror():
     """Test getting a metadata entry that does not exists."""
     store = SQLiteStore()
@@ -436,6 +448,88 @@ def test_annotation_to_geojson():
     assert geojson["type"] == "Feature"
     assert geojson["geometry"]["type"] == "Point"
     assert geojson["properties"] == {"foo": "bar", "baz": "qux"}
+
+
+def test_remove_area_column(fill_store):
+    """Test removing an area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    assert "area" not in store._get_table_columns()
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200
+
+
+def test_remove_area_column_indexed(fill_store):
+    """Test removing an area column if theres an index on it."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.create_index("area", '"area"')
+    store.remove_area_column()
+    assert "area" not in store._get_table_columns()
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200
+
+
+def test_add_area_column(fill_store):
+    """Test adding an area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    store.add_area_column()
+    assert "area" in store.indexes()
+    assert "area" in store._get_table_columns()
+
+    # check the results are properly sorted by area
+    result = store.query((0, 0, 100, 100))
+    areas = [ann.geometry.area for ann in result.values()]
+    assert areas == sorted(areas, reverse=True)
+
+    # check add index option of add_area_column
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    assert "area" not in store.indexes()
+    store.add_area_column(False)
+    assert "area" not in store.indexes()
+
+
+def test_query_min_area(fill_store):
+    """Test querying with a minimum area."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    result = store.query((0, 0, 1000, 1000), min_area=1)
+    assert len(result) == 100  # should only get cells, pts are too small
+
+
+def test_query_min_area_no_area_column(fill_store):
+    """Test querying with a minimum area when there is no area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    with pytest.raises(ValueError, match="without an area column"):
+        store.query((0, 0, 1000, 1000), min_area=1)
+
+
+def test_auto_commit(fill_store, tmp_path):
+    """Test auto commit.
+
+    Check that if auto-commit is False, the changes are not committed until
+    commit() is called.
+
+    """
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon.db", auto_commit=False)
+    keys = list(store.keys())
+    store.patch(keys[0], Point(-500, -500))
+    store.append_many([Annotation(Point(10, 10), {}), Annotation(Point(20, 20), {})])
+    store.remove_many(keys[5:10])
+    store.clear()
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon.db")
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200  # check none of the changes were committed
+    store = SQLiteStore(tmp_path / "polygon2.db", auto_commit=False)
+    store.append_many([Annotation(Point(10, 10), {}), Annotation(Point(20, 20), {})])
+    store.commit()
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon2.db")
+    assert len(store) == 2  # check explicitly committing works
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
@@ -754,6 +848,36 @@ class TestStore:
         store.to_geojson(tmp_path / "polygon.json")
         store2 = store_cls.from_geojson(tmp_path / "polygon.json")
         assert len(store) == len(store2)
+
+    @staticmethod
+    def test_from_geojson_path_transform(fill_store, tmp_path, store_cls):
+        """Test loading from geojson with a transform."""
+        _, store = fill_store(store_cls, tmp_path / "polygon.db")
+        com = annotations_center_of_mass(list(store.values()))
+        store.to_geojson(tmp_path / "polygon.json")
+        # load the store translated so that origin is (100,100) and scaled by 2
+        store2 = store_cls.from_geojson(
+            tmp_path / "polygon.json", scale_factor=(2, 2), origin=(100, 100)
+        )
+        assert len(store) == len(store2)
+        com2 = annotations_center_of_mass(list(store2.values()))
+        assert com2.x == pytest.approx((com.x - 100) * 2)
+        assert com2.y == pytest.approx((com.y - 100) * 2)
+
+    @staticmethod
+    def test_transform(fill_store, tmp_path, store_cls):
+        """Test translating a store."""
+
+        def test_translation(geom):
+            """Performs a translation of input geometry."""
+            return affinity.translate(geom, 100, 100)
+
+        _, store = fill_store(store_cls, tmp_path / "polygon.db")
+        com = annotations_center_of_mass(list(store.values()))
+        store.transform(test_translation)
+        com2 = annotations_center_of_mass(list(store.values()))
+        assert com2.x - com.x == pytest.approx(100)
+        assert com2.y - com.y == pytest.approx(100)
 
     @staticmethod
     def test_to_geojson_str(fill_store, tmp_path, store_cls):
@@ -1226,7 +1350,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable_unique_multi_select(fill_store, store_cls):
-        """Test querying for properties with a callable select and where."""
+        """Test querying unique properties with a callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=sample_multi_select,
@@ -1247,6 +1371,18 @@ class TestStore:
         )
         assert isinstance(result_set, dict)
         assert set(result_set.values()) == {1}
+
+    @staticmethod
+    def test_pquery_callable_no_where(fill_store, store_cls):
+        """Test querying for properties with callable select, no where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=lambda props: props.get("class"),
+            where=None,
+            unique=False,
+        )
+        assert isinstance(result_set, dict)
+        assert set(result_set.values()).issubset({0, 1, 2, 3, 4, None})
 
     @staticmethod
     def test_pquery_pickled(fill_store, store_cls):
