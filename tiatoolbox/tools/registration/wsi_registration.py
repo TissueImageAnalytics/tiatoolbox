@@ -1074,7 +1074,7 @@ def estimate_bspline_transform(
     num_iterations: int = 100,
     sampling_percent: float = 0.2,
 ):
-    """Estimate BSpline transformation.
+    """Estimate B-spline transformation.
 
     This function performs registration using multi-resolution Bspline approach.
 
