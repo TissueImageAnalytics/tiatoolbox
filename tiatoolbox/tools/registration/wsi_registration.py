@@ -1,10 +1,10 @@
 import warnings
 from typing import Dict, Tuple
 
-import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
+import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1136,7 +1136,9 @@ def estimate_bspline_transform(
     moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
 
     # Determine the number of BSpline control points using physical spacing
-    grid_physical_spacing = len(fixed_image.shape) * [grid_space]  # A control point every grid_space (mm)
+    grid_physical_spacing = len(fixed_image.shape) * [
+        grid_space
+    ]  # A control point every grid_space (mm)
     image_physical_size = [
         size * spacing
         for size, spacing in zip(
@@ -1160,7 +1162,9 @@ def estimate_bspline_transform(
     )
     registration_method.SetMetricAsMattesMutualInformation(50)
     registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
-    registration_method.SetMetricSamplingPercentage(sampling_percent, sitk.sitkWallClock)
+    registration_method.SetMetricSamplingPercentage(
+        sampling_percent, sitk.sitkWallClock
+    )
 
     registration_method.SetShrinkFactorsPerLevel(shrink_factor)
     registration_method.SetSmoothingSigmasPerLevel(smooth_sigmas)
@@ -1203,4 +1207,3 @@ def apply_bspline_transform(fixed_image, moving_image, transform):
 
     sitk_registered_image_sitk = resampler.Execute(moving_image_sitk)
     return sitk.GetArrayFromImage(sitk_registered_image_sitk)
-

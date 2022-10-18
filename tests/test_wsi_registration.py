@@ -6,8 +6,8 @@ import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import (
     DFBRegister,
-    estimate_bspline_transform,
     apply_bspline_transform,
+    estimate_bspline_transform,
     match_histograms,
     prealignment,
 )
@@ -373,6 +373,7 @@ def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving
         transform_initializer=pre_transform,
     )
 
+
 def test_estimate_bspline_transform_inputs():
     fixed_img = np.random.rand(32, 32, 3)
     moving_img = np.random.rand(32, 32, 3)
@@ -382,7 +383,9 @@ def test_estimate_bspline_transform_inputs():
     with pytest.raises(
         ValueError, match=r".*The input images should be grayscale images.*"
     ):
-        _, _ = estimate_bspline_transform(fixed_img, moving_img, fixed_mask, moving_mask)
+        _, _ = estimate_bspline_transform(
+            fixed_img, moving_img, fixed_mask, moving_mask
+        )
 
 
 def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
@@ -405,6 +408,8 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
         fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk, moving_msk
     )
 
-    registered_msk = apply_bspline_transform(fixed_msk[:, :, 0], moving_msk[:, :, 0], transform)
+    registered_msk = apply_bspline_transform(
+        fixed_msk[:, :, 0], moving_msk[:, :, 0], transform
+    )
     mask_overlap = dice(fixed_msk[:, :, 0], registered_msk)
     assert mask_overlap > 0.75
