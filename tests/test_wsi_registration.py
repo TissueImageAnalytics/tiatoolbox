@@ -7,9 +7,11 @@ import pytest
 from tiatoolbox.tools.registration.wsi_registration import (
     DFBRegister,
     estimate_bspline_transform,
+    apply_bspline_transform,
     match_histograms,
     prealignment,
 )
+from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.misc import imread
 
 
@@ -399,7 +401,10 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     moving_msk = cv2.warpAffine(
         moving_msk, rigid_transform[0:-1][:], fixed_img.shape[:2][::-1]
     )
-    _ = estimate_bspline_transform(
+    transform = estimate_bspline_transform(
         fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk, moving_msk
     )
-    print('hellp')
+
+    registered_msk = apply_bspline_transform(fixed_msk[:, :, 0], moving_msk[:, :, 0], transform)
+    mask_overlap = dice(fixed_msk[:, :, 0], registered_msk)
+    assert mask_overlap > 0.75

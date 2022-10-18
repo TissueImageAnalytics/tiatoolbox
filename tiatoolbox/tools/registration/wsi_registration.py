@@ -1078,19 +1078,31 @@ def estimate_bspline_transform(
     num_iterations: int = 100,
     sampling_percent: float = 0.2,
 ):
-    """
+    """Estimate BSpline transformation.
+
+    This function performs registration using multi-resolution Bspline approach.
 
     Args:
-        fixed_image:
-        moving_image:
-        fixed_mask:
-        moving_mask:
+        fixed_image (:class:`numpy.ndarray`):
+            A fixed image.
+        moving_image (:class:`numpy.ndarray`):
+            A moving image.
+        fixed_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the fixed image.
+        moving_mask (:class:`numpy.ndarray`):
+            A binary tissue mask for the moving image.
         grid_space:
+            Grid_space (mm) to decide control points.
         scale_factors:
+            Scaling factor of each BSpline per level in a multi-level setting.
         shrink_factor:
+            Shrink factor per level to change the size and complexity of the image.
         smooth_sigmas:
+            Standard deviation for gaussian smoothing per level.
         num_iterations:
+            Number of iterations.
         sampling_percent:
+            Fraction of image used for metric evaluation.
 
     Returns:
         2D deformation transformation represented by a grid of control points.
@@ -1124,10 +1136,7 @@ def estimate_bspline_transform(
     moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
 
     # Determine the number of BSpline control points using physical spacing
-    grid_physical_spacing = [
-        grid_space,
-        grid_space,
-    ]  # A control point every grid_space (mm)
+    grid_physical_spacing = len(fixed_image.shape) * [grid_space]  # A control point every grid_space (mm)
     image_physical_size = [
         size * spacing
         for size, spacing in zip(
@@ -1151,7 +1160,7 @@ def estimate_bspline_transform(
     )
     registration_method.SetMetricAsMattesMutualInformation(50)
     registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
-    registration_method.SetMetricSamplingPercentage(sampling_percent)
+    registration_method.SetMetricSamplingPercentage(sampling_percent, sitk.sitkWallClock)
 
     registration_method.SetShrinkFactorsPerLevel(shrink_factor)
     registration_method.SetSmoothingSigmasPerLevel(smooth_sigmas)
@@ -1166,23 +1175,32 @@ def estimate_bspline_transform(
 
 
 def apply_bspline_transform(fixed_image, moving_image, transform):
-    """
+    """Apply BSpline transform to an image.
+
+    This function applied
 
     Args:
-        fixed_image:
-        moving_image:
+        fixed_image (:class:`numpy.ndarray`):
+            A fixed image.
+        moving_image (:class:`numpy.ndarray`):
+            A moving image.
         transform:
+            A BSpline transform.
 
     Returns:
+        :class:`numpy.ndarray`:
+            A transformed moving image.
 
     """
+    fixed_image_sitk = sitk.GetImageFromArray(fixed_image)
+    moving_image_sitk = sitk.GetImageFromArray(moving_image)
+
     resampler = sitk.ResampleImageFilter()
-    resampler.SetReferenceImage(fixed_image)
+    resampler.SetReferenceImage(fixed_image_sitk)
     resampler.SetInterpolator(sitk.sitkLinear)
     resampler.SetDefaultPixelValue(1)
     resampler.SetTransform(transform)
 
-    moving_image_sitk = sitk.GetImageFromArray(moving_image)
     sitk_registered_image_sitk = resampler.Execute(moving_image_sitk)
     return sitk.GetArrayFromImage(sitk_registered_image_sitk)
 
