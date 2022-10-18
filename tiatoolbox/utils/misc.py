@@ -3,17 +3,22 @@ import copy
 import json
 import os
 import pathlib
+import warnings
 import zipfile
-from typing import Union
+from typing import IO, Dict, Optional, Tuple, Union
 
 import cv2
+import joblib
 import numpy as np
 import pandas as pd
 import requests
 import torch
 import yaml
+from shapely.affinity import translate
+from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 
+from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
@@ -849,3 +854,197 @@ def select_cv2_interpolation(scale_factor):
     if np.any(scale_factor > 1.0):
         return "cubic"
     return "area"
+
+
+def store_from_dat(
+    fp: Union[IO, str],
+    scale_factor: Tuple[float, float] = (1, 1),
+    typedict: Optional[Dict] = None,
+    origin: Tuple[float, float] = (0, 0),
+    cls: AnnotationStore = SQLiteStore,
+) -> "AnnotationStore":
+    """Load annotations from a hovernet-style .dat file.
+
+    Args:
+        fp (Union[IO, str, Path]):
+            The file path or handle to load from.
+        scale_factor (Tuple[float, float]):
+            The scale factor in each dimension to use when loading the annotations.
+            All coordinates will be multiplied by this factor to allow import of
+            annotations saved at non-baseline resolution.
+        typedict (Dict[str, str]):
+            A dictionary mapping annotation types to annotation keys. Annotations
+            with a type that is a key in the dictionary, will have their type
+            replaced by the corresponding value. Useful for providing descriptive
+            names to non-descriptive types,
+            eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
+            For multi-head output, should be a dict of dicts, eg:
+            {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
+                'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
+        origin (Tuple[float, float]):
+            The x and y coordinates to use as the origin for the annotations.
+        cls (AnnotationStore):
+            The class to use for the annotation store. Defaults to SQLiteStore.
+
+    Returns:
+        AnnotationStore:
+            A new annotation store with the annotations loaded from the file.
+
+    """
+    store = cls()
+    add_from_dat(store, fp, scale_factor, typedict=typedict, origin=origin)
+    return store
+
+
+def make_valid_poly(poly, origin=None):
+    """Helper function to make a valid polygon.
+
+    Args:
+        poly (Polygon):
+            The polygon to make valid.
+        origin (Tuple[float, float]):
+            The x and y coordinates to use as the origin for the annotation.
+
+    Returns:
+        A valid geometry.
+
+    """
+    if origin != (0, 0):
+        # transform coords to be relative to given pt.
+        poly = translate(poly, -origin[0], -origin[1])
+    if poly.is_valid:
+        return poly
+    warnings.warn("Invalid geometry found, fix using buffer().")
+    return poly.buffer(0.01)
+
+
+def anns_from_hoverdict(data, props, typedict, origin, scale_factor):
+    """Helper function to create list of Annotation objects.
+
+    Creates annotations from a hovernet-style dict of segmentations, mapping types
+    using type dict if provided.
+
+    Args:
+        data (dict):
+            A dictionary of segmentations
+        props (list):
+            A list of properties
+        typedict (dict):
+            A dictionary mapping annotation types to more descriptive names.
+        origin (tuple):
+            The x and y coordinates to use as the origin for the annotations.
+        scale_factor (float):
+            The scale factor to use when loading the annotations. All coordinates
+            will be multiplied by this factor.
+    Returns:
+        A list of Annotation objects.
+
+    """
+    return [
+        Annotation(
+            make_valid_poly(
+                feature2geometry(
+                    {
+                        "type": ann.get("geom_type", "Polygon"),
+                        "coordinates": scale_factor * np.array([ann["contour"]]),
+                    }
+                ),
+                origin,
+            ),
+            {
+                prop: typedict[ann[prop]]
+                if prop == "type" and typedict is not None
+                else ann[prop]
+                for prop in props[3:]
+                if prop in ann
+            },
+        )
+        for ann in data.values()
+    ]
+
+
+def make_default_dict(data, subcat):
+    """Helper function to create a default typedict if none is provided.
+
+    The unique types in the data are given a prefix to differentiate
+    types from different heads of a multi-head model.
+    For example, types 1,2, etc in the 'Gland' head will become
+    'Gla: 1', 'Gla: 2', etc.
+
+    Args:
+        data (dict):
+            The data loaded from the .dat file.
+        subcat:
+            The subcategory of the data, eg 'Gland' or 'Nuclei'.
+    Returns:
+        A dictionary mapping types to more descriptive names.
+
+    """
+    types = {
+        data[subcat][ann_id]["type"]
+        for ann_id in data[subcat]
+        if "type" in data[subcat][ann_id]
+    }
+    num_chars = np.minimum(3, len(subcat))
+    return {t: f"{subcat[:num_chars]}: {t}" for t in types}
+
+
+def add_from_dat(
+    store,
+    fp: Union[IO, str],
+    scale_factor: Tuple[float, float] = (1, 1),
+    typedict: Optional[Dict] = None,
+    origin: Tuple[float, float] = (0, 0),
+) -> None:
+    """Add annotations from a .dat file to an existing store.
+
+    Make a best effort to create valid shapely geometries from provided contours.
+
+    Args:
+        fp (Union[IO, str, Path]):
+            The file path or handle to load from.
+        scale_factor (float):
+            The scale factor to use when loading the annotations. All coordinates
+            will be multiplied by this factor to allow import of annotations saved
+            at non-baseline resolution.
+        typedict (Dict[str, str]):
+            A dictionary mapping annotation types to annotation keys. Annotations
+            with a type that is a key in the dictionary, will have their type
+            replaced by the corresponding value. Useful for providing descriptive
+            names to non-descriptive types,
+            eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
+            For multi-head output, should be a dict of dicts, eg:
+            {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
+                'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
+        origin [float, float]:
+            The x and y coordinates to use as the origin for the annotations.
+
+    """
+
+    data = joblib.load(fp)
+    props = list(data[list(data.keys())[0]].keys())
+    if "contour" not in props:
+        # assume cerberus format with objects subdivided into categories
+        anns = []
+        for subcat in data:
+            if subcat == "resolution":
+                continue
+            props = next(iter(data[subcat].values()))
+            if not isinstance(props, dict):
+                continue
+            props = list(props.keys())
+            # use type dictionary if available else auto-generate
+            if typedict is None:
+                typedict_sub = make_default_dict(data, subcat)
+            else:
+                typedict_sub = typedict[subcat]
+            anns.extend(
+                anns_from_hoverdict(
+                    data[subcat], props, typedict_sub, origin, scale_factor
+                )
+            )
+    else:
+        anns = anns_from_hoverdict(data, props, typedict, origin, scale_factor)
+
+    print(f"added {len(anns)} annotations")
+    store.append_many(anns)
