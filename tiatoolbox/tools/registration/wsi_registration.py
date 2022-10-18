@@ -1,10 +1,9 @@
 import warnings
 from typing import Dict, Tuple
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import scipy.ndimage as ndi
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -155,9 +154,6 @@ def prealignment(
         mode="constant",
     )
     dice_before = dice(padded_fixed_mask, padded_moving_mask)
-
-    cy, cx = ndi.center_of_mass((1 - fixed_img) * fixed_mask)
-    fixed_com = [cx, cy]
 
     fixed_com = compute_center_of_mass((1 - fixed_img) * fixed_mask)
     moving_com = compute_center_of_mass((1 - moving_img) * moving_mask)
