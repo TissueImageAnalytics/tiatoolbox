@@ -354,23 +354,11 @@ def test_register_output_without_initializer(
     assert np.linalg.norm(expected[:2, :2] - output[:2, :2]) < 0.1
     assert np.linalg.norm(expected[:2, 2] - output[:2, 2]) < 10
 
-
-def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving_mask):
-    """Test for the estimated tissue transform in register function."""
-    fixed_img = imread(fixed_image)
-    moving_img = imread(moving_image)
-    fixed_msk = imread(fixed_mask)
-    moving_msk = imread(moving_mask)
-
-    df = DFBRegister()
-    pre_transform = np.eye(3)
-
     _ = df.register(
         fixed_img,
         moving_img,
-        fixed_msk,
-        moving_msk,
-        transform_initializer=pre_transform,
+        fixed_msk[:, :, 0],
+        moving_msk[:, :, 0],
     )
 
 
