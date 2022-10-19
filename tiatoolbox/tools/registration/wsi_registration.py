@@ -1091,15 +1091,27 @@ def estimate_bspline_transform(
 
     """
     bspline_params = {
-                    'grid_space': 50.0,     # grid_space (mm) to decide control points
-                    'scale_factors': [1, 2, 5],     # scaling factor of each B-spline per level in a multi-level setting
-                    'shrink_factor': [4, 2, 1],     # shrink factor per level to change the size and complexity of the image
-                    'smooth_sigmas': [4, 2, 1],     # standard deviation for gaussian smoothing per level
-                    'num_iterations': 100,      # maximal number of iterations
-                    'sampling_percent': 0.2,        # fraction of image used for metric evaluation
-                    'learning_rate': 0.5,       # step size along traversal direction in parameter space
-                    'convergence_min_value': 1e-4,      # value for checking convergence together with energy profile of the similarity metric
-                    'convergence_window_size': 5,       # number of similarity metric values for estimating the energy profile
+        "grid_space": 50.0,  # grid_space (mm) to decide control points
+        "scale_factors": [
+            1,
+            2,
+            5,
+        ],  # scaling factor of each B-spline per level in a multi-level setting
+        "shrink_factor": [
+            4,
+            2,
+            1,
+        ],  # shrink factor per level to change the size and complexity of the image
+        "smooth_sigmas": [
+            4,
+            2,
+            1,
+        ],  # standard deviation for gaussian smoothing per level
+        "num_iterations": 100,  # maximal number of iterations
+        "sampling_percent": 0.2,  # fraction of image used for metric evaluation
+        "learning_rate": 0.5,  # step size along traversal direction in parameter space
+        "convergence_min_value": 1e-4,  # value for checking convergence together with energy profile of the similarity metric
+        "convergence_window_size": 5,  # number of similarity metric values for estimating the energy profile
     }
     bspline_params.update(kwargs)
 
@@ -1132,7 +1144,7 @@ def estimate_bspline_transform(
 
     # Determine the number of B-spline control points using physical spacing
     grid_physical_spacing = len(fixed_image.shape) * [
-        bspline_params['grid_space']
+        bspline_params["grid_space"]
     ]  # A control point every grid_space (mm)
     image_physical_size = [
         size * spacing
@@ -1153,27 +1165,29 @@ def estimate_bspline_transform(
 
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetInitialTransformAsBSpline(
-        tx, inPlace=True, scaleFactors=bspline_params['scale_factors']
+        tx, inPlace=True, scaleFactors=bspline_params["scale_factors"]
     )
     registration_method.SetMetricAsMattesMutualInformation(50)
     registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
     registration_method.SetMetricSamplingPercentage(
-        bspline_params['sampling_percent'], sitk.sitkWallClock
+        bspline_params["sampling_percent"], sitk.sitkWallClock
     )
 
-    registration_method.SetShrinkFactorsPerLevel(bspline_params['shrink_factor'])
-    registration_method.SetSmoothingSigmasPerLevel(bspline_params['smooth_sigmas'])
+    registration_method.SetShrinkFactorsPerLevel(bspline_params["shrink_factor"])
+    registration_method.SetSmoothingSigmasPerLevel(bspline_params["smooth_sigmas"])
     registration_method.SetOptimizerAsGradientDescentLineSearch(
-        learningRate=bspline_params['learning_rate'],
-        numberOfIterations=bspline_params['num_iterations'],
-        convergenceMinimumValue=bspline_params['convergence_min_value'],
-        convergenceWindowSize=bspline_params['convergence_window_size'],
+        learningRate=bspline_params["learning_rate"],
+        numberOfIterations=bspline_params["num_iterations"],
+        convergenceMinimumValue=bspline_params["convergence_min_value"],
+        convergenceWindowSize=bspline_params["convergence_window_size"],
     )
     registration_method.SetInterpolator(sitk.sitkLinear)
     return registration_method.Execute(fixed_image_inv_sitk, moving_image_inv_sitk)
 
 
-def apply_bspline_transform(fixed_image: np.ndarray, moving_image: np.ndarray, transform: sitk.BSplineTransform) -> np.ndarray:
+def apply_bspline_transform(
+    fixed_image: np.ndarray, moving_image: np.ndarray, transform: sitk.BSplineTransform
+) -> np.ndarray:
     """Apply the given B-spline transform to a moving image.
 
     Args:
