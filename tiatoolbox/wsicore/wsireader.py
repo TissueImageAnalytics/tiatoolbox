@@ -18,7 +18,7 @@ import pandas as pd
 import tifffile
 import zarr
 
-from tiatoolbox import utils
+from tiatoolbox import logger, utils
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
@@ -1319,7 +1319,6 @@ class WSIReader:
         tile_objective_value: int,
         tile_read_size: Tuple[int, int],
         tile_format: str = ".jpg",
-        verbose: bool = True,
     ) -> None:
         """Generate image tiles from whole slide images.
 
@@ -1332,8 +1331,6 @@ class WSIReader:
                 Tile (width, height).
             tile_format (str):
                 File format to save image tiles, defaults to ".jpg".
-            verbose (bool):
-                Print output, default to True.
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -1381,26 +1378,20 @@ class WSIReader:
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
-            if verbose:
-                format_str = (
-                    "Tile%d:  start_w:%d, end_w:%d, "
-                    "start_h:%d, end_h:%d, "
-                    "width:%d, height:%d"
-                )
-
-                print(
-                    format_str
-                    % (
-                        iter_tot,
-                        start_w,
-                        end_w,
-                        start_h,
-                        end_h,
-                        end_w - start_w,
-                        end_h - start_h,
-                    ),
-                    flush=True,
-                )
+            logger.debug(
+                "Tile{iter_tot}:  start_w:{start_w}, end_w:{end_w}, "
+                "start_h:{start_h}, end_h:{end_h}, "
+                "width:{width}, height:{height}",
+                extra={
+                    "iter_tot": iter_tot,
+                    "start_w": start_w,
+                    "end_w": end_w,
+                    "start_h": start_h,
+                    "end_h": end_h,
+                    "width": end_w - start_w,
+                    "height": end_h - start_h,
+                },
+            )
 
             # Rescale to the correct objective value
             if rescale != 1:
