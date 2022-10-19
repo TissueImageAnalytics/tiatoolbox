@@ -2,9 +2,9 @@ import logging
 import warnings
 from typing import Dict, Tuple
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1072,7 +1072,11 @@ def estimate_bspline_transform(
 ) -> sitk.BSplineTransform:
     """Estimate B-spline transformation.
 
-    This function performs registration using multi-resolution B-spline approach.
+    This function performs registration using the `SimpleITK toolkit
+    <https://simpleitk.readthedocs.io/_/downloads/en/v1.2.4/pdf/>`_. We employed
+     a deformable registration using a multi-resolution B-spline approach. B-spline
+     registration uses B-spline curves to compute the deformation field mapping pixels
+     in a moving image to corresponding pixels in a fixed image.
 
     Args:
         fixed_image (:class:`numpy.ndarray`):
