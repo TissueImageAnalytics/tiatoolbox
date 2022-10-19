@@ -307,7 +307,7 @@ def test_register_input_channels():
 def test_register_output_with_initializer(
     fixed_image, moving_image, fixed_mask, moving_mask
 ):
-    """Test for register function with initialzer."""
+    """Test for register function with initializer."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
     fixed_msk = imread(fixed_mask)

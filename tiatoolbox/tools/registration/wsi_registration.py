@@ -1,3 +1,4 @@
+import logging
 import warnings
 from typing import Dict, Tuple
 
@@ -1067,16 +1068,11 @@ def estimate_bspline_transform(
     moving_image: np.ndarray,
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
-    grid_space: float = 50.0,
-    scale_factors: list = (1, 2, 5),
-    shrink_factor: list = (4, 2, 1),
-    smooth_sigmas: list = (4, 2, 1),
-    num_iterations: int = 100,
-    sampling_percent: float = 0.2,
+    **kwargs,
 ):
-    """Estimate BSpline transformation.
+    """Estimate B-spline transformation.
 
-    This function performs registration using multi-resolution Bspline approach.
+    This function performs registration using multi-resolution B-spline approach.
 
     Args:
         fixed_image (:class:`numpy.ndarray`):
@@ -1087,30 +1083,33 @@ def estimate_bspline_transform(
             A binary tissue mask for the fixed image.
         moving_mask (:class:`numpy.ndarray`):
             A binary tissue mask for the moving image.
-        grid_space:
-            Grid_space (mm) to decide control points.
-        scale_factors:
-            Scaling factor of each BSpline per level in a multi-level setting.
-        shrink_factor:
-            Shrink factor per level to change the size and complexity of the image.
-        smooth_sigmas:
-            Standard deviation for gaussian smoothing per level.
-        num_iterations:
-            Number of iterations.
-        sampling_percent:
-            Fraction of image used for metric evaluation.
+        **kwargs (dict):
+            Key-word arguments for B-spline parameters.
 
     Returns:
         2D deformation transformation represented by a grid of control points.
 
     """
+    bspline_params = {
+                    'grid_space': 50.0,     # grid_space (mm) to decide control points
+                    'scale_factors': [1, 2, 5],     # scaling factor of each B-spline per level in a multi-level setting
+                    'shrink_factor': [4, 2, 1],     # shrink factor per level to change the size and complexity of the image
+                    'smooth_sigmas': [4, 2, 1],     # standard deviation for gaussian smoothing per level
+                    'num_iterations': 100,      # maximal number of iterations
+                    'sampling_percent': 0.2,        # fraction of image used for metric evaluation
+                    'learning_rate': 0.5,       # step size along traversal direction in parameter space
+                    'convergence_min_value': 1e-4,      # value for checking convergence together with energy profile of the similarity metric
+                    'convergence_window_size': 5,       # number of similarity metric values for estimating the energy profile
+    }
+    bspline_params.update(kwargs)
+
     fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
     if len(fixed_image.shape) == 3 or len(moving_image.shape) == 3:
         raise ValueError("The input images should be grayscale images.")
 
     # Inverting intensity values
-    fixed_image_inv = 255 - fixed_image
-    moving_image_inv = 255 - moving_image
+    fixed_image_inv = np.invert(fixed_image)
+    moving_image_inv = np.invert(moving_image)
 
     if len(fixed_mask.shape) > 2:
         fixed_mask = fixed_mask[:, :, 0]
@@ -1131,9 +1130,9 @@ def estimate_bspline_transform(
     fixed_image_inv_sitk = sitk.Cast(fixed_image_inv_sitk, sitk.sitkFloat32)
     moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
 
-    # Determine the number of BSpline control points using physical spacing
+    # Determine the number of B-spline control points using physical spacing
     grid_physical_spacing = len(fixed_image.shape) * [
-        grid_space
+        bspline_params['grid_space']
     ]  # A control point every grid_space (mm)
     image_physical_size = [
         size * spacing
@@ -1150,42 +1149,40 @@ def estimate_bspline_transform(
     tx = sitk.BSplineTransformInitializer(
         image1=fixed_image_inv_sitk, transformDomainMeshSize=mesh_size
     )
-    print(f"Initial Number of Parameters: {tx.GetNumberOfParameters()}")
+    logging.info(f"Initial Number of B-spline Parameters: {tx.GetNumberOfParameters()}")
 
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetInitialTransformAsBSpline(
-        tx, inPlace=True, scaleFactors=scale_factors
+        tx, inPlace=True, scaleFactors=bspline_params['scale_factors']
     )
     registration_method.SetMetricAsMattesMutualInformation(50)
     registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
     registration_method.SetMetricSamplingPercentage(
-        sampling_percent, sitk.sitkWallClock
+        bspline_params['sampling_percent'], sitk.sitkWallClock
     )
 
-    registration_method.SetShrinkFactorsPerLevel(shrink_factor)
-    registration_method.SetSmoothingSigmasPerLevel(smooth_sigmas)
+    registration_method.SetShrinkFactorsPerLevel(bspline_params['shrink_factor'])
+    registration_method.SetSmoothingSigmasPerLevel(bspline_params['smooth_sigmas'])
     registration_method.SetOptimizerAsGradientDescentLineSearch(
-        learningRate=0.5,
-        numberOfIterations=num_iterations,
-        convergenceMinimumValue=1e-4,
-        convergenceWindowSize=5,
+        learningRate=bspline_params['learning_rate'],
+        numberOfIterations=bspline_params['num_iterations'],
+        convergenceMinimumValue=bspline_params['convergence_min_value'],
+        convergenceWindowSize=bspline_params['convergence_window_size'],
     )
     registration_method.SetInterpolator(sitk.sitkLinear)
     return registration_method.Execute(fixed_image_inv_sitk, moving_image_inv_sitk)
 
 
-def apply_bspline_transform(fixed_image, moving_image, transform):
-    """Apply BSpline transform to an image.
-
-    This function applied
+def apply_bspline_transform(fixed_image: np.ndarray, moving_image: np.ndarray, transform: sitk.BSplineTransform) -> np.ndarray:
+    """Apply the given B-spline transform to a moving image.
 
     Args:
         fixed_image (:class:`numpy.ndarray`):
             A fixed image.
         moving_image (:class:`numpy.ndarray`):
             A moving image.
-        transform:
-            A BSpline transform.
+        transform (sitk.BSplineTransform):
+            A B-spline transform.
 
     Returns:
         :class:`numpy.ndarray`:
