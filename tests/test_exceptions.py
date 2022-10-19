@@ -24,7 +24,6 @@ def test_exception_tests():
             input_path="/mnt/test/sample.txt",
             tile_objective_value=5,
             output_dir=str(pathlib.Path(__file__).parent.joinpath("tiles_save_tiles")),
-            verbose=True,
         )
 
     with pytest.raises(MethodNotSupported):
