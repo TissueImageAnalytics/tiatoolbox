@@ -2,9 +2,9 @@ import logging
 import warnings
 from typing import Dict, Tuple
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1069,7 +1069,7 @@ def estimate_bspline_transform(
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
     **kwargs,
-):
+) -> sitk.BSplineTransform:
     """Estimate B-spline transformation.
 
     This function performs registration using multi-resolution B-spline approach.
@@ -1085,33 +1085,42 @@ def estimate_bspline_transform(
             A binary tissue mask for the moving image.
         **kwargs (dict):
             Key-word arguments for B-spline parameters.
+                grid_space (float):
+                    Grid_space (mm) to decide control points.
+                scale_factors (list):
+                    Scaling factor of each B-spline per level in a multi-level setting.
+                shrink_factor (list):
+                    Shrink factor per level to change the size and
+                    complexity of the image.
+                smooth_sigmas (list):
+                    Standard deviation for gaussian smoothing per level.
+                num_iterations (int):
+                    Maximal number of iterations.
+                sampling_percent (float):
+                    Fraction of image used for metric evaluation.
+                learning_rate (float):
+                    Step size along traversal direction in parameter space.
+                convergence_min_value (float):
+                    Value for checking convergence together with energy
+                    profile of the similarity metric.
+                convergence_window_size (int):
+                    Number of similarity metric values for estimating the
+                    energy profile.
 
     Returns:
         2D deformation transformation represented by a grid of control points.
 
     """
     bspline_params = {
-        "grid_space": 50.0,  # grid_space (mm) to decide control points
-        "scale_factors": [
-            1,
-            2,
-            5,
-        ],  # scaling factor of each B-spline per level in a multi-level setting
-        "shrink_factor": [
-            4,
-            2,
-            1,
-        ],  # shrink factor per level to change the size and complexity of the image
-        "smooth_sigmas": [
-            4,
-            2,
-            1,
-        ],  # standard deviation for gaussian smoothing per level
-        "num_iterations": 100,  # maximal number of iterations
-        "sampling_percent": 0.2,  # fraction of image used for metric evaluation
-        "learning_rate": 0.5,  # step size along traversal direction in parameter space
-        "convergence_min_value": 1e-4,  # value for checking convergence together with energy profile of the similarity metric
-        "convergence_window_size": 5,  # number of similarity metric values for estimating the energy profile
+        "grid_space": 50.0,
+        "scale_factors": [1, 2, 5],
+        "shrink_factor": [4, 2, 1],
+        "smooth_sigmas": [4, 2, 1],
+        "num_iterations": 100,
+        "sampling_percent": 0.2,
+        "learning_rate": 0.5,
+        "convergence_min_value": 1e-4,
+        "convergence_window_size": 5,
     }
     bspline_params.update(kwargs)
 
@@ -1161,7 +1170,9 @@ def estimate_bspline_transform(
     tx = sitk.BSplineTransformInitializer(
         image1=fixed_image_inv_sitk, transformDomainMeshSize=mesh_size
     )
-    logging.info(f"Initial Number of B-spline Parameters: {tx.GetNumberOfParameters()}")
+    logging.info(
+        "Initial Number of B-spline Parameters: %d", tx.GetNumberOfParameters()
+    )
 
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetInitialTransformAsBSpline(
