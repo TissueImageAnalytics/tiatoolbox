@@ -1,4 +1,6 @@
 """Command line interface for save_tiles."""
+import logging
+
 from tiatoolbox.cli.common import (
     cli_file_type,
     cli_img_input,
@@ -34,6 +36,8 @@ def save_tiles(
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, "save", "tiles"
     )
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
 
     for curr_file in files_all:
         wsicore.save_tiles.save_tiles(
@@ -41,5 +45,4 @@ def save_tiles(
             output_dir=output_path,
             tile_objective_value=tile_objective_value,
             tile_read_size=tile_read_size,
-            verbose=verbose,
         )
