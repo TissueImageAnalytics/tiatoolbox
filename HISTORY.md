@@ -7,8 +7,8 @@
 - Adds an AnnotationTileGenerator and AnnotationRenderer which allows serving of tiles rendered directly from an annotation store.
 - Adds [DFBR](https://arxiv.org/abs/2202.09971) registration model and jupyter notebook example
   - Adds DICE metric
-- Adds [SCCNN](https://doi.org/10.1109/tmi.2016.2525803) architecture.
-- Adds [MapDe](https://arxiv.org/abs/1806.06970) architecture.
+- Adds [SCCNN](https://doi.org/10.1109/tmi.2016.2525803) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.sccnn.SCCNN.html)\]
+- Adds [MapDe](https://arxiv.org/abs/1806.06970) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.mapde.MapDe.html)\]
 - Adds support for reading MPP metadata from  NGFF v0.4
 - Adds enhancements to tiatoolbox.annotation.storage that are useful when using an AnnotationStore for visualization purposes.
 
