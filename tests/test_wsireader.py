@@ -76,6 +76,8 @@ def pytest_generate_tests(metafunc):
         return
     idlist = []
     argvalues = []
+    if not hasattr(metafunc.cls, "scenarios"):
+        return
     for scenario in metafunc.cls.scenarios:
         idlist.append(scenario[0])
         items = scenario[1].items()
@@ -1965,6 +1967,30 @@ def test_nff_no_scale_transforms_mpp(tmp_path):
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
 
+
+class TestTIFFWSIReader:
+
+    @staticmethod
+    def test_ome_missing_instrument_ref(monkeypatch):
+        """Test that an OME-TIFF can be read without instrument reference."""
+        from defusedxml import ElementTree as ET
+        sample = _fetch_remote_sample("ome-brightfield-pyramid-1-small")
+        wsi = wsireader.TIFFWSIReader(sample)
+        page = wsi.tiff.pages[0]
+        description = page.description
+        tree = ET.fromstring(description)
+        namespaces = {
+            "ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06",
+        }
+        images = tree.findall("ome:Image", namespaces)
+        for image in images:
+            instruments = image.findall("ome:InstrumentRef", namespaces)
+            for instrument in instruments:
+                image.remove(instrument)
+        new_description = ET.tostring(tree, encoding="unicode")
+        monkeypatch.setattr(page, "description", new_description)
+        monkeypatch.setattr(wsi, "_m_info", None)
+        assert wsi.info.objective_power is None
 
 class TestReader:
     scenarios = [
