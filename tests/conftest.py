@@ -10,6 +10,33 @@ from _pytest.tmpdir import TempPathFactory
 
 from tiatoolbox.data import _fetch_remote_sample
 
+# -------------------------------------------------------------------------------------
+# Generate Parameterized Tests
+# -------------------------------------------------------------------------------------
+
+
+def pytest_generate_tests(metafunc):
+    """Generate (parameterize) test scenarios.
+
+    Adapted from pytest documentation. For more information on
+    parameterized tests see:
+    https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
+
+    """
+    # Return if the test is not part of a class
+    if metafunc.cls is None:
+        return
+    idlist = []
+    argvalues = []
+    if not hasattr(metafunc.cls, "scenarios"):
+        return
+    for scenario in metafunc.cls.scenarios:
+        idlist.append(scenario[0])
+        items = scenario[1].items()
+        argnames = [x[0] for x in items]
+        argvalues.append([x[1] for x in items])
+    metafunc.parametrize(argnames, argvalues, ids=idlist, scope="class")
+
 
 @pytest.fixture(scope="session")
 def root_path(request) -> Path:
