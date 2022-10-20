@@ -3200,8 +3200,8 @@ class TIFFWSIReader(WSIReader):
             "OME-XML": xml,
         }
 
-        objective_power = self._get_ome_objective_power(xml, namespaces, xml_series)
-        mpp = self._get_ome_mpp(namespaces, xml_series)
+        objective_power = self._get_ome_objective_power(xml)
+        mpp = self._get_ome_mpp(xml)
         vendor = None
 
         return {
