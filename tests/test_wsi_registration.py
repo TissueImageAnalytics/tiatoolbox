@@ -253,7 +253,7 @@ def test_match_histograms():
 
 
 def test_filtering_duplicate_matching_points():
-    """Test test_filtering_matching_points function with duplicate matching points."""
+    """Test filtering_matching_points function with duplicate matching points."""
     fixed_mask = np.zeros((50, 50))
     fixed_mask[20:40, 20:40] = 255
     moving_mask = np.zeros((50, 50))
@@ -274,7 +274,7 @@ def test_filtering_duplicate_matching_points():
 
 
 def test_filtering_no_duplicate_matching_points():
-    """Test test_filtering_matching_points function with no duplicate matching points."""
+    """Test filtering_matching_points function with no duplicate matching points."""
     fixed_mask = np.zeros((50, 50))
     fixed_mask[20:40, 20:40] = 255
     moving_mask = np.zeros((50, 50))
