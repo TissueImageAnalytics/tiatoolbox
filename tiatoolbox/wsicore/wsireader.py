@@ -3192,8 +3192,6 @@ class TIFFWSIReader(WSIReader):
         # the first IFD.
         description = self.tiff.pages[0].description
         xml = self._get_ome_xml()
-        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
-        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
 
         raw = {
             "Description": description,
