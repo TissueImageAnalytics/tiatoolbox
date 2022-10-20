@@ -3190,11 +3190,10 @@ class TIFFWSIReader(WSIReader):
         # The OME-XML should be in each IFD but is optional. It must be
         # present in the first IFD. We simply get the description from
         # the first IFD.
-        description = self.tiff.pages[0].description
         xml = self._get_ome_xml()
 
         raw = {
-            "Description": description,
+            "Description": self.tiff.pages[0].description,
             "OME-XML": xml,
         }
 
