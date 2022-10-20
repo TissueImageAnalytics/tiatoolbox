@@ -1,7 +1,7 @@
 from defusedxml import ElementTree
 
-from tiatoolbox.wsicore import wsireader
 from tiatoolbox.data import _fetch_remote_sample
+from tiatoolbox.wsicore import wsireader
 
 
 def test_ome_missing_instrument_ref(monkeypatch):
