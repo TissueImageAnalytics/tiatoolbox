@@ -3345,10 +3345,12 @@ class TIFFWSIReader(WSIReader):
 
         if self.tiff.is_svs:
             filetype_params = self._parse_svs_metadata()
-        if self.tiff.is_ome:
+        elif self.tiff.is_ome:
             filetype_params = self._parse_ome_metadata()
-        if self.tiff.pages[0].is_tiled:
+        elif self.tiff.pages[0].is_tiled:
             filetype_params = self._parse_generic_tiled_metadata()
+        else:
+            filetype_params = {}
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         return WSIMeta(
