@@ -2015,6 +2015,7 @@ class TestTIFFWSIReader:
         monkeypatch.setattr(wsi, "_m_info", None)
         assert wsi.info.mpp is None
 
+
 class TestReader:
     scenarios = [
         (
