@@ -2,9 +2,9 @@ import logging
 import warnings
 from typing import Dict, Tuple
 
-import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
+import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1132,8 +1132,9 @@ def estimate_bspline_transform(
     if len(fixed_image.shape) > 3 or len(moving_image.shape) > 3:
         raise ValueError("The input images can only be grayscale or RGB images.")
 
-    if (len(fixed_image.shape) == 3 and fixed_image.shape[2] != 3) or\
-       (len(moving_image.shape) == 3 and moving_image.shape[2] != 3):
+    if (len(fixed_image.shape) == 3 and fixed_image.shape[2] != 3) or (
+        len(moving_image.shape) == 3 and moving_image.shape[2] != 3
+    ):
         raise ValueError("The input images can only have 3 channels.")
 
     # Inverting intensity values
@@ -1167,7 +1168,9 @@ def estimate_bspline_transform(
     moving_image_inv_sitk = cast_filter.Execute(moving_image_inv_sitk)
 
     # Determine the number of B-spline control points using physical spacing
-    grid_physical_spacing = 2 * [bspline_params["grid_space"]]  # A control point every grid_space (mm)
+    grid_physical_spacing = 2 * [
+        bspline_params["grid_space"]
+    ]  # A control point every grid_space (mm)
     image_physical_size = [
         size * spacing
         for size, spacing in zip(
