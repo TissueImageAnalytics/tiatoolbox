@@ -1,10 +1,9 @@
-import logging
 import warnings
 from typing import Dict, Tuple
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1182,9 +1181,7 @@ def estimate_bspline_transform(
     tx = sitk.BSplineTransformInitializer(
         image1=fixed_image_inv_sitk, transformDomainMeshSize=mesh_size
     )
-    logging.info(
-        "Initial Number of B-spline Parameters: %d", tx.GetNumberOfParameters()
-    )
+    print("Initial Number of B-spline Parameters:", tx.GetNumberOfParameters)
 
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetInitialTransformAsBSpline(
