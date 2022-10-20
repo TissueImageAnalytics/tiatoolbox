@@ -453,14 +453,10 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     transform = estimate_bspline_transform(
         fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk[:, :, 0], moving_msk[:, :, 0]
     )
-    _ = apply_bspline_transform(
-        fixed_img[:, :, 0], moving_img[:, :, 0], transform
-    )
+    _ = apply_bspline_transform(fixed_img[:, :, 0], moving_img[:, :, 0], transform)
 
     # RGB images as input
-    transform = estimate_bspline_transform(
-        fixed_img, moving_img, fixed_msk, moving_msk
-    )
+    transform = estimate_bspline_transform(fixed_img, moving_img, fixed_msk, moving_msk)
 
     _ = apply_bspline_transform(fixed_img, moving_img, transform)
     registered_msk = apply_bspline_transform(fixed_msk, moving_msk, transform)
