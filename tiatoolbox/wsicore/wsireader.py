@@ -3199,11 +3199,10 @@ class TIFFWSIReader(WSIReader):
 
         objective_power = self._get_ome_objective_power(xml)
         mpp = self._get_ome_mpp(xml)
-        vendor = None
 
         return {
             "objective_power": objective_power,
-            "vendor": vendor,
+            "vendor": None,
             "mpp": mpp,
             "raw": raw,
         }
