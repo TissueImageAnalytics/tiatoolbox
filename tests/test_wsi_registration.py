@@ -252,8 +252,8 @@ def test_match_histograms():
     assert np.all(norm_image_b == image_b)
 
 
-def test_filtering_matching_points():
-    """Test test_filtering_matching_points function."""
+def test_filtering_duplicate_matching_points():
+    """Test test_filtering_matching_points function with duplicate matching points."""
     fixed_mask = np.zeros((50, 50))
     fixed_mask[20:40, 20:40] = 255
     moving_mask = np.zeros((50, 50))
@@ -264,6 +264,27 @@ def test_filtering_matching_points():
     )
     moving_points = np.array(
         [[30, 25], [32, 36], [31, 20], [30, 35], [30, 35], [30, 35], [26, 27]]
+    )
+    quality = np.ones((7, 1))
+
+    df = DFBRegister()
+    _ = df.filtering_matching_points(
+        fixed_mask, moving_mask, fixed_points, moving_points, quality
+    )
+
+
+def test_filtering_no_duplicate_matching_points():
+    """Test test_filtering_matching_points function with no duplicate matching points."""
+    fixed_mask = np.zeros((50, 50))
+    fixed_mask[20:40, 20:40] = 255
+    moving_mask = np.zeros((50, 50))
+    moving_mask[20:40, 20:40] = 255
+
+    fixed_points = np.array(
+        [[25, 25], [25, 28], [15, 25], [30, 25], [25, 30], [30, 35], [21, 37]]
+    )
+    moving_points = np.array(
+        [[30, 25], [32, 36], [31, 20], [20, 35], [30, 15], [34, 35], [26, 27]]
     )
     quality = np.ones((7, 1))
 
@@ -362,14 +383,49 @@ def test_register_output_without_initializer(
     )
 
 
+def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving_mask):
+    """Test for the estimated tissue and block-wise transform in register function."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    df = DFBRegister()
+    pre_transform = np.eye(3)
+
+    _ = df.register(
+        fixed_img,
+        moving_img,
+        fixed_msk,
+        moving_msk,
+        transform_initializer=pre_transform,
+    )
+
+
 def test_estimate_bspline_transform_inputs():
-    fixed_img = np.random.rand(32, 32, 3)
-    moving_img = np.random.rand(32, 32, 3)
+    """Test input dimensions for estimate_bspline_transform function."""
+    fixed_img = np.random.rand(32, 32, 32, 3)
+    moving_img = np.random.rand(32, 32, 32, 3)
     fixed_mask = np.random.choice([0, 1], size=(32, 32))
     moving_mask = np.random.choice([0, 1], size=(32, 32))
 
     with pytest.raises(
-        ValueError, match=r".*The input images should be grayscale images.*"
+        ValueError, match=r".*The input images can only be grayscale or RGB images.*"
+    ):
+        _, _ = estimate_bspline_transform(
+            fixed_img, moving_img, fixed_mask, moving_mask
+        )
+
+
+def test_estimate_bspline_transform_rgb_input():
+    """Test inputs' number of channels for estimate_bspline_transform function."""
+    fixed_img = np.random.rand(32, 32, 32)
+    moving_img = np.random.rand(32, 32, 32)
+    fixed_mask = np.random.choice([0, 1], size=(32, 32))
+    moving_mask = np.random.choice([0, 1], size=(32, 32))
+
+    with pytest.raises(
+        ValueError, match=r".*The input images can only have 3 channels.*"
     ):
         _, _ = estimate_bspline_transform(
             fixed_img, moving_img, fixed_mask, moving_mask
@@ -392,16 +448,21 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     moving_msk = cv2.warpAffine(
         moving_msk, rigid_transform[0:-1][:], fixed_img.shape[:2][::-1]
     )
-    _ = estimate_bspline_transform(
+
+    # Grayscale images as input
+    transform = estimate_bspline_transform(
         fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk[:, :, 0], moving_msk[:, :, 0]
     )
+    _ = apply_bspline_transform(
+        fixed_img[:, :, 0], moving_img[:, :, 0], transform
+    )
 
+    # RGB images as input
     transform = estimate_bspline_transform(
-        fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk, moving_msk
+        fixed_img, moving_img, fixed_msk, moving_msk
     )
 
-    registered_msk = apply_bspline_transform(
-        fixed_msk[:, :, 0], moving_msk[:, :, 0], transform
-    )
-    mask_overlap = dice(fixed_msk[:, :, 0], registered_msk)
+    _ = apply_bspline_transform(fixed_img, moving_img, transform)
+    registered_msk = apply_bspline_transform(fixed_msk, moving_msk, transform)
+    mask_overlap = dice(fixed_msk, registered_msk)
     assert mask_overlap > 0.75

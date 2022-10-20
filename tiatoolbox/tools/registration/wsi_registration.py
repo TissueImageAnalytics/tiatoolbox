@@ -2,9 +2,9 @@ import logging
 import warnings
 from typing import Dict, Tuple
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from skimage import exposure, filters
@@ -1129,8 +1129,12 @@ def estimate_bspline_transform(
     bspline_params.update(kwargs)
 
     fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
-    if len(fixed_image.shape) == 3 or len(moving_image.shape) == 3:
-        raise ValueError("The input images should be grayscale images.")
+    if len(fixed_image.shape) > 3 or len(moving_image.shape) > 3:
+        raise ValueError("The input images can only be grayscale or RGB images.")
+
+    if (len(fixed_image.shape) == 3 and fixed_image.shape[2] != 3) or\
+       (len(moving_image.shape) == 3 and moving_image.shape[2] != 3):
+        raise ValueError("The input images can only have 3 channels.")
 
     # Inverting intensity values
     fixed_image_inv = np.invert(fixed_image)
@@ -1150,15 +1154,20 @@ def estimate_bspline_transform(
     )
 
     # Getting SimpleITK Images from numpy arrays
-    fixed_image_inv_sitk = sitk.GetImageFromArray(fixed_image_inv)
-    moving_image_inv_sitk = sitk.GetImageFromArray(moving_image_inv)
-    fixed_image_inv_sitk = sitk.Cast(fixed_image_inv_sitk, sitk.sitkFloat32)
-    moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
+    fixed_image_inv_sitk = sitk.GetImageFromArray(fixed_image_inv, isVector=True)
+    moving_image_inv_sitk = sitk.GetImageFromArray(moving_image_inv, isVector=True)
+
+    # fixed_image_inv_sitk = sitk.Cast(fixed_image_inv_sitk, sitk.sitkFloat32)
+    # moving_image_inv_sitk = sitk.Cast(moving_image_inv_sitk, sitk.sitkFloat32)
+
+    cast_filter = sitk.VectorIndexSelectionCastImageFilter()
+    # selectCastFilter.SetIndex(0)
+    cast_filter.SetOutputPixelType(sitk.sitkFloat32)
+    fixed_image_inv_sitk = cast_filter.Execute(fixed_image_inv_sitk)
+    moving_image_inv_sitk = cast_filter.Execute(moving_image_inv_sitk)
 
     # Determine the number of B-spline control points using physical spacing
-    grid_physical_spacing = len(fixed_image.shape) * [
-        bspline_params["grid_space"]
-    ]  # A control point every grid_space (mm)
+    grid_physical_spacing = 2 * [bspline_params["grid_space"]]  # A control point every grid_space (mm)
     image_physical_size = [
         size * spacing
         for size, spacing in zip(
@@ -1218,8 +1227,8 @@ def apply_bspline_transform(
             A transformed moving image.
 
     """
-    fixed_image_sitk = sitk.GetImageFromArray(fixed_image)
-    moving_image_sitk = sitk.GetImageFromArray(moving_image)
+    fixed_image_sitk = sitk.GetImageFromArray(fixed_image, isVector=True)
+    moving_image_sitk = sitk.GetImageFromArray(moving_image, isVector=True)
 
     resampler = sitk.ResampleImageFilter()
     resampler.SetReferenceImage(fixed_image_sitk)
