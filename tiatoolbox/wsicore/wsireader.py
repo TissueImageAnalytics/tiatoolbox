@@ -3191,12 +3191,6 @@ class TIFFWSIReader(WSIReader):
         # present in the first IFD. We simply get the description from
         # the first IFD.
         xml = self._get_ome_xml()
-
-        raw = {
-            "Description": self.tiff.pages[0].description,
-            "OME-XML": xml,
-        }
-
         objective_power = self._get_ome_objective_power(xml)
         mpp = self._get_ome_mpp(xml)
 
@@ -3204,7 +3198,10 @@ class TIFFWSIReader(WSIReader):
             "objective_power": objective_power,
             "vendor": None,
             "mpp": mpp,
-            "raw": raw,
+            "raw": {
+                "Description": self.tiff.pages[0].description,
+                "OME-XML": xml,
+            },
         }
 
     def _get_ome_objective_power(
