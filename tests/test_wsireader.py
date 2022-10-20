@@ -491,7 +491,7 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-def testconvert_resolution_units(sample_ndpi):
+def test_convert_resolution_units(sample_ndpi):
     """Test the resolution unit conversion code."""
     wsi = wsireader.WSIReader.open(sample_ndpi)
 
