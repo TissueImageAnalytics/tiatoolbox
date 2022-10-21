@@ -29,8 +29,9 @@ def background_composite(image, fill=255, alpha=False):
         >>> from matplotlib import pyplot as plt
         >>> img_with_alpha = np.zeros((2000, 2000, 4)).astype('uint8')
         >>> img_with_alpha[:1000, :, 3] = 255 # edit alpha channel
-        >>> img_back_composite = transforms
-        ...     .background_composite(img_with_alpha)
+        >>> img_back_composite = transforms.background_composite(
+        ...     img_with_alpha
+        ... )
         >>> plt.imshow(img_with_alpha)
         >>> plt.imshow(img_back_composite)
         >>> plt.show()
@@ -154,10 +155,10 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
 
 def rgb2od(img):
-    r"""Convert from RGB to optical density (OD_RGB) space.
+    r"""Convert from RGB to optical density (:math:`OD_{RGB}`) space.
 
-    ::math::
-        RGB = 255 * \\exp(-1*OD_RGB)
+    .. math::
+        RGB = 255 * exp^{-1*OD_{RGB}}
 
     Args:
         img (:class:`numpy.ndarray` of type :class:`numpy.uint8`):
@@ -179,10 +180,10 @@ def rgb2od(img):
 
 
 def od2rgb(od):
-    r"""Convert from optical density (OD_RGB) to RGB.
+    r"""Convert from optical density (:math:`OD_{RGB}`) to RGB.
 
-    ::math::
-        RGB = 255 * \\exp(-1*OD_RGB)
+    .. math::
+        RGB = 255 * exp^{-1*OD_{RGB}}
 
     Args:
         od (:class:`numpy.ndarray`):
@@ -220,9 +221,11 @@ def bounds2locsize(bounds, origin="upper"):
     Returns:
         tuple:
             A 2-tuple containing integer 2-tuples for location and size:
+
             - :py:obj:`tuple` - location tuple
                 - :py:obj:`int` - x
                 - :py:obj:`int` - y
+
             - :py:obj:`size` - size tuple
                 - :py:obj:`int` - width
                 - :py:obj:`int` - height

@@ -6,6 +6,7 @@
 1xshxsw
 20x
 2nd
+3D
 3rd
 40x
 B301
@@ -17,6 +18,7 @@ DICOM
 DNS
 Dataloader
 Dataset
+Datasets
 Delaunay
 E1120
 FCN
@@ -60,8 +62,11 @@ W0063
 W0079
 W0105
 W0123
+W0143
+W0201
 W0212
 W0221
+W0613
 W0703
 W6004
 WRT
@@ -87,6 +92,7 @@ cuda
 cv2
 dataframe
 dataset
+doctest
 downsample
 downsampled
 downsampling
@@ -100,6 +106,7 @@ eval
 execfile
 func
 fx
+geojson
 getitem
 grayscale
 greyscale
@@ -112,6 +119,8 @@ iostate
 jpg
 kather
 kd
+lookahead
+lookbehind
 macports
 memray
 mpp
@@ -133,6 +142,7 @@ pred
 preproc
 preprocessing
 pretrained
+pts
 pylint
 pyright
 qtconsole
@@ -151,12 +161,14 @@ superset
 svs
 tiatoolbox
 tifffile
+tileserver
+tokenize
 tolist
 uid
 uint8
 uncallable
 v4
-w0613
+viridis
 wsi
 wsireader
 zarr

@@ -96,8 +96,8 @@ class CoordinateTransform:
             The scale factors. Must be one for each axis.
     """
 
-    type: str = "scale"  # noqa: A003
-    scale: List[float] = field(default_factory=lambda: [1.0, 0.5, 0.5])
+    type: str = "identity"  # noqa: A003
+    scale: Optional[List[float]] = None
 
 
 @dataclass

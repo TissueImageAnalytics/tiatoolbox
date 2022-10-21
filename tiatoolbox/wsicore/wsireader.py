@@ -1,4 +1,6 @@
 """This module defines classes which can read image data from WSI formats."""
+from __future__ import annotations
+
 import copy
 import json
 import math
@@ -8,16 +10,16 @@ import re
 import warnings
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import openslide
 import pandas as pd
 import tifffile
 import zarr
+from defusedxml import ElementTree
 
 from tiatoolbox import utils
-from tiatoolbox.tools import tissuemask
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
@@ -145,11 +147,11 @@ class WSIReader:
     from whole slide image (WSI) files.
 
     Attributes:
-        input_img (pathlib.Path):
+        input_path (pathlib.Path):
             Input path to WSI file.
 
     Args:
-        input_img (:obj:`str` or :obj:`pathlib.Path` or :class:`numpy.ndarray`):
+        input_img (str, :obj:`pathlib.Path`, :obj:`ndarray` or :obj:`.WSIReader`):
             Input path to WSI.
         mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
             The MPP of the WSI. If not provided, the MPP is approximated
@@ -162,19 +164,19 @@ class WSIReader:
 
     @staticmethod  # noqa: A003
     def open(  # noqa: A003
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, pathlib.Path, np.ndarray, WSIReader],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> "WSIReader":
-        """Return an appropriate :class:`.WSIReader` object.
+        """Returns an appropriate :class:`.WSIReader` object.
 
         Args:
-            input_img (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:WSIReader):
+            input_img (str, pathlib.Path, :obj:`numpy.ndarray` or :obj:`.WSIReader`):
                 Input to create a WSI object from. Supported types of
-                input are: `str` and `pathlib.Path` which point to the
+                input are: `str` and :obj:`pathlib.Path` which point to the
                 location on the disk where image is stored,
                 :class:`numpy.ndarray` in which the input image in the
-                form of numpy array (HxWxC) is stored, or :obj:WSIReader
+                form of numpy array (HxWxC) is stored, or :obj:`.WSIReader`
                 which is an already created tiatoolbox WSI handler. In
                 the latter case, the function directly passes the
                 input_imge to the output.
@@ -260,7 +262,7 @@ class WSIReader:
         """Verify that an input image is supported.
 
         Args:
-            input_path (pathlib.Path):
+            input_path (:class:`pathlib.Path`):
                 Input path to WSI.
 
         Raises:
@@ -461,18 +463,22 @@ class WSIReader:
 
         Returns:
             tuple:
-                Parameters for reading the requested region
+                Parameters for reading the requested region.
+
                 - :py:obj:`int` - Optimal read level.
+
                 - :py:obj:`tuple` - Read location in level coordinates.
                     - :py:obj:`int` - X location.
                     - :py:obj:`int` - Y location.
+
                 - :py:obj:`tuple` - Region size in level coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.
-                - :py:obj:`tuple` - Scaling to apply after level read to
-                  achieve desired output resolution.
+
+                - :py:obj:`tuple` - Scaling to apply after level read.
                     - :py:obj:`float` - X scale factor.
                     - :py:obj:`float` - Y scale factor.
+
                 - :py:obj:`tuple` - Region size in baseline coordinates.
                     - :py:obj:`int` - Width.
                     - :py:obj:`int` - Height.
@@ -1288,21 +1294,23 @@ class WSIReader:
                 Extra kwargs passed to the masker class.
 
         """
+        from tiatoolbox.tools import tissuemask
+
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
             raise ValueError(f"Invalid tissue masking method: {method}.")
-        if method == "otsu":
-            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         if method == "morphological":
             mpp = None
             power = None
-            if units == "power":
-                power = resolution
             if units == "mpp":
                 mpp = resolution
+            elif units == "power":
+                power = resolution
             masker = tissuemask.MorphologicalMasker(
                 mpp=mpp, power=power, **masker_kwargs
             )
+        elif method == "otsu":
+            masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
         mask_img = masker.fit_transform([thumbnail])[0]
         return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
@@ -1317,7 +1325,7 @@ class WSIReader:
         """Generate image tiles from whole slide images.
 
         Args:
-            output_dir(str or pathlib.Path):
+            output_dir(str or :obj:`pathlib.Path`):
                 Output directory to save the tiles.
             tile_objective_value (int):
                 Objective value at which tile is generated.
@@ -1411,7 +1419,7 @@ class WSIReader:
                 + tile_format
             )
 
-            utils.misc.imwrite(image_path=output_dir.joinpath(img_save_name), img=im)
+            utils.misc.imwrite(image_path=output_dir / img_save_name, img=im)
 
             data.append(
                 [
@@ -1440,12 +1448,12 @@ class WSIReader:
                 "size_h",
             ],
         )
-        df.to_csv(output_dir.joinpath("Output.csv"), index=False)
+        df.to_csv(output_dir / "Output.csv", index=False)
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
         utils.misc.imwrite(
-            output_dir.joinpath("slide_thumbnail" + tile_format), img=slide_thumb
+            output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
         )
 
 
@@ -2410,8 +2418,8 @@ class OmnyxJP2WSIReader(WSIReader):
         glymur_wsi = self.glymur_wsi
         box = glymur_wsi.box
         description = box[3].xml.find("description")
-        m = re.search(r"(?<=AppMag = )\d\d", description.text)
-        objective_power = np.int(m.group(0))
+        matches = re.search(r"(?<=AppMag = )\d\d", description.text)
+        objective_power = np.int(matches[0])
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
 
@@ -2438,9 +2446,9 @@ class OmnyxJP2WSIReader(WSIReader):
         ]
 
         vendor = "Omnyx JP2"
-        m = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
-        mpp_x = float(m.group(0))
-        mpp_y = float(m.group(0))
+        matches = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
+        mpp_x = float(matches[0])
+        mpp_y = float(matches[0])
         mpp = [mpp_x, mpp_y]
 
         return WSIMeta(
@@ -2481,7 +2489,7 @@ class VirtualWSIReader(WSIReader):
         mode (str)
 
     Args:
-        input_img (str, pathlib.Path, ndarray):
+        input_img (str, :obj:`pathlib.Path`, :class:`numpy.ndarray`):
             Input path to WSI.
         info (WSIMeta):
             Metadata for the virtual wsi.
@@ -2627,7 +2635,7 @@ class VirtualWSIReader(WSIReader):
                 ("resolution").
             **kwargs (dict):
                 Extra key-word arguments for reader specific parameters.
-                Currently only used by VirtualWSIReader. See class
+                Currently, only used by VirtualWSIReader. See class
                 docstrings for more information.
 
         Returns:
@@ -2781,11 +2789,7 @@ class VirtualWSIReader(WSIReader):
             size=image_read_size,
         )
 
-        if interpolation in [None, "none"]:
-            output_size = None
-        else:
-            output_size = size
-
+        output_size = None if interpolation in [None, "none"] else size
         im_region = utils.image.sub_pixel_read(
             self.img,
             bounds,
@@ -3011,7 +3015,7 @@ class ArrayView:
             y, x, s = index
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
-        raise Exception(f"Unsupported axes `{self.axes}`.")
+        raise ValueError(f"Unsupported axes `{self.axes}`.")
 
 
 class TIFFWSIReader(WSIReader):
@@ -3083,7 +3087,7 @@ class TIFFWSIReader(WSIReader):
             return shape
         if self._axes == "SYX":
             return np.roll(shape, -1)
-        raise Exception(f"Unsupported axes `{self._axes}`.")
+        raise ValueError(f"Unsupported axes `{self._axes}`.")
 
     def _parse_svs_metadata(self) -> dict:
         """Extract SVS specific metadata.
@@ -3164,36 +3168,64 @@ class TIFFWSIReader(WSIReader):
             "raw": raw,
         }
 
+    def _get_ome_xml(self) -> ElementTree.Element:
+        """Parse OME-XML from the description of the first IFD (page).
+
+        Returns:
+            ElementTree.Element:
+                OME-XML root element.
+
+        """
+        description = self.tiff.pages[0].description
+        return ElementTree.fromstring(description)
+
     def _parse_ome_metadata(self) -> dict:
+        """Extract OME specific metadata.
+
+        Returns:
+            dict:
+                Dictionary of kwargs for WSIMeta.
+
+        """
         # The OME-XML should be in each IFD but is optional. It must be
         # present in the first IFD. We simply get the description from
         # the first IFD.
-        from defusedxml.ElementTree import fromstring as et_from_string
+        xml = self._get_ome_xml()
+        objective_power = self._get_ome_objective_power(xml)
+        mpp = self._get_ome_mpp(xml)
 
-        description = self.tiff.pages[0].description
-        xml = et_from_string(description)
-        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
-        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
-
-        raw = {
-            "Description": description,
-            "OME-XML": xml,
+        return {
+            "objective_power": objective_power,
+            "vendor": None,
+            "mpp": mpp,
+            "raw": {
+                "Description": self.tiff.pages[0].description,
+                "OME-XML": xml,
+            },
         }
 
-        objective_power = None
-        mpp = None
-        vendor = None
+    def _get_ome_objective_power(
+        self, xml: Optional[ElementTree.Element] = None
+    ) -> Optional[float]:
+        """Get the objective power from the OME-XML.
 
-        xml_pixels = xml_series.find("ome:Pixels", namespaces)
-        mppx = xml_pixels.attrib.get("PhysicalSizeX")
-        mppy = xml_pixels.attrib.get("PhysicalSizeY")
-        if mppx is not None and mppy is not None:
-            mpp = [mppx, mppy]
-        elif mppx is not None or mppy is not None:
-            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
-            mpp = [mppx or mppy] * 2
+        Args:
+            xml (ElementTree.Element, optional):
+                OME-XML root element. Defaults to None. If None, the
+                OME-XML will be parsed from the first IFD.
 
+        Returns:
+            float:
+                Objective power.
+
+        """
+        xml = xml or self._get_ome_xml()
+        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
         instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
+        if instrument_ref is None:
+            return None
+
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
         instrument_ref_id = instrument_ref.attrib["ID"]
         objective_settings_id = objective_settings.attrib["ID"]
@@ -3209,32 +3241,53 @@ class TIFFWSIReader(WSIReader):
 
         try:
             objective = objectives[(instrument_ref_id, objective_settings_id)]
-            objective_power = float(objective.attrib.get("NominalMagnification"))
-        except KeyError:
-            raise KeyError("No matching Instrument for image InstrumentRef in OME-XML.")
+            return float(objective.attrib.get("NominalMagnification"))
+        except KeyError as e:
+            raise KeyError(
+                "No matching Instrument for image InstrumentRef in OME-XML."
+            ) from e
 
-        return {
-            "objective_power": objective_power,
-            "vendor": vendor,
-            "mpp": mpp,
-            "raw": raw,
-        }
+    def _get_ome_mpp(
+        self, xml: Optional[ElementTree.Element] = None
+    ) -> Optional[List[float]]:
+        """Get the microns per pixel from the OME-XML.
 
-    def _parse_generic_tiled_metadata(self) -> dict:
+        Args:
+            xml (ElementTree.Element, optional):
+                OME-XML root element. Defaults to None. If None, the
+                OME-XML will be parsed from the first IFD.
+
+        Returns:
+            Optional[List[float]]:
+                Microns per pixel.
+
+        """
+        xml = xml or self._get_ome_xml()
+        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
+        xml_pixels = xml_series.find("ome:Pixels", namespaces)
+        mppx = xml_pixels.attrib.get("PhysicalSizeX")
+        mppy = xml_pixels.attrib.get("PhysicalSizeY")
+        if mppx is not None and mppy is not None:
+            return [mppx, mppy]
+        elif mppx is not None or mppy is not None:
+            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
+            return [mppx or mppy] * 2
+        return None
+
+    def _parse_generic_tiff_metadata(self) -> dict:
         """Extract generic tiled metadata.
 
         Returns:
             dict: Dictionary of kwargs for WSIMeta.
 
         """
-        raw = {}
         mpp = None
         objective_power = None
         vendor = "Generic"
 
         description = self.tiff.pages[0].description
-        raw["Description"] = description
-
+        raw = {"Description": description}
         # Check for MPP in the tiff resolution tags
         # res_units: 1 = undefined, 2 = inch, 3 = centimeter
         res_units = self.tiff.pages[0].tags.get("ResolutionUnit")
@@ -3245,8 +3298,8 @@ class TIFFWSIReader(WSIReader):
             and res_units.value != 1
         ):
             mpp = [
-                utils.misc.ppu2mpp(res_x.value[0], res_units.value),
-                utils.misc.ppu2mpp(res_y.value[0], res_units.value),
+                utils.misc.ppu2mpp(res_x.value[0] / res_x.value[1], res_units.value),
+                utils.misc.ppu2mpp(res_y.value[0] / res_y.value[1], res_units.value),
             ]
 
         return {
@@ -3287,10 +3340,10 @@ class TIFFWSIReader(WSIReader):
 
         if self.tiff.is_svs:
             filetype_params = self._parse_svs_metadata()
-        if self.tiff.is_ome:
+        elif self.tiff.is_ome:
             filetype_params = self._parse_ome_metadata()
-        if self.tiff.pages[0].is_tiled:
-            filetype_params = self._parse_generic_tiled_metadata()
+        else:
+            filetype_params = self._parse_generic_tiff_metadata()
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         return WSIMeta(
@@ -4169,7 +4222,7 @@ class DICOMWSIReader(WSIReader):
 
 
 class NGFFWSIReader(WSIReader):
-    """Reader for NGFF WSI zarrs.
+    """Reader for NGFF WSI zarr(s).
 
     Support is currently experimental. This supports reading from
     NGFF version 0.4.
@@ -4197,7 +4250,15 @@ class NGFFWSIReader(WSIReader):
             multiscales=ngff.Multiscales(
                 version=multiscales.get("version"),
                 axes=[ngff.Axis(**axis) for axis in axes],
-                datasets=[ngff.Dataset(**dataset) for dataset in datasets],
+                datasets=[
+                    ngff.Dataset(
+                        path=dataset["path"],
+                        coordinateTransformations=dataset.get(
+                            "coordinateTransformations",
+                        ),
+                    )
+                    for dataset in datasets
+                ],
             ),
             omero=ngff.Omero(
                 name=omero.get("name"),
@@ -4214,8 +4275,9 @@ class NGFFWSIReader(WSIReader):
         }
 
     def _info(self):
+        multiscales = self.zattrs.multiscales
         return WSIMeta(
-            axes="".join(axis.name.upper() for axis in self.zattrs.multiscales.axes),
+            axes="".join(axis.name.upper() for axis in multiscales.axes),
             level_dimensions=[
                 array.shape[:2][::-1]
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
@@ -4223,7 +4285,49 @@ class NGFFWSIReader(WSIReader):
             slide_dimensions=self._zarr_group[0].shape[:2][::-1],
             vendor=self.zattrs._creator.name,  # skipcq
             raw=self._zarr_group.attrs,
+            mpp=self._get_mpp(),
         )
+
+    def _get_mpp(self) -> Optional[Tuple[float, float]]:
+        """Get the microns-per-pixel (MPP) of the slide.
+
+        Returns:
+            Tuple[float, float]:
+                The mpp of the slide an x,y tuple. None if not available.
+
+        """
+        # Check that the required axes are present
+        multiscales = self.zattrs.multiscales
+        axes_dict = {a.name.lower(): a for a in multiscales.axes}
+        if "x" not in axes_dict or "y" not in axes_dict:
+            return None
+        x = axes_dict["x"]
+        y = axes_dict["y"]
+
+        # Check the units,
+        # Currently only handle micrometer units
+        if x.unit != y.unit != "micrometer":
+            warnings.warn(
+                f"Expected units of micrometer, got {x.unit} and {y.unit}",
+                UserWarning,
+            )
+            return None
+
+        # Check that datasets is non-empty and has at least one coordinateTransformation
+        if (
+            not multiscales.datasets
+            or not multiscales.datasets[0].coordinateTransformations
+        ):
+            return None
+
+        # Currently simply using the first scale transform
+        transforms = multiscales.datasets[0].coordinateTransformations
+        for t in transforms:
+            if "scale" in t and t.get("type") == "scale":
+                x_index = multiscales.axes.index(x)
+                y_index = multiscales.axes.index(y)
+                return (t["scale"][x_index], t["scale"][y_index])
+        return None
 
     def read_rect(
         self,

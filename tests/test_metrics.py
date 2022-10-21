@@ -1,8 +1,9 @@
 """Tests for metrics package in the toolbox."""
 
 import numpy as np
+import pytest
 
-from tiatoolbox.utils.metrics import f1_detection, pair_coordinates
+from tiatoolbox.utils.metrics import dice, f1_detection, pair_coordinates
 
 
 def test_pair_coordinates():
@@ -24,3 +25,38 @@ def test_f1_detection():
     set_b = np.array([[0.1, 0.1], [1.1, 1.1], [2.1, 2.1], [3.1, 3.1], [4.2, 4.2]])
     score = f1_detection(set_a, set_b, 0.2)
     assert score - 1.0 < 1.0e-6
+
+
+def test_dice():
+    """Test to calculate DICE."""
+    gt_mask = np.random.randint(2, size=(256, 256))
+    pred_mask = np.random.randint(2, size=(256, 256))
+    dice_val = dice(gt_mask, pred_mask)
+    assert dice_val >= 0
+    assert dice_val <= 1.0
+
+    gt_mask = np.ones(shape=(256, 256))
+    pred_mask = np.ones(shape=(256, 256))
+
+    dice_val = dice(gt_mask, pred_mask)
+    assert dice_val == 1.0
+
+    gt_mask = np.ones(shape=(256, 256))
+    pred_mask = np.zeros(shape=(256, 256))
+
+    dice_val = dice(gt_mask, pred_mask)
+    assert dice_val == 0.0
+
+    gt_mask = np.zeros(shape=(256, 256))
+    pred_mask = np.zeros(shape=(256, 256))
+
+    dice_val = dice(gt_mask, pred_mask)
+    assert np.isnan(dice_val)
+
+
+def test_dice_shape_mismatch_error():
+    """Tests if the shape of inputs does not match."""
+    gt_mask = np.random.randint(2, size=(256, 256, 1))
+    pred_mask = np.random.randint(2, size=(256, 256, 3))
+    with pytest.raises(ValueError, match=r".*Shape mismatch between the two masks.*"):
+        _ = dice(gt_mask, pred_mask)

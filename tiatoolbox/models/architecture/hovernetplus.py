@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
+from skimage import morphology
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.architecture.utils import UpSample2x
@@ -22,7 +23,7 @@ class HoVerNetPlus(HoVerNet):
     in contrast to HoVerNet at 0.25 mpp.
 
     The tiatoolbox model should produce following results on the specified datasets
-    that is was trained on.
+    that it was trained on.
 
     .. list-table:: HoVerNet+ Performance for Nuclear Instance Segmentation
        :widths: 15 15 15 15 15 15 15
@@ -80,6 +81,7 @@ class HoVerNetPlus(HoVerNet):
         self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
     ):
         super().__init__(mode="fast")
+        self.num_input_channels = num_input_channels
         self.num_types = num_types
         self.num_layers = num_layers
         ksize = 3
@@ -113,8 +115,9 @@ class HoVerNetPlus(HoVerNet):
     def _proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
 
-        This function takes the layer segmentation map and applies a
-        gaussian blur to remove spurious segmentations.
+        This function takes the layer segmentation map and applies various morphological
+        operations remove spurious segmentations. Note, this processing is specific to
+        oral epithelium, where prioirty is given to certain tissue layers.
 
         Args:
             ls_map:
@@ -125,10 +128,41 @@ class HoVerNetPlus(HoVerNet):
                 The processed segmentation map.
 
         """
-        ls_map = np.squeeze(ls_map.astype("float32"))
-        ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)
-        ls_map = np.around(ls_map)
-        return ls_map.astype("int")
+        ls_map = np.squeeze(ls_map)
+        ls_map = np.around(ls_map).astype("uint8")  # ensure all numbers are integers
+        min_size = 20000
+        kernel_size = 20
+
+        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")
+        mask = np.where(ls_map >= 1, 1, 0).astype("uint8")
+        epith_all = epith_all > 0
+        epith_mask = morphology.remove_small_objects(
+            epith_all, min_size=min_size
+        ).astype("uint8")
+        epith_edited = epith_mask * ls_map
+        epith_edited = epith_edited.astype("uint8")
+        epith_edited_open = np.zeros_like(epith_edited).astype("uint8")
+        for i in [3, 2, 4]:
+            tmp = np.where(epith_edited == i, 1, 0).astype("uint8")
+            ep_open = cv2.morphologyEx(
+                tmp, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size))
+            )
+            ep_open = cv2.morphologyEx(
+                ep_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size))
+            )
+            epith_edited_open[ep_open == 1] = i
+
+        mask_open = cv2.morphologyEx(
+            mask, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size))
+        )
+        mask_open = cv2.morphologyEx(
+            mask_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size))
+        ).astype("uint8")
+        ls_map = mask_open.copy()
+        for i in range(2, 5):
+            ls_map[epith_edited_open == i] = i
+
+        return ls_map.astype("uint8")
 
     @staticmethod
     def _get_layer_info(pred_layer):
@@ -142,7 +176,9 @@ class HoVerNetPlus(HoVerNet):
         Returns:
             dict:
                 A dictionary of layer contours. It has the
-                following form::
+                following form:
+
+                .. code-block:: json
 
                     {
                         1: {  # Instance ID
@@ -188,51 +224,55 @@ class HoVerNetPlus(HoVerNet):
                 output of `infer_batch`).
 
         Returns:
-            inst_map (ndarray):
-                Pixel-wise nuclear instance segmentation prediction.
-            inst_dict (dict):
-                A dictionary containing a mapping of each instance
-                within `inst_map` instance information. It has the
-                following form::
+            tuple:
+                - inst_map (ndarray):
+                    Pixel-wise nuclear instance segmentation prediction.
+                - inst_dict (dict):
+                    A dictionary containing a mapping of each instance
+                    within `inst_map` instance information. It has the
+                    following form:
 
-                    {
-                        0: {  # Instance ID
-                            "box": [
-                                x_min,
-                                y_min,
-                                x_max,
-                                y_max,
-                            ],
-                            "centroid": [x, y],
-                            "contour": [
-                                [x, y],
-                                ...
-                            ],
-                            "type": integer,
-                            "prob": float,
-                        },
-                        ...
-                    }
+                    .. code-block:: json
 
-                where the instance ID is an integer corresponding to the
-                instance at the same pixel value within `inst_map`.
-            layer_map (ndarray):
-                Pixel-wise layer segmentation prediction.
-            layer_dict (dict):
-                A dictionary containing a mapping of each segmented
-                layer within `layer_map`. It has the following form::
+                        {
+                            0: {  # Instance ID
+                                "box": [
+                                    x_min,
+                                    y_min,
+                                    x_max,
+                                    y_max,
+                                ],
+                                "centroid": [x, y],
+                                "contour": [
+                                    [x, y],
+                                    ...
+                                ],
+                                "type": integer,
+                                "prob": float,
+                            },
+                            ...
+                        }
 
-                    {
-                        1: {  # Instance ID
-                            "contour": [
-                                [x, y],
-                                ...
-                            ],
-                            "type": integer,
-                        },
-                        ...
-                    }
+                    where the instance ID is an integer corresponding to the
+                    instance at the same pixel value within `inst_map`.
+                - layer_map (ndarray):
+                    Pixel-wise layer segmentation prediction.
+                - layer_dict (dict):
+                    A dictionary containing a mapping of each segmented
+                    layer within `layer_map`. It has the following form
 
+                    .. code-block:: json
+
+                        {
+                            1: {  # Instance ID
+                                "contour": [
+                                    [x, y],
+                                    ...
+                                ],
+                                "type": integer,
+                            },
+                            ...
+                        }
         Examples:
             >>> from tiatoolbox.models.architecture.hovernetplus import HoVerNetPlus
             >>> import torch
@@ -254,7 +294,7 @@ class HoVerNetPlus(HoVerNet):
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
 
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
-        pred_type = tp_map
+        pred_type = np.around(tp_map).astype("uint8")
 
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
         layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)

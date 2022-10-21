@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from shapely import affinity
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPoint, Polygon
 from shapely.geometry.point import Point
 
 from tiatoolbox.annotation.storage import (
@@ -72,7 +72,7 @@ def cell_polygon(
     ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
     x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
     y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
-    boundary_coords = np.stack([x, y], axis=1).astype(int).tolist()
+    boundary_coords = np.stack([x, y], axis=1).tolist()
 
     # Copy first coordinate to the end if required
     if repeat_first:
@@ -89,9 +89,46 @@ def cell_polygon(
     return affinity.rotate(polygon, angle, origin="centroid")
 
 
-def sample_predicate(props: Dict[str, Any]) -> bool:
-    """Simple example predicate function for tests."""
+def sample_where_1(props: Dict[str, Any]) -> bool:
+    """Simple example predicate function for tests.
+
+    Checks for a class = 1.
+
+    """
+    return props.get("class") == 1
+
+
+def sample_where_123(props: Dict[str, Any]) -> bool:
+    """Simple example predicate function for tests.
+
+    Checks for a class = 123.
+
+    """
     return props.get("class") == 123
+
+
+def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
+    """Simple example select expression for tests.
+
+    Gets the class value.
+
+    """
+    return props.get("class")
+
+
+def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
+    """Simple example select expression for tests.
+
+    Gets the class value and the class mod 2.
+
+    """
+    return (props.get("class"), props.get("class") % 2)
+
+
+def annotations_center_of_mass(annotations):
+    """Compute the mean of the annotation centroids."""
+    centroids = [annotation.geometry.centroid for annotation in annotations]
+    return MultiPoint(centroids).centroid
 
 
 # Fixtures
@@ -127,7 +164,8 @@ def fill_store(cell_grid, points_grid):
     ):
         store = store_class(path)
         annotations = [Annotation(cell) for cell in cell_grid] + [
-            Annotation(point) for point in points_grid
+            Annotation(point, properties={"class": random.randint(0, 4)})
+            for point in points_grid
         ]
         keys = store.append_many(annotations)
         return keys, store
@@ -250,6 +288,40 @@ def test_sqlite_store_index_str(fill_store, tmp_path):
     assert t2 < t1
 
 
+def test_sqlite_create_index_no_analyze(fill_store, tmp_path):
+    """Test that creating an index without ANALYZE."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    properties_predicate = "props['class']"
+    store.create_index("test_index", properties_predicate, analyze=False)
+    assert "test_index" in store.indexes()
+
+
+def test_sqlite_pquery_warn_no_index(fill_store):
+    """Test that querying without an index warns."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    with pytest.warns(UserWarning, match="index"):
+        store.pquery("*", unique=False)
+    # Check that there is no warning after creating the index
+    store.create_index("test_index", "props['class']")
+    with pytest.warns(None) as record:
+        store.pquery("props['class']")
+        assert len(record) == 0
+
+
+def test_sqlite_store_indexes(fill_store, tmp_path):
+    """Test getting a list of index names."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.create_index("test_index", "props['class']")
+    assert "test_index" in store.indexes()
+
+
+def test_sqlite_drop_index_error(fill_store, tmp_path):
+    """Test dropping an index that does not exist."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    with pytest.raises(sqlite3.OperationalError, match="no such index"):
+        store.drop_index("test_index")
+
+
 def test_sqlite_store_unsupported_compression(sample_triangle):
     """Test that using an unsupported compression str raises error."""
     store = SQLiteStore(compression="foo")
@@ -257,11 +329,17 @@ def test_sqlite_store_unsupported_compression(sample_triangle):
         _ = store.serialise_geometry(sample_triangle)
 
 
+def test_sqlite_optimize(fill_store, tmp_path):
+    """Test optimizing the database."""
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.optimize()
+
+
 def test_sqlite_store_no_compression(sample_triangle):
     """Test that using no compression raises no error."""
     store = SQLiteStore(compression=None)
     serialised = store.serialise_geometry(sample_triangle)
-    deserialised = store.deserialise_geometry(serialised)
+    deserialised = store.deserialize_geometry(serialised)
     assert deserialised.wkb == sample_triangle.wkb
 
 
@@ -269,14 +347,14 @@ def test_sqlite_store_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
     with pytest.raises(Exception, match="Unsupported"):
-        _ = store.deserialise_geometry(bytes())
+        _ = store.deserialize_geometry(bytes())
 
 
 def test_sqlite_store_wkt_deserialisation(sample_triangle):
     """Test WKT deserialisation."""
     store = SQLiteStore(compression=None)
     wkt = sample_triangle.wkt
-    geom = store.deserialise_geometry(wkt)
+    geom = store.deserialize_geometry(wkt)
     assert geom == sample_triangle
 
 
@@ -287,8 +365,14 @@ def test_sqlite_store_wkb_deserialisation(sample_triangle):
 
     """
     wkb = sample_triangle.wkb
-    geom = AnnotationStore.deserialise_geometry(wkb)
+    geom = AnnotationStore.deserialize_geometry(wkb)
     assert geom == sample_triangle
+
+
+def test_sqlite_store_metadata_get_key():
+    """Test getting a metadata entry."""
+    store = SQLiteStore()
+    assert store.metadata["compression"] == "zlib"
 
 
 def test_sqlite_store_metadata_get_keyerror():
@@ -348,12 +432,6 @@ def test_sqlite_drop_index_fail():
         store.drop_index("foo")
 
 
-def test_sqlite_optimize(fill_store, tmp_path):
-    """Test running the optimize function on an SQLiteStore."""
-    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
-    store.optimize(limit=0)
-
-
 def test_sqlite_optimize_no_vacuum(fill_store, tmp_path):
     """Test running the optimize function on an SQLiteStore without VACUUM."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
@@ -370,6 +448,88 @@ def test_annotation_to_geojson():
     assert geojson["type"] == "Feature"
     assert geojson["geometry"]["type"] == "Point"
     assert geojson["properties"] == {"foo": "bar", "baz": "qux"}
+
+
+def test_remove_area_column(fill_store):
+    """Test removing an area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    assert "area" not in store._get_table_columns()
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200
+
+
+def test_remove_area_column_indexed(fill_store):
+    """Test removing an area column if theres an index on it."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.create_index("area", '"area"')
+    store.remove_area_column()
+    assert "area" not in store._get_table_columns()
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200
+
+
+def test_add_area_column(fill_store):
+    """Test adding an area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    store.add_area_column()
+    assert "area" in store.indexes()
+    assert "area" in store._get_table_columns()
+
+    # check the results are properly sorted by area
+    result = store.query((0, 0, 100, 100))
+    areas = [ann.geometry.area for ann in result.values()]
+    assert areas == sorted(areas, reverse=True)
+
+    # check add index option of add_area_column
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    assert "area" not in store.indexes()
+    store.add_area_column(False)
+    assert "area" not in store.indexes()
+
+
+def test_query_min_area(fill_store):
+    """Test querying with a minimum area."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    result = store.query((0, 0, 1000, 1000), min_area=1)
+    assert len(result) == 100  # should only get cells, pts are too small
+
+
+def test_query_min_area_no_area_column(fill_store):
+    """Test querying with a minimum area when there is no area column."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    store.remove_area_column()
+    with pytest.raises(ValueError, match="without an area column"):
+        store.query((0, 0, 1000, 1000), min_area=1)
+
+
+def test_auto_commit(fill_store, tmp_path):
+    """Test auto commit.
+
+    Check that if auto-commit is False, the changes are not committed until
+    commit() is called.
+
+    """
+    _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon.db", auto_commit=False)
+    keys = list(store.keys())
+    store.patch(keys[0], Point(-500, -500))
+    store.append_many([Annotation(Point(10, 10), {}), Annotation(Point(20, 20), {})])
+    store.remove_many(keys[5:10])
+    store.clear()
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon.db")
+    result = store.query((0, 0, 1000, 1000))
+    assert len(result) == 200  # check none of the changes were committed
+    store = SQLiteStore(tmp_path / "polygon2.db", auto_commit=False)
+    store.append_many([Annotation(Point(10, 10), {}), Annotation(Point(20, 20), {})])
+    store.commit()
+    store.close()
+    store = SQLiteStore(tmp_path / "polygon2.db")
+    assert len(store) == 2  # check explicitly committing works
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
@@ -690,6 +850,36 @@ class TestStore:
         assert len(store) == len(store2)
 
     @staticmethod
+    def test_from_geojson_path_transform(fill_store, tmp_path, store_cls):
+        """Test loading from geojson with a transform."""
+        _, store = fill_store(store_cls, tmp_path / "polygon.db")
+        com = annotations_center_of_mass(list(store.values()))
+        store.to_geojson(tmp_path / "polygon.json")
+        # load the store translated so that origin is (100,100) and scaled by 2
+        store2 = store_cls.from_geojson(
+            tmp_path / "polygon.json", scale_factor=(2, 2), origin=(100, 100)
+        )
+        assert len(store) == len(store2)
+        com2 = annotations_center_of_mass(list(store2.values()))
+        assert com2.x == pytest.approx((com.x - 100) * 2)
+        assert com2.y == pytest.approx((com.y - 100) * 2)
+
+    @staticmethod
+    def test_transform(fill_store, tmp_path, store_cls):
+        """Test translating a store."""
+
+        def test_translation(geom):
+            """Performs a translation of input geometry."""
+            return affinity.translate(geom, 100, 100)
+
+        _, store = fill_store(store_cls, tmp_path / "polygon.db")
+        com = annotations_center_of_mass(list(store.values()))
+        store.transform(test_translation)
+        com2 = annotations_center_of_mass(list(store.values()))
+        assert com2.x - com.x == pytest.approx(100)
+        assert com2.y - com.y == pytest.approx(100)
+
+    @staticmethod
     def test_to_geojson_str(fill_store, tmp_path, store_cls):
         """Test exporting to ndjson with a file path string."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
@@ -818,7 +1008,7 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
 
-        results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_predicate))
+        results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_where_123))
         assert len(results) == 1
 
     @staticmethod
@@ -847,7 +1037,7 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
 
-        results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_predicate))
+        results = store.query((0, 0, 1024, 1024), where=pickle.dumps(sample_where_123))
         assert len(results) == 1
 
     @staticmethod
@@ -1006,7 +1196,7 @@ class TestStore:
         for _, annotation in store.items():
             geometry = annotation.geometry
             serialised = store.serialise_geometry(geometry)
-            deserialised = store.deserialise_geometry(serialised)
+            deserialised = store.deserialize_geometry(serialised)
             if isinstance(serialised, str):
                 assert geometry.wkt == deserialised.wkt
             else:
@@ -1047,6 +1237,225 @@ class TestStore:
         monkeypatch.setattr(sys, "version_info", py37_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
+
+    @staticmethod
+    def test_bquery(fill_store, store_cls):
+        """Test querying a store with a bounding box."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery((0, 0, 1e10, 1e10))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_bquery_polygon(fill_store, store_cls):
+        """Test querying a store with a polygon."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.bquery(Polygon.from_bounds(0, 0, 1e10, 1e10))
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+
+    @staticmethod
+    def test_bquery_callable(fill_store, store_cls):
+        """Test querying a store with a bounding box and a callable where."""
+        keys, store = fill_store(store_cls, ":memory:")
+        store.patch(keys[0], properties={"class": 123})
+        dictionary = store.bquery(
+            (0, 0, 1e10, 1e10), where=lambda props: props.get("class") == 123
+        )
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == 1
+
+    @staticmethod
+    def test_pquery_all(fill_store, store_cls):
+        """Test querying for all properties."""
+        keys, store = fill_store(store_cls, ":memory:")
+        dictionary = store.pquery("*", unique=False)
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+        assert isinstance(dictionary[keys[0]], dict)
+
+    @staticmethod
+    def test_pquery_all_unique_exception(fill_store, store_cls):
+        """Test querying for all properties."""
+        _, store = fill_store(store_cls, ":memory:")
+        with pytest.raises(ValueError, match="unique"):
+            _ = store.pquery("*", unique=True)
+
+    @staticmethod
+    def test_pquery_unique(fill_store, store_cls):
+        """Test querying for properties."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(select="props.get('class')")
+        assert isinstance(result_set, set)
+        assert result_set == {0, 1, 2, 3, 4, None}
+
+    @staticmethod
+    def test_pquery_unique_with_geometry(fill_store, store_cls):
+        """Test querying for properties with a geometry intersection."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select="props.get('class')",
+            geometry=Polygon.from_bounds(0, 0, 128, 128),
+        )
+        assert isinstance(result_set, set)
+        assert result_set == {0, 1, 2, 3, 4, None}
+
+    @staticmethod
+    def test_pquery_unique_with_where(fill_store, store_cls):
+        """Test querying for properties with a where predicate."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select="props.get('class')",
+            where="props.get('class') == 1",
+        )
+        assert isinstance(result_set, set)
+        assert result_set == {1}
+
+    @staticmethod
+    def test_pquery_unique_with_geometry_and_where(fill_store, store_cls):
+        """Test querying for properties with a geometry and where predicate."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select="props.get('class')",
+            geometry=Polygon.from_bounds(0, 0, 128, 128),
+            where="props.get('class') == 1",
+        )
+        assert isinstance(result_set, set)
+        assert result_set == {1}
+
+    @staticmethod
+    def test_pquery_callable_unique(fill_store, store_cls):
+        """Test querying for properties with a callable select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=lambda props: (props.get("class"),),
+            where=lambda props: props.get("class") == 1,
+            unique=True,
+        )
+        assert isinstance(result_set, set)
+        assert result_set == {1}
+
+    @staticmethod
+    def test_pquery_callable_unique_no_squeeze(fill_store, store_cls):
+        """Test querying for properties with a callable select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=sample_select,
+            where=sample_where_1,
+            unique=True,
+            squeeze=False,
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}]
+
+    @staticmethod
+    def test_pquery_callable_unique_multi_select(fill_store, store_cls):
+        """Test querying unique properties with a callable select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=sample_multi_select,
+            where=sample_where_1,
+            unique=True,
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}, {1}]
+
+    @staticmethod
+    def test_pquery_callable(fill_store, store_cls):
+        """Test querying for properties with a callable select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=lambda props: props.get("class"),
+            where=lambda props: props.get("class") == 1,
+            unique=False,
+        )
+        assert isinstance(result_set, dict)
+        assert set(result_set.values()) == {1}
+
+    @staticmethod
+    def test_pquery_callable_no_where(fill_store, store_cls):
+        """Test querying for properties with callable select, no where."""
+        _, store = fill_store(store_cls, ":memory:")
+        result_set = store.pquery(
+            select=lambda props: props.get("class"),
+            where=None,
+            unique=False,
+        )
+        assert isinstance(result_set, dict)
+        assert set(result_set.values()).issubset({0, 1, 2, 3, 4, None})
+
+    @staticmethod
+    def test_pquery_pickled(fill_store, store_cls):
+        """Test querying for properties with a pickled select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+
+        result_set = store.pquery(
+            select=pickle.dumps(sample_select),
+            where=pickle.dumps(sample_where_1),
+        )
+        assert isinstance(result_set, set)
+        assert result_set == {1}
+
+    @staticmethod
+    def test_pquery_pickled_no_squeeze(fill_store, store_cls):
+        """Test querying for properties with a pickled select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+
+        result_set = store.pquery(
+            select=pickle.dumps(sample_select),
+            where=pickle.dumps(sample_where_1),
+            squeeze=False,
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}]
+
+    @staticmethod
+    def test_pquery_pickled_multi_select(fill_store, store_cls):
+        """Test querying for properties with a pickled select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+
+        result_set = store.pquery(
+            select=pickle.dumps(sample_multi_select),
+            where=pickle.dumps(sample_where_1),
+        )
+        assert isinstance(result_set, list)
+        assert result_set == [{1}, {1}]
+
+    @staticmethod
+    def test_pquery_invalid_expression_type(fill_store, store_cls):
+        """Test querying for properties with an invalid expression type."""
+        _, store = fill_store(store_cls, ":memory:")
+        with pytest.raises(TypeError):
+            _ = store.pquery(select=123, where=456)
+
+    @staticmethod
+    def test_pquery_non_matching_type(fill_store, store_cls):
+        """Test querying with a non-matching type for select and where."""
+        _, store = fill_store(store_cls, ":memory:")
+        with pytest.raises(TypeError):
+            _ = store.pquery(select=123, where="foo")
+
+    @staticmethod
+    def test_pquery_dict(fill_store, store_cls):
+        """Test querying for properties."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.pquery(select="props.get('class')", unique=False)
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) == len(store)
+        assert all(key in store for key in dictionary)
+
+    @staticmethod
+    def test_pquery_dict_with_geometry(fill_store, store_cls):
+        """Test querying for properties with a geometry intersection."""
+        _, store = fill_store(store_cls, ":memory:")
+        dictionary = store.pquery(
+            select="props.get('class')",
+            unique=False,
+            geometry=Polygon.from_bounds(0, 0, 128, 128),
+        )
+        assert isinstance(dictionary, dict)
+        assert len(dictionary) < len(store)
+        assert all(key in store for key in dictionary)
 
     @staticmethod
     def test_is_rectangle(store_cls):
@@ -1217,26 +1626,6 @@ class TestStore:
         dictionary = store.bquery((0, 0, 1e10, 1e10))
         assert isinstance(dictionary, dict)
         assert len(dictionary) == len(store)
-
-    @staticmethod
-    def test_bquery_polygon(fill_store, store_cls):
-        """Test querying a store with a polygon."""
-        _, store = fill_store(store_cls, ":memory:")
-        dictionary = store.bquery(Polygon.from_bounds(0, 0, 1e10, 1e10))
-        assert isinstance(dictionary, dict)
-        assert len(dictionary) == len(store)
-
-    @staticmethod
-    def test_bquery_callable(fill_store, store_cls):
-        """Test querying a store with a bounding box and a callable."""
-        keys, store = fill_store(store_cls, ":memory:")
-        for i, key in enumerate(keys):
-            store.patch(key, properties={"class": i % 5})
-        dictionary = store.bquery(
-            (0, 0, 1e10, 1e10), where=lambda x: x.get("class") > 0
-        )
-        assert isinstance(dictionary, dict)
-        assert len(dictionary) == len(store) - len(store) // 5
 
     @staticmethod
     def test_validate_equal_lengths(store_cls):
