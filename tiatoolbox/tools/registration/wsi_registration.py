@@ -235,7 +235,6 @@ def match_histograms(
             - :class:`numpy.ndarray` - A normalized grayscale image.
 
     """
-
     image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
     if len(image_a.shape) == 3 or len(image_b.shape) == 3:
         raise ValueError("The input images should be grayscale images.")

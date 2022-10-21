@@ -68,7 +68,6 @@ def fill_store(cell_grid, points_grid):
 @pytest.fixture()
 def app(sample_ndpi, tmp_path, fill_store) -> TileServer:
     """Create a testing TileServer WSGI app."""
-
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.
     wsi = WSIReader.open(Path(sample_ndpi))
