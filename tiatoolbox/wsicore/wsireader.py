@@ -3275,7 +3275,7 @@ class TIFFWSIReader(WSIReader):
             return [mppx or mppy] * 2
         return None
 
-    def _parse_generic_tiled_metadata(self) -> dict:
+    def _parse_generic_tiff_metadata(self) -> dict:
         """Extract generic tiled metadata.
 
         Returns:
@@ -3342,10 +3342,8 @@ class TIFFWSIReader(WSIReader):
             filetype_params = self._parse_svs_metadata()
         elif self.tiff.is_ome:
             filetype_params = self._parse_ome_metadata()
-        elif self.tiff.pages[0].is_tiled:
-            filetype_params = self._parse_generic_tiled_metadata()
         else:
-            filetype_params = {"raw": {}}
+            filetype_params = self._parse_generic_tiff_metadata()
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         return WSIMeta(
