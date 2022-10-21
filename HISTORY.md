@@ -26,6 +26,7 @@
 - Adds citation in README.md and CITATION.cff to Nature Communications Medicine paper
 - Fixes a bug #452 raised by @rogertrullo  where only the numerator of the TIFF resolution tags was being read.
 - Fixes HoVer-Net+ post-processing to be inline with original work.
+- Fixes a bug where an exception would be raised if the OME XML is missing objective power.
 
 ### Development related changes
 
