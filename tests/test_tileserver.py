@@ -173,6 +173,6 @@ def test_cli_name_multiple_flag():
 
     @cli_name(multiple=True)
     def dummy_fn():
-        """it's empty because its a dummy function"""
+        """It is empty because it's a dummy function"""
 
     assert "Multiple" in dummy_fn.__click_params__[0].help
