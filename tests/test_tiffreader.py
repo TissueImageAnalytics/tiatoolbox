@@ -68,8 +68,8 @@ def test_ome_missing_physicalsizey(monkeypatch):
         assert pytest.approx(wsi.info.mpp, abs=0.1) == 0.5
 
 
-def test_tiffreader_non_tiled(monkeypatch):
-    """Test that a non-tiled TIFF can be read."""
+def test_tiffreader_non_tiled_metadata(monkeypatch):
+    """Test that fetching metadata for non-tiled TIFF does not error."""
     sample = _fetch_remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
     monkeypatch.setattr(wsi.tiff, "is_ome", False)
