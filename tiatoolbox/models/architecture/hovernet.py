@@ -7,8 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
-from scipy.ndimage import measurements
-from scipy.ndimage.morphology import binary_fill_holes
+from scipy import ndimage
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
 
@@ -512,7 +511,7 @@ class HoVerNet(ModelABC):
         # processing
         blb = np.array(blb_raw >= 0.5, dtype=np.int32)
 
-        blb = measurements.label(blb)[0]
+        blb = ndimage.label(blb)[0]
         blb = remove_small_objects(blb, min_size=10)
         blb[blb > 0] = 1  # background is 0 already
 
@@ -573,10 +572,10 @@ class HoVerNet(ModelABC):
 
         marker = blb - overall
         marker[marker < 0] = 0
-        marker = binary_fill_holes(marker).astype("uint8")
+        marker = ndimage.binary_fill_holes(marker).astype("uint8")
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel)
-        marker = measurements.label(marker)[0]
+        marker = ndimage.label(marker)[0]
         marker = remove_small_objects(marker, min_size=obj_size)
 
         return watershed(dist, markers=marker, mask=blb)
