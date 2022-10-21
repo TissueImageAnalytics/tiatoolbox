@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
+from skimage import morphology
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.architecture.utils import UpSample2x
@@ -114,8 +115,9 @@ class HoVerNetPlus(HoVerNet):
     def _proc_ls(ls_map: np.ndarray):
         """Extract Layer Segmentation map with LS Map.
 
-        This function takes the layer segmentation map and applies a
-        gaussian blur to remove spurious segmentations.
+        This function takes the layer segmentation map and applies various morphological
+        operations remove spurious segmentations. Note, this processing is specific to
+        oral epithelium, where prioirty is given to certain tissue layers.
 
         Args:
             ls_map:
@@ -126,10 +128,41 @@ class HoVerNetPlus(HoVerNet):
                 The processed segmentation map.
 
         """
-        ls_map = np.squeeze(ls_map.astype("float32"))
-        ls_map = cv2.GaussianBlur(ls_map, (7, 7), 0)
-        ls_map = np.around(ls_map)
-        return ls_map.astype("int")
+        ls_map = np.squeeze(ls_map)
+        ls_map = np.around(ls_map).astype("uint8")  # ensure all numbers are integers
+        min_size = 20000
+        kernel_size = 20
+
+        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")
+        mask = np.where(ls_map >= 1, 1, 0).astype("uint8")
+        epith_all = epith_all > 0
+        epith_mask = morphology.remove_small_objects(
+            epith_all, min_size=min_size
+        ).astype("uint8")
+        epith_edited = epith_mask * ls_map
+        epith_edited = epith_edited.astype("uint8")
+        epith_edited_open = np.zeros_like(epith_edited).astype("uint8")
+        for i in [3, 2, 4]:
+            tmp = np.where(epith_edited == i, 1, 0).astype("uint8")
+            ep_open = cv2.morphologyEx(
+                tmp, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size))
+            )
+            ep_open = cv2.morphologyEx(
+                ep_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size))
+            )
+            epith_edited_open[ep_open == 1] = i
+
+        mask_open = cv2.morphologyEx(
+            mask, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size))
+        )
+        mask_open = cv2.morphologyEx(
+            mask_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size))
+        ).astype("uint8")
+        ls_map = mask_open.copy()
+        for i in range(2, 5):
+            ls_map[epith_edited_open == i] = i
+
+        return ls_map.astype("uint8")
 
     @staticmethod
     def _get_layer_info(pred_layer):
@@ -261,7 +294,7 @@ class HoVerNetPlus(HoVerNet):
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
 
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
-        pred_type = tp_map
+        pred_type = np.around(tp_map).astype("uint8")
 
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
         layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)
