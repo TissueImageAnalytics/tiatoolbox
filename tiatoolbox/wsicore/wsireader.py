@@ -3345,7 +3345,7 @@ class TIFFWSIReader(WSIReader):
         elif self.tiff.pages[0].is_tiled:
             filetype_params = self._parse_generic_tiled_metadata()
         else:
-            filetype_params = {}
+            filetype_params = {"raw": {}}
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         return WSIMeta(
