@@ -173,6 +173,30 @@ def fill_store(cell_grid, points_grid):
     return _fill_store
 
 
+# Generate Parameterized Tests
+
+
+def pytest_generate_tests(metafunc):
+    """Generate (parameterize) test scenarios.
+
+    Adapted from pytest documentation. For more information on
+    parameterized tests see:
+    https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
+
+    """
+    # Return if the test is not part of a class
+    if metafunc.cls is None:
+        return
+    id_list = []
+    arg_values = []
+    for scenario in metafunc.cls.scenarios:
+        id_list.append(scenario[0])
+        items = scenario[1].items()
+        arg_names = [x[0] for x in items]
+        arg_values.append([x[1] for x in items])
+    metafunc.parametrize(arg_names, arg_values, ids=id_list, scope="class")
+
+
 # Class Specific Tests
 
 
