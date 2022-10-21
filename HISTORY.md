@@ -12,6 +12,10 @@
 - Adds support for reading MPP metadata from  NGFF v0.4
 - Adds enhancements to tiatoolbox.annotation.storage that are useful when using an AnnotationStore for visualization purposes.
 
+### Changes to API
+
+- None
+
 ### Bug Fixes and Other Changes
 
 - Fixes colorbar_params #410
@@ -19,8 +23,9 @@
   - Fixes typos, metadata and links
 - Fixes nucleus_segmentor_engine for boundary artefacts
 - Fixes the colorbar cropping in tests
-- Adds citation in README.md and CITATION.cff to Nature Comms Med paper
+- Adds citation in README.md and CITATION.cff to Nature Communications Medicine paper
 - Fixes a bug #452 raised by @rogertrullo  where only the numerator of the TIFF resolution tags was being read.
+- Fixes HoVer-Net+ post-processing to be inline with original work.
 
 ### Development related changes
 
