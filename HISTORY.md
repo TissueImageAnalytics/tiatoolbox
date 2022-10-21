@@ -35,8 +35,8 @@
 - Uses myst for markdown parsing
 - Uses requirements.txt to define dependencies for requirements consistency
 - Adds notebook AST pre-commit hook
-- Adds checks to validate python examples in the code
-- Adds checks to resolve imports
+- Adds check to validate python examples in the code
+- Adds check to resolve imports
 - Fixes an error in a docstring which triggered the failing test.
 - Adds pre-commit hooks to format markdown and notebook markdown
 - Adds pip install workflow to resolve dependencies when requirements file is updated
