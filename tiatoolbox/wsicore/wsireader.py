@@ -17,14 +17,13 @@ import openslide
 import pandas as pd
 import tifffile
 import zarr
-from PIL import Image
 from defusedxml import ElementTree
+from PIL import Image
 
 from tiatoolbox import utils
-from tiatoolbox.annotation.storage import SQLiteStore
+from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.utils.transforms import background_composite
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
 from tiatoolbox.wsicore.wsimeta import WSIMeta
@@ -300,11 +299,11 @@ class WSIReader:
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
+        input_img: Union[str, pathlib.Path, np.ndarray, AnnotationStore],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
     ) -> None:
-        if isinstance(input_img, np.ndarray):
+        if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
         else:
             self.input_path = pathlib.Path(input_img)
@@ -4486,15 +4485,19 @@ class AnnotationStoreReader(WSIReader):
 
     def __init__(
         self,
-        path,
+        store: Union[AnnotationStore, str],
         info: Optional[WSIMeta] = None,
         renderer: AnnotationRenderer = None,
         base_wsi_reader: WSIReader = None,
         alpha=1.0,
         **kwargs,
     ):
-        super().__init__(path, **kwargs)
-        self.store = SQLiteStore(path)
+        super().__init__(store, **kwargs)
+        self.store = (
+            SQLiteStore(pathlib.Path(store))
+            if isinstance(store, (str, pathlib.Path))
+            else store
+        )
         if info is None:
             if base_wsi_reader is not None:
                 # get the metadata from the base reader
@@ -4769,7 +4772,9 @@ class AnnotationStoreReader(WSIReader):
                 coord_space=coord_space,
                 **kwargs,
             )
-            base_region = Image.fromarray(background_composite(base_region, alpha=True))
+            base_region = Image.fromarray(
+                utils.transforms.background_composite(base_region, alpha=True)
+            )
             im_region = Image.fromarray(im_region)
             if self.alpha < 1.0:
                 im_region.putalpha(
@@ -4778,7 +4783,7 @@ class AnnotationStoreReader(WSIReader):
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
             return np.array(base_region)
-        return background_composite(im_region)
+        return utils.transforms.background_composite(im_region)
 
     def read_bounds(
         self,
@@ -4940,7 +4945,9 @@ class AnnotationStoreReader(WSIReader):
                 coord_space=coord_space,
                 **kwargs,
             )
-            base_region = Image.fromarray(background_composite(base_region, alpha=True))
+            base_region = Image.fromarray(
+                utils.transforms.background_composite(base_region, alpha=True)
+            )
             im_region = Image.fromarray(im_region)
             if self.alpha < 1.0:
                 im_region.putalpha(
@@ -4949,4 +4956,4 @@ class AnnotationStoreReader(WSIReader):
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
             return np.array(base_region)
-        return background_composite(im_region)
+        return utils.transforms.background_composite(im_region)

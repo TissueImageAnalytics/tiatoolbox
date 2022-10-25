@@ -1901,6 +1901,13 @@ def test_store_reader_explicit_info(remote_sample, tmp_path):
     assert reader._info().as_dict() == wsi_reader.info.as_dict()
 
 
+def test_store_reader_from_store(remote_sample, tmp_path):
+    """Test AnnotationStoreReader from an AnnotationStore object."""
+    store = SQLiteStore(remote_sample("annotation_store_svs_1"))
+    reader = AnnotationStoreReader(store)
+    assert isinstance(reader.store, SQLiteStore)
+
+
 def test_store_reader_alpha(remote_sample):
     """Test AnnotationStoreReader with alpha channel."""
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
