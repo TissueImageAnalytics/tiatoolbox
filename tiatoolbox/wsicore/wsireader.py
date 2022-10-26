@@ -4462,8 +4462,8 @@ class AnnotationStoreReader(WSIReader):
     on top of its parent WSI as a virtual 'annotated slide'.
 
     Args:
-        path (str):
-            Path to annotation store.
+        store (AnnotatioStore | str):
+            An AnnotationStore or a path to an annotation store .db file.
         info (WSIMeta):
             Metadata of the base WSi for the annotations in the store.
             If this is not provided, will attempt to read it read from
