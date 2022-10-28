@@ -237,7 +237,6 @@ def match_histograms(
             - :class:`numpy.ndarray` - A normalized grayscale image.
 
     """
-
     image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
     if len(image_a.shape) == 3 or len(image_b.shape) == 3:
         raise ValueError("The input images should be grayscale images.")
@@ -1354,7 +1353,7 @@ class Transformer:
             center_level0[1] - (transformed_size[1] * (2**level)) / 2,
         ]
         transformed_location = tuple(
-            [np.round(x).astype(int) for x in transformed_location]
+            np.round(x).astype(int) for x in transformed_location
         )
         return transformed_location, transformed_size
 
