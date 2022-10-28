@@ -1245,6 +1245,7 @@ class Transformer:
     using transformation.
 
     """
+
     def __init__(self, wsi_reader, transform):
         """Initialize object.
 
@@ -1260,7 +1261,7 @@ class Transformer:
 
     @staticmethod
     def transform_points(points, transform):
-        """ Transform points using the given transformation matrix.
+        """Transform points using the given transformation matrix.
 
         Args:
             points (:class:`numpy.ndarray`):
@@ -1294,19 +1295,28 @@ class Transformer:
         """
         width, height = size[0], size[1]
 
-        x = [np.linspace(1, width, width, endpoint=True), np.ones(height) * width,
-             np.linspace(1, width, width, endpoint=True), np.ones(height)]
+        x = [
+            np.linspace(1, width, width, endpoint=True),
+            np.ones(height) * width,
+            np.linspace(1, width, width, endpoint=True),
+            np.ones(height),
+        ]
         x = np.array(list(itertools.chain.from_iterable(x)))
 
-        y = [np.ones(width), np.linspace(1, height, height, endpoint=True),
-             np.ones(width) * height, np.linspace(1, height, height, endpoint=True)]
+        y = [
+            np.ones(width),
+            np.linspace(1, height, height, endpoint=True),
+            np.ones(width) * height,
+            np.linspace(1, height, height, endpoint=True),
+        ]
         y = np.array(list(itertools.chain.from_iterable(y)))
 
         points = np.array([x, y]).transpose()
         transform_points = self.transform_points(points, transform)
 
-        width = np.ceil(np.max(transform_points[:, 0]) - np.min(transform_points[:, 0])).astype(int)
-        height = np.ceil(np.max(transform_points[:, 1]) - np.min(transform_points[:, 1])).astype(int)
+        width = np.max(transform_points[:, 0]) - np.min(transform_points[:, 0])
+        height = np.max(transform_points[:, 1]) - np.min(transform_points[:, 1])
+        width, height = np.ceil(width).astype(int), np.ceil(height).astype(int)
 
         return (width, height)
 
@@ -1319,7 +1329,8 @@ class Transformer:
 
         Args:
             location (tuple(int)):
-                (x, y) tuple giving the top left pixel in the baseline (level 0) reference frame.
+                (x, y) tuple giving the top left pixel in the baseline (level 0)
+                reference frame.
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
             level (int):
@@ -1332,15 +1343,19 @@ class Transformer:
 
         """
         inv_transform = inv(self.transform_level0)
-        size_level0 = [x * (2 ** level) for x in size]
+        size_level0 = [x * (2**level) for x in size]
         center_level0 = [x + size_level0[i] / 2 for i, x in enumerate(location)]
         center_level0 = np.expand_dims(np.array(center_level0), axis=0)
         center_level0 = self.transform_points(center_level0, inv_transform)[0]
 
         transformed_size = self.get_patch_dimensions(size, inv_transform)
-        transformed_location = [center_level0[0] - (transformed_size[0] * (2 ** level)) / 2,
-                                center_level0[1] - (transformed_size[1] * (2 ** level)) / 2]
-        transformed_location = tuple([np.round(x).astype(int) for x in transformed_location])
+        transformed_location = [
+            center_level0[0] - (transformed_size[0] * (2**level)) / 2,
+            center_level0[1] - (transformed_size[1] * (2**level)) / 2,
+        ]
+        transformed_location = tuple(
+            [np.round(x).astype(int) for x in transformed_location]
+        )
         return transformed_location, transformed_size
 
     def transform_patch(self, patch, size):
@@ -1360,20 +1375,25 @@ class Transformer:
 
         """
         transform = self.transform_level0 * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]
-        forward_translation = np.array([[1, 0, -size[0] / 2], [0, 1, -size[1] / 2], [0, 0, 1]])
-        inverse_translation = np.array([[1, 0, size[0] / 2], [0, 1, size[1] / 2], [0, 0, 1]])
+        forward_translation = np.array(
+            [[1, 0, -size[0] / 2], [0, 1, -size[1] / 2], [0, 0, 1]]
+        )
+        inverse_translation = np.array(
+            [[1, 0, size[0] / 2], [0, 1, size[1] / 2], [0, 0, 1]]
+        )
         transform = inverse_translation @ transform @ forward_translation
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 
     def read_rect(self, location, size, level):
-        """Read a transformed region of the transformed whole slide image at a location and size.
+        """Read a transformed region of the transformed whole slide image.
 
         Location is in terms of the baseline image (level 0 / maximum resolution),
         and size is the output image size.
 
         Args:
             location (tuple(int)):
-                (x, y) tuple giving the top left pixel in the baseline (level 0) reference frame.
+                (x, y) tuple giving the top left pixel in the baseline (level 0)
+                reference frame.
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
             level (int):
@@ -1384,9 +1404,16 @@ class Transformer:
                 A transformed region/patch.
 
         """
-        transformed_location, max_size = self.get_transformed_location(location, size, level)
-        patch = self.wsi_reader.read_rect(transformed_location, max_size, resolution=level, units='level')
+        transformed_location, max_size = self.get_transformed_location(
+            location, size, level
+        )
+        patch = self.wsi_reader.read_rect(
+            transformed_location, max_size, resolution=level, units="level"
+        )
         transformed_patch = self.transform_patch(patch, max_size)
-        transformed_patch = transformed_patch[int(max_size[1]/2) - int(size[1]/2):int(max_size[1]/2) + int(size[1]/2),
-                                              int(max_size[0]/2) - int(size[0]/2):int(max_size[0]/2) + int(size[0]/2), :]
-        return transformed_patch
+
+        start_row = int(max_size[1] / 2) - int(size[1] / 2)
+        end_row = int(max_size[1] / 2) + int(size[1] / 2)
+        start_col = int(max_size[0] / 2) - int(size[0] / 2)
+        end_col = int(max_size[0] / 2) + int(size[0] / 2)
+        return transformed_patch[start_row:end_row, start_col:end_col, :]
