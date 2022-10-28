@@ -2085,7 +2085,15 @@ class SQLiteStore(AnnotationStore):
         def add_props_to_result(
             result: DefaultDict[str, set], properties: Dict[str, Any]
         ) -> None:
-            """Add the properties to the appropriate set in result."""
+            """Add the properties to the appropriate set in result.
+
+            Args:
+                result (DefaultDict[str, set]):
+                    The result dictionary to add the properties to.
+                properties (Dict[str, Any]):
+                    The properties to add to the result.
+
+            """
             # Get the selected values
             selection = select(properties)
             # Wrap scalar values into a tuple
