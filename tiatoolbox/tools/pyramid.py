@@ -481,6 +481,9 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         if renderer is None:
             renderer = AnnotationRenderer()
         self.renderer = renderer
+        # if using blur, render overlapping tiles to minimise edge effects.
+        # factor of 1.5 below chosen empirically as a good balance between
+        # empirical visual quality and added rendering time.
         self.overlap = int(1.5 * renderer.blur_radius)
 
         output_size = [self.output_tile_size] * 2

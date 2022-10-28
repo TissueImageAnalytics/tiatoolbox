@@ -45,6 +45,7 @@ from typing import (
     IO,
     Any,
     Callable,
+    DefaultDict,
     Dict,
     Generator,
     Iterable,
@@ -2081,7 +2082,9 @@ class SQLiteStore(AnnotationStore):
 
         """
 
-        def add_props_to_result(result, properties):
+        def add_props_to_result(
+            result: DefaultDict[str, set], properties: Dict[str, Any]
+        ) -> None:
             """Add the properties to the appropriate set in result."""
             # Get the selected values
             selection = select(properties)
