@@ -18,6 +18,10 @@
             <img src="https://shields.io/conda/dn/conda-forge/tiatoolbox"  alt="conda-forge downloads"/>
     </a>
   <br>
+  <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
+    <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
+  </a>
+  <br>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/blob/develop/LICENSE">
     <img alt="GitHub license" src="https://img.shields.io/github/license/TissueImageAnalytics/tiatoolbox"></a>
   <br>
@@ -30,9 +34,6 @@
     </a>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml">
     <img src="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml/badge.svg"  alt="GitHub Workflow passing"/>
-  </a>
-  <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
-    <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
   </a>
   <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
       <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm" alt="Code Coverage"/>

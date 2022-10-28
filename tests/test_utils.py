@@ -8,11 +8,14 @@ from pathlib import Path
 from typing import Tuple
 
 import cv2
+import joblib
 import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
+from shapely.geometry import Polygon
 
+from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported
@@ -83,7 +86,7 @@ def test_imresize():
 
     # test for not supporting dtype
     img = np.random.randint(0, 256, (4, 4, 16))
-    with pytest.raises(ValueError, match=r".*float128.*"):
+    with pytest.raises((AttributeError, ValueError), match=r".*float128.*"):
         resized_img = utils.transforms.imresize(
             img.astype(np.float128),
             scale_factor=4,
@@ -1366,3 +1369,104 @@ def test_detect_gpu():
 
     """
     _ = utils.env_detection.has_gpu()
+
+
+def make_simple_dat(centroids=((0, 0), (100, 100))):
+    polys = [cell_polygon(cent) for cent in centroids]
+    return {
+        f"ann{i}": {
+            "box": poly.bounds,
+            "centroid": [poly.centroid.x, poly.centroid.y],
+            "contour": np.array(poly.exterior.coords).tolist(),
+            "type": i,
+        }
+        for i, poly in enumerate(polys)
+    }
+
+
+def test_from_dat(tmp_path):
+    """Test generating an annotation store from a .dat file."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    assert len(store) == 2
+
+
+def test_from_dat_type_dict(tmp_path):
+    """Test generating an annotation store from a .dat file with a type dict."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(
+        tmp_path / "test.dat", typedict={0: "cell0", 1: "cell1"}
+    )
+    result = store.query(where="props['type'] == 'cell1'")
+    assert len(result) == 1
+
+
+def test_from_dat_transformed(tmp_path):
+    """Test generating an annotation store from a .dat file with a transform."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(
+        tmp_path / "test.dat", scale_factor=2, origin=(50, 50)
+    )
+    result = store.query(where="props['type'] == 1")
+    # check centroid is at 150,150
+    poly = next(iter(result.values()))
+    assert np.rint(poly.geometry.centroid.x) == 150
+    assert np.rint(poly.geometry.centroid.y) == 150
+
+
+def test_from_multi_head_dat(tmp_path):
+    """Test generating an annotation store from a .dat file with multiple heads."""
+    head_a = make_simple_dat()
+    head_b = make_simple_dat([(200, 200), (300, 300)])
+    data = {
+        "A": head_a,
+        "B": head_b,
+        "resolution": 0.5,
+        "other_meta_data": {"foo": "bar"},
+    }
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    assert len(store) == 4
+
+    result = store.query(where="props['type'] == 'A: 1'")
+    assert len(result) == 1
+
+
+def test_invalid_poly(tmp_path):
+    """Test that invalid polygons are dealt with correctly."""
+    coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
+    poly = Polygon(coords)
+    data = make_simple_dat()
+    data["invalid"] = {
+        "box": poly.bounds,
+        "centroid": [poly.centroid.x, poly.centroid.y],
+        "contour": np.array(poly.exterior.coords).tolist(),
+        "type": 2,
+    }
+    joblib.dump(data, tmp_path / "test.dat")
+    with pytest.warns(UserWarning, match="Invalid geometry found, fix"):
+        store = utils.misc.store_from_dat(tmp_path / "test.dat")
+
+    result = store.query(where="props['type'] == 2")
+    assert next(iter(result.values())).geometry.is_valid
+
+
+def test_from_multi_head_dat_type_dict(tmp_path):
+    """Test generating a store from a .dat file with multiple heads, with typedict."""
+    head_a = make_simple_dat()
+    head_b = make_simple_dat([(200, 200), (300, 300)])
+    data = {"A": head_a, "B": head_b}
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(
+        tmp_path / "test.dat",
+        typedict={"A": {0: "cell0", 1: "cell1"}, "B": {0: "gland0", 1: "gland1"}},
+    )
+    assert len(store) == 4
+
+    result = store.query(where="props['type'] == 'gland1'")
+    assert len(result) == 1
+    result = store.query(where=lambda x: x["type"][0:4] == "cell")
+    assert len(result) == 2

@@ -87,6 +87,14 @@ Each WSI consists of a multitude of different tissue types, each containing many
 
 [![image](../docs/images/hovernetplus.png)](./09-multi-task-segmentation.ipynb)
 
+### 10- Image Alignment ([10-wsi_registration](./10-wsi-registration.ipynb))
+
+This notebook presents an example demonstrating how to use TIAToolbox for registration of an image pair using [Deep Feature Based Registration (DFBR) method](https://arxiv.org/abs/2202.09971) \[1\], followed by non-rigid alignment using SimpleITK. The registration tool in the TIAToolbox also comprises a pre-alignment step, a pre-requisite to DFBR. In particular, we introduce the use of our registration tool wsi_registration ([Code](https://github.com/TissueImageAnalytics/tiatoolbox/tree/develop/tiatoolbox/tools/registration)).
+
+\[1\] Awan, Ruqayya, et al. "Deep Feature based Cross-slide Registration." arXiv preprint arXiv:2202.09971 (2022).
+
+[![image](../docs/images/wsi-registration.png)](./10-wsi-registration.ipynb)
+
 ## B) Examples of high-level analysis (pipelines) using TIAToolbox
 
 List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.

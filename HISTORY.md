@@ -1,5 +1,47 @@
 # History
 
+## 1.3.0 (2022-10-20)
+
+### Major Updates and Feature Improvements
+
+- Adds an AnnotationTileGenerator and AnnotationRenderer which allows serving of tiles rendered directly from an annotation store.
+- Adds [DFBR](https://arxiv.org/abs/2202.09971) registration model and jupyter notebook example
+  - Adds DICE metric
+- Adds [SCCNN](https://doi.org/10.1109/tmi.2016.2525803) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.sccnn.SCCNN.html)\]
+- Adds [MapDe](https://arxiv.org/abs/1806.06970) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.mapde.MapDe.html)\]
+- Adds support for reading MPP metadata from  NGFF v0.4
+- Adds enhancements to tiatoolbox.annotation.storage that are useful when using an AnnotationStore for visualization purposes.
+
+### Changes to API
+
+- None
+
+### Bug Fixes and Other Changes
+
+- Fixes colorbar_params #410
+- Fixes Jupyter notebooks for better read the docs rendering
+  - Fixes typos, metadata and links
+- Fixes nucleus_segmentor_engine for boundary artefacts
+- Fixes the colorbar cropping in tests
+- Adds citation in README.md and CITATION.cff to Nature Communications Medicine paper
+- Fixes a bug #452 raised by @rogertrullo  where only the numerator of the TIFF resolution tags was being read.
+- Fixes HoVer-Net+ post-processing to be inline with original work.
+- Fixes a bug where an exception would be raised if the OME XML is missing objective power.
+
+### Development related changes
+
+- Uses Furo theme for readthedocs
+- Replaces nbgallery and nbsphinx with myst-nb for jupyter notebook rendering
+- Uses myst for markdown parsing
+- Uses requirements.txt to define dependencies for requirements consistency
+- Adds notebook AST pre-commit hook
+- Adds check to validate python examples in the code
+- Adds check to resolve imports
+- Fixes an error in a docstring which triggered the failing test.
+- Adds pre-commit hooks to format markdown and notebook markdown
+- Adds pip install workflow to resolve dependencies when requirements file is updated
+- Improves tiatoolbox import using LazyLoader
+
 ## 1.2.1 (2022-07-07)
 
 ### Major Updates and Feature Improvements
