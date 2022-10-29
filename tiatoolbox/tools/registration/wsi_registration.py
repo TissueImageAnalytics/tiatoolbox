@@ -9,6 +9,7 @@ import torch
 import torchvision
 from numpy.linalg import inv
 from skimage import exposure, filters
+from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -982,7 +983,7 @@ class DFBRegister:
         fixed_mask = np.uint8(fixed_mask > 0)
         moving_mask = np.uint8(moving_mask > 0)
 
-        # Perform Pre-alignment
+        # -- Perform Pre-alignment --
         if transform_initializer is None:
             transform_initializer, moving_img, moving_mask, before_dice = prealignment(
                 fixed_img, moving_img, fixed_mask, moving_mask
@@ -997,7 +998,7 @@ class DFBRegister:
             )
             before_dice = dice(fixed_mask, moving_mask)
 
-        # Estimate transform using tissue regions
+        # -- Estimate transform using tissue regions -- #
         (
             fixed_tissue_img,
             fixed_tissue_mask,
@@ -1013,7 +1014,7 @@ class DFBRegister:
             fixed_tissue_img, moving_tissue_img, fixed_tissue_mask, moving_tissue_mask
         )
 
-        # Use tissue transform if it improves DICE overlap
+        # Use the estimated transform only if it improves DICE overlap
         after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
         if after_dice > before_dice:
             moving_tissue_img, moving_tissue_mask = (
@@ -1024,7 +1025,7 @@ class DFBRegister:
         else:
             tissue_transform = np.eye(3, 3)
 
-        # Perform transform using tissue regions in a block wise manner
+        # -- Perform transform using tissue regions in a block-wise manner -- #
         (
             block_transform,
             transform_tissue_img,
@@ -1033,13 +1034,25 @@ class DFBRegister:
             fixed_tissue_img, moving_tissue_img, fixed_tissue_mask, moving_tissue_mask
         )
 
-        # Use block-wise tissue transform if it improves DICE overlap
+        # Use the estimated tissue transform only if it improves DICE overlap
         after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
-        if after_dice <= before_dice:
+        if after_dice > before_dice:
+            moving_tissue_img, moving_tissue_mask = (
+                transform_tissue_img,
+                transform_tissue_mask,
+            )
+            before_dice = after_dice
+        else:
             block_transform = np.eye(3, 3)
 
+        # -- Fix translation offset -- #
+        shift, _error, _diffphase = phase_cross_correlation(
+            fixed_tissue_img, moving_tissue_img
+        )
+        translation_offset = np.array([[1, 0, shift[1]], [0, 1, shift[0]], [0, 0, 1]])
+
         # Combining tissue and block transform
-        tissue_transform = block_transform @ tissue_transform
+        tissue_transform = translation_offset @ block_transform @ tissue_transform
 
         # tissue_transform is computed for cropped images (tissue region only).
         # It is converted using the tissue crop coordinates, so that it can be
