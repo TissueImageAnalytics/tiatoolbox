@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 """The setup script."""
-import sys
-from pathlib import Path
 
 from setuptools import find_packages, setup
 
@@ -12,16 +10,34 @@ with open("README.md") as readme_file:
 with open("HISTORY.md") as history_file:
     history = history_file.read()
 
-install_requires = [
-    line
-    for line in Path("requirements.txt").read_text().splitlines()
-    if line and line[0] not in ("-", "#")
+requirements = [
+    "albumentations>=1.0.3",
+    "Click>=8.1.2",
+    "defusedxml>=0.7.1",
+    "flask>=2.1.1",
+    "glymur>=0.9.9",
+    "imagecodecs>=2021.11.20",
+    "matplotlib>=3.5.1",
+    "numpy>=1.21.5",
+    "opencv-python>=4.5.5",
+    "openslide-python>=1.1.2",
+    "pandas>=1.3.5",
+    "pillow>=9.0.1",
+    "pydicom>=2.3.0",
+    "pyyaml>=6.0",
+    "requests>=2.27.1",
+    "scikit-image>=0.19.2",
+    "scikit-learn>=1.0.2",
+    "scipy>=1.7.3",
+    "shapely>=1.8.1",
+    "tifffile>=2021.11.2",
+    "torch>=1.11.0",
+    "torchvision>=0.12.0",
+    "tqdm>=4.63.1",
+    "umap-learn>=0.5.2",
+    "wsidicom>=0.2.0",
+    "zarr>=2.11.1",
 ]
-
-dependency_links = []
-
-if sys.platform != "darwin":
-    dependency_links = ["https://download.pytorch.org/whl/cu113"]
 
 setup_requirements = [
     "pytest-runner",
@@ -46,13 +62,12 @@ setup(
         "Programming Language :: Python :: 3.10",
     ],
     description="Computational pathology toolbox developed by TIA Centre.",
-    dependency_links=dependency_links,
     entry_points={
         "console_scripts": [
             "tiatoolbox=tiatoolbox.cli:main",
         ],
     },
-    install_requires=install_requires,
+    install_requires=requirements,
     long_description=readme + "\n\n" + history,
     long_description_content_type="text/markdown",
     include_package_data=True,
