@@ -1,4 +1,4 @@
-"""Define original NuClick architecture
+"""Defines original NuClick architecture
 
 Koohbanani, N. A., Jahanifar, M., Tajadin, N. Z., & Rajpoot, N. (2020).
 NuClick: a deep learning framework for interactive segmentation of microscopic images.
@@ -87,6 +87,7 @@ class ConvBnRelu(nn.Module):
         Args:
             input_tensor (torch.Tensor):
                     Input, the tensor is of the shape NCHW.
+        
         Returns:
             output (torch.Tensor):
                         The inference output.
@@ -189,7 +190,6 @@ class MultiscaleConvBlock(nn.Module):
         activation: str = "relu",
         use_bias: bool = False,
     ):
-
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
@@ -233,7 +233,7 @@ class MultiscaleConvBlock(nn.Module):
         )
 
     def forward(self, input_map):
-        """Logic for using layers defined in init.
+        """Logic for using layers defined in MultiscaleConvBlock init.
 
         This method defines how layers are used in forward operation.
 
@@ -256,7 +256,7 @@ class MultiscaleConvBlock(nn.Module):
 
 
 class ResidualConv(nn.Module):
-    """Residual Convolution block
+    """Residual Convolution block.
 
     Args:
         num_input_channels (int):
@@ -274,10 +274,9 @@ class ResidualConv(nn.Module):
 
     Returns:
         model (torch.nn.Module):
-            a pytorch model.
+            A pytorch model.
 
     """
-
     def __init__(
         self,
         num_input_channels: int,
@@ -313,7 +312,7 @@ class ResidualConv(nn.Module):
         self.activation = nn.ReLU()
 
     def forward(self, input_tensor):
-        """Logic for using layers defined in init.
+        """Logic for using layers defined in ResidualConv init.
 
         This method defines how layers are used in forward operation.
 
@@ -322,7 +321,8 @@ class ResidualConv(nn.Module):
                 Input, the tensor is of the shape NCHW.
 
         Returns:
-            output (torch.Tensor): The inference output.
+            output (torch.Tensor): 
+                The inference output.
 
         """
         conv1 = self.conv_block_1(input_tensor)
@@ -510,7 +510,7 @@ class NuClick(ModelABC):
         )
 
     def forward(self, imgs: torch.Tensor):
-        """Logic for using layers defined in init.
+        """Logic for using layers defined in NuClick init.
 
         This method defines how layers are used in forward operation.
 
