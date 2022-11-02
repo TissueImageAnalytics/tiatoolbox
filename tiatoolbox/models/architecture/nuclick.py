@@ -87,7 +87,7 @@ class ConvBnRelu(nn.Module):
         Args:
             input_tensor (torch.Tensor):
                     Input, the tensor is of the shape NCHW.
-        
+
         Returns:
             output (torch.Tensor):
                         The inference output.
@@ -277,6 +277,7 @@ class ResidualConv(nn.Module):
             A pytorch model.
 
     """
+
     def __init__(
         self,
         num_input_channels: int,
@@ -321,7 +322,7 @@ class ResidualConv(nn.Module):
                 Input, the tensor is of the shape NCHW.
 
         Returns:
-            output (torch.Tensor): 
+            output (torch.Tensor):
                 The inference output.
 
         """
