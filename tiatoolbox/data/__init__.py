@@ -108,3 +108,8 @@ def stain_norm_target() -> np.ndarray:
     from tiatoolbox.utils.misc import imread
 
     return imread(_local_sample_path("target_image.png"))
+
+
+def small_svs() -> pathlib.Path:
+    """Small SVS file for testing."""
+    return _fetch_remote_sample("svs-1-small")
