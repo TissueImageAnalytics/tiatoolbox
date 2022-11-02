@@ -58,6 +58,32 @@ JP2_TEST_TISSUE_BOUNDS = (32768, 42880, 33792, 43904)
 JP2_TEST_TISSUE_LOCATION = (32768, 42880)
 JP2_TEST_TISSUE_SIZE = (1024, 1024)
 
+# -------------------------------------------------------------------------------------
+# Generate Parameterized Tests
+# -------------------------------------------------------------------------------------
+
+
+def pytest_generate_tests(metafunc):
+    """Generate (parameterize) test scenarios.
+
+    Adapted from pytest documentation. For more information on
+    parameterized tests see:
+    https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
+
+    """
+    # Return if the test is not part of a class
+    if metafunc.cls is None:
+        return
+    idlist = []
+    argvalues = []
+    if not hasattr(metafunc.cls, "scenarios"):
+        return
+    for scenario in metafunc.cls.scenarios:
+        idlist.append(scenario[0])
+        items = scenario[1].items()
+        argnames = [x[0] for x in items]
+        argvalues.append([x[1] for x in items])
+    metafunc.parametrize(argnames, argvalues, ids=idlist, scope="class")
 
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
@@ -464,7 +490,7 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-def testconvert_resolution_units(sample_ndpi):
+def test_convert_resolution_units(sample_ndpi):
     """Test the resolution unit conversion code."""
     wsi = wsireader.WSIReader.open(sample_ndpi)
 
