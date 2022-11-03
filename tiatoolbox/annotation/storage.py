@@ -985,7 +985,7 @@ class AnnotationStore(ABC, MutableMapping):
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
                 return eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
-            elif isinstance(select, bytes):
+            if isinstance(select, bytes):
                 return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
             return select(annotation.properties)
 

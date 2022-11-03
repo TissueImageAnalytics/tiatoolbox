@@ -3270,7 +3270,7 @@ class TIFFWSIReader(WSIReader):
         mppy = xml_pixels.attrib.get("PhysicalSizeY")
         if mppx is not None and mppy is not None:
             return [mppx, mppy]
-        elif mppx is not None or mppy is not None:
+        if mppx is not None or mppy is not None:
             warnings.warn("Only one MPP value found. Using it for both X  and Y.")
             return [mppx or mppy] * 2
         return None
