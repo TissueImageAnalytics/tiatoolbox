@@ -1,7 +1,7 @@
 name: CHECKING AUTO TAG --- Build & publish Multiple tiatoolbox images
 on:
   push:
-    branches: ['master']
+    branches: ['dev-docker']
     tags:
       - "v*"
 
@@ -42,7 +42,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: ${{ matrix.image }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # images: ${{ matrix.image }}
           # tags: type=semver,pattern={{major}}.{{minor}}
 
       - name: CHECKING TAGS
