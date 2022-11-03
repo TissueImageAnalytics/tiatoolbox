@@ -1,13 +1,12 @@
-name: CHECKING AUTO TAG --- Build & publish Multiple tiatoolbox images
+name: Publishing TIAToolbox docker images in ghcr.io
 on:
-  push:
-    branches: ['dev-docker']
-    tags:
-      - "v*"
+  workflow_dispatch
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: TissueImageAnalytics/tiatoolbox
+  image: ghcr.io/tissueimageanalytics/tiatoolbox
+  TOOLBOX_VER: 1.3.0
 
 jobs:
   build-and-push-image:
@@ -16,12 +15,16 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - dockerfile: ./docker/3.7/Debian/Dockerfile
-            image: ghcr.io/tissueimageanalytics/tiatoolbox
+          - dockerfile: ./3.7/Debian/Dockerfile
             mtag: py3.7-debian
-          - dockerfile: ./docker/3.8/Debian/Dockerfile
-            image: ghcr.io/tissueimageanalytics/tiatoolbox
+          - dockerfile: ./3.8/Debian/Dockerfile
             mtag: py3.8-debian
+          - dockerfile: ./3.9/Debian/Dockerfile
+            mtag: py3.9-debian
+          - dockerfile: ./3.9/Ubuntu/Dockerfile
+            mtag: py3.9-ubuntu
+          - dockerfile: ./3.9/Ubuntu/Dockerfile
+            mtag: latest
     permissions:
       contents: read
       packages: write
@@ -38,13 +41,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN  }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+      - name: Publishing with 'latest' tag
+        if: contains(matrix.mtag, 'latest')
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # images: ${{ matrix.image }}
-          # tags: type=semver,pattern={{major}}.{{minor}}
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: "${{ env.image }}:${{ matrix.mtag }}"
 
-      - name: CHECKING TAGS
-        run: echo "${{ steps.meta.outputs.tags }}"
+      - name: Publishing with explicit tags
+        if: ${{ !contains(matrix.mtag, 'latest') }}
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: "${{ env.image }}:${{ env.TOOLBOX_VER }}-${{ matrix.mtag }}"
