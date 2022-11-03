@@ -1,4 +1,4 @@
-name: Publishing TIAToolbox docker images in ghcr.io
+name: Publish cpu dockers
 on:
   workflow_dispatch
 
