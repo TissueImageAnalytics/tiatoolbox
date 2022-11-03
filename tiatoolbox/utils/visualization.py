@@ -629,10 +629,10 @@ class AnnotationRenderer:
                         )
                     )
                 )
-            elif score_prop == "color":
+            if score_prop == "color":
                 # use colors directly specified in annotation properties
                 return (*[int(255 * c) for c in annotation.properties["color"]], 255)
-            elif score_prop is not None:
+            if score_prop is not None:
                 return tuple(
                     int(c * 255)
                     for c in self.mapper(
