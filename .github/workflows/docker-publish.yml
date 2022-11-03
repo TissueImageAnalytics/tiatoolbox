@@ -1,7 +1,7 @@
 name: CHECKING AUTO TAG --- Build & publish Multiple tiatoolbox images
 on:
   push:
-    branches: ['dev-docker']
+    branches: ['master']
     tags:
       - "v*"
 
