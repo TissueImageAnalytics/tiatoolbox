@@ -10,13 +10,14 @@ import re
 import warnings
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import openslide
 import pandas as pd
 import tifffile
 import zarr
+from defusedxml import ElementTree
 
 from tiatoolbox import logger, utils
 from tiatoolbox.utils.env_detection import pixman_warning
@@ -3158,36 +3159,64 @@ class TIFFWSIReader(WSIReader):
             "raw": raw,
         }
 
+    def _get_ome_xml(self) -> ElementTree.Element:
+        """Parse OME-XML from the description of the first IFD (page).
+
+        Returns:
+            ElementTree.Element:
+                OME-XML root element.
+
+        """
+        description = self.tiff.pages[0].description
+        return ElementTree.fromstring(description)
+
     def _parse_ome_metadata(self) -> dict:
+        """Extract OME specific metadata.
+
+        Returns:
+            dict:
+                Dictionary of kwargs for WSIMeta.
+
+        """
         # The OME-XML should be in each IFD but is optional. It must be
         # present in the first IFD. We simply get the description from
         # the first IFD.
-        from defusedxml.ElementTree import fromstring as et_from_string
+        xml = self._get_ome_xml()
+        objective_power = self._get_ome_objective_power(xml)
+        mpp = self._get_ome_mpp(xml)
 
-        description = self.tiff.pages[0].description
-        xml = et_from_string(description)
-        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
-        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
-
-        raw = {
-            "Description": description,
-            "OME-XML": xml,
+        return {
+            "objective_power": objective_power,
+            "vendor": None,
+            "mpp": mpp,
+            "raw": {
+                "Description": self.tiff.pages[0].description,
+                "OME-XML": xml,
+            },
         }
 
-        objective_power = None
-        mpp = None
-        vendor = None
+    def _get_ome_objective_power(
+        self, xml: Optional[ElementTree.Element] = None
+    ) -> Optional[float]:
+        """Get the objective power from the OME-XML.
 
-        xml_pixels = xml_series.find("ome:Pixels", namespaces)
-        mppx = xml_pixels.attrib.get("PhysicalSizeX")
-        mppy = xml_pixels.attrib.get("PhysicalSizeY")
-        if mppx is not None and mppy is not None:
-            mpp = [mppx, mppy]
-        elif mppx is not None or mppy is not None:
-            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
-            mpp = [mppx or mppy] * 2
+        Args:
+            xml (ElementTree.Element, optional):
+                OME-XML root element. Defaults to None. If None, the
+                OME-XML will be parsed from the first IFD.
 
+        Returns:
+            float:
+                Objective power.
+
+        """
+        xml = xml or self._get_ome_xml()
+        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
         instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
+        if instrument_ref is None:
+            return None
+
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
         instrument_ref_id = instrument_ref.attrib["ID"]
         objective_settings_id = objective_settings.attrib["ID"]
@@ -3203,20 +3232,41 @@ class TIFFWSIReader(WSIReader):
 
         try:
             objective = objectives[(instrument_ref_id, objective_settings_id)]
-            objective_power = float(objective.attrib.get("NominalMagnification"))
+            return float(objective.attrib.get("NominalMagnification"))
         except KeyError as e:
             raise KeyError(
                 "No matching Instrument for image InstrumentRef in OME-XML."
             ) from e
 
-        return {
-            "objective_power": objective_power,
-            "vendor": vendor,
-            "mpp": mpp,
-            "raw": raw,
-        }
+    def _get_ome_mpp(
+        self, xml: Optional[ElementTree.Element] = None
+    ) -> Optional[List[float]]:
+        """Get the microns per pixel from the OME-XML.
 
-    def _parse_generic_tiled_metadata(self) -> dict:
+        Args:
+            xml (ElementTree.Element, optional):
+                OME-XML root element. Defaults to None. If None, the
+                OME-XML will be parsed from the first IFD.
+
+        Returns:
+            Optional[List[float]]:
+                Microns per pixel.
+
+        """
+        xml = xml or self._get_ome_xml()
+        namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
+        xml_pixels = xml_series.find("ome:Pixels", namespaces)
+        mppx = xml_pixels.attrib.get("PhysicalSizeX")
+        mppy = xml_pixels.attrib.get("PhysicalSizeY")
+        if mppx is not None and mppy is not None:
+            return [mppx, mppy]
+        elif mppx is not None or mppy is not None:
+            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
+            return [mppx or mppy] * 2
+        return None
+
+    def _parse_generic_tiff_metadata(self) -> dict:
         """Extract generic tiled metadata.
 
         Returns:
@@ -3281,10 +3331,10 @@ class TIFFWSIReader(WSIReader):
 
         if self.tiff.is_svs:
             filetype_params = self._parse_svs_metadata()
-        if self.tiff.is_ome:
+        elif self.tiff.is_ome:
             filetype_params = self._parse_ome_metadata()
-        if self.tiff.pages[0].is_tiled:
-            filetype_params = self._parse_generic_tiled_metadata()
+        else:
+            filetype_params = self._parse_generic_tiff_metadata()
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         return WSIMeta(

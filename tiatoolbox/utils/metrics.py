@@ -87,7 +87,6 @@ def dice(gt_mask, pred_mask):
             A dice overlap
 
     """
-
     if gt_mask.shape != pred_mask.shape:
         raise ValueError(f'{"Shape mismatch between the two masks."}')
 
