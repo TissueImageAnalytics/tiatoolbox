@@ -1332,7 +1332,7 @@ class Transformer:
 
         return (width, height)
 
-    def get_transformed_location(self, location, size, level):
+    def get_transformed_location(self, location: Tuple[int, int], size: Tuple[int, int], level: int) -> Tuple[int, int]:
         """Get corresponding location on unregistered image and the required patch size.
 
         This function applies inverse transformation to the centre point of the region.
