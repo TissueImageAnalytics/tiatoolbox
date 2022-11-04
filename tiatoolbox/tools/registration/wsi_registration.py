@@ -1292,7 +1292,9 @@ class Transformer:
         points_warp = np.dot(points_pad, transform.T)
         return points_warp[:, :-1]
 
-    def get_patch_dimensions(self, size: Tuple[int, int], transform: np.ndarray) -> Tuple[int, int]:
+    def get_patch_dimensions(
+        self, size: Tuple[int, int], transform: np.ndarray
+    ) -> Tuple[int, int]:
         """Compute patch size needed for transformation.
 
         Args:
@@ -1332,7 +1334,9 @@ class Transformer:
 
         return (width, height)
 
-    def get_transformed_location(self, location: Tuple[int, int], size: Tuple[int, int], level: int) -> Tuple[int, int]:
+    def get_transformed_location(
+        self, location: Tuple[int, int], size: Tuple[int, int], level: int
+    ) -> Tuple[int, int]:
         """Get corresponding location on unregistered image and the required patch size.
 
         This function applies inverse transformation to the centre point of the region.
@@ -1396,7 +1400,9 @@ class Transformer:
         transform = inverse_translation @ transform @ forward_translation
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 
-    def read_rect(self, location: Tuple[int, int], size: Tuple[int, int], level: int) -> np.ndarray:
+    def read_rect(
+        self, location: Tuple[int, int], size: Tuple[int, int], level: int
+    ) -> np.ndarray:
         """Read a transformed region of the transformed whole slide image.
 
         Location is in terms of the baseline image (level 0 / maximum resolution),
