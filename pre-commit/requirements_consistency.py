@@ -95,6 +95,32 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
     return packages
 
 
+def parse_setup_py(file_path) -> Dict[str, Requirement]:
+    """Parse a setup.py file.
+
+    Args:
+        file_path (pathlib.Path):
+            Path to the setup.py file.
+
+    Returns:
+        dict:
+            A dictionary mapping package names to
+            pkg_resources.Requirement.
+    """
+    mock_setup = {}
+    import setuptools
+
+    setuptools.setup = lambda **kw: mock_setup.update(kw)
+    spec = importlib.util.spec_from_file_location("setup", str(file_path))
+    setup = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(setup)
+
+    del setup, setuptools  # skipcq
+
+    requirements = mock_setup.get("install_requires", [])
+    return parse_pip(lines=requirements)
+
+
 def test_files_exist(root_dir: Path) -> None:
     """Test that all requirements files exist.
 
@@ -136,18 +162,7 @@ def parse_requirements(
     if lines and file_path:
         raise ValueError("Only one of file_path or lines may be specified")
     if file_path.name == "setup.py":
-        mock_setup = {}
-        import setuptools
-
-        setuptools.setup = lambda **kw: mock_setup.update(kw)
-        spec = importlib.util.spec_from_file_location("setup", str(file_path))
-        setup = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(setup)
-
-        del setup, setuptools  # skipcq
-
-        requirements = mock_setup.get("install_requires", [])
-        return parse_pip(lines=requirements)
+        return parse_setup_py(file_path)
     if file_path.suffix == ".yml":
         return parse_conda(file_path)
     if file_path.suffix == ".txt":
@@ -197,12 +212,12 @@ def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -
 
         # Check that the constraints and versions are the same across files
         formatted_reqs = [f"{c}{v} ({p.name})" for p, c, v in zipped_file_specs]
-        if not all(x == constraints[0] for x in constraints):
+        if any(x != constraints[0] for x in constraints):
             print(
                 f"{key} has inconsistent constraints:" f" {', '.join(formatted_reqs)}."
             )
             consistent = False
-        if not all(x == versions[0] for x in versions):
+        if any(x != versions[0] for x in versions):
             print(f"{key} has inconsistent versions:" f" {', '.join(formatted_reqs)}.")
             consistent = False
     return consistent  # noqa: R504

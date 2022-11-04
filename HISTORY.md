@@ -1,60 +1,107 @@
-History
-=======
+# History
 
-1.2.1 (2022-07-07)
-------------------
+## 1.3.0 (2022-10-20)
+
 ### Major Updates and Feature Improvements
-- None
+
+- Adds an AnnotationTileGenerator and AnnotationRenderer which allows serving of tiles rendered directly from an annotation store.
+- Adds [DFBR](https://arxiv.org/abs/2202.09971) registration model and jupyter notebook example
+  - Adds DICE metric
+- Adds [SCCNN](https://doi.org/10.1109/tmi.2016.2525803) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.sccnn.SCCNN.html)\]
+- Adds [MapDe](https://arxiv.org/abs/1806.06970) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.mapde.MapDe.html)\]
+- Adds support for reading MPP metadata from  NGFF v0.4
+- Adds enhancements to tiatoolbox.annotation.storage that are useful when using an AnnotationStore for visualization purposes.
 
 ### Changes to API
+
 - None
 
 ### Bug Fixes and Other Changes
+
+- Fixes colorbar_params #410
+- Fixes Jupyter notebooks for better read the docs rendering
+  - Fixes typos, metadata and links
+- Fixes nucleus_segmentor_engine for boundary artefacts
+- Fixes the colorbar cropping in tests
+- Adds citation in README.md and CITATION.cff to Nature Communications Medicine paper
+- Fixes a bug #452 raised by @rogertrullo  where only the numerator of the TIFF resolution tags was being read.
+- Fixes HoVer-Net+ post-processing to be inline with original work.
+- Fixes a bug where an exception would be raised if the OME XML is missing objective power.
+
+### Development related changes
+
+- Uses Furo theme for readthedocs
+- Replaces nbgallery and nbsphinx with myst-nb for jupyter notebook rendering
+- Uses myst for markdown parsing
+- Uses requirements.txt to define dependencies for requirements consistency
+- Adds notebook AST pre-commit hook
+- Adds check to validate python examples in the code
+- Adds check to resolve imports
+- Fixes an error in a docstring which triggered the failing test.
+- Adds pre-commit hooks to format markdown and notebook markdown
+- Adds pip install workflow to resolve dependencies when requirements file is updated
+- Improves tiatoolbox import using LazyLoader
+
+## 1.2.1 (2022-07-07)
+
+### Major Updates and Feature Improvements
+
+- None
+
+### Changes to API
+
+- None
+
+### Bug Fixes and Other Changes
+
 - Fixes issues with dependencies.
-	- Adds flask to dependencies.
+  - Adds flask to dependencies.
 - Fixes missing file in the python package.
 - Clarifies help string for show-wsi option.
 
-
 ### Development related changes
+
 - Removes Travis CI.
-	- GitHub Actions will be used instead.
+  - GitHub Actions will be used instead.
 - Adds pre-commit hooks to check requirements consistency.
 - Adds GitHub Action to resolve conda environment checks on Windows and Ubuntu.
 
+## 1.2.0 (2022-07-05)
 
-1.2.0 (2022-07-05)
-------------------
 ### Major Updates and Feature Improvements
+
 - Adds support for Python 3.10
 - Adds short description for IDARS algorithm #383
 - Adds support for NGFF v0.4 [OME-ZARR](https://ngff.openmicroscopy.org/latest/).
 - Adds CLI for launching tile server.
 
 ### Changes to API
+
 - Renames `stainnorm_target()` function to `stain_norm_target()`.
 - Removes `get_wsireader`
 - Replaces the custom PlattScaler in `tools/scale.py` with the regular Scikit-Learn [LogisticRegression](https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression).
 
 ### Bug Fixes and Other Changes
+
 - Fixes bugs in UNET architecture.
-	- Number of channels in Batchnorm argument in the decoding path to match with the input channels.
-	- Padding `0` creates feature maps in the decoder part with the same size as encoder.
+  - Number of channels in Batchnorm argument in the decoding path to match with the input channels.
+  - Padding `0` creates feature maps in the decoder part with the same size as encoder.
 - Fixes linter issues and typos
 - Fixes incorrect output with overlap in `predictor.merge_predictions()` and `return_raw=True`
-	- Thanks to @paulhacosta for raising #356, Fixed by #358.
+  - Thanks to @paulhacosta for raising #356, Fixed by #358.
 - Fixes errors with JP2 read. Checks input path exists.
 - Fixes errors with torch upgrade to 1.12.
 
 ### Development related changes
+
 - Adds pre-commit hooks for consistency across the repo.
 - Sets up GitHub Actions Workflow.
-    - Travis CI will be removed in future release.
+  - Travis CI will be removed in future release.
 
+## 1.1.0 (2022-05-07)
 
-1.1.0 (2022-05-07)
-------------------
 ### Major Updates and Feature Improvements
+
 - Adds DICOM Support.
 - Updates license to more permissive BSD 3-clause.
 - Adds `micronet` model.
@@ -62,7 +109,7 @@ History
   - Adds a check for tiles in a TIFF file when opening.
   - Uses OpenSlide to read a TIFF if it has tiles instead of OpenCV (VirtualWSIReader).
   - Adds a fallback to tifffile if it is tiled but openslide cannot read it
-  (e.g. jp2k or jpegxl tiles).
+    (e.g. jp2k or jpegxl tiles).
 - Adds support for multi-channel images (HxWxC).
 - Fixes performance issues in `semantic_segmentor.py`.
   - Performance gain measurement: 21.67s (new) vs 45.564 (old) using a 4k x 4k WSI.
@@ -70,9 +117,11 @@ History
 - Adds benchmark for Annotations Store.
 
 ### Changes to API
+
 - None
 
 ### Bug Fixes and Other Changes
+
 - Enhances the error messages to be more informative.
 - Fixes Flake8 Errors, typos.
   - Fixes patch predictor models based after fixing a typo.
@@ -82,6 +131,7 @@ History
 - Adds metrics to readthedocs/docstrings for pretrained models.
 
 ### Development related changes
+
 - Adds `pydicom` and `wsidicom` as dependency.
 - Updates dependencies.
 - Fixes Travis detection and makes improvements to run tests faster on Travis.
@@ -89,28 +139,31 @@ History
 - Improves CLI definitions to make it easier to integrate new functions.
 - Fixes compile options for test_annotation_stores.py
 
+## 1.0.1 (2022-01-31)
 
-1.0.1 (2022-01-31)
-------------------
 ### Major Updates and Feature Improvements
+
 - Updates dependencies for conda recipe #262
 
 ### Changes to API
+
 - None
 
 ### Bug Fixes and Other Changes
+
 - Adds User Warning For Missing SQLite Functions
 - Fixes Pixman version check errors
 - Fixes empty query in instance segmentor
 
 ### Development related changes
+
 - Fixes flake8 linting issues and typos
 - Conditional pytest.skipif to skip GPU tests on travis while running them locally or elsewhere
 
+## 1.0.0 (2021-12-23)
 
-1.0.0 (2021-12-23)
-------------------
 ### Major Updates and Feature Improvements
+
 - Adds nucleus instance segmentation base class
   - Adds  [HoVerNet](https://www.sciencedirect.com/science/article/abs/pii/S1361841519301045) architecture
 - Adds multi-task segmentor [HoVerNet+](https://arxiv.org/abs/2108.13904) model
@@ -127,10 +180,12 @@ History
 - Adds support to override or specify mpp and power
 
 ### Changes to API
+
 - Replaces `models.controller` API with `models.engine`
 - Replaces `CNNPatchPredictor` with `PatchPredictor`
 
 ### Bug Fixes and Other Changes
+
 - Fixes  Fix `filter_coordinates` read wrong resolutions for patch extraction
 - For `PatchPredictor`
   - `ioconfig` will supersede everything
@@ -142,17 +197,18 @@ History
 - Improves performance of mask based patch extraction
 
 ### Development related changes
+
 - Improve tests performance for Travis runs
 - Adds feature detection mechanism to detect the platform and installed packages etc.
 - On demand imports for some libraries for performance
 - Improves performance of mask based patch extraction
 
+## 0.8.0 (2021-10-27)
 
-0.8.0 (2021-10-27)
-------------------
 ### Major Updates and Feature Improvements
+
 - Adds `SemanticSegmentor` which is Predictor equivalent for semantic segmentation.
--  Add `TIFFWSIReader` class to support OMETiff reading.
+- Add `TIFFWSIReader` class to support OMETiff reading.
 - Adds `FeatureExtractor` API to controller.
 - Adds WSI Serialization Dataset which support changing parallel workers on the fly. This would reduce the time spent to create new worker for every WSI/Tile (costly).
 - Adds IOState data class to contain IO information for loading input to model and assembling model output back to WSI/Tile.
@@ -163,6 +219,7 @@ History
 - Update python notebooks to add `read_rect` and `read_bounds` examples with `mpp` read.
 
 ### Changes to API
+
 - Adds `WSIReader.open`. `get_wsireader` will deprecate in the next release. Please use `WSIReader.open` instead.
 - CLI is now POSIX compatible
   - Replaces underscores in variable names with hyphens
@@ -170,12 +227,14 @@ History
 - Move string_to_tuple to tiatoolbox/utils/misc.py
 
 ### Bug Fixes and Other Changes
+
 - Fixes README git clone instructions.
 - Fixes stain normalisation due to changes in sklearn.
 - Fixes a test in tests/test_slide_info
 - Fixes readthedocs documentation issues
 
 ### Development related changes
+
 - Adds dependencies for tiffile, imagecodecs, zarr.
 - Adds more stringent pre-commit checks
 - Moved local test files into `tiatoolbox/data`.
@@ -190,10 +249,10 @@ History
 - Updates to new GitHub organisation name in the repo
   - Fixes related links
 
+## 0.7.0 (2021-09-16)
 
-0.7.0 (2021-09-16)
-------------------
 ### Major and Feature Improvements
+
 - Drops support for python 3.6
 - Update minimum requirement to python 3.7
 - Adds support for python 3.9
@@ -203,16 +262,19 @@ History
 - Adds visualisation module to overlay the results of an algorithm.
 
 ### Changes to API
+
 - Command line interface for stain normalisation can be called using the keyword `stain-norm` instead of `stainnorm`
 - Replaces `FixedWindowPatchExtractor` with `SlidingWindowPatchExtractor` .
 - get_patchextractor takes the `slidingwindow` as an argument.
 - Depreciates `VariableWindowPatchExtractor`
 
 ### Bug Fixes and Other Changes
+
 - Significantly improved python notebook documentation for clarity, consistency and ease of use for non-experts.
 - Adds detailed installation instructions for Windows, Linux and Mac
 
 ### Development related changes
+
 - Moves flake8 above pytest in the `travis.yml` script stage.
 - Adds `set -e` at the start of the script stage in `travis.yml` to cause it to exit on error and (hopefully) not run later parts of the stage.
 - Readthedocs related changes
@@ -221,10 +283,10 @@ History
   - Removes conda build on readthedocs build
 - Adds extra checks to pre-commit, e.g., import sorting, spellcheck etc. Detailed list can be found on this [commit](https://github.com/TissueImageAnalytics/tiatoolbox/commit/662a143e915fa55416badd992d8e7358211730a6).
 
+## 0.6.0 (2021-05-11)
 
-0.6.0 (2021-05-11)
-------------------
 ### Major and Feature Improvements
+
 - Add `TissueMasker` class to allow tissue masking using `Otsu` and `Morphological` processing.
 - Add helper/convenience method to WSIReader(s) to produce a mask. Add reader object to allow reading a mask conveniently as if it were a WSI i.e., use same location and resolution to read tissue area and mask area.
 - Add `PointsPatchExtractor` returns patches that can be used by classification models. Takes `csv`, `json` or `pd.DataFrame` and returns patches corresponding to each pixel location.
@@ -233,35 +295,40 @@ History
 - Update readme with improved instructions to use the toolbox. Make the README file somewhat more comprehensible to beginners, particularly those with not much background or experience.
 
 ### Changes to API
+
 - `tiatoolbox.dataloader` replaced by `tiatoolbox.wsicore`
 
 ### Bug Fixes and Other Changes
+
 - Minor bug fixes
 
 ### Development-related changes
+
 - Improve unit test coverage.
 - Move test data to tiatoolbox server.
 
+______________________________________________________________________
 
-------------------
+## 0.5.2 (2021-03-12)
 
-0.5.2 (2021-03-12)
-------------------
 ### Bug Fixes and Other Changes
+
 - Fix URL for downloading test JP2 image.
 - Update readme with new logo.
 
-------------------
+______________________________________________________________________
 
-0.5.1 (2020-12-31)
-------------------
+## 0.5.1 (2020-12-31)
+
 ### Bug Fixes and Other Changes
+
 - Add `scikit-image` as dependency in `setup.py`
 - Update notebooks to add instructions to install dependencies
 
-------------------
-0.5.0 (2020-12-30)
-------------------
+______________________________________________________________________
+
+## 0.5.0 (2020-12-30)
+
 ### Major and Feature Improvements
 
 - Adds `get_wsireader()` to return appropriate WSIReader.
@@ -283,6 +350,7 @@ History
 - Adds pre processing step to stain normalisation where stain matrix encodes colour information from tissue region only.
 
 ### Changes to API
+
 - `read_region` refactored to be backwards compatible with openslide arguments.
 - `slide_info` changed to `info`
 - Updates WSIReader which only takes one input
@@ -292,6 +360,7 @@ History
 - `transforms.imresize` takes additional arguments `output_size` and interpolation method 'optimise' which selects `cv2.INTER_AREA` for `scale_factor<1` and `cv2.INTER_CUBIC` for `scale_factor>1`
 
 ### Bug Fixes and Other Changes
+
 - Refactors glymur code to use index slicing instead of deprecated read function.
 - Refactors thumbnail code to use `read_bounds` and be a member of the WSIReader base class.
 - Updates `README.md` to clarify installation instructions.
@@ -304,6 +373,7 @@ History
 - Adds `scikit-image` or `jupyterlab` as a dependency.
 
 ### Development related changes
+
 - Moved `test_wsireader_jp2_save_tiles` to test_wsireader.py.
 - Change recipe in Makefile for coverage to use pytest-cov instead of coverage.
 - Runs travis only on PR.
@@ -313,10 +383,9 @@ History
 - Rearranges `usage.rst` for better readability.
 - Adds `pre-commit`, `flake8`, `flake8-bugbear`, `black`, `pytest-cov` and `recommonmark` as dependency.
 
+______________________________________________________________________
 
-------------------
-0.4.0 (2020-10-25)
-------------------
+## 0.4.0 (2020-10-25)
 
 ### Major and Feature Improvements
 
@@ -327,10 +396,9 @@ History
 - Adds `WSIMeta` class to save meta data for whole slide images. `WSIMeta` casts properties to python types. Properties from OpenSlide are returned as string. raw values can always be accessed via `slide.raw`. Adds data validation e.g., checking that level_count matches up with the length of the `level_dimensions` and `level_downsamples`. Adds type hints to `WSIMeta`.
 - Adds exceptions `FileNotSupported` and `MethodNotSupported`
 
-
 ### Changes to API
 
--  Restructures `WSIReader` as parent class to allow support to read whole slide images in other formats.
+- Restructures `WSIReader` as parent class to allow support to read whole slide images in other formats.
 - Adds `slide_info` as a property of `WSIReader`
 - Updates `slide_info` type to `WSIMeta` from `dict`
 - Depreciates support for multiprocessing from within the toolbox. The toolbox is focused on processing single whole slide and standard images. External libraries can be used to run using multiprocessing on multiple files.
@@ -342,9 +410,9 @@ History
 - Removes `pathos` as a dependency
 - Updates `openslide-python` requirement to 1.1.2
 
-------------------
-0.3.0 (2020-07-19)
-------------------
+______________________________________________________________________
+
+## 0.3.0 (2020-07-19)
 
 ### Major and Feature Improvements
 
@@ -361,66 +429,66 @@ History
 
 - Adds `pandas` as dependency
 
-------------------
-0.2.2 (2020-07-12)
-------------------
+______________________________________________________________________
+
+## 0.2.2 (2020-07-12)
 
 ### Major and Feature Improvements
 
--   None
+- None
 
 ### Changes to API
 
--   None
+- None
 
 ### Bug Fixes and Other Changes
 
--   Fix command line interface for `slide-info` feature and travis pypi deployment
+- Fix command line interface for `slide-info` feature and travis pypi deployment
 
-------------------
-0.2.1 (2020-07-10)
-------------------
+______________________________________________________________________
+
+## 0.2.1 (2020-07-10)
 
 ### Major and Feature Improvements
 
--   None
+- None
 
 ### Changes to API
 
--   None
+- None
 
 ### Bug Fixes and Other Changes
 
--   Minor changes to configuration files.
+- Minor changes to configuration files.
 
-------------------
-0.2.0 (2020-07-10)
-------------------
+______________________________________________________________________
+
+## 0.2.0 (2020-07-10)
 
 ### Major and Feature Improvements
 
--   Adds feature slide\_info to read whole slide images and display meta
-    data information
--   Adds multiprocessing decorator TIAMultiProcess to allow running
-    toolbox functions using multiprocessing.
+- Adds feature slide_info to read whole slide images and display meta
+  data information
+- Adds multiprocessing decorator TIAMultiProcess to allow running
+  toolbox functions using multiprocessing.
 
 ### Changes to API
 
--   None
+- None
 
 ### Bug Fixes and Other Changes
 
--   Adds Sphinx Readthedocs support
-    <https://readthedocs.org/projects/tia-toolbox/> for stable and
-    develop branches
--   Adds code coverage tools to test the pytest coverage of the package
--   Adds deepsource integration to highlight and fix bug risks,
-    performance issues etc.
--   Adds README to allow users to setup the environment.
--   Adds conda and pip requirements instructions
+- Adds Sphinx Readthedocs support
+  <https://readthedocs.org/projects/tia-toolbox/> for stable and
+  develop branches
+- Adds code coverage tools to test the pytest coverage of the package
+- Adds deepsource integration to highlight and fix bug risks,
+  performance issues etc.
+- Adds README to allow users to setup the environment.
+- Adds conda and pip requirements instructions
 
-------------------
-0.1.0 (2020-05-28)
-------------------
+______________________________________________________________________
 
--   First release on PyPI.
+## 0.1.0 (2020-05-28)
+
+- First release on PyPI.
