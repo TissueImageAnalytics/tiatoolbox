@@ -338,7 +338,7 @@ def test_register_output_with_initializer(
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
 
     expected = np.array(
-        [[-0.99683, -0.00333, 338.69983], [-0.03201, -0.98420, 770.22941], [0, 0, 1]]
+        [[-0.98454, -0.00708, 397.95628], [-0.01024, -0.99752, 684.81131], [0, 0, 1]]
     )
 
     output = df.register(
@@ -363,7 +363,7 @@ def test_register_output_without_initializer(
 
     df = DFBRegister()
     expected = np.array(
-        [[-0.99683, -0.00189, 336.79039], [0.00691, -0.99810, 765.98081], [0, 0, 1]]
+        [[-0.99863, 0.00189, 389.79039], [0.00691, -0.99810, 874.98081], [0, 0, 1]]
     )
 
     output = df.register(
