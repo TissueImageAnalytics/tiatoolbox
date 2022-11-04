@@ -1396,7 +1396,7 @@ class Transformer:
         transform = inverse_translation @ transform @ forward_translation
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 
-    def read_rect(self, location, size, level):
+    def read_rect(self, location: Tuple[int, int], size: Tuple[int, int], level: int) -> np.ndarray:
         """Read a transformed region of the transformed whole slide image.
 
         Location is in terms of the baseline image (level 0 / maximum resolution),
