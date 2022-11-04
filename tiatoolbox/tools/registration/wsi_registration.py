@@ -1272,7 +1272,7 @@ class Transformer:
         self.transform_level0 = transform
 
     @staticmethod
-    def transform_points(points, transform):
+    def transform_points(points: np.ndarray, transform: np.ndarray) -> np.ndarray:
         """Transform points using the given transformation matrix.
 
         Args:
