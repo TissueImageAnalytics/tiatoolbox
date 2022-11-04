@@ -1370,7 +1370,7 @@ class Transformer:
         )
         return transformed_location, transformed_size
 
-    def transform_patch(self, patch, size):
+    def transform_patch(self, patch: np.ndarray, size: Tuple[int, int]) -> np.ndarray:
         """Apply transformation to the given patch.
 
         This function applies the transformation matrix after removing the translation.
