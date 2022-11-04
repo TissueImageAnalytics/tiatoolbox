@@ -1292,7 +1292,7 @@ class Transformer:
         points_warp = np.dot(points_pad, transform.T)
         return points_warp[:, :-1]
 
-    def get_patch_dimensions(self, size, transform):
+    def get_patch_dimensions(self, size: Tuple[int, int], transform: np.ndarray) -> Tuple[int, int]:
         """Compute patch size needed for transformation.
 
         Args:
