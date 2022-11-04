@@ -335,7 +335,9 @@ def group4_arch_branch(
     return nn.ModuleDict(module_dict)
 
 
-def out_arch_branch(in_ch: int, num_class: int = 2, activation: str = "softmax"):
+def out_arch_branch(
+    in_ch: int, num_output_channels: int = 2, activation: str = "softmax"
+):
     """Group5 branch for MicroNet.
 
     This branch defines architecture for auxiliary and the main output.
@@ -343,7 +345,7 @@ def out_arch_branch(in_ch: int, num_class: int = 2, activation: str = "softmax")
     Args:
         in_ch (int):
             Number of input channels.
-        num_class (int):
+        num_output_channels (int):
             Number of output channels. default=2.
         activation (str):
             Activation function, default="softmax".
@@ -361,7 +363,7 @@ def out_arch_branch(in_ch: int, num_class: int = 2, activation: str = "softmax")
         nn.Dropout2d(p=0.5),
         nn.Conv2d(
             in_ch,
-            num_class,
+            num_output_channels,
             kernel_size=(3, 3),
             stride=(1, 1),
             padding=0,
@@ -406,7 +408,7 @@ class MicroNet(ModelABC):
     Args:
         num_input_channels (int):
             Number of channels in input. default=3.
-        num_class (int):
+        num_output_channels (int):
             Number of output channels. default=2.
         out_activation (str):
             Activation to use at the output. MapDe inherits MicroNet
@@ -423,11 +425,13 @@ class MicroNet(ModelABC):
 
     """
 
-    def __init__(self, num_input_channels=3, num_class=2, out_activation="softmax"):
+    def __init__(
+        self, num_input_channels=3, num_output_channels=2, out_activation="softmax"
+    ):
         super().__init__()
-        if num_class < 2:
+        if num_output_channels < 2:
             raise ValueError("Number of classes should be >=2.")
-        self.__num_class = num_class
+        self.__num_output_channels = num_output_channels
         self.in_ch = num_input_channels
 
         module_dict = OrderedDict()
@@ -455,12 +459,20 @@ class MicroNet(ModelABC):
             512, 256, (8, 8), (8, 8), activation=out_activation
         )
 
-        module_dict["aux_out1"] = out_arch_branch(64, num_class=self.__num_class)
-        module_dict["aux_out2"] = out_arch_branch(128, num_class=self.__num_class)
-        module_dict["aux_out3"] = out_arch_branch(256, num_class=self.__num_class)
+        module_dict["aux_out1"] = out_arch_branch(
+            64, num_output_channels=self.__num_output_channels
+        )
+        module_dict["aux_out2"] = out_arch_branch(
+            128, num_output_channels=self.__num_output_channels
+        )
+        module_dict["aux_out3"] = out_arch_branch(
+            256, num_output_channels=self.__num_output_channels
+        )
 
         module_dict["out"] = out_arch_branch(
-            64 + 128 + 256, num_class=self.__num_class, activation=out_activation
+            64 + 128 + 256,
+            num_output_channels=self.__num_output_channels,
+            activation=out_activation,
         )
 
         self.layer = nn.ModuleDict(module_dict)
