@@ -6,7 +6,7 @@ import pathlib
 import numpy as np
 import pytest
 
-from tiatoolbox.data import _fetch_remote_sample, stain_norm_target, small_svs
+from tiatoolbox.data import _fetch_remote_sample, small_svs, stain_norm_target
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
