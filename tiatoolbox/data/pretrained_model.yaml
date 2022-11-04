@@ -815,3 +815,23 @@ sccnn-conic:
             radius: 12
             min_distance: 5
             threshold_abs: 0.05
+
+nuclick_original-pannuke:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_original-pannuke.pth
+    architecture:
+        class: nuclick.NuClick
+        kwargs:
+            num_input_channels: 5
+            num_output_channels: 1
+
+nuclick_light-pannuke:
+    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_unet-pannuke.pth
+    architecture:
+        class: unet.UNetModel
+        kwargs:
+            num_input_channels: 5
+            num_output_channels: 1
+            encoder: "unet"
+            encoder_levels: [32, 64, 128, 256]
+            decoder_block: (3,)
+            skip_type: 'concat'

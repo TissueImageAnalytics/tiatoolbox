@@ -1,8 +1,9 @@
-"""Define orginal NuClick architecture#
+"""Defines original NuClick architecture
 
 Koohbanani, N. A., Jahanifar, M., Tajadin, N. Z., & Rajpoot, N. (2020).
 NuClick: a deep learning framework for interactive segmentation of microscopic images.
 Medical Image Analysis, 65, 101771.
+
 """
 import warnings
 from typing import Tuple, Union
@@ -24,20 +25,28 @@ bn_axis = 1
 
 
 class ConvBnRelu(nn.Module):
-    """Convolution -> Batch Normalization -> ReLu/Sigmoid
+    """Performs Convolution, Batch Normalization and activation.
+
     Args:
-        num_input_channels (int): Number of channels in input.
-        num_output_channels (int): Number of channels in output.
-        kernel_size (int): Size of the kernel in the convolution layer.
-        strds (int): Size of the stride in the convolution layer.
-        use_bias (bool): Whether to use bias in the convolution layer.
-        dilatation_rate (int): Dilatation rate in the convolution layer.
-        activation (str): Name of the activation function to use.
-        do_batchnorm (bool): Whether to do batch normalization after the
-        convolution layer.
+        num_input_channels (int):
+            Number of channels in input.
+        num_output_channels (int):
+            Number of channels in output.
+        kernel_size (int):
+            Size of the kernel in the convolution layer.
+        strides (int):
+            Size of the stride in the convolution layer.
+        use_bias (bool):
+            Whether to use bias in the convolution layer.
+        dilation_rate (int):
+            Dilation rate in the convolution layer.
+        activation (str):
+            Name of the activation function to use.
+        do_batchnorm (bool):
+            Whether to do batch normalization after the convolution layer.
+
     Returns:
         model (torch.nn.Module): a pytorch model.
-
 
     """
 
@@ -46,9 +55,9 @@ class ConvBnRelu(nn.Module):
         num_input_channels: int,
         num_output_channels: int,
         kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
-        strds: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
         use_bias: bool = False,
-        dilatation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
         activation: str = "relu",
         do_batchnorm: bool = True,
     ):
@@ -56,27 +65,33 @@ class ConvBnRelu(nn.Module):
         super().__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
-        if isinstance(strds, int):
-            strds = (strds, strds)
+        if isinstance(strides, int):
+            strides = (strides, strides)
 
         self.conv_bn_relu = self.get_block(
             num_input_channels,
             num_output_channels,
             kernel_size,
-            strds,
+            strides,
             use_bias,
-            dilatation_rate,
+            dilation_rate,
             activation,
             do_batchnorm,
         )
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
+
         This method defines how layers are used in forward operation.
+
         Args:
-            input_tensor (torch.Tensor): Input, the tensor is of the shape NCHW.
+            input_tensor (torch.Tensor):
+                    Input, the tensor is of the shape NCHW.
+
         Returns:
-            output (torch.Tensor): The inference output.
+            output (torch.Tensor):
+                        The inference output.
+
 
         """
         return self.conv_bn_relu(input_tensor)
@@ -86,23 +101,32 @@ class ConvBnRelu(nn.Module):
         in_channels,
         out_channels,
         kernel_size,
-        strds,
+        strides,
         use_bias,
-        dilatation_rate,
+        dilation_rate,
         activation,
         do_batchnorm,
     ):
-        """Function for acquire the convolutional block.
+        """Function to acquire a convolutional block.
+
         Args:
-            in_channels (int): Number of channels in input.
-            out_channels (int): Number of channels in output.
-            kernel_size (list): Size of the kernel in the acquired convolution block.
-            strds (int): Size of stride in the convolution layer.
-            use_bias (bool): Whether to use bias in the convolution layer.
-            dilatation_rates (list): Dilation rate for each convolution layer.
-            activation (str): Name of the activation function to use.
-            do_batchnorm (bool): Whether to do batch normalization after the
-        convolution layer.
+            in_channels (int):
+                Number of channels in input.
+            out_channels (int):
+                Number of channels in output.
+            kernel_size (list):
+                Size of the kernel in the acquired convolution block.
+            strides (int):
+                Size of stride in the convolution layer.
+            use_bias (bool):
+                Whether to use bias in the convolution layer.
+            dilation_rates (list):
+                Dilation rate for each convolution layer.
+            activation (str):
+                Name of the activation function to use.
+            do_batchnorm (bool):
+                Whether to do batch normalization after the convolution layer.
+
         Returns:
             torch.nn.Sequential: a pytorch layer
 
@@ -111,8 +135,8 @@ class ConvBnRelu(nn.Module):
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
-            stride=strds,
-            dilation=dilatation_rate,
+            stride=strides,
+            dilation=dilation_rate,
             bias=use_bias,
             padding="same",
             padding_mode="zeros",
@@ -127,23 +151,29 @@ class ConvBnRelu(nn.Module):
 
         if activation == "relu":
             layers.append(nn.ReLU())
-        elif activation == "sigmoid":
-            layers.append(nn.Sigmoid())
 
         return nn.Sequential(*layers)
 
 
 class MultiscaleConvBlock(nn.Module):
-    """Multiscale convolution block
-    Defines four convolution layers.
+    """Defines Multiscale convolution block.
+
     Args:
-        num_input_channels (int): Number of channels in input.
-        num_output_channels (int): Number of channels in output.
-        kernel_sizes (list): Size of the kernel in each convolution layer.
-        strds (int): Size of stride in the convolution layer.
-        use_bias (bool): Whether to use bias in the convolution layer.
-        dilatation_rates (list): Dilation rate for each convolution layer.
-        activation (str): Name of the activation function to use.
+        num_input_channels (int):
+            Number of channels in input.
+        num_output_channels (int):
+            Number of channels in output.
+        kernel_sizes (list):
+            Size of the kernel in each convolution layer.
+        strides (int):
+            Size of stride in the convolution layer.
+        use_bias (bool):
+            Whether to use bias in the convolution layer.
+        dilation_rates (list):
+            Dilation rate for each convolution layer.
+        activation (str):
+            Name of the activation function to use.
+
     Returns:
         torch.nn.Module:
             A PyTorch model.
@@ -152,64 +182,68 @@ class MultiscaleConvBlock(nn.Module):
 
     def __init__(
         self,
-        num_input_channels,
-        kernel_sizes,
-        dilatation_rates,
-        num_output_channels=32,
-        strds=(1, 1),
-        activation="relu",
-        use_bias=False,
+        num_input_channels: int,
+        kernel_sizes: Union[Tuple[int, int], np.ndarray],
+        dilation_rates: Union[Tuple[int, int], np.ndarray],
+        num_output_channels: int = 32,
+        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        activation: str = "relu",
+        use_bias: bool = False,
     ):
-
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[0],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[0], dilatation_rates[0]),
+            dilation_rate=(dilation_rates[0], dilation_rates[0]),
         )
 
         self.conv_block_2 = ConvBnRelu(
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[1],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[1], dilatation_rates[1]),
+            dilation_rate=(dilation_rates[1], dilation_rates[1]),
         )
 
         self.conv_block_3 = ConvBnRelu(
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[2],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[2], dilatation_rates[2]),
+            dilation_rate=(dilation_rates[2], dilation_rates[2]),
         )
 
         self.conv_block_4 = ConvBnRelu(
             num_input_channels=num_input_channels,
             num_output_channels=num_output_channels,
             kernel_size=kernel_sizes[3],
-            strds=strds,
+            strides=strides,
             activation=activation,
             use_bias=use_bias,
-            dilatation_rate=(dilatation_rates[3], dilatation_rates[3]),
+            dilation_rate=(dilation_rates[3], dilation_rates[3]),
         )
 
     def forward(self, input_map):
-        """Logic for using layers defined in init.
+        """Logic for using layers defined in MultiscaleConvBlock init.
+
         This method defines how layers are used in forward operation.
+
         Args:
-            input (torch.Tensor): Input, the tensor is of the shape NCHW.
+            input_map (torch.Tensor):
+                Input, the tensor is of the shape NCHW.
         Returns:
-            output (torch.Tensor): The inference output.
+            output (torch.Tensor):
+                The inference output.
+
         """
         conv0 = input_map
 
@@ -222,29 +256,36 @@ class MultiscaleConvBlock(nn.Module):
 
 
 class ResidualConv(nn.Module):
-    """Residual Convolution block
+    """Residual Convolution block.
+
     Args:
-        num_input_channels (int): Number of channels in input.
-        num_output_channels (int): Number of channels in output.
-        kernel_size (int): Size of the kernel in all convolution layers.
-        strds (int): Size of the stride in all convolution layers.
-        use_bias (bool): Whether to use bias in the convolution layers.
-        dilatation_rate (int): Dilation rate in all convolution layers.
-        activation (str): Name of the activation function to use.
+        num_input_channels (int):
+            Number of channels in input.
+        num_output_channels (int):
+            Number of channels in output.
+        kernel_size (int):
+            Size of the kernel in all convolution layers.
+        strides (int):
+            Size of the stride in all convolution layers.
+        use_bias (bool):
+            Whether to use bias in the convolution layers.
+        dilation_rate (int):
+            Dilation rate in all convolution layers.
+
     Returns:
-        model (torch.nn.Module): a pytorch model.
+        model (torch.nn.Module):
+            A pytorch model.
 
     """
 
     def __init__(
         self,
-        num_input_channels,
-        num_output_channels=32,
-        kernel_size=(3, 3),
-        strds=(1, 1),
-        activation="relu",
-        use_bias=False,
-        dilatation_rate=(1, 1),
+        num_input_channels: int,
+        num_output_channels: int = 32,
+        kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
+        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        use_bias: bool = False,
+        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
     ):
         super().__init__()
 
@@ -252,35 +293,38 @@ class ResidualConv(nn.Module):
             num_input_channels,
             num_output_channels,
             kernel_size=kernel_size,
-            strds=strds,
+            strides=strides,
             activation="None",
             use_bias=use_bias,
-            dilatation_rate=dilatation_rate,
+            dilation_rate=dilation_rate,
             do_batchnorm=True,
         )
         self.conv_block_2 = ConvBnRelu(
             num_output_channels,
             num_output_channels,
             kernel_size=kernel_size,
-            strds=strds,
+            strides=strides,
             activation="None",
             use_bias=use_bias,
-            dilatation_rate=dilatation_rate,
+            dilation_rate=dilation_rate,
             do_batchnorm=True,
         )
 
-        if activation == "relu":
-            self.activation = nn.ReLU()
-        elif activation == "sigmoid":
-            self.activation = nn.Sigmoid()
+        self.activation = nn.ReLU()
 
     def forward(self, input_tensor):
-        """Logic for using layers defined in init.
+        """Logic for using layers defined in ResidualConv init.
+
         This method defines how layers are used in forward operation.
+
         Args:
-            input_tensor (torch.Tensor): Input, the tensor is of the shape NCHW.
+            input_tensor (torch.Tensor):
+                Input, the tensor is of the shape NCHW.
+
         Returns:
-            output (torch.Tensor): The inference output.
+            output (torch.Tensor):
+                The inference output.
+
         """
         conv1 = self.conv_block_1(input_tensor)
         conv2 = self.conv_block_2(conv1)
@@ -291,21 +335,26 @@ class ResidualConv(nn.Module):
 
 class NuClick(ModelABC):
     """NuClick Architecture.
-    NuClick is used for interactive segmentation.
+
+    NuClick is used for interactive nuclei segmentation.
     NuClick takes an RGB image patch along with an inclusion and an exclusion map.
+
     Args:
-        num_input_channels (int): Number of channels in input.
-        num_output_channels (int): Number of channels in output.
+        num_input_channels (int):
+            Number of channels in input.
+        num_output_channels (int):
+            Number of channels in output.
+
     Returns:
         model (torch.nn.Module): a pytorch model.
+
     Examples:
         >>> # instantiate a NuClick model for interactive nucleus segmentation.
         >>> NuClick(num_input_channels = 5, num_output_channels = 1)
 
-
     """
 
-    def __init__(self, num_input_channels, num_output_channels):
+    def __init__(self, num_input_channels: int, num_output_channels: int):
         super().__init__()
         self.net_name = "NuClick"
 
@@ -333,6 +382,7 @@ class NuClick(ModelABC):
             num_input_channels=32,
             num_output_channels=self.n_classes,
             kernel_size=(1, 1),
+            strides=1,
             activation=None,
             use_bias=True,
             do_batchnorm=False,
@@ -400,21 +450,21 @@ class NuClick(ModelABC):
             num_input_channels=128,
             num_output_channels=32,
             kernel_sizes=[3, 3, 5, 5],
-            dilatation_rates=[1, 3, 3, 6],
+            dilation_rates=[1, 3, 3, 6],
         )
 
         self.multiscale_block_2 = MultiscaleConvBlock(
             num_input_channels=256,
             num_output_channels=64,
             kernel_sizes=[3, 3, 5, 5],
-            dilatation_rates=[1, 3, 2, 3],
+            dilation_rates=[1, 3, 2, 3],
         )
 
         self.multiscale_block_3 = MultiscaleConvBlock(
             num_input_channels=64,
             num_output_channels=16,
             kernel_sizes=[3, 3, 5, 7],
-            dilatation_rates=[1, 3, 2, 6],
+            dilation_rates=[1, 3, 2, 6],
         )
 
         # -------------Max Pooling blocks------------
@@ -461,10 +511,13 @@ class NuClick(ModelABC):
         )
 
     def forward(self, imgs: torch.Tensor):
-        """Logic for using layers defined in init.
+        """Logic for using layers defined in NuClick init.
+
         This method defines how layers are used in forward operation.
+
         Args:
             imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+
         Returns:
             output (torch.Tensor): The inference output.
 
@@ -519,6 +572,7 @@ class NuClick(ModelABC):
         nuc_points=None,
     ):
         """Post processing.
+
         Args:
             preds (ndarray): list of prediction output of each patch and
                 assumed to be in the order of (no.patch, h, w) (match with the output
@@ -533,6 +587,7 @@ class NuClick(ModelABC):
             nuc_points (ndarray): In the order of (no.patch, h, w).
                 In each patch, The pixel that has been 'clicked' is set to 1 and the
                 rest pixels are set to 0.
+
         Returns:
             masks (ndarray): pixel-wise nuclei instance segmentation
                 prediction, shape:(no.patch, h, w).
@@ -558,13 +613,16 @@ class NuClick(ModelABC):
     @staticmethod
     def infer_batch(model, batch_data, on_gpu):
         """Run inference on an input batch.
+
         This contains logic for forward operation as well as batch i/o
         aggregation.
+
         Args:
             model (nn.Module): PyTorch defined model.
             batch_data (ndarray): a batch of data generated by
                 torch.utils.data.DataLoader.
             on_gpu (bool): Whether to run inference on a GPU.
+
         Returns:
             Pixel-wise nuclei prediction for each patch, shape: (no.patch, h, w).
 

@@ -24,9 +24,6 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     _pretrained_path = f"{tmp_path}/weights.pth"
     fetch_pretrained_weights("nuclick_original-pannuke", _pretrained_path)
 
-    with pytest.raises(ValueError, match=r".*input channels number error*"):
-        model = NuClick(num_input_channels=-1, num_output_channels=-1)
-
     # test creation
     model = NuClick(num_input_channels=5, num_output_channels=1)
 
@@ -53,7 +50,9 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     pretrained = torch.load(_pretrained_path, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
-    postproc_masks = model.postproc(output)
+    postproc_masks = model.postproc(
+        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+    )
 
     gt_path = pathlib.Path(remote_sample("nuclick-output"))
     gt_mask = np.load(gt_path)
@@ -61,3 +60,14 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     assert (
         np.count_nonzero(postproc_masks * gt_mask) / np.count_nonzero(gt_mask) > 0.999
     )
+
+    # test post-processing without reconstruction
+    _ = model.postproc(output)
+
+    # test failed reconstruction in post-processing
+    inclusion_map = np.zeros((128, 128))
+    inclusion_map[0, 0] = 1
+    with pytest.warns(UserWarning, match=r"Nuclei reconstruction was not done"):
+        _ = model.postproc(
+            output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+        )
