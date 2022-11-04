@@ -757,7 +757,7 @@ micronet-consep:
         class: micronet.MicroNet
         kwargs:
             num_input_channels: 3
-            num_class: 2
+            num_output_channels: 2
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
@@ -780,7 +780,7 @@ mapde-crchisto:
             num_input_channels: 3
             min_distance: 4
             threshold_abs: 250
-            num_class: 1
+            num_classes: 1
 
 mapde-conic:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-conic.pth
@@ -790,7 +790,7 @@ mapde-conic:
             num_input_channels: 3
             min_distance: 3
             threshold_abs: 205
-            num_class: 1
+            num_classes: 1
 
 sccnn-crchisto:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-crchisto.pth
