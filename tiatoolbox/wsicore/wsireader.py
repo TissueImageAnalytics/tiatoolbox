@@ -3280,6 +3280,7 @@ class TIFFWSIReader(WSIReader):
         if mppx is not None or mppy is not None:
             warnings.warn("Only one MPP value found. Using it for both X  and Y.")
             return [mppx or mppy] * 2
+
         return None
 
     def _parse_generic_tiff_metadata(self) -> dict:

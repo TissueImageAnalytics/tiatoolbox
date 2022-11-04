@@ -981,13 +981,16 @@ class AnnotationStore(ABC, MutableMapping):
             """  # noqa Q440, Q441
             if select == "*" and unique:
                 raise ValueError("unique=True cannot be used with select='*'")
+
             if select == "*":  # Special case for all properties
                 return annotation.properties
+
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
                 return eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
             if isinstance(select, bytes):
                 return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
+
             return select(annotation.properties)
 
         return self._handle_pquery_results(
