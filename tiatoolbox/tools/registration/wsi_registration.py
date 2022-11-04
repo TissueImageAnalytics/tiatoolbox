@@ -3,9 +3,9 @@ import warnings
 from numbers import Number
 from typing import Dict, Tuple, Union
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from numpy.linalg import inv
@@ -118,6 +118,12 @@ def prealignment(
             - class:`numpy.ndarray`: Transformed moving image.
             - class:`numpy.ndarray`: Transformed moving mask.
             - float: Dice overlap
+
+    Examples:
+        >>> from tiatoolbox.tools.registration.wsi_registration import prealignment
+        >>> transform, transformed_image, transformed_mask, dice_overlap = prealignment(
+                fixed_thumbnail, moving_thumbnail, fixed_mask, moving_mask
+            )
 
     """
     orig_fixed_img, orig_moving_img = fixed_img, moving_img
@@ -240,6 +246,10 @@ def match_histograms(
             - :class:`numpy.ndarray` - A normalized grayscale image.
             - :class:`numpy.ndarray` - A normalized grayscale image.
 
+    Examples:
+        >>> from tiatoolbox.tools.registration.wsi_registration import match_histograms
+        >>> norm_image_a, norm_image_b = match_histograms(gray_image_a, gray_image_b)
+
     """
     image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
     if len(image_a.shape) == 3 or len(image_b.shape) == 3:
@@ -351,6 +361,17 @@ class DFBRegister:
         [2] Yang, Z., Dan, T. and Yang, Y., 2018. Multi-temporal remote
         sensing image registration using deep convolutional features.
         Ieee Access, 6, pp.38544-38555.
+
+    Examples:
+        >>> from tiatoolbox.tools.registration.wsi_registration import DFBRegister
+        >>> import cv2
+        >>> df = DFBRegister()
+        >>> fixed_image = np.repeat(np.expand_dims(fixed_gray, axis=2), 3, axis=2)
+        >>> moving_image = np.repeat(np.expand_dims(moving_gray, axis=2), 3, axis=2)
+        >>> transform = df.register(fixed_image, moving_image, fixed_mask, moving_mask)
+        >>> registered = cv2.warpAffine(
+                moving_gray, transform[0:-1], fixed_gray.shape[:2][::-1]
+            )
 
     """
 
@@ -1129,6 +1150,18 @@ def estimate_bspline_transform(
 
     Returns:
         2D deformation transformation represented by a grid of control points.
+
+    Examples:
+        >>> from tiatoolbox.tools.registration.wsi_registration import (
+                estimate_bspline_transform, apply_bspline_transform
+            )
+        >>> bspline_transform = estimate_bspline_transform(
+                fixed_gray_thumbnail, moving_gray_thumbnail, fixed_mask, moving_mask,
+                grid_space=50.0, sampling_percent=0.1,
+            )
+        >>> bspline_registered_image = apply_bspline_transform(
+                fixed_thumbnail, moving_thumbnail, bspline_transform
+            )
 
     """
     bspline_params = {
