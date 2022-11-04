@@ -69,6 +69,7 @@ def test_small_svs():
     """Test for fetching small SVS (CMU-1-Small-Region) sample image."""
     path = small_svs()
     # Check it exists
-    assert path.exists() and path.is_file()
+    assert path.exists()
+    assert path.is_file()
     # Test if corrupted
     WSIReader.open(path)
