@@ -573,8 +573,7 @@ class MicroNet(ModelABC):
         nuc_inst_info_dict = HoVerNet.get_instance_info(canvas)
         return canvas, nuc_inst_info_dict
 
-    @staticmethod
-    def preproc(image: np.ndarray):
+    def preproc(self, image: np.ndarray):
         """Preprocessing function for MicroNet.
 
         Performs per image standardization.
@@ -589,7 +588,7 @@ class MicroNet(ModelABC):
 
         """
         image = np.transpose(image, axes=(2, 0, 1))
-        image /= 255.0
+        image = self._transform(image)
         image = torch.from_numpy(image)
 
         image_mean = torch.mean(image, dim=(-1, -2, -3))
