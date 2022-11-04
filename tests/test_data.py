@@ -6,7 +6,7 @@ import pathlib
 import numpy as np
 import pytest
 
-from tiatoolbox.data import _fetch_remote_sample, stain_norm_target
+from tiatoolbox.data import _fetch_remote_sample, stain_norm_target, small_svs
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -63,3 +63,12 @@ def test_fetch_sample_skip(tmp_path):
     assert isinstance(arr, np.ndarray)
 
     _ = _fetch_remote_sample("stainnorm-source", tmp_path)
+
+
+def test_small_svs():
+    """Test for fetching small SVS (CMU-1-Small-Region) sample image."""
+    path = small_svs()
+    # Check it exists
+    assert path.exists() and path.is_file()
+    # Test if corrupted
+    WSIReader.open(path)
