@@ -1,10 +1,11 @@
 import itertools
 import warnings
-from typing import Dict, Tuple
+from numbers import Number
+from typing import Dict, Tuple, Union
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from numpy.linalg import inv
@@ -15,7 +16,9 @@ from skimage.util import img_as_float
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+
+Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
 
 
 def _check_dims(
@@ -1250,7 +1253,7 @@ def apply_bspline_transform(
     return sitk.GetArrayFromImage(sitk_registered_image_sitk)
 
 
-class Transformer:
+class AffineWSITransformer:
     """Resampling regions from a whole slide image.
 
     This class is used to resample tiles/patches from a whole slide image
@@ -1401,7 +1404,11 @@ class Transformer:
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 
     def read_rect(
-        self, location: Tuple[int, int], size: Tuple[int, int], level: int
+        self,
+        location: Tuple[int, int],
+        size: Tuple[int, int],
+        resolution: Resolution,
+        units: str,
     ) -> np.ndarray:
         """Read a transformed region of the transformed whole slide image.
 
@@ -1414,19 +1421,33 @@ class Transformer:
                 reference frame.
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
-            level (int):
+            resolution (float or tuple(float)):
                 Pyramid level/resolution layer.
+            units (str):
+                Units of the scale.
 
         Returns:
             :class:`numpy.ndarray`:
                 A transformed region/patch.
 
         """
+        (
+            read_level,
+            _,
+            _,
+            _post_read_scale,
+            _baseline_read_size,
+        ) = self.wsi_reader.find_read_rect_params(
+            location=location,
+            size=size,
+            resolution=resolution,
+            units=units,
+        )
         transformed_location, max_size = self.get_transformed_location(
-            location, size, level
+            location, size, read_level
         )
         patch = self.wsi_reader.read_rect(
-            transformed_location, max_size, resolution=level, units="level"
+            transformed_location, max_size, resolution=resolution, units=units
         )
         transformed_patch = self.transform_patch(patch, max_size)
 
