@@ -1258,7 +1258,7 @@ class Transformer:
 
     """
 
-    def __init__(self, wsi_reader, transform):
+    def __init__(self, wsi_reader: WSIReader, transform: np.ndarray) -> None:
         """Initialize object.
 
         Args:
