@@ -5,6 +5,7 @@ import copy
 # ! The garbage collector
 import gc
 import multiprocessing
+import os
 import pathlib
 import shutil
 
@@ -31,6 +32,11 @@ except NotImplementedError:
 def _rm_dir(path):
     """Helper func to remove directory."""
     shutil.rmtree(path, ignore_errors=True)
+
+
+def _crash_func(x):
+    """Helper to induce crash."""
+    raise ValueError("Propataion Crash.")
 
 
 def semantic_postproc_func(raw_output):
@@ -249,6 +255,30 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
+def test_empty_image(tmp_path):
+    root_save_dir = pathlib.Path(tmp_path)
+    sample_patch = np.ones((1024, 1024, 3), dtype="uint8") * 255
+    sample_patch_path = os.path.join(root_save_dir, "sample_tile.png")
+    imwrite(sample_patch_path, sample_patch)
+
+    save_dir = f"{root_save_dir}/semantic/"
+    _rm_dir(save_dir)
+
+    multi_segmentor = MultiTaskSegmentor(
+        pretrained_model="hovernetplus-oed",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=0,
+    )
+
+    _ = multi_segmentor.predict(
+        [sample_patch_path],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+
+
 def test_functionality_semantic_travis(remote_sample, tmp_path):
     """Functionality test for multi task segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
@@ -301,4 +331,52 @@ def test_functionality_semantic_travis(remote_sample, tmp_path):
     layer_map = np.load(f"{output[0][1]}.0.npy")
 
     assert layer_map is not None, "Must have some segmentations."
+    _rm_dir(tmp_path)
+
+
+def test_crash_segmentor(remote_sample, tmp_path):
+    """Test engine crash when given malformed input."""
+    root_save_dir = pathlib.Path(tmp_path)
+    sample_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
+    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
+    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+
+    save_dir = f"{root_save_dir}/multi/"
+
+    # resolution for travis testing, not the correct ones
+    resolution = 4.0
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": resolution}],
+        output_resolutions=[
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+            {"units": "mpp", "resolution": resolution},
+        ],
+        margin=128,
+        tile_shape=[512, 512],
+        patch_input_shape=[256, 256],
+        patch_output_shape=[164, 164],
+        stride_shape=[164, 164],
+    )
+    multi_segmentor = MultiTaskSegmentor(
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=2,
+        pretrained_model="hovernetplus-oed",
+    )
+
+    # * Test crash propagation when parallelize post processing
+    _rm_dir(save_dir)
+    multi_segmentor.model.postproc_func = _crash_func
+    with pytest.raises(ValueError, match=r"Crash."):
+        multi_segmentor.predict(
+            [sample_wsi_svs],
+            masks=[sample_wsi_msk],
+            mode="wsi",
+            ioconfig=ioconfig,
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+            save_dir=save_dir,
+        )
     _rm_dir(tmp_path)
