@@ -122,8 +122,8 @@ def prealignment(
     Examples:
         >>> from tiatoolbox.tools.registration.wsi_registration import prealignment
         >>> transform, transformed_image, transformed_mask, dice_overlap = prealignment(
-                fixed_thumbnail, moving_thumbnail, fixed_mask, moving_mask
-            )
+        >>>     fixed_thumbnail, moving_thumbnail, fixed_mask, moving_mask
+        >>> )
 
     """
     orig_fixed_img, orig_moving_img = fixed_img, moving_img
@@ -370,8 +370,8 @@ class DFBRegister:
         >>> moving_image = np.repeat(np.expand_dims(moving_gray, axis=2), 3, axis=2)
         >>> transform = df.register(fixed_image, moving_image, fixed_mask, moving_mask)
         >>> registered = cv2.warpAffine(
-                moving_gray, transform[0:-1], fixed_gray.shape[:2][::-1]
-            )
+        >>>     moving_gray, transform[0:-1], fixed_gray.shape[:2][::-1]
+        >>> )
 
     """
 
@@ -1153,15 +1153,15 @@ def estimate_bspline_transform(
 
     Examples:
         >>> from tiatoolbox.tools.registration.wsi_registration import (
-                estimate_bspline_transform, apply_bspline_transform
-            )
+        >>>     estimate_bspline_transform, apply_bspline_transform
+        >>> )
         >>> bspline_transform = estimate_bspline_transform(
-                fixed_gray_thumbnail, moving_gray_thumbnail, fixed_mask, moving_mask,
-                grid_space=50.0, sampling_percent=0.1,
-            )
+        >>>     fixed_gray_thumbnail, moving_gray_thumbnail, fixed_mask, moving_mask,
+        >>>     grid_space=50.0, sampling_percent=0.1,
+        >>> )
         >>> bspline_registered_image = apply_bspline_transform(
-                fixed_thumbnail, moving_thumbnail, bspline_transform
-            )
+        >>>     fixed_thumbnail, moving_thumbnail, bspline_transform
+        >>> )
 
     """
     bspline_params = {
