@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import (
+    AffineWSITransformer,
     DFBRegister,
     apply_bspline_transform,
     estimate_bspline_transform,
@@ -13,6 +14,7 @@ from tiatoolbox.tools.registration.wsi_registration import (
 )
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.misc import imread
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def test_extract_features(dfbr_features):
@@ -462,3 +464,20 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     registered_msk = apply_bspline_transform(fixed_msk, moving_msk, transform)
     mask_overlap = dice(fixed_msk, registered_msk)
     assert mask_overlap > 0.75
+
+
+def test_affine_wsi_transformer(sample_ome_tiff):
+    location = (1000, 600)  # at base level 0
+    resolution = 0
+    size = (100, 100)
+
+    wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
+    expected = wsi_reader.read_rect(
+        location, size, resolution=resolution, units="level"
+    )
+
+    transform_level0 = np.eye(3)
+    tfm = AffineWSITransformer(wsi_reader, transform_level0)
+    output = tfm.read_rect(location, size, resolution=resolution, units="level")
+
+    assert np.sum(expected - output) == 0

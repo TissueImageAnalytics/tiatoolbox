@@ -3,9 +3,9 @@ import warnings
 from numbers import Number
 from typing import Dict, Tuple, Union
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from numpy.linalg import inv
@@ -1364,8 +1364,8 @@ class AffineWSITransformer:
         points = np.array([x, y]).transpose()
         transform_points = self.transform_points(points, transform)
 
-        width = np.max(transform_points[:, 0]) - np.min(transform_points[:, 0])
-        height = np.max(transform_points[:, 1]) - np.min(transform_points[:, 1])
+        width = np.max(transform_points[:, 0]) - np.min(transform_points[:, 0]) + 1
+        height = np.max(transform_points[:, 1]) - np.min(transform_points[:, 1]) + 1
         width, height = np.ceil(width).astype(int), np.ceil(height).astype(int)
 
         return (width, height)
