@@ -89,11 +89,11 @@ Each WSI consists of a multitude of different tissue types, each containing many
 
 ### 10- Image Alignment ([10-wsi_registration](./10-wsi-registration.ipynb))
 
-This notebook presents an example to show how to use TIAToolbox for registration of an image pair using [Deep Feature Based Registration](https://arxiv.org/pdf/2202.09971.pdf) (DFBR) [1], followed by non-rigid alignment using [SimpleITK](https://simpleitk.readthedocs.io/en/master/registrationOverview.html). The registration tool in the TIAToolbox also comprises a pre-alignment step, a pre-requisite to DFBR. In particular, we will introduce the use of our registration tool `wsi_registration`.
+This notebook presents an example to show how to use TIAToolbox for registration of an image pair using [Deep Feature Based Registration](https://arxiv.org/pdf/2202.09971.pdf) (DFBR) \[1\], followed by non-rigid alignment using [SimpleITK](https://simpleitk.readthedocs.io/en/master/registrationOverview.html). The registration tool in the TIAToolbox also comprises a pre-alignment step, a pre-requisite to DFBR. In particular, we will introduce the use of our registration tool `wsi_registration`.
 
-In this example, the affine transformation is computed using thumbnails of the fixed and moving images. The estimated transformation is then used to extract corresponding tiles from both fixed and moving images at a higher magnification level. The non-rigid deformation between the two tiles is then dealt with using the SimpleITK. 
+In this example, the affine transformation is computed using thumbnails of the fixed and moving images. The estimated transformation is then used to extract corresponding tiles from both fixed and moving images at a higher magnification level. The non-rigid deformation between the two tiles is then dealt with using the SimpleITK.
 
-[1] Awan, Ruqayya, et al. "Deep Feature based Cross-slide Registration." arXiv preprint arXiv:2202.09971 (2022).
+\[1\] Awan, Ruqayya, et al. "Deep Feature based Cross-slide Registration." arXiv preprint arXiv:2202.09971 (2022).
 
 [![image](../docs/images/wsi-registration.png)](./10-wsi-registration.ipynb)
 
