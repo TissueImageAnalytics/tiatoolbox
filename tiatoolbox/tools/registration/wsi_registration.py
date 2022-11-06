@@ -3,9 +3,9 @@ import warnings
 from numbers import Number
 from typing import Dict, Tuple, Union
 
-import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
+import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from numpy.linalg import inv
