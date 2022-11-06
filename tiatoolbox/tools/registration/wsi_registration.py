@@ -1292,6 +1292,16 @@ class AffineWSITransformer:
     This class is used to resample tiles/patches from a whole slide image
     using transformation.
 
+    Example:
+        >>> from tiatoolbox.tools.registration.wsi_registration import (
+        >>> AffineWSITransformer
+        >>> )
+        >>> from tiatoolbox.wsicore.wsireader import WSIReader
+        >>> wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
+        >>> transform_level0 = np.eye(3)
+        >>> tfm = AffineWSITransformer(wsi_reader, transform_level0)
+        >>> output = tfm.read_rect(location, size, resolution=resolution, units="level")
+
     """
 
     def __init__(self, wsi_reader: WSIReader, transform: np.ndarray) -> None:
