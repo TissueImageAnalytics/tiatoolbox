@@ -510,7 +510,7 @@ class NuClick(ModelABC):
             stride=(2, 2),
         )
 
-    def forward(self, imgs: torch.Tensor):
+    def forward(self, imgs: torch.Tensor, _):
         """Logic for using layers defined in NuClick init.
 
         This method defines how layers are used in forward operation.
