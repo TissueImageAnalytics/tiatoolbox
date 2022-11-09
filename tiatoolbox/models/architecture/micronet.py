@@ -477,24 +477,6 @@ class MicroNet(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
-    @staticmethod
-    def _transform(imgs: torch.Tensor):
-        """Transforming network input to desired format.
-
-        This method is model and dataset specific, meaning that it can be replaced by
-        user's desired transform function before training/inference.
-
-        Args:
-            imgs (np.ndarray or torch.Tensor):
-                Input images, the tensor is of the shape NCHW.
-
-        Returns:
-            output (torch.Tensor):
-                The transformed input.
-
-        """
-        return imgs / 255.0
-
     def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
@@ -573,7 +555,8 @@ class MicroNet(ModelABC):
         nuc_inst_info_dict = HoVerNet.get_instance_info(canvas)
         return canvas, nuc_inst_info_dict
 
-    def preproc(self, image: np.ndarray):
+    @staticmethod
+    def preproc(image: np.ndarray):
         """Preprocessing function for MicroNet.
 
         Performs per image standardization.
@@ -588,7 +571,7 @@ class MicroNet(ModelABC):
 
         """
         image = np.transpose(image, axes=(2, 0, 1))
-        image = self._transform(image)
+        image = image / 255.0
         image = torch.from_numpy(image)
 
         image_mean = torch.mean(image, dim=(-1, -2, -3))
