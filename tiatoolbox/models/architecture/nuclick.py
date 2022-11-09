@@ -510,6 +510,7 @@ class NuClick(ModelABC):
             stride=(2, 2),
         )
 
+    # pylint: disable=W0221
     def forward(self, imgs: torch.Tensor, _):
         """Logic for using layers defined in NuClick init.
 
