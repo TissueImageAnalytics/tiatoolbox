@@ -321,7 +321,7 @@ class UNetModel(ModelABC):
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def preproc(image: torch.Tensor) -> torch.Tensor:
+    def _transform(image: torch.Tensor) -> torch.Tensor:
         """Transforming network input to desired format.
 
         This method is model and dataset specific, meaning that it can be replaced by
@@ -356,7 +356,7 @@ class UNetModel(ModelABC):
 
         """
         # transform the input using network-specific transform function
-        imgs = self.preproc(imgs)
+        imgs = self._transform(imgs)
 
         # assume output is after each down-sample resolution
         en_list = self.backbone(imgs)
