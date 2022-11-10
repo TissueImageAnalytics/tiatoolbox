@@ -511,7 +511,7 @@ class NuClick(ModelABC):
         )
 
     # pylint: disable=W0221
-    def forward(self, imgs: torch.Tensor, _):
+    def forward(self, imgs: torch.Tensor):
         """Logic for using layers defined in NuClick init.
 
         This method defines how layers are used in forward operation.
