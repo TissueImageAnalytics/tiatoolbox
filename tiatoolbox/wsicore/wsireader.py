@@ -4829,8 +4829,8 @@ class AnnotationStoreReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
-        """Read a region of the annotation mask or overlaid whole slide image
-        within given bounds.
+        """Read a region of the annotation mask, or annotated whole slide
+        image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
         resolution).
