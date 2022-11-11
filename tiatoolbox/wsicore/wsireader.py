@@ -4608,7 +4608,8 @@ class AnnotationStoreReader(WSIReader):
 
         Example:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
-            >>> # Load a WSI image and associated annotations
+            >>> # Load an annotation store and associated wsi to be
+            >>> # overlaid upon.
             >>> annotated_wsi = WSIReader.open(input_img="./CMU-1.db",
             >>>                         base_wsi="./CMU-1.ndpi")
             >>> location = (0, 0)
@@ -4734,7 +4735,9 @@ class AnnotationStoreReader(WSIReader):
         Alternatively, an instance of WSIMeta can be provided describing the
         slide the annotations are associated with (in which case annotations
         are assumed to be saved at the baseline resolution given in the metadata).
-            Example:
+
+        Example:
+
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # get metadata from the slide (could also manually create a
             >>> # WSIMeta object if you know the slide info but do not have the
