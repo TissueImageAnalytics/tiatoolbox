@@ -25,7 +25,6 @@ from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
 )
 def show_wsi(img_input, name, colour_by, colour_map):  # pragma: no cover
     """Show a slide together with any overlays."""
-
     from tiatoolbox.utils.visualization import AnnotationRenderer
     from tiatoolbox.visualization.tileserver import TileServer
 
