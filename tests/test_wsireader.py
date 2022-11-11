@@ -1882,7 +1882,7 @@ def test_tiled_tiff_tifffile(remote_sample):
     """Test fallback to tifffile for files which openslide cannot read.
 
     E.G. tiled tiffs with JPEG XL compression.
-    
+
     """
     sample_path = remote_sample("tiled-tiff-1-small-jp2k")
     wsi = wsireader.WSIReader.open(sample_path)
@@ -1965,13 +1965,21 @@ def test_store_reader_from_store(remote_sample, tmp_path):
     assert isinstance(reader.store, SQLiteStore)
 
 
+def test_store_reader_base_wsi_str(remote_sample, tmp_path):
+    """Test AnnotationStoreReader with base_wsi as a string."""
+    store = SQLiteStore(remote_sample("annotation_store_svs_1"))
+    reader = AnnotationStoreReader(store, base_wsi=remote_sample("svs-1-small"))
+    assert isinstance(reader.store, SQLiteStore)
+    assert isinstance(reader.base_wsi, WSIReader)
+
+
 def test_store_reader_alpha(remote_sample):
     """Test AnnotationStoreReader with alpha channel."""
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     store_reader = AnnotationStoreReader(
         remote_sample("annotation_store_svs_1"),
         wsi_reader.info,
-        base_wsi_reader=wsi_reader,
+        base_wsi=wsi_reader,
     )
     wsi_thumb = wsi_reader.slide_thumbnail()
     wsi_tile = wsi_reader.read_rect((500, 500), (1000, 1000))
@@ -2074,9 +2082,7 @@ class TestReader:
                         "type",
                         COLOR_DICT,
                     ),
-                    "base_wsi_reader": WSIReader.open(
-                        _fetch_remote_sample("svs-1-small")
-                    ),
+                    "base_wsi": WSIReader.open(_fetch_remote_sample("svs-1-small")),
                     "alpha": 0.5,
                 },
             },

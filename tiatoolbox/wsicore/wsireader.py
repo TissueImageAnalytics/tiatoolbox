@@ -170,6 +170,7 @@ class WSIReader:
         input_img: Union[str, pathlib.Path, np.ndarray, WSIReader],
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
+        **kwargs,
     ) -> "WSIReader":
         """Returns an appropriate :class:`.WSIReader` object.
 
@@ -221,7 +222,7 @@ class WSIReader:
         last_suffix = suffixes[-1]
 
         if last_suffix == ".db":
-            return AnnotationStoreReader(input_path)
+            return AnnotationStoreReader(input_path, **kwargs)
 
         if last_suffix in (".zarr",):
             if not is_ngff(input_path):
@@ -4463,24 +4464,24 @@ class AnnotationStoreReader(WSIReader):
     on top of its parent WSI as a virtual 'annotated slide'.
 
     Args:
-        store (AnnotatioStore | str):
+        store (AnnotationStore | str):
             An AnnotationStore or a path to an annotation store .db file.
         info (WSIMeta):
-            Metadata of the base WSi for the annotations in the store.
+            Metadata of the base WSI for the annotations in the store.
             If this is not provided, will attempt to read it read from
-            the store metadata, or the base_wsi_reader if provided.
+            the store metadata, or the base_wsi if provided.
             If no source of metadata is found, will raise an error.
         renderer (AnnotationRenderer):
             Renderer to use for rendering annotations. Providing a renderer
             allows for customisation of the rendering process. If not provided,
             a sensible default will be created.
-        base_wsi_reader (WSIReader):
-            Base WSI reader to use for reading the base WSI. Annotations
+        base_wsi (WSIReader | str):
+            Base WSI reader or path to use for reading the base WSI. Annotations
             will be rendered on top of the base WSI. If not provided,
             will render annotation masks without a base image.
         alpha (float):
             Opacity of the overlaid annotations. Must be between 0 and 1.
-            Has no effect if base_wsi_reader is not provided.
+            Has no effect if base_wsi is not provided.
 
     """
 
@@ -4489,7 +4490,7 @@ class AnnotationStoreReader(WSIReader):
         store: Union[AnnotationStore, str],
         info: Optional[WSIMeta] = None,
         renderer: AnnotationRenderer = None,
-        base_wsi_reader: WSIReader = None,
+        base_wsi: Union[WSIReader, str] = None,
         alpha=1.0,
         **kwargs,
     ):
@@ -4499,21 +4500,25 @@ class AnnotationStoreReader(WSIReader):
             if isinstance(store, (str, pathlib.Path))
             else store
         )
+        self.base_wsi = base_wsi
+        if isinstance(base_wsi, (str, pathlib.Path)):
+            self.base_wsi = WSIReader.open(base_wsi)
         if info is None:
-            if base_wsi_reader is not None:
-                # get the metadata from the base reader
-                info = base_wsi_reader.info
-            else:
-                # try to get metadata from store
-                try:
-                    self.info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
-                except KeyError:
+            # try to get metadata from store
+            try:
+                info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
+            except KeyError:
+                if self.base_wsi is not None:
+                    # get the metadata from the base reader.
+                    # assumes annotations saved at WSI baseline res
+                    info = self.base_wsi.info
+                else:
+                    # we cant find any metadata
                     raise ValueError(
                         """No metadata found in store. Please provide either
                         info or base slide."""
                     )
-        else:
-            self.info = info
+        self.info = info
         if renderer is None:
             types = self.store.pquery("props['type']")
             if len(types) == 0:
@@ -4522,9 +4527,7 @@ class AnnotationStoreReader(WSIReader):
                 renderer = AnnotationRenderer("type", list(types), max_scale=1000)
         renderer.edge_thickness = 0
         self.renderer = renderer
-        self.base_wsi_reader = base_wsi_reader
-        if base_wsi_reader is not None:
-            self.info = base_wsi_reader.info
+        if self.base_wsi is not None:
             self.on_slide = True
         self.alpha = alpha
 
@@ -4544,7 +4547,8 @@ class AnnotationStoreReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
-        """Read a region of the whole slide image at a location and size.
+        """Read a region of the annotation mask, or annotated whole slide
+        image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
         resolution), and size is the output image size.
@@ -4604,16 +4608,17 @@ class AnnotationStoreReader(WSIReader):
 
         Example:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
-            >>> # Load a WSI image
-            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> # Load a WSI image and associated annotations
+            >>> annotated_wsi = WSIReader.open(input_img="./CMU-1.db",
+            >>>                         base_wsi="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # Read a region at level 0 (baseline / full resolution)
-            >>> img = wsi.read_rect(location, size)
+            >>> img = annotated_wsi.read_rect(location, size)
             >>> # Read a region at 0.5 microns per pixel (mpp)
-            >>> img = wsi.read_rect(location, size, 0.5, "mpp")
+            >>> img = annotated_wsi.read_rect(location, size, 0.5, "mpp")
             >>> # This could also be written more verbosely as follows
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=(0.5, 0.5),
@@ -4656,12 +4661,14 @@ class AnnotationStoreReader(WSIReader):
         Examples:
 
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
-            >>> # Load a WSI image
-            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> # Load an annotation store and associated wsi to be
+            >>> # overlaid upon.
+            >>> annotated_wsi = WSIReader.open(input_img="./CMU-1.db",
+            >>>                     base_wsi="./CMU-1.ndpi")
             >>> location = (0, 0)
             >>> size = (256, 256)
             >>> # The resolution can be different in x and y, e.g.
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=(0.5, 0.75),
@@ -4671,14 +4678,14 @@ class AnnotationStoreReader(WSIReader):
             >>> # microns per pixel, pyramid/resolution level, and
             >>> # fraction of baseline.
             >>> # E.g. Read a region at an objective power of 10x
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=10,
             ...     units="power",
             ... )
             >>> # Read a region at pyramid / resolution level 1
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=1,
@@ -4689,7 +4696,7 @@ class AnnotationStoreReader(WSIReader):
             >>> # E.g. if levels 0 and 1 have a downsampling of 1x and
             >>> # 2x of baseline, then level 0.5 will correspond to a
             >>> # downsampling factor 1.5x of baseline.
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=0.5,
@@ -4697,7 +4704,7 @@ class AnnotationStoreReader(WSIReader):
             ... )
             >>> # Read a region at half of the full / baseline
             >>> # resolution.
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=0.5,
@@ -4705,7 +4712,7 @@ class AnnotationStoreReader(WSIReader):
             ... )
             >>> # Read at a higher resolution than the baseline
             >>> # (interpolation applied to output)
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=1.25,
@@ -4713,12 +4720,34 @@ class AnnotationStoreReader(WSIReader):
             ... )
             >>> # Assuming the image has a native mpp of 0.5,
             >>> # interpolation will be applied here.
-            >>> img = wsi.read_rect(
+            >>> img = annotated_wsi.read_rect(
             ...     location,
             ...     size,
             ...     resolution=0.25,
             ...     units="mpp",
             ... )
+
+        Annotations can also be displayed as a stand-alone mask not
+        overlaid on the WSI. In this case, the metadata of the store
+        must contain the resolution at which the annotations were saved
+        at, and the slide dimensions at that resolution.
+        Alternatively, an instance of WSIMeta can be provided describing the
+        slide the annotations are associated with (in which case annotations
+        are assumed to be saved at the baseline resolution given in the metadata).
+            Example:
+            >>> from tiatoolbox.wsicore.wsireader import WSIReader
+            >>> # get metadata from the slide (could also manually create a
+            >>> # WSIMeta object if you know the slide info but do not have the
+            >>> # slide itself)
+            >>> metadata = WSIReader.open("CMU-1.ndpi").info
+            >>> # Load associated annotations
+            >>> annotation_mask = WSIReader.open(input_img="./CMU-1.db", info=wsi_meta)
+            >>> location = (0, 0)
+            >>> size = (256, 256)
+            >>> # Read a region of the mask at level 0 (baseline / full resolution)
+            >>> img = annotation_mask.read_rect(location, size)
+            >>> # Read a region of the mask at 0.5 microns per pixel (mpp)
+            >>> img = annotation_mask.read_rect(location, size, 0.5, "mpp")
 
         """
         if coord_space == "resolution":
@@ -4760,9 +4789,9 @@ class AnnotationStoreReader(WSIReader):
             interpolation=interpolation,
         )
 
-        if self.base_wsi_reader is not None:
+        if self.base_wsi is not None:
             # overlay image region on the base wsi
-            base_region = self.base_wsi_reader.read_rect(
+            base_region = self.base_wsi.read_rect(
                 location,
                 size,
                 resolution=resolution,
@@ -4797,7 +4826,8 @@ class AnnotationStoreReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
-        """Read a region of the whole slide image within given bounds.
+        """Read a region of the annotation mask or overlaid whole slide image
+        within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
         resolution).
@@ -4859,10 +4889,11 @@ class AnnotationStoreReader(WSIReader):
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> from matplotlib import pyplot as plt
-            >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
+            >>> annotated_wsi = WSIReader.open(input_img="./CMU-1.db",
+            >>>                          base_wsi="./CMU-1.ndpi")
             >>> # Read a region at level 0 (baseline / full resolution)
             >>> bounds = [1000, 2000, 2000, 3000]
-            >>> img = wsi.read_bounds(bounds)
+            >>> img = annotated_wsi.read_bounds(bounds)
             >>> plt.imshow(img)
             >>> # This could also be written more verbosely as follows
             >>> img = wsi.read_bounds(
@@ -4934,9 +4965,9 @@ class AnnotationStoreReader(WSIReader):
                 scale_factor=post_read_scale,
                 output_size=size_at_requested,
             )
-        if self.base_wsi_reader is not None:
+        if self.base_wsi is not None:
             # overlay image region on the base wsi
-            base_region = self.base_wsi_reader.read_bounds(
+            base_region = self.base_wsi.read_bounds(
                 bounds,
                 resolution=resolution,
                 units=units,
