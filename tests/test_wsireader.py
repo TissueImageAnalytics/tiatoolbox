@@ -1882,6 +1882,7 @@ def test_tiled_tiff_tifffile(remote_sample):
     """Test fallback to tifffile for files which openslide cannot read.
 
     E.G. tiled tiffs with JPEG XL compression.
+    
     """
     sample_path = remote_sample("tiled-tiff-1-small-jp2k")
     wsi = wsireader.WSIReader.open(sample_path)
