@@ -122,7 +122,7 @@ def prealignment(
     Examples:
         >>> from tiatoolbox.tools.registration.wsi_registration import prealignment
         >>> transform, transformed_image, transformed_mask, dice_overlap = prealignment(
-        >>>     fixed_thumbnail, moving_thumbnail, fixed_mask, moving_mask
+        ...     fixed_thumbnail, moving_thumbnail, fixed_mask, moving_mask
         >>> )
 
     """
