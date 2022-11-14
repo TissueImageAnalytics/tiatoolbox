@@ -3,9 +3,9 @@ import warnings
 from numbers import Number
 from typing import Dict, Tuple, Union
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from numpy.linalg import inv
@@ -1007,7 +1007,7 @@ class DFBRegister:
         fixed_mask = np.uint8(fixed_mask > 0)
         moving_mask = np.uint8(moving_mask > 0)
 
-        # -- Perform Pre-alignment --
+        # Perform Pre-alignment
         if transform_initializer is None:
             transform_initializer, moving_img, moving_mask, before_dice = prealignment(
                 fixed_img, moving_img, fixed_mask, moving_mask
@@ -1022,7 +1022,7 @@ class DFBRegister:
             )
             before_dice = dice(fixed_mask, moving_mask)
 
-        # -- Estimate transform using tissue regions -- #
+        # Estimate transform using tissue regions
         (
             fixed_tissue_img,
             fixed_tissue_mask,
@@ -1049,7 +1049,7 @@ class DFBRegister:
         else:
             tissue_transform = np.eye(3, 3)
 
-        # -- Perform transform using tissue regions in a block-wise manner -- #
+        # Perform transform using tissue regions in a block-wise manner
         (
             block_transform,
             transform_tissue_img,
@@ -1069,7 +1069,7 @@ class DFBRegister:
         else:
             block_transform = np.eye(3, 3)
 
-        # -- Fix translation offset -- #
+        # Fix translation offset
         shift, _error, _diffphase = phase_cross_correlation(
             fixed_tissue_img, moving_tissue_img
         )
