@@ -371,7 +371,7 @@ class DFBRegister:
         >>> transform = df.register(fixed_image, moving_image, fixed_mask, moving_mask)
         >>> registered = cv2.warpAffine(
         ...     moving_gray, transform[0:-1], fixed_gray.shape[:2][::-1]
-        >>> )
+        ... )
 
     """
 
