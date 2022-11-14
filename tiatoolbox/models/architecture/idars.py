@@ -62,8 +62,8 @@ class IDaRS(CNNModel):
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
-    # skipcq: PYL-W0221  # noqa: E800
-    def preproc(img: np.ndarray):
+    # noqa: E800
+    def preproc(image: np.ndarray):
         """Define preprocessing steps.
 
         Args:
@@ -75,7 +75,7 @@ class IDaRS(CNNModel):
                 An image of shape HWC.
 
         """
-        img = img.copy()
-        img = TRANSFORM(img)
+        image = image.copy()
+        image = TRANSFORM(image)
         # toTensor will turn image to CHW so we transpose again
-        return img.permute(1, 2, 0)
+        return image.permute(1, 2, 0)
