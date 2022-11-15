@@ -123,3 +123,5 @@ files:
     url: [ *testdata, "annotation/CMU-1-Small-Region_detections.db"]
   rendered_annotations_svs_1:
     url: [ *testdata, "annotation/svs_1_rendered_annotations.tiff"]
+  nuclick-output:
+    url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
