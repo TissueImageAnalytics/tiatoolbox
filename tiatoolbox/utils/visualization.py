@@ -584,7 +584,7 @@ class AnnotationRenderer:
             self.blur = None
 
     @staticmethod
-    def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: int):
+    def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: float):
         """Return coords relative to top left of tile, as array suitable for cv2.
         Args:
             coords (List):
@@ -650,7 +650,7 @@ class AnnotationRenderer:
         tile: np.ndarray,
         annotation: Annotation,
         top_left: Tuple[float, float],
-        scale: int,
+        scale: float,
     ):
         """Render a polygon annotation onto a tile using cv2.
         Args:
@@ -690,7 +690,7 @@ class AnnotationRenderer:
         tile: np.ndarray,
         annotation: Annotation,
         top_left: Tuple[float, float],
-        scale: int,
+        scale: float,
     ):
         """Render a point annotation onto a tile using cv2.
         Args:
@@ -718,7 +718,7 @@ class AnnotationRenderer:
         tile: np.ndarray,
         annotation: Annotation,
         top_left: Tuple[float, float],
-        scale: int,
+        scale: float,
     ):
         """Render a line annotation onto a tile using cv2.
         Args:
@@ -759,7 +759,7 @@ class AnnotationRenderer:
         self,
         store: AnnotationStore,
         bounds: Tuple[float, float, float, float],
-        scale: int,
+        scale: float,
         res: int = 1,
         border: int = 0,
     ):
@@ -845,7 +845,7 @@ class AnnotationRenderer:
         tile: np.ndarray,
         annotation: Annotation,
         top_left: Tuple[float, float],
-        scale: int,
+        scale: float,
     ):
         """Render annotation appropriately to its geometry type.
 

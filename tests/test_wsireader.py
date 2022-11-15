@@ -1979,6 +1979,16 @@ def test_store_reader_no_types(tmp_path, remote_sample):
     assert reader.renderer.score_prop is None
 
 
+def test_store_reader_info_from_base(tmp_path, remote_sample):
+    """Test that AnnotationStoreReader will correctly get metadata
+    from a provided base_wsi if the store has no wsi metadata."""
+    SQLiteStore(tmp_path / "store.db")
+    wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
+    store_reader = AnnotationStoreReader(tmp_path / "store.db", base_wsi=wsi_reader)
+    # the store reader should have the same metadata as the base wsi
+    assert store_reader.info.mpp[0] == wsi_reader.info.mpp[0]
+
+
 def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path):
     """Test that mpp is None if scale is not in micrometers."""
     sample = _fetch_remote_sample("ngff-1")
@@ -2159,7 +2169,6 @@ class TestReader:
         wsi = reader_class(sample, **kwargs)
         location = (0, 0)
         size = np.array([1024, 1024])
-
         # Avoid testing very small levels (e.g. as in Omnyx JP2) because
         # MSE for very small levels is noisy.
         level_downsamples = [

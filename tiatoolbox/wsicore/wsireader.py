@@ -4462,6 +4462,9 @@ class AnnotationStoreReader(WSIReader):
     rendering the annotations in the specified region to be read. Can be used
     either to render annotations as a stand-alone mask, or to render annotations
     on top of its parent WSI as a virtual 'annotated slide'.
+    Note: Currently only supports annotations stored at the same resolution as
+    the parent WSI base resolution. Support for annotations stored at arbitrary
+    resolutions will be added in the future.
 
     Args:
         store (AnnotationStore | str):
@@ -4782,7 +4785,7 @@ class AnnotationStoreReader(WSIReader):
             location=location, size=baseline_read_size
         )
         im_region = self.renderer.render_annotations(
-            self.store, bounds, np.rint(self.info.level_downsamples[read_level])
+            self.store, bounds, self.info.level_downsamples[read_level]
         )
 
         im_region = utils.transforms.imresize(
@@ -4954,7 +4957,7 @@ class AnnotationStoreReader(WSIReader):
         im_region = self.renderer.render_annotations(
             self.store,
             bounds_at_baseline,
-            np.rint(self.info.level_downsamples[read_level]),
+            self.info.level_downsamples[read_level],
         )
 
         if coord_space == "resolution":
