@@ -321,20 +321,21 @@ class UNetModel(ModelABC):
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def _transform(imgs: torch.Tensor) -> torch.Tensor:
+    def _transform(image: torch.Tensor) -> torch.Tensor:
         """Transforming network input to desired format.
 
         This method is model and dataset specific, meaning that it can be replaced by
         user's desired transform function before training/inference.
 
         Args:
-            imgs (:class:`torch.Tensor`): Input images, the tensor is of the shape NCHW.
+            image (:class:`torch.Tensor`): Input images, the tensor is of the shape
+                NCHW.
 
         Returns:
             output (:class:`torch.Tensor`): The transformed input.
 
         """
-        return imgs / 255.0
+        return image / 255.0
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition

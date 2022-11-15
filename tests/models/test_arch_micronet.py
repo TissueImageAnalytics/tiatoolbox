@@ -39,9 +39,9 @@ def test_functionality(remote_sample, tmp_path):
 
 
 def test_value_error():
-    """Test to generate value error is num_classes < 2."""
+    """Test to generate value error is num_output_channels < 2."""
     with pytest.raises(ValueError, match="Number of classes should be >=2"):
-        _ = MicroNet(num_class=1)
+        _ = MicroNet(num_output_channels=1)
 
 
 @pytest.mark.skipif(
