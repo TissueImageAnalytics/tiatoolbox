@@ -591,7 +591,7 @@ class AnnotationRenderer:
                 List of coordinates in the form [x, y].
             top_left (tuple):
                 The top left corner of the tile in wsi.
-            scale (int):
+            scale (float):
                 The zoom scale at which we are rendering.
         Returns:
             np.array:
@@ -660,7 +660,7 @@ class AnnotationRenderer:
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.
-            scale (int):
+            scale (float):
                 The zoom scale at which we are rendering.
 
         """
@@ -700,7 +700,7 @@ class AnnotationRenderer:
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.
-            scale (int):
+            scale (float):
                 The zoom scale at which we are rendering.
 
         """
@@ -728,7 +728,7 @@ class AnnotationRenderer:
                 The annotation to render.
             top_left (tuple):
                 The top left corner of the tile in wsi.
-            scale (int):
+            scale (float):
                 The zoom scale at which we are rendering.
 
         """
@@ -774,7 +774,7 @@ class AnnotationRenderer:
                 The image to render the annotation on.
             bound_geom (Polygon):
                 A polygon representing the bounding box of the tile.
-            scale (int):
+            scale (float):
                 The scale at which we are rendering the tile.
         Returns:
             np.ndarray:
@@ -856,7 +856,7 @@ class AnnotationRenderer:
                 The annotation to render.
             top_left (Tuple[int, int]):
                 The top left coordinate of the tile.
-            scale (int):
+            scale (float):
                 The scale at which we are rendering the tile.
 
         """
