@@ -45,6 +45,7 @@ from typing import (
     IO,
     Any,
     Callable,
+    DefaultDict,
     Dict,
     Generator,
     Iterable,
@@ -987,7 +988,6 @@ class AnnotationStore(ABC, MutableMapping):
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
                 return eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
-
             if isinstance(select, bytes):
                 return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
 
@@ -2085,7 +2085,18 @@ class SQLiteStore(AnnotationStore):
 
         """
 
-        def add_props_to_result(result, properties):
+        def add_props_to_result(
+            result: DefaultDict[str, set], properties: Dict[str, Any]
+        ) -> None:
+            """Add the properties to the appropriate set in result.
+
+            Args:
+                result (DefaultDict[str, set]):
+                    The result dictionary to add the properties to.
+                properties (Dict[str, Any]):
+                    The properties to add to the result.
+
+            """
             # Get the selected values
             selection = select(properties)
             # Wrap scalar values into a tuple
