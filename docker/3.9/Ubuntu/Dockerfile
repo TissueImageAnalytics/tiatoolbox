@@ -1,28 +1,34 @@
-FROM ubuntu:20.04 AS builder-image
+FROM ubuntu:22.04 AS builder-image
 
 # To avoid tzdata blocking the build with frontend questions
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install --no-install-recommends -y python3.9 python3.9-dev python3.9-venv python3-pip python3-wheel build-essential && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install python3.9
+RUN : \
+    && apt-get update && apt upgrade \
+    && apt install software-properties-common -y \
+    && add-apt-repository ppa:deadsnakes/ppa -y && apt update \
+    && apt-get install -y --no-install-recommends python3.9-venv \
+    && apt-get install libpython3.9-de -y \
+    && apt-get install python3.9-dev -y \
+    && apt-get install build-essential -y \
+    && apt-get clean \
+    && :
 
-# create and activate virtual environment
-RUN python3.9 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Add env to PATH
+RUN python3.9 -m venv /venv
+ENV PATH=/venv/bin:$PATH
 
-RUN pip3 install --no-cache-dir tiatoolbox
-
-FROM ubuntu:20.04 AS runner-image
-RUN apt-get update && apt-get install --no-install-recommends -y python3.9 python3-venv \
+# install TIAToolbox and its requirements
+RUN apt-get update && apt-get install --no-install-recommends -y \
     libopenjp2-7-dev libopenjp2-tools \
     openslide-tools \
     libgl1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder-image /opt/venv /opt/venv
+RUN pip install --no-cache-dir tiatoolbox
 
 # activate virtual environment
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-CMD ["python3"]
+CMD ["python"]

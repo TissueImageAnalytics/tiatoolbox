@@ -9,5 +9,3 @@ RUN apt-get -y update && apt-get -y install --no-install-recommends \
     && pip3 --no-cache-dir install tiatoolbox \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-CMD ["python3"]
