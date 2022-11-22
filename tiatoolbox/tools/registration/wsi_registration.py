@@ -1160,7 +1160,7 @@ def estimate_bspline_transform(
         ...     grid_space=50.0, sampling_percent=0.1,
         ... )
         >>> bspline_registered_image = apply_bspline_transform(
-        >>>     fixed_thumbnail, moving_thumbnail, bspline_transform
+        ...     fixed_thumbnail, moving_thumbnail, bspline_transform
         ... )
 
     """
