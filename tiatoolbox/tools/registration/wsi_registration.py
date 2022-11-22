@@ -1161,7 +1161,7 @@ def estimate_bspline_transform(
         ... )
         >>> bspline_registered_image = apply_bspline_transform(
         >>>     fixed_thumbnail, moving_thumbnail, bspline_transform
-        >>> )
+        ... )
 
     """
     bspline_params = {
