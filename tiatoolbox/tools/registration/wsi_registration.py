@@ -1295,7 +1295,7 @@ class AffineWSITransformer:
     Example:
         >>> from tiatoolbox.tools.registration.wsi_registration import (
         >>> AffineWSITransformer
-        >>> )
+        ... )
         >>> from tiatoolbox.wsicore.wsireader import WSIReader
         >>> wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
         >>> transform_level0 = np.eye(3)
