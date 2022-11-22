@@ -1070,7 +1070,7 @@ class DFBRegister:
             block_transform = np.eye(3, 3)
 
         # Fix translation offset
-        shift, _error, _diffphase = phase_cross_correlation(
+        shift, _error, _diff_phase = phase_cross_correlation(
             fixed_tissue_img, moving_tissue_img
         )
         translation_offset = np.array([[1, 0, shift[1]], [0, 1, shift[0]], [0, 0, 1]])
