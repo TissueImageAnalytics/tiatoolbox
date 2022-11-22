@@ -1154,7 +1154,7 @@ def estimate_bspline_transform(
     Examples:
         >>> from tiatoolbox.tools.registration.wsi_registration import (
         ...     estimate_bspline_transform, apply_bspline_transform
-        >>> )
+        ... )
         >>> bspline_transform = estimate_bspline_transform(
         >>>     fixed_gray_thumbnail, moving_gray_thumbnail, fixed_mask, moving_mask,
         >>>     grid_space=50.0, sampling_percent=0.1,
