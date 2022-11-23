@@ -335,7 +335,9 @@ def group4_arch_branch(
     return nn.ModuleDict(module_dict)
 
 
-def out_arch_branch(in_ch: int, num_class: int = 2, activation: str = "softmax"):
+def out_arch_branch(
+    in_ch: int, num_output_channels: int = 2, activation: str = "softmax"
+):
     """Group5 branch for MicroNet.
 
     This branch defines architecture for auxiliary and the main output.
@@ -343,7 +345,7 @@ def out_arch_branch(in_ch: int, num_class: int = 2, activation: str = "softmax")
     Args:
         in_ch (int):
             Number of input channels.
-        num_class (int):
+        num_output_channels (int):
             Number of output channels. default=2.
         activation (str):
             Activation function, default="softmax".
@@ -361,7 +363,7 @@ def out_arch_branch(in_ch: int, num_class: int = 2, activation: str = "softmax")
         nn.Dropout2d(p=0.5),
         nn.Conv2d(
             in_ch,
-            num_class,
+            num_output_channels,
             kernel_size=(3, 3),
             stride=(1, 1),
             padding=0,
@@ -406,7 +408,7 @@ class MicroNet(ModelABC):
     Args:
         num_input_channels (int):
             Number of channels in input. default=3.
-        num_class (int):
+        num_output_channels (int):
             Number of output channels. default=2.
         out_activation (str):
             Activation to use at the output. MapDe inherits MicroNet
@@ -423,11 +425,13 @@ class MicroNet(ModelABC):
 
     """
 
-    def __init__(self, num_input_channels=3, num_class=2, out_activation="softmax"):
+    def __init__(
+        self, num_input_channels=3, num_output_channels=2, out_activation="softmax"
+    ):
         super().__init__()
-        if num_class < 2:
+        if num_output_channels < 2:
             raise ValueError("Number of classes should be >=2.")
-        self.__num_class = num_class
+        self.__num_output_channels = num_output_channels
         self.in_ch = num_input_channels
 
         module_dict = OrderedDict()
@@ -455,33 +459,23 @@ class MicroNet(ModelABC):
             512, 256, (8, 8), (8, 8), activation=out_activation
         )
 
-        module_dict["aux_out1"] = out_arch_branch(64, num_class=self.__num_class)
-        module_dict["aux_out2"] = out_arch_branch(128, num_class=self.__num_class)
-        module_dict["aux_out3"] = out_arch_branch(256, num_class=self.__num_class)
+        module_dict["aux_out1"] = out_arch_branch(
+            64, num_output_channels=self.__num_output_channels
+        )
+        module_dict["aux_out2"] = out_arch_branch(
+            128, num_output_channels=self.__num_output_channels
+        )
+        module_dict["aux_out3"] = out_arch_branch(
+            256, num_output_channels=self.__num_output_channels
+        )
 
         module_dict["out"] = out_arch_branch(
-            64 + 128 + 256, num_class=self.__num_class, activation=out_activation
+            64 + 128 + 256,
+            num_output_channels=self.__num_output_channels,
+            activation=out_activation,
         )
 
         self.layer = nn.ModuleDict(module_dict)
-
-    @staticmethod
-    def _transform(imgs: torch.Tensor):
-        """Transforming network input to desired format.
-
-        This method is model and dataset specific, meaning that it can be replaced by
-        user's desired transform function before training/inference.
-
-        Args:
-            imgs (np.ndarray or torch.Tensor):
-                Input images, the tensor is of the shape NCHW.
-
-        Returns:
-            output (torch.Tensor):
-                The transformed input.
-
-        """
-        return imgs / 255.0
 
     def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
@@ -561,7 +555,8 @@ class MicroNet(ModelABC):
         nuc_inst_info_dict = HoVerNet.get_instance_info(canvas)
         return canvas, nuc_inst_info_dict
 
-    def preproc(self, image: np.ndarray):
+    @staticmethod
+    def preproc(image: np.ndarray):
         """Preprocessing function for MicroNet.
 
         Performs per image standardization.
@@ -576,7 +571,7 @@ class MicroNet(ModelABC):
 
         """
         image = np.transpose(image, axes=(2, 0, 1))
-        image = self._transform(image)
+        image = image / 255.0
         image = torch.from_numpy(image)
 
         image_mean = torch.mean(image, dim=(-1, -2, -3))

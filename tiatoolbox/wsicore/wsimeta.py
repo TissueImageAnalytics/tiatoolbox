@@ -313,4 +313,5 @@ class WSIMeta:
             "vendor": self.vendor,
             "mpp": mpp,
             "file_path": self.file_path,
+            "axes": self.axes,
         }

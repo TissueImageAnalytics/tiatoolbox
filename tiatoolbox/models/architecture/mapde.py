@@ -56,7 +56,7 @@ class MapDe(MicroNet):
     Args:
         num_input_channels (int):
             Number of channels in input. default=3.
-        num_class (int):
+        num_classes (int):
             Number of cell classes to identify. default=1.
         min_distance (int):
             The minimal allowed distance separating peaks.
@@ -76,10 +76,10 @@ class MapDe(MicroNet):
         num_input_channels: int = 3,
         min_distance: int = 4,
         threshold_abs: float = 250,
-        num_class: int = 1,
+        num_classes: int = 1,
     ):
         super().__init__(
-            num_class=num_class * 2,
+            num_output_channels=num_classes * 2,
             num_input_channels=num_input_channels,
             out_activation="relu",
         )
@@ -198,7 +198,7 @@ class MapDe(MicroNet):
         )
 
         dist_filter = np.expand_dims(dist_filter, axis=(0, 1))  # NCHW
-        dist_filter = np.repeat(dist_filter, repeats=num_class * 2, axis=1)
+        dist_filter = np.repeat(dist_filter, repeats=num_classes * 2, axis=1)
 
         self.min_distance = min_distance
         self.threshold_abs = threshold_abs
