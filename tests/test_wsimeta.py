@@ -9,8 +9,9 @@ from tiatoolbox.wsicore import wsimeta, wsireader
 # noinspection PyTypeChecker
 def test_wsimeta_init_fail():
     """Test incorrect init for WSIMeta raises TypeError."""
+    dimensions = (None, None)
     with pytest.raises(TypeError):
-        wsimeta.WSIMeta(slide_dimensions=(None, None))
+        wsimeta.WSIMeta(slide_dimensions=dimensions)
 
 
 @pytest.mark.filterwarnings("ignore")
