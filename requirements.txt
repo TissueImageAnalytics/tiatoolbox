@@ -1,5 +1,5 @@
 # torch installation
---extra-index-url https://download.pytorch.org/whl/cu113; sys_platform != "darwin"
+--extra-index-url https://download.pytorch.org/whl/cu116; sys_platform != "darwin"
 albumentations>=1.3.0
 Click>=8.1.3
 defusedxml>=0.7.1
