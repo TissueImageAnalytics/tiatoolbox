@@ -148,6 +148,7 @@ pyright
 qtconsole
 quickstart
 reimport
+renderer
 resampling
 rescale
 rtree
