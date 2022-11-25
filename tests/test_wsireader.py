@@ -1,4 +1,3 @@
-# skipcq: PTC-W6004
 """Tests for reading whole-slide images."""
 
 import json

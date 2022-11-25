@@ -1,4 +1,3 @@
-# skipcq: PTC-W6004
 """Tests for stain normalization code."""
 
 import pathlib
@@ -51,7 +50,7 @@ def test_h_e_in_correct_order():
     he = stainextract.h_and_e_in_right_order(v1, v2)
     assert np.all(he == np.array([v1, v2]))
 
-    he = stainextract.h_and_e_in_right_order(v2, v1)
+    he = stainextract.h_and_e_in_right_order(v1=v2, v2=v1)
     assert np.all(he == np.array([v1, v2]))
 
 
