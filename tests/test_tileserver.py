@@ -115,15 +115,8 @@ def app(remote_sample, tmp_path, fill_store) -> TileServer:
         },
     )
     app.config.from_mapping({"TESTING": True})
-    # with app.test_client() as client:
-    #     response = client.get("/tileserver/setup")
-    #     #get the "user" cookie
-    #     cookie = next(
-    #         (cookie for cookie in client.cookie_jar if cookie.name == "user"),
-    #         None
-    #     )
 
-    return app  # , cookie.value
+    return app
 
 
 @pytest.fixture()
@@ -368,23 +361,6 @@ def test_update_renderer(app):
         assert response.content_type == "text/html; charset=utf-8"
         # check that the renderer has been correctly updated
         assert app.tia_pyramids["default"]["overlay"].renderer.edge_thickness == 5
-
-
-def test_update_where(app):
-    """Test updating where."""
-    with app.test_client() as client:
-        data = {
-            "types": json.dumps(["0", "2"]),
-            "filter": json.dumps("props['prob'] > 0.5"),
-        }
-        response = client.post("/tileserver/update_where", data=data)
-        assert response.status_code == 200
-        assert response.content_type == "text/html; charset=utf-8"
-        # check that the where has been correctly updated
-        layer = app.tia_pyramids["default"]["overlay"]
-        assert layer.renderer.where({"type": "0", "prob": 0.6}) is True
-        assert layer.renderer.where({"type": "0", "prob": 0.4}) is False
-        assert layer.renderer.where({"type": "1", "prob": 0.6}) is False
 
 
 def test_secondary_cmap(app):

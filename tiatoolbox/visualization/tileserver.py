@@ -1,6 +1,5 @@
 """Simple Flask WSGI apps to display tiles as slippery maps."""
-from __future__ import annotations
-
+import ast
 import copy
 import io
 import json
@@ -131,7 +130,6 @@ class TileServer(Flask):
         self.route("/tileserver/change_overlay/<overlay_path>")(self.change_overlay)
         self.route("/tileserver/commit/<save_path>")(self.commit_db)
         self.route("/tileserver/update_renderer/<prop>/<val>")(self.update_renderer)
-        self.route("/tileserver/update_where", methods=["POST"])(self.update_where)
         self.route("/tileserver/change_secondary_cmap/<type_id>/<prop>/<cmap>")(
             self.change_secondary_cmap
         )
@@ -199,10 +197,10 @@ class TileServer(Flask):
         self,
         layer: str,
         user: str,
-        tile_group: int,
+        tile_group: int,  # skipcq: PYL-w0613
         z: int,
         x: int,
-        y: int,  # skipcq: PYL-w0613
+        y: int,
         res: int,
     ) -> Response:
         """Serve a Zoomify tile for a particular layer.
@@ -248,7 +246,8 @@ class TileServer(Flask):
         image_io.seek(0)
         return send_file(image_io, mimetype="image/webp")
 
-    def update_types(self, sq: SQLiteStore):
+    @staticmethod
+    def update_types(sq: SQLiteStore):
         """Get the available types from the store."""
         types = sq.pquery("props['type']")
         if None in types:
@@ -289,7 +288,6 @@ class TileServer(Flask):
         user = self._get_user()
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
-                print(pred)
                 if pred == "None":
                     pred = None
                 layer.renderer.where = pred
@@ -301,7 +299,6 @@ class TileServer(Flask):
         user = self._get_user()
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
-                print(prop)
                 if prop == "None":
                     prop = None
                 layer.renderer.score_prop = prop
@@ -316,7 +313,7 @@ class TileServer(Flask):
             user = "default"
         else:
             user = secrets.token_urlsafe(16)
-        resp.set_cookie("user", user)
+        resp.set_cookie("user", user, httponly=True)  # skipcq: PTC-W6003
         self.renderers[user] = copy.deepcopy(self.renderer)
         self.overlaps[user] = 0
         return resp
@@ -333,7 +330,6 @@ class TileServer(Flask):
         """Change the slide for a layer."""
         user = self._get_user()
         layer_path = self.decode_safe_name(layer_path)
-        print(layer_path)
 
         self.tia_layers[user] = {layer: WSIReader.open(Path(layer_path))}
         self.tia_pyramids[user] = {
@@ -349,7 +345,7 @@ class TileServer(Flask):
         """Change the colour mapper for the overlay."""
         user = self._get_user()
         if cmap[0] == "{":
-            cmap = eval(cmap)
+            cmap = ast.literal_eval(cmap)
 
         if cmap is None:
             cmapp = cm.get_cmap("jet")
@@ -362,7 +358,6 @@ class TileServer(Flask):
 
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
-                print(cmap)
                 if cmap == "None":
                     cmap = None
                 layer.renderer.mapper = cmapp
@@ -373,7 +368,7 @@ class TileServer(Flask):
         """Change the type-specific colour mapper for the overlay."""
         user = self._get_user()
         if cmap[0] == "{":
-            cmap = eval(cmap)
+            cmap = ast.literal_eval(cmap)
 
         if cmap is None:
             cmapp = cm.get_cmap("jet")
@@ -388,7 +383,6 @@ class TileServer(Flask):
 
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
-                print(cmap)
                 if cmapp == "None":
                     cmapp = None
                 layer.renderer.secondary_cmap = cmap_dict
@@ -399,40 +393,12 @@ class TileServer(Flask):
         """Update a property in the renderer."""
         user = self._get_user()
         val = json.loads(val)
-        if val == "None" or val == "null":
+        if val in ["None", "null"]:
             val = None
         self.renderers[user].__setattr__(prop, val)
         if prop == "blur_radius":
             self.overlaps[user] = int(1.5 * val)
             self.tia_pyramids[user]["overlay"].overlap = self.overlaps[user]
-        return "done"
-
-    def update_where(self):
-        """Update the where callable in the renderer."""
-        user = self._get_user()
-        get_types = json.loads(request.form["types"])
-        filter_val = json.loads(request.form["filter"])
-
-        if filter_val == "None":
-            if len(get_types) == 0:
-                pred = None
-            else:
-
-                def pred(props):
-                    return props["type"] in get_types
-
-        else:
-            if len(get_types) == 0:
-
-                def pred(props):
-                    return eval(filter_val)
-
-            else:
-
-                def pred(props):
-                    return eval(filter_val) and props["type"] in get_types
-
-        self.renderers[user].where = pred
         return "done"
 
     def load_annotations(self, file_path, model_mpp):
@@ -444,7 +410,6 @@ class TileServer(Flask):
         """
         user = self._get_user()
         file_path = self.decode_safe_name(file_path)
-        print(file_path)
 
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
@@ -467,7 +432,6 @@ class TileServer(Flask):
         )
         self.tia_layers[user]["overlay"] = self.tia_pyramids[user]["overlay"]
         types = self.update_types(sq)
-        print(types)
         return json.dumps(types)
 
     def change_overlay(self, overlay_path):
@@ -480,12 +444,8 @@ class TileServer(Flask):
         """
         user = self._get_user()
         overlay_path = self.decode_safe_name(overlay_path)
-        print(overlay_path)
-        if overlay_path.suffix == ".geojson":
-            sq = SQLiteStore.from_geojson(overlay_path)
-        elif overlay_path.suffix == ".dat":
-            sq = store_from_dat(overlay_path)
-        elif overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
+
+        if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
             layer = f"layer{len(self.tia_pyramids[user])}"
             if overlay_path.suffix == ".tiff":
                 self.tia_layers[user][layer] = OpenSlideWSIReader(
@@ -501,6 +461,10 @@ class TileServer(Flask):
                 self.tia_layers[user][layer]
             )
             return json.dumps(layer)
+        if overlay_path.suffix == ".geojson":
+            sq = SQLiteStore.from_geojson(overlay_path)
+        elif overlay_path.suffix == ".dat":
+            sq = store_from_dat(overlay_path)
         else:
             sq = SQLiteStore(overlay_path, auto_commit=False)
 
@@ -546,7 +510,6 @@ class TileServer(Flask):
         """
         user = self._get_user()
         save_path = self.decode_safe_name(save_path)
-        print(save_path)
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
                 if layer.store.path.suffix == ".db":
