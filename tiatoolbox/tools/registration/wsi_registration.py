@@ -3,9 +3,9 @@ import warnings
 from numbers import Number
 from typing import Dict, Tuple, Union
 
+import SimpleITK as sitk  # noqa: N813
 import cv2
 import numpy as np
-import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
 from numpy.linalg import inv
@@ -1304,17 +1304,17 @@ class AffineWSITransformer:
 
     """
 
-    def __init__(self, wsi_reader: WSIReader, transform: np.ndarray) -> None:
+    def __init__(self, reader: WSIReader, transform: np.ndarray) -> None:
         """Initialize object.
 
         Args:
-            wsi_reader (WSIReader):
+            reader (WSIReader):
                 An object with base WSIReader as base class.
             transform (:class:`numpy.ndarray`):
                 A 3x3 transformation matrix.
 
         """
-        self.wsi_reader = wsi_reader
+        self.wsi_reader = reader
         self.transform_level0 = transform
 
     @staticmethod
@@ -1350,7 +1350,7 @@ class AffineWSITransformer:
                 Transformation matrix of shape (3, 3).
 
         Returns:
-            :tuple(int) - Maximum patch size needed for transformation.
+            :tuple(int) - Maximum patch size (width, height) needed for transformation.
 
         """
         width, height = size[0], size[1]
