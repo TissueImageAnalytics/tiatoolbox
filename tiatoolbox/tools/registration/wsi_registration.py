@@ -19,6 +19,7 @@ from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+IntBounds = Tuple[int, int, int, int]
 
 
 def _check_dims(
@@ -44,8 +45,8 @@ def _check_dims(
 
     Returns:
         tuple:
-            - :class:`numpy.ndarray`: A grayscale fixed image.
-            - :class:`numpy.ndarray`: A grayscale moving image.
+            - :class:`numpy.ndarray` - A grayscale fixed image.
+            - :class:`numpy.ndarray` - A grayscale moving image.
 
     """
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(moving_mask)) == 1:
@@ -66,7 +67,7 @@ def _check_dims(
     return fixed_img, moving_img
 
 
-def compute_center_of_mass(mask: np.ndarray) -> list:
+def compute_center_of_mass(mask: np.ndarray) -> tuple:
     """Compute center of mass.
 
     Args:
@@ -74,14 +75,15 @@ def compute_center_of_mass(mask: np.ndarray) -> list:
             A binary mask.
 
     Returns:
-        list:
-            x- and y- coordinates representing center of mass.
+        :py:obj:`tuple` - x- and y- coordinates representing center of mass.
+            - :py:obj:`int` - X coordinate.
+            - :py:obj:`int` - Y coordinate.
 
     """
     moments = cv2.moments(mask)
     x_coord_center = moments["m10"] / moments["m00"]
     y_coord_center = moments["m01"] / moments["m00"]
-    return [x_coord_center, y_coord_center]
+    return (x_coord_center, y_coord_center)
 
 
 def prealignment(
@@ -114,10 +116,10 @@ def prealignment(
 
     Returns:
         tuple:
-            - class:`numpy.ndarray`: A rigid transform matrix.
-            - class:`numpy.ndarray`: Transformed moving image.
-            - class:`numpy.ndarray`: Transformed moving mask.
-            - float: Dice overlap
+            - :class:`numpy.ndarray` - A rigid transform matrix.
+            - :class:`numpy.ndarray` - Transformed moving image.
+            - :class:`numpy.ndarray` - Transformed moving mask.
+            - :py:obj:`float` - Dice overlap.
 
     Examples:
         >>> from tiatoolbox.tools.registration.wsi_registration import prealignment
@@ -626,7 +628,7 @@ class DFBRegister:
         fixed_mask: np.ndarray,
         moving_image: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> Tuple[np.array, np.array, np.array, np.array, tuple]:
+    ) -> Tuple[np.array, np.array, np.array, np.array, IntBounds]:
         """Extract tissue region.
 
         This function uses binary mask for extracting tissue
@@ -644,11 +646,15 @@ class DFBRegister:
 
         Returns:
             tuple:
-                - np.ndarray - A cropped image containing tissue region.
-                - np.ndarray - A cropped image containing tissue mask.
-                - np.ndarray - A cropped image containing tissue region.
-                - np.ndarray - A cropped image containing tissue mask.
-                - tuple - Bounding box (min_row, min_col, max_row, max_col).
+                - :class:`numpy.ndarray` - A cropped image containing tissue region.
+                - :class:`numpy.ndarray` - A cropped image containing tissue mask.
+                - :class:`numpy.ndarray` - A cropped image containing tissue region.
+                - :class:`numpy.ndarray` - A cropped image containing tissue mask.
+                - :py:obj:`tuple` - Bounds of the tissue region.
+                    - :py:obj:`int` - Top (start y value)
+                    - :py:obj:`int` - Left (start x value)
+                    - :py:obj:`int` - Bottom (end y value)
+                    - :py:obj:`int` - Right (end x value)
 
         """
         fixed_minc, fixed_min_r, width, height = cv2.boundingRect(fixed_mask)
@@ -681,7 +687,7 @@ class DFBRegister:
         )
 
     @staticmethod
-    def find_points_inside_boundary(mask: np.ndarray, points: np.ndarray):
+    def find_points_inside_boundary(mask: np.ndarray, points: np.ndarray) -> np.ndarray:
         """Find indices of points lying inside the boundary.
 
         This function returns indices of points which are
@@ -1350,7 +1356,9 @@ class AffineWSITransformer:
                 Transformation matrix of shape (3, 3).
 
         Returns:
-            :tuple(int) - Maximum patch size (width, height) needed for transformation.
+            :py:obj:`tuple` - Maximum size of the patch needed for transformation.
+                - :py:obj:`int` - Width
+                - :py:obj:`int` - Height
 
         """
         width, height = size[0], size[1]
@@ -1400,8 +1408,12 @@ class AffineWSITransformer:
 
         Returns:
             tuple:
-                - tuple(int) - transformed location (top left pixel).
-                - tuple(int) - maximum size suitable for transformation.
+                - :py:obj:`tuple` - Transformed location (top left pixel).
+                    - :py:obj:`int` - X coordinate
+                    - :py:obj:`int` - Y coordinate
+                - :py:obj:`tuple` - Maximum size suitable for transformation.
+                    - :py:obj:`int` - Width
+                    - :py:obj:`int` - Height
 
         """
         inv_transform = inv(self.transform_level0)
