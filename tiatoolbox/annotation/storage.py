@@ -1129,6 +1129,7 @@ class AnnotationStore(ABC, MutableMapping):
         origin: Tuple[float, float] = (0, 0),
     ) -> "AnnotationStore":
         """Create a new database with annotations loaded from a geoJSON file.
+
         Args:
             fp (Union[IO, str, Path]):
                 The file path or handle to load from.

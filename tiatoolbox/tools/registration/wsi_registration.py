@@ -647,13 +647,13 @@ class DFBRegister:
         Returns:
             tuple:
                 - :class:`numpy.ndarray` - A cropped image containing tissue region
-                    from fixed image.
+                  from fixed image.
                 - :class:`numpy.ndarray` - A cropped image containing tissue mask
-                    from fixed image.
+                  from fixed image.
                 - :class:`numpy.ndarray` - A cropped image containing tissue region
-                    from moving image.
+                  from moving image.
                 - :class:`numpy.ndarray` - A cropped image containing tissue mask
-                    from moving image.
+                  from moving image.
                 - :py:obj:`tuple` - Bounds of the tissue region.
                     - :py:obj:`int` - Top (start y value)
                     - :py:obj:`int` - Left (start x value)
