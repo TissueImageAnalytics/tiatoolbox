@@ -1,4 +1,3 @@
-# skipcq: PTC-W6004, PYL-W0105
 """Tests for annotation store classes."""
 import json
 import pickle
@@ -1007,7 +1006,7 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            # (0, 0, 1024, 1024),
+            # (0, 0, 1024, 1024),  # noqa: E800
             where=lambda props: props.get("class")
             == 123,
         )

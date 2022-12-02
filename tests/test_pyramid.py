@@ -1,4 +1,3 @@
-# skipcq: PTC-W6004
 """Tests for tile pyramid generation."""
 import re
 from pathlib import Path
