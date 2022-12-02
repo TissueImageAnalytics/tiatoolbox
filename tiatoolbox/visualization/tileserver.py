@@ -120,7 +120,6 @@ class TileServer(Flask):
         )
         self.route("/")(self.index)
         self.route("/tileserver/setup")(self.setup)
-        self.route("/tileserver/change_predicate/<pred>")(self.change_pred)
         self.route("/tileserver/change_color_prop/<prop>")(self.change_prop)
         self.route("/tileserver/change_slide/<layer>/<layer_path>")(self.change_slide)
         self.route("/tileserver/change_cmap/<cmap>")(self.change_mapper)
@@ -146,6 +145,22 @@ class TileServer(Flask):
         if self.default_user:
             return "default"
         return request.cookies.get("user")
+
+    @staticmethod
+    def _get_cmap(cmap):
+        """Get the colourmap from the string sent."""
+        if cmap[0] == "{":
+            cmap = ast.literal_eval(cmap)
+
+        if cmap == "None":
+            return None
+        if isinstance(cmap, str):
+            return cm.get_cmap(cmap)
+
+        def cmapp(x):
+            return cmap[x]
+
+        return cmapp
 
     def _get_layer_as_wsireader(self, layer, meta):
         """Gets appropriate image provider for layer.
@@ -283,17 +298,6 @@ class TileServer(Flask):
             "index.html", title=self.tia_title, layers=json.dumps(layers)
         )
 
-    def change_pred(self, pred):
-        """Change predicate in store."""
-        user = self._get_user()
-        for layer in self.tia_pyramids[user].values():
-            if isinstance(layer, AnnotationTileGenerator):
-                if pred == "None":
-                    pred = None
-                layer.renderer.where = pred
-
-        return "done"
-
     def change_prop(self, prop):
         """Change the property to colour by."""
         user = self._get_user()
@@ -344,22 +348,10 @@ class TileServer(Flask):
     def change_mapper(self, cmap):
         """Change the colour mapper for the overlay."""
         user = self._get_user()
-        if cmap[0] == "{":
-            cmap = ast.literal_eval(cmap)
-
-        if cmap is None:
-            cmapp = cm.get_cmap("jet")
-        elif isinstance(cmap, str):
-            cmapp = cm.get_cmap(cmap)
-        elif isinstance(cmap, dict):
-
-            def cmapp(x):
-                return cmap[x]
+        cmapp = self._get_cmap(cmap)
 
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
-                if cmap == "None":
-                    cmap = None
                 layer.renderer.mapper = cmapp
 
         return "done"
@@ -367,24 +359,12 @@ class TileServer(Flask):
     def change_secondary_cmap(self, type_id, prop, cmap):
         """Change the type-specific colour mapper for the overlay."""
         user = self._get_user()
-        if cmap[0] == "{":
-            cmap = ast.literal_eval(cmap)
-
-        if cmap is None:
-            cmapp = cm.get_cmap("jet")
-        elif isinstance(cmap, str):
-            cmapp = cm.get_cmap(cmap)
-        elif isinstance(cmap, dict):
-
-            def cmapp(x):
-                return cmap[x]
+        cmapp = self._get_cmap(cmap)
 
         cmap_dict = {"type": type_id, "score_prop": prop, "mapper": cmapp}
 
         for layer in self.tia_pyramids[user].values():
             if isinstance(layer, AnnotationTileGenerator):
-                if cmapp == "None":
-                    cmapp = None
                 layer.renderer.secondary_cmap = cmap_dict
 
         return "done"

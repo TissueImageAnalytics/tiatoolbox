@@ -134,9 +134,6 @@ def empty_app(remote_sample, tmp_path, fill_store) -> TileServer:
 def layer_get_tile(app, layer) -> None:
     """Get a single tile and check the status code and content type."""
     with app.test_client() as client:
-        # with client.session_transaction() as session:
-        # set a user id without going through the login route
-        # session.cookies["user"] = "u"
         response = client.get(
             f"/tileserver/layer/{layer}/default/zoomify/TileGroup0/0-0-0@1x.jpg"
         )
@@ -284,6 +281,26 @@ def test_load_save_annotations(app, tmp_path):
     # check that the annotations have been correctly saved
     store = SQLiteStore(app.tia_pyramids["default"]["overlay"].store.path)
     assert len(store) == num_annotations + 2
+
+
+def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
+    """Test loading annotations when no annotations are present."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    with empty_app.test_client() as client:
+        user = setup_app(client)
+        response = client.get(
+            f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
+        )
+        assert response.status_code == 200
+        response = client.get(
+            f"/tileserver/load_annotations/{safe_str(tmp_path / 'test.dat')}/{0.5}"
+        )
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        assert set(json.loads(response.data)) == {0, 1}
+        # check that the 2 annotations have been correctly loaded
+        assert len(empty_app.tia_pyramids[user]["overlay"].store) == 2
 
 
 def test_change_overlay(empty_app, tmp_path, remote_sample):

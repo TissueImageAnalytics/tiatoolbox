@@ -1372,6 +1372,7 @@ def test_detect_gpu():
 
 
 def make_simple_dat(centroids=((0, 0), (100, 100))):
+    """Make a simple dat file with cells at provided centroids."""
     polys = [cell_polygon(cent) for cent in centroids]
     return {
         f"ann{i}": {
