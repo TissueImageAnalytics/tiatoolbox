@@ -1129,6 +1129,7 @@ class AnnotationStore(ABC, MutableMapping):
         origin: Tuple[float, float] = (0, 0),
     ) -> "AnnotationStore":
         """Create a new database with annotations loaded from a geoJSON file.
+
         Args:
             fp (Union[IO, str, Path]):
                 The file path or handle to load from.
@@ -1461,10 +1462,10 @@ class SQLiteStore(AnnotationStore):
     Uses and rtree index for fast spatial queries.
 
     Version History:
-    1.0.0:
-        Initial version.
-    1.0.1 (07/10/2022):
-        Added optional "area" column and queries sorted/filtered by area.
+        1.0.0:
+            Initial version.
+        1.0.1 (07/10/2022):
+            Added optional "area" column and queries sorted/filtered by area.
 
     """
 
