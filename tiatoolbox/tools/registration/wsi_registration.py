@@ -1321,7 +1321,7 @@ class AffineWSITransformer:
             reader (WSIReader):
                 An object with base WSIReader as base class.
             transform (:class:`numpy.ndarray`):
-                A 3x3 transformation matrix.
+                A 3x3 transformation matrix. The inverse transformation will be applied.
 
         """
         self.wsi_reader = reader
@@ -1453,12 +1453,11 @@ class AffineWSITransformer:
 
         """
         transform = self.transform_level0 * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]
+        translation = (-size[0] / 2 + 0.5, -size[1] / 2 + 0.5)
         forward_translation = np.array(
-            [[1, 0, -size[0] / 2], [0, 1, -size[1] / 2], [0, 0, 1]]
+            [[1, 0, translation[0]], [0, 1, translation[1]], [0, 0, 1]]
         )
-        inverse_translation = np.array(
-            [[1, 0, size[0] / 2], [0, 1, size[1] / 2], [0, 0, 1]]
-        )
+        inverse_translation = np.linalg.inv(forward_translation)
         transform = inverse_translation @ transform @ forward_translation
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 

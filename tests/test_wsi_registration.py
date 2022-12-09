@@ -467,17 +467,26 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
 
 
 def test_affine_wsi_transformer(sample_ome_tiff):
-    location = (1000, 600)  # at base level 0
+    test_locations = [(1001, 600), (1000, 500), (800, 701)]  # at base level 0
     resolution = 0
     size = (100, 100)
 
-    wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
-    expected = wsi_reader.read_rect(
-        location, size, resolution=resolution, units="level"
-    )
+    for location in test_locations:
+        wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
+        expected = wsi_reader.read_rect(
+            location, size, resolution=resolution, units="level"
+        )
 
-    transform_level0 = np.eye(3)
-    tfm = AffineWSITransformer(wsi_reader, transform_level0)
-    output = tfm.read_rect(location, size, resolution=resolution, units="level")
+        transform_level0 = np.array(
+            [
+                [0, -1, location[0] + location[1] + size[1]],
+                [1, 0, location[1] - location[0]],
+                [0, 0, 1],
+            ]
+        )
+        tfm = AffineWSITransformer(wsi_reader, transform_level0)
+        output = tfm.read_rect(location, size, resolution=resolution, units="level")
 
-    assert np.sum(expected - output) == 0
+        expected = cv2.rotate(expected, cv2.ROTATE_90_CLOCKWISE)
+
+        assert np.sum(expected - output) == 0
