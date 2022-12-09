@@ -45,6 +45,7 @@ from typing import (
     IO,
     Any,
     Callable,
+    DefaultDict,
     Dict,
     Generator,
     Iterable,
@@ -987,7 +988,6 @@ class AnnotationStore(ABC, MutableMapping):
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
                 return eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
-
             if isinstance(select, bytes):
                 return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
 
@@ -1129,6 +1129,7 @@ class AnnotationStore(ABC, MutableMapping):
         origin: Tuple[float, float] = (0, 0),
     ) -> "AnnotationStore":
         """Create a new database with annotations loaded from a geoJSON file.
+
         Args:
             fp (Union[IO, str, Path]):
                 The file path or handle to load from.
@@ -1461,10 +1462,10 @@ class SQLiteStore(AnnotationStore):
     Uses and rtree index for fast spatial queries.
 
     Version History:
-    1.0.0:
-        Initial version.
-    1.0.1 (07/10/2022):
-        Added optional "area" column and queries sorted/filtered by area.
+        1.0.0:
+            Initial version.
+        1.0.1 (07/10/2022):
+            Added optional "area" column and queries sorted/filtered by area.
 
     """
 
@@ -2085,7 +2086,18 @@ class SQLiteStore(AnnotationStore):
 
         """
 
-        def add_props_to_result(result, properties):
+        def add_props_to_result(
+            result: DefaultDict[str, set], properties: Dict[str, Any]
+        ) -> None:
+            """Add the properties to the appropriate set in result.
+
+            Args:
+                result (DefaultDict[str, set]):
+                    The result dictionary to add the properties to.
+                properties (Dict[str, Any]):
+                    The properties to add to the result.
+
+            """
             # Get the selected values
             selection = select(properties)
             # Wrap scalar values into a tuple
