@@ -40,7 +40,7 @@ def git_branch_modified_paths() -> Set[Path]:
                 "git",
                 "diff",
                 "--name-only",
-                from_to,
+                "origin/HEAD...HEAD",
             ]
         )
         .decode()
