@@ -27,7 +27,7 @@ def git_branch_modified_paths() -> Set[Path]:
                 "git",
                 "diff",
                 "--name-only",
-                "develop",
+                "origin/develop",
             ]
         )
         .decode()
