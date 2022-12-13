@@ -11,7 +11,7 @@ def main(files: List[Path]) -> bool:
     """Check each file in the list of files for valid Python."""
     passed = True
     for path in files:
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             notebook = json.load(fh)
         for n, cell in enumerate(notebook["cells"]):
             if cell["cell_type"] != "code":

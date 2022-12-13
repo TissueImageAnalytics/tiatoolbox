@@ -96,7 +96,7 @@ def main(files: List[Path]) -> bool:
         print(path)
         file_changed = False
         # Load the notebook
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             notebook = json.load(fh)
         # Check each cell
         for cell_num, cell in enumerate(notebook["cells"]):
