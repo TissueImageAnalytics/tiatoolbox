@@ -6,7 +6,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Set
 
 
 def git_branch_name() -> str:
@@ -16,6 +16,32 @@ def git_branch_name() -> str:
         .decode()
         .strip()
     )
+
+
+def git_branch_modified_paths() -> Set[Path]:
+    """Get a set of file paths modified on this branch vs develop."""
+    return {
+        Path(p)
+        for p in subprocess.check_output(
+            [
+                "git",
+                "diff",
+                "--name-only",
+                "develop",
+            ]
+        )
+        .decode()
+        .strip()
+        .splitlines()
+    }
+
+
+def git_previous_commit_modified_paths() -> Set[Path]:
+    """Get a set of file paths modified in the previous commit."""
+    return {
+        Path(p)
+        for p in subprocess.check_output(["git", "diff", "--name-only", "HEAD~"])
+    }
 
 
 @dataclass(frozen=True)
@@ -45,7 +71,12 @@ REPLACEMENTS = [
 def main(files: List[Path]) -> bool:
     """Check that URLs in the notebook are relative to the current branch."""
     passed = True
+    modified_paths = git_branch_modified_paths().union(
+        git_previous_commit_modified_paths()
+    )
     for path in files:
+        if path not in modified_paths:
+            continue
         print(path)
         file_changed = False
         # Load the notebook
