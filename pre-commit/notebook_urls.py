@@ -41,6 +41,9 @@ def git_previous_commit_modified_paths() -> Set[Path]:
     return {
         Path(p)
         for p in subprocess.check_output(["git", "diff", "--name-only", "HEAD~"])
+        .decode()
+        .strip()
+        .splitlines()
     }
 
 
