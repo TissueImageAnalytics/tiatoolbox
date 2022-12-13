@@ -20,6 +20,19 @@ def git_branch_name() -> str:
 
 def git_branch_modified_paths() -> Set[Path]:
     """Get a set of file paths modified on this branch vs develop."""
+    import os
+
+    from_ref = (
+        os.environ.get("PRE_COMMIT_FROM_REF")
+        or os.environ.get("PRE_COMMIT_SOURCE")
+        or "develop"
+    )
+    to_ref = (
+        os.environ.get("PRE_COMMIT_TO_REF")
+        or os.environ.get("PRE_COMMIT_ORIGIN")
+        or "HEAD"
+    )
+    from_to = (f"{from_ref}...{to_ref}",)
     return {
         Path(p)
         for p in subprocess.check_output(
@@ -27,7 +40,7 @@ def git_branch_modified_paths() -> Set[Path]:
                 "git",
                 "diff",
                 "--name-only",
-                "origin/develop",
+                from_to,
             ]
         )
         .decode()
