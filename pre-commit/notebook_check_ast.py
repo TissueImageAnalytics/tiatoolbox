@@ -16,7 +16,7 @@ def main(files: List[Path]) -> bool:
         for n, cell in enumerate(notebook["cells"]):
             if cell["cell_type"] != "code":
                 continue
-            source = "".join([x for x in cell["source"] if x[0] not in ("#", "%", "!")])
+            source = "".join([x for x in cell["source"] if x[0] not in r"#%!"])
             try:
                 ast.parse(source)
             except SyntaxError as e:
