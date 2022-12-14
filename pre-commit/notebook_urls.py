@@ -30,7 +30,7 @@ def git_branch_modified_paths() -> Set[Path]:
     to_ref = (
         os.environ.get("PRE_COMMIT_TO_REF")
         or os.environ.get("PRE_COMMIT_ORIGIN")
-        or "HEAD"
+        or git_branch_name()
     )
     from_to = (f"{from_ref}...{to_ref}",)
     return {
@@ -40,7 +40,7 @@ def git_branch_modified_paths() -> Set[Path]:
                 "git",
                 "diff",
                 "--name-only",
-                "origin/HEAD...HEAD",
+                from_to,
             ]
         )
         .decode()
