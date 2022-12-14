@@ -32,7 +32,7 @@ def git_branch_modified_paths() -> Set[Path]:
         or os.environ.get("PRE_COMMIT_ORIGIN")
         or git_branch_name()
     )
-    from_to = (f"{from_ref}...{to_ref}",)
+    from_to = f"{from_ref}...{to_ref}"
     return {
         Path(p)
         for p in subprocess.check_output(
