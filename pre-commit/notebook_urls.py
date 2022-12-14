@@ -121,7 +121,13 @@ def replace_line(line: str) -> str:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check notebook URLs")
-    parser.add_argument("files", nargs="+", help="Path to notebook(s)", type=Path)
+    parser.add_argument(
+        "files",
+        nargs="+",
+        help="Path to notebook(s)",
+        type=Path,
+        default=list(Path.cwd().rglob("*.ipynb")),
+    )
     parser.add_argument(
         "-f", "--from-ref", help="Reference to diff from", type=str, default="develop"
     )
