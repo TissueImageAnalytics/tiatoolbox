@@ -19,6 +19,6 @@ jobs:
             - name: Run URL Replace Script
               run: |
                   python pre-commit/notebook_urls.py \
-                  --from_ref $GITHUB_BASE_REF \
-                  --to_ref $GITHUB_HEAD_REF  \
+                  -f $GITHUB_BASE_REF \
+                  -t $GITHUB_HEAD_REF  \
                   files `find examples -type f -name "*.ipynb"`
