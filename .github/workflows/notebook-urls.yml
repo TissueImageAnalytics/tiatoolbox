@@ -17,7 +17,4 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v2
             - name: Run URL Replace Script
-              run: |
-                  python pre-commit/notebook_urls.py \
-                  -f $GITHUB_BASE_REF \
-                  -t $GITHUB_HEAD_REF
+              run: python pre-commit/notebook_urls.py -f $GITHUB_BASE_REF -t $GITHUB_HEAD_REF
