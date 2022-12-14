@@ -1,3 +1,8 @@
+ci:
+  autofix_prs: true
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: 'weekly'
+  skip: [notebook-urls]
 repos:
   - repo: local
     hooks:
@@ -18,7 +23,6 @@ repos:
         entry: python pre-commit/notebook_urls.py
         types_or: [jupyter]
         language: python
-        stages: [push]
       - id: notebook-markdown-format
         name: notebook markdown format
         entry: python pre-commit/notebook_markdown_format.py
