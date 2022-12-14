@@ -4,7 +4,7 @@ name: Notebook URLs
 
 on:
     push:
-        paths: ["*.ipynb"]
+        paths: ["examples/**"]
 
 jobs:
     build:
