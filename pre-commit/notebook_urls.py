@@ -18,21 +18,9 @@ def git_branch_name() -> str:
     )
 
 
-def git_branch_modified_paths() -> Set[Path]:
+def git_branch_modified_paths(from_ref: str, to_ref: str) -> Set[Path]:
     """Get a set of file paths modified on this branch vs develop."""
-    import os
-
-    from_ref = (
-        os.environ.get("PRE_COMMIT_FROM_REF")
-        or os.environ.get("PRE_COMMIT_SOURCE")
-        or "develop"
-    )
-    to_ref = (
-        os.environ.get("PRE_COMMIT_TO_REF")
-        or os.environ.get("PRE_COMMIT_ORIGIN")
-        or "HEAD"
-    )
-    from_to = (f"{from_ref}...{to_ref}",)
+    from_to = f"{from_ref}...{to_ref}"
     return {
         Path(p)
         for p in subprocess.check_output(
@@ -40,7 +28,7 @@ def git_branch_modified_paths() -> Set[Path]:
                 "git",
                 "diff",
                 "--name-only",
-                "origin/HEAD...HEAD",
+                from_to,
             ]
         )
         .decode()
@@ -63,8 +51,8 @@ def git_previous_commit_modified_paths() -> Set[Path]:
 @dataclass(frozen=True)
 class Replacement:
     pattern: str
-    replacement: str
-    main_replacement: str = None
+    replace: str
+    main_replace: str = None
 
 
 MAIN_BRANCHES = ("master", "main")
@@ -84,12 +72,12 @@ REPLACEMENTS = [
 ]
 
 
-def main(files: List[Path]) -> bool:
+def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
     """Check that URLs in the notebook are relative to the current branch."""
     passed = True
-    modified_paths = git_branch_modified_paths().union(
-        git_previous_commit_modified_paths()
-    )
+    print(from_ref, to_ref)
+    modified_paths = git_branch_modified_paths(from_ref, to_ref)
+    print(modified_paths)
     for path in files:
         if path not in modified_paths:
             continue
@@ -124,15 +112,31 @@ def replace_line(line: str) -> str:
         if re.match(r.pattern, line):
             # Replace matches
             if GIT_REV in MAIN_BRANCHES:
-                line = re.sub(r.pattern, r.main_replacement, line)
+                line = re.sub(r.pattern, r.main_replace, line)
             else:
-                line = re.sub(r.pattern, r.replacement, line)
+                line = re.sub(r.pattern, r.replace, line)
             print(line)
     return line
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check notebook URLs")
-    parser.add_argument("files", nargs="+", help="Path to notebook(s)", type=Path)
+    parser.add_argument(
+        "files",
+        nargs="+",
+        help="Path to notebook(s)",
+        type=Path,
+        default=list(Path.cwd().rglob("*.ipynb")),
+    )
+    parser.add_argument(
+        "-f", "--from-ref", help="Reference to diff from", type=str, default="develop"
+    )
+    parser.add_argument(
+        "-t",
+        "--to-ref",
+        help="Reference to diff to",
+        type=str,
+        default=git_branch_name(),
+    )
     args = parser.parse_args()
-    sys.exit(1 - main(args.files))
+    sys.exit(1 - main(args.files, args.from_ref, args.to_ref))
