@@ -747,8 +747,10 @@ class WSIReader:
                 "there is no information about 'objective_power' in WSI meta data."
             )
 
-    def _prepare_output_dict(self, input_unit, input_res, baseline_mpp, baseline_power):
-        # calculate the output_res based on input_unit and resolution
+    def _prepare_output_dict(
+        self, input_unit, input_res, baseline_mpp, baseline_power
+    ) -> dict:
+        """Calculate output_res as dictionary based on input_unit and resolution."""
         output_dict = {
             "mpp": None,
             "power": None,
@@ -2532,7 +2534,7 @@ class VirtualWSIReader(WSIReader):
             self._m_info = info
 
     def _info(self):
-        """Visual Field meta data getter.
+        """Visual Field metadata getter.
 
         This generates a WSIMeta object for the slide if none exists.
         There is 1 level with dimensions equal to the image and no mpp,
@@ -3125,7 +3127,7 @@ class TIFFWSIReader(WSIReader):
         def parse_svs_tag(string: str) -> Tuple[str, Union[Number, str]]:
             """Parse SVS key-value string.
 
-            Infers types of data by trial and error with a fallback to
+            Infers type(s) of data by trial and error with a fallback to
             the original string type.
 
             Args:
@@ -3148,9 +3150,11 @@ class TIFFWSIReader(WSIReader):
             value = value_string.strip()
 
             def us_date(string: str) -> datetime:
+                """Returns datetime parsed according to US date format."""
                 return datetime.strptime(string, r"%m/%d/%y")
 
             def time(string: str) -> datetime:
+                """Returns datetime parsed according to HMS format."""
                 return datetime.strptime(string, r"%H:%M:%S")
 
             casting_precedence = [us_date, time, int, float]
@@ -3774,7 +3778,13 @@ class DICOMWSIReader(WSIReader):
         self.wsi = WsiDicom.open(input_img)
 
     def _info(self) -> WSIMeta:
+        """WSI metadata constructor.
 
+        Returns:
+            WSIMeta:
+                Containing metadata.
+
+        """
         level_dimensions = [
             (level.size.width, level.size.height) for level in self.wsi.levels
         ]
@@ -3821,7 +3831,7 @@ class DICOMWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4288,6 +4298,13 @@ class NGFFWSIReader(WSIReader):
         }
 
     def _info(self):
+        """WSI metadata constructor.
+
+        Returns:
+            WSIMeta:
+                Containing metadata.
+
+        """
         multiscales = self.zattrs.multiscales
         return WSIMeta(
             axes="".join(axis.name.upper() for axis in multiscales.axes),
