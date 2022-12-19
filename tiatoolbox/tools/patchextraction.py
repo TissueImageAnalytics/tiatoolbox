@@ -289,7 +289,7 @@ class PatchExtractor(PatchExtractorABC):
         if isinstance(coordinate_resolution, (int, float)):
             coordinate_resolution = [coordinate_resolution, coordinate_resolution]
 
-        if not (0 <= min_mask_ratio <= 1):
+        if not 0 <= min_mask_ratio <= 1:
             raise ValueError("`min_mask_ratio` must be between 0 and 1.")
 
         # define default mask_resolution based on the input `coordinate_units`
