@@ -460,6 +460,7 @@ class PatchExtractor(PatchExtractorABC):
         stride_shape = np.array(stride_shape)
 
         def validate_shape(shape):
+            """Tests if the shape is valid for an image."""
             return (
                 not np.issubdtype(shape.dtype, np.integer)
                 or np.size(shape) > 2
