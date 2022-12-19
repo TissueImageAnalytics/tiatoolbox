@@ -443,7 +443,7 @@ class WSIReader:
         the desired resolution would require a large amount of memory
         and be very slow. This function checks the other resolutions
         stored in the WSI's pyramid of resolutions to find the lowest
-        resolution (smallest level) which is higher resolution (a larger
+        resolution (the smallest level) which is higher resolution (a larger
         level) than the requested output resolution.
 
         In addition to finding this 'optimal level', the scale factor to
@@ -789,7 +789,7 @@ class WSIReader:
         This function accepts a resolution and its units in the input
         and converts it to all other units ('mpp', 'power', 'baseline').
         To achieve resolution in 'mpp' and 'power' units in the output,
-        WSI meta data should contain `mpp` and `objective_power`
+        WSI metadata should contain `mpp` and `objective_power`
         information, respectively.
 
         Args:
@@ -802,8 +802,8 @@ class WSIReader:
                 and 'level'. output_unit (str): the desired unit to
                 which we want to convert the `input_res`. Acceptable
                 values for `output_unit` are: 'mpp', 'power', and
-                'baseline'. If `output_unit` is not provided, all of the
-                conversions to all of the mentioned units will be
+                'baseline'. If `output_unit` is not provided, all the
+                conversions to all the mentioned units will be
                 returned in a dictionary.
             output_unit (str):
                 Units of scale, Supported units are:
@@ -818,8 +818,8 @@ class WSIReader:
                 Either a float which is the converted `input_res` to the
                 desired `output_unit` or a dictionary containing the
                 converted `input_res` to all acceptable units (`'mpp'`,
-                `'power'`, `'baseline'`). If there is not enough meta
-                data to calculate a unit (like `mpp` or `power`), they
+                `'power'`, `'baseline'`). If there is not enough metadata
+                to calculate a unit (like `mpp` or `power`), they
                 will be set to None in the dictionary.
 
         """
@@ -937,7 +937,7 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1127,7 +1127,7 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1516,7 +1516,7 @@ class OpenSlideWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1717,7 +1717,7 @@ class OpenSlideWSIReader(WSIReader):
         im_region = wsi.read_region(location, read_level, level_size)
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         im_region = utils.image.crop_and_pad_edges(
             bounds=utils.transforms.locsize2bounds(level_location, level_size),
             max_dimensions=self.info.level_dimensions[read_level],
@@ -1754,7 +1754,7 @@ class OpenSlideWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1883,7 +1883,7 @@ class OpenSlideWSIReader(WSIReader):
         )
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         im_region = utils.image.crop_and_pad_edges(
             bounds=bounds_at_read_level,
             max_dimensions=self.info.level_dimensions[read_level],
@@ -1945,7 +1945,7 @@ class OpenSlideWSIReader(WSIReader):
         except KeyError:
             warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
 
-        # Return None value if cannot be determined.
+        # Return None value if metadata cannot be determined.
         return None
 
     def _info(self):
@@ -2039,7 +2039,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -2274,7 +2274,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -2601,7 +2601,7 @@ class VirtualWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -2832,7 +2832,7 @@ class VirtualWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -3390,7 +3390,7 @@ class TIFFWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -3623,7 +3623,7 @@ class TIFFWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4041,7 +4041,7 @@ class DICOMWSIReader(WSIReader):
         im_region = wsi.read_region(location, read_level, constrained_read_size)
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         level_read_bounds = utils.transforms.locsize2bounds(
             level_location, level_read_size
         )
@@ -4081,7 +4081,7 @@ class DICOMWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4217,7 +4217,7 @@ class DICOMWSIReader(WSIReader):
         )
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         im_region = utils.image.crop_and_pad_edges(
             bounds=bounds_at_read_level,
             max_dimensions=self.info.level_dimensions[read_level],
@@ -4579,7 +4579,7 @@ class AnnotationStoreReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4861,7 +4861,7 @@ class AnnotationStoreReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
