@@ -3027,6 +3027,8 @@ class ArrayView:
 
 
 class TIFFWSIReader(WSIReader):
+    """Define Tiff WSI Reader."""
+
     def __init__(
         self,
         input_img: Union[str, pathlib.Path, np.ndarray],
@@ -3756,6 +3758,8 @@ class TIFFWSIReader(WSIReader):
 
 
 class DICOMWSIReader(WSIReader):
+    """Defines DICOM WSI Reader."""
+
     wsidicom = None
 
     def __init__(

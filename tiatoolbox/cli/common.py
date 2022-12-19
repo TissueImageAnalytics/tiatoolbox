@@ -353,6 +353,8 @@ def cli_verbose(
 
 
 class TIAToolboxCLI(click.Group):
+    """Defines TIAToolbox Commandline Interface Click group."""
+
     def __init__(self, *args, **kwargs):
         super(TIAToolboxCLI, self).__init__(*args, **kwargs)
         self.help = "Computational pathology toolbox by TIA Centre."
