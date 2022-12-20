@@ -215,7 +215,7 @@ def test_patch_dataset_crash(tmp_path):
         predefined_preproc_func("secret-dataset")
 
 
-def test_wsi_patch_dataset(sample_wsi_dict):
+def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -357,11 +357,12 @@ def test_wsi_patch_dataset(sample_wsi_dict):
     )
     negative_mask = imread(mini_wsi_msk)
     negative_mask = np.zeros_like(negative_mask)
-    imwrite("negative_mask.png", negative_mask)
+    negative_mask_path = tmp_path / "negative_mask.png"
+    imwrite(negative_mask_path, negative_mask)
     with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
         ds = WSIPatchDataset(
             img_path=mini_wsi_svs,
-            mask_path="negative_mask.png",
+            mask_path=negative_mask_path,
             mode="wsi",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
@@ -369,7 +370,6 @@ def test_wsi_patch_dataset(sample_wsi_dict):
             resolution=1.0,
             units="mpp",
         )
-    shutil.rmtree("negative_mask.png", ignore_errors=True)
 
     # * for tile
     reader = WSIReader.open(mini_wsi_jpg)
@@ -424,15 +424,15 @@ def test_patch_dataset_abc():
 
     # test setter and getter
     assert ds.preproc_func(1) == 1
-    ds.preproc_func = lambda x: x - 1
+    ds.preproc_func = lambda x: x - 1  # skipcq: PYL-W0201
     assert ds.preproc_func(1) == 0
     assert ds.preproc(1) == 1, "Must be unchanged!"
-    ds.preproc_func = None
+    ds.preproc_func = None  # skipcq: PYL-W0201
     assert ds.preproc_func(2) == 2
 
     # test assign uncallable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
-        ds.preproc_func = 1
+        ds.preproc_func = 1  # skipcq: PYL-W0201
 
 
 # -------------------------------------------------------------------------------------

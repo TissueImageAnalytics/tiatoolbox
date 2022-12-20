@@ -1,4 +1,3 @@
-# skipcq: PTC-W6004
 """Tests for tile pyramid generation."""
 import re
 from pathlib import Path
@@ -173,7 +172,7 @@ def test_sub_tile_levels():
     wsi = wsireader.VirtualWSIReader(array)
 
     class MockTileGenerator(pyramid.TilePyramidGenerator):
-        def tile_path(self, level: int, x: int, y: int) -> Path:
+        def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
             return Path(level, x, y)
 
         @property
