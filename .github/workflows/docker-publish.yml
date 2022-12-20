@@ -15,8 +15,6 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - dockerfile: ./docker/3.7/Debian/Dockerfile
-            mtag: py3.7-debian
           - dockerfile: ./docker/3.8/Debian/Dockerfile
             mtag: py3.8-debian
           - dockerfile: ./docker/3.9/Debian/Dockerfile
