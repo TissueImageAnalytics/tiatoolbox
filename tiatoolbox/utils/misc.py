@@ -880,7 +880,7 @@ def store_from_dat(
             eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
             For multi-head output, should be a dict of dicts, eg:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
-                'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
+            'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
         origin (Tuple[float, float]):
             The x and y coordinates to use as the origin for the annotations.
         cls (AnnotationStore):
@@ -998,7 +998,7 @@ def add_from_dat(
 ) -> None:
     """Add annotations from a .dat file to an existing store.
 
-    Make a best effort to create valid shapely geometries from provided contours.
+    Make the best effort to create valid shapely geometries from provided contours.
 
     Args:
         fp (Union[IO, str, Path]):
@@ -1013,9 +1013,9 @@ def add_from_dat(
             replaced by the corresponding value. Useful for providing descriptive
             names to non-descriptive types,
             eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
-            For multi-head output, should be a dict of dicts, eg:
+            For multi-head output, should be a dict of dicts, e.g.:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
-                'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
+            'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
         origin [float, float]:
             The x and y coordinates to use as the origin for the annotations.
 
