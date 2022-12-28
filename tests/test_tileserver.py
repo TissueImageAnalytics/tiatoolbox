@@ -231,18 +231,21 @@ def test_setup(app):
 def test_color_prop(app):
     """Test endpoint to change property to color by."""
     with app.test_client() as client:
-        response = client.get("/tileserver/change_color_prop/test_prop")
+        response = client.put("/tileserver/change_color_prop/test_prop")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the color prop has been correctly set
         assert app.tia_pyramids["default"]["overlay"].renderer.score_prop == "test_prop"
+
+        response = client.put("/tileserver/change_color_prop/None")
+        assert app.tia_pyramids["default"]["overlay"].renderer.score_prop is None
 
 
 def test_change_slide(app, remote_sample):
     """Test changing slide."""
     slide_path = remote_sample("svs-1-small")
     with app.test_client() as client:
-        response = client.get(f"/tileserver/change_slide/slide/{safe_str(slide_path)}")
+        response = client.put(f"/tileserver/change_slide/slide/{safe_str(slide_path)}")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the slide has been correctly changed
@@ -253,12 +256,19 @@ def test_change_slide(app, remote_sample):
 def test_change_cmap(app):
     """Test changing colormap."""
     with app.test_client() as client:
-        response = client.get("/tileserver/change_cmap/Reds")
+        response = client.put("/tileserver/change_cmap/Reds")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the colormap has been correctly changed
         layer = app.tia_pyramids["default"]["overlay"]
         assert layer.renderer.mapper(0.5) == cm.get_cmap("Reds")(0.5)
+
+        response = client.put("/tileserver/change_cmap/None")
+        assert layer.renderer.mapper is None
+
+        cdict = {"type1": (1, 0, 0), "type2": (0, 1, 0)}
+        response = client.put(f"/tileserver/change_cmap/{json.dumps(cdict)}")
+        assert layer.renderer.mapper("type2") == [0, 1, 0]
 
 
 def test_load_save_annotations(app, tmp_path):
@@ -267,7 +277,7 @@ def test_load_save_annotations(app, tmp_path):
     joblib.dump(data, tmp_path / "test.dat")
     with app.test_client() as client:
         num_annotations = len(app.tia_pyramids["default"]["overlay"].store)
-        response = client.get(
+        response = client.put(
             f"/tileserver/load_annotations/{safe_str(tmp_path / 'test.dat')}/{0.5}"
         )
         assert response.status_code == 200
@@ -289,11 +299,11 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
     joblib.dump(data, tmp_path / "test.dat")
     with empty_app.test_client() as client:
         user = setup_app(client)
-        response = client.get(
+        response = client.put(
             f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
-        response = client.get(
+        response = client.put(
             f"/tileserver/load_annotations/{safe_str(tmp_path / 'test.dat')}/{0.5}"
         )
         assert response.status_code == 200
@@ -315,11 +325,11 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
     overlay_path = remote_sample("svs-1-small")
     with empty_app.test_client() as client:
         user = setup_app(client)
-        response = client.get(
+        response = client.put(
             f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
-        response = client.get(f"/tileserver/change_overlay/{safe_str(geo_path)}")
+        response = client.put(f"/tileserver/change_overlay/{safe_str(geo_path)}")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the annotations have been correctly loaded
@@ -327,11 +337,11 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
 
         # reset tileserver and load overlay from .db instead
         response = client.get("tileserver/reset")
-        response = client.get(
+        response = client.put(
             f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
-        response = client.get(f"/tileserver/change_overlay/{safe_str(sample_store)}")
+        response = client.put(f"/tileserver/change_overlay/{safe_str(sample_store)}")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
@@ -339,7 +349,7 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         assert len(empty_app.tia_pyramids[user]["overlay"].store) == num_annotations
 
         # add another image layer
-        response = client.get(f"/tileserver/change_overlay/{safe_str(overlay_path)}")
+        response = client.put(f"/tileserver/change_overlay/{safe_str(overlay_path)}")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the overlay has been correctly added
@@ -354,11 +364,11 @@ def test_commit(empty_app, tmp_path, remote_sample):
     joblib.dump(data, tmp_path / "test.dat")
     with empty_app.test_client() as client:
         setup_app(client)
-        response = client.get(
+        response = client.put(
             f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
-        response = client.get(
+        response = client.put(
             f"/tileserver/change_overlay/{safe_str(tmp_path / 'test.dat')}"
         )
         assert response.status_code == 200
@@ -373,17 +383,21 @@ def test_commit(empty_app, tmp_path, remote_sample):
 def test_update_renderer(app):
     """Test updating renderer."""
     with app.test_client() as client:
-        response = client.get("/tileserver/update_renderer/edge_thickness/5")
+        response = client.put("/tileserver/update_renderer/edge_thickness/5")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the renderer has been correctly updated
         assert app.tia_pyramids["default"]["overlay"].renderer.edge_thickness == 5
 
+        response = client.put("/tileserver/update_renderer/blur_radius/5")
+        assert app.tia_pyramids["default"]["overlay"].renderer.blur_radius == 5
+        assert app.overlaps["default"] == int(5 * 1.5)
+
 
 def test_secondary_cmap(app):
     """Test secondary cmap."""
     with app.test_client() as client:
-        response = client.get("/tileserver/change_secondary_cmap/0/prob/Reds")
+        response = client.put("/tileserver/change_secondary_cmap/0/prob/Reds")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the renderer has been correctly updated
@@ -396,7 +410,7 @@ def test_secondary_cmap(app):
 def test_get_props(app):
     """Test getting props."""
     with app.test_client() as client:
-        response = client.get("/tileserver/get_props")
+        response = client.get("/tileserver/get_prop_names")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert set(json.loads(response.data)) == {"prob", "type"}

@@ -119,20 +119,32 @@ class TileServer(Flask):
             self.zoomify,
         )
         self.route("/")(self.index)
-        self.route("/tileserver/setup")(self.setup)
-        self.route("/tileserver/change_color_prop/<prop>")(self.change_prop)
-        self.route("/tileserver/change_slide/<layer>/<layer_path>")(self.change_slide)
-        self.route("/tileserver/change_cmap/<cmap>")(self.change_mapper)
-        self.route("/tileserver/load_annotations/<file_path>/<float:model_mpp>")(
-            self.load_annotations
+        self.route("/tileserver/get_user")(self.get_user)
+        self.route("/tileserver/change_color_prop/<prop>", methods=["PUT"])(
+            self.change_prop
         )
-        self.route("/tileserver/change_overlay/<overlay_path>")(self.change_overlay)
+        self.route("/tileserver/change_slide/<layer>/<layer_path>", methods=["PUT"])(
+            self.change_slide
+        )
+        self.route("/tileserver/change_cmap/<cmap>", methods=["PUT"])(
+            self.change_mapper
+        )
+        self.route(
+            "/tileserver/load_annotations/<file_path>/<float:model_mpp>",
+            methods=["PUT"],
+        )(self.load_annotations)
+        self.route("/tileserver/change_overlay/<overlay_path>", methods=["PUT"])(
+            self.change_overlay
+        )
         self.route("/tileserver/commit/<save_path>")(self.commit_db)
-        self.route("/tileserver/update_renderer/<prop>/<val>")(self.update_renderer)
-        self.route("/tileserver/change_secondary_cmap/<type_id>/<prop>/<cmap>")(
-            self.change_secondary_cmap
+        self.route("/tileserver/update_renderer/<prop>/<val>", methods=["PUT"])(
+            self.update_renderer
         )
-        self.route("/tileserver/get_props")(self.get_properties)
+        self.route(
+            "/tileserver/change_secondary_cmap/<type_id>/<prop>/<cmap>", methods=["PUT"]
+        )(self.change_secondary_cmap)
+        self.route("/tileserver/get_prop_names")(self.get_properties)
+        self.route("/tileserver/get_prop_values/<prop>")(self.get_property_values)
         self.route("/tileserver/reset")(self.reset)
 
     def _get_user(self):
@@ -309,8 +321,8 @@ class TileServer(Flask):
 
         return "done"
 
-    def setup(self):
-        """Setup the tileserver."""
+    def get_user(self):
+        """Setup a user."""
         # respond with a random cookie
         resp = make_response("done")
         if self.default_user:
@@ -465,21 +477,38 @@ class TileServer(Flask):
         types = self.update_types(sq)
         return json.dumps(types)
 
-    def get_properties(self, where_type=None):
+    def get_properties(self, where=None):
         """Get all the properties of the annotations in the store."""
         user = self._get_user()
-        where = None
-        if where_type is not None:
-            where = (f'props["type"]="{where_type}"',)
+        if where == "None":
+            where = None
+        if where is not None:
+            where = (f'props["type"]="{where}"',)
         ann_props = self.tia_pyramids[user]["overlay"].store.pquery(
             select="*",
             where=where,
             unique=False,
         )
+        # import pdb; pdb.set_trace()
         props = []
         for prop_dict in ann_props.values():
             props.extend(list(prop_dict.keys()))
         return json.dumps(list(set(props)))
+
+    def get_property_values(self, prop, where=None):
+        """Get all the values of a property in the store."""
+        user = self._get_user()
+        if where == "None":
+            where = None
+        if where is not None:
+            where = (f'props["type"]="{where}"',)
+        ann_props = self.tia_pyramids[user]["overlay"].store.pquery(
+            select=f"props['{prop}']",
+            where=where,
+            unique=True,
+        )
+        # import pdb; pdb.set_trace()
+        return json.dumps(list(ann_props))
 
     def commit_db(self, save_path):
         """Commit changes to the current store.

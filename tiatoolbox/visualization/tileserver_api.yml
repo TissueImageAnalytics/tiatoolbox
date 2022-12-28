@@ -1,0 +1,302 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: tiatoolbox tileserver API
+  description: A simple API to get tiles from a WSI, together with rendered
+    annotations. Provides endpoints to get tiles from different layers,
+    specify the path to the resource to be displayed, and control aspects of the
+    AnnotationRenderer used to render the annotations.
+
+servers:
+  - url: https://localhost:5000/tileserver
+    description: Development server
+
+security:
+  - BasicAuth: []
+
+paths:
+  /layer/{layer}/{user}/zoomify/TileGroup{tile_group}/{z}-{x}-{y}@{res}x.webp:
+    get:
+      description: Returns a tile from the specified layer at requested zoom level and tile location.
+      parameters:
+        - name: layer
+          in: path
+          description: The layer to get the tile from
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/user'
+        - name: tile_group
+          in: path
+          description: Not currently used, exist for backwards compatibility
+          required: true
+          schema:
+            type: integer
+        - name: z
+          in: path
+          description: The zoom level of the tile. 0 is most zoomed out.
+          required: true
+          schema:
+            type: integer
+        - name: x
+          in: path
+          description: The x location of the tile
+          required: true
+          schema:
+            type: integer
+        - name: y
+          in: path
+          description: The y location of the tile
+          required: true
+          schema:
+            type: integer
+        - name: res
+          in: path
+          description: The resolution of the tile (1x or 2x)
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully returned a tile image
+          content:
+            image/webp:
+              schema:
+                type: image
+
+        '404':
+          description: The requested tile does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Tile not found
+
+  /:
+    get:
+      description: Returns index page
+      responses:
+        '200':
+          description: Successfully returned index page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /get_user:
+    get:
+      description: Returns the user currently logged in
+      responses:
+        '200':
+          description: Successfully returned user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: string
+                    description: The user currently logged in
+
+  /change_color_prop/{prop}:
+    put:
+      description: Changes the color property used to color the annotations
+      parameters:
+        - name: prop
+          in: path
+          description: The property to use to color the annotations
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully changed color property
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: done
+
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    Artist:
+      type: object
+      required:
+        - username
+      properties:
+        artist_name:
+          type: string
+        artist_genre:
+            type: string
+        albums_recorded:
+            type: integer
+        username:
+            type: string
+
+  #  ----- Added lines  ----------------------------------------
+  parameters:
+    PageLimit:
+      name: limit
+      in: query
+      description: Limits the number of items on a page
+      schema:
+        type: integer
+
+    PageOffset:
+      name: offset
+      in: query
+      description: Specifies the page number of the artists to be displayed
+      schema:
+        type: integer
+
+  responses:
+    400Error:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+  #  ---- /Added lines  ----------------------------------------
+
+
+
+
+
+
+
+
+paths:
+  /artists:
+    get:
+      description: Returns a list of artists
+      parameters:
+        #  ----- Added line  ------------------------------------------
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+        #  ---- /Added line  ------------------------------------------
+      responses:
+        '200':
+          description: Successfully returned a list of artists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  #  ----- Added line  --------------------------------
+                  $ref: '#/components/schemas/Artist'
+                  #  ---- /Added line  --------------------------------
+        '400':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/400Error'
+          #  ---- /Added line  ----------------------------------------
+
+    post:
+      description: Lets a user post a new artist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              #  ----- Added line  ------------------------------------
+              $ref: '#/components/schemas/Artist'
+              #  ---- /Added line  ------------------------------------
+      responses:
+        '200':
+          description: Successfully created a new artist
+        '400':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/400Error'
+          #  ---- /Added line  ----------------------------------------
+
+  /artists/{username}:
+    get:
+      description: Obtain information about an artist from his or her unique username
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Successfully returned an artist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  artist_name:
+                    type: string
+                  artist_genre:
+                    type: string
+                  albums_recorded:
+                    type: integer
+
+        '400':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/400Error'
+          #  ---- /Added line  ----------------------------------------
+
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    Artist:
+      type: object
+      required:
+        - username
+      properties:
+        artist_name:
+          type: string
+        artist_genre:
+            type: string
+        albums_recorded:
+            type: integer
+        username:
+            type: string
+
+  #  ----- Added lines  ----------------------------------------
+  parameters:
+    PageLimit:
+      name: limit
+      in: query
+      description: Limits the number of items on a page
+      schema:
+        type: integer
+
+    PageOffset:
+      name: offset
+      in: query
+      description: Specifies the page number of the artists to be displayed
+      schema:
+        type: integer
+
+  responses:
+    400Error:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+  #  ---- /Added lines  ----------------------------------------
