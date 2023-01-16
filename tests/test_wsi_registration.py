@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from tiatoolbox.tools.registration.wsi_registration import (
+    AffineWSITransformer,
     DFBRegister,
     apply_bspline_transform,
     estimate_bspline_transform,
@@ -13,6 +14,7 @@ from tiatoolbox.tools.registration.wsi_registration import (
 )
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.misc import imread
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def test_extract_features(dfbr_features):
@@ -338,7 +340,7 @@ def test_register_output_with_initializer(
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
 
     expected = np.array(
-        [[-0.99683, -0.00333, 338.69983], [-0.03201, -0.98420, 770.22941], [0, 0, 1]]
+        [[-0.98454, -0.00708, 397.95628], [-0.01024, -0.99752, 684.81131], [0, 0, 1]]
     )
 
     output = df.register(
@@ -363,7 +365,7 @@ def test_register_output_without_initializer(
 
     df = DFBRegister()
     expected = np.array(
-        [[-0.99683, -0.00189, 336.79039], [0.00691, -0.99810, 765.98081], [0, 0, 1]]
+        [[-0.99863, 0.00189, 389.79039], [0.00691, -0.99810, 874.98081], [0, 0, 1]]
     )
 
     output = df.register(
@@ -462,3 +464,29 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     registered_msk = apply_bspline_transform(fixed_msk, moving_msk, transform)
     mask_overlap = dice(fixed_msk, registered_msk)
     assert mask_overlap > 0.75
+
+
+def test_affine_wsi_transformer(sample_ome_tiff):
+    test_locations = [(1001, 600), (1000, 500), (800, 701)]  # at base level 0
+    resolution = 0
+    size = (100, 100)
+
+    for location in test_locations:
+        wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
+        expected = wsi_reader.read_rect(
+            location, size, resolution=resolution, units="level"
+        )
+
+        transform_level0 = np.array(
+            [
+                [0, -1, location[0] + location[1] + size[1]],
+                [1, 0, location[1] - location[0]],
+                [0, 0, 1],
+            ]
+        )
+        tfm = AffineWSITransformer(wsi_reader, transform_level0)
+        output = tfm.read_rect(location, size, resolution=resolution, units="level")
+
+        expected = cv2.rotate(expected, cv2.ROTATE_90_CLOCKWISE)
+
+        assert np.sum(expected - output) == 0

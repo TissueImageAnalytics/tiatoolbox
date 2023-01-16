@@ -234,8 +234,7 @@ def test_sub_tile_levels(fill_store, tmp_path):
     class MockTileGenerator(AnnotationTileGenerator):
         """Mock generator with specific subtile_level."""
 
-        @staticmethod
-        def tile_path(level: int, x: int, y: int) -> Path:
+        def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
             """Tile path."""
             return Path(level, x, y)
 
