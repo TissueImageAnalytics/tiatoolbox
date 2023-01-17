@@ -239,6 +239,7 @@ class SQLJSONDictionary(SQLExpression):
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):
+        """Returns SQLTriplet specified by key."""
         return SQLTriplet(self[key], "if_null", default or SQLNone())
 
 
@@ -264,6 +265,7 @@ class SQLRegex(SQLExpression):
 
     @classmethod
     def search(cls, pattern: str, string: str, flags: int = 0) -> "SQLRegex":
+        """Returns an SQL expression to match a string against a pattern."""
         return SQLRegex(pattern, string, int(flags))
 
 
