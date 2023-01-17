@@ -32,7 +32,7 @@ repos:
       - mdformat-gfm  # GitHub flavoured markdown
       - mdformat-black  # Black formatting for python verbatim blocks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v4.4.0
     hooks:
       - id: check-ast               # Simply checks whether the files parse as valid Python.
       - id: fix-byte-order-marker   # Removes utf-8 byte order marker.
