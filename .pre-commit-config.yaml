@@ -54,7 +54,7 @@ repos:
       - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source.
       - id: pretty-format-json      # Sets a standard for formatting JSON files.
   - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.9.0
+    rev: v1.10.0
     hooks:
       - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
       - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon.
