@@ -49,7 +49,7 @@ class TissueMasker(ABC):
 
         """
         if not self.fitted:
-            raise Exception("Fit must be called before transform.")
+            raise SyntaxError("Fit must be called before transform.")
 
     def fit_transform(self, images: np.ndarray, **kwargs) -> np.ndarray:
         """Perform :func:`fit` then :func:`transform`.

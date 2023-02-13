@@ -419,7 +419,6 @@ class PatchPredictor:
             "labels": [],
         }
         for _, batch_data in enumerate(dataloader):
-
             batch_output_probabilities = self.model.infer_batch(
                 model, batch_data["image"], on_gpu
             )

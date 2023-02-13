@@ -96,7 +96,6 @@ class TileServer(Flask):
             self.tia_pyramids["default"] = {}
             self.renderers["default"] = copy.deepcopy(self.renderer)
         for i, (key, layer) in enumerate(layers.items()):
-
             layer = self._get_layer_as_wsireader(layer, meta)
 
             self.tia_layers["default"][key] = layer
