@@ -60,7 +60,7 @@ repos:
       - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon.
       - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst.
   - repo: https://github.com/pycqa/isort
-    rev: 5.11.4
+    rev: 5.12.0
     hooks:
       - id: isort
   - repo: https://github.com/psf/black
