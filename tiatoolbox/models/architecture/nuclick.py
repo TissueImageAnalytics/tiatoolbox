@@ -61,7 +61,6 @@ class ConvBnRelu(nn.Module):
         activation: str = "relu",
         do_batchnorm: bool = True,
     ):
-
         super().__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)

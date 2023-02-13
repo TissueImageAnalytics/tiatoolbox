@@ -190,7 +190,7 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
     )
     SQLiteStore()
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
-    with pytest.raises(Exception, match="RTREE and JSON1"):
+    with pytest.raises(EnvironmentError, match="RTREE and JSON1"):
         SQLiteStore()
 
 
@@ -199,7 +199,7 @@ def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
     monkeypatch.setattr(
         SQLiteStore, "compile_options", lambda x: ["OMIT_JSON"], raising=True
     )
-    with pytest.raises(Exception, match="JSON must not"):
+    with pytest.raises(EnvironmentError, match="JSON must not"):
         SQLiteStore()
 
 
@@ -232,7 +232,7 @@ def test_sqlite_store_index_version_error(monkeypatch):
     """Test adding an index with SQlite <3.9."""
     store = SQLiteStore()
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
-    with pytest.raises(Exception, match="Requires sqlite version 3.9.0"):
+    with pytest.raises(EnvironmentError, match="Requires sqlite version 3.9.0"):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
@@ -300,7 +300,7 @@ def test_sqlite_drop_index_error(fill_store, tmp_path):
 def test_sqlite_store_unsupported_compression(sample_triangle):
     """Test that using an unsupported compression str raises error."""
     store = SQLiteStore(compression="foo")
-    with pytest.raises(Exception, match="Unsupported"):
+    with pytest.raises(ValueError, match="Unsupported"):
         _ = store.serialise_geometry(sample_triangle)
 
 
@@ -321,7 +321,7 @@ def test_sqlite_store_no_compression(sample_triangle):
 def test_sqlite_store_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
-    with pytest.raises(Exception, match="Unsupported"):
+    with pytest.raises(ValueError, match="Unsupported"):
         _ = store.deserialize_geometry(bytes())
 
 

@@ -649,7 +649,12 @@ class WSIReader:
         """
         wsi_shape_at_baseline = self.info.slide_dimensions
         # Find parameters for optimal read
-        (_, _, wsi_shape_at_resolution, _,) = self._find_read_bounds_params(
+        (
+            _,
+            _,
+            wsi_shape_at_resolution,
+            _,
+        ) = self._find_read_bounds_params(
             [0, 0] + list(wsi_shape_at_baseline), resolution, units, precisions
         )
         return wsi_shape_at_resolution
@@ -2373,7 +2378,12 @@ class OmnyxJP2WSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
@@ -2783,7 +2793,13 @@ class VirtualWSIReader(WSIReader):
             )
 
         # Find parameters for optimal read
-        (_, _, _, _, baseline_read_size,) = self.find_read_rect_params(
+        (
+            _,
+            _,
+            _,
+            _,
+            baseline_read_size,
+        ) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -3722,7 +3738,12 @@ class TIFFWSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
@@ -4437,7 +4458,12 @@ class NGFFWSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
@@ -4961,7 +4987,12 @@ class AnnotationStoreReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
