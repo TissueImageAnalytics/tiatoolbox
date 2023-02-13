@@ -1775,7 +1775,7 @@ def test_arrayview_unsupported_axes():
     """Test unsupported axes in ArrayView."""
     array = zarr.ones((128, 128, 3))
     array_view = ArrayView(array=array, axes="FOO")
-    with pytest.raises(Exception, match="Unsupported axes"):
+    with pytest.raises(ValueError, match="Unsupported axes"):
         array_view[:64, :64, :]
 
 
@@ -1783,7 +1783,7 @@ def test_arrayview_unsupported_axes_shape(sample_ome_tiff, monkeypatch):
     """Test accessing an unspported axes in TIFFWSIReader._shape_channels_last."""
     wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
     monkeypatch.setattr(wsi, "_axes", "FOO")
-    with pytest.raises(Exception, match="Unsupported axes"):
+    with pytest.raises(ValueError, match="Unsupported axes"):
         _ = wsi._info()
 
 
