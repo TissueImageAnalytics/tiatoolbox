@@ -443,7 +443,7 @@ class WSIReader:
         the desired resolution would require a large amount of memory
         and be very slow. This function checks the other resolutions
         stored in the WSI's pyramid of resolutions to find the lowest
-        resolution (smallest level) which is higher resolution (a larger
+        resolution (the smallest level) which is higher resolution (a larger
         level) than the requested output resolution.
 
         In addition to finding this 'optimal level', the scale factor to
@@ -649,7 +649,12 @@ class WSIReader:
         """
         wsi_shape_at_baseline = self.info.slide_dimensions
         # Find parameters for optimal read
-        (_, _, wsi_shape_at_resolution, _,) = self._find_read_bounds_params(
+        (
+            _,
+            _,
+            wsi_shape_at_resolution,
+            _,
+        ) = self._find_read_bounds_params(
             [0, 0] + list(wsi_shape_at_baseline), resolution, units, precisions
         )
         return wsi_shape_at_resolution
@@ -747,8 +752,10 @@ class WSIReader:
                 "there is no information about 'objective_power' in WSI meta data."
             )
 
-    def _prepare_output_dict(self, input_unit, input_res, baseline_mpp, baseline_power):
-        # calculate the output_res based on input_unit and resolution
+    def _prepare_output_dict(
+        self, input_unit, input_res, baseline_mpp, baseline_power
+    ) -> dict:
+        """Calculate output_res as dictionary based on input_unit and resolution."""
         output_dict = {
             "mpp": None,
             "power": None,
@@ -787,7 +794,7 @@ class WSIReader:
         This function accepts a resolution and its units in the input
         and converts it to all other units ('mpp', 'power', 'baseline').
         To achieve resolution in 'mpp' and 'power' units in the output,
-        WSI meta data should contain `mpp` and `objective_power`
+        WSI metadata should contain `mpp` and `objective_power`
         information, respectively.
 
         Args:
@@ -800,8 +807,8 @@ class WSIReader:
                 and 'level'. output_unit (str): the desired unit to
                 which we want to convert the `input_res`. Acceptable
                 values for `output_unit` are: 'mpp', 'power', and
-                'baseline'. If `output_unit` is not provided, all of the
-                conversions to all of the mentioned units will be
+                'baseline'. If `output_unit` is not provided, all the
+                conversions to all the mentioned units will be
                 returned in a dictionary.
             output_unit (str):
                 Units of scale, Supported units are:
@@ -816,8 +823,8 @@ class WSIReader:
                 Either a float which is the converted `input_res` to the
                 desired `output_unit` or a dictionary containing the
                 converted `input_res` to all acceptable units (`'mpp'`,
-                `'power'`, `'baseline'`). If there is not enough meta
-                data to calculate a unit (like `mpp` or `power`), they
+                `'power'`, `'baseline'`). If there is not enough metadata
+                to calculate a unit (like `mpp` or `power`), they
                 will be set to None in the dictionary.
 
         """
@@ -935,7 +942,7 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1125,7 +1132,7 @@ class WSIReader:
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1505,7 +1512,7 @@ class OpenSlideWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1706,7 +1713,7 @@ class OpenSlideWSIReader(WSIReader):
         im_region = wsi.read_region(location, read_level, level_size)
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         im_region = utils.image.crop_and_pad_edges(
             bounds=utils.transforms.locsize2bounds(level_location, level_size),
             max_dimensions=self.info.level_dimensions[read_level],
@@ -1743,7 +1750,7 @@ class OpenSlideWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -1872,7 +1879,7 @@ class OpenSlideWSIReader(WSIReader):
         )
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         im_region = utils.image.crop_and_pad_edges(
             bounds=bounds_at_read_level,
             max_dimensions=self.info.level_dimensions[read_level],
@@ -1934,7 +1941,7 @@ class OpenSlideWSIReader(WSIReader):
         except KeyError:
             warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
 
-        # Return None value if cannot be determined.
+        # Return None value if metadata cannot be determined.
         return None
 
     def _info(self):
@@ -2028,7 +2035,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -2263,7 +2270,7 @@ class OmnyxJP2WSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -2362,7 +2369,12 @@ class OmnyxJP2WSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
@@ -2523,7 +2535,7 @@ class VirtualWSIReader(WSIReader):
             self._m_info = info
 
     def _info(self):
-        """Visual Field meta data getter.
+        """Visual Field metadata getter.
 
         This generates a WSIMeta object for the slide if none exists.
         There is 1 level with dimensions equal to the image and no mpp,
@@ -2590,7 +2602,7 @@ class VirtualWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -2772,7 +2784,13 @@ class VirtualWSIReader(WSIReader):
             )
 
         # Find parameters for optimal read
-        (_, _, _, _, baseline_read_size,) = self.find_read_rect_params(
+        (
+            _,
+            _,
+            _,
+            _,
+            baseline_read_size,
+        ) = self.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -2821,7 +2839,7 @@ class VirtualWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -3018,6 +3036,8 @@ class ArrayView:
 
 
 class TIFFWSIReader(WSIReader):
+    """Define Tiff WSI Reader."""
+
     def __init__(
         self,
         input_img: Union[str, pathlib.Path, np.ndarray],
@@ -3114,7 +3134,7 @@ class TIFFWSIReader(WSIReader):
         def parse_svs_tag(string: str) -> Tuple[str, Union[Number, str]]:
             """Parse SVS key-value string.
 
-            Infers types of data by trial and error with a fallback to
+            Infers type(s) of data by trial and error with a fallback to
             the original string type.
 
             Args:
@@ -3137,9 +3157,11 @@ class TIFFWSIReader(WSIReader):
             value = value_string.strip()
 
             def us_date(string: str) -> datetime:
+                """Returns datetime parsed according to US date format."""
                 return datetime.strptime(string, r"%m/%d/%y")
 
             def time(string: str) -> datetime:
+                """Returns datetime parsed according to HMS format."""
                 return datetime.strptime(string, r"%H:%M:%S")
 
             casting_precedence = [us_date, time, int, float]
@@ -3375,7 +3397,7 @@ class TIFFWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -3608,7 +3630,7 @@ class TIFFWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -3707,7 +3729,12 @@ class TIFFWSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
@@ -3747,6 +3774,8 @@ class TIFFWSIReader(WSIReader):
 
 
 class DICOMWSIReader(WSIReader):
+    """Defines DICOM WSI Reader."""
+
     wsidicom = None
 
     def __init__(
@@ -3761,7 +3790,13 @@ class DICOMWSIReader(WSIReader):
         self.wsi = WsiDicom.open(input_img)
 
     def _info(self) -> WSIMeta:
+        """WSI metadata constructor.
 
+        Returns:
+            WSIMeta:
+                Containing metadata.
+
+        """
         level_dimensions = [
             (level.size.width, level.size.height) for level in self.wsi.levels
         ]
@@ -3808,7 +3843,7 @@ class DICOMWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4018,7 +4053,7 @@ class DICOMWSIReader(WSIReader):
         im_region = wsi.read_region(location, read_level, constrained_read_size)
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         level_read_bounds = utils.transforms.locsize2bounds(
             level_location, level_read_size
         )
@@ -4058,7 +4093,7 @@ class DICOMWSIReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4194,7 +4229,7 @@ class DICOMWSIReader(WSIReader):
         )
         im_region = np.array(im_region)
 
-        # Apply padding outside of the slide area
+        # Apply padding outside the slide area
         im_region = utils.image.crop_and_pad_edges(
             bounds=bounds_at_read_level,
             max_dimensions=self.info.level_dimensions[read_level],
@@ -4275,6 +4310,13 @@ class NGFFWSIReader(WSIReader):
         }
 
     def _info(self):
+        """WSI metadata constructor.
+
+        Returns:
+            WSIMeta:
+                Containing metadata.
+
+        """
         multiscales = self.zattrs.multiscales
         return WSIMeta(
             axes="".join(axis.name.upper() for axis in multiscales.axes),
@@ -4407,7 +4449,12 @@ class NGFFWSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?
@@ -4549,7 +4596,7 @@ class AnnotationStoreReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4831,7 +4878,7 @@ class AnnotationStoreReader(WSIReader):
 
         Reads can be performed at different resolutions by supplying a
         pair of arguments for the resolution and the units of
-        resolution. If meta data does not specify `mpp` or
+        resolution. If metadata does not specify `mpp` or
         `objective_power` then `baseline` units should be selected with
         resolution 1.0
 
@@ -4931,7 +4978,12 @@ class AnnotationStoreReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            (read_level, _, _, post_read_scale,) = self._find_read_bounds_params(
+            (
+                read_level,
+                _,
+                _,
+                post_read_scale,
+            ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
         else:  # duplicated portion with VirtualReader, factoring out ?

@@ -1,4 +1,3 @@
-# skipcq: PTC-W6004, PYL-W0105
 """Tests for annotation store classes."""
 import json
 import pickle
@@ -191,7 +190,7 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
     )
     SQLiteStore()
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
-    with pytest.raises(Exception, match="RTREE and JSON1"):
+    with pytest.raises(EnvironmentError, match="RTREE and JSON1"):
         SQLiteStore()
 
 
@@ -200,7 +199,7 @@ def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
     monkeypatch.setattr(
         SQLiteStore, "compile_options", lambda x: ["OMIT_JSON"], raising=True
     )
-    with pytest.raises(Exception, match="JSON must not"):
+    with pytest.raises(EnvironmentError, match="JSON must not"):
         SQLiteStore()
 
 
@@ -233,7 +232,7 @@ def test_sqlite_store_index_version_error(monkeypatch):
     """Test adding an index with SQlite <3.9."""
     store = SQLiteStore()
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
-    with pytest.raises(Exception, match="Requires sqlite version 3.9.0"):
+    with pytest.raises(EnvironmentError, match="Requires sqlite version 3.9.0"):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
@@ -301,7 +300,7 @@ def test_sqlite_drop_index_error(fill_store, tmp_path):
 def test_sqlite_store_unsupported_compression(sample_triangle):
     """Test that using an unsupported compression str raises error."""
     store = SQLiteStore(compression="foo")
-    with pytest.raises(Exception, match="Unsupported"):
+    with pytest.raises(ValueError, match="Unsupported"):
         _ = store.serialise_geometry(sample_triangle)
 
 
@@ -322,7 +321,7 @@ def test_sqlite_store_no_compression(sample_triangle):
 def test_sqlite_store_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
-    with pytest.raises(Exception, match="Unsupported"):
+    with pytest.raises(ValueError, match="Unsupported"):
         _ = store.deserialize_geometry(bytes())
 
 
@@ -1007,7 +1006,7 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            # (0, 0, 1024, 1024),
+            # (0, 0, 1024, 1024),  # noqa: E800
             where=lambda props: props.get("class")
             == 123,
         )
@@ -1205,9 +1204,9 @@ class TestStore:
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py37_init(fill_store, store_cls, monkeypatch):
-        """Test that __init__ is compatible with Python 3.7."""
-        py37_version = (3, 7, 0)
+    def test_py38_init(fill_store, store_cls, monkeypatch):
+        """Test that __init__ is compatible with Python 3.8."""
+        py38_version = (3, 8, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""
@@ -1216,7 +1215,7 @@ class TestStore:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 
-        monkeypatch.setattr(sys, "version_info", py37_version)
+        monkeypatch.setattr(sys, "version_info", py38_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
 

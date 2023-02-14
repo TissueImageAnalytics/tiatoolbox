@@ -104,9 +104,9 @@ class WSIMeta:
     ):
         self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None
-        self.slide_dimensions = tuple([int(x) for x in slide_dimensions])
+        self.slide_dimensions = tuple(int(x) for x in slide_dimensions)
         self.level_dimensions = (
-            tuple([(int(w), int(h)) for w, h in level_dimensions])
+            tuple((int(w), int(h)) for w, h in level_dimensions)
             if level_dimensions is not None
             else [self.slide_dimensions]
         )
@@ -144,7 +144,7 @@ class WSIMeta:
         if len(set(self.axes) - set(self._valid_axes_characters)) > 0:
             warnings.warn(
                 "Axes contains invalid characters. "
-                f"Valid characters are '{self._valid_axes_characters}'."
+                f"Valid characters are {self._valid_axes_characters!r}."
             )
             passed = False
 

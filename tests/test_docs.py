@@ -33,7 +33,6 @@ def test_validate_docstring_examples(source_files, root_path):
 
     """
     for file in source_files:
-
         source = Path(file).read_text()
         tree = ast.parse(source)
         parser = doctest.DocTestParser()

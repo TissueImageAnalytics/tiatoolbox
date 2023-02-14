@@ -149,7 +149,7 @@ def test_transform_before_fit_otsu():
     """Test otsu masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.OtsuTissueMasker()
-    with pytest.raises(Exception, match="Fit must be called before transform."):
+    with pytest.raises(SyntaxError, match="Fit must be called before transform."):
         masker.transform([image])[0]
 
 
@@ -157,7 +157,7 @@ def test_transform_before_fit_morphological():
     """Test morphological masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.MorphologicalMasker()
-    with pytest.raises(Exception, match="Fit must be called before transform."):
+    with pytest.raises(SyntaxError, match="Fit must be called before transform."):
         masker.transform([image])[0]
 
 

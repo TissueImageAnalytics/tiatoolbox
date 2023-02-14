@@ -398,6 +398,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
 
 def test_patch_dataset_abc():
     """Test for ABC methods."""
+
     # test missing definition for abstract
     # intentionally created to check error
     # skipcq
@@ -424,15 +425,15 @@ def test_patch_dataset_abc():
 
     # test setter and getter
     assert ds.preproc_func(1) == 1
-    ds.preproc_func = lambda x: x - 1
+    ds.preproc_func = lambda x: x - 1  # skipcq: PYL-W0201
     assert ds.preproc_func(1) == 0
     assert ds.preproc(1) == 1, "Must be unchanged!"
-    ds.preproc_func = None
+    ds.preproc_func = None  # skipcq: PYL-W0201
     assert ds.preproc_func(2) == 2
 
     # test assign uncallable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
-        ds.preproc_func = 1
+        ds.preproc_func = 1  # skipcq: PYL-W0201
 
 
 # -------------------------------------------------------------------------------------
