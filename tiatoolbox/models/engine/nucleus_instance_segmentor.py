@@ -790,7 +790,6 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             # !
 
         for future in self._futures:
-
             #  not actually future but the results
             if self._postproc_workers is None:
                 callback(*future)
