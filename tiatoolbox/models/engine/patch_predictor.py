@@ -246,7 +246,7 @@ class PatchPredictor:
         self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
-        self.num_loader_worker = num_loader_workers
+        self.num_loader_workers = num_loader_workers
         self.verbose = verbose
 
     @staticmethod
@@ -398,7 +398,7 @@ class PatchPredictor:
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
-            num_workers=self.num_loader_worker,
+            num_workers=self.num_loader_workers,
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
@@ -463,22 +463,24 @@ class PatchPredictor:
 
         Args:
             ioconfig (IOPatchPredictorConfig):
-        patch_input_shape (tuple):
-            Size of patches input to the model. Patches are at
-            requested read resolution, not with respect to level 0,
-            and must be positive.
-        stride_shape (tuple):
-            Stride using during tile and WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
-        resolution (float):
-            Resolution used for reading the image. Please see
-            :obj:`WSIReader` for details.
-        units (str):
-            Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
-            :obj:`WSIReader` for details.
+                Object defines information about input and output placement
+                of patches for patch prediction.
+            patch_input_shape (tuple):
+                Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to level 0,
+                and must be positive.
+            stride_shape (tuple):
+                Stride using during tile and WSI processing. Stride is
+                at requested read resolution, not with respect to
+                level 0, and must be positive. If not provided,
+                `stride_shape=patch_input_shape`.
+            resolution (float):
+                Resolution used for reading the image. Please see
+                :obj:`WSIReader` for details.
+            units (str):
+                Units of resolution used for reading the image. Choose
+                from either `level`, `power` or `mpp`. Please see
+                :obj:`WSIReader` for details.
 
         Returns:
             Updated Patch Predictor IO configuration.
