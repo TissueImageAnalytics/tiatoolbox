@@ -1,7 +1,6 @@
 """This module implements nucleus detection engine."""
 
 
-from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 
 
@@ -113,24 +112,11 @@ class NucleusDetector(PatchPredictor):
         pretrained_weights=None,
         verbose=True,
     ):
-        super().__init__()
-
-        self.imgs = None
-        self.mode = None
-
-        if model is None and pretrained_model is None:
-            raise ValueError("Must provide either `model` or `pretrained_model`.")
-
-        if model is not None:
-            self.model = model
-            ioconfig = None  # retrieve iostate from provided model ?
-        else:
-            model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
-
-        self.ioconfig = ioconfig  # for storing original
-        self._ioconfig = None  # for storing runtime
-        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
-        self.pretrained_model = pretrained_model
-        self.batch_size = batch_size
-        self.num_loader_worker = num_loader_workers
-        self.verbose = verbose
+        super().__init__(
+            batch_size=batch_size,
+            num_loader_workers=num_loader_workers,
+            model=model,
+            pretrained_model=pretrained_model,
+            pretrained_weights=pretrained_weights,
+            verbose=verbose,
+        )
