@@ -40,7 +40,7 @@ def save_tiles(
     """
     input_path = pathlib.Path(input_path)
 
-    logger.debug(input_path.name, flush=True)
+    logger.debug(input_path.name)
 
     wsi = WSIReader.open(input_img=input_path)
     wsi.save_tiles(
