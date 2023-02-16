@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import math
 import os
 import pathlib
@@ -1331,10 +1332,11 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: Union[str, pathlib.Path],
-        tile_objective_value: int,
-        tile_read_size: Tuple[int, int],
+        output_dir: Union[str, pathlib.Path] = "tiles",
+        tile_objective_value: int = 20,
+        tile_read_size: Tuple[int, int] = (5000, 5000),
         tile_format: str = ".jpg",
+        verbose: bool = False,
     ) -> None:
         """Generate image tiles from whole slide images.
 
@@ -1342,11 +1344,13 @@ class WSIReader:
             output_dir(str or :obj:`pathlib.Path`):
                 Output directory to save the tiles.
             tile_objective_value (int):
-                Objective value at which tile is generated.
+                Objective value at which tile is generated, default = 20
             tile_read_size (tuple(int)):
-                Tile (width, height).
+                Tile (width, height), default = (5000, 5000).
             tile_format (str):
-                File format to save image tiles, defaults to ".jpg".
+                File format to save image tiles, defaults = ".jpg".
+            verbose (bool):
+                Print output, default=False
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -1360,6 +1364,12 @@ class WSIReader:
             >>> slide_param = wsi.info
 
         """
+
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+
+        logger.debug("Processing %s.", self.input_path.name)
+
         output_dir = pathlib.Path(output_dir, self.input_path.name)
 
         level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
@@ -1372,7 +1382,6 @@ class WSIReader:
         tile_h = tile_read_size[1]
         tile_w = tile_read_size[0]
 
-        iter_tot = 0
         output_dir = pathlib.Path(output_dir)
         output_dir.mkdir(parents=True)
         data = []
@@ -1395,18 +1404,15 @@ class WSIReader:
             im = self.read_bounds(baseline_bounds, level)
 
             logger.debug(
-                "Tile{iter_tot}:  start_w:{start_w}, end_w:{end_w}, "
-                "start_h:{start_h}, end_h:{end_h}, "
-                "width:{width}, height:{height}",
-                extra={
-                    "iter_tot": iter_tot,
-                    "start_w": start_w,
-                    "end_w": end_w,
-                    "start_h": start_h,
-                    "end_h": end_h,
-                    "width": end_w - start_w,
-                    "height": end_h - start_h,
-                },
+                "Tile %d:  start_w: %d, end_w: %d, start_h: %d, end_h: %d, "
+                "width: %d, height: %d",
+                iter_tot,
+                start_w,
+                end_w,
+                start_h,
+                end_h,
+                end_w - start_w,
+                end_h - start_h,
             )
 
             # Rescale to the correct objective value
@@ -1461,6 +1467,9 @@ class WSIReader:
         utils.misc.imwrite(
             output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
         )
+
+        if verbose:
+            logger.setLevel(logging.INFO)
 
 
 class OpenSlideWSIReader(WSIReader):

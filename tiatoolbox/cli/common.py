@@ -157,6 +157,18 @@ def cli_tile_read_size(
     )
 
 
+def cli_tile_format(
+    usage_help: str = "File format to save image tiles, defaults = '.jpg'",
+) -> callable:
+    """Enables --tile-format option for cli."""
+    return click.option(
+        "--tile-format",
+        type=str,
+        default=".jpg",
+        help=usage_help,
+    )
+
+
 def cli_method(
     usage_help: str = "Select method of for tissue masking.",
     default: str = "Otsu",

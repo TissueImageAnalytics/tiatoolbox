@@ -937,7 +937,7 @@ def test_wsireader_save_tiles(sample_svs, tmp_path):
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     wsi.save_tiles(
-        output_dir=str(tmp_path / ("test_wsireader_save_tiles")),
+        output_dir=str(tmp_path / "test_wsireader_save_tiles"),
         tile_objective_value=5,
         tile_read_size=(5000, 5000),
     )
