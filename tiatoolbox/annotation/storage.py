@@ -1000,6 +1000,94 @@ class AnnotationStore(ABC, MutableMapping):
             select, unique, squeeze, items, select_values
         )
 
+    def nquery(
+        self,
+        geometry: Optional[Geometry] = None,
+        where: Optional[Predicate] = None,
+        distance: float = 5.0,
+        units: str = "points",
+        n_where: Optional[Predicate] = None,
+        use_centroid: bool = True,
+    ) -> Dict[str, Dict[Annotation, Annotation]]:
+        """Query for annotations within a distance of another annotation.
+
+        Args:
+            geometry (Geometry):
+                A geometry to use for the query. If None, the geometry of
+                the annotation is used. Defaults to None.
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will be
+                returned. Defaults to None (assume always true). This may
+                be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                annotation store backend in python before being returned
+                to the user. A pickle object is, where possible, hooked
+                into the backend as a user defined function to filter
+                results during the backend query. Strings are expected to
+                be in a domain specific language and are converted to SQL
+                on a best-effort basis. For supported operators of the DSL
+                see :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query. It is
+                important to note that untrusted user input should never
+                be accepted to this argument as arbitrary code can be
+                run via pickle or the parsing of the string statement.
+            distance (float):
+                The distance to search for annotations within. Defaults to
+                5.0.
+            units (str):
+                The units of the distance. Defaults to "points", i.e.
+                whatever units were used when inserting geometry to the
+                store. Other options include "um" which will use microns
+                for distance calculations if the store is aware of the
+                resolution.
+            n_where (str or bytes or Callable):
+                Predicate to filter the nearest annotations by. Defaults
+                to None (assume always true). See `where` for more
+                details.
+            use_centroid (bool):
+                If True, the centroids of geometries will be used for
+                distance calculations. If False, the geometry will be used.
+                Defaults to True.
+
+        Returns:
+            Dict[str, Dict[Annotation, Annotation]]:
+                A dictionary mapping annotation keys to another
+                dictionary which represents an annotation and all
+                annotations within `distance` of it.
+
+        Examples:
+            >>> from shapely.geometry import Point
+            >>> from tiatoolbox.annotation.storage import Annotation, SQLiteStore
+            >>> store = SQLiteStore()
+            >>> annotation = Annotation(Point(0, 0), {"class": 42})
+            >>> store.add(annotation, "foo")
+            >>> neighbour = Annotation(Point(1, 1), {"class": 123})
+            >>> store.add(neighbour, "bar")
+            >>> store.nquery(distance=2.0)
+            ... {
+            ...   "foo": {
+            ...     Annotation(POINT (1 1), {'class': 123}): {
+            ...       "bar": Annotation(POINT (1 1), {'class': 123}),
+            ...     }
+            ...   },
+            ... }
+
+
+            >>> from shapely.geometry import Point
+            >>> from tiatoolbox.annotation.storage import Annotation, SQLiteStore
+            >>> store = SQLiteStore()
+            >>> annotation = Annotation(Point(0, 0), {"class": 42})
+            >>> store.add(annotation, "foo")
+            >>> store.nquery(distance=1.0)
+            ... {"foo": {Annotation(POINT (1 1), {'class': 123}): {}}}
+
+        """
+        raise NotImplementedError
+
     @staticmethod
     def _handle_pquery_results(
         select: Select,
