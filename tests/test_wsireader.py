@@ -940,7 +940,6 @@ def test_wsireader_save_tiles(sample_svs, tmp_path):
         output_dir=str(tmp_path / ("test_wsireader_save_tiles")),
         tile_objective_value=5,
         tile_read_size=(5000, 5000),
-        verbose=True,
     )
     assert (
         tmp_path / "test_wsireader_save_tiles" / "CMU-1-Small-Region.svs" / "Output.csv"
@@ -969,7 +968,6 @@ def test_incompatible_objective_value(sample_svs, tmp_path):
             ),
             tile_objective_value=3,
             tile_read_size=(5000, 5000),
-            verbose=True,
         )
 
 
@@ -983,7 +981,6 @@ def test_incompatible_level(sample_svs, tmp_path):
             ),
             tile_objective_value=1,
             tile_read_size=(500, 500),
-            verbose=True,
         )
 
 
@@ -995,7 +992,6 @@ def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
         output_dir=str(tmp_path / "test_wsireader_jp2_save_tiles"),
         tile_objective_value=5,
         tile_read_size=(5000, 5000),
-        verbose=True,
     )
     assert (
         tmp_path / "test_wsireader_jp2_save_tiles" / "test1.jp2" / "Output.csv"
