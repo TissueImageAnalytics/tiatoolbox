@@ -24,7 +24,7 @@ from tiatoolbox.cli.common import (
 @cli_tile_objective()
 @cli_tile_read_size()
 @cli_tile_format()
-@cli_verbose()
+@cli_verbose(default=False)
 def save_tiles(
     img_input,
     output_path,
