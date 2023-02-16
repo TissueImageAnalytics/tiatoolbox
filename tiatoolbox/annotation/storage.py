@@ -1068,13 +1068,13 @@ class AnnotationStore(ABC, MutableMapping):
             >>> neighbour = Annotation(Point(1, 1), {"class": 123})
             >>> store.add(neighbour, "bar")
             >>> store.nquery(distance=2.0)
-            ... {
-            ...   "foo": {
-            ...     Annotation(POINT (1 1), {'class': 123}): {
-            ...       "bar": Annotation(POINT (1 1), {'class': 123}),
-            ...     }
-            ...   },
-            ... }
+            {
+              "foo": {
+                Annotation(POINT (1 1), {'class': 123}): {
+                  "bar": Annotation(POINT (1 1), {'class': 123}),
+                }
+              },
+            }
 
 
             >>> from shapely.geometry import Point
@@ -1083,7 +1083,7 @@ class AnnotationStore(ABC, MutableMapping):
             >>> annotation = Annotation(Point(0, 0), {"class": 42})
             >>> store.add(annotation, "foo")
             >>> store.nquery(distance=1.0)
-            ... {"foo": {Annotation(POINT (1 1), {'class': 123}): {}}}
+            {"foo": {Annotation(POINT (1 1), {'class': 123}): {}}}
 
         """
         raise NotImplementedError
