@@ -118,7 +118,7 @@ class StainAugmentor(ImageOnlyTransform):
 
         if self.method.lower() not in {"macenko", "vahadane"}:
             raise ValueError(
-                f"Unsupported stain extractor method '{self.method}' for "
+                f"Unsupported stain extractor method {self.method!r} for "
                 "StainAugmentor. Choose either 'vahadane' or 'macenko'."
             )
         self.stain_normalizer = get_normalizer(self.method.lower())

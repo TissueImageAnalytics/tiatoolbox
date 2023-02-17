@@ -144,7 +144,7 @@ class WSIMeta:
         if len(set(self.axes) - set(self._valid_axes_characters)) > 0:
             warnings.warn(
                 "Axes contains invalid characters. "
-                f"Valid characters are '{self._valid_axes_characters}'."
+                f"Valid characters are {self._valid_axes_characters!r}."
             )
             passed = False
 

@@ -1491,7 +1491,7 @@ class SQLiteStore(AnnotationStore):
             if not all(
                 ["OMIT_JSON" not in compile_options, "ENABLE_RTREE" in compile_options]
             ):
-                raise Exception(
+                raise EnvironmentError(
                     """RTREE sqlite3 compile option is required, and
                     JSON must not be disabled with OMIT_JSON compile option"""
                 )
@@ -1499,7 +1499,9 @@ class SQLiteStore(AnnotationStore):
             if not all(
                 ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
             ):
-                raise Exception("RTREE and JSON1 sqlite3 compile options are required.")
+                raise EnvironmentError(
+                    "RTREE and JSON1 sqlite3 compile options are required."
+                )
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:
@@ -2819,7 +2821,7 @@ class SQLiteStore(AnnotationStore):
         """
         _, minor, _ = sqlite3.sqlite_version_info
         if minor < 9:
-            raise Exception("Requires sqlite version 3.9.0 or higher.")
+            raise EnvironmentError("Requires sqlite version 3.9.0 or higher.")
         cur = self.con.cursor()
         if not isinstance(where, str):
             raise TypeError(f"Invalid type for `where` ({type(where)}).")
