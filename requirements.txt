@@ -27,5 +27,5 @@ torch>=1.13.0
 torchvision>=0.13.0
 tqdm>=4.64.1
 umap-learn>=0.5.3
-wsidicom>=0.3.2, 0.7.0
+wsidicom>=0.3.2, <0.7.0
 zarr>=2.12.0
