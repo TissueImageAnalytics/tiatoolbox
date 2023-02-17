@@ -1,5 +1,23 @@
 # History
 
+## 1.3.2 (2023-02-17)
+
+### Major Updates and Feature Improvements
+
+None
+
+### Changes to API
+
+None
+
+### Bug Fixes and Other Changes
+
+- Fix bug related to reading DICOM files
+
+### Development related changes
+
+- Restricts wsidicom version to \<0.7.0 for compatibility
+
 ## 1.3.1 (2022-12-20)
 
 ### Major Updates and Feature Improvements
