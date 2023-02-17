@@ -18,7 +18,6 @@ None
 
 - Restricts wsidicom version to \<0.7.0 for compatibility
 
-
 ## 1.3.1 (2022-12-20)
 
 ### Major Updates and Feature Improvements
