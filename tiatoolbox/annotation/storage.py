@@ -1060,17 +1060,17 @@ class AnnotationStore(ABC, MutableMapping):
                 annotations within `distance` of it.
 
         Examples:
-            >>> from shapely.geometry import Point
+            >>> from shapely.geometry import Point, Polyon
             >>> from tiatoolbox.annotation.storage import Annotation, SQLiteStore
             >>> store = SQLiteStore()
             >>> annotation = Annotation(Point(0, 0), {"class": 42})
             >>> store.add(annotation, "foo")
             >>> neighbour = Annotation(Point(1, 1), {"class": 123})
             >>> store.add(neighbour, "bar")
-            >>> store.nquery(distance=2.0)
+            >>> store.nquery((-.5, -.5, .5, .5), distance=2.0)
             {
               "foo": {
-                Annotation(POINT (1 1), {'class': 123}): {
+                Annotation(POINT (0 0), {'class': 42}): {
                   "bar": Annotation(POINT (1 1), {'class': 123}),
                 }
               },
@@ -1082,8 +1082,8 @@ class AnnotationStore(ABC, MutableMapping):
             >>> store = SQLiteStore()
             >>> annotation = Annotation(Point(0, 0), {"class": 42})
             >>> store.add(annotation, "foo")
-            >>> store.nquery(distance=1.0)
-            {"foo": {Annotation(POINT (1 1), {'class': 123}): {}}}
+            >>> store.nquery((-.5, -.5, .5, .5), distance=1.0)
+            {"foo": {Annotation(POINT (0 0), {'class': 42}): {}}}
 
         """
         raise NotImplementedError
