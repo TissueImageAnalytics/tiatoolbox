@@ -275,6 +275,87 @@ input output configuration:
 
     - hovernet_original_kumar
 
+Nucleus Detection
+^^^^^^^^^^^^^^^^^
+
+CRCHisto Dataset
+--------------
+
+We provide the following models trained using the `CoNSeP dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe//>`_, which uses the following
+input output configuration:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOPatchPredictorConfig
+        ioconfig = IOPatchPredictorConfig(
+            patch_input_shape=(31, 31),
+            stride_shape=(8, 8),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+        )
+
+
+.. collapse:: Model names
+
+    - sccnn-crchisto
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOPatchPredictorConfig
+        ioconfig = IOPatchPredictorConfig(
+            patch_input_shape=(252, 252),
+            stride_shape=(150, 150),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+        )
+
+
+.. collapse:: Model names
+
+    - mapde-crchisto
+
+
+CoNIC Dataset
+--------------
+
+We provide the following models trained using the `CoNIC dataset <https://conic-challenge.grand-challenge.org/>`_, which uses the following
+input output configuration:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOPatchPredictorConfig
+        ioconfig = IOPatchPredictorConfig(
+            patch_input_shape=(31, 31),
+            stride_shape=(8, 8),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+        )
+
+
+.. collapse:: Model names
+
+    - sccnn-conic
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models import IOPatchPredictorConfig
+        ioconfig = IOPatchPredictorConfig(
+            patch_input_shape=(252, 252),
+            stride_shape=(150, 150),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+        )
+
+
+.. collapse:: Model names
+
+    - mapde-conic
+
+
 Multi-Task Segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^
 
