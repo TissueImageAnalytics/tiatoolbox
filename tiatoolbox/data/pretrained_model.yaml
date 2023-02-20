@@ -778,7 +778,7 @@ mapde-crchisto:
         class: mapde.MapDe
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.25 }
+                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
             min_distance: 4
             threshold_abs: 250
@@ -793,7 +793,7 @@ mapde-conic:
         class: mapde.MapDe
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.25 }
+                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
             min_distance: 3
             threshold_abs: 205
@@ -808,7 +808,7 @@ sccnn-crchisto:
         class: sccnn.SCCNN
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.25 }
+                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
             out_height: 13
             out_width: 13
@@ -826,7 +826,7 @@ sccnn-conic:
         class: sccnn.SCCNN
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.25 }
+                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
             out_height: 13
             out_width: 13
