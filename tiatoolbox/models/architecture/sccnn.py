@@ -90,13 +90,14 @@ class SCCNN(ModelABC):
     def __init__(
         self,
         num_input_channels: int = 3,
-        out_height: int = 13,
-        out_width: int = 13,
+        patch_output_shape: Tuple[int, int] = (13, 13),
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
     ) -> None:
         super().__init__()
+        out_height = patch_output_shape[0]
+        out_width = patch_output_shape[1]
         self.in_ch = num_input_channels
         self.out_height = out_height
         self.out_width = out_width
