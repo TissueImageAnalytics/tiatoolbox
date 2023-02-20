@@ -303,7 +303,7 @@ Nucleus Detection
 CRCHisto Dataset
 --------------
 
-We provide the following models trained using the `CoNSeP dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe//>`_, which uses the following
+We provide the following models trained using the `CRCHisto dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe//>`_, which uses the following
 input output configuration:
 
 .. collapse:: Input Output Configuration Details
