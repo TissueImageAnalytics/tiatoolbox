@@ -4,6 +4,7 @@
 from typing import List, Union
 
 import numpy as np
+import pandas as pd
 
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
@@ -160,6 +161,8 @@ class NucleusDetector(SemanticSegmentor):
 
     """  # noqa: W605
 
+    from tiatoolbox.wsicore.wsireader import WSIReader
+
     def __init__(
         self,
         batch_size=8,
@@ -179,3 +182,72 @@ class NucleusDetector(SemanticSegmentor):
             verbose=verbose,
             auto_generate_mask=auto_generate_mask,
         )
+
+    def _process_predictions(
+        self,
+        cum_batch_predictions: List,
+        wsi_reader: WSIReader,
+        ioconfig: IOSegmentorConfig,
+        save_path: str,
+        cache_dir: str,
+    ):
+        """Define how the aggregated predictions are processed.
+
+        This includes merging the prediction if necessary and also saving the
+        locations afterwards. Note that items within `cum_batch_predictions` will
+        be consumed during the operation.
+
+        Args:
+            cum_batch_predictions (list):
+                List of batch predictions. Each item within the list
+                should be of (location, patch_predictions).
+            wsi_reader (:class:`WSIReader`):
+                A reader for the image where the predictions come from.
+            ioconfig (:class:`IOSegmentorConfig`):
+                A configuration object contains input and output
+                information.
+            save_path (str):
+                Root path to save current WSI predictions.
+            cache_dir (str):
+                Root path to cache current WSI data.
+
+        """
+        if len(cum_batch_predictions) == 0:
+            return
+
+        # assume predictions is N, each item has L output element
+        locations, predictions = list(zip(*cum_batch_predictions))
+        # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
+        # output patch this can exceed the image bound at the requested
+        # resolution remove singleton due to split.
+        locations = np.array([v[0] for v in locations])
+        for index, output_resolution in enumerate(ioconfig.output_resolutions):
+            # assume resolution index to be in the same order as L
+            merged_resolution = ioconfig.highest_input_resolution
+            merged_locations = locations
+            # ! location is w.r.t the highest resolution, hence still need conversion
+            if ioconfig.save_resolution is not None:
+                merged_resolution = ioconfig.save_resolution
+                output_shape = wsi_reader.slide_dimensions(**output_resolution)
+                merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
+                fx = merged_shape[0] / output_shape[0]
+                merged_locations = np.ceil(locations * fx).astype(np.int64)
+            merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
+            # 0 idx is to remove singleton without removing other axes singleton
+            to_merge_predictions = [v[index][0] for v in predictions]
+            sub_save_path = f"{save_path}.raw.{index}.npy"
+            sub_count_path = f"{cache_dir}/count.{index}.npy"
+            cum_canvas = self.merge_prediction(
+                merged_shape[::-1],  # XY to YX
+                to_merge_predictions,
+                merged_locations,
+                save_path=sub_save_path,
+                cache_count_path=sub_count_path,
+            )
+
+            # Coordinates in output resolution for the current canvas.
+            cum_canvas = np.expand_dims(cum_canvas, axis=0)
+            coordinates_canvas = pd.DataFrame(
+                self.model.postproc_func(cum_canvas), columns=["x", "y"]
+            )
+            coordinates_canvas.to_csv(f"{save_path}.locations.{index}.csv", index=False)
