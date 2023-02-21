@@ -820,14 +820,11 @@ sccnn-crchisto:
     architecture:
         class: sccnn.SCCNN
         kwargs:
-            input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
-            out_height: 13
-            out_width: 13
             radius: 12
             min_distance: 6
-            threshold_abs: 0.201
+            threshold_abs: 0.20
+            patch_output_shape: [ 13, 13 ]
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
@@ -836,9 +833,9 @@ sccnn-crchisto:
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
             tile_shape: [ 2048, 2048 ]
-            patch_input_shape: [ 252, 252 ]
-            patch_output_shape: [ 252, 252 ]
-            stride_shape: [ 150, 150 ]
+            patch_input_shape: [ 31, 31 ]
+            patch_output_shape: [ 13, 13 ]
+            stride_shape: [ 8, 8 ]
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 sccnn-conic:
@@ -846,14 +843,11 @@ sccnn-conic:
     architecture:
         class: sccnn.SCCNN
         kwargs:
-            input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
-            out_height: 13
-            out_width: 13
             radius: 12
             min_distance: 5
-            threshold_abs: 0.051
+            threshold_abs: 0.05
+            patch_output_shape: [ 13, 13 ]
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
@@ -862,9 +856,9 @@ sccnn-conic:
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
             tile_shape: [ 2048, 2048 ]
-            patch_input_shape: [ 252, 252 ]
-            patch_output_shape: [ 252, 252 ]
-            stride_shape: [ 150, 150 ]
+            patch_input_shape: [ 31, 31 ]
+            patch_output_shape: [ 13, 13 ]
+            stride_shape: [ 8, 8 ]
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 nuclick_original-pannuke:
