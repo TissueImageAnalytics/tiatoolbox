@@ -6,6 +6,9 @@ import pandas as pd
 import pytest
 
 from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+from tiatoolbox.utils import env_detection as toolbox_env
+
+ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 
 
 def test_nucleus_detector_engine(remote_sample, tmp_path):
@@ -14,7 +17,10 @@ def test_nucleus_detector_engine(remote_sample, tmp_path):
 
     nucleus_detector = NucleusDetector(pretrained_model="mapde-conic")
     _ = nucleus_detector.predict(
-        [mini_wsi_svs], mode="wsi", save_dir=tmp_path / "output"
+        [mini_wsi_svs],
+        mode="wsi",
+        save_dir=tmp_path / "output",
+        on_gpu=ON_GPU,
     )
 
     coordinates = pd.read_csv(tmp_path / "output" / "0.locations.0.csv")
