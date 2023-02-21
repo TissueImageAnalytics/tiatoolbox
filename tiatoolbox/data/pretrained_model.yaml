@@ -765,7 +765,6 @@ micronet-consep:
                 - {"units": "mpp", "resolution": 0.25}
             output_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
-            margin: 128
             tile_shape: [2048, 2048]
             patch_input_shape: [252, 252]
             patch_output_shape: [252, 252]
@@ -777,30 +776,44 @@ mapde-crchisto:
     architecture:
         class: mapde.MapDe
         kwargs:
-            input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
             min_distance: 4
             threshold_abs: 250
             num_classes: 1
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
+            output_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
             tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 252, 252 ]
+            patch_output_shape: [ 252, 252 ]
             stride_shape: [ 150, 150 ]
+            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 mapde-conic:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-conic.pth
     architecture:
         class: mapde.MapDe
         kwargs:
-            input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
             num_input_channels: 3
             min_distance: 3
             threshold_abs: 205
             num_classes: 1
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
+            output_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
             tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 252, 252 ]
+            patch_output_shape: [ 252, 252 ]
             stride_shape: [ 150, 150 ]
+            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 sccnn-crchisto:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-crchisto.pth
@@ -814,11 +827,19 @@ sccnn-crchisto:
             out_width: 13
             radius: 12
             min_distance: 6
-            threshold_abs: 0.20
+            threshold_abs: 0.201
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
+            output_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
             tile_shape: [ 2048, 2048 ]
-            patch_input_shape: [ 31, 31 ]
-            patch_output_shape: [ 13, 13 ]
-            stride_shape: [ 8, 8 ]
+            patch_input_shape: [ 252, 252 ]
+            patch_output_shape: [ 252, 252 ]
+            stride_shape: [ 150, 150 ]
+            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 sccnn-conic:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-conic.pth
@@ -832,11 +853,19 @@ sccnn-conic:
             out_width: 13
             radius: 12
             min_distance: 5
-            threshold_abs: 0.05
+            threshold_abs: 0.051
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
+            output_resolutions:
+                - { "units": "mpp", "resolution": 0.5 }
             tile_shape: [ 2048, 2048 ]
-            patch_input_shape: [ 31, 31 ]
-            patch_output_shape: [ 13, 13 ]
-            stride_shape: [ 8, 8 ]
+            patch_input_shape: [ 252, 252 ]
+            patch_output_shape: [ 252, 252 ]
+            stride_shape: [ 150, 150 ]
+            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 nuclick_original-pannuke:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_original-pannuke.pth
