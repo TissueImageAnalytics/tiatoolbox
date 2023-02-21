@@ -551,7 +551,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
-    assert predictor._ioconfig.patch_input_shape == [300, 300]
+    assert predictor._ioconfig.patch_input_shape == (300, 300)
     _rm_dir(f"{tmp_path}/dump")
 
     predictor.predict(
@@ -561,7 +561,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
-    assert predictor._ioconfig.stride_shape == [300, 300]
+    assert predictor._ioconfig.stride_shape == (300, 300)
     _rm_dir(f"{tmp_path}/dump")
 
     predictor.predict(
