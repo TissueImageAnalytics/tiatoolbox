@@ -1090,6 +1090,19 @@ class AnnotationStore(ABC, MutableMapping):
             >>> store.nquery((-.5, -.5, .5, .5), distance=1.0)
             {"foo": {Annotation(POINT (0 0), {'class': 42}): {}}}
 
+            Example of querying for TILs - lympocytes within 3 um
+            of tumour cells.
+
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
+            >>> store = SQLiteStore("hovernet-pannuke-output.db")
+            >>> tils = store.nquery(
+            ...     where="props['class'] == 1",   # Tumour cells
+            ...     nwhere="props['class'] == 0",  # Lymphocytes
+            ...     distance=3.0,  # nwhere within 10 of where
+            ...     units="um",  # Use microns for distance
+            ...     use_centroid=True,  # Use centroids for distance
+            ... )
+
         """
         raise NotImplementedError
 
