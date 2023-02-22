@@ -1116,12 +1116,14 @@ class AnnotationStore(ABC, MutableMapping):
         # Query for others within the distance of initial selection
         result = {}
         for key, ann in selection.items():
-            result[key] = self.query(
+            subquery_result = self.query(
                 geometry=ann.geometry.centroid.buffer(distance)
                 if use_centroid
                 else ann.geometry.buffer(distance),
                 where=n_where,
             )
+            if subquery_result:
+                result[key] = subquery_result
 
         return result
 

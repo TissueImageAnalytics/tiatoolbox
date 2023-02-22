@@ -1678,3 +1678,38 @@ class TestStore:
         assert len(result) == 1
         assert "A" in result
         assert result["A"] == {"B": ann_b}
+
+    @staticmethod
+    def test_nquery_centroid_no_results(store_cls):
+        """Test querying within a neighbourhood with no results
+
+
+        Test that a neighbourhood query returns an empty dictionary
+        when there are no results.
+
+        .. code-block:: text
+
+            3^
+            2|
+            1|
+            0+----->
+            0 1 2 3
+
+        Query for all points within a distance of 2 from A. Should
+        return an empty dictionary.
+
+        """
+        store: AnnotationStore = store_cls()
+        ann_a = Annotation(
+            Point(1, 1),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=2,
+            use_centroid=True,
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 0
