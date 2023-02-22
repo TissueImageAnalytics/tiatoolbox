@@ -1638,7 +1638,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_centroid(store_cls):
-        """Test simple querying within a neighbourhood
+        """Test simple querying within a neighbourhood.
 
 
         Test that a neighbourhood query returns the correct results
@@ -1681,7 +1681,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_centroid_no_results(store_cls):
-        """Test querying within a neighbourhood with no results
+        """Test querying within a neighbourhood with no results.
 
 
         Test that a neighbourhood query returns an empty dictionary
