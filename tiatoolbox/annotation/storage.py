@@ -1008,7 +1008,7 @@ class AnnotationStore(ABC, MutableMapping):
         units: str = "points",
         n_where: Optional[Predicate] = None,
         use_centroid: bool = True,
-    ) -> Dict[str, Dict[Annotation, Annotation]]:
+    ) -> Dict[str, Dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
         Args:
@@ -1054,9 +1054,9 @@ class AnnotationStore(ABC, MutableMapping):
                 Defaults to True.
 
         Returns:
-            Dict[str, Dict[Annotation, Annotation]]:
+            Dict[str, Dict[str, Annotation]]:
                 A dictionary mapping annotation keys to another
-                dictionary which represents an annotation and all
+                dictionary which represents an annotation key and all
                 annotations within `distance` of it.
 
         Examples:
@@ -1097,14 +1097,33 @@ class AnnotationStore(ABC, MutableMapping):
             >>> store = SQLiteStore("hovernet-pannuke-output.db")
             >>> tils = store.nquery(
             ...     where="props['class'] == 1",   # Tumour cells
-            ...     nwhere="props['class'] == 0",  # Lymphocytes
-            ...     distance=3.0,  # nwhere within 10 of where
+            ...     n_where="props['class'] == 0",  # Lymphocytes
+            ...     distance=3.0,  # n_where within 10 of where
             ...     units="um",  # Use microns for distance
             ...     use_centroid=True,  # Use centroids for distance
             ... )
 
         """
-        raise NotImplementedError
+        # This is a naive generic implementation which can be overridden
+        # by back ends which can do this more efficiently.
+
+        # Initial selection of annotations to query around
+        selection = self.query(
+            geometry=geometry,
+            where=where,
+        )
+
+        # Query for others within the distance of initial selection
+        result = {}
+        for key, ann in selection.items():
+            result[key] = self.query(
+                geometry=ann.geometry.centroid.buffer(distance)
+                if use_centroid
+                else ann.geometry.buffer(distance),
+                where=n_where,
+            )
+
+        return result
 
     @staticmethod
     def _handle_pquery_results(
