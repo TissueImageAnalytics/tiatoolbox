@@ -74,5 +74,5 @@ def test_micronet_output(remote_sample, tmp_path):
     output_on_server = np.load(str(micronet_output))
     output_on_server = np.round(output_on_server, decimals=3)
     new_output = np.round(output[500:1000, 1000:1500, :], decimals=3)
-    diff = new_output-output_on_server
+    diff = new_output - output_on_server
     assert diff.mean() < 1e-5
