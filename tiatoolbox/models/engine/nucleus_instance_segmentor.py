@@ -180,7 +180,7 @@ def _process_tile_predictions(
             geo
             for bounds in sel_boxes
             for geo in tile_rtree.query(bounds)
-            if bounds.contains(geometries(geo))
+            if bounds.contains(geometries[geo])
         ]
     elif tile_mode in [1, 2]:
         # for `horizontal/vertical strip` tiles
