@@ -170,10 +170,10 @@ class WSIMeta:
         # Non-fatal conditions: Raise warning only, do not fail validation
 
         if self.raw is None:
-            warnings.warn("Raw data is None")
+            warnings.warn("Raw data is None", stacklevel=2)
 
         if all(x is None for x in [self.objective_power, self.mpp]):
-            warnings.warn("Unknown scale (no objective_power or mpp)")
+            warnings.warn("Unknown scale (no objective_power or mpp)", stacklevel=2)
 
         return passed  # noqa
 
