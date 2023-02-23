@@ -3818,7 +3818,7 @@ class DICOMWSIReader(WSIReader):
             )
             for level in self.wsi.levels
         ]
-        dataset = self.wsi.datasets[0]
+        dataset = self.wsi.base_level.datasets[0]
         # Get pixel spacing in mm from DICOM file and convert to um/px (mpp)
         mm_per_pixel = dataset.pixel_spacing
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
