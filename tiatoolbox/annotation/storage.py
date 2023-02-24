@@ -1117,7 +1117,9 @@ class AnnotationStore(ABC, MutableMapping):
         result = {}
         for key, ann in selection.items():
             subquery_result = self.query(
-                geometry=ann.geometry.centroid.buffer(distance)
+                geometry=Polygon.from_bounds(*ann.geometry.bounds).centroid.buffer(
+                    distance
+                )
                 if use_centroid
                 else ann.geometry.buffer(distance),
                 where=n_where,
