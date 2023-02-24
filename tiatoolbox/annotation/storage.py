@@ -1004,9 +1004,10 @@ class AnnotationStore(ABC, MutableMapping):
         self,
         geometry: Optional[Geometry] = None,
         where: Optional[Predicate] = None,
-        distance: float = 5.0,
-        units: str = "points",
         n_where: Optional[Predicate] = None,
+        distance: float = 5.0,
+        geometry_predicate: str = "intersects",
+        units: str = "points",
         use_centroid: bool = True,
     ) -> Dict[str, Dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
@@ -1035,19 +1036,23 @@ class AnnotationStore(ABC, MutableMapping):
                 important to note that untrusted user input should never
                 be accepted to this argument as arbitrary code can be
                 run via pickle or the parsing of the string statement.
+            n_where (str or bytes or Callable):
+                Predicate to filter the nearest annotations by. Defaults
+                to None (assume always true). See `where` for more
+                details.
             distance (float):
                 The distance to search for annotations within. Defaults to
                 5.0.
+            geometry_predicate (str):
+                The predicate to use when comparing geometries. Defaults
+                to "intersects". Other options include "within" and
+                "contains".
             units (str):
                 The units of the distance. Defaults to "points", i.e.
                 whatever units were used when inserting geometry to the
                 store. Other options include "um" which will use microns
                 for distance calculations if the store is aware of the
                 resolution.
-            n_where (str or bytes or Callable):
-                Predicate to filter the nearest annotations by. Defaults
-                to None (assume always true). See `where` for more
-                details.
             use_centroid (bool):
                 If True, the centroids of geometries will be used for
                 distance calculations. If False, the geometry will be used.
@@ -1123,6 +1128,7 @@ class AnnotationStore(ABC, MutableMapping):
                 if use_centroid
                 else ann.geometry.buffer(distance),
                 where=n_where,
+                geometry_predicate=geometry_predicate,
             )
             if subquery_result:
                 result[key] = subquery_result
