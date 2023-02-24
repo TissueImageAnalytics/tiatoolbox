@@ -109,7 +109,7 @@ def test_show_generator_iter(fill_store, tmp_path):
         assert isinstance(tile, Image.Image)
         assert tile.size == (256, 256)
         plt.imshow(tile)
-        plt.show()
+        plt.show(block=False)
 
 
 def test_correct_number_rendered(fill_store, tmp_path):
@@ -188,7 +188,7 @@ def test_decimation(fill_store, tmp_path):
 
     thumb = tg.get_tile(1, 1, 1)
     plt.imshow(thumb)
-    plt.show()
+    plt.show(block=False)
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
     assert num == 17  # expect 17 pts in bottom right quadrant
 
