@@ -545,7 +545,7 @@ class MicroNet(ModelABC):
 
         """
         pred_bin = np.argmax(image[0], axis=2)
-        pred_inst = ndimage.measurements.label(pred_bin)[0]
+        pred_inst = ndimage.label(pred_bin)[0]
         pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
         for inst_id in range(1, np.max(pred_inst) + 1):
