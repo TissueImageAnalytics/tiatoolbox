@@ -18,7 +18,6 @@ None
 
 - Restricts dependency versions for compatibility
 
-
 ## 1.3.2 (2023-02-17)
 
 ### Major Updates and Feature Improvements
