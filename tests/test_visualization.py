@@ -73,8 +73,11 @@ def test_overlay_prediction_mask(sample_wsi_dict):
 
     # Test normal run, should not crash.
     thumb_float = thumb / 255.0
-    _ = overlay_prediction_mask(thumb_float, merged, label_info=label_info_full)
-    _ = overlay_prediction_mask(thumb, merged, label_info=label_info_full)
+    ax = overlay_prediction_mask(thumb_float, merged, label_info=label_info_full)
+    ax.remove()
+    ax = overlay_prediction_mask(thumb, merged, label_info=label_info_full)
+    ax.remove()
+
     ax = plt.subplot(1, 2, 1)
     _ = overlay_prediction_mask(thumb, merged, ax=ax)
     _ = overlay_prediction_mask(thumb_float, merged, min_val=0.5, return_ax=False)
