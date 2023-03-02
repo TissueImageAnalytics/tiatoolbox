@@ -1977,7 +1977,8 @@ class SQLiteStore(AnnotationStore):
             if "USING INDEX" not in query_plan[-1]:
                 warnings.warn(
                     "Query is not using an index. "
-                    "Consider adding an index to improve performance."
+                    "Consider adding an index to improve performance.",
+                    stacklevel=2,
                 )
         # if area column exists, sort annotations by area
         if "area" in self.table_columns:
@@ -2948,7 +2949,7 @@ class DictionaryStore(AnnotationStore):
 
     def commit(self) -> None:
         if str(self.connection) == ":memory:":
-            warnings.warn("In-memory store. Nothing to commit.")
+            warnings.warn("In-memory store. Nothing to commit.", stacklevel=2)
             return
         if not self.path.exists():
             self.path.touch()

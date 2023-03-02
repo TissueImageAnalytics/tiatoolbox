@@ -220,7 +220,8 @@ def prealignment(
 
     warnings.warn(
         "Not able to find the best transformation for pre-alignment. "
-        "Try changing the values for 'dice_overlap' and 'rotation_step'."
+        "Try changing the values for 'dice_overlap' and 'rotation_step'.",
+        stacklevel=2,
     )
     return np.eye(3), moving_img, moving_mask, dice_before
 

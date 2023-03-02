@@ -425,7 +425,8 @@ class WSIReader:
                 "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
-                " Interpolation of read regions may occur."
+                " Interpolation of read regions may occur.",
+                stacklevel=2,
             )
         return level, scale
 
@@ -845,6 +846,7 @@ class WSIReader:
                 "output_unit is returned as None. Probably due to missing 'mpp' or "
                 "'objective_power' in slide's meta data.",
                 UserWarning,
+                stacklevel=2,
             )
         return out_res
 
@@ -876,6 +878,7 @@ class WSIReader:
                 + str(tile_objective_value)
                 + "not available.",
                 UserWarning,
+                stacklevel=2,
             )
         except ValueError:
             level = 0
@@ -886,6 +889,7 @@ class WSIReader:
                 + str(tile_objective_value)
                 + "not allowed.",
                 UserWarning,
+                stacklevel=2,
             )
             tile_objective_value = self.info.objective_power
 
@@ -1944,11 +1948,14 @@ class OpenSlideWSIReader(WSIReader):
 
             warnings.warn(
                 "Metadata: Falling back to TIFF resolution tag"
-                " for microns-per-pixel (MPP)."
+                " for microns-per-pixel (MPP).",
+                stacklevel=2,
             )
             return mpp_x, mpp_y
         except KeyError:
-            warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
+            warnings.warn(
+                "Metadata: Unable to determine microns-per-pixel (MPP).", stacklevel=2
+            )
 
         # Return None value if metadata cannot be determined.
         return None
@@ -1982,10 +1989,13 @@ class OpenSlideWSIReader(WSIReader):
                     float(np.mean(mpp))
                 )
                 warnings.warn(
-                    "Metadata: Objective power inferred from microns-per-pixel (MPP)."
+                    "Metadata: Objective power inferred from microns-per-pixel (MPP).",
+                    stacklevel=2,
                 )
             else:
-                warnings.warn("Metadata: Unable to determine objective power.")
+                warnings.warn(
+                    "Metadata: Unable to determine objective power.", stacklevel=2
+                )
 
         return WSIMeta(
             file_path=self.input_path,
@@ -2452,7 +2462,8 @@ class OmnyxJP2WSIReader(WSIReader):
         if cod is None:
             warnings.warn(
                 "Metadata: JP2 codestream missing COD segment! "
-                "Cannot determine number of decompositions (levels)"
+                "Cannot determine number of decompositions (levels)",
+                stacklevel=2,
             )
             level_count = 1
         else:
@@ -3301,7 +3312,9 @@ class TIFFWSIReader(WSIReader):
         if mppx is not None and mppy is not None:
             return [mppx, mppy]
         if mppx is not None or mppy is not None:
-            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
+            warnings.warn(
+                "Only one MPP value found. Using it for both X  and Y.", stacklevel=2
+            )
             return [mppx or mppy] * 2
 
         return None
@@ -4361,6 +4374,7 @@ class NGFFWSIReader(WSIReader):
             warnings.warn(
                 f"Expected units of micrometer, got {x.unit} and {y.unit}",
                 UserWarning,
+                stacklevel=2,
             )
             return None
 

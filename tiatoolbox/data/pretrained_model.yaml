@@ -777,44 +777,66 @@ mapde-crchisto:
     architecture:
         class: mapde.MapDe
         kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.25 }
             num_input_channels: 3
             min_distance: 4
             threshold_abs: 250
             num_classes: 1
+            tile_shape: [ 2048, 2048 ]
+            patch_input_shape: [ 252, 252 ]
+            stride_shape: [ 150, 150 ]
 
 mapde-conic:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-conic.pth
     architecture:
         class: mapde.MapDe
         kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.25 }
             num_input_channels: 3
             min_distance: 3
             threshold_abs: 205
             num_classes: 1
+            tile_shape: [ 2048, 2048 ]
+            patch_input_shape: [ 252, 252 ]
+            stride_shape: [ 150, 150 ]
 
 sccnn-crchisto:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-crchisto.pth
     architecture:
         class: sccnn.SCCNN
         kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.25 }
             num_input_channels: 3
             out_height: 13
             out_width: 13
             radius: 12
             min_distance: 6
             threshold_abs: 0.20
+            tile_shape: [ 2048, 2048 ]
+            patch_input_shape: [ 31, 31 ]
+            patch_output_shape: [ 13, 13 ]
+            stride_shape: [ 8, 8 ]
 
 sccnn-conic:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-conic.pth
     architecture:
         class: sccnn.SCCNN
         kwargs:
+            input_resolutions:
+                - { "units": "mpp", "resolution": 0.25 }
             num_input_channels: 3
             out_height: 13
             out_width: 13
             radius: 12
             min_distance: 5
             threshold_abs: 0.05
+            tile_shape: [ 2048, 2048 ]
+            patch_input_shape: [ 31, 31 ]
+            patch_output_shape: [ 13, 13 ]
+            stride_shape: [ 8, 8 ]
 
 nuclick_original-pannuke:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_original-pannuke.pth
