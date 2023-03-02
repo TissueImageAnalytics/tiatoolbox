@@ -1,4 +1,4 @@
-"""Unit test package for Nuclick."""
+"""Unit test package for NuClick."""
 
 import pathlib
 
@@ -16,7 +16,7 @@ ON_GPU = False
 
 
 def test_functional_nuclcik(remote_sample, tmp_path):
-    """Tests for nuclick."""
+    """Tests for NuClick."""
     # convert to pathlib Path to prevent wsireader complaint
     tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
     img = imread(tile_path)
@@ -25,7 +25,7 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     fetch_pretrained_weights("nuclick_original-pannuke", _pretrained_path)
 
     # test creation
-    model = NuClick(num_input_channels=5, num_output_channels=1)
+    _ = NuClick(num_input_channels=5, num_output_channels=1)
 
     # test inference
     # create image patch, inclusion and exclusion maps

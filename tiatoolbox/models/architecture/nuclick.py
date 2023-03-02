@@ -602,7 +602,7 @@ class NuClick(ModelABC):
                 this_marker = nuc_points[i, :, :] > 0
 
                 if np.any(this_mask[this_marker > 0]):
-                    this_mask = reconstruction(this_marker, this_mask, selem=disk(1))
+                    this_mask = reconstruction(this_marker, this_mask, footprint=disk(1))
                     masks[i] = np.array([this_mask])
                 else:
                     warnings.warn(
