@@ -606,7 +606,8 @@ class NuClick(ModelABC):
                     masks[i] = np.array([this_mask])
                 else:
                     warnings.warn(
-                        f"Nuclei reconstruction was not done for nucleus #{i}"
+                        f"Nuclei reconstruction was not done for nucleus #{i}",
+                        stacklevel=2,
                     )
         return masks
 
