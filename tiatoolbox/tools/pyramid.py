@@ -583,7 +583,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         """
         if pad_mode is not None or interpolation is not None:
             warnings.warn(
-                "interpolation, pad_mode are unused by AnnotationTileGenerator"
+                "interpolation, pad_mode are unused by AnnotationTileGenerator",
+                stacklevel=2,
             )
         if level < 0:
             raise IndexError
