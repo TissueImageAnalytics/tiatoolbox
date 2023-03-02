@@ -311,10 +311,9 @@ class PatchPredictor:
         reader = WSIReader.open(img)
         if isinstance(reader, VirtualWSIReader):
             warnings.warn(
-                (
-                    "Image is not pyramidal hence read is forced to be "
-                    "at `units='baseline'` and `resolution=1.0`."
-                )
+                "Image is not pyramidal hence read is forced to be "
+                "at `units='baseline'` and `resolution=1.0`.",
+                stacklevel=2,
             )
             resolution = 1.0
             units = "baseline"
@@ -542,14 +541,16 @@ class PatchPredictor:
             warnings.warn(
                 "More than 1 WSIs detected but there is no save directory set."
                 "All subsequent output will be saved to current runtime"
-                "location under folder 'output'. Overwriting may happen!"
+                "location under folder 'output'. Overwriting may happen!",
+                stacklevel=2,
             )
             save_dir = pathlib.Path(os.getcwd()).joinpath("output")
         elif save_dir is not None and len(imgs) > 1:
             warnings.warn(
                 "When providing multiple whole-slide images / tiles, "
                 "we save the outputs and return the locations "
-                "to the corresponding files."
+                "to the corresponding files.",
+                stacklevel=2,
             )
 
         if save_dir is not None:
@@ -869,7 +870,8 @@ class PatchPredictor:
             warnings.warn(
                 "WSIPatchDataset only reads image tile at "
                 '`units="baseline"`. Resolutions will be converted '
-                "to baseline value."
+                "to baseline value.",
+                stacklevel=2,
             )
             ioconfig = ioconfig.to_baseline()
 

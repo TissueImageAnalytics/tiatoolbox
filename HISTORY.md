@@ -1,5 +1,23 @@
 # History
 
+## 1.3.3 (2023-03-02)
+
+### Major Updates and Feature Improvements
+
+- Restricts dependency versions for long term stability of the current version
+
+### Changes to API
+
+None
+
+### Bug Fixes and Other Changes
+
+- Fix bug related to reading scikit-image
+
+### Development related changes
+
+- Restricts dependency versions for compatibility
+
 ## 1.3.2 (2023-02-17)
 
 ### Major Updates and Feature Improvements
