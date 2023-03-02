@@ -8,7 +8,7 @@ import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import cm
+from matplotlib import colormaps
 from numpy.typing import ArrayLike
 from PIL import Image, ImageFilter, ImageOps
 from shapely import speedups
@@ -58,7 +58,7 @@ def colourise_image(img, cmap="viridis"):
     """
     if len(img.shape) == 2:
         # Single channel, make into rgb with colormap.
-        c_map = cm.get_cmap(cmap)
+        c_map = colormaps[cmap]
         im_rgb = (c_map(img) * 255).astype(np.uint8)
         return im_rgb[:, :, :3]
     # Already rgb, return unaltered
@@ -556,9 +556,9 @@ class AnnotationRenderer:
         score_prop_edge=None,
     ):
         if mapper is None:
-            mapper = cm.get_cmap("jet")
+            mapper = colormaps["jet"]
         if isinstance(mapper, str) and mapper != "categorical":
-            mapper = cm.get_cmap(mapper)
+            mapper = colormaps[mapper]
         if isinstance(mapper, list):
             colors = random_colors(len(mapper))
             mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
