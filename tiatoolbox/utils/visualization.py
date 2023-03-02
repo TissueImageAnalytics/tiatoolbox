@@ -640,7 +640,9 @@ class AnnotationRenderer:
                     )
                 )
         except KeyError:
-            warnings.warn("score_prop not found in properties. Using default color.")
+            warnings.warn(
+                "score_prop not found in properties. Using default color.", stacklevel=2
+            )
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
@@ -870,4 +872,4 @@ class AnnotationRenderer:
         elif geom_type == "LineString":
             self.render_line(tile, annotation, top_left, scale)
         else:
-            warnings.warn(f"Unknown geometry: {geom_type}")
+            warnings.warn(f"Unknown geometry: {geom_type}", stacklevel=3)

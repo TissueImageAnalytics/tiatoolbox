@@ -223,7 +223,8 @@ class PatchExtractor(PatchExtractorABC):
             if len(self.coordinate_list) == 0:
                 warnings.warn(
                     "No candidate coordinates left after "
-                    "filtering by `input_mask` positions."
+                    "filtering by `input_mask` positions.",
+                    stacklevel=2,
                 )
 
         data = self.coordinate_list[:, :2]  # only use the x_start and y_start
