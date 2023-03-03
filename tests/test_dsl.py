@@ -62,7 +62,7 @@ def test_json_contains():
 
 
 def sqlite_eval(query: Union[str, Number]):
-    """Evaluate an SQL predicate on dummpy data and return the result.
+    """Evaluate an SQL predicate on dummy data and return the result.
 
     Args:
         query (Union[str, Number]): SQL predicate to evaluate.
