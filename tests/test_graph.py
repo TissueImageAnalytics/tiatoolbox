@@ -182,27 +182,6 @@ def test_edge_index_to_trainangles_many():
     assert triangles.shape == (3, 3)
 
 
-def pytest_generate_tests(metafunc):
-    """Generate (parameterize) test scenarios.
-
-    Adapted from pytest documentation. For more information on
-    parameterized tests see:
-    https://docs.pytest.org/en/6.2.x/example/parametrize.html#a-quick-port-of-testscenarios
-
-    """
-    # Return if the test is not part of a class
-    if metafunc.cls is None:
-        return
-    idlist = []
-    argvalues = []
-    for scenario in metafunc.cls.scenarios:
-        idlist.append(scenario[0])
-        items = scenario[1].items()
-        argnames = [x[0] for x in items]
-        argvalues.append([x[1] for x in items])
-    metafunc.parametrize(argnames, argvalues, ids=idlist, scope="class")
-
-
 def test_slidegraph_build_feature_range_thresh_none():
     """Test SlideGraphConstructor builds a graph without removing features."""
     # Generate random points and features

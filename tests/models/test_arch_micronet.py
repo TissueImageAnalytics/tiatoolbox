@@ -1,4 +1,3 @@
-# skipcq: PTC-W6004
 """Unit test package for MicroNet."""
 
 import pathlib
@@ -39,9 +38,9 @@ def test_functionality(remote_sample, tmp_path):
 
 
 def test_value_error():
-    """Test to generate value error is num_classes < 2."""
+    """Test to generate value error is num_output_channels < 2."""
     with pytest.raises(ValueError, match="Number of classes should be >=2"):
-        _ = MicroNet(num_class=1)
+        _ = MicroNet(num_output_channels=1)
 
 
 @pytest.mark.skipif(
@@ -75,6 +74,5 @@ def test_micronet_output(remote_sample, tmp_path):
     output_on_server = np.load(str(micronet_output))
     output_on_server = np.round(output_on_server, decimals=3)
     new_output = np.round(output[500:1000, 1000:1500, :], decimals=3)
-    true_values = output_on_server == new_output
-    percent_true = np.count_nonzero(true_values) / np.size(output_on_server)
-    assert percent_true > 0.999
+    diff = new_output - output_on_server
+    assert diff.mean() < 1e-5

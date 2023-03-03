@@ -74,7 +74,9 @@ def test_tiffreader_non_tiled_metadata(monkeypatch):
     wsi = wsireader.TIFFWSIReader(sample)
     monkeypatch.setattr(wsi.tiff, "is_ome", False)
     monkeypatch.setattr(
-        wsi.tiff.pages[0].__class__, "is_tiled", property(lambda _: False)
+        wsi.tiff.pages[0].__class__,
+        "is_tiled",
+        property(lambda _: False),  # skipcq: PYL-W0612
     )
     monkeypatch.setattr(wsi, "_m_info", None)
     assert pytest.approx(wsi.info.mpp, abs=0.1) == 0.5

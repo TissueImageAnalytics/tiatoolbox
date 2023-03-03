@@ -1,0 +1,62 @@
+name: Publish Dockers
+on:
+  workflow_dispatch
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: TissueImageAnalytics/tiatoolbox
+  image: ghcr.io/tissueimageanalytics/tiatoolbox
+  TOOLBOX_VER: 1.3.3
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - dockerfile: ./docker/3.8/Debian/Dockerfile
+            mtag: py3.8-debian
+          - dockerfile: ./docker/3.9/Debian/Dockerfile
+            mtag: py3.9-debian
+          - dockerfile: ./docker/3.9/Ubuntu/Dockerfile
+            mtag: py3.9-ubuntu
+          - dockerfile: ./docker/3.10/Debian/Dockerfile
+            mtag: py3.10-debian
+          - dockerfile: ./docker/3.10/Ubuntu/Dockerfile
+            mtag: py3.10-ubuntu
+          - dockerfile: ./docker/3.10/Ubuntu/Dockerfile
+            mtag: latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN  }}
+
+      - name: Publishing with 'latest' tag
+        if: contains(matrix.mtag, 'latest')
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: "${{ env.image }}:${{ matrix.mtag }}"
+
+      - name: Publishing with explicit tags
+        if: ${{ !contains(matrix.mtag, 'latest') }}
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: "${{ env.image }}:${{ env.TOOLBOX_VER }}-${{ matrix.mtag }}"

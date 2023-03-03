@@ -90,13 +90,14 @@ class SCCNN(ModelABC):
     def __init__(
         self,
         num_input_channels: int = 3,
-        out_height: int = 13,
-        out_width: int = 13,
+        patch_output_shape: Tuple[int, int] = (13, 13),
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
     ) -> None:
         super().__init__()
+        out_height = patch_output_shape[0]
+        out_width = patch_output_shape[1]
         self.in_ch = num_input_channels
         self.out_height = out_height
         self.out_width = out_width
@@ -234,20 +235,20 @@ class SCCNN(ModelABC):
         return sc2 * out_map_threshold
 
     @staticmethod
-    def _transform(imgs: torch.Tensor) -> torch.Tensor:
+    def preproc(image: torch.Tensor) -> torch.Tensor:
         """Transforming network input to desired format.
 
         This method is model and dataset specific, meaning that it can be replaced by
         user's desired transform function before training/inference.
 
         Args:
-            imgs (torch.Tensor): Input images, the tensor is of the shape NCHW.
+            image (torch.Tensor): Input images, the tensor is of the shape NCHW.
 
         Returns:
             output (torch.Tensor): The transformed input.
 
         """
-        return imgs / 255.0
+        return image / 255.0
 
     def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
@@ -301,7 +302,7 @@ class SCCNN(ModelABC):
             sigmoid2 = sigmoid[:, 2:3, :, :]
             return sigmoid0, sigmoid1, sigmoid2
 
-        input_tensor = self._transform(input_tensor)
+        input_tensor = self.preproc(input_tensor)
         l1 = self.layer["l1"]["conv1"](input_tensor)
         p1 = self.layer["pool1"](l1)
         l2 = self.layer["l2"]["conv1"](p1)
