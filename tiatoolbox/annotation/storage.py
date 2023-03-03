@@ -2642,7 +2642,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
-        xy = dict(zip("xy", np.array(geometry.centroid)))
+        xy = dict(zip("xy", np.array(geometry.centroid.coords[0])))
         query_parameters = dict(
             **bounds,
             **xy,
