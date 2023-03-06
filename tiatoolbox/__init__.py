@@ -49,8 +49,8 @@ with open(PRETRAINED_FILES_REGISTRY_PATH) as registry_handle:
 rcParam["pretrained_model_info"] = PRETRAINED_INFO
 
 
-def _lazy_import(name: str, module_location: Path):
-    spec = importlib.util.spec_from_file_location(name, module_location)
+def _lazy_import(name: str):
+    spec = importlib.util.find_spec(name)
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)
@@ -58,13 +58,21 @@ def _lazy_import(name: str, module_location: Path):
     loader.exec_module(module)
     return module
 
+def _lazy_import_class(module_name: str, class_name: str):
+    module = _lazy_import(module_name)
+    return getattr(module, class_name)
+
+
+annotation = _lazy_import("tiatoolbox.annotation")
+models = _lazy_import("tiatoolbox.models")
+tools = _lazy_import("tiatoolbox.tools")
+utils = _lazy_import("tiatoolbox.utils")
+wsicore = _lazy_import("tiatoolbox.wsicore")
+
+HoVerNet = _lazy_import_class("tiatoolbox.models.architecture.hovernet", "HoVerNet")
+
 
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))
-    location = Path(__file__).parent
-    annotation = _lazy_import("annotation", location)
-    models = _lazy_import("models", location)
-    tiatoolbox = _lazy_import("tiatoolbox", location)
-    tools = _lazy_import("tools", location)
-    utils = _lazy_import("utils", location)
-    wsicore = _lazy_import("wsicore", location)
+
+    #
