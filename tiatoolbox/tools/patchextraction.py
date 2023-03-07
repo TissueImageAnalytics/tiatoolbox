@@ -2,10 +2,11 @@
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame
+from math import ceil
 
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -617,6 +618,337 @@ class SlidingWindowPatchExtractor(PatchExtractor):
                 self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
+
+
+class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
+    """Extract patches inside regions of interest (ROI) using sliding window.
+
+    Args:
+        wsi (:class:`WSIReader`):
+            Whole slide image reader.
+        patch_size (int or tuple(int)):
+            Patch size tuple (width, height).
+        regions (list of tuple(int)):
+            List of regions of interest (ROI) to extract patches from.
+            Each element of the list is a tuple of 4 integers
+            (x, y, width, height) where (x1, y1) is the top-left
+            coordinate of the ROI.
+            Coordinates should be specified the target resolution (see
+            `resolution` and `units`).
+        resolution (int or float or tuple of float):
+            Resolution at which to read the image, default = 0. Either a
+            single number or a sequence of two numbers for x and y are
+            valid. This value is in terms of the corresponding units.
+            For example: resolution=0.5 and units="mpp" will read the
+            slide at 0.5 microns per-pixel, and resolution=3,
+            units="level" will read at level at pyramid level /
+            resolution layer 3.
+        units (str):
+            The units of resolution, default = "level". Supported units
+            are: microns per pixel (mpp), objective power (power),
+            pyramid / resolution level (level), Only pyramid /
+            resolution levels (level) embedded in the whole slide image
+            are supported.
+        stride(int or tuple(int)):
+            Stride in (x, y) direction for patch extraction, default =
+            `patch_size`.
+        pad_mode (str):
+            Method for padding at edges of the WSI. Default to
+            'constant'. See :func:`numpy.pad` for more information.
+        pad_constant_values (int or tuple(int)):
+            Values to use with constant padding. Defaults to 0.
+            See :func:`numpy.pad` for more information.
+        within_wsi_bound (bool):
+            Whether to extract patches beyond the WSI size limits. If
+            False, extracted patches at margins will be padded
+            appropriately based on `pad_constant_values` and
+            `pad_mode`.
+        within_region_bound (bool):
+            Whether to extract patches beyond the region size limits. If
+            False, patches will start within the region bounds but might
+            extend beyond the region bounds. If True, patches will be
+            fully contained within the region bounds.
+            If `within_wsi_bound` is False, this parameter has to be set
+            to False as well.
+        return_coordinates (bool):
+            Whether to include coordinates of the patches. If True,
+            iterator and getter will return a tuple (coordinates, patch) where
+            coordinates is a tuple (x, y) of left-top point of the
+            patch. If False, iterator and getter will return only the patch itself.
+        min_region_covered (int or tuple(int)):
+            Minimum part of the region that should be covered by each patch.
+            If None, the whole region should be covered. If tuple, the
+            first element is the minimum width and the second element is
+            the minimum height. If int, the same value is used for both
+            width and height. Default is None.
+    """
+
+    def __init__(
+        self,
+        patch_size: Union[int, Tuple[int, int]],
+        regions: List[Tuple[int, int, int, int]],
+        input_img: Optional[Union[str, Path, np.ndarray]] = None,
+        wsi: Optional[wsireader.WSIReader] = None,
+        resolution: Union[int, float, Tuple[float, float]] = 0,
+        units: str = "level",
+        stride: Optional[Union[int, Tuple[int, int]]] = None,
+        pad_mode: str = "constant",
+        pad_constant_values: Union[int, Tuple[int, int]] = 0,
+        within_wsi_bound: bool = True,
+        within_region_bound: bool = True,
+        return_coordinates: bool = False,
+        min_region_covered: Optional[Union[int, Tuple[int, int]]] = None,
+    ):
+
+        if within_region_bound and not within_wsi_bound:
+            raise ValueError(
+                "within_region_bound cannot be True if within_wsi_bound is False"
+            )
+
+        if wsi is not None:
+            if input_img is not None:
+                raise ValueError("input_img and wsi cannot be both provided")
+            self.wsi = wsi
+        elif input_img is not None:
+            self.wsi = wsireader.WSIReader.open(input_img=input_img)
+        else:
+            raise ValueError("input_img or wsi must be provided")
+
+        self.resolution = resolution
+        self.pad_mode = pad_mode
+        self.pad_constant_values = pad_constant_values
+        self.within_wsi_bound = within_wsi_bound
+        self.within_region_bound = within_region_bound
+        self.regions = regions
+
+        if isinstance(patch_size, (tuple, list)):
+            if len(patch_size) != 2:
+                raise ValueError("patch_size should be a tuple of length 2")
+
+            if not isinstance(patch_size[0], int) or not isinstance(patch_size[1], int):
+                raise ValueError("patch_size should be a tuple of integers")
+                # NOTE: since casting float to int loses precision, we do not do that implicitly here and in stride
+
+            self.patch_size = tuple(patch_size)
+
+        elif isinstance(patch_size, int):
+            self.patch_size = (
+                patch_size,
+                patch_size,
+            )
+        else:
+            raise ValueError(
+                "patch_size should be an integer or a tuple of integers of length 2"
+            )
+
+        self.units = units
+        self.return_coordinates = return_coordinates
+
+        if stride is None:
+            self.stride = self.patch_size
+        else:
+            if isinstance(stride, (tuple, list)):
+                if len(stride) != 2:
+                    raise ValueError("stride should be a tuple of length 2")
+
+                if not isinstance(stride[0], int) or not isinstance(stride[1], int):
+                    raise ValueError("stride should be a tuple of integers")
+
+                self.stride = tuple(stride)
+            elif isinstance(stride, int):
+                self.stride = (stride, stride)
+            else:
+                raise ValueError(
+                    "stride should be an integer or a tuple of integers of length 2"
+                )
+
+        if self.patch_size[0] <= 0 or self.patch_size[1] <= 0:
+            raise ValueError("patch_size should be greater than 0")
+
+        if self.stride[0] <= 0 or self.stride[1] <= 0:
+            raise ValueError("stride should be greater than 0")
+
+        if min_region_covered is not None and within_region_bound:
+            raise ValueError(
+                "min_region_covered cannot be used with within_region_bound=True"
+            )
+
+        elif min_region_covered is None:
+            if within_region_bound:
+                self.min_region_covered = self.patch_size
+            else:
+                self.min_region_covered = (1, 1)
+        else:
+            if isinstance(min_region_covered, (tuple, list)):
+                if len(min_region_covered) != 2:
+                    raise ValueError("min_region_covered should be a tuple of length 2")
+
+                if not isinstance(min_region_covered[0], int) or not isinstance(
+                    min_region_covered[1], int
+                ):
+                    raise ValueError("min_region_covered should be a tuple of integers")
+
+                self.min_region_covered = tuple(min_region_covered)
+
+            elif isinstance(min_region_covered, int):
+                self.min_region_covered = (
+                    min_region_covered,
+                    min_region_covered,
+                )
+            else:
+                raise ValueError("min_region_covered should be a tuple of integers")
+
+        if (
+            self.min_region_covered[0] > self.patch_size[0]
+            or self.min_region_covered[1] > self.patch_size[1]
+        ):
+            raise ValueError("min_region_covered should be smaller than patch_size")
+
+        if self.min_region_covered[0] < 0 or self.min_region_covered[1] < 0:
+            raise ValueError("min_region_covered should be greater than zero")
+
+        self.check_regions(regions, self.wsi_size)
+
+    @property
+    def wsi_size(self):
+        """Return the size of WSI at requested resolution.
+
+        Returns:
+            :py:obj:`tuple`:
+                Size of the WSI in (width, height).
+        """
+        return self.wsi.slide_dimensions(self.resolution, self.units)
+
+    def __next__(self):
+        n = self.n
+
+        if n >= sum(self.region_sizes):
+            raise StopIteration
+
+        self.n = n + 1
+        return self[n]
+
+    def __iter__(self):
+        self.n = 0
+        return self
+
+    def __len__(self):
+        return sum(self.region_sizes)
+
+    @staticmethod
+    def check_regions(regions, wsi_size):
+        """Check if the regions are valid, i.e. are located within the WSI bounds.
+        Raises:
+            ValueError: If the regions are not valid.
+        """
+
+        wsi_width, wsi_height = wsi_size
+
+        for reg in regions:
+            if len(reg) != 4:
+                raise ValueError(
+                    f"Size of each region should be 4 but got a region with size {len(reg)}"
+                )
+
+            x1, y1, w, h = reg
+            x2 = x1 + w - 1  # -1 because the region is inclusive
+            y2 = y1 + h - 1
+
+            if not (0 <= x1 < x2 < wsi_width and 0 <= y1 < y2 < wsi_height):
+                raise ValueError("Region is out of bounds of the WSI")
+
+            if not all([isinstance(t, int) for t in reg]):
+                raise ValueError("Each region should be a tuple of integers")
+
+    @property
+    def patch_start_areas(self):
+        """Return the areas where patches can start.
+        Returns:
+            :py:obj:`list`:
+                List of tuples of the form (x1, y1, w, h) where (x1, y1) is the
+                top-left corner of the region and (w, h) is the width and height
+                of the region.
+        """
+        regions = []
+        wsi_width, wsi_height = self.wsi_size
+
+        for (x1, y1, w, h) in self.regions:
+            min_y_start = y1 - self.patch_size[1] + self.min_region_covered[1]
+            min_x_start = x1 - self.patch_size[0] + self.min_region_covered[0]
+
+            max_y_start = y1 + h - self.min_region_covered[1]
+            max_x_start = x1 + w - self.min_region_covered[0]
+
+            if self.within_wsi_bound:
+                min_y_start = max(min_y_start, 0)
+                max_y_start = min(max_y_start, wsi_height - self.patch_size[1])
+
+                min_x_start = max(min_x_start, 0)
+                max_x_start = min(max_x_start, wsi_width - self.patch_size[0])
+
+            h = max_y_start - min_y_start + 1
+            w = max_x_start - min_x_start + 1
+            # +1 because the region is inclusive
+
+            regions.append((min_x_start, min_y_start, w, h))
+
+        return regions
+
+    @property
+    def region_sizes(self):
+        """Return the number of patches in each region.
+        Returns:
+            :py:obj:`list`:
+                List of number of patches in each region.
+        """
+        return [
+            (ceil(w / self.stride[0]) * ceil(h / self.stride[1]))
+            for _, _, w, h in self.patch_start_areas
+        ]
+
+    def __getitem__(self, item: int):
+        if not isinstance(item, int):
+            raise TypeError("Index should be an integer.")
+
+        cum_sum = 0
+        for ind, reg_size in enumerate(self.region_sizes):
+            if item >= cum_sum + reg_size:
+                cum_sum += reg_size
+                continue
+
+            position_inside_region = item - cum_sum
+            x1, y1, w, h = self.patch_start_areas[ind]
+            elements_in_row = ceil(w / self.stride[0])
+
+            pos_y, pos_x = (
+                position_inside_region // elements_in_row,
+                position_inside_region % elements_in_row,
+            )
+
+            start_y, start_x = (
+                y1 + pos_y * self.stride[1],
+                x1 + pos_x * self.stride[0],
+            )
+
+            rect = self.wsi.read_rect(
+                location=(start_x, start_y),
+                size=self.patch_size,
+                resolution=self.resolution,
+                units=self.units,
+                pad_mode=self.pad_mode,
+                pad_constant_values=self.pad_constant_values,
+                coord_space="resolution",
+            )
+
+            if self.return_coordinates:
+                return (
+                    start_x,
+                    start_y,
+                ), rect
+
+            return rect
+
+        raise IndexError(f"Index {item} is out of range.")
 
 
 class PointsPatchExtractor(PatchExtractor):
