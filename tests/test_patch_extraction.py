@@ -6,7 +6,10 @@ import numpy as np
 import pytest
 
 from tiatoolbox.tools import patchextraction
-from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.tools.patchextraction import (
+    PatchExtractor,
+    SlidingWindowInRegionsPatchExtractor,
+)
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
 from tiatoolbox.wsicore.wsireader import (
@@ -612,4 +615,404 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
             resolution=res,
             units="level",
             stride=stride,
+        )
+
+
+def test_region_inits(sample_ndpi):
+    """Test initial checks on SlidingWindowInRegionsPatchExtractor creation."""
+
+    input_img = pathlib.Path(sample_ndpi)
+    wsi = OpenSlideWSIReader(input_img=input_img)
+    regions = [(0, 0, 100, 100)]
+
+    # check that both wsi and input_img can be passed
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        input_img=input_img,
+        patch_size=(400, 400),
+        resolution=0,
+        units="level",
+        regions=regions,
+    )
+    assert extractor.wsi.info.file_path == wsi.info.file_path
+
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        wsi=wsi, patch_size=(400, 400), resolution=0, units="level", regions=regions
+    )
+    assert extractor.wsi == wsi
+
+    # check that not int coordinates are not allowed
+    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10.1, 10)],
+        )
+
+    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400.1, 400),
+            resolution=0,
+            units="level",
+            regions=regions,
+        )
+
+    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            stride=4.1,
+            resolution=0,
+            units="level",
+            regions=regions,
+        )
+
+    with pytest.raises(ValueError, match=r".*should be 4.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            stride=4,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10, 10)],
+        )
+
+    with pytest.raises(ValueError, match=r".*length 2.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400, 1),
+            stride=4,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+        )
+
+    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            stride=(4, 0.3),
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+        )
+
+    with pytest.raises(ValueError, match=r".*min_region_covered.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            stride=1,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+            min_region_covered=1,
+            within_region_bound=True,
+        )
+
+    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            stride=1,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+            min_region_covered=(1, 4.5),
+            within_region_bound=False,
+        )
+
+    with pytest.raises(ValueError, match=r".*length 2.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            stride=1,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+            min_region_covered=(1, 4, 2),
+            within_region_bound=False,
+        )
+
+    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            stride=1,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+            min_region_covered="warwick",
+            within_region_bound=False,
+        )
+
+    with pytest.raises(ValueError, match=r".*smaller.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(1, 1),
+            stride=1,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+            min_region_covered=(5, 5),
+            within_region_bound=False,
+        )
+
+    with pytest.raises(ValueError, match=r".*greater than zero.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(10, 10),
+            stride=1,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+            min_region_covered=(5, -5),
+            within_region_bound=False,
+        )
+
+    with pytest.raises(ValueError, match=r".*patch_size.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size="warwick",
+            stride=4,
+            resolution=0,
+            units="level",
+            regions=[(0, 0, 10, 10)],
+        )
+
+    with pytest.raises(ValueError, match=r".*out of bounds.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            wsi=wsi,
+            regions=[(0, 10, 0, 10**10)],
+            patch_size=(1, 1),
+            resolution=0,
+            units="level",
+        )
+
+    with pytest.raises(ValueError, match=r".*within_region_bound.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            patch_size=(400, 400),
+            resolution=0,
+            units="level",
+            regions=regions,
+            within_region_bound=True,
+            within_wsi_bound=False,
+        )
+
+    with pytest.raises(ValueError, match=r".*cannot be both provided.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            input_img=input_img,
+            wsi=wsi,
+            patch_size=(400, 400),
+            resolution=0,
+            units="level",
+            regions=regions,
+            within_region_bound=True,
+            within_wsi_bound=True,
+        )
+
+    with pytest.raises(ValueError, match=r".*must be provided.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            patch_size=(400, 400),
+            resolution=0,
+            units="level",
+            regions=regions,
+            within_region_bound=True,
+            within_wsi_bound=True,
+        )
+
+    with pytest.raises(ValueError, match=".*should be greater than 0"):
+        SlidingWindowInRegionsPatchExtractor(
+            patch_size=(0, 400),
+            resolution=0,
+            units="level",
+            regions=regions,
+            within_region_bound=True,
+            within_wsi_bound=True,
+            wsi=wsi,
+        )
+
+    with pytest.raises(ValueError, match=".*should be greater than 0"):
+        SlidingWindowInRegionsPatchExtractor(
+            patch_size=(400, 400),
+            stride=(0, 400),
+            resolution=0,
+            units="level",
+            regions=regions,
+            within_region_bound=True,
+            within_wsi_bound=True,
+            wsi=wsi,
+        )
+
+    with pytest.raises(ValueError, match=".*tuple of length 2.*"):
+        SlidingWindowInRegionsPatchExtractor(
+            patch_size=(400, 400),
+            stride=(0, 400, 4),
+            resolution=0,
+            units="level",
+            regions=regions,
+            within_region_bound=True,
+            within_wsi_bound=True,
+            wsi=wsi,
+        )
+
+
+def test_region_patches():
+    """Test SlidingWindowInRegionsPatchExtractor patches and sizes."""
+    image_width = 30
+    image_height = 40
+
+    if image_width % 10 != 0 or image_height % 10 != 0:
+        raise ValueError(
+            "Image width and height should be divisible by 10 for this test to work."
+        )
+
+    image = (
+        np.arange(image_width * image_height * 3)
+        .reshape((image_height, image_width, 3))
+        .astype(np.uint8)
+    )
+    wsi = VirtualWSIReader(image)
+
+    # check that the patch extractor works with a single pixel patch
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        wsi=wsi,
+        regions=[(0, 0, image_width, image_height)],
+        patch_size=(1, 1),
+        resolution=0,
+        units="level",
+        return_coordinates=True,
+    )
+    assert len(extractor) == image_width * image_height
+
+    with pytest.raises(IndexError, match=r".*out of range.*"):
+        _ = extractor[image_width * image_height + 1]
+
+    with pytest.raises(TypeError, match=r".should be an integer.*"):
+        _ = extractor["3"]
+
+    for ind, (original_index, (patch_index, patch)) in enumerate(
+        zip(np.ndindex(image.shape[:-1]), extractor)
+    ):
+        original = image[original_index]
+        assert patch.shape == (1, 1, 3)
+        assert np.all(patch == original)
+        assert (
+            patch_index == original_index[::-1]
+        )  # np.ndindex returns (y, x) while patch_index is (x, y)
+
+    # check the same behaviour with return_coordinates=False
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        wsi=wsi,
+        regions=[(0, 0, image_width, image_height)],
+        patch_size=1,
+        resolution=0,
+        units="level",
+        return_coordinates=False,
+    )
+
+    for ind, (original_index, patch) in enumerate(
+        zip(np.ndindex(image.shape[:-1]), extractor)
+    ):
+        original = image[original_index]
+        assert patch.shape == (1, 1, 3)
+        assert np.all(patch == original)
+
+    # check that the patch extractor works with patch of all image
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        wsi=wsi,
+        regions=[(0, 0, image_width, image_height)],
+        patch_size=(image_width, image_height),
+        resolution=0,
+        units="level",
+        return_coordinates=True,
+        within_region_bound=True,
+        within_wsi_bound=True,
+    )
+    assert len(extractor) == 1
+    cords, patch = next(iter(extractor))
+    assert cords == (0, 0)
+    assert np.all(patch == image)
+
+    # test self.within_region_bound=True and self.within_wsi_bound=True
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        wsi=wsi,
+        regions=[(0, 0, image_width, image_height)],
+        patch_size=(10, 10),
+        resolution=0,
+        units="level",
+        return_coordinates=True,
+        within_region_bound=True,
+        within_wsi_bound=True,
+    )
+    assert len(extractor) == image_width // 10 * image_height // 10
+
+    for (start_x, start_y), _ in extractor:
+        end_x, end_y = start_x + 10, start_y + 10  # note: end_x and end_y are exclusive
+        assert 0 <= start_x < end_x <= image_width
+        assert 0 <= start_y < end_y <= image_height
+
+    # test within_region_bound=False and within_wsi_bound=False
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        wsi=wsi,
+        regions=[(0, 0, image_width, image_height)],
+        patch_size=(10, 10),
+        resolution=0,
+        units="level",
+        return_coordinates=True,
+        within_region_bound=False,
+        within_wsi_bound=False,
+        stride=1,
+        min_region_covered=(1, 1),
+    )
+
+    padded_image = np.pad(
+        image, ((9, 9), (9, 9), (0, 0)), mode="constant"
+    )  # 10-1=9. 1 is min_region_part
+    assert len(extractor) == (image_width + 9) * (image_height + 9)
+    # we can start from anywhere in the padded image plus 9 pixels above and left of the image
+
+    for (x, y), patch in extractor:
+        padded_x, padded_y = x + 9, y + 9
+        assert 0 <= padded_y < padded_image.shape[0]
+        assert 0 <= padded_x < padded_image.shape[1]
+
+        padded_patch = padded_image[padded_y : padded_y + 10, padded_x : padded_x + 10]
+        assert np.all(patch == padded_patch)
+
+    # test within_region_bound=False and within_wsi_bound=True
+    extractor = SlidingWindowInRegionsPatchExtractor(
+        wsi=wsi,
+        regions=[(0, 0, image_width, image_height - 9)],
+        patch_size=(10, 10),
+        resolution=0,
+        units="level",
+        return_coordinates=True,
+        within_region_bound=False,
+        within_wsi_bound=True,
+        min_region_covered=1,
+    )
+    assert len(extractor) == (image_width // 10) * (image_height // 10)
+
+    # the output should be the same as if regions=[(0, 0, image_width, image_height)] and within_region_bound=True
+    for (x, y), patch in extractor:
+        assert 0 <= x < image_width
+        assert 0 <= y < image_height
+
+        original_patch = image[y : y + 10, x : x + 10]
+        assert np.all(patch == original_patch)
+
+    # test within_region_bound=True and within_wsi_bound=False
+    with pytest.raises(ValueError, match=r".*within_region_bound.*"):
+        extractor = SlidingWindowInRegionsPatchExtractor(
+            wsi=wsi,
+            regions=[(0, 0, image_width, image_height)],
+            patch_size=(10, 10),
+            resolution=0,
+            units="level",
+            return_coordinates=True,
+            within_region_bound=True,
+            within_wsi_bound=False,
         )
