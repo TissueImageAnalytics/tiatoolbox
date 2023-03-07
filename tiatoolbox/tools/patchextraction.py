@@ -1026,13 +1026,13 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
 
-def get_patch_extractor(method_name: str, **kwargs: str):
+def get_patch_extractor(method_name: str, *args, **kwargs: str):
     """Return a patch extractor object as requested.
 
     Args:
         method_name (str):
-            Name of patch extraction method, must be one of "point" or
-            "slidingwindow". The method name is case-insensitive.
+            Name of patch extraction method, must be one of "point",
+            "slidingwindow", or "region". The method name is case-insensitive.
         **kwargs:
             Keyword arguments passed to :obj:`PatchExtractor`.
 
@@ -1047,12 +1047,16 @@ def get_patch_extractor(method_name: str, **kwargs: str):
         ...  'point', img_patch_h=200, img_patch_w=200)
 
     """
-    if method_name.lower() not in ["point", "slidingwindow"]:
+
+    __availible_extractors = {
+        "point": PointsPatchExtractor,
+        "slidingwindow": SlidingWindowPatchExtractor,
+        "region": SlidingWindowInRegionsPatchExtractor,
+    }
+
+    try:
+        return __availible_extractors[method_name.lower()](*args, **kwargs)
+    except KeyError:
         raise MethodNotSupported(
             f"{method_name.lower()} method is not currently supported."
         )
-
-    if method_name.lower() == "point":
-        return PointsPatchExtractor(**kwargs)
-
-    return SlidingWindowPatchExtractor(**kwargs)
