@@ -727,7 +727,8 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
 
             if not isinstance(patch_size[0], int) or not isinstance(patch_size[1], int):
                 raise ValueError("patch_size should be a tuple of integers")
-                # NOTE: since casting float to int loses precision, we do not do that implicitly here and in stride
+                # NOTE: since casting float to int loses precision,
+                # we do not do that implicitly here and in stride
 
             self.patch_size = tuple(patch_size)
 
@@ -847,7 +848,8 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
         for reg in regions:
             if len(reg) != 4:
                 raise ValueError(
-                    f"Size of each region should be 4 but got a region with size {len(reg)}"
+                    f"Size of each region should be 4 "
+                    f"but got a region with size {len(reg)}"
                 )
 
             x1, y1, w, h = reg
