@@ -54,9 +54,11 @@ def test_set_logger():
     importlib.reload(tiatoolbox)
     assert len(logger.handlers) == 2
 
+
 def test_logger_output():
     """Tests if logger is writing output to correct value."""
     from tiatoolbox import logger
+
     logger.setLevel(logging.DEBUG)
     logger.debug("Test if debug is written to stdout.")
 
