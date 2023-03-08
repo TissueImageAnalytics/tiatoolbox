@@ -699,11 +699,6 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
         return_coordinates: bool = False,
         min_region_covered: Optional[Union[int, Tuple[int, int]]] = None,
     ):
-        if within_region_bound and not within_wsi_bound:
-            raise ValueError(
-                "within_region_bound cannot be True if within_wsi_bound is False"
-            )
-
         self.wsi = self.get_wsi(input_img, wsi)
         self.resolution = resolution
         self.units = units
@@ -721,17 +716,15 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
         try:
             self.patch_size = self._get_pair(patch_size)
         except ValueError as e:
-            raise ValueError("There was an error with patch_size") from e
+            raise ValueError(f"There was an error with patch_size: {e}") from e
 
-        try:
-            self.stride = self.patch_size or self._get_pair(stride)
-        except ValueError as e:
-            raise ValueError("There was an error with stride") from e
-
-        if min_region_covered is not None and within_region_bound:
-            raise ValueError(
-                "min_region_covered cannot be used with within_region_bound=True"
-            )
+        if stride is None:
+            self.stride = self.patch_size
+        else:
+            try:
+                self.stride = self._get_pair(stride)
+            except ValueError as e:
+                raise ValueError(f"There was an error with stride: {e}") from e
 
         if min_region_covered is None:
             if within_region_bound:
@@ -742,9 +735,17 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
             try:
                 self.min_region_covered = self._get_pair(min_region_covered)
             except ValueError as e:
-                raise ValueError("There was an error with min_region_covered") from e
+                raise ValueError(
+                    f"There was an error with min_region_covered: {e}"
+                ) from e
 
-        self.check_patch_params(self.patch_size, self.min_region_covered, self.stride)
+        self.check_patch_params(
+            self.patch_size,
+            self.min_region_covered,
+            self.stride,
+            self.within_region_bound,
+            self.within_wsi_bound,
+        )
         self.check_regions(self.regions, self.wsi_size)
 
     @staticmethod
@@ -775,12 +776,19 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
         patch_size: Tuple[int, int],
         min_region_covered: Tuple[int, int],
         stride: Tuple[int, int],
+        within_region_bound: bool,
+        within_wsi_bound: bool,
     ):
         """Check if the patch parameters are valid.
 
         Raises:
             ValueError: If the patch parameters are not valid.
         """
+        if within_region_bound and not within_wsi_bound:
+            raise ValueError(
+                "within_region_bound cannot be True if within_wsi_bound is False"
+            )
+
         if (
             min_region_covered[0] > patch_size[0]
             or min_region_covered[1] > patch_size[1]
@@ -795,6 +803,11 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
 
         if stride[0] <= 0 or stride[1] <= 0:
             raise ValueError("stride should be greater than 0")
+
+        if min_region_covered is not None and within_region_bound:
+            raise ValueError(
+                "min_region_covered cannot be used with within_region_bound=True"
+            )
 
     @staticmethod
     def check_regions(regions, wsi_size):
@@ -824,6 +837,16 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def _get_pair(x: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
+        """Get a pair of integers from a single integer or a tuple of integers.
+        Args:
+            x (Union[int, Tuple[int, int]]): Input data
+
+        Raises:
+            ValueError: If the input is not a single integer or a tuple of integers.
+
+        Returns:
+            Tuple[int, int]: A pair of integers.
+        """
         if isinstance(x, (tuple, list)):
             if len(x) != 2:
                 raise ValueError("Pair has to have exactly two elements")
@@ -920,7 +943,7 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
                 continue
 
             position_inside_region = item - cum_sum
-            x1, y1, w, h = self.patch_start_areas[ind]
+            x1, y1, w, _ = self.patch_start_areas[ind]
             elements_in_row = ceil(w / self.stride[0])
 
             pos_y, pos_x = (
