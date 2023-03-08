@@ -620,7 +620,6 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
 def test_region_inits(sample_ndpi):
     """Test initial checks on SlidingWindowInRegionsPatchExtractor creation."""
-
     input_img = pathlib.Path(sample_ndpi)
     wsi = OpenSlideWSIReader(input_img=input_img)
     regions = [(0, 0, 100, 100)]
@@ -893,7 +892,7 @@ def test_region_patches():
     with pytest.raises(TypeError, match=r".should be an integer.*"):
         _ = extractor["3"]
 
-    for ind, (original_index, (patch_index, patch)) in enumerate(
+    for _, (original_index, (patch_index, patch)) in enumerate(
         zip(np.ndindex(image.shape[:-1]), extractor)
     ):
         original = image[original_index]
@@ -913,7 +912,7 @@ def test_region_patches():
         return_coordinates=False,
     )
 
-    for ind, (original_index, patch) in enumerate(
+    for _, (original_index, patch) in enumerate(
         zip(np.ndindex(image.shape[:-1]), extractor)
     ):
         original = image[original_index]
@@ -972,7 +971,8 @@ def test_region_patches():
         image, ((9, 9), (9, 9), (0, 0)), mode="constant"
     )  # 10-1=9. 1 is min_region_part
     assert len(extractor) == (image_width + 9) * (image_height + 9)
-    # we can start from anywhere in the padded image plus 9 pixels above and left of the image
+    # we can start from anywhere in the padded image
+    # plus 9 pixels above and left of the image
 
     for (x, y), patch in extractor:
         padded_x, padded_y = x + 9, y + 9
@@ -996,7 +996,9 @@ def test_region_patches():
     )
     assert len(extractor) == (image_width // 10) * (image_height // 10)
 
-    # the output should be the same as if regions=[(0, 0, image_width, image_height)] and within_region_bound=True
+    # the output should be the same as
+    # if regions were [(0, 0, image_width, image_height)] and
+    # within_region_bound was set to True
     for (x, y), patch in extractor:
         assert 0 <= x < image_width
         assert 0 <= y < image_height

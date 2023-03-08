@@ -665,11 +665,11 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
             `pad_mode`.
         within_region_bound (bool):
             Whether to extract patches beyond the region size limits. If
-            False, patches will start within the region bounds but might
-            extend beyond the region bounds. If True, patches will be
-            fully contained within the region bounds.
-            If `within_wsi_bound` is False, this parameter has to be set
-            to False as well.
+            False, some part of patches will start within the region
+            bounds but might extend beyond the region bounds. If True,
+            patches will be fully contained within the region bounds.
+            If set to True, `within_wsi_bound` parameter has to be set
+            to True as well.
         return_coordinates (bool):
             Whether to include coordinates of the patches. If True,
             iterator and getter will return a tuple (coordinates, patch) where
@@ -704,110 +704,138 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
                 "within_region_bound cannot be True if within_wsi_bound is False"
             )
 
-        if wsi is not None:
-            if input_img is not None:
-                raise ValueError("input_img and wsi cannot be both provided")
-            self.wsi = wsi
-        elif input_img is not None:
-            self.wsi = wsireader.WSIReader.open(input_img=input_img)
-        else:
-            raise ValueError("input_img or wsi must be provided")
-
+        self.wsi = self.get_wsi(input_img, wsi)
         self.resolution = resolution
+        self.units = units
+
         self.pad_mode = pad_mode
         self.pad_constant_values = pad_constant_values
+
         self.within_wsi_bound = within_wsi_bound
         self.within_region_bound = within_region_bound
         self.regions = regions
-
-        if isinstance(patch_size, (tuple, list)):
-            if len(patch_size) != 2:
-                raise ValueError("patch_size should be a tuple of length 2")
-
-            if not isinstance(patch_size[0], int) or not isinstance(patch_size[1], int):
-                raise ValueError("patch_size should be a tuple of integers")
-                # NOTE: since casting float to int loses precision,
-                # we do not do that implicitly here and in stride
-
-            self.patch_size = tuple(patch_size)
-
-        elif isinstance(patch_size, int):
-            self.patch_size = (
-                patch_size,
-                patch_size,
-            )
-        else:
-            raise ValueError(
-                "patch_size should be an integer or a tuple of integers of length 2"
-            )
-
-        self.units = units
         self.return_coordinates = return_coordinates
 
-        if stride is None:
-            self.stride = self.patch_size
-        else:
-            if isinstance(stride, (tuple, list)):
-                if len(stride) != 2:
-                    raise ValueError("stride should be a tuple of length 2")
+        self.n = 0
 
-                if not isinstance(stride[0], int) or not isinstance(stride[1], int):
-                    raise ValueError("stride should be a tuple of integers")
+        try:
+            self.patch_size = self._get_pair(patch_size)
+        except ValueError as e:
+            raise ValueError("There was an error with patch_size") from e
 
-                self.stride = tuple(stride)
-            elif isinstance(stride, int):
-                self.stride = (stride, stride)
-            else:
-                raise ValueError(
-                    "stride should be an integer or a tuple of integers of length 2"
-                )
-
-        if self.patch_size[0] <= 0 or self.patch_size[1] <= 0:
-            raise ValueError("patch_size should be greater than 0")
-
-        if self.stride[0] <= 0 or self.stride[1] <= 0:
-            raise ValueError("stride should be greater than 0")
+        try:
+            self.stride = self.patch_size or self._get_pair(stride)
+        except ValueError as e:
+            raise ValueError("There was an error with stride") from e
 
         if min_region_covered is not None and within_region_bound:
             raise ValueError(
                 "min_region_covered cannot be used with within_region_bound=True"
             )
 
-        elif min_region_covered is None:
+        if min_region_covered is None:
             if within_region_bound:
                 self.min_region_covered = self.patch_size
             else:
                 self.min_region_covered = (1, 1)
         else:
-            if isinstance(min_region_covered, (tuple, list)):
-                if len(min_region_covered) != 2:
-                    raise ValueError("min_region_covered should be a tuple of length 2")
+            try:
+                self.min_region_covered = self._get_pair(min_region_covered)
+            except ValueError as e:
+                raise ValueError("There was an error with min_region_covered") from e
 
-                if not isinstance(min_region_covered[0], int) or not isinstance(
-                    min_region_covered[1], int
-                ):
-                    raise ValueError("min_region_covered should be a tuple of integers")
+        self.check_patch_params(self.patch_size, self.min_region_covered, self.stride)
+        self.check_regions(self.regions, self.wsi_size)
 
-                self.min_region_covered = tuple(min_region_covered)
+    @staticmethod
+    def get_wsi(
+        input_img: Optional[Union[str, Path, np.ndarray]],
+        wsi: Optional[wsireader.WSIReader],
+    ):
+        """Get the WSIReader object.
 
-            elif isinstance(min_region_covered, int):
-                self.min_region_covered = (
-                    min_region_covered,
-                    min_region_covered,
-                )
-            else:
-                raise ValueError("min_region_covered should be a tuple of integers")
+        Args:
+            input_img (Union[str, Path, np.ndarray]): Path to the WSI.
+            wsi (wsireader.WSIReader): WSIReader object.
 
+        Returns:
+            wsireader.WSIReader: WSIReader object.
+        """
+        if wsi is not None:
+            if input_img is not None:
+                raise ValueError("input_img and wsi cannot be both provided")
+            return wsi
+        if input_img is not None:
+            return wsireader.WSIReader.open(input_img=input_img)
+
+        raise ValueError("input_img or wsi must be provided")
+
+    @staticmethod
+    def check_patch_params(
+        patch_size: Tuple[int, int],
+        min_region_covered: Tuple[int, int],
+        stride: Tuple[int, int],
+    ):
+        """Check if the patch parameters are valid.
+
+        Raises:
+            ValueError: If the patch parameters are not valid.
+        """
         if (
-            self.min_region_covered[0] > self.patch_size[0]
-            or self.min_region_covered[1] > self.patch_size[1]
+            min_region_covered[0] > patch_size[0]
+            or min_region_covered[1] > patch_size[1]
         ):
             raise ValueError("min_region_covered should be smaller than patch_size")
 
-        if self.min_region_covered[0] < 0 or self.min_region_covered[1] < 0:
+        if min_region_covered[0] < 0 or min_region_covered[1] < 0:
             raise ValueError("min_region_covered should be greater than zero")
 
-        self.check_regions(regions, self.wsi_size)
+        if patch_size[0] <= 0 or patch_size[1] <= 0:
+            raise ValueError("patch_size should be greater than 0")
+
+        if stride[0] <= 0 or stride[1] <= 0:
+            raise ValueError("stride should be greater than 0")
+
+    @staticmethod
+    def check_regions(regions, wsi_size):
+        """Check if the regions are valid, i.e. are located within the WSI bounds.
+
+        Raises:
+            ValueError: If the regions are not valid.
+        """
+        wsi_width, wsi_height = wsi_size
+
+        for reg in regions:
+            if len(reg) != 4:
+                raise ValueError(
+                    f"Size of each region should be 4 "
+                    f"but got a region with size {len(reg)}"
+                )
+
+            x1, y1, w, h = reg
+            x2 = x1 + w - 1  # -1 because the region is inclusive
+            y2 = y1 + h - 1
+
+            if not (0 <= x1 < x2 < wsi_width and 0 <= y1 < y2 < wsi_height):
+                raise ValueError("Region is out of bounds of the WSI")
+
+            if not all(isinstance(t, int) for t in reg):
+                raise ValueError("Each region should be a tuple of integers")
+
+    @staticmethod
+    def _get_pair(x: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
+        if isinstance(x, (tuple, list)):
+            if len(x) != 2:
+                raise ValueError("Pair has to have exactly two elements")
+            pair = tuple(x)
+        else:
+            pair = (x, x)
+
+        if not isinstance(pair[0], int) or not isinstance(pair[1], int):
+            # NOTE: since casting float to int loses precision,
+            # we do not do that implicitly
+            raise ValueError("Elements of the pair have to be integers")
+        return pair
 
     @property
     def wsi_size(self):
@@ -834,32 +862,6 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
 
     def __len__(self):
         return sum(self.region_sizes)
-
-    @staticmethod
-    def check_regions(regions, wsi_size):
-        """Check if the regions are valid, i.e. are located within the WSI bounds.
-        Raises:
-            ValueError: If the regions are not valid.
-        """
-
-        wsi_width, wsi_height = wsi_size
-
-        for reg in regions:
-            if len(reg) != 4:
-                raise ValueError(
-                    f"Size of each region should be 4 "
-                    f"but got a region with size {len(reg)}"
-                )
-
-            x1, y1, w, h = reg
-            x2 = x1 + w - 1  # -1 because the region is inclusive
-            y2 = y1 + h - 1
-
-            if not (0 <= x1 < x2 < wsi_width and 0 <= y1 < y2 < wsi_height):
-                raise ValueError("Region is out of bounds of the WSI")
-
-            if not all([isinstance(t, int) for t in reg]):
-                raise ValueError("Each region should be a tuple of integers")
 
     @property
     def patch_start_areas(self):
@@ -1048,7 +1050,6 @@ def get_patch_extractor(method_name: str, *args, **kwargs: str):
         ...  'point', img_patch_h=200, img_patch_w=200)
 
     """
-
     __availible_extractors = {
         "point": PointsPatchExtractor,
         "slidingwindow": SlidingWindowPatchExtractor,
