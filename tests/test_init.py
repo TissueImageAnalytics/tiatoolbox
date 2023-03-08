@@ -40,14 +40,34 @@ def test_set_logger():
     logger.handlers = []  # reset first to overwrite import
     handler_1 = logging.StreamHandler()
     handler_2 = logging.StreamHandler()
+    handler_3 = logging.StreamHandler()
     logger.addHandler(handler_1)
     logger.addHandler(handler_2)
-    assert len(logger.handlers) == 2
+    logger.addHandler(handler_3)
+    assert len(logger.handlers) == 3
     # skipcq
     importlib.reload(tiatoolbox)
     # should not overwrite, so still have 2 handler
-    assert len(logger.handlers) == 2
+    assert len(logger.handlers) == 3
     logger.handlers = []  # remove all handler
     # skipcq
     importlib.reload(tiatoolbox)
-    assert len(logger.handlers) == 1
+    assert len(logger.handlers) == 2
+
+def test_logger_output():
+    """Tests if logger is writing output to correct value."""
+    from tiatoolbox import logger
+    logger.setLevel(logging.DEBUG)
+    logger.debug("Test if debug is written to stdout.")
+
+    logger.setLevel(logging.INFO)
+    logger.info("Test if info written to stdout.")
+
+    logger.setLevel(logging.WARNING)
+    logger.warning("Test if warning written to stderr.")
+
+    logger.setLevel(logging.ERROR)
+    logger.error("Test if error is written to stderr.")
+
+    logger.setLevel(logging.CRITICAL)
+    logger.critical("Test if critical is written to stderr.")
