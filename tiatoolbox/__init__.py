@@ -25,7 +25,7 @@ import logging
 # logging
 logging.captureWarnings(True)
 if not logging.getLogger().hasHandlers():
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(
         "|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d|%H:%M:%S",
