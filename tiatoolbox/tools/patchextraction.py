@@ -1,12 +1,12 @@
 """This file defines patch extraction methods for deep learning models."""
 import warnings
 from abc import ABC, abstractmethod
+from math import ceil
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame
-from math import ceil
 
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
@@ -699,7 +699,6 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
         return_coordinates: bool = False,
         min_region_covered: Optional[Union[int, Tuple[int, int]]] = None,
     ):
-
         if within_region_bound and not within_wsi_bound:
             raise ValueError(
                 "within_region_bound cannot be True if within_wsi_bound is False"
@@ -874,7 +873,7 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
         regions = []
         wsi_width, wsi_height = self.wsi_size
 
-        for (x1, y1, w, h) in self.regions:
+        for x1, y1, w, h in self.regions:
             min_y_start = y1 - self.patch_size[1] + self.min_region_covered[1]
             min_x_start = x1 - self.patch_size[0] + self.min_region_covered[0]
 
