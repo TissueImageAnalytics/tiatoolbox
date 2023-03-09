@@ -30,6 +30,7 @@ IFD
 JP2
 Jupyter
 Kumar
+Liskov
 MERCHANTABILITY
 Macenko
 Munkres
