@@ -4,6 +4,7 @@ import importlib
 import logging
 import os
 import shutil
+import subprocess
 
 import pytest
 
@@ -55,21 +56,84 @@ def test_set_logger():
     assert len(logger.handlers) == 2
 
 
+def helper_logger_test(run_statement: str):
+    """Helper for logger tests."""
+    proc = subprocess.Popen(
+        [
+            "python",
+            "-c",
+            run_statement,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return proc.communicate()[0], proc.communicate()[1]
+
+
 def test_logger_output():
     """Tests if logger is writing output to correct value."""
-    from tiatoolbox import logger
+    # Test DEBUG is written to stdout
+    run_statement = (
+        "from tiatoolbox import logger; "
+        "import logging; "
+        "logger.setLevel(logging.DEBUG); "
+        'logger.debug("Test if debug is written to stdout.")'
+    )
+    out, err = helper_logger_test(run_statement=run_statement)
+    assert b"[DEBUG] Test if debug is written to stdout." in out
+    assert err == b""
 
-    logger.setLevel(logging.DEBUG)
-    logger.debug("Test if debug is written to stdout.")
+    # Test INFO is written to stdout
+    run_statement = (
+        "from tiatoolbox import logger; "
+        "import logging; "
+        "logger.setLevel(logging.INFO); "
+        'logger.info("Test if info is written to stdout.")'
+    )
+    out, err = helper_logger_test(run_statement=run_statement)
+    assert b"[INFO] Test if info is written to stdout." in out
+    assert err == b""
 
-    logger.setLevel(logging.INFO)
-    logger.info("Test if info written to stdout.")
+    # Test WARNING is written to stderr
+    run_statement = (
+        "from tiatoolbox import logger; "
+        "import logging; "
+        "logger.setLevel(logging.WARNING); "
+        'logger.warning("Test if warning is written to stderr.")'
+    )
+    out, err = helper_logger_test(run_statement=run_statement)
+    assert out == b""
+    assert b"[WARNING] Test if warning is written to stderr." in err
 
-    logger.setLevel(logging.WARNING)
-    logger.warning("Test if warning written to stderr.")
+    # Test ERROR is written to stderr
+    run_statement = (
+        "from tiatoolbox import logger; "
+        "import logging; "
+        "logger.setLevel(logging.ERROR); "
+        'logger.error("Test if error is written to stderr.")'
+    )
+    out, err = helper_logger_test(run_statement=run_statement)
+    assert out == b""
+    assert b"[ERROR] Test if error is written to stderr." in err
 
-    logger.setLevel(logging.ERROR)
-    logger.error("Test if error is written to stderr.")
+    # Test ERROR is written to stderr
+    run_statement = (
+        "from tiatoolbox import logger; "
+        "import logging; "
+        "logger.setLevel(logging.ERROR); "
+        'logger.error("Test if error is written to stderr.")'
+    )
+    out, err = helper_logger_test(run_statement=run_statement)
+    assert out == b""
+    assert b"[ERROR] Test if error is written to stderr." in err
 
-    logger.setLevel(logging.CRITICAL)
-    logger.critical("Test if critical is written to stderr.")
+    # Test CRITICAL is written to stderr
+    run_statement = (
+        "from tiatoolbox import logger; "
+        "import logging; "
+        "logger.setLevel(logging.CRITICAL); "
+        'logger.critical("Test if critical is written to stderr.")'
+    )
+    out, err = helper_logger_test(run_statement=run_statement)
+    assert out == b""
+    assert b"[CRITICAL] Test if critical is written to stderr." in err
