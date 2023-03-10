@@ -1047,7 +1047,6 @@ class AnnotationStore(ABC, MutableMapping):
         n_where: Optional[Predicate] = None,
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
-        units: str = "points",
         mode: str = "poly-poly",
     ) -> Dict[str, Dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
@@ -1087,12 +1086,6 @@ class AnnotationStore(ABC, MutableMapping):
                 The predicate to use when comparing geometries. Defaults
                 to "intersects". Other options include "within" and
                 "contains".
-            units (str):
-                The units of the distance. Defaults to "points", i.e.
-                whatever units were used when inserting geometry to the
-                store. Other options include "um" which will use microns
-                for distance calculations if the store is aware of the
-                resolution.
             mode (tuple[str, str] or str):
                 The method to use for determining distance during the
                 query. Defaults to "box-box". This may significantly
