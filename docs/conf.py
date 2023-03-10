@@ -110,7 +110,7 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "requirements*.txt",
+    "requirements/requirements*.txt",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.

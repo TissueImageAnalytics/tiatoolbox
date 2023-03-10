@@ -1,4 +1,4 @@
-name: tiatoolbox-dev
+name: tiatoolbox
 channels:
   - conda
   - conda-forge
@@ -6,9 +6,9 @@ channels:
   - defaults
 dependencies:
   - cython
-  - openjpeg>=2.4.0
+  - openslide
   - pip>=20.0.2
   - pixman>=0.39.0
   - python>=3.8, <3.11
   - pip:
-      - -r requirements_dev.txt
+    - -r requirements/requirements.txt

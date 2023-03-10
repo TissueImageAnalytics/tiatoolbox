@@ -1,4 +1,4 @@
-name: tiatoolbox
+name: tiatoolbox-dev
 channels:
   - conda
   - conda-forge
@@ -11,4 +11,4 @@ dependencies:
   - pixman>=0.39.0
   - python>=3.8, <3.11
   - pip:
-      - -r requirements.txt
+      - -r requirements/requirements_dev.txt

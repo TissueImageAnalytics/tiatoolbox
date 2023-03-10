@@ -1,4 +1,4 @@
--r requirements.txt
+-r requirements/requirements.txt
 -r docs/requirements.txt
 black>=23.1.0
 bump2version>=1.0.1
