@@ -673,6 +673,14 @@ class AnnotationStore(ABC, MutableMapping):
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
 
+        def bbox_intersects(
+            annotation_geometry: Geometry, query_geometry: Geometry
+        ) -> bool:
+            """True if bounding box of the annotation intersects the query geometry."""
+            return Polygon.from_bounds(*query_geometry.bounds).intersects(
+                Polygon.from_bounds(*annotation_geometry.bounds)
+            )
+
         def filter_function(annotation: Annotation) -> bool:
             """Filter function for querying annotations.
 
@@ -688,8 +696,12 @@ class AnnotationStore(ABC, MutableMapping):
             """
             return (  # Geometry is None or the geometry predicate matches
                 query_geometry is None
-                or self._geometry_predicate(
-                    geometry_predicate, query_geometry, annotation.geometry
+                or (
+                    bbox_intersects(annotation.geometry, query_geometry)
+                    if geometry_predicate == "bbox_intersects"
+                    else self._geometry_predicate(
+                        geometry_predicate, query_geometry, annotation.geometry
+                    )
                 )
             ) and self._eval_where(where, annotation.properties)
 
