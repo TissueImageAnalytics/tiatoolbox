@@ -2266,8 +2266,7 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[QueryGeometry] = None,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        min_area=None,  # noqa: T100 FIXME: Broken Liskov substitution principle
-        # and missing from docstring
+        min_area=None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
