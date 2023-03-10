@@ -1931,3 +1931,69 @@ class TestStore:
         )
         assert isinstance(result, dict)
         assert len(result) == 1
+
+    @staticmethod
+    def test_nquery_find_overlapping_bboxes(store_cls):
+        store: AnnotationStore = store_cls()
+
+        grid_size = 10
+        spacing = 30
+        radius = 5
+        grid = np.ndindex((grid_size, grid_size))
+
+        for x, y in grid:
+            cell_a = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_a = Annotation(cell_a, {"class": "A"})
+            cell_b = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_b = Annotation(cell_b, {"class": "B"})
+
+            store[f"A_{x}_{y}"] = ann_a
+            store[f"B_{x}_{y}"] = ann_b
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=0,
+            mode="box-box",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == grid_size**2
+        for v in result.values():
+            assert len(v) == 1
+
+    @staticmethod
+    def test_nquery_find_overlapping_bboxpoints(store_cls):
+        store: AnnotationStore = store_cls()
+
+        grid_size = 10
+        spacing = 10
+        radius = 5
+        grid = np.ndindex((grid_size, grid_size))
+
+        for x, y in grid:
+            cell_a = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_a = Annotation(cell_a, {"class": "A"})
+            cell_b = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_b = Annotation(cell_b, {"class": "B"})
+
+            store[f"A_{x}_{y}"] = ann_a
+            store[f"B_{x}_{y}"] = ann_b
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=2,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == grid_size**2
+        for v in result.values():
+            assert len(v) == 1
