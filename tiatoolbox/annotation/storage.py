@@ -1158,7 +1158,11 @@ class AnnotationStore(ABC, MutableMapping):
             raise TypeError("mode must be a string or tuple of strings")
         if isinstance(mode, str):
             mode = tuple(mode.split("-"))
-        from_mode, to_mode = mode
+        if mode not in (("box", "box"), ("boxpoint", "boxpoint"), ("poly", "poly")):
+            raise ValueError(
+                "mode must be one of 'box-box', 'boxpoint-boxpoint', or 'poly-poly'"
+            )
+        from_mode, _ = mode
 
         # Initial selection of annotations to query around
         selection = self.query(
