@@ -1085,7 +1085,8 @@ class AnnotationStore(ABC, MutableMapping):
             geometry_predicate (str):
                 The predicate to use when comparing geometries. Defaults
                 to "intersects". Other options include "within" and
-                "contains".
+                "contains". Ignored if `mode` is "boxpoint-boxpoint" or
+                "box-box".
             mode (tuple[str, str] or str):
                 The method to use for determining distance during the
                 query. Defaults to "box-box". This may significantly
