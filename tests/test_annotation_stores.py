@@ -1969,7 +1969,7 @@ class TestStore:
     def test_nquery_find_overlapping_bboxpoints(store_cls):
         store: AnnotationStore = store_cls()
 
-        grid_size = 10
+        grid_size = 100
         spacing = 10
         radius = 5
         grid = np.ndindex((grid_size, grid_size))
@@ -1997,3 +1997,39 @@ class TestStore:
         assert len(result) == grid_size**2
         for v in result.values():
             assert len(v) == 1
+
+    @staticmethod
+    def test_invalid_mode_type(store_cls):
+        store: AnnotationStore = store_cls()
+
+        with pytest.raises(TypeError, match="string or tuple of strings"):
+            store.nquery(
+                where="props['class'] == 'A'",
+                n_where="props['class'] == 'B'",
+                distance=2,
+                mode=123,
+            )
+
+    @staticmethod
+    def test_invalid_mode_format(store_cls):
+        store: AnnotationStore = store_cls()
+
+        with pytest.raises(ValueError, match="must be one of"):
+            store.nquery(
+                where="props['class'] == 'A'",
+                n_where="props['class'] == 'B'",
+                distance=2,
+                mode="invalid-invalid-invalid",
+            )
+
+    @staticmethod
+    def test_invalid_mode(store_cls):
+        store: AnnotationStore = store_cls()
+
+        with pytest.raises(ValueError, match="must be one of"):
+            store.nquery(
+                where="props['class'] == 'A'",
+                n_where="props['class'] == 'B'",
+                distance=2,
+                mode="invalid",
+            )
