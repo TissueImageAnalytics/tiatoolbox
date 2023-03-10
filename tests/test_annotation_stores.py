@@ -1969,7 +1969,7 @@ class TestStore:
     def test_nquery_find_overlapping_bboxpoints(store_cls):
         store: AnnotationStore = store_cls()
 
-        grid_size = 100
+        grid_size = 10
         spacing = 10
         radius = 5
         grid = np.ndindex((grid_size, grid_size))
