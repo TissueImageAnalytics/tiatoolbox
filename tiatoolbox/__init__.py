@@ -65,10 +65,6 @@ def _lazy_import(name: str):
     loader.exec_module(module)
     return module
 
-def _lazy_import_class(module_name: str, class_name: str):
-    module = _lazy_import(module_name)
-    return getattr(module, class_name)
-
 
 annotation = _lazy_import("tiatoolbox.annotation")
 models = _lazy_import("tiatoolbox.models")
@@ -76,10 +72,5 @@ tools = _lazy_import("tiatoolbox.tools")
 utils = _lazy_import("tiatoolbox.utils")
 wsicore = _lazy_import("tiatoolbox.wsicore")
 
-HoVerNet = _lazy_import_class("tiatoolbox.models.architecture.hovernet", "HoVerNet")
-
-
 if __name__ == "__main__":
     print("tiatoolbox version:" + str(__version__))
-
-    #

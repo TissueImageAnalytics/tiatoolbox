@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tiatoolbox.wsicore import wsimeta, wsireader
+from tiatoolbox.wsicore import wsimeta, wsireader, WSIMeta
 
 
 # noinspection PyTypeChecker
@@ -63,7 +63,8 @@ def test_wsimeta_validate_pass():
     meta = wsimeta.WSIMeta(slide_dimensions=(512, 512), axes="YXS")
     assert meta.validate()
 
-    meta = wsimeta.WSIMeta(
+    # Test with top-level import
+    meta = WSIMeta(
         slide_dimensions=(512, 512),
         axes="YXS",
         level_dimensions=[(512, 512), (256, 256)],
