@@ -1181,16 +1181,24 @@ class AnnotationStore(ABC, MutableMapping):
             geometry = ann.geometry
             if from_mode == "box":
                 geometry_predicate = "bbox_intersects"
-                geometry = Polygon.from_bounds(*ann.geometry.bounds)
+                min_x, min_y, max_x, max_y = ann.geometry.bounds
+                geometry = Polygon.from_bounds(
+                    min_x - distance,
+                    min_y - distance,
+                    max_x + distance,
+                    max_y + distance,
+                )
             elif from_mode == "boxpoint":
                 geometry_predicate = "bbox_centre_within"
                 geometry = Polygon.from_bounds(*ann.geometry.bounds).centroid
+                geometry = geometry.buffer(distance)
             elif from_mode == "poly":
                 geometry = ann.geometry
+                geometry = geometry.buffer(distance)
             else:
                 raise ValueError(f"Unsupported mode {mode}")
             subquery_result = self.query(
-                geometry=geometry.buffer(distance),
+                geometry=geometry,
                 where=n_where,
                 geometry_predicate=geometry_predicate,
             )
