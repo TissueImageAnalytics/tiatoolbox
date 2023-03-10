@@ -91,6 +91,21 @@ def sqlite_eval(query: Union[str, Number]):
     return result
 
 
+class TestSQLite:  # noqa: PIE798
+    """Test converting from our DSL to an SQLite backed."""
+
+    @staticmethod
+    def test_prop_or_prop():
+        """Test OR operator between two prop accesses."""
+        query = eval(
+            "(props['int'] == 2) | (props['int'] == 3)", SQL_GLOBALS, {}
+        )  # skipcq: PYL-W0123
+        assert str(query) == (
+            '((json_extract(properties, "$.int") == 2) OR '
+            '(json_extract(properties, "$.int") == 3))'
+        )
+
+
 class TestPredicate:
     """Test predicate statments with various backends."""
 
