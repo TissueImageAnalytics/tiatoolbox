@@ -294,7 +294,7 @@ class AnnotationStore(ABC, MutableMapping):
         "bbox_intersects",
         # Special non-shapely case, query bounding box contains
         # stored bounding box centroid
-        "bbox_centroid_within",
+        "bbox_centre_within",
     ]
 
     @classmethod  # noqa: A003
@@ -685,7 +685,7 @@ class AnnotationStore(ABC, MutableMapping):
                 Polygon.from_bounds(*annotation_geometry.bounds)
             )
 
-        def bbox_centroid_within(
+        def bbox_centre_within(
             annotation_geometry: Geometry, query_geometry: Geometry
         ) -> bool:
             """True if annotation bounds centre within query geometry bounds.
@@ -719,14 +719,12 @@ class AnnotationStore(ABC, MutableMapping):
                             and bbox_intersects(annotation.geometry, query_geometry)
                         ),
                         (
-                            geometry_predicate == "bbox_centroid_within"
-                            and bbox_centroid_within(
-                                annotation.geometry, query_geometry
-                            )
+                            geometry_predicate == "bbox_centre_within"
+                            and bbox_centre_within(annotation.geometry, query_geometry)
                         ),
                         (
                             geometry_predicate
-                            not in ("bbox_intersects", "bbox_centroid_within")
+                            not in ("bbox_intersects", "bbox_centre_within")
                             and self._geometry_predicate(
                                 geometry_predicate, query_geometry, annotation.geometry
                             )
@@ -1185,7 +1183,7 @@ class AnnotationStore(ABC, MutableMapping):
                 geometry_predicate = "bbox_intersects"
                 geometry = Polygon.from_bounds(*ann.geometry.bounds)
             elif from_mode == "boxpoint":
-                geometry_predicate = "bbox_centroid_within"
+                geometry_predicate = "bbox_centre_within"
                 geometry = Polygon.from_bounds(*ann.geometry.bounds).centroid
             elif from_mode == "poly":
                 geometry = ann.geometry
@@ -2047,10 +2045,10 @@ class SQLiteStore(AnnotationStore):
         # rapidly narrow candidates down.
         if query_geometry is not None:
             # Add rtree index checks to the query.
-            # For special case of bbox_centroid_within, Check for
+            # For special case of bbox_centre_within, Check for
             # centroid of the annotation bounds within query geometry
             # bounds.
-            if geometry_predicate == "bbox_centroid_within":
+            if geometry_predicate == "bbox_centre_within":
                 query_string += (
                     "AND (min_x + max_x)/2 >= :min_x "
                     "AND (min_x + max_x)/2 <= :max_x "
@@ -2085,7 +2083,7 @@ class SQLiteStore(AnnotationStore):
             # check only.
             if geometry_predicate is not None and geometry_predicate not in (
                 "bbox_intersects",
-                "bbox_centroid_within",
+                "bbox_centre_within",
             ):
                 query_string += (
                     "\nAND geometry_predicate("
