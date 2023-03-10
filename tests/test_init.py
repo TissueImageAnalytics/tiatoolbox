@@ -4,6 +4,7 @@ import importlib
 import logging
 import os
 import shutil
+import subprocess
 
 import pytest
 
@@ -40,14 +41,66 @@ def test_set_logger():
     logger.handlers = []  # reset first to overwrite import
     handler_1 = logging.StreamHandler()
     handler_2 = logging.StreamHandler()
+    handler_3 = logging.StreamHandler()
     logger.addHandler(handler_1)
     logger.addHandler(handler_2)
-    assert len(logger.handlers) == 2
+    logger.addHandler(handler_3)
+    assert len(logger.handlers) == 3
     # skipcq
     importlib.reload(tiatoolbox)
     # should not overwrite, so still have 2 handler
-    assert len(logger.handlers) == 2
+    assert len(logger.handlers) == 3
     logger.handlers = []  # remove all handler
     # skipcq
     importlib.reload(tiatoolbox)
-    assert len(logger.handlers) == 1
+    assert len(logger.handlers) == 2
+
+
+def helper_logger_test(level: str):
+    """Helper for logger tests."""
+    if level.lower() in ["debug", "info"]:
+        output = "out"
+        order = (0, 1)
+    else:
+        output = "err"
+        order = (1, 0)
+    run_statement = (
+        f"from tiatoolbox import logger; "
+        f"import logging; "
+        f"logger.setLevel(logging.{level.upper()}); "
+        f'logger.{level.lower()}("Test if {level.lower()} is written to std{output}.")'
+    )
+
+    proc = subprocess.Popen(
+        [
+            "python",
+            "-c",
+            run_statement,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert (
+        f"[{level.upper()}] Test if {level.lower()} is written to std{output}.".encode()
+        in proc.communicate()[order[0]]
+    )
+    assert proc.communicate()[order[1]] == b""
+
+
+def test_logger_output():
+    """Tests if logger is writing output to correct value."""
+    # Test DEBUG is written to stdout
+    helper_logger_test(level="debug")
+
+    # Test INFO is written to stdout
+    helper_logger_test(level="info")
+
+    # Test WARNING is written to stderr
+    helper_logger_test(level="warning")
+
+    # Test ERROR is written to stderr
+    helper_logger_test(level="error")
+
+    # Test CRITICAL is written to stderr
+    helper_logger_test(level="critical")
