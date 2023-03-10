@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tiatoolbox.wsicore import wsimeta, wsireader, WSIMeta
+from tiatoolbox.wsicore import WSIMeta, wsimeta, wsireader
 
 
 # noinspection PyTypeChecker
