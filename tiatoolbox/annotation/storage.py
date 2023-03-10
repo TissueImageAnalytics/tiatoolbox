@@ -1099,8 +1099,6 @@ class AnnotationStore(ABC, MutableMapping):
                 change performance depending on the backend. Possible
                 options are:
                   - "poly-poly": Polygon boundary to polygon boundary.
-                  - "boxpoint-poly": Bounding box centre point to
-                    polygon boundary.
                   - "boxpoint-boxpoint": Bounding box centre point to
                     bounding box centre point.
                   - "box-box": Bounding box to bounding box.
