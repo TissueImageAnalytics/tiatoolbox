@@ -11,4 +11,4 @@ dependencies:
   - pixman>=0.39.0
   - python>=3.8, <3.11
   - pip:
-    - -r requirements/requirements.txt
+    - -r requirements.txt
