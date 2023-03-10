@@ -1637,9 +1637,8 @@ class TestStore:
             assert path == Path(fh.name)
 
     @staticmethod
-    def test_nquery_centroid(store_cls):
+    def test_nquery_boxpoint_boxpoint(store_cls):
         """Test simple querying within a neighbourhood.
-
 
         Test that a neighbourhood query returns the correct results
         for a simple data store with two points.
@@ -1647,10 +1646,10 @@ class TestStore:
         .. code-block:: text
 
             3^
-            2|  B
-            1|A
-            0+----->
-            0 1 2 3
+            2|   B
+            1| A
+            0+------>
+             0 1 2 3
 
         Query for all points within a distance of 2 from A. Should
         return a dictionary with a single key, "A", and a value of
@@ -1672,7 +1671,7 @@ class TestStore:
             where="props['class'] == 'A'",
             n_where="props['class'] == 'B'",
             distance=2,
-            use_centroid=True,
+            mode="boxpoint-boxpoint",
         )
         assert isinstance(result, dict)
         assert len(result) == 1
@@ -1680,9 +1679,8 @@ class TestStore:
         assert result["A"] == {"B": ann_b}
 
     @staticmethod
-    def test_nquery_centroid_no_results(store_cls):
+    def test_nquery_boxpoint_boxpoint_no_results(store_cls):
         """Test querying within a neighbourhood with no results.
-
 
         Test that a neighbourhood query returns an empty dictionary
         when there are no results.
@@ -1693,7 +1691,7 @@ class TestStore:
             2|
             1|
             0+----->
-            0 1 2 3
+             0 1 2 3
 
         Query for all points within a distance of 2 from A. Should
         return an empty dictionary.
@@ -1709,26 +1707,25 @@ class TestStore:
             where="props['class'] == 'A'",
             n_where="props['class'] == 'B'",
             distance=2,
-            use_centroid=True,
+            mode="boxpoint-boxpoint",
         )
         assert isinstance(result, dict)
         assert len(result) == 0
 
     @staticmethod
-    def test_nquery_centroid_multiple(store_cls):
+    def test_nquery_boxpoint_boxpoint_multiple(store_cls):
         """Test querying within a neighbourhood with multiple results.
 
-
         Test that a neighbourhood query returns the correct results
-        for a simple data store with three points.
+        for a simple data store with four points.
 
         .. code-block:: text
 
             3^
-            2|  B
-            1|A C
-            0+----->
-            0 1 2 3
+            2|   B
+            1| A C D <-- D is outside the neighbourhood
+            0+------>
+             0 1 2 3
 
         Query for all points within a distance of 2 from A. Should
         return a dictionary with a single key, "A", and a value of
@@ -1741,23 +1738,196 @@ class TestStore:
             {"class": "A"},
         )
         store["A"] = ann_a
+
         ann_b = Annotation(
             Point(2, 2),
             {"class": "B"},
         )
         store["B"] = ann_b
+
         ann_c = Annotation(
             Point(2, 1),
             {"class": "C"},
         )
         store["C"] = ann_c
+
+        ann_d = Annotation(
+            Point(3, 1),
+            {"class": "D"},
+        )
+        store["D"] = ann_d
+
         result = store.nquery(
             where="props['class'] == 'A'",
             n_where="(props['class'] == 'B') | (props['class'] == 'C')",
             distance=2,
-            use_centroid=True,
+            mode="boxpoint-boxpoint",
         )
         assert isinstance(result, dict)
         assert len(result) == 1
         assert "A" in result
         assert result["A"] == {"B": ann_b, "C": ann_c}
+
+    @staticmethod
+    def test_nquery_poly_poly(store_cls):
+        """Test querying within a neighbourhood with multiple results.
+
+        Test that a neighbourhood query returns the correct results
+        for a simple data store with two polygons.
+
+        .. code-block:: text
+
+            3^
+            2|   B
+            1| A
+            0+------>
+             0 1 2 3
+
+        """
+        store: AnnotationStore = store_cls()
+
+        ann_a = Annotation(  # Triangle
+            Polygon([(0, 0), (0, 1), (1, 0)]),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+
+        ann_b = Annotation(  # Square
+            Polygon.from_bounds(1, 1, 2, 2),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=2,
+            mode="poly-poly",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1
+
+    @staticmethod
+    def test_nquery_poly_poly_vs_boxpoint_boxpoint(store_cls):
+        """Test querying within a neighbourhood with two polygons.
+
+        Test that a full polygon neighbourhood query returns results
+        where a centroid query would return no results.
+
+        .. code-block:: text
+
+             ^
+            3|
+             |         <----2---->
+            2|     +-----+     +-----+
+             |     |  +  |<-1->|  +  |
+            1|     +-----+     +-----+
+             |
+            0+------------------------>
+             0     1     2     3     4
+
+        """
+        store: AnnotationStore = store_cls()
+
+        ann_a = Annotation(
+            Polygon.from_bounds(1, 1, 2, 2),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+
+        ann_b = Annotation(
+            Polygon.from_bounds(3, 1, 4, 2),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+
+        distance = 1.25
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=distance,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 0
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=distance,
+            mode=("poly", "poly"),
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1
+
+    @staticmethod
+    def test_nquery_polygon_boundary_alt(store_cls):
+        """Test querying within a neighbourhood with two polygons.
+
+        This test is similar to test_nquery_polygon_boundary, but
+        the centroids are closer than the boundaries.
+
+        .. code-block:: text
+
+             ^
+            5|     +-----------------+
+             |     +---------------+ |
+            4|        <-----2----->| |  centroid-boundary = 2
+             |        <--1-->      | |  centroid-centroid = 1
+            3|     +-----+         | |
+             |     |  +  |  +  ^   | |  centroid-boundary = 2
+            2|     +-----+     |   | |
+             |        ^        |2  | |
+            1|        v1.5     v   | |  boundary-boundary = 1.5
+             |     +---------------+ |
+            0+-----+-----------------+-->
+             0     1     2     3     4
+        """
+        store: AnnotationStore = store_cls()
+
+        # Annotation A: A 1x1 box
+        ann_a = Annotation(
+            Polygon.from_bounds(1, 2, 2, 3),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+
+        # C shaped polygon around annotation A
+        ann_b = Annotation(
+            Polygon(
+                [
+                    (1, 0),
+                    (4, 0),
+                    (4, 5),
+                    (1, 5),
+                    (1, 4.5),
+                    (3.5, 4.5),
+                    (3.5, 0.5),
+                    (1, 0.5),
+                ]
+            ),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+
+        distance = 1.75
+
+        centroid = Polygon.from_bounds(*ann_b.geometry.bounds).centroid
+
+        print(centroid)
+        print(ann_a.geometry.centroid)
+        print(
+            centroid.buffer(distance)
+            .intersection(ann_a.geometry.centroid.buffer(distance))
+            .area
+        )
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=distance,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1

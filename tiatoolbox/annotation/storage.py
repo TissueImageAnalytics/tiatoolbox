@@ -1020,7 +1020,7 @@ class AnnotationStore(ABC, MutableMapping):
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
         units: str = "points",
-        use_centroid: bool = True,
+        mode: str = "poly-poly",
     ) -> Dict[str, Dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
@@ -1065,10 +1065,22 @@ class AnnotationStore(ABC, MutableMapping):
                 store. Other options include "um" which will use microns
                 for distance calculations if the store is aware of the
                 resolution.
-            use_centroid (bool):
-                If True, the centroids of geometries will be used for
-                distance calculations. If False, the geometry will be used.
-                Defaults to True.
+            mode (tuple[str, str] or str):
+                The method to use for determining distance during the
+                query. Defaults to "box-box". This may significantly
+                change performance depending on the backend. Possible
+                options are:
+                  - "poly-poly": Polygon boundary to polygon boundary.
+                  - "boxpoint-poly": Bounding box centre point to
+                    polygon boundary.
+                  - "boxpoint-boxpoint": Bounding box centre point to
+                    bounding box centre point.
+                  - "box-box": Bounding box to bounding box.
+                May be specified as a dash separated string or a tuple
+                of two strings. The first string is the mode for the
+                query geometry and the second string is the mode for
+                the nearest annotation geometry.
+
 
         Returns:
             Dict[str, Dict[str, Annotation]]:
@@ -1117,12 +1129,17 @@ class AnnotationStore(ABC, MutableMapping):
             ...     n_where="props['class'] == 0",  # Lymphocytes
             ...     distance=3.0,  # n_where within 10 of where
             ...     units="um",  # Use microns for distance
-            ...     use_centroid=True,  # Use centroids for distance
+            ...     mode="point-point",  # Use point to point distance
             ... )
 
         """
         # This is a naive generic implementation which can be overridden
         # by back ends which can do this more efficiently.
+        if not isinstance(mode, (str, tuple)):
+            raise TypeError("mode must be a string or tuple of strings")
+        if isinstance(mode, str):
+            mode = tuple(mode.split("-"))
+        from_mode, to_mode = mode
 
         # Initial selection of annotations to query around
         selection = self.query(
@@ -1133,12 +1150,14 @@ class AnnotationStore(ABC, MutableMapping):
         # Query for others within the distance of initial selection
         result = {}
         for key, ann in selection.items():
+            geometry = ann.geometry
+            if from_mode == "box":
+                geometry = Polygon.from_bounds(*ann.geometry.bounds)
+            elif from_mode == "boxpoint":
+                geometry_predicate = "bbox_intersects"
+                geometry = Polygon.from_bounds(*ann.geometry.bounds).centroid
             subquery_result = self.query(
-                geometry=Polygon.from_bounds(*ann.geometry.bounds).centroid.buffer(
-                    distance
-                )
-                if use_centroid
-                else ann.geometry.buffer(distance),
+                geometry=geometry.buffer(distance),
                 where=n_where,
                 geometry_predicate=geometry_predicate,
             )
