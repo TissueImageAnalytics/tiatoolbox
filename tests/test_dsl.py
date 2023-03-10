@@ -97,9 +97,9 @@ class TestSQLite:  # noqa: PIE798
     @staticmethod
     def test_prop_or_prop():
         """Test OR operator between two prop accesses."""
-        query = eval(
+        query = eval(  # skipcq: PYL-W0123
             "(props['int'] == 2) | (props['int'] == 3)", SQL_GLOBALS, {}
-        )  # skipcq: PYL-W0123
+        )
         assert str(query) == (
             '((json_extract(properties, "$.int") == 2) OR '
             '(json_extract(properties, "$.int") == 3))'
