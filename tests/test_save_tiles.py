@@ -63,7 +63,7 @@ def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
             "--output-path",
             tmp_path,
             "--verbose",
-            "False",
+            "True",
         ],
     )
 
