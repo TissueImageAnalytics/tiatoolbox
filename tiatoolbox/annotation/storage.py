@@ -1101,12 +1101,40 @@ class AnnotationStore(ABC, MutableMapping):
                 query geometry and the second string is the mode for
                 the nearest annotation geometry.
 
-
         Returns:
             Dict[str, Dict[str, Annotation]]:
                 A dictionary mapping annotation keys to another
                 dictionary which represents an annotation key and all
                 annotations within `distance` of it.
+
+        The `mode` argument is used to determine how to calculate the
+        distance between annotations. The default mode is "box-box"
+        which is typically the fastest. This mode uses the bounding
+        boxes of annotations and the query geometry when determining if
+        annotations are within the neighbourhood.
+
+        .. figure:: ../images/nquery-box-box.png
+            :width: 512
+            :alt: "box-box" mode
+
+        The "poly-poly" mode is the slowest but most accurate. This mode
+        uses the polygon boundary of annotations and the query geometry
+        when determining if annotations are within the neighbourhood.
+
+        .. figure:: ../images/nquery-poly-poly.png
+            :width: 512
+            :alt: "poly-poly" mode
+
+        
+        The "boxpoint-boxpoint" mode is faster than "poly-poly" but less
+        accurate. This mode uses the centre point of the bounding box of
+        annotations and the query geometry when determining if
+        annotations are within the neighbourhood.
+
+        .. figure:: ../images/nquery-boxpoint-boxpoint.png
+            :width: 512
+            :alt: "boxpoint-boxpoint" mode        
+        
 
         Examples:
             Example bounding boxy query with one neighbour within a
