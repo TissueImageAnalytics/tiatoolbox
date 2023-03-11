@@ -152,6 +152,15 @@ class Annotation:
 class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
 
+    def __new__(cls, *args, **kwargs):
+        """Return an instance of a subclass of AnnotationStore."""
+        if cls is AnnotationStore:
+            raise TypeError(
+                "AnnotationStore is an abstract class and cannot be instantiated."
+                " Use a subclass such as DictionaryStore or SQLiteStore instead."
+            )
+        return super().__new__(cls)
+
     @staticmethod
     def _is_right_angle(a, b, c) -> bool:
         """Returns True if three points make a right angle.
