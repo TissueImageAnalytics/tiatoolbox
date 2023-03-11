@@ -1191,8 +1191,6 @@ class AnnotationStore(ABC, MutableMapping):
             elif from_mode == "poly":
                 geometry = ann.geometry
                 geometry = geometry.buffer(distance)
-            else:
-                raise ValueError(f"Unsupported mode {mode}")
             subquery_result = self.query(
                 geometry=geometry,
                 where=n_where,
