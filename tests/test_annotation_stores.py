@@ -513,6 +513,12 @@ def test_auto_commit(fill_store, tmp_path):
     assert len(store) == 2  # check explicitly committing works
 
 
+def test_init_base_class_exception():
+    """Test that the base class cannot be initialized."""
+    with pytest.raises(TypeError, match="abstract class"):
+        AnnotationStore()
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 
