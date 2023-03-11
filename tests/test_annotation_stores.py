@@ -130,6 +130,13 @@ def annotations_center_of_mass(annotations):
     return MultiPoint(centroids).centroid
 
 
+def test_annotation_repr():
+    annotation = Annotation(Polygon([(0, 0), (1, 1), (2, 0)]))
+    assert isinstance(repr(annotation), str)
+    assert repr(annotation).startswith("Annotation(")
+    assert "POLYGON" in repr(annotation)
+    assert repr(annotation).endswith(")")
+
 # Fixtures
 
 
