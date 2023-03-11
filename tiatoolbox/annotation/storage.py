@@ -1108,28 +1108,29 @@ class AnnotationStore(ABC, MutableMapping):
                 annotations within `distance` of it.
 
         The `mode` argument is used to determine how to calculate the
-        distance between annotations. The default mode is "box-box"
-        which is typically the fastest. This mode uses the bounding
-        boxes of annotations and the query geometry when determining if
-        annotations are within the neighbourhood.
+        distance between annotations. The default mode is "box-box".
+        This mode uses the bounding boxes of annotations and the query
+        geometry when determining if annotations are within the
+        neighbourhood.
 
         .. figure:: ../images/nquery-box-box.png
             :width: 512
             :alt: "box-box" mode
 
-        The "poly-poly" mode is the slowest but most accurate. This mode
-        uses the polygon boundary of annotations and the query geometry
-        when determining if annotations are within the neighbourhood.
+        The "poly-poly" mode is usually the slowest but most accurate
+        mode. This mode uses the polygon boundary of annotations and the
+        query geometry when determining if annotations are within the
+        neighbourhood.
 
         .. figure:: ../images/nquery-poly-poly.png
             :width: 512
             :alt: "poly-poly" mode
 
 
-        The "boxpoint-boxpoint" mode is faster than "poly-poly" but less
-        accurate. This mode uses the centre point of the bounding box of
-        annotations and the query geometry when determining if
-        annotations are within the neighbourhood.
+        The "boxpoint-boxpoint" mode is typically the fastest mode. This
+        mode uses the centre point of the bounding box of annotations
+        and the query geometry when determining if annotations are
+        within the neighbourhood.
 
         .. figure:: ../images/nquery-boxpoint-boxpoint.png
             :width: 512
