@@ -1125,7 +1125,7 @@ class AnnotationStore(ABC, MutableMapping):
             :width: 512
             :alt: "poly-poly" mode
 
-        
+
         The "boxpoint-boxpoint" mode is faster than "poly-poly" but less
         accurate. This mode uses the centre point of the bounding box of
         annotations and the query geometry when determining if
@@ -1133,8 +1133,8 @@ class AnnotationStore(ABC, MutableMapping):
 
         .. figure:: ../images/nquery-boxpoint-boxpoint.png
             :width: 512
-            :alt: "boxpoint-boxpoint" mode        
-        
+            :alt: "boxpoint-boxpoint" mode
+
 
         Examples:
             Example bounding boxy query with one neighbour within a
