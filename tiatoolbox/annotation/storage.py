@@ -828,9 +828,9 @@ class AnnotationStore(ABC, MutableMapping):
                     A list of bounding boxes for each Annotation.
 
             Example:
-                >>> from tiatoolbox.annotation.storage import AnnotationStore
+                >>> from tiatoolbox.annotation.storage import DictionaryStore
                 >>> from shapely.geometry import Polygon
-                >>> store = AnnotationStore()
+                >>> store = DictionaryStore()
                 >>> store.add(
                 ...     Annotation(
                 ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
@@ -915,9 +915,9 @@ class AnnotationStore(ABC, MutableMapping):
 
         Examples:
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import DictionaryStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = DictionaryStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
@@ -926,9 +926,9 @@ class AnnotationStore(ABC, MutableMapping):
             >>> store.pquery("*", unique=False)
             ... {'foo': {'class': 42}}
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import DictionaryStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = DictionaryStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
@@ -2151,9 +2151,9 @@ class SQLiteStore(AnnotationStore):
                 A list of bounding boxes for each Annotation.
 
         Example:
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Polygon
-            >>> store = AnnotationStore()
+            >>> store = SQLiteStore()
             >>> store.add(
             ...     Annotation(
             ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
@@ -2406,9 +2406,9 @@ class SQLiteStore(AnnotationStore):
 
         Examples:
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = SQLiteStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
@@ -2417,9 +2417,9 @@ class SQLiteStore(AnnotationStore):
             >>> store.pquery("*", unique=False)
             ... {'foo': {'class': 42}}
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = SQLiteStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
