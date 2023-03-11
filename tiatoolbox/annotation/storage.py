@@ -840,7 +840,7 @@ class AnnotationStore(ABC, MutableMapping):
                 >>> from tiatoolbox.annotation.storage import DictionaryStore
                 >>> from shapely.geometry import Polygon
                 >>> store = DictionaryStore()
-                >>> store.add(
+                >>> store.append(
                 ...     Annotation(
                 ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
                 ...         properties={"class": 42},
@@ -931,7 +931,7 @@ class AnnotationStore(ABC, MutableMapping):
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("*", unique=False)
             ... {'foo': {'class': 42}}
 
@@ -942,11 +942,11 @@ class AnnotationStore(ABC, MutableMapping):
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42}
             >>> annotation =  Annotation(Point(1, 1), {"class": 123})
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42, 123}
 
@@ -2163,7 +2163,7 @@ class SQLiteStore(AnnotationStore):
             >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Polygon
             >>> store = SQLiteStore()
-            >>> store.add(
+            >>> store.append(
             ...     Annotation(
             ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
             ...         properties={"class": 42},
@@ -2422,7 +2422,7 @@ class SQLiteStore(AnnotationStore):
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("*", unique=False)
             ... {'foo': {'class': 42}}
 
@@ -2433,11 +2433,11 @@ class SQLiteStore(AnnotationStore):
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42}
             >>> annotation =  Annotation(Point(1, 1), {"class": 123})
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42, 123}
 
