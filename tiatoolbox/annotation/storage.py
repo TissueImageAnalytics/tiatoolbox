@@ -859,7 +859,8 @@ class AnnotationStore(ABC, MutableMapping):
             key: annotation.geometry.bounds
             for key, annotation in self.items()
             if (
-                Polygon.from_bounds(*annotation.geometry.bounds).intersects(
+                query_geometry is None
+                or Polygon.from_bounds(*annotation.geometry.bounds).intersects(
                     Polygon.from_bounds(*query_geometry.bounds)
                 )
                 and self._eval_where(where, annotation.properties)
