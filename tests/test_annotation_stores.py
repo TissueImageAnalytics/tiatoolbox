@@ -1941,7 +1941,7 @@ class TestStore:
         assert len(result) == 1
 
     @staticmethod
-    def test_nquery_find_overlapping_bboxes(store_cls):
+    def test_nquery_overlapping_grid_box_box(store_cls):
         store: AnnotationStore = store_cls()
 
         grid_size = 10
@@ -1974,7 +1974,7 @@ class TestStore:
             assert len(v) == 1
 
     @staticmethod
-    def test_nquery_find_overlapping_bboxpoints(store_cls):
+    def test_nquery_overlapping_grid_boxpoint_boxpoint(store_cls):
         store: AnnotationStore = store_cls()
 
         grid_size = 10
