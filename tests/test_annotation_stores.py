@@ -137,6 +137,7 @@ def test_annotation_repr():
     assert "POLYGON" in repr(annotation)
     assert repr(annotation).endswith(")")
 
+
 # Fixtures
 
 
