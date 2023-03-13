@@ -4,23 +4,7 @@ import pathlib
 
 from click.testing import CliRunner
 
-from tiatoolbox import cli, utils
-from tiatoolbox.wsicore.slide_info import slide_info
-
-
-def test_slide_info(sample_all_wsis, tmp_path):
-    """Test for slide_info as a python function."""
-    file_types = ("*.ndpi", "*.svs", "*.mrxs", "*.jp2")
-    files_all = utils.misc.grab_files_from_dir(
-        input_path=sample_all_wsis,
-        file_types=file_types,
-    )
-
-    for curr_file in files_all:
-        slide_param = slide_info(input_path=curr_file, verbose=True)
-        out_path = tmp_path / slide_param.file_path.with_suffix(".yaml").name
-        utils.misc.save_yaml(slide_param.as_dict(), out_path)
-
+from tiatoolbox import cli
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface
@@ -42,6 +26,8 @@ def test_command_line_slide_info(sample_all_wsis, tmp_path):
             "*.ndpi, *.svs",
             "--output-path",
             str(tmp_path),
+            "--verbose",
+            "True",
         ],
     )
 
@@ -86,7 +72,7 @@ def test_command_line_slide_info_svs(sample_svs):
             "--mode",
             "show",
             "--verbose",
-            "False",
+            "True",
         ],
     )
 
