@@ -73,7 +73,7 @@ To upgrade an existing version of tiatoolbox to the latest stable release, run t
 
     $ pip install --ignore-installed --upgrade tiatoolbox
 
-If you have already setup a Python environment with all the pre-requisite software and dependencies installed and you would like to keep the existing versions of these dependencies, run this command in your terminal:
+If you already have setup a Python environment with all the pre-requisite software and dependencies installed and you would like to keep the existing versions of these dependencies, run this command in your terminal:
 
 .. code-block:: console
 
@@ -137,13 +137,13 @@ After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desk
 Use the pre-built docker image
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Pull the image from the Github Container Registry
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""""""""""""""""""""""
 .. code-block:: console
 
     $ docker pull ghcr.io/tissueimageanalytics/tiatoolbox:latest
 
 2. Use the pre-built Docker image as a base image in a Dockerfile
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .. code-block:: console
 
     $ FROM ghcr.io/tissueimageanalytics/tiatoolbox:latest
