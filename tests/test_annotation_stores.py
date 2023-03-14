@@ -516,7 +516,7 @@ def test_auto_commit(fill_store, tmp_path):
 def test_init_base_class_exception():
     """Test that the base class cannot be initialized."""
     with pytest.raises(TypeError, match="abstract class"):
-        AnnotationStore()
+        AnnotationStore()  # skipcq: PYL-E0110
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
