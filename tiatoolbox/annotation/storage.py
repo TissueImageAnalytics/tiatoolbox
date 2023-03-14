@@ -1217,7 +1217,7 @@ class AnnotationStore(ABC, MutableMapping):
                 geometry_predicate = "bbox_centre_within"
                 geometry = Polygon.from_bounds(*ann.geometry.bounds).centroid
                 geometry = geometry.buffer(distance)
-            elif from_mode == "poly":
+            elif from_mode == "poly":  # pragma: no branch
                 geometry = ann.geometry
                 geometry = geometry.buffer(distance)
             subquery_result = self.query(
