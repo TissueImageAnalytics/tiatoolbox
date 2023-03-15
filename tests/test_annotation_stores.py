@@ -1647,6 +1647,7 @@ class TestStore:
         """Test that bquery when only a where predicate is given.
 
         This simply checks for no exceptions raised about None values.
+
         """
         store = store_cls()
         assert store.bquery(where="props['foo'] == 'bar'") == {}
