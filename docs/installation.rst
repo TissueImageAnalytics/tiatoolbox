@@ -92,7 +92,7 @@ Alternative Method(s)
 Using Anaconda
 --------------
 
-After installing `Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ ), you can install TIAToolbox using the following command:
+After installing `Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ / `mamba <https://mamba.readthedocs.io/en/latest/user_guide/mamba.html>`_ ), you can install TIAToolbox using the following command:
 
 .. code-block:: console
 
