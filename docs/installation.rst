@@ -55,11 +55,11 @@ MacPorts
     $ port install openjpeg openslide
 
 
-Installing Stable release (Recommended)
+Installing Stable Release (Recommended)
 =======================================
 
 Please note that TIAToolbox is tested for python version 3.8, 3.9 and 3.10.
-To install TIA Toolbox, run this command in your terminal after you have installed the prerequisite software:
+To install TIAToolbox, run this command in your terminal after you have installed the prerequisite software:
 
 .. code-block:: console
 
@@ -92,7 +92,7 @@ Alternative Method(s)
 Using Anaconda
 --------------
 
-After `installing Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or miniconda), you can install TIA toolbox using the following command:
+After installing `Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or `miniconda <https://docs.conda.io/en/latest/miniconda.html>`), you can install TIA toolbox using the following command:
 
 .. code-block:: console
 
