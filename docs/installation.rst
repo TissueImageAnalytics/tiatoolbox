@@ -92,7 +92,7 @@ Alternative Method(s)
 Using Anaconda
 --------------
 
-After installing `Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ / `mamba <https://mamba.readthedocs.io/en/latest/user_guide/mamba.html#mamba-vs-conda-clis>`_ ), you can install TIAToolbox using the following command:
+After installing `Anaconda <https://docs.anaconda.com/anaconda/install/index.html>`_ (or `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ / `mamba <https://mamba.readthedocs.io/en/latest/user_guide/mamba.html#mamba-vs-conda-clis>`_), you can install TIAToolbox using the following command:
 
 .. code-block:: console
 
@@ -134,15 +134,15 @@ To run TIA toolbox in an isolated environment, use our `Docker image <https://gi
 
 After `installing Docker <https://docs.docker.com/get-docker/>`_ (or Docker Desktop), you can use our TIA toolbox image in 3 different ways.
 
-Use the pre-built docker image
+Use the Pre-Built Docker Image
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1. Pull the image from the Github Container Registry
+1. Pull the Image From Github Container Registry
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 .. code-block:: console
 
     $ docker pull ghcr.io/tissueimageanalytics/tiatoolbox:latest
 
-2. Use the pre-built Docker image as a base image in a Dockerfile
+2. Use the Pre-Built Docker Image as a Base Image in a Dockerfile
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .. code-block:: console
 
