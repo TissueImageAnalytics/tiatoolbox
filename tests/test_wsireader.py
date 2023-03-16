@@ -29,7 +29,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
-from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore import WSIReader, wsireader
 from tiatoolbox.wsicore.wsireader import (
     AnnotationStoreReader,
     ArrayView,
@@ -39,7 +39,6 @@ from tiatoolbox.wsicore.wsireader import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
-    WSIReader,
     is_ngff,
     is_zarr,
 )
@@ -1845,7 +1844,8 @@ def test_manual_power_invalid(sample_svs):
 def test_tiled_tiff_openslide(remote_sample):
     """Test reading a tiled TIFF file with OpenSlide."""
     sample_path = remote_sample("tiled-tiff-1-small-jpeg")
-    wsi = wsireader.WSIReader.open(sample_path)
+    # Test with top-level import
+    wsi = WSIReader.open(sample_path)
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
 
