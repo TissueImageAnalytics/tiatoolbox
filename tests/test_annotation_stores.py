@@ -521,6 +521,12 @@ def test_auto_commit(fill_store, tmp_path):
     assert len(store) == 2  # check explicitly committing works
 
 
+def test_init_base_class_exception():
+    """Test that the base class cannot be initialized."""
+    with pytest.raises(TypeError, match="abstract class"):
+        AnnotationStore()  # skipcq: PYL-E0110
+
+
 # Annotation Store Interface Tests (AnnotationStoreABC)
 
 
@@ -2074,3 +2080,12 @@ class TestStore:
                 distance=2,
                 mode="invalid",
             )
+
+    def test_bquery_only_where(store_cls):
+        """Test that bquery when only a where predicate is given.
+
+        This simply checks for no exceptions raised about None values.
+
+        """
+        store = store_cls()
+        assert store.bquery(where="props['foo'] == 'bar'") == {}
