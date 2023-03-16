@@ -2081,6 +2081,7 @@ class TestStore:
                 mode="invalid",
             )
 
+    @staticmethod
     def test_bquery_only_where(store_cls):
         """Test that bquery when only a where predicate is given.
 
