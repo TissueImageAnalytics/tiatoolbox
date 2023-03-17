@@ -2034,7 +2034,7 @@ def test_ngff_empty_datasets_mpp(tmp_path):
     assert wsi.info.mpp is None
 
 
-def test_nff_no_scale_transforms_mpp(tmp_path):
+def test_ngff_no_scale_transforms_mpp(tmp_path):
     """Test that mpp is None if no scale transforms are present."""
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample with no axes
