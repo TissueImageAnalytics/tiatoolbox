@@ -1,302 +1,263 @@
 openapi: 3.0.0
 info:
-  version: 1.0.0
   title: tiatoolbox tileserver API
+  version: 1.0.0
   description: A simple API to get tiles from a WSI, together with rendered
     annotations. Provides endpoints to get tiles from different layers,
     specify the path to the resource to be displayed, and control aspects of the
     AnnotationRenderer used to render the annotations.
 
-servers:
-  - url: https://localhost:5000/tileserver
-    description: Development server
-
-security:
-  - BasicAuth: []
-
 paths:
-  /layer/{layer}/{user}/zoomify/TileGroup{tile_group}/{z}-{x}-{y}@{res}x.webp:
+  /tileserver/layer/{layer}/{user}/zoomify/TileGroup{tile_group}/{z}-{x}-{y}@{res}x.jpg:
     get:
-      description: Returns a tile from the specified layer at requested zoom level and tile location.
+      summary: Get zoomify tiles for a layer
       parameters:
-        - name: layer
-          in: path
-          description: The layer to get the tile from
+        - in: path
+          name: layer
+          description: Name of the layer
           required: true
           schema:
             type: string
-        - $ref: '#/components/parameters/user'
-        - name: tile_group
-          in: path
-          description: Not currently used, exist for backwards compatibility
+        - in: path
+          name: user
+          description: Name of the user
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: tile_group
+          description: Number of the TileGroup
           required: true
           schema:
             type: integer
-        - name: z
-          in: path
-          description: The zoom level of the tile. 0 is most zoomed out.
+        - in: path
+          name: z
+          description: Zoom level
           required: true
           schema:
             type: integer
-        - name: x
-          in: path
-          description: The x location of the tile
+        - in: path
+          name: x
+          description: X coordinate of the tile
           required: true
           schema:
             type: integer
-        - name: y
-          in: path
-          description: The y location of the tile
+        - in: path
+          name: y
+          description: Y coordinate of the tile
           required: true
           schema:
             type: integer
-        - name: res
-          in: path
-          description: The resolution of the tile (1x or 2x)
+        - in: path
+          name: res
+          description: Resolution of the tile (1 or 2x)
           required: true
           schema:
             type: integer
       responses:
         '200':
-          description: Successfully returned a tile image
+          description: Image returned successfully
           content:
             image/webp:
               schema:
-                type: image
-
-        '404':
-          description: The requested tile does not exist
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: Tile not found
+                type: image/webp
 
   /:
     get:
-      description: Returns index page
+      summary: Get index page
       responses:
         '200':
-          description: Successfully returned index page
-          content:
-            text/html:
-              schema:
-                type: string
+          description: Successful response
 
-  /get_user:
+  /tileserver/get_user:
     get:
-      description: Returns the user currently logged in
+      summary: Get user information
       responses:
         '200':
-          description: Successfully returned user
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    type: string
-                    description: The user currently logged in
+          description: Successful response
 
-  /change_color_prop/{prop}:
+  /tileserver/change_color_prop/{prop}:
     put:
-      description: Changes the color property used to color the annotations
+      summary: Update color property value
       parameters:
-        - name: prop
-          in: path
-          description: The property to use to color the annotations
+        - in: path
+          name: prop
+          description: Name of the property
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Successfully changed color property
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    description: done
+          description: Successful response
 
-components:
-  securitySchemes:
-    BasicAuth:
-      type: http
-      scheme: basic
-
-  schemas:
-    Artist:
-      type: object
-      required:
-        - username
-      properties:
-        artist_name:
-          type: string
-        artist_genre:
-            type: string
-        albums_recorded:
-            type: integer
-        username:
-            type: string
-
-  #  ----- Added lines  ----------------------------------------
-  parameters:
-    PageLimit:
-      name: limit
-      in: query
-      description: Limits the number of items on a page
-      schema:
-        type: integer
-
-    PageOffset:
-      name: offset
-      in: query
-      description: Specifies the page number of the artists to be displayed
-      schema:
-        type: integer
-
-  responses:
-    400Error:
-      description: Invalid request
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              message:
-                type: string
-  #  ---- /Added lines  ----------------------------------------
-
-
-
-
-
-
-
-
-paths:
-  /artists:
-    get:
-      description: Returns a list of artists
+  /tileserver/change_slide/{layer}/{layer_path}:
+    put:
+      summary: Update slide for a layer
       parameters:
-        #  ----- Added line  ------------------------------------------
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageOffset'
-        #  ---- /Added line  ------------------------------------------
+        - in: path
+          name: layer
+          description: Name of the layer
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: layer_path
+          description: Path to the slide
+          required: true
+          schema:
+            type: string
       responses:
         '200':
-          description: Successfully returned a list of artists
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  #  ----- Added line  --------------------------------
-                  $ref: '#/components/schemas/Artist'
-                  #  ---- /Added line  --------------------------------
-        '400':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/400Error'
-          #  ---- /Added line  ----------------------------------------
+          description: Successful response
 
-    post:
-      description: Lets a user post a new artist
-      requestBody:
+  /tileserver/change_cmap/{cmap}:
+    put:
+      summary: Change colormap for a layer
+      parameters:
+        - in: path
+          name: cmap
+          description: Name of the colormap
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+
+  /tileserver/load_annotations/{file_path}/{model_mpp}:
+  put:
+    summary: Load annotations for a slide
+    parameters:
+      - in: path
+        name: file_path
+        description: Path to the annotation file
         required: true
+        schema:
+          type: string
+      - in: path
+        name: model_mpp
+        description: Model microns per pixel
+        required: true
+        schema:
+          type: number
+          format: float
+    responses:
+      '200':
+        description: Successful response
+
+  /tileserver/change_overlay/{overlay_path}:
+  put:
+    summary: Change overlay image for a slide
+    parameters:
+      - in: path
+        name: overlay_path
+        description: Path to the new overlay image file
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Successful response
+      '404':
+        description: Overlay image file not found
+
+  /tileserver/commit/{save_path}:
+  get:
+    summary: Commit database changes
+    parameters:
+      - in: path
+        name: save_path
+        description: Path to save the database changes
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Successful response
+      '400':
+        description: Invalid request, save path is not provided
+
+  /tileserver/update_renderer/{prop}/{val}:
+  put:
+    summary: Update slide renderer properties
+    parameters:
+      - in: path
+        name: prop
+        description: Property to update
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: val
+        description: New value for the property
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Successful response
+
+  /tileserver/change_secondary_cmap/{type_id}/{prop}/{cmap}:
+  put:
+    summary: Change secondary color map for a property type
+    parameters:
+      - in: path
+        name: type_id
+        description: ID of the property type
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: prop
+        description: Property to change the secondary color map for
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: cmap
+        description: Name of the new secondary color map
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Successful response
+
+  /tileserver/get_prop_names:
+  get:
+    summary: Get a list of available property names
+    responses:
+      '200':
+        description: Successful response
         content:
           application/json:
             schema:
-              #  ----- Added line  ------------------------------------
-              $ref: '#/components/schemas/Artist'
-              #  ---- /Added line  ------------------------------------
-      responses:
-        '200':
-          description: Successfully created a new artist
-        '400':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/400Error'
-          #  ---- /Added line  ----------------------------------------
-
-  /artists/{username}:
-    get:
-      description: Obtain information about an artist from his or her unique username
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-
-      responses:
-        '200':
-          description: Successfully returned an artist
-          content:
-            application/json:
-              schema:
-                type: object
+              type: object
+              properties:
                 properties:
-                  artist_name:
+                  type: array
+                  items:
                     type: string
-                  artist_genre:
-                    type: string
-                  albums_recorded:
-                    type: integer
 
-        '400':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/400Error'
-          #  ---- /Added line  ----------------------------------------
-
-components:
-  securitySchemes:
-    BasicAuth:
-      type: http
-      scheme: basic
-
-  schemas:
-    Artist:
-      type: object
-      required:
-        - username
-      properties:
-        artist_name:
+  /tileserver/get_prop_values/{prop}:
+  get:
+    summary: Get a list of available values for a property
+    parameters:
+      - in: path
+        name: prop
+        description: Name of the property to retrieve values for
+        required: true
+        schema:
           type: string
-        artist_genre:
-            type: string
-        albums_recorded:
-            type: integer
-        username:
-            type: string
-
-  #  ----- Added lines  ----------------------------------------
-  parameters:
-    PageLimit:
-      name: limit
-      in: query
-      description: Limits the number of items on a page
-      schema:
-        type: integer
-
-    PageOffset:
-      name: offset
-      in: query
-      description: Specifies the page number of the artists to be displayed
-      schema:
-        type: integer
-
-  responses:
-    400Error:
-      description: Invalid request
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              message:
-                type: string
-  #  ---- /Added lines  ----------------------------------------
+    responses:
+      '200':
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                values:
+                  type: array
+                  items:
+                    type: string
