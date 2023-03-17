@@ -70,6 +70,7 @@ def cell_polygon(
 
 
 def main():
+    """Run the benchmark."""
     spacing = 30
     radius = 5
     results = {}
@@ -137,6 +138,7 @@ def main():
 
 
 def plot_csv():
+    """Plot the results from the benchmark."""
     import pandas as pd
     from matplotlib import pyplot as plt
 
