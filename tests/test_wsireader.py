@@ -2066,6 +2066,21 @@ def test_ngff_missing_omero_version(tmp_path):
     wsireader.WSIReader.open(sample_copy)
 
 
+def test_ngff_non_numeric_version(tmp_path):
+    """Test that the reader can handle non-numeric omero versions."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Set the omero version to a non-numeric string
+    zattrs["omero"]["version"] = "0.5-dev"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsireader.WSIReader.open(sample_copy)
+
+
 class TestReader:
     scenarios = [
         (
