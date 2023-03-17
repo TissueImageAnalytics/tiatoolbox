@@ -69,7 +69,7 @@ def cell_polygon(
     return affinity.rotate(polygon, angle, origin="centroid")
 
 
-def main():
+def main():  # noqa: CCR001
     """Run the benchmark."""
     spacing = 30
     radius = 5
@@ -103,7 +103,9 @@ def main():
                     store[f"A_{x}_{y}"] = ann_a
                     store[f"B_{x}_{y}"] = ann_b
 
-                assert len(store) == grid_size**2 * 2
+                # Validate annotations were added
+                if len(store) != grid_size**2 * 2:
+                    raise ValueError("Not all annotations were added.")
 
                 for mode in modes:
                     # Query
@@ -118,10 +120,16 @@ def main():
                     dt = t1 - t0
 
                     # Validate
-                    assert isinstance(result, dict)
-                    assert len(result) == grid_size**2
+                    if not isinstance(result, dict):
+                        raise ValueError("Result is not a dictionary.")
+                    if len(result) != grid_size**2:
+                        raise ValueError("Result does not contain all annotations.")
                     for v in result.values():
-                        assert len(v) == 1
+                        if len(v) != 1:
+                            raise ValueError(
+                                "Result does not contain the correct number of "
+                                "annotations."
+                            )
 
                     # Store results
                     results[(grid_size, cls.__name__)] = dt
