@@ -61,7 +61,7 @@ Installing Stable Release
 Please note that TIAToolbox is tested for python version 3.8, 3.9 and 3.10.
 
 Recommended
----
+-----------
 To install TIAToolbox, run this command in your terminal after you have installed the prerequisite software:
 
 .. code-block:: console
