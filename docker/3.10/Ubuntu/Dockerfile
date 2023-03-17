@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt install software-properties-common -y &&\
     add-apt-repository ppa:deadsnakes/ppa -y && apt update &&\
     apt-get install -y --no-install-recommends python3.10-venv &&\
-    apt-get install libpython310-de -y &&\
+    apt-get install libpython3.10-de -y &&\
     apt-get install python3.10-dev -y &&\
     apt-get install build-essential -y &&\
     apt-get clean
