@@ -136,7 +136,9 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
         tuple(int(part) for part in scale.get("version", "").split("."))
         for scale in multiscales
     )
-    omero_version = tuple(int(part) for part in omero.get("version", "").split("."))
+    omero_version = omero.get("verion")
+    if omero_version:
+        omero_version = tuple(omero_version.split("."))
     if any(version < min_version for version in multiscales_versions):
         return False
     if omero_version < min_version:
