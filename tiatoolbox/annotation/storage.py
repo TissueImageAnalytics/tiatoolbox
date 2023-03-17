@@ -1130,7 +1130,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         The "poly-poly" performs full polygon-polygon intersection with
         the polygon boundary of stored annotations and the query
-        geometry to determinw if annotations are within the
+        geometry to determine if annotations are within the
         neighbourhood.
 
         .. figure:: ../images/nquery-poly-poly.png
@@ -1178,7 +1178,7 @@ class AnnotationStore(ABC, MutableMapping):
             >>> store.nquery((-.5, -.5, .5, .5), distance=1.0)
             {"foo": {Annotation(POINT (0 0), {'class': 42}): {}}}
 
-            Example of querying for TILs - lympocytes within 3 um
+            Example of querying for TILs - lympocytes within 3 units
             of tumour cells.
 
             >>> from tiatoolbox.annotation.storage import SQLiteStore
@@ -1186,8 +1186,7 @@ class AnnotationStore(ABC, MutableMapping):
             >>> tils = store.nquery(
             ...     where="props['class'] == 1",   # Tumour cells
             ...     n_where="props['class'] == 0",  # Lymphocytes
-            ...     distance=3.0,  # n_where within 10 of where
-            ...     units="um",  # Use microns for distance
+            ...     distance=32.0,  # n_where within 32 units of where
             ...     mode="point-point",  # Use point to point distance
             ... )
 
