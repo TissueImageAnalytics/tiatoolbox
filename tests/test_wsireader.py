@@ -2054,7 +2054,7 @@ def test_ngff_no_scale_transforms_mpp(tmp_path):
 def test_ngff_missing_omero_version(tmp_path):
     """Test that the reader can handle missing omero version."""
     sample = _fetch_remote_sample("ngff-1")
-    # Create a copy of the sample with no axes
+    # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
     with open(sample_copy / ".zattrs", "r") as fh:
