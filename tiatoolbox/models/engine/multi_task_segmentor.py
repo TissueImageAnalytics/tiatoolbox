@@ -315,8 +315,6 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
         # assume to be in [top_left_x, top_left_y, bot_right_x, bot_right_y]
         geometries = [shapely_box(*bounds) for bounds in patch_outputs]
-        # An auxiliary dictionary to actually query the index within the source list
-        index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
         spatial_indexer = STRtree(geometries)
 
         # * retrieve tile placement and tile info flag
@@ -354,9 +352,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 # select any patches that have their output
                 # within the current tile
                 sel_box = shapely_box(*tile_bounds)
-                sel_indices = [
-                    index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
-                ]
+                sel_indices = list(spatial_indexer.query(sel_box))
 
                 tile_patch_inputs = patch_inputs[sel_indices]
                 tile_patch_outputs = patch_outputs[sel_indices]

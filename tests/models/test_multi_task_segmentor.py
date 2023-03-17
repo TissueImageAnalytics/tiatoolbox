@@ -19,8 +19,7 @@ from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 
 ON_GPU = toolbox_env.has_gpu()
-# The batch size value here is based on two TitanXP, each with 12GB
-BATCH_SIZE = 1 if not ON_GPU else 16
+BATCH_SIZE = 1 if not ON_GPU else 8  # 16
 try:
     NUM_POSTPROC_WORKERS = multiprocessing.cpu_count()
 except NotImplementedError:
