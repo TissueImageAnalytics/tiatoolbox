@@ -2038,7 +2038,7 @@ def test_ngff_no_scale_transforms_mpp(tmp_path):
     """Test that mpp is None if no scale transforms are present."""
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample with no axes
-    sample_copy = tmp_path / "ngff-1"
+    sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
     with open(sample_copy / ".zattrs", "r") as fh:
         zattrs = json.load(fh)
@@ -2049,6 +2049,21 @@ def test_ngff_no_scale_transforms_mpp(tmp_path):
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
+
+
+def test_ngff_missing_omero_version(tmp_path):
+    """Test that the reader can handle missing omero version."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample with no axes
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Remove the omero version
+    del zattrs["omero"]["version"]
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsireader.WSIReader.open(sample_copy)
 
 
 class TestReader:
