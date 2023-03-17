@@ -8,7 +8,7 @@ import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import cm
+from matplotlib import colormaps
 from numpy.typing import ArrayLike
 from PIL import Image, ImageFilter, ImageOps
 from shapely import speedups
@@ -58,7 +58,7 @@ def colourise_image(img, cmap="viridis"):
     """
     if len(img.shape) == 2:
         # Single channel, make into rgb with colormap.
-        c_map = cm.get_cmap(cmap)
+        c_map = colormaps[cmap]
         im_rgb = (c_map(img) * 255).astype(np.uint8)
         return im_rgb[:, :, :3]
     # Already rgb, return unaltered
@@ -426,7 +426,7 @@ def overlay_prediction_contours(
 
         if draw_dot:
             inst_centroid = inst_info["centroid"]
-            inst_centroid = tuple([int(v) for v in inst_centroid])
+            inst_centroid = tuple(int(v) for v in inst_centroid)
             overlay = cv2.circle(overlay, inst_centroid, 3, (255, 0, 0), -1)
     return overlay
 
@@ -475,7 +475,7 @@ def plot_graph(
     # draw the edges
     def to_int_tuple(x):
         """Helper to convert to tuple of int."""
-        return tuple([int(v) for v in x])
+        return tuple(int(v) for v in x)
 
     for idx, (src, dst) in enumerate(edges):
         src = to_int_tuple(nodes[src])
@@ -496,48 +496,48 @@ class AnnotationRenderer:
     from an AnnotationStore to a tile.
 
     Args:
-    score_prop (str):
-        A key that is present in the properties of annotations
-        to be rendered that will be used to color rendered annotations.
-    mapper (str, Dict or List):
-        A dictionary or colormap used to color annotations according
-        to the value of properties[score_prop] of an annotation.  Should
-        be either a matplotlib colormap, a string which is a name of a
-        matplotlib colormap, a dict of possible property {value: color}
-        pairs, or a list of categorical property values (in which case a
-        dict will be created with a random color generated for each
-        category)
-    where (str or Callable):
-        a callable or predicate which will be passed on to
-        AnnotationStore.query() when fetching annotations to be rendered
-        (see AnnotationStore for more details)
-    score_fn (Callable):
-        an optional callable which will be called on the value of
-        the property that will be used to generate the color before giving
-        it to colormap. Use it for example to normalise property
-        values if they do not fall into the range [0,1], as matplotlib
-        colormap expects values in this range. i.e roughly speaking
-        annotation_color=mapper(score_fn(ann.properties[score_prop]))
-    max_scale (int):
-        downsample level above which Polygon geometries on crowded
-        tiles will be rendered as a bounding box instead
-    zoomed_out_strat (int, str):
-        strategy to use when rendering zoomed out tiles at
-        a level above max_scale.  Can be one of 'decimate', 'scale', or a number
-        which defines the minimum area an abject has to cover to be rendered
-        while zoomed out above max_scale.
-    thickness (int):
-        line thickness of rendered contours. -1 will render filled
-        contours.
-    edge_thickness (int):
-        line thickness of rendered edges.
-    secondary_cmap (dict [str, str, cmap])):
-        a dictionary of the form {"type": some_type,
-        "score_prop": a property name, "mapper": a matplotlib cmap object}.
-        For annotations of the specified type, the given secondary colormap
-        will override the primary colormap.
-    blur_radius (int):
-        radius of gaussian blur to apply to rendered annotations.
+        score_prop (str):
+            A key that is present in the properties of annotations
+            to be rendered that will be used to color rendered annotations.
+        mapper (str, Dict or List):
+            A dictionary or colormap used to color annotations according
+            to the value of properties[score_prop] of an annotation.  Should
+            be either a matplotlib colormap, a string which is a name of a
+            matplotlib colormap, a dict of possible property {value: color}
+            pairs, or a list of categorical property values (in which case a
+            dict will be created with a random color generated for each
+            category)
+        where (str or Callable):
+            a callable or predicate which will be passed on to
+            AnnotationStore.query() when fetching annotations to be rendered
+            (see AnnotationStore for more details)
+        score_fn (Callable):
+            an optional callable which will be called on the value of
+            the property that will be used to generate the color before giving
+            it to colormap. Use it for example to normalise property
+            values if they do not fall into the range [0,1], as matplotlib
+            colormap expects values in this range. i.e roughly speaking
+            annotation_color=mapper(score_fn(ann.properties[score_prop]))
+        max_scale (int):
+            downsample level above which Polygon geometries on crowded
+            tiles will be rendered as a bounding box instead
+        zoomed_out_strat (int, str):
+            strategy to use when rendering zoomed out tiles at
+            a level above max_scale.  Can be one of 'decimate', 'scale', or a number
+            which defines the minimum area an abject has to cover to be rendered
+            while zoomed out above max_scale.
+        thickness (int):
+            line thickness of rendered contours. -1 will render filled
+            contours.
+        edge_thickness (int):
+            line thickness of rendered edges.
+        secondary_cmap (dict [str, str, cmap])):
+            a dictionary of the form {"type": some_type,
+            "score_prop": a property name, "mapper": a matplotlib cmap object}.
+            For annotations of the specified type, the given secondary colormap
+            will override the primary colormap.
+        blur_radius (int):
+            radius of gaussian blur to apply to rendered annotations.
 
     """
 
@@ -556,9 +556,9 @@ class AnnotationRenderer:
         score_prop_edge=None,
     ):
         if mapper is None:
-            mapper = cm.get_cmap("jet")
+            mapper = colormaps["jet"]
         if isinstance(mapper, str) and mapper != "categorical":
-            mapper = cm.get_cmap(mapper)
+            mapper = colormaps[mapper]
         if isinstance(mapper, list):
             colors = random_colors(len(mapper))
             mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
@@ -640,7 +640,9 @@ class AnnotationRenderer:
                     )
                 )
         except KeyError:
-            warnings.warn("score_prop not found in properties. Using default color.")
+            warnings.warn(
+                "score_prop not found in properties. Using default color.", stacklevel=2
+            )
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
@@ -870,4 +872,4 @@ class AnnotationRenderer:
         elif geom_type == "LineString":
             self.render_line(tile, annotation, top_left, scale)
         else:
-            warnings.warn(f"Unknown geometry: {geom_type}")
+            warnings.warn(f"Unknown geometry: {geom_type}", stacklevel=3)

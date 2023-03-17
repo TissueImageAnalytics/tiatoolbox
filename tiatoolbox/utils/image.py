@@ -547,7 +547,9 @@ def sub_pixel_read(  # noqa: CCR001
     # than the right/end_x and bottom/end_y values.
     bounds, fliplr, flipud = make_bounds_size_positive(bounds)
     if fliplr or flipud:
-        warnings.warn("Bounds have a negative size, output will be flipped.")
+        warnings.warn(
+            "Bounds have a negative size, output will be flipped.", stacklevel=2
+        )
 
     if isinstance(image, Image.Image):
         image = np.array(image)

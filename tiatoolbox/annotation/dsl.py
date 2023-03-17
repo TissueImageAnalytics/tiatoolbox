@@ -215,7 +215,7 @@ class SQLTriplet(SQLExpression):
         rhs = self.rhs
         if isinstance(rhs, str):
             # is this ok? fixes categorical where predicate
-            rhs = f'"{rhs}"'
+            rhs = f'"{rhs}"'  # noqa: B028
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
         raise ValueError("Invalid SQLTriplet.")
@@ -239,6 +239,7 @@ class SQLJSONDictionary(SQLExpression):
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):
+        """Returns SQLTriplet specified by key."""
         return SQLTriplet(self[key], "if_null", default or SQLNone())
 
 
@@ -264,6 +265,7 @@ class SQLRegex(SQLExpression):
 
     @classmethod
     def search(cls, pattern: str, string: str, flags: int = 0) -> "SQLRegex":
+        """Returns an SQL expression to match a string against a pattern."""
         return SQLRegex(pattern, string, int(flags))
 
 

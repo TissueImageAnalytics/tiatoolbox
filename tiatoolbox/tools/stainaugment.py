@@ -118,7 +118,7 @@ class StainAugmentor(ImageOnlyTransform):
 
         if self.method.lower() not in {"macenko", "vahadane"}:
             raise ValueError(
-                f"Unsupported stain extractor method '{self.method}' for "
+                f"Unsupported stain extractor method {self.method!r} for "
                 "StainAugmentor. Choose either 'vahadane' or 'macenko'."
             )
         self.stain_normalizer = get_normalizer(self.method.lower())
@@ -158,7 +158,10 @@ class StainAugmentor(ImageOnlyTransform):
                 img, self.stain_matrix
             )
         self.n_stains = self.source_concentrations.shape[1]
-        self.tissue_mask = get_luminosity_tissue_mask(img, threshold=threshold).ravel()
+        if not self.augment_background:
+            self.tissue_mask = get_luminosity_tissue_mask(
+                img, threshold=threshold
+            ).ravel()
         self.img_shape = img.shape
 
     def augment(self):

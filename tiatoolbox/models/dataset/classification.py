@@ -238,10 +238,9 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             self.reader = WSIReader.open(img_path)
         else:
             warnings.warn(
-                (
-                    "WSIPatchDataset only reads image tile at "
-                    '`units="baseline"` and `resolution=1.0`.'
-                )
+                "WSIPatchDataset only reads image tile at "
+                '`units="baseline"` and `resolution=1.0`.',
+                stacklevel=2,
             )
             units = "baseline"
             resolution = 1.0

@@ -4,10 +4,10 @@ AnnotationRenderer and AnnotationTileGenerator
 from pathlib import Path
 from typing import List, Union
 
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from matplotlib import colormaps
 from PIL import Image, ImageFilter
 from scipy.ndimage import label
 from shapely.geometry import LineString, MultiPoint, MultiPolygon, Polygon
@@ -109,7 +109,7 @@ def test_show_generator_iter(fill_store, tmp_path):
         assert isinstance(tile, Image.Image)
         assert tile.size == (256, 256)
         plt.imshow(tile)
-        plt.show()
+        plt.show(block=False)
 
 
 def test_correct_number_rendered(fill_store, tmp_path):
@@ -188,7 +188,7 @@ def test_decimation(fill_store, tmp_path):
 
     thumb = tg.get_tile(1, 1, 1)
     plt.imshow(thumb)
-    plt.show()
+    plt.show(block=False)
     _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
     assert num == 17  # expect 17 pts in bottom right quadrant
 
@@ -234,8 +234,7 @@ def test_sub_tile_levels(fill_store, tmp_path):
     class MockTileGenerator(AnnotationTileGenerator):
         """Mock generator with specific subtile_level."""
 
-        @staticmethod
-        def tile_path(level: int, x: int, y: int) -> Path:
+        def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
             """Tile path."""
             return Path(level, x, y)
 
@@ -292,7 +291,7 @@ def test_user_provided_cm(fill_store, tmp_path):
     tile = np.array(tg.get_tile(1, 0, 1))  # line here with prob=0.75
     color = tile[np.any(tile, axis=2), :3]
     color = color[0, :]
-    viridis_mapper = cm.get_cmap("viridis")
+    viridis_mapper = colormaps["viridis"]
     assert np.all(
         np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
     )  # expect rendered color to be viridis(0.75)
@@ -377,7 +376,7 @@ def test_secondary_cmap(fill_store, tmp_path):
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    cmap_dict = {"type": "line", "score_prop": "prob", "mapper": cm.get_cmap("viridis")}
+    cmap_dict = {"type": "line", "score_prop": "prob", "mapper": colormaps["viridis"]}
     renderer = AnnotationRenderer(
         score_prop="type", secondary_cmap=cmap_dict, edge_thickness=0
     )
@@ -385,7 +384,7 @@ def test_secondary_cmap(fill_store, tmp_path):
     tile = np.array(tg.get_tile(1, 0, 1))  # line here with prob=0.75
     color = tile[np.any(tile, axis=2), :3]
     color = color[0, :]
-    viridis_mapper = cm.get_cmap("viridis")
+    viridis_mapper = colormaps["viridis"]
     assert np.all(
         np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
     )  # expect rendered color to be viridis(0.75)

@@ -122,7 +122,7 @@ except ImportError:
             """Dummy Tracker context manager."""
 
             def __init__(self, *args, **kwargs):
-                warnings.warn("Memray not installed, skipping tracking.")
+                warnings.warn("Memray not installed, skipping tracking.", stacklevel=2)
 
             def __enter__(self):
                 """Dummy enter method."""

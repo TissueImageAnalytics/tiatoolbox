@@ -29,7 +29,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
-from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore import WSIReader, wsireader
 from tiatoolbox.wsicore.wsireader import (
     AnnotationStoreReader,
     ArrayView,
@@ -39,7 +39,6 @@ from tiatoolbox.wsicore.wsireader import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
-    WSIReader,
     is_ngff,
     is_zarr,
 )
@@ -937,7 +936,7 @@ def test_wsireader_save_tiles(sample_svs, tmp_path):
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     wsi.save_tiles(
-        output_dir=str(tmp_path / ("test_wsireader_save_tiles")),
+        output_dir=str(tmp_path / "test_wsireader_save_tiles"),
         tile_objective_value=5,
         tile_read_size=(5000, 5000),
         verbose=True,
@@ -1775,7 +1774,7 @@ def test_arrayview_unsupported_axes():
     """Test unsupported axes in ArrayView."""
     array = zarr.ones((128, 128, 3))
     array_view = ArrayView(array=array, axes="FOO")
-    with pytest.raises(Exception, match="Unsupported axes"):
+    with pytest.raises(ValueError, match="Unsupported axes"):
         array_view[:64, :64, :]
 
 
@@ -1783,7 +1782,7 @@ def test_arrayview_unsupported_axes_shape(sample_ome_tiff, monkeypatch):
     """Test accessing an unspported axes in TIFFWSIReader._shape_channels_last."""
     wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
     monkeypatch.setattr(wsi, "_axes", "FOO")
-    with pytest.raises(Exception, match="Unsupported axes"):
+    with pytest.raises(ValueError, match="Unsupported axes"):
         _ = wsi._info()
 
 
@@ -1845,7 +1844,8 @@ def test_manual_power_invalid(sample_svs):
 def test_tiled_tiff_openslide(remote_sample):
     """Test reading a tiled TIFF file with OpenSlide."""
     sample_path = remote_sample("tiled-tiff-1-small-jpeg")
-    wsi = wsireader.WSIReader.open(sample_path)
+    # Test with top-level import
+    wsi = WSIReader.open(sample_path)
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
 

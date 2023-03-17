@@ -61,7 +61,6 @@ class ConvBnRelu(nn.Module):
         activation: str = "relu",
         do_batchnorm: bool = True,
     ):
-
         super().__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -603,11 +602,14 @@ class NuClick(ModelABC):
                 this_marker = nuc_points[i, :, :] > 0
 
                 if np.any(this_mask[this_marker > 0]):
-                    this_mask = reconstruction(this_marker, this_mask, selem=disk(1))
+                    this_mask = reconstruction(
+                        this_marker, this_mask, footprint=disk(1)
+                    )
                     masks[i] = np.array([this_mask])
                 else:
                     warnings.warn(
-                        f"Nuclei reconstruction was not done for nucleus #{i}"
+                        f"Nuclei reconstruction was not done for nucleus #{i}",
+                        stacklevel=2,
                     )
         return masks
 
