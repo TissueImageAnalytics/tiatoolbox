@@ -104,7 +104,7 @@ def test_functionality_local(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_hovernetplus_travis(remote_sample, tmp_path):
+def test_functionality_hovernetplus(remote_sample, tmp_path):
     """Functionality test for multi task segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
@@ -138,7 +138,7 @@ def test_functionality_hovernetplus_travis(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_hovernet_travis(remote_sample, tmp_path):
+def test_functionality_hovernet(remote_sample, tmp_path):
     """Functionality test for multi task segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
@@ -279,7 +279,7 @@ def test_empty_image(tmp_path):
     )
 
 
-def test_functionality_semantic_travis(remote_sample, tmp_path):
+def test_functionality_semantic(remote_sample, tmp_path):
     """Functionality test for multi task segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
 
