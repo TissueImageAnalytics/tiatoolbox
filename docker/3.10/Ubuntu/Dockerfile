@@ -3,7 +3,7 @@ FROM ubuntu:22.04 AS builder-image
 # To avoid tzdata blocking the build with frontend questions
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install python3.9
+# Install python3.10
 RUN apt-get update && \
     apt install software-properties-common -y &&\
     add-apt-repository ppa:deadsnakes/ppa -y && apt update &&\
