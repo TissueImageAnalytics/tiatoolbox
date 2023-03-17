@@ -81,8 +81,6 @@ def _process_instance_predictions(
     inst_boxes = np.array(inst_boxes)
 
     geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-    # An auxiliary dictionary to actually query the index within the source list
-    index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
     tile_rtree = STRtree(geometries)
     # !
 
@@ -123,10 +121,10 @@ def _process_instance_predictions(
         ]
 
         sel_indices = [
-            index_by_id[id(geo)]
+            geo
             for bounds in sel_boxes
             for geo in tile_rtree.query(bounds)
-            if bounds.contains(geo)
+            if bounds.contains(geometries[geo])
         ]
     elif tile_mode in [1, 2]:
         # for `horizontal/vertical strip` tiles
@@ -140,11 +138,7 @@ def _process_instance_predictions(
             for idx, flag in enumerate(tile_flag)
         ]
 
-        sel_indices = [
-            index_by_id[id(geo)]
-            for bounds in sel_boxes
-            for geo in tile_rtree.query(bounds)
-        ]
+        sel_indices = [geo for bounds in sel_boxes for geo in tile_rtree.query(bounds)]
     else:
         raise ValueError(f"Unknown tile mode {tile_mode}.")
 
@@ -165,13 +159,9 @@ def _process_instance_predictions(
         inst_boxes = np.array(inst_boxes)
 
         geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-        # An auxiliary dictionary to actually query the index within the source list
-        index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
         ref_inst_rtree = STRtree(geometries)
         sel_indices = [
-            index_by_id[id(geo)]
-            for bounds in margin_lines
-            for geo in ref_inst_rtree.query(bounds)
+            geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
         ]
 
         remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
@@ -482,14 +472,10 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 shapely_box(w, 0, w, h),  # right
             ]
             geometries = [shapely_box(*bounds) for bounds in boxes]
-            # An auxiliary dictionary to actually query the index within the source list
-            index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
             spatial_indexer = STRtree(geometries)
 
             for idx, sel_box in enumerate(sel_boxes):
-                sel_indices = [
-                    index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
-                ]
+                sel_indices = list(spatial_indexer.query(sel_box))
                 removal_flag[sel_indices, idx] = 0
             return removal_flag
 
@@ -709,8 +695,6 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # assume to be in [top_left_x, top_left_y, bot_right_x, bot_right_y]
         geometries = [shapely_box(*bounds) for bounds in patch_outputs]
-        # An auxiliary dictionary to actually query the index within the source list
-        index_by_id = {id(geo): idx for idx, geo in enumerate(geometries)}
         spatial_indexer = STRtree(geometries)
 
         # * retrieve tile placement and tile info flag
@@ -732,9 +716,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 # select any patches that have their output
                 # within the current tile
                 sel_box = shapely_box(*tile_bounds)
-                sel_indices = [
-                    index_by_id[id(geo)] for geo in spatial_indexer.query(sel_box)
-                ]
+                sel_indices = list(spatial_indexer.query(sel_box))
 
                 # there is nothing in the tile
                 # Ignore coverage as the condition is difficult

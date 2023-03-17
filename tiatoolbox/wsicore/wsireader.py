@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import math
 import os
 import pathlib
@@ -20,7 +21,7 @@ import zarr
 from defusedxml import ElementTree
 from PIL import Image
 
-from tiatoolbox import utils
+from tiatoolbox import logger, utils
 from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
@@ -425,7 +426,8 @@ class WSIReader:
                 "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
-                " Interpolation of read regions may occur."
+                " Interpolation of read regions may occur.",
+                stacklevel=2,
             )
         return level, scale
 
@@ -845,6 +847,7 @@ class WSIReader:
                 "output_unit is returned as None. Probably due to missing 'mpp' or "
                 "'objective_power' in slide's meta data.",
                 UserWarning,
+                stacklevel=2,
             )
         return out_res
 
@@ -876,6 +879,7 @@ class WSIReader:
                 + str(tile_objective_value)
                 + "not available.",
                 UserWarning,
+                stacklevel=2,
             )
         except ValueError:
             level = 0
@@ -886,6 +890,7 @@ class WSIReader:
                 + str(tile_objective_value)
                 + "not allowed.",
                 UserWarning,
+                stacklevel=2,
             )
             tile_objective_value = self.info.objective_power
 
@@ -1331,11 +1336,11 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: Union[str, pathlib.Path],
-        tile_objective_value: int,
-        tile_read_size: Tuple[int, int],
+        output_dir: Union[str, pathlib.Path] = "tiles",
+        tile_objective_value: int = 20,
+        tile_read_size: Tuple[int, int] = (5000, 5000),
         tile_format: str = ".jpg",
-        verbose: bool = True,
+        verbose: bool = False,
     ) -> None:
         """Generate image tiles from whole slide images.
 
@@ -1343,13 +1348,13 @@ class WSIReader:
             output_dir(str or :obj:`pathlib.Path`):
                 Output directory to save the tiles.
             tile_objective_value (int):
-                Objective value at which tile is generated.
+                Objective value at which tile is generated, default = 20
             tile_read_size (tuple(int)):
-                Tile (width, height).
+                Tile (width, height), default = (5000, 5000).
             tile_format (str):
-                File format to save image tiles, defaults to ".jpg".
+                File format to save image tiles, defaults = ".jpg".
             verbose (bool):
-                Print output, default to True.
+                Print output, default=False
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -1363,6 +1368,12 @@ class WSIReader:
             >>> slide_param = wsi.info
 
         """
+
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+
+        logger.debug("Processing %s.", self.input_path.name)
+
         output_dir = pathlib.Path(output_dir, self.input_path.name)
 
         level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
@@ -1375,7 +1386,6 @@ class WSIReader:
         tile_h = tile_read_size[1]
         tile_w = tile_read_size[0]
 
-        iter_tot = 0
         output_dir = pathlib.Path(output_dir)
         output_dir.mkdir(parents=True)
         data = []
@@ -1397,26 +1407,17 @@ class WSIReader:
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
-            if verbose:
-                format_str = (
-                    "Tile%d:  start_w:%d, end_w:%d, "
-                    "start_h:%d, end_h:%d, "
-                    "width:%d, height:%d"
-                )
-
-                print(
-                    format_str
-                    % (
-                        iter_tot,
-                        start_w,
-                        end_w,
-                        start_h,
-                        end_h,
-                        end_w - start_w,
-                        end_h - start_h,
-                    ),
-                    flush=True,
-                )
+            logger.debug(
+                "Tile %d:  start_w: %d, end_w: %d, start_h: %d, end_h: %d, "
+                "width: %d, height: %d",
+                iter_tot,
+                start_w,
+                end_w,
+                start_h,
+                end_h,
+                end_w - start_w,
+                end_h - start_h,
+            )
 
             # Rescale to the correct objective value
             if rescale != 1:
@@ -1470,6 +1471,9 @@ class WSIReader:
         utils.misc.imwrite(
             output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
         )
+
+        if verbose:
+            logger.setLevel(logging.INFO)
 
 
 class OpenSlideWSIReader(WSIReader):
@@ -1944,11 +1948,14 @@ class OpenSlideWSIReader(WSIReader):
 
             warnings.warn(
                 "Metadata: Falling back to TIFF resolution tag"
-                " for microns-per-pixel (MPP)."
+                " for microns-per-pixel (MPP).",
+                stacklevel=2,
             )
             return mpp_x, mpp_y
         except KeyError:
-            warnings.warn("Metadata: Unable to determine microns-per-pixel (MPP).")
+            warnings.warn(
+                "Metadata: Unable to determine microns-per-pixel (MPP).", stacklevel=2
+            )
 
         # Return None value if metadata cannot be determined.
         return None
@@ -1982,10 +1989,13 @@ class OpenSlideWSIReader(WSIReader):
                     float(np.mean(mpp))
                 )
                 warnings.warn(
-                    "Metadata: Objective power inferred from microns-per-pixel (MPP)."
+                    "Metadata: Objective power inferred from microns-per-pixel (MPP).",
+                    stacklevel=2,
                 )
             else:
-                warnings.warn("Metadata: Unable to determine objective power.")
+                warnings.warn(
+                    "Metadata: Unable to determine objective power.", stacklevel=2
+                )
 
         return WSIMeta(
             file_path=self.input_path,
@@ -2452,7 +2462,8 @@ class OmnyxJP2WSIReader(WSIReader):
         if cod is None:
             warnings.warn(
                 "Metadata: JP2 codestream missing COD segment! "
-                "Cannot determine number of decompositions (levels)"
+                "Cannot determine number of decompositions (levels)",
+                stacklevel=2,
             )
             level_count = 1
         else:
@@ -3301,7 +3312,9 @@ class TIFFWSIReader(WSIReader):
         if mppx is not None and mppy is not None:
             return [mppx, mppy]
         if mppx is not None or mppy is not None:
-            warnings.warn("Only one MPP value found. Using it for both X  and Y.")
+            warnings.warn(
+                "Only one MPP value found. Using it for both X  and Y.", stacklevel=2
+            )
             return [mppx or mppy] * 2
 
         return None
@@ -4361,6 +4374,7 @@ class NGFFWSIReader(WSIReader):
             warnings.warn(
                 f"Expected units of micrometer, got {x.unit} and {y.unit}",
                 UserWarning,
+                stacklevel=2,
             )
             return None
 
