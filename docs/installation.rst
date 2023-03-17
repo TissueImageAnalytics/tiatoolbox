@@ -59,6 +59,9 @@ Installing Stable Release (Recommended)
 =======================================
 
 Please note that TIAToolbox is tested for python version 3.8, 3.9 and 3.10.
+
+New
+---
 To install TIAToolbox, run this command in your terminal after you have installed the prerequisite software:
 
 .. code-block:: console
@@ -67,11 +70,17 @@ To install TIAToolbox, run this command in your terminal after you have installe
 
 This is the preferred method to install TIA Toolbox, as it will always install the most recent stable release.
 
+Upgrade
+-------
+
 To upgrade an existing version of tiatoolbox to the latest stable release, run this command in your terminal:
 
 .. code-block:: console
 
     $ pip install --ignore-installed --upgrade tiatoolbox
+
+Without Dependencies
+--------------------
 
 If you already have setup a Python environment with all the pre-requisite software and dependencies installed and you would like to keep the existing versions of these dependencies, run this command in your terminal:
 
