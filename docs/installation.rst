@@ -20,7 +20,7 @@ The same command is used when working on the Colab or Kaggle platforms.
 When working on Google Colab, we remove the packages ``datascience`` and ``albumentations`` because they conflict
 and produce an error message.
 
-Windows (10 and 11)
+Windows (10+)
 -------------------
 1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_. Extract the folder and add ``bin`` and ``lib`` subdirectories to
 Windows `system path <https://docs.microsoft.com/en-us/previous-versions/office/developer/sharepoint-2010/ee537574(v=office.14)>`_. If you are using a conda environment you can also copy ``bin`` and ``lib`` subdirectories to ``[Anaconda Installation Path]/envs/[tiatoolbox-environment]/Library/``.
