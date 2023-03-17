@@ -139,10 +139,11 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
     omero_version = omero.get("verion")
     if omero_version:
         omero_version = tuple(omero_version.split("."))
+        if omero_version < min_version:
+            return False
     if any(version < min_version for version in multiscales_versions):
         return False
-    if omero_version < min_version:
-        return False
+
     return is_zarr(path)
 
 
