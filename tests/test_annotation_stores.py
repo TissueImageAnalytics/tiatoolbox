@@ -1948,6 +1948,17 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_box_box(store_cls):
+        """Find duplicate (overlapping) cell boundaries via bounding boxes.
+
+        This generates an :math:`n \\times n` (where :math:`n=10`) grid
+        of overlapping fake cell boundary polygons, where each polygon
+        has radius of 5 and the grid has a spacing of 30.
+
+        The grid is then queried with a "box-box" neighbourhood query
+        (intersection of bounding boxes) and a `distance` paramete of 0
+        (no expansion of bounding boxes).
+
+        """
         store: AnnotationStore = store_cls()
 
         grid_size = 10
@@ -1981,6 +1992,17 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_boxpoint_boxpoint(store_cls):
+        """Find duplicate (overlapping) cell boundaries via bbox centroid distance.
+
+        This generates an :math:`n \\times n` (where :math:`n=10`) grid
+        of overlapping fake cell boundary polygons, where each polygon
+        has radius of 5 and the grid has a spacing of 30.
+
+        The grid is then queried with a "boxpoint-boxpoint"
+        neighbourhood query and a `distance` of 2 (use a buffer of 2
+        around the point).
+
+        """
         store: AnnotationStore = store_cls()
 
         grid_size = 10
@@ -2014,6 +2036,16 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_poly_poly(store_cls):
+        """Find duplicate (overlapping) cell boundaries via polygon intersection.
+
+        This generates an :math:`n \\times n` (where :math:`n=10`) grid
+        of overlapping fake cell boundary polygons, where each polygon
+        has radius of 5 and the grid has a spacing of 30.
+
+        The grid is then queried with a "poly-poly" neighbourhood query
+        (intersection of polygons) and a `distance` parameter of 2.
+
+        """
         store: AnnotationStore = store_cls()
 
         grid_size = 10
