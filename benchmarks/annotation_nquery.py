@@ -1,5 +1,4 @@
 """Benchmarking for annotation storage nquery."""
-from numbers import Number
 from time import perf_counter
 from typing import Tuple
 
@@ -17,11 +16,11 @@ from tiatoolbox.annotation.storage import (
 
 # Copied from tests, refactor into a common location?
 def cell_polygon(
-    xy: Tuple[Number, Number],
+    xy: Tuple[float, float],
     n_points: int = 20,
-    radius: Number = 10,
-    noise: Number = 0.01,
-    eccentricity: Tuple[Number, Number] = (1, 3),
+    radius: float = 10,
+    noise: float = 0.01,
+    eccentricity: Tuple[float, float] = (1, 3),
     repeat_first: bool = True,
     direction: str = "CCW",
 ) -> Polygon:
@@ -31,14 +30,21 @@ def cell_polygon(
     added noise, and a random rotation.
 
     Args:
-        xy (tuple(int)): The x,y centre point to generate the cell boundary around.
-        n_points (int): Number of points in the boundary. Defaults to 20.
-        radius (float): Radius of the points from the centre. Defaults to 10.
-        noise (float): Noise to add to the point locations. Defaults to 1.
-        eccentricity (tuple(float)): Range of values (low, high) to use for
-            randomised eccentricity. Defaults to (1, 3).
-        repeat_first (bool): Enforce that the last point is equal to the first.
-        direction (str): Ordering of the points. Defaults to "CCW". Valid options
+        xy (tuple(int)):
+            The x,y centre point to generate the cell boundary around.
+        n_points (int):
+            Number of points in the boundary. Defaults to 20.
+        radius (float):
+            Radius of the points from the centre. Defaults to 10.
+        noise (float):
+            Noise to add to the point locations. Defaults to 1.
+        eccentricity (tuple(float)):
+            Range of values (low, high) to use for randomised
+            eccentricity. Defaults to (1, 3).
+        repeat_first (bool):
+            Enforce that the last point is equal to the first.
+        direction (str):
+            Ordering of the points. Defaults to "CCW". Valid options
             are: counter-clockwise "CCW", and clockwise "CW".
 
     """
