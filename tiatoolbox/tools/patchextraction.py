@@ -158,6 +158,9 @@ class PatchExtractor(PatchExtractorABC):
         self.n = 0
         return self
 
+    def __len__(self):
+        return self.locations_df.shape[0]
+
     def __next__(self):
         n = self.n
 
@@ -211,12 +214,12 @@ class PatchExtractor(PatchExtractorABC):
             converted_units = {
                 k: v for k, v in converted_units.items() if v is not None
             }
-            converted_units_keys = list(converted_units.keys())
+            units_key = list(converted_units.keys())[0]
             selected_coord_indices = self.filter_coordinates_fast(
                 self.mask,
                 self.coordinate_list,
-                coordinate_resolution=converted_units[converted_units_keys[0]],
-                coordinate_units=converted_units_keys[0],
+                coordinate_resolution=converted_units[units_key],
+                coordinate_units=units_key,
                 min_mask_ratio=self.min_mask_ratio,
             )
             self.coordinate_list = self.coordinate_list[selected_coord_indices]
@@ -335,6 +338,7 @@ class PatchExtractor(PatchExtractorABC):
         func: Callable = None,
         resolution: float = None,
         units: str = None,
+        min_mask_ratio: float = 0,
     ):
         """Indicates which coordinate is valid for mask-based patch extraction.
 
@@ -379,7 +383,7 @@ class PatchExtractor(PatchExtractorABC):
                 interpolation="nearest",
                 coord_space="resolution",
             )
-            return np.sum(roi > 0) > 0
+            return np.mean(roi > 0) > min_mask_ratio
 
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
             raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")

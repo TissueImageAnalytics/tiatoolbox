@@ -162,6 +162,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         resolution=None,
         units=None,
         auto_get_mask=True,
+        min_mask_ratio=0,
     ):
         """Create a WSI-level patch dataset.
 
@@ -296,11 +297,22 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             mask_reader.info = self.reader.info
 
         if mask_reader is not None:
-            selected = PatchExtractor.filter_coordinates(
+            # convert the coordinate_list resolution unit to acceptable units
+            converted_units = self.reader.convert_resolution_units(
+                input_res=resolution,
+                input_unit=units,
+            )
+            # find the first unit which is not None
+            converted_units = {
+                k: v for k, v in converted_units.items() if v is not None
+            }
+            units_key = list(converted_units.keys())[0]
+            selected = PatchExtractor.filter_coordinates_fast(
                 mask_reader,  # must be at the same resolution
                 self.inputs,  # must already be at requested resolution
-                resolution=resolution,
-                units=units,
+                coordinate_resolution=converted_units[units_key],
+                coordinate_units=units_key,
+                min_mask_ratio=min_mask_ratio,
             )
             self.inputs = self.inputs[selected]
 
