@@ -717,7 +717,7 @@ class DFBRegister:
         end_x_y = points[:, 0:2] + 1
         bbox_coord = np.c_[points, end_x_y].astype(int)
         return PatchExtractor.filter_coordinates_fast(
-            mask_reader, bbox_coord, 1.0, "baseline", 1.0
+            mask_reader, bbox_coord, mask.shape[::-1]
         )
 
     def filtering_matching_points(
