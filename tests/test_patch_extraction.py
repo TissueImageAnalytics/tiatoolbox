@@ -83,6 +83,7 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
     )
 
     assert isinstance(points, patchextraction.PointsPatchExtractor)
+    assert len(points) == 1860
 
     sliding_window = patchextraction.get_patch_extractor(
         input_img=input_img,

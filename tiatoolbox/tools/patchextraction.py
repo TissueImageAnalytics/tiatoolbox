@@ -159,7 +159,7 @@ class PatchExtractor(PatchExtractorABC):
         return self
 
     def __len__(self):
-        return self.locations_df.shape[0]
+        return self.locations_df.shape[0] if self.locations_df is not None else 0
 
     def __next__(self):
         n = self.n
