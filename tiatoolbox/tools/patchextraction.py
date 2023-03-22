@@ -205,21 +205,10 @@ class PatchExtractor(PatchExtractorABC):
         )
 
         if self.mask is not None:
-            # convert the coordinate_list resolution unit to acceptable units
-            converted_units = self.wsi.convert_resolution_units(
-                input_res=self.resolution,
-                input_unit=self.units,
-            )
-            # find the first unit which is not None
-            converted_units = {
-                k: v for k, v in converted_units.items() if v is not None
-            }
-            units_key = list(converted_units.keys())[0]
             selected_coord_indices = self.filter_coordinates_fast(
                 self.mask,
                 self.coordinate_list,
-                coordinate_resolution=converted_units[units_key],
-                coordinate_units=units_key,
+                wsi_shape=slide_dimension,
                 min_mask_ratio=self.min_mask_ratio,
             )
             self.coordinate_list = self.coordinate_list[selected_coord_indices]
@@ -240,9 +229,7 @@ class PatchExtractor(PatchExtractorABC):
     def filter_coordinates_fast(
         mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
-        coordinate_resolution: float,
-        coordinate_units: str,
-        mask_resolution: float = None,
+        wsi_shape: Tuple[int, int],
         min_mask_ratio: float = 0,
     ):
         """Validate patch extraction coordinates based on the input mask.
@@ -263,16 +250,8 @@ class PatchExtractor(PatchExtractorABC):
                 default `func=None`, K should be 4, as we expect the
                 `coordinates_list` to be bounding boxes in `[start_x,
                 start_y, end_x, end_y]` format.
-            coordinate_resolution (float):
-                Resolution value at which `coordinates_list` is
-                generated.
-            coordinate_units (str):
-                Resolution unit at which `coordinates_list` is generated.
-            mask_resolution (float):
-                Resolution at which mask array is extracted. It is
-                supposed to be in the same units as `coord_resolution`
-                i.e., `coordinate_units`. If not provided, a default
-                value will be selected based on `coordinate_units`.
+            wsi_shape (tuple(int, int)):
+                Shape of the WSI in the requested `resolution` and `units`.
             min_mask_ratio (float):
                 Only patches with positive area percentage above this value are
                 included. Defaults to 0.
@@ -290,28 +269,21 @@ class PatchExtractor(PatchExtractorABC):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
         if coordinates_list.shape[-1] != 4:
             raise ValueError("`coordinates_list` must be of shape [N, 4].")
-        if isinstance(coordinate_resolution, (int, float)):
-            coordinate_resolution = [coordinate_resolution, coordinate_resolution]
 
         if not 0 <= min_mask_ratio <= 1:
             raise ValueError("`min_mask_ratio` must be between 0 and 1.")
 
-        # define default mask_resolution based on the input `coordinate_units`
-        if mask_resolution is None:
-            mask_res_dict = {"mpp": 8, "power": 1.25, "baseline": 0.03125}
-            mask_resolution = mask_res_dict[coordinate_units]
-
-        tissue_mask = mask_reader.slide_thumbnail(
-            resolution=mask_resolution, units=coordinate_units
-        )
+        # the tissue mask exists in the reader already, no need to generate it
+        tissue_mask = mask_reader.img
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
+        scale_factors = np.array(tissue_mask.shape[::-1]) / np.array(wsi_shape)
         scaled_coords = coordinates_list.copy().astype(np.float32)
-        scaled_coords[:, [0, 2]] *= coordinate_resolution[0] / mask_resolution
+        scaled_coords[:, [0, 2]] *= scale_factors[0]
         scaled_coords[:, [0, 2]] = np.clip(
             scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
         )
-        scaled_coords[:, [1, 3]] *= coordinate_resolution[1] / mask_resolution
+        scaled_coords[:, [1, 3]] *= scale_factors[1]
         scaled_coords[:, [1, 3]] = np.clip(
             scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
         )

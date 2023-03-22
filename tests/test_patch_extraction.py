@@ -424,6 +424,7 @@ def test_filter_coordinates():
     mask = np.zeros([9, 6])
     mask[0:4, 3:8] = 1  # will flag first 2
     mask_reader = VirtualWSIReader(mask)
+    slide_shape = [6, 9]  # slide shape (w, h) at requested resolution
 
     # Tests for (original) filter_coordinates method
     # functionality test
@@ -462,13 +463,11 @@ def test_filter_coordinates():
     flag_list = PatchExtractor.filter_coordinates_fast(
         mask_reader,
         bbox_list,
-        coordinate_resolution=1.0,
-        coordinate_units="mpp",
-        mask_resolution=1,
+        slide_shape,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
     flag_list = PatchExtractor.filter_coordinates_fast(
-        mask_reader, bbox_list, coordinate_resolution=(1.0, 1.0), coordinate_units="mpp"
+        mask_reader, bbox_list, slide_shape
     )
 
     # Test for bad mask input
@@ -478,8 +477,7 @@ def test_filter_coordinates():
         PatchExtractor.filter_coordinates_fast(
             mask,
             bbox_list,
-            coordinate_resolution=1.0,
-            coordinate_units="mpp",
+            slide_shape,
         )
 
     # Test for bad bbox coordinate list in the input
@@ -487,8 +485,7 @@ def test_filter_coordinates():
         PatchExtractor.filter_coordinates_fast(
             mask_reader,
             bbox_list.tolist(),
-            coordinate_resolution=1,
-            coordinate_units="mpp",
+            slide_shape,
         )
 
     # Test for incomplete coordinate list
@@ -496,8 +493,7 @@ def test_filter_coordinates():
         PatchExtractor.filter_coordinates_fast(
             mask_reader,
             bbox_list[:, :2],
-            coordinate_resolution=1,
-            coordinate_units="mpp",
+            slide_shape,
         )
 
     # Test for put of range min_mask_ratio
@@ -505,16 +501,14 @@ def test_filter_coordinates():
         PatchExtractor.filter_coordinates_fast(
             mask_reader,
             bbox_list,
-            coordinate_resolution=1.0,
-            coordinate_units="mpp",
+            slide_shape,
             min_mask_ratio=-0.5,
         )
     with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
         PatchExtractor.filter_coordinates_fast(
             mask_reader,
             bbox_list,
-            coordinate_resolution=1.0,
-            coordinate_units="mpp",
+            slide_shape,
             min_mask_ratio=1.1,
         )
 
@@ -529,7 +523,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Generating a test mask to read patches from
     mask_dim = (int(slide_dimensions[0] / 10), int(slide_dimensions[1] / 10))
-    wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+    wsi_mask = np.zeros(mask_dim[::-1], dtype=np.uint8)  # reverse as dims are (w, h)
     # masking two column to extract patch from
     wsi_mask[:, :2] = 255
 
