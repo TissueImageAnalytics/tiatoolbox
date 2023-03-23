@@ -39,5 +39,5 @@
   profile = "black"
   multi_line_output = 3
   line_length = 88
-  skip_gitignore = "True"
   filter_files = "True"
+  skip = [".gitignore", "benchmarks/*"]
