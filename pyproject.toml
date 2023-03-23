@@ -34,3 +34,10 @@
   ]
   ignore_errors = true
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py']
+
+[tool.isort]
+  profile = "black"
+  multi_line_output = 3
+  skip_gitignore = ["True"]
+  line_length = 88
+  filter_files = ["True"]
