@@ -138,8 +138,8 @@ import psutil  # noqa: E402
 from shapely.geometry import Polygon  # noqa: E402
 from tqdm import tqdm  # noqa: E402
 
-from tiatoolbox.annotation.storage import (  # noqa: E402
-    Annotation,
+from tiatoolbox.annotation.storage import (
+    Annotation,  # noqa: E402
     DictionaryStore,
     SQLiteStore,
 )
