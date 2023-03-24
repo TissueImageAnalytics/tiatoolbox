@@ -1148,7 +1148,7 @@ class AnnotationStore(ABC, MutableMapping):
 
 
         Examples:
-            Example bounding boxy query with one neighbour within a
+            Example bounding box query with one neighbour within a
             distance of 2.0.
 
             >>> from shapely.geometry import Point, Polyon
@@ -1167,7 +1167,7 @@ class AnnotationStore(ABC, MutableMapping):
               },
             }
 
-            Example bounding boxy query with no neighbours within a
+            Example bounding box query with no neighbours within a
             distance of 1.0.
 
             >>> from shapely.geometry import Point
