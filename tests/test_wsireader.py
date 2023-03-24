@@ -2070,6 +2070,38 @@ def test_ngff_missing_omero_version(tmp_path):
     wsireader.WSIReader.open(sample_copy)
 
 
+def test_ngff_missing_multiscales_returns_false(tmp_path):
+    """Test that missing multiscales key returns False for is_ngff."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Remove the multiscales key
+    del zattrs["multiscales"]
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    assert not wsireader.is_ngff(sample_copy)
+
+
+def test_ngff_wrong_format_metadata(tmp_path, caplog):
+    """Test that is_ngff is False and logs a warning if metadata is wrong."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["multiscales"] = "foo"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with caplog.at_level(logging.WARNING):
+        assert not wsireader.is_ngff(sample_copy)
+    assert "must be present and of the correct type" in caplog.text
+
+
 def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     """Test that the reader can handle non-numeric omero versions."""
 

@@ -136,6 +136,11 @@ def is_ngff(
                 all(isinstance(m, dict) for m in multiscales),
             ]
         ):
+            logger.warning(
+                "The NGFF file is not valid. "
+                "The multiscales, _ARRAY_DIMENSIONS and omero attributes "
+                "must be present and of the correct type."
+            )
             return False
     except KeyError:
         return False
