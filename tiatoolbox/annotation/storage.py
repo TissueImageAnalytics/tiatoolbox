@@ -1065,7 +1065,7 @@ class AnnotationStore(ABC, MutableMapping):
             geometry (Geometry):
                 A geometry to use to query for the initial set of
                 annotations to perform a neighbourhood query around. If
-                Non, all annotations in the store are considered.
+                None, all annotations in the store are considered.
                 Defaults to None.
             where (str or bytes or Callable):
                 A statement which should evaluate to a boolean value.
