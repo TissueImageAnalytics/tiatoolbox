@@ -129,8 +129,10 @@ macports
 memray
 mpp
 mse
+multiscales
 natively
 ndarray
+ngff
 nn
 noinspection
 normalizer

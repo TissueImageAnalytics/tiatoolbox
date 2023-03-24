@@ -19,6 +19,7 @@ import pandas as pd
 import tifffile
 import zarr
 from defusedxml import ElementTree
+from packaging.version import Version
 from PIL import Image
 
 from tiatoolbox import logger, utils
@@ -36,6 +37,8 @@ IntPair = Tuple[int, int]
 Bounds = Tuple[Number, Number, Number, Number]
 IntBounds = Tuple[int, int, int, int]
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+MIN_NGFF_VERSION = Version("0.4")
+MAX_NGFF_VERSION = Version("0.4")
 
 
 def is_dicom(path: pathlib.Path) -> bool:
@@ -99,8 +102,8 @@ def is_zarr(path: pathlib.Path) -> bool:
 
 def is_ngff(
     path: pathlib.Path,
-    min_version: Tuple[str, ...] = ("0", "4"),
-    max_version: Tuple[str, ...] = ("0", "4"),
+    min_version: Version = MIN_NGFF_VERSION,
+    max_version: Version = MAX_NGFF_VERSION,
 ) -> bool:
     """Check if the input is a NGFF file.
 
@@ -136,47 +139,50 @@ def is_ngff(
             return False
     except KeyError:
         return False
-    multiscales_versions = tuple(
-        tuple(int(part) for part in scale.get("version", "").split("."))
-        for scale in multiscales
-    )
-    omero_version = omero.get("version")
+    multiscales_versions = {
+        Version(scale["version"]) for scale in multiscales if "version" in scale
+    }
+    omero_version: Optional[str] = omero.get("version")
     if omero_version:
-        omero_version = tuple(omero_version.split("."))
+        omero_version: Version = Version(omero_version)
         if omero_version < min_version:
             logger.warning(
-                "The minimum supported version of the NGFF file is {}. "
-                "But the versions of the multiscales in the file are {}.",
-                (min_version, set(multiscales_versions)),
+                "The minimum supported version of the NGFF file is %s. "
+                "But the versions of the multiscales in the file are %s.",
+                min_version,
+                multiscales_versions,
             )
             return False
         if omero_version > max_version:
             logger.warning(
-                "The maximum supported version of the NGFF file is {}. "
-                "But the versions of the multiscales in the file are {}.",
-                (max_version, set(multiscales_versions)),
+                "The maximum supported version of the NGFF file is %s. "
+                "But the versions of the multiscales in the file are %s.",
+                max_version,
+                multiscales_versions,
             )
             return False
 
-    if len(set(multiscales_versions)) > 1:
+    if len(multiscales_versions) > 1:
         logger.warning(
-            "Found multiple versions in NGFF multiscales: {}",
-            set(multiscales_versions),
+            "Found multiple versions for NGFF multiscales: %s",
+            multiscales_versions,
         )
 
     if any(version < min_version for version in multiscales_versions):
         logger.warning(
-            "The minimum supported version of the NGFF file is {}. "
-            "But the versions of the multiscales in the file are {}.",
-            (min_version, set(multiscales_versions)),
+            "The minimum supported version of the NGFF file is %s. "
+            "But the versions of the multiscales in the file are %s.",
+            min_version,
+            multiscales_versions,
         )
         return False
 
     if any(version > max_version for version in multiscales_versions):
         logger.warning(
-            "The maximum supported version of the NGFF file is {}. "
-            "But the versions of the multiscales in the file are {}.",
-            (max_version, set(multiscales_versions)),
+            "The maximum supported version of the NGFF file is %s. "
+            "But the versions of the multiscales in the file are %s.",
+            max_version,
+            multiscales_versions,
         )
         return False
 

@@ -1,12 +1,15 @@
 """Tests for reading whole-slide images."""
 
+import copy
 import json
+import logging
 import os
 import pathlib
 import random
 import re
 import shutil
 from copy import deepcopy
+from pathlib import Path
 from time import time
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
@@ -17,6 +20,7 @@ import numpy as np
 import pytest
 import zarr
 from click.testing import CliRunner
+from packaging.version import Version
 from skimage.filters import threshold_otsu
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.morphology import binary_dilation, disk, remove_small_objects
@@ -2066,8 +2070,24 @@ def test_ngff_missing_omero_version(tmp_path):
     wsireader.WSIReader.open(sample_copy)
 
 
-def test_ngff_non_numeric_version(tmp_path):
+def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     """Test that the reader can handle non-numeric omero versions."""
+
+    # Patch the is_ngff function to change the min/max version
+    if_ngff = wsireader.is_ngff  # noqa: F841
+    min_version = Version("0.4")
+    max_version = Version("0.5")
+
+    def patched_is_ngff(
+        path: Path,
+        min_version: Version = min_version,
+        max_version: Version = max_version,
+    ) -> bool:
+        """Patched is_ngff function with new min/max version."""
+        return is_ngff(path, min_version, max_version)
+
+    monkeypatch.setattr(wsireader, "is_ngff", patched_is_ngff)
+
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
@@ -2079,6 +2099,30 @@ def test_ngff_non_numeric_version(tmp_path):
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsireader.WSIReader.open(sample_copy)
+
+
+def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
+    """Test that the reader logs a warning inconsistent multiscales versions."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Set the versions to be inconsistent
+    multiscales = zattrs["multiscales"]
+    # Needs at least 2 multiscales to be inconsistent
+    if len(multiscales) < 2:
+        multiscales.append(copy.deepcopy(multiscales[0]))
+    for i, _ in enumerate(multiscales):
+        multiscales[i]["version"] = f"0.{i}-dev"
+    zattrs["omero"]["multiscales"] = multiscales
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    # Capture logger output to check for warning
+    with caplog.at_level(logging.WARNING), pytest.raises(FileNotSupported):
+        wsireader.WSIReader.open(sample_copy)
+    assert "multiple versions" in caplog.text
 
 
 class TestReader:
