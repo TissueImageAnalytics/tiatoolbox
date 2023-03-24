@@ -2,7 +2,7 @@
 
 import torch
 
-from tiatoolbox.models.architecture.idars import IDaRS
+from tiatoolbox.models import IDaRS
 
 
 def test_functional():
