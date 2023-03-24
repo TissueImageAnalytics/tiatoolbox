@@ -5,10 +5,10 @@ import pytest
 import torch
 import torch.nn as nn
 
+from tiatoolbox.models import HoVerNet
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.hovernet import (
     DenseBlock,
-    HoVerNet,
     ResidualBlock,
     TFSamepaddingLayer,
 )
