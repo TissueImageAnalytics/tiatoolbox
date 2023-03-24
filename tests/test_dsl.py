@@ -92,7 +92,7 @@ def sqlite_eval(query: Union[str, Number]):
 
 
 class TestSQLite:  # noqa: PIE798
-    """Test converting from our DSL to an SQLite backed."""
+    """Test converting from our DSL to an SQLite backend."""
 
     @staticmethod
     def test_prop_or_prop():
