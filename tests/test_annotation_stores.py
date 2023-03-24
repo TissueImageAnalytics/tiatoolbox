@@ -131,6 +131,7 @@ def annotations_center_of_mass(annotations):
 
 
 def test_annotation_repr():
+    """Test the repr of an annotation."""
     annotation = Annotation(Polygon([(0, 0), (1, 1), (2, 0)]))
     assert isinstance(repr(annotation), str)
     assert repr(annotation).startswith("Annotation(")
