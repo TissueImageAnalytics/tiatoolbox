@@ -97,7 +97,11 @@ def is_zarr(path: pathlib.Path) -> bool:
         return False
 
 
-def is_ngff(path: pathlib.Path, min_version: Tuple[str, ...] = ("0", "4")) -> bool:
+def is_ngff(
+    path: pathlib.Path,
+    min_version: Tuple[str, ...] = ("0", "4"),
+    max_version: Tuple[str, ...] = ("0", "4"),
+) -> bool:
     """Check if the input is a NGFF file.
 
     Args:
@@ -140,8 +144,40 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[str, ...] = ("0", "4")) -> bo
     if omero_version:
         omero_version = tuple(omero_version.split("."))
         if omero_version < min_version:
+            logger.warning(
+                "The minimum supported version of the NGFF file is {}. "
+                "But the versions of the multiscales in the file are {}.",
+                (min_version, set(multiscales_versions)),
+            )
             return False
+        if omero_version > max_version:
+            logger.warning(
+                "The maximum supported version of the NGFF file is {}. "
+                "But the versions of the multiscales in the file are {}.",
+                (max_version, set(multiscales_versions)),
+            )
+            return False
+
+    if len(set(multiscales_versions)) > 1:
+        logger.warning(
+            "Found multiple versions in NGFF multiscales: {}",
+            set(multiscales_versions),
+        )
+
     if any(version < min_version for version in multiscales_versions):
+        logger.warning(
+            "The minimum supported version of the NGFF file is {}. "
+            "But the versions of the multiscales in the file are {}.",
+            (min_version, set(multiscales_versions)),
+        )
+        return False
+
+    if any(version > max_version for version in multiscales_versions):
+        logger.warning(
+            "The maximum supported version of the NGFF file is {}. "
+            "But the versions of the multiscales in the file are {}.",
+            (max_version, set(multiscales_versions)),
+        )
         return False
 
     return is_zarr(path)
