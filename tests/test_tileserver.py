@@ -27,7 +27,7 @@ def safe_str(name):
 
 
 def setup_app(client):
-    client.get("/tileserver/setup")
+    client.get("/tileserver/get_user")
     # get the "user" cookie
     cookie = next(
         (cookie for cookie in client.cookie_jar if cookie.name == "user"), None
@@ -220,10 +220,10 @@ def test_cli_name_multiple_flag():
     assert "Multiple" in dummy_fn.__click_params__[0].help
 
 
-def test_setup(app):
-    """Test setup endpoint."""
+def test_get_user(app):
+    """Test get_user endpoint."""
     with app.test_client() as client:
-        response = client.get("/tileserver/setup")
+        response = client.get("/tileserver/get_user")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
 
@@ -414,6 +414,22 @@ def test_get_props(app):
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert set(json.loads(response.data)) == {"prob", "type"}
+
+
+def test_get_property_values(app):
+    """Test getting property values."""
+    with app.test_client() as client:
+        response = client.get("/tileserver/get_prop_values/type/all")
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/get_prop_values/type/1")
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        # the only value of property 'type' for annotations of type 1 is 1
+        assert set(json.loads(response.data)) == {1}
 
 
 def test_reset(app):

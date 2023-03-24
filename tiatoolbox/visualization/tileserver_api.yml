@@ -239,7 +239,7 @@ paths:
                   items:
                     type: string
 
-  /tileserver/get_prop_values/{prop}:
+  /tileserver/get_prop_values/{prop}/{type}:
   get:
     summary: Get a list of available values for a property
     parameters:
@@ -247,6 +247,13 @@ paths:
         name: prop
         description: Name of the property to retrieve values for
         required: true
+        schema:
+          type: string
+      - in: path
+        name: type
+        description: Name of a type to retrieve property values for.
+          if all, prop values over all annotations will be returned
+        required: false
         schema:
           type: string
     responses:
