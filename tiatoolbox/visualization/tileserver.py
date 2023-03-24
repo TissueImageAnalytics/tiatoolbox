@@ -143,7 +143,9 @@ class TileServer(Flask):
             "/tileserver/change_secondary_cmap/<type_id>/<prop>/<cmap>", methods=["PUT"]
         )(self.change_secondary_cmap)
         self.route("/tileserver/get_prop_names")(self.get_properties)
-        self.route("/tileserver/get_prop_values/<prop>/<type>")(self.get_property_values)
+        self.route("/tileserver/get_prop_values/<prop>/<type>")(
+            self.get_property_values
+        )
         self.route("/tileserver/reset")(self.reset)
 
     def _get_user(self):
