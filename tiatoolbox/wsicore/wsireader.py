@@ -97,7 +97,7 @@ def is_zarr(path: pathlib.Path) -> bool:
         return False
 
 
-def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
+def is_ngff(path: pathlib.Path, min_version: Tuple[str, ...] = ("0", "4")) -> bool:
     """Check if the input is a NGFF file.
 
     Args:
