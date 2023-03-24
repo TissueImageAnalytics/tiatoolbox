@@ -1155,7 +1155,7 @@ class AnnotationStore(ABC, MutableMapping):
             >>> from tiatoolbox.annotation.storage import Annotation, SQLiteStore
             >>> store = SQLiteStore()
             >>> annotation = Annotation(Point(0, 0), {"class": 42})
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> neighbour = Annotation(Point(1, 1), {"class": 123})
             >>> store.add(neighbour, "bar")
             >>> store.nquery((-.5, -.5, .5, .5), distance=2.0)
