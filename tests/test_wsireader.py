@@ -2102,6 +2102,38 @@ def test_ngff_wrong_format_metadata(tmp_path, caplog):
     assert "must be present and of the correct type" in caplog.text
 
 
+def test_ngff_below_min_version(tmp_path):
+    """Test for FileNotSupported when version is below minimum."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["omero"]["version"] = "0.0"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with pytest.raises(FileNotSupported):
+        wsireader.WSIReader.open(sample_copy)
+
+
+def test_ngff_above_max_version(tmp_path):
+    """Test for FileNotSupported when version is above maximum."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["omero"]["version"] = "10.0"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with pytest.raises(FileNotSupported):
+        wsireader.WSIReader.open(sample_copy)
+
+
 def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     """Test that the reader can handle non-numeric omero versions."""
 
