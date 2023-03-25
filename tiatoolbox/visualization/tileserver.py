@@ -143,7 +143,9 @@ class TileServer(Flask):
             "/tileserver/change_secondary_cmap/<type_id>/<prop>/<cmap>", methods=["PUT"]
         )(self.change_secondary_cmap)
         self.route("/tileserver/get_prop_names")(self.get_properties)
-        self.route("/tileserver/get_prop_values/<prop>/<type>")(self.get_property_values)
+        self.route("/tileserver/get_prop_values/<prop>/<ann_type>")(
+            self.get_property_values
+        )
         self.route("/tileserver/reset")(self.reset)
 
     def _get_user(self):
@@ -169,6 +171,7 @@ class TileServer(Flask):
             return cm.get_cmap(cmap)
 
         def cmapp(x):
+            """Dictionary colormap callable wrapper"""
             return cmap[x]
 
         return cmapp
@@ -493,12 +496,12 @@ class TileServer(Flask):
             props.extend(list(prop_dict.keys()))
         return json.dumps(list(set(props)))
 
-    def get_property_values(self, prop, type):
+    def get_property_values(self, prop, ann_type):
         """Get all the values of a property in the store."""
         user = self._get_user()
         where = None
-        if type != "all":
-            where = f'props["type"]=={type}'
+        if ann_type != "all":
+            where = f'props["type"]=={ann_type}'
         ann_props = self.tia_pyramids[user]["overlay"].store.pquery(
             select=f"props['{prop}']",
             where=where,
