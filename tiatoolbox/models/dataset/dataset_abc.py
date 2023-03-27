@@ -1,6 +1,7 @@
 import os
 import pathlib
 from abc import ABC, abstractmethod
+from typing import Union
 
 import numpy as np
 import torch
@@ -98,14 +99,26 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             raise ValueError("`inputs` should be a list of patch coordinates.")
 
     @staticmethod
-    def load_img(path):
+    def load_img(input_img: Union[str, pathlib.Path, np.ndarray]) -> np.ndarray:
         """Load an image from a provided path.
 
         Args:
-            path (str): Path to an image file.
+            input_img (str, pathlib.Path, np.ndarray): path to image or image data.
+
+        Returns:
+            np.ndarray: image data.
 
         """
-        path = pathlib.Path(path)
+
+        if not isinstance(input_img, (str, pathlib.Path, np.ndarray)):
+            raise ValueError(
+                f"Cannot load image data from `{type(input_img)}` objects."
+            )
+
+        if isinstance(input_img, np.ndarray):
+            return input_img
+
+        path = pathlib.Path(input_img)
 
         if path.suffix not in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
             raise ValueError(f"Cannot load image data from `{path.suffix}` files.")

@@ -87,7 +87,7 @@ def patch_predictor(
     )
 
     output = predictor.predict(
-        imgs=files_all,
+        input_imgs=files_all,
         masks=masks_all,
         mode=mode,
         return_probabilities=return_probabilities,
