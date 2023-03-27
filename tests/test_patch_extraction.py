@@ -97,10 +97,9 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
 
 
 def test_points_patch_extractor_image_format(
-    sample_svs, sample_jp2, source_image, patch_extr_csv
+    sample_svs, sample_jp2, source_image, patch_extr_csv, blank_sample
 ):
     """Test PointsPatchExtractor returns the right object."""
-    file_parent_dir = pathlib.Path(__file__).parent
     locations_list = pathlib.Path(patch_extr_csv)
 
     points = patchextraction.get_patch_extractor(
@@ -130,10 +129,9 @@ def test_points_patch_extractor_image_format(
 
     assert isinstance(points.wsi, OmnyxJP2WSIReader)
 
-    false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
-    with pytest.raises(FileNotSupported):
+    with blank_sample(".test") as false_image_path, pytest.raises(FileNotSupported):
         _ = patchextraction.get_patch_extractor(
-            input_img=false_image,
+            input_img=false_image_path,
             locations_list=locations_list,
             method_name="point",
             patch_size=(200, 200),

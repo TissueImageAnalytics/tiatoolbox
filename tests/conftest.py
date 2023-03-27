@@ -3,6 +3,7 @@
 import pathlib
 import shutil
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Callable
 
 import pytest
@@ -57,6 +58,27 @@ def remote_sample(tmp_path_factory: TempPathFactory) -> Callable:
         return _fetch_remote_sample(key, tmp_path_factory.mktemp("data"))
 
     return __remote_sample
+
+
+@pytest.fixture(scope="session")
+def blank_sample(tmp_path_factory: TempPathFactory):
+    """Factory fixture for creating blank sample files."""
+
+    class BlankSample:
+        """Sample file. Automatically deleted after use."""
+
+        def __init__(self, suffix: str):
+            self.suffix = suffix
+
+        def __enter__(self) -> pathlib.Path:
+            folder = tmp_path_factory.mktemp("data")
+            self.file = NamedTemporaryFile(suffix=self.suffix, dir=folder, delete=True)
+            return pathlib.Path(self.file.name)
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self.file.close()
+
+    return BlankSample
 
 
 @pytest.fixture(scope="session")
