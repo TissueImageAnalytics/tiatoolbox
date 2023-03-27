@@ -11,7 +11,7 @@ import re
 import warnings
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import openslide
@@ -36,6 +36,7 @@ IntPair = Tuple[int, int]
 Bounds = Tuple[Number, Number, Number, Number]
 IntBounds = Tuple[int, int, int, int]
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+Units = Literal["mpp", "power", "baseline", "level"]
 
 
 def is_dicom(path: pathlib.Path) -> bool:
@@ -204,6 +205,7 @@ class WSIReader:
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
             )
+
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
@@ -212,10 +214,22 @@ class WSIReader:
 
         # Input is a string or pathlib.Path, normalise to pathlib.Path
         input_path = pathlib.Path(input_img)
+        if not os.path.exists(input_path):
+            raise ValueError("`input_img` path must exist")
+
         WSIReader.verify_supported_wsi(input_path)
+        return WSIReader.get_reader_by_filepath(
+            input_path, mpp=mpp, power=power, **kwargs
+        )
 
+    @staticmethod
+    def get_reader_by_filepath(
+        input_path: pathlib.Path,
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+        **kwargs,
+    ) -> WSIReader:
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
-
         if is_dicom(input_path):
             return DICOMWSIReader(input_path, mpp=mpp, power=power)
 
@@ -373,7 +387,7 @@ class WSIReader:
         raise NotImplementedError
 
     def _find_optimal_level_and_downsample(
-        self, resolution: Resolution, units: str, precision: int = 3
+        self, resolution: Resolution, units: Units, precision: int = 3
     ) -> Tuple[int, np.ndarray]:
         """Find the optimal level to read at for a desired resolution and units.
 
@@ -436,7 +450,7 @@ class WSIReader:
         location: IntPair,
         size: IntPair,
         resolution: Resolution,
-        units: str,
+        units: Units,
         precision: int = 3,
     ) -> Tuple[int, IntPair, IntPair, NumPair, IntPair]:
         """Find optimal parameters for reading a rect at a given resolution.
@@ -513,7 +527,7 @@ class WSIReader:
         )
 
     def _find_read_params_at_resolution(
-        self, location: IntPair, size: IntPair, resolution: Resolution, units: str
+        self, location: IntPair, size: IntPair, resolution: Resolution, units: Units
     ) -> Tuple[int, NumPair, IntPair, IntPair, IntPair, IntPair]:
         """Works similarly to `_find_read_rect_params`.
 
@@ -600,7 +614,7 @@ class WSIReader:
         ) + output
 
     def _bounds_at_resolution_to_baseline(
-        self, bounds: Bounds, resolution: Resolution, units: str
+        self, bounds: Bounds, resolution: Resolution, units: Units
     ) -> Bounds:
         """Find corresponding bounds in baseline.
 
@@ -628,7 +642,7 @@ class WSIReader:
         return np.concatenate([tl_at_baseline, br_at_baseline])  # bounds at baseline
 
     def slide_dimensions(
-        self, resolution: Resolution, units: str, precisions: int = 3
+        self, resolution: Resolution, units: Units, precisions: int = 3
     ) -> IntPair:
         """Return the size of WSI at requested resolution.
 
@@ -662,7 +676,7 @@ class WSIReader:
         return wsi_shape_at_resolution
 
     def _find_read_bounds_params(
-        self, bounds: Bounds, resolution: Resolution, units: str, precision: int = 3
+        self, bounds: Bounds, resolution: Resolution, units: Units, precision: int = 3
     ) -> Tuple[int, IntBounds, IntPair, IntPair, np.ndarray]:
         """Find optimal parameters for reading bounds at a given resolution.
 
@@ -901,7 +915,7 @@ class WSIReader:
         location: NumPair,
         size: NumPair,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -933,7 +947,7 @@ class WSIReader:
         location: IntPair,
         size: IntPair,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -1123,7 +1137,7 @@ class WSIReader:
         self,
         bounds: Bounds,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -1257,7 +1271,7 @@ class WSIReader:
             location=location, size=size, resolution=level, units="level"
         )
 
-    def slide_thumbnail(self, resolution: Resolution = 1.25, units: str = "power"):
+    def slide_thumbnail(self, resolution: Resolution = 1.25, units: Units = "power"):
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see
@@ -1288,7 +1302,7 @@ class WSIReader:
         self,
         method: str = "otsu",
         resolution: Resolution = 1.25,
-        units: str = "power",
+        units: Units = "power",
         **masker_kwargs,
     ) -> "VirtualWSIReader":
         """Create a tissue mask and wrap it in a VirtualWSIReader.
