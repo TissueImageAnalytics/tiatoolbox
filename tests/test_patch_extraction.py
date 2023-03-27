@@ -964,7 +964,6 @@ def test_region_patches():
         within_region_bound=False,
         within_wsi_bound=False,
         stride=1,
-        min_region_covered=(1, 1),
     )
 
     padded_image = np.pad(
