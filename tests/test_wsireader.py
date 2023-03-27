@@ -1980,7 +1980,9 @@ def test_store_reader_alpha(remote_sample):
 
 
 def test_store_reader_no_types(tmp_path, remote_sample):
-    """Test AnnotationStoreReader with no types."""
+    """
+    Test AnnotationStoreReader with no types.
+    """
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     reader = AnnotationStoreReader(tmp_path / "store.db", wsi_reader.info)
@@ -1989,8 +1991,10 @@ def test_store_reader_no_types(tmp_path, remote_sample):
 
 
 def test_store_reader_info_from_base(tmp_path, remote_sample):
-    """Test that AnnotationStoreReader will correctly get metadata
-    from a provided base_wsi if the store has no wsi metadata."""
+    """
+    Test that AnnotationStoreReader will correctly get metadata
+    from a provided base_wsi if the store has no wsi metadata.
+    """
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     store_reader = AnnotationStoreReader(tmp_path / "store.db", base_wsi=wsi_reader)

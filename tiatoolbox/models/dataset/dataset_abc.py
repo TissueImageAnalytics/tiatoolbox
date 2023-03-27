@@ -109,7 +109,6 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             np.ndarray: image data.
 
         """
-
         if not isinstance(input_img, (str, pathlib.Path, np.ndarray)):
             raise ValueError(
                 f"Cannot load image data from `{type(input_img)}` objects."

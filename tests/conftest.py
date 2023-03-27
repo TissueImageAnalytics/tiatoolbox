@@ -69,6 +69,7 @@ def blank_sample(tmp_path_factory: TempPathFactory):
 
         def __init__(self, suffix: str):
             self.suffix = suffix
+            self.file = None  # will be set in __enter__
 
         def __enter__(self) -> pathlib.Path:
             folder = tmp_path_factory.mktemp("data")

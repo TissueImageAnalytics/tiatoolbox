@@ -720,8 +720,8 @@ class PatchPredictor:
 
         return file_dict if save_output else outputs
 
+    @staticmethod
     def _save_output(
-        self,
         output_model,
         idx,
         merged_prediction,
@@ -730,6 +730,7 @@ class PatchPredictor:
         save_dir,
         merge_predictions,
     ):
+        """Save prediction to json and/or numpy file."""
         # dynamic 0 padding
         img_code = f"{idx:0{len(str(len(input_imgs)))}d}"
 
@@ -753,7 +754,7 @@ class PatchPredictor:
         if img_id is None:
             img_id = idx
 
-        return save_info
+        return img_id, save_info
 
     def predict(
         self,

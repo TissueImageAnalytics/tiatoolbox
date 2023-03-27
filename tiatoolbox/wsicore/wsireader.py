@@ -279,6 +279,10 @@ class WSIReader:
         power: Optional[Number] = None,
         **kwargs,
     ) -> WSIReader:
+        """
+        Returns an appropriate :class:`.WSIReader` object
+        based on the file extension.
+        """
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
         if is_dicom(input_path):
             return DICOMWSIReader(input_path, mpp=mpp, power=power)
@@ -1432,7 +1436,6 @@ class WSIReader:
             >>> slide_param = wsi.info
 
         """
-
         if verbose:
             logger.setLevel(logging.DEBUG)
 

@@ -283,7 +283,6 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
     ):
         """Reads or generates a mask for the input image and
         applies it to the dataset."""
-
         mask_reader = None
         if mask is not None:
             if not isinstance(mask, (str, pathlib.Path, np.ndarray, VirtualWSIReader)):
