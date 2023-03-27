@@ -41,6 +41,7 @@ Nx4
 NxM
 NxN
 OME
+Omero
 Omnyx
 OpenCV
 Otsu's
@@ -128,8 +129,10 @@ macports
 memray
 mpp
 mse
+multiscales
 natively
 ndarray
+ngff
 nn
 noinspection
 normalizer
