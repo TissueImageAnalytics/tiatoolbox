@@ -649,7 +649,7 @@ def test_region_inits(sample_ndpi):
             regions=[(0, 0, 10.1, 10)],
         )
 
-    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+    with pytest.raises(ValueError, match=r".*integers.*"):
         SlidingWindowInRegionsPatchExtractor(
             input_img=input_img,
             patch_size=(400.1, 400),
@@ -658,7 +658,7 @@ def test_region_inits(sample_ndpi):
             regions=regions,
         )
 
-    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+    with pytest.raises(ValueError, match=r".*integers.*"):
         SlidingWindowInRegionsPatchExtractor(
             input_img=input_img,
             patch_size=(400, 400),
@@ -678,7 +678,7 @@ def test_region_inits(sample_ndpi):
             regions=[(0, 0, 10, 10, 10)],
         )
 
-    with pytest.raises(ValueError, match=r".*length 2.*"):
+    with pytest.raises(ValueError, match=r".*two elements.*"):
         SlidingWindowInRegionsPatchExtractor(
             input_img=input_img,
             patch_size=(400, 400, 1),
@@ -688,7 +688,7 @@ def test_region_inits(sample_ndpi):
             regions=[(0, 0, 10, 10)],
         )
 
-    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+    with pytest.raises(ValueError, match=r".*integers.*"):
         SlidingWindowInRegionsPatchExtractor(
             input_img=input_img,
             patch_size=(400, 400),
@@ -710,7 +710,7 @@ def test_region_inits(sample_ndpi):
             within_region_bound=True,
         )
 
-    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+    with pytest.raises(ValueError, match=r".*integers.*"):
         SlidingWindowInRegionsPatchExtractor(
             input_img=input_img,
             patch_size=(400, 400),
@@ -722,7 +722,7 @@ def test_region_inits(sample_ndpi):
             within_region_bound=False,
         )
 
-    with pytest.raises(ValueError, match=r".*length 2.*"):
+    with pytest.raises(ValueError, match=r".*two elements.*"):
         SlidingWindowInRegionsPatchExtractor(
             input_img=input_img,
             patch_size=(400, 400),
@@ -734,7 +734,7 @@ def test_region_inits(sample_ndpi):
             within_region_bound=False,
         )
 
-    with pytest.raises(ValueError, match=r".*tuple of integers.*"):
+    with pytest.raises(ValueError, match=r".*integers.*"):
         SlidingWindowInRegionsPatchExtractor(
             input_img=input_img,
             patch_size=(400, 400),
@@ -742,7 +742,7 @@ def test_region_inits(sample_ndpi):
             resolution=0,
             units="level",
             regions=[(0, 0, 10, 10)],
-            min_region_covered="warwick",
+            min_region_covered="abc",
             within_region_bound=False,
         )
 
@@ -833,7 +833,7 @@ def test_region_inits(sample_ndpi):
             wsi=wsi,
         )
 
-    with pytest.raises(ValueError, match=".*should be greater than 0"):
+    with pytest.raises(ValueError, match=".*should be greater than 0.*"):
         SlidingWindowInRegionsPatchExtractor(
             patch_size=(400, 400),
             stride=(0, 400),
@@ -845,7 +845,7 @@ def test_region_inits(sample_ndpi):
             wsi=wsi,
         )
 
-    with pytest.raises(ValueError, match=".*tuple of length 2.*"):
+    with pytest.raises(ValueError, match=".*two elements.*"):
         SlidingWindowInRegionsPatchExtractor(
             patch_size=(400, 400),
             stride=(0, 400, 4),

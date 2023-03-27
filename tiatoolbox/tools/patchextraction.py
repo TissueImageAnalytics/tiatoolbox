@@ -726,6 +726,11 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
             except ValueError as e:
                 raise ValueError(f"There was an error with stride: {e}") from e
 
+        if min_region_covered is not None and within_region_bound:
+            raise ValueError(
+                "min_region_covered cannot be used with within_region_bound=True"
+            )
+
         if min_region_covered is None:
             if within_region_bound:
                 self.min_region_covered = self.patch_size
@@ -803,11 +808,6 @@ class SlidingWindowInRegionsPatchExtractor(PatchExtractorABC):
 
         if stride[0] <= 0 or stride[1] <= 0:
             raise ValueError("stride should be greater than 0")
-
-        if min_region_covered is not None and within_region_bound:
-            raise ValueError(
-                "min_region_covered cannot be used with within_region_bound=True"
-            )
 
     @staticmethod
     def check_regions(regions, wsi_size):
