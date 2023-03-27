@@ -19,6 +19,7 @@ import pandas as pd
 import tifffile
 import zarr
 from defusedxml import ElementTree
+from packaging.version import Version
 from PIL import Image
 
 from tiatoolbox import logger, utils
@@ -36,6 +37,8 @@ IntPair = Tuple[int, int]
 Bounds = Tuple[Number, Number, Number, Number]
 IntBounds = Tuple[int, int, int, int]
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+MIN_NGFF_VERSION = Version("0.4")
+MAX_NGFF_VERSION = Version("0.4")
 
 
 def is_dicom(path: pathlib.Path) -> bool:
@@ -97,7 +100,11 @@ def is_zarr(path: pathlib.Path) -> bool:
         return False
 
 
-def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
+def is_ngff(
+    path: pathlib.Path,
+    min_version: Version = MIN_NGFF_VERSION,
+    max_version: Version = MAX_NGFF_VERSION,
+) -> bool:
     """Check if the input is a NGFF file.
 
     Args:
@@ -129,18 +136,61 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
                 all(isinstance(m, dict) for m in multiscales),
             ]
         ):
+            logger.warning(
+                "The NGFF file is not valid. "
+                "The multiscales, _ARRAY_DIMENSIONS and omero attributes "
+                "must be present and of the correct type."
+            )
             return False
     except KeyError:
         return False
-    multiscales_versions = tuple(
-        tuple(int(part) for part in scale.get("version", "").split("."))
-        for scale in multiscales
-    )
-    omero_version = tuple(int(part) for part in omero.get("version", "").split("."))
+    multiscales_versions = {
+        Version(scale["version"]) for scale in multiscales if "version" in scale
+    }
+    omero_version: Optional[str] = omero.get("version")
+    if omero_version:
+        omero_version: Version = Version(omero_version)
+        if omero_version < min_version:
+            logger.warning(
+                "The minimum supported version of the NGFF file is %s. "
+                "But the versions of the multiscales in the file are %s.",
+                min_version,
+                multiscales_versions,
+            )
+            return False
+        if omero_version > max_version:
+            logger.warning(
+                "The maximum supported version of the NGFF file is %s. "
+                "But the versions of the multiscales in the file are %s.",
+                max_version,
+                multiscales_versions,
+            )
+            return False
+
+    if len(multiscales_versions) > 1:
+        logger.warning(
+            "Found multiple versions for NGFF multiscales: %s",
+            multiscales_versions,
+        )
+
     if any(version < min_version for version in multiscales_versions):
+        logger.warning(
+            "The minimum supported version of the NGFF file is %s. "
+            "But the versions of the multiscales in the file are %s.",
+            min_version,
+            multiscales_versions,
+        )
         return False
-    if omero_version < min_version:
+
+    if any(version > max_version for version in multiscales_versions):
+        logger.warning(
+            "The maximum supported version of the NGFF file is %s. "
+            "But the versions of the multiscales in the file are %s.",
+            max_version,
+            multiscales_versions,
+        )
         return False
+
     return is_zarr(path)
 
 
@@ -4072,7 +4122,8 @@ class DICOMWSIReader(WSIReader):
         _, constrained_read_size = utils.transforms.bounds2locsize(
             constrained_read_bounds
         )
-        im_region = wsi.read_region(location, read_level, constrained_read_size)
+        dicom_level = wsi.levels[read_level].level
+        im_region = wsi.read_region(location, dicom_level, constrained_read_size)
         im_region = np.array(im_region)
 
         # Apply padding outside the slide area
@@ -4246,8 +4297,9 @@ class DICOMWSIReader(WSIReader):
             level_location, size_at_read_level, level_size
         )
         _, read_size = utils.transforms.bounds2locsize(read_bounds)
+        dicom_level = wsi.levels[read_level].level
         im_region = wsi.read_region(
-            location=location_at_baseline, level=read_level, size=read_size
+            location=location_at_baseline, level=dicom_level, size=read_size
         )
         im_region = np.array(im_region)
 
