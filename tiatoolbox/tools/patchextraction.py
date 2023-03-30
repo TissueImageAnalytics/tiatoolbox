@@ -231,6 +231,7 @@ class PatchExtractor(PatchExtractorABC):
         coordinates_list: np.ndarray,
         wsi_shape: Tuple[int, int],
         min_mask_ratio: float = 0,
+        func: Callable = None,
     ):
         """Validate patch extraction coordinates based on the input mask.
 
@@ -254,7 +255,15 @@ class PatchExtractor(PatchExtractorABC):
                 Shape of the WSI in the requested `resolution` and `units`.
             min_mask_ratio (float):
                 Only patches with positive area percentage above this value are
-                included. Defaults to 0.
+                included. Defaults to 0. Has no effect if `func` is not `None`.
+            func (callable):
+                Function to be used to validate the coordinates. The function
+                must take a `numpy.ndarray` of the mask and a `numpy.ndarray`
+                of the coordinates as input and return a bool indicating
+                whether the coordinate is valid or not. If `None`, a default
+                function that accepts patches with positive area proportion above
+                `min_mask_ratio` is used.
+
 
         Returns:
             :class:`numpy.ndarray`:
@@ -289,18 +298,26 @@ class PatchExtractor(PatchExtractorABC):
         )
         scaled_coords = list(np.int32(scaled_coords))
 
-        flag_list = []
-        for coord in scaled_coords:
+        def default_sel_func(tissue_mask, coord):
+            """Default selection function to filter coordinates.
+
+            This function selects a coordinate if the proportion of
+            positive mask in the corresponding patch is greater than
+            `min_mask_ratio`.
+
+            """
             this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
             patch_area = np.prod(this_part.shape)
             pos_area = np.count_nonzero(this_part)
-
-            if (
+            return (
                 (pos_area == patch_area) or (pos_area > patch_area * min_mask_ratio)
-            ) and (pos_area > 0 and patch_area > 0):
-                flag_list.append(True)
-            else:
-                flag_list.append(False)
+            ) and (pos_area > 0 and patch_area > 0)
+
+        func = default_sel_func if func is None else func
+        flag_list = []
+        for coord in scaled_coords:
+            flag_list.append(func(tissue_mask, coord))
+
         return np.array(flag_list)
 
     @staticmethod
