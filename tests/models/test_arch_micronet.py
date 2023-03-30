@@ -7,8 +7,8 @@ import pytest
 import torch
 
 from tiatoolbox import utils
+from tiatoolbox.models import MicroNet
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.micronet import MicroNet
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader
