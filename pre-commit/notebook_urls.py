@@ -88,7 +88,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
         PatternReplacement(
             pattern=(
                 r"(^\s*[!%]\s*)pip install "
-                r"(git\+https://github\.com/TissueImageAnalytics/tiatoolbox\.git@.*|tiatoolbox)"  # noqa: E501
+                r"(git\+https://github\.com/TissueImageAnalytics/tiatoolbox\.git@[\S]*|tiatoolbox)"  # noqa: E501
             ),
             replacement=(
                 r"\1pip install "
@@ -165,6 +165,9 @@ def replace_line(line: str, to_ref: str, replacements: List[PatternReplacement])
     """
     for rep in replacements:
         if re.match(rep.pattern, line):
+            print(line.strip())
+            print(f"Replacing {rep.pattern} with {rep.replacement}")
+            print()
             # Replace matches
             if to_ref in MAIN_BRANCHES:
                 line = re.sub(rep.pattern, rep.main_replacement, line)
