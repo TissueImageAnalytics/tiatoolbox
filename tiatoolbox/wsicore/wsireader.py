@@ -165,7 +165,7 @@ def is_ngff(
                 max_version,
                 multiscales_versions,
             )
-            return False
+            return True
 
     if len(multiscales_versions) > 1:
         logger.warning(
@@ -189,7 +189,7 @@ def is_ngff(
             max_version,
             multiscales_versions,
         )
-        return False
+        return True
 
     return is_zarr(path)
 
