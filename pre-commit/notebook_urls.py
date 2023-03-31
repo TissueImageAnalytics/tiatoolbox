@@ -50,6 +50,18 @@ def git_previous_commit_modified_paths() -> Set[Path]:
 
 @dataclass(frozen=True)
 class Replacement:
+    """Replacement dataclass.
+
+    Attributes:
+        pattern:
+            Regex pattern to match.
+        replace:
+            Replacement string.
+        main_replace:
+            Replacement string for main branch.
+
+    """
+
     pattern: str
     replace: str
     main_replace: str = None
