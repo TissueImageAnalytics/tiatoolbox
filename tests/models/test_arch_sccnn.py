@@ -3,8 +3,8 @@ import numpy as np
 import torch
 
 from tiatoolbox import utils
+from tiatoolbox.models import SCCNN
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.sccnn import SCCNN
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
