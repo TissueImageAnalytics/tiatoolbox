@@ -406,6 +406,25 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         layer = empty_app.tia_pyramids[user][lname]
         assert np.all(layer.wsi.img == imread(jpg_path))
 
+        # add an overlay from a .dat file
+        data = make_simple_dat()
+        joblib.dump(data, tmp_path / "test.dat")
+        response = client.put(
+            f"/tileserver/change_overlay/{safe_str(tmp_path / 'test.dat')}"
+        )
+        assert set(json.loads(response.data)) == {0, 1}
+
+        # add a .tiff overlay
+        response = client.put(
+            f"/tileserver/change_slide/{safe_str(remote_sample('svs-1-small'))}"
+        )
+        tiff_path = remote_sample("tiled-tiff-1-small-jpeg")
+        response = client.put(f"/tileserver/change_overlay/{safe_str(tiff_path)}")
+        # check that the overlay has been correctly added
+        lname = f"layer{len(empty_app.tia_pyramids[user])-1}"
+        layer = empty_app.tia_pyramids[user][lname]
+        assert layer.wsi.info.file_path == tiff_path
+
 
 def test_commit(empty_app, tmp_path, remote_sample):
     """Test committing annotations."""
@@ -417,6 +436,13 @@ def test_commit(empty_app, tmp_path, remote_sample):
             f"/tileserver/change_slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
+
+        # try to commit now - should return "nothing to save"
+        response = client.get(f"/tileserver/commit/{safe_str(tmp_path / 'test.db')}")
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        assert response.data == b"nothing to save"
+
         response = client.put(
             f"/tileserver/change_overlay/{safe_str(tmp_path / 'test.dat')}"
         )
@@ -496,3 +522,12 @@ def test_reset(app_alt):
         # check that the tileserver has been correctly reset
         assert len(app_alt.tia_pyramids["default"]) == 0
         assert app_alt.tia_layers["default"] == {}
+
+
+def test_no_ann_layer(empty_app, remote_sample):
+    """Test doing something needing annotation layer when none exists."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        client.put(f"/tileserver/change_slide/{safe_str(remote_sample('svs-1-small'))}")
+        with pytest.raises(ValueError, match="No annotation layer found."):
+            client.get("/tileserver/get_prop_names/all")
