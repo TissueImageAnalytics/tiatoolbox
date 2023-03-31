@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-collect_ignore = ["setup.py", "benchmark/"]
+  collect_ignore = ["setup.py", "benchmark/"]
 
 [tool.black]
   exclude = '''
