@@ -91,9 +91,6 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
     passed = True
     print(f"From ref '{from_ref}' to ref '{to_ref}'")
     modified_paths = git_branch_modified_paths(from_ref, to_ref)
-    print("Files modified versus from ref:")
-    for path in modified_paths:
-        print(path)
     for path in files:
         if path not in modified_paths:
             print(f"Skipping {path}")
