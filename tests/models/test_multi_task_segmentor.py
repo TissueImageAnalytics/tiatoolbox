@@ -138,7 +138,7 @@ def test_functionality_hovernetplus(remote_sample, tmp_path):
 
 
 def test_functionality_hovernet(remote_sample, tmp_path):
-    """Functionality test for multi task segmentor."""
+    """Functionality test for multitask segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
@@ -276,6 +276,37 @@ def test_empty_image(tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
+    _rm_dir(save_dir)
+
+    multi_segmentor = MultiTaskSegmentor(
+        pretrained_model="hovernet_fast-pannuke",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=0,
+    )
+
+    _ = multi_segmentor.predict(
+        [sample_patch_path],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    _rm_dir(save_dir)
+
+    multi_segmentor = MultiTaskSegmentor(
+        pretrained_model="fcn_resnet50_unet-bcss",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=0,
+    )
+
+    _ = multi_segmentor.predict(
+        [sample_patch_path],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    _rm_dir(save_dir)
 
 
 def test_functionality_semantic(remote_sample, tmp_path):
