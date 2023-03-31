@@ -92,7 +92,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
             ),
             replace=(
                 r"\1pip install "
-                f"git+https://github.com/TissueImageAnalytics/tiatoolbox.git@{from_ref}"
+                f"git+https://github.com/TissueImageAnalytics/tiatoolbox.git@{to_ref}"
             ),
             main_replace=r"\1pip install tiatoolbox",
         ),
