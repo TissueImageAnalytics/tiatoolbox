@@ -6,7 +6,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Tuple
 
 
 def git_branch_name() -> str:
@@ -95,31 +95,44 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
         if path not in modified_paths:
             print(f"Skipping {path}")
             continue
-        file_changed = False
-        # Load the notebook
-        with open(path, encoding="utf-8") as fh:
-            notebook = json.load(fh)
-        # Check each cell
-        for cell_num, cell in enumerate(notebook["cells"]):
-            # Check each line
-            for line_num, line in enumerate(cell["source"]):
-                new_line = replace_line(line)
-                if new_line != line:
-                    print(
-                        f"{path.name}: Changed (cell {cell_num+1}, line {line_num+1})"
-                    )
-                    file_changed = True
-                    passed = False
-                    cell["source"][line_num] = new_line
+        changed, notebook = check_notebook(path)
+        passed = passed and not changed
         # Write the file if it has changed
-        if file_changed:
+        if changed:
             print(f"Updating {path}")
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(notebook, fh, indent=1, ensure_ascii=False)
                 fh.write("\n")
         else:
             print(f"Skipping {path}")
-    return passed  # noqa: R504
+    return passed
+
+
+def check_notebook(path: Path) -> Tuple[bool, dict]:
+    """Check the notebook for URL replacements.
+
+    Args:
+        path:
+            Path to notebook.
+
+    Returns:
+        Tuple of whether the file was changed and the notebook object.
+
+    """
+    file_changed = False
+    # Load the notebook
+    with open(path, encoding="utf-8") as fh:
+        notebook = json.load(fh)
+        # Check each cell
+    for cell_num, cell in enumerate(notebook["cells"]):
+        # Check each line
+        for line_num, line in enumerate(cell["source"]):
+            new_line = replace_line(line)
+            if new_line != line:
+                print(f"{path.name}: Changed (cell {cell_num+1}, line {line_num+1})")
+                file_changed = True
+                cell["source"][line_num] = new_line
+    return file_changed, notebook
 
 
 def replace_line(line: str) -> str:
