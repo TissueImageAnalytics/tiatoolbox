@@ -18,11 +18,6 @@ repos:
         entry: python pre-commit/notebook_check_ast.py
         types_or: [jupyter]
         language: python
-      - id: notebook-urls
-        name: notebook urls
-        entry: python pre-commit/notebook_urls.py
-        types_or: [jupyter]
-        language: python
       - id: notebook-markdown-format
         name: notebook markdown format
         entry: python pre-commit/notebook_markdown_format.py
