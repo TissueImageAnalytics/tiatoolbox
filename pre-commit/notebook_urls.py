@@ -12,7 +12,7 @@ from typing import List, Set
 def git_branch_name() -> str:
     """Get the current branch name."""
     return (
-        subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+        subprocess.check_output(["/usr/bin/git", "rev-parse", "--abbrev-ref", "HEAD"])
         .decode()
         .strip()
     )
