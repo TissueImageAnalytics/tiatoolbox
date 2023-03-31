@@ -164,10 +164,6 @@ def replace_line(line: str, to_ref: str, replacements: List[PatternReplacement])
 
     """
     for rep in replacements:
-        if "pip" in line:
-            print(line.strip())
-            print(rep.pattern)
-            print(re.match(rep.pattern, line))
         if re.match(rep.pattern, line):
             # Replace matches
             if to_ref in MAIN_BRANCHES:
