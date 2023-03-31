@@ -304,7 +304,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             mask_reader.info = self.reader.info
 
         if mask_reader is not None:
-            selected = PatchExtractor.filter_coordinates_fast(
+            selected = PatchExtractor.filter_coordinates(
                 mask_reader,  # must be at the same resolution
                 self.inputs,  # must already be at requested resolution
                 wsi_shape=wsi_shape,

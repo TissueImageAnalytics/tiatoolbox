@@ -205,7 +205,7 @@ class PatchExtractor(PatchExtractorABC):
         )
 
         if self.mask is not None:
-            selected_coord_indices = self.filter_coordinates_fast(
+            selected_coord_indices = self.filter_coordinates(
                 self.mask,
                 self.coordinate_list,
                 wsi_shape=slide_dimension,
@@ -226,7 +226,7 @@ class PatchExtractor(PatchExtractorABC):
         return self
 
     @staticmethod
-    def filter_coordinates_fast(
+    def filter_coordinates(
         mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
         wsi_shape: Tuple[int, int],
@@ -318,75 +318,6 @@ class PatchExtractor(PatchExtractorABC):
         for coord in scaled_coords:
             flag_list.append(func(tissue_mask, coord))
 
-        return np.array(flag_list)
-
-    @staticmethod
-    def filter_coordinates(
-        mask_reader: wsireader.VirtualWSIReader,
-        coordinates_list: np.ndarray,
-        func: Callable = None,
-        resolution: float = None,
-        units: str = None,
-        min_mask_ratio: float = 0,
-    ):
-        """Indicates which coordinate is valid for mask-based patch extraction.
-
-        Locations are validated by a custom or default filter `func`.
-
-        Args:
-            mask_reader (:class:`.VirtualReader`):
-                A virtual pyramidal reader of the mask related to the
-                WSI from which we want to extract the patches.
-            coordinates_list (ndarray and np.int32):
-                Coordinates to be checked via the `func`. They must be
-                in the same resolution as requested `resolution` and
-                `units`. The shape of `coordinates_list` is (N, K) where
-                N is the number of coordinate sets and K is either 2 for
-                centroids or 4 for bounding boxes. When using the
-                default `func=None`, K should be 4, as we expect the
-                `coordinates_list` to refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
-            func:
-                The coordinate validator function. A function that takes
-                `reader` and `coordinate` as arguments and return True
-                or False as indication of coordinate validity.
-            resolution (float):
-                The resolution value at which coordinates_list are
-                generated.
-            units (str):
-                The resolution unit at which coordinates_list are
-                generated.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                List of flags to indicate which coordinates are valid.
-
-        """
-
-        def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
-            """Accept coord as long as its box contains bits of mask."""
-            roi = reader.read_bounds(
-                coord,
-                resolution=reader.info.mpp if resolution is None else resolution,
-                units="mpp" if units is None else units,
-                interpolation="nearest",
-                coord_space="resolution",
-            )
-            return np.mean(roi > 0) > min_mask_ratio
-
-        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
-            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
-        if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
-            coordinates_list.dtype, np.integer
-        ):
-            raise ValueError("`coordinates_list` should be ndarray of integer type.")
-        if func is None and coordinates_list.shape[-1] != 4:
-            raise ValueError(
-                f"Default `func` does not support "
-                f"`coordinates_list` of shape {coordinates_list.shape}."
-            )
-        func = default_sel_func if func is None else func
-        flag_list = [func(mask_reader, coord) for coord in coordinates_list]
         return np.array(flag_list)
 
     @staticmethod

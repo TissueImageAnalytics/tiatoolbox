@@ -427,55 +427,26 @@ def test_filter_coordinates():
     mask_reader = VirtualWSIReader(mask)
     slide_shape = [6, 9]  # slide shape (w, h) at requested resolution
 
-    # Tests for (original) filter_coordinates method
-    # functionality test
-    flag_list = PatchExtractor.filter_coordinates(
-        mask_reader, bbox_list, resolution=1.0, units="baseline"
-    )
-    assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
-
-    # Test for bad mask input
-    with pytest.raises(
-        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
-    ):
-        PatchExtractor.filter_coordinates(
-            mask, bbox_list, resolution=1.0, units="baseline"
-        )
-
-    # Test for bad bbox coordinate list in the input
-    with pytest.raises(ValueError, match=r".*should be ndarray of integer type.*"):
-        PatchExtractor.filter_coordinates(
-            mask_reader, bbox_list.tolist(), resolution=1.0, units="baseline"
-        )
-
-    # Test for incomplete coordinate list
-    with pytest.raises(ValueError, match=r".*`coordinates_list` of shape.*"):
-        PatchExtractor.filter_coordinates(
-            mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
-        )
-
     ###############################################
-    # Tests for filter_coordinates_fast (new) method
+    # Tests for filter_coordinates (new) method
     _info = mask_reader.info
     _info.mpp = 1.0
     mask_reader._m_info = _info
 
     # functionality test
-    flag_list = PatchExtractor.filter_coordinates_fast(
+    flag_list = PatchExtractor.filter_coordinates(
         mask_reader,
         bbox_list,
         slide_shape,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
-    flag_list = PatchExtractor.filter_coordinates_fast(
-        mask_reader, bbox_list, slide_shape
-    )
+    flag_list = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
 
     # Test for bad mask input
     with pytest.raises(
         ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
     ):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask,
             bbox_list,
             slide_shape,
@@ -483,7 +454,7 @@ def test_filter_coordinates():
 
     # Test for bad bbox coordinate list in the input
     with pytest.raises(ValueError, match=r".*should be ndarray of integer type.*"):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list.tolist(),
             slide_shape,
@@ -491,7 +462,7 @@ def test_filter_coordinates():
 
     # Test for incomplete coordinate list
     with pytest.raises(ValueError, match=r".*`coordinates_list` must be of shape.*"):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list[:, :2],
             slide_shape,
@@ -499,14 +470,14 @@ def test_filter_coordinates():
 
     # Test for put of range min_mask_ratio
     with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,
             slide_shape,
             min_mask_ratio=-0.5,
         )
     with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,
             slide_shape,

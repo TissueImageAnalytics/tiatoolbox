@@ -716,7 +716,7 @@ class DFBRegister:
         # convert coordinates of shape [N, 2] to [N, 4]
         end_x_y = points[:, 0:2] + 1
         bbox_coord = np.c_[points, end_x_y].astype(int)
-        return PatchExtractor.filter_coordinates_fast(
+        return PatchExtractor.filter_coordinates(
             mask_reader, bbox_coord, mask.shape[::-1]
         )
 
