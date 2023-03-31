@@ -75,13 +75,15 @@ REPLACEMENTS = [
 def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
     """Check that URLs in the notebook are relative to the current branch."""
     passed = True
-    print(from_ref, to_ref)
+    print(f"From ref '{from_ref}' to ref '{to_ref}'")
     modified_paths = git_branch_modified_paths(from_ref, to_ref)
-    print(modified_paths)
+    print("Files modified versus from ref:")
+    for path in modified_paths:
+        print(path)
     for path in files:
         if path not in modified_paths:
+            print(f"Skipping {path}")
             continue
-        print(path)
         file_changed = False
         # Load the notebook
         with open(path, encoding="utf-8") as fh:
@@ -100,9 +102,12 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
                     cell["source"][line_num] = new_line
         # Write the file if it has changed
         if file_changed:
+            print(f"Updating {path}")
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(notebook, fh, indent=1, ensure_ascii=False)
                 fh.write("\n")
+        else:
+            print(f"Skipping {path}")
     return passed  # noqa: R504
 
 
