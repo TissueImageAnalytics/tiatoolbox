@@ -165,9 +165,6 @@ def replace_line(line: str, to_ref: str, replacements: List[PatternReplacement])
     """
     for rep in replacements:
         if re.match(rep.pattern, line):
-            print(line.strip())
-            print(f"Replacing {rep.pattern} with {rep.replacement}")
-            print()
             # Replace matches
             if to_ref in MAIN_BRANCHES:
                 line = re.sub(rep.pattern, rep.main_replacement, line)
