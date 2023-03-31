@@ -131,11 +131,11 @@ def check_notebook(
 
     """
     project_root = Path(__file__).parent.parent
-    file_changed = False
+    changed = False
     # Check if the path is inside the project root
     if path.resolve().parents[1] != project_root.resolve():
         print(f"Skipping {path} (not inside the project directory)")
-        return file_changed, None
+        return changed, None
     # Load the notebook
     with open(path, encoding="utf-8") as fh:
         notebook = json.load(fh)
@@ -146,9 +146,9 @@ def check_notebook(
             new_line = replace_line(line, to_ref, replacements)
             if new_line != line:
                 print(f"{path.name}: Changed (cell {cell_num+1}, line {line_num+1})")
-                file_changed = True
+                changed = True
                 cell["source"][line_num] = new_line
-    return file_changed, notebook
+    return changed, notebook
 
 
 def replace_line(line: str, to_ref: str, replacements: List[Replacement]) -> str:
