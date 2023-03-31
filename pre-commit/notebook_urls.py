@@ -73,7 +73,17 @@ MAIN_BRANCHES = ("master", "main")
 
 
 def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
-    """Check that URLs in the notebook are relative to the current branch."""
+    """Check that URLs in the notebook are relative to the current branch.
+
+    Args:
+        files:
+            List of files to check.
+        from_ref:
+            Reference to diff from.
+        to_ref:
+            Reference to diff to.
+
+    """
     replacements = [
         Replacement(
             pattern=(
