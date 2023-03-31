@@ -257,9 +257,9 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         self.output_types = output_types
         self._futures = None
 
-        if "hovernetplus" in pretrained_model:
+        if "hovernetplus" in str(pretrained_model):
             self.output_types = ["instance", "semantic"]
-        elif "hovernet" in pretrained_model:
+        elif "hovernet" in str(pretrained_model):
             self.output_types = ["instance"]
 
         # adding more runtime placeholder
@@ -270,7 +270,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 self._wsi_inst_info = []
         else:
             raise ValueError(
-                "Output type must be specificed for instance or semantic segmentation."
+                "Output type must be specified for instance or semantic segmentation."
             )
 
     def _predict_one_wsi(
