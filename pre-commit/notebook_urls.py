@@ -93,7 +93,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
     modified_paths = git_branch_modified_paths(from_ref, to_ref)
     for path in files:
         if path not in modified_paths:
-            print(f"Skipping {path}")
+            print(f"Skipping {path} (modified but not in given file list)")
             continue
         changed, notebook = check_notebook(path)
         passed = passed and not changed
