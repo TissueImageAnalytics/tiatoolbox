@@ -8,7 +8,7 @@ import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import cm
+from matplotlib import colormaps
 from numpy.typing import ArrayLike
 from PIL import Image, ImageFilter, ImageOps
 from shapely import speedups
@@ -58,7 +58,7 @@ def colourise_image(img, cmap="viridis"):
     """
     if len(img.shape) == 2:
         # Single channel, make into rgb with colormap.
-        c_map = cm.get_cmap(cmap)
+        c_map = colormaps[cmap]
         im_rgb = (c_map(img) * 255).astype(np.uint8)
         return im_rgb[:, :, :3]
     # Already rgb, return unaltered
@@ -426,7 +426,7 @@ def overlay_prediction_contours(
 
         if draw_dot:
             inst_centroid = inst_info["centroid"]
-            inst_centroid = tuple([int(v) for v in inst_centroid])
+            inst_centroid = tuple(int(v) for v in inst_centroid)
             overlay = cv2.circle(overlay, inst_centroid, 3, (255, 0, 0), -1)
     return overlay
 
@@ -475,7 +475,7 @@ def plot_graph(
     # draw the edges
     def to_int_tuple(x):
         """Helper to convert to tuple of int."""
-        return tuple([int(v) for v in x])
+        return tuple(int(v) for v in x)
 
     for idx, (src, dst) in enumerate(edges):
         src = to_int_tuple(nodes[src])
@@ -556,9 +556,9 @@ class AnnotationRenderer:
         score_prop_edge=None,
     ):
         if mapper is None:
-            mapper = cm.get_cmap("jet")
+            mapper = colormaps["jet"]
         if isinstance(mapper, str) and mapper != "categorical":
-            mapper = cm.get_cmap(mapper)
+            mapper = colormaps[mapper]
         if isinstance(mapper, list):
             colors = random_colors(len(mapper))
             mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
@@ -640,7 +640,9 @@ class AnnotationRenderer:
                     )
                 )
         except KeyError:
-            warnings.warn("score_prop not found in properties. Using default color.")
+            warnings.warn(
+                "score_prop not found in properties. Using default color.", stacklevel=2
+            )
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
@@ -870,4 +872,4 @@ class AnnotationRenderer:
         elif geom_type == "LineString":
             self.render_line(tile, annotation, top_left, scale)
         else:
-            warnings.warn(f"Unknown geometry: {geom_type}")
+            warnings.warn(f"Unknown geometry: {geom_type}", stacklevel=3)

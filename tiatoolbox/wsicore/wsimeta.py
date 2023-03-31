@@ -104,9 +104,9 @@ class WSIMeta:
     ):
         self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None
-        self.slide_dimensions = tuple([int(x) for x in slide_dimensions])
+        self.slide_dimensions = tuple(int(x) for x in slide_dimensions)
         self.level_dimensions = (
-            tuple([(int(w), int(h)) for w, h in level_dimensions])
+            tuple((int(w), int(h)) for w, h in level_dimensions)
             if level_dimensions is not None
             else [self.slide_dimensions]
         )
@@ -144,35 +144,36 @@ class WSIMeta:
         if len(set(self.axes) - set(self._valid_axes_characters)) > 0:
             warnings.warn(
                 "Axes contains invalid characters. "
-                f"Valid characters are '{self._valid_axes_characters}'."
+                f"Valid characters are {self._valid_axes_characters!r}.",
+                stacklevel=2,
             )
             passed = False
 
         if self.level_count < 1:
-            warnings.warn("Level count is not a positive integer")
+            warnings.warn("Level count is not a positive integer", stacklevel=2)
             passed = False
 
         if self.level_dimensions is None:
-            warnings.warn("level_dimensions is None")
+            warnings.warn("level_dimensions is None", stacklevel=2)
             passed = False
         elif len(self.level_dimensions) != self.level_count:
-            warnings.warn("Length of level dimensions != level count")
+            warnings.warn("Length of level dimensions != level count", stacklevel=2)
             passed = False
 
         if self.level_downsamples is None:
-            warnings.warn("Level downsamples is None")
+            warnings.warn("Level downsamples is None", stacklevel=2)
             passed = False
         elif len(self.level_downsamples) != self.level_count:
-            warnings.warn("Length of level downsamples != level count")
+            warnings.warn("Length of level downsamples != level count", stacklevel=2)
             passed = False
 
         # Non-fatal conditions: Raise warning only, do not fail validation
 
         if self.raw is None:
-            warnings.warn("Raw data is None")
+            warnings.warn("Raw data is None", stacklevel=2)
 
         if all(x is None for x in [self.objective_power, self.mpp]):
-            warnings.warn("Unknown scale (no objective_power or mpp)")
+            warnings.warn("Unknown scale (no objective_power or mpp)", stacklevel=2)
 
         return passed  # noqa
 

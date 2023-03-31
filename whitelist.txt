@@ -20,6 +20,7 @@ Dataloader
 Dataset
 Datasets
 Delaunay
+E0110
 E1120
 FCN
 GPL
@@ -40,6 +41,7 @@ Nx4
 NxM
 NxN
 OME
+Omero
 Omnyx
 OpenCV
 Otsu's
@@ -49,6 +51,7 @@ PYL
 Peter
 Peter554
 Preload
+R0201
 RGB
 RGBA
 ROI
@@ -66,6 +69,7 @@ W0143
 W0201
 W0212
 W0221
+W0612
 W0613
 W0703
 W6004
@@ -125,8 +129,10 @@ macports
 memray
 mpp
 mse
+multiscales
 natively
 ndarray
+ngff
 nn
 noinspection
 normalizer

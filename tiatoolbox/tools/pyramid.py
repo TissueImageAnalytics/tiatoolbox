@@ -492,7 +492,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         )
         if self.renderer.mapper == "categorical":
             # get the possible categories for given score_prop from store
-            types = self.store.pquery(f"props['{self.renderer.score_prop}']")
+            types = self.store.pquery(f"props[{self.renderer.score_prop!r}]")
             # make a random dictionary colour map
             colors = random_colors(len(types))
             mapper = {key: (*color, 1) for key, color in zip(types, colors)}
@@ -583,7 +583,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         """
         if pad_mode is not None or interpolation is not None:
             warnings.warn(
-                "interpolation, pad_mode are unused by AnnotationTileGenerator"
+                "interpolation, pad_mode are unused by AnnotationTileGenerator",
+                stacklevel=2,
             )
         if level < 0:
             raise IndexError

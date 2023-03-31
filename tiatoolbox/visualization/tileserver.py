@@ -71,7 +71,6 @@ class TileServer(Flask):
         # Set up the layer dict.
         meta = None
         for i, (key, layer) in enumerate(layers.items()):
-
             layer = self._get_layer_as_wsireader(layer, meta)
 
             self.tia_layers[key] = layer

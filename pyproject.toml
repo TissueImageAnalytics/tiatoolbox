@@ -5,7 +5,6 @@
     | \.git
     | \.hg
     | \.mypy_cache
-    | \.tox
     | \.venv
     | _build
     | buck-out
@@ -35,3 +34,10 @@
   ]
   ignore_errors = true
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py']
+
+[build-system]
+  requires = ["setuptools"]
+  build-backend = "setuptools.build_meta"
+
+[tool.distutils.bdist_wheel]
+  universal = true

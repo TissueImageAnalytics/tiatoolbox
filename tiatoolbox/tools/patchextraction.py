@@ -223,7 +223,8 @@ class PatchExtractor(PatchExtractorABC):
             if len(self.coordinate_list) == 0:
                 warnings.warn(
                     "No candidate coordinates left after "
-                    "filtering by `input_mask` positions."
+                    "filtering by `input_mask` positions.",
+                    stacklevel=2,
                 )
 
         data = self.coordinate_list[:, :2]  # only use the x_start and y_start
@@ -289,7 +290,7 @@ class PatchExtractor(PatchExtractorABC):
         if isinstance(coordinate_resolution, (int, float)):
             coordinate_resolution = [coordinate_resolution, coordinate_resolution]
 
-        if not (0 <= min_mask_ratio <= 1):
+        if not 0 <= min_mask_ratio <= 1:
             raise ValueError("`min_mask_ratio` must be between 0 and 1.")
 
         # define default mask_resolution based on the input `coordinate_units`
@@ -460,6 +461,7 @@ class PatchExtractor(PatchExtractorABC):
         stride_shape = np.array(stride_shape)
 
         def validate_shape(shape):
+            """Tests if the shape is valid for an image."""
             return (
                 not np.issubdtype(shape.dtype, np.integer)
                 or np.size(shape) > 2

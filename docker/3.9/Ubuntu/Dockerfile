@@ -4,16 +4,14 @@ FROM ubuntu:22.04 AS builder-image
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install python3.9
-RUN : \
-    && apt-get update && apt upgrade \
-    && apt install software-properties-common -y \
-    && add-apt-repository ppa:deadsnakes/ppa -y && apt update \
-    && apt-get install -y --no-install-recommends python3.9-venv \
-    && apt-get install libpython3.9-de -y \
-    && apt-get install python3.9-dev -y \
-    && apt-get install build-essential -y \
-    && apt-get clean \
-    && :
+RUN apt-get update && \
+    apt install software-properties-common -y &&\
+    add-apt-repository ppa:deadsnakes/ppa -y && apt update &&\
+    apt-get install -y --no-install-recommends python3.9-venv &&\
+    apt-get install libpython3.9-de -y &&\
+    apt-get install python3.9-dev -y &&\
+    apt-get install build-essential -y &&\
+    apt-get clean
 
 # Add env to PATH
 RUN python3.9 -m venv /venv
@@ -30,5 +28,3 @@ RUN pip install --no-cache-dir tiatoolbox
 # activate virtual environment
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-
-CMD ["python"]
