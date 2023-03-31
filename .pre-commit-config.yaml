@@ -2,7 +2,6 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: 'weekly'
-  skip: [notebook-urls]
 repos:
   - repo: local
     hooks:
