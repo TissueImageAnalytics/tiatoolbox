@@ -4,25 +4,6 @@ from abc import ABC, abstractmethod
 import torch.nn as nn
 
 
-class IOConfigABC(ABC):
-    """Define an abstract class for holding predictor I/O information.
-
-    Enforcing such that following attributes must always be defined by
-    the subclass.
-
-    """
-
-    @property
-    @abstractmethod
-    def input_resolutions(self):
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def output_resolutions(self):
-        raise NotImplementedError
-
-
 class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 

@@ -20,7 +20,7 @@ import torch.utils.data as torch_data
 import tqdm
 
 from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.models_abc import IOConfigABC
+from tiatoolbox.models.engine.engines_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import imread
