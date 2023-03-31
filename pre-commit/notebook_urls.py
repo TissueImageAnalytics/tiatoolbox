@@ -51,7 +51,7 @@ def git_previous_commit_modified_paths() -> Set[Path]:
 
 
 @dataclass(frozen=True)
-class Replacement:
+class PatternReplacement:
     """Replacement dataclass.
 
     Attributes:
@@ -85,7 +85,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
 
     """
     replacements = [
-        Replacement(
+        PatternReplacement(
             pattern=(
                 r"(^\s*[!%]\s*)pip install "
                 r"(git\+https://github\.com/TissueImageAnalytics/tiatoolbox\.git@.*|tiatoolbox)"  # noqa: E501
@@ -114,7 +114,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
 
 
 def check_notebook(
-    path: Path, to_ref: str, replacements: List[Replacement]
+    path: Path, to_ref: str, replacements: List[PatternReplacement]
 ) -> Tuple[bool, dict]:
     """Check the notebook for URL replacements.
 
@@ -151,7 +151,7 @@ def check_notebook(
     return changed, notebook
 
 
-def replace_line(line: str, to_ref: str, replacements: List[Replacement]) -> str:
+def replace_line(line: str, to_ref: str, replacements: List[PatternReplacement]) -> str:
     """Perform pattern replacements in the line.
 
     Args:
