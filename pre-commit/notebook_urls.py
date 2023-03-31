@@ -25,7 +25,7 @@ def git_branch_modified_paths(from_ref: str, to_ref: str) -> Set[Path]:
         Path(p)
         for p in subprocess.check_output(
             [
-                "git",
+                "/usr/bin/git",
                 "diff",
                 "--name-only",
                 from_to,
@@ -41,7 +41,9 @@ def git_previous_commit_modified_paths() -> Set[Path]:
     """Get a set of file paths modified in the previous commit."""
     return {
         Path(p)
-        for p in subprocess.check_output(["git", "diff", "--name-only", "HEAD~"])
+        for p in subprocess.check_output(
+            ["/usr/bin/git", "diff", "--name-only", "HEAD~"]
+        )
         .decode()
         .strip()
         .splitlines()
