@@ -57,16 +57,16 @@ class Replacement:
     Attributes:
         pattern:
             Regex pattern to match.
-        replace:
+        replacement:
             Replacement string.
-        main_replace:
+        main_replacement:
             Replacement string for main branch.
 
     """
 
     pattern: str
-    replace: str
-    main_replace: str = None
+    replacement: str
+    main_replacement: str = None
 
 
 MAIN_BRANCHES = ("master", "main")
@@ -90,11 +90,11 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
                 r"(^\s*[!%]\s*)pip install "
                 r"(git+https://github.com/TissueImageAnalytics/tiatoolbox.git@.*|tiatoolbox)"  # noqa: E501
             ),
-            replace=(
+            replacement=(
                 r"\1pip install "
                 f"git+https://github.com/TissueImageAnalytics/tiatoolbox.git@{to_ref}"
             ),
-            main_replace=r"\1pip install tiatoolbox",
+            main_replacement=r"\1pip install tiatoolbox",
         ),
     ]
     passed = True
@@ -167,9 +167,9 @@ def replace_line(line: str, to_ref: str, replacements: List[Replacement]) -> str
         if re.match(rep.pattern, line):
             # Replace matches
             if to_ref in MAIN_BRANCHES:
-                line = re.sub(rep.pattern, rep.main_replace, line)
+                line = re.sub(rep.pattern, rep.main_replacement, line)
             else:
-                line = re.sub(rep.pattern, rep.replace, line)
+                line = re.sub(rep.pattern, rep.replacement, line)
             print(line)
     return line
 
