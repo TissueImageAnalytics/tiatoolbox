@@ -1,3 +1,6 @@
+[tool.pytest.ini_options]
+collect_ignore = ["setup.py", "benchmark/"]
+
 [tool.black]
   exclude = '''
   /(
@@ -34,3 +37,17 @@
   ]
   ignore_errors = true
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py']
+
+[tool.isort]
+  profile = "black"
+  multi_line_output = 3
+  line_length = 88
+  filter_files = "True"
+  skip = [".gitignore", "benchmarks/*"]
+
+[build-system]
+  requires = ["setuptools"]
+  build-backend = "setuptools.build_meta"
+
+[tool.distutils.bdist_wheel]
+  universal = true
