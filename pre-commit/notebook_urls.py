@@ -70,28 +70,27 @@ class Replacement:
 
 
 MAIN_BRANCHES = ("master", "main")
-GIT_REV = git_branch_name()
-REPLACEMENTS = [
-    Replacement(
-        (
-            r"(^\s*[!%]\s*)pip install "
-            "(git+https://github.com/TissueImageAnalytics/tiatoolbox.git@.*|tiatoolbox)"
-        ),
-        (
-            r"\1pip install "
-            f"git+https://github.com/TissueImageAnalytics/tiatoolbox.git@{GIT_REV}"
-        ),
-        r"\1pip install tiatoolbox",
-    ),
-]
 
 
 def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
     """Check that URLs in the notebook are relative to the current branch."""
+    replacements = [
+        Replacement(
+            pattern=(
+                r"(^\s*[!%]\s*)pip install "
+                "(git+https://github.com/TissueImageAnalytics/tiatoolbox.git@.*|tiatoolbox)"  # noqa: E501
+            ),
+            replace=(
+                r"\1pip install "
+                f"git+https://github.com/TissueImageAnalytics/tiatoolbox.git@{from_ref}"
+            ),
+            main_replace=r"\1pip install tiatoolbox",
+        ),
+    ]
     passed = True
     print(f"From ref '{from_ref}' to ref '{to_ref}'")
     for path in files:
-        changed, notebook = check_notebook(path)
+        changed, notebook = check_notebook(path, to_ref, replacements)
         passed = passed and not changed
         # Write the file if it has changed
         if changed:
@@ -100,22 +99,33 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
                 json.dump(notebook, fh, indent=1, ensure_ascii=False)
                 fh.write("\n")
         else:
-            print(f"Skipping {path}")
+            print(f"Skipping {path} (no changes)")
     return passed
 
 
-def check_notebook(path: Path) -> Tuple[bool, dict]:
+def check_notebook(
+    path: Path, to_ref: str, replacements: List[Replacement]
+) -> Tuple[bool, dict]:
     """Check the notebook for URL replacements.
 
     Args:
         path:
             Path to notebook.
+        to_ref:
+            Reference to diff to.
+        replacements:
+            List of replacements to perform.
 
     Returns:
         Tuple of whether the file was changed and the notebook object.
 
     """
+    project_root = Path(__file__).parent.parent
     file_changed = False
+    # Check if the path is inside the project root
+    if path.resolve().parents[1] != project_root.resolve():
+        print(f"Skipping {path} (not inside the project directory)")
+        return file_changed, None
     # Load the notebook
     with open(path, encoding="utf-8") as fh:
         notebook = json.load(fh)
@@ -123,7 +133,7 @@ def check_notebook(path: Path) -> Tuple[bool, dict]:
     for cell_num, cell in enumerate(notebook["cells"]):
         # Check each line
         for line_num, line in enumerate(cell["source"]):
-            new_line = replace_line(line)
+            new_line = replace_line(line, to_ref, replacements)
             if new_line != line:
                 print(f"{path.name}: Changed (cell {cell_num+1}, line {line_num+1})")
                 file_changed = True
@@ -131,15 +141,25 @@ def check_notebook(path: Path) -> Tuple[bool, dict]:
     return file_changed, notebook
 
 
-def replace_line(line: str) -> str:
-    """Perform pattern replacements in the line."""
-    for r in REPLACEMENTS:
-        if re.match(r.pattern, line):
+def replace_line(line: str, to_ref: str, replacements: List[Replacement]) -> str:
+    """Perform pattern replacements in the line.
+
+    Args:
+        line:
+            Line to replace.
+        to_ref:
+            Reference to diff to.
+        replacements:
+            List of replacements to perform.
+
+    """
+    for rep in replacements:
+        if re.match(rep.pattern, line):
             # Replace matches
-            if GIT_REV in MAIN_BRANCHES:
-                line = re.sub(r.pattern, r.main_replace, line)
+            if to_ref in MAIN_BRANCHES:
+                line = re.sub(rep.pattern, rep.main_replace, line)
             else:
-                line = re.sub(r.pattern, r.replace, line)
+                line = re.sub(rep.pattern, rep.replace, line)
             print(line)
     return line
 
