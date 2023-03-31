@@ -16,7 +16,7 @@ from tests.test_annotation_stores import cell_polygon
 from tests.test_utils import make_simple_dat
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.cli.common import cli_name
-from tiatoolbox.utils.misc import imwrite
+from tiatoolbox.utils.misc import imread, imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
 
@@ -73,7 +73,7 @@ def fill_store(cell_grid, points_grid):
         lines = [
             Annotation(
                 LineString(((x, x + 500) for x in range(100, 400, 10))),
-                {"type": "line", "prob": 0.75},
+                {"type": "line", "prob": 0.75, "other_prop": "foo"},
             )
         ]
 
@@ -85,7 +85,7 @@ def fill_store(cell_grid, points_grid):
 
 
 @pytest.fixture()
-def app(remote_sample, tmp_path, fill_store) -> TileServer:
+def app(remote_sample, tmp_path) -> TileServer:
     """Create a testing TileServer WSGI app."""
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.
@@ -120,7 +120,32 @@ def app(remote_sample, tmp_path, fill_store) -> TileServer:
 
 
 @pytest.fixture()
-def empty_app(remote_sample, tmp_path, fill_store) -> TileServer:
+def app_alt(fill_store) -> TileServer:
+    """Create a testing TileServer WSGI app, with a different setup."""
+    sample_slide = WSIReader.open(np.zeros((1000, 1000, 3), dtype=np.uint8))
+    _, sample_store = fill_store(SQLiteStore, ":memory:")
+    sample_store.append(
+        Annotation(
+            Polygon([(0, 0), (0, 10), (10, 10), (10, 0)]),
+            {"prob": 0.5},
+        )
+    )
+
+    # make tileserver with simple artificial layers
+    app = TileServer(
+        "Testing TileServer",
+        [
+            sample_slide,
+            sample_store,
+        ],
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    return app
+
+
+@pytest.fixture()
+def empty_app() -> TileServer:
     """Create a testing TileServer WSGI app with no layers."""
     app = TileServer(
         "Testing TileServer",
@@ -244,13 +269,19 @@ def test_color_prop(app):
 def test_change_slide(app, remote_sample):
     """Test changing slide."""
     slide_path = remote_sample("svs-1-small")
+    slide_path2 = remote_sample("wsi2_4k_4k_jpg")
     with app.test_client() as client:
-        response = client.put(f"/tileserver/change_slide/slide/{safe_str(slide_path)}")
+        response = client.put(f"/tileserver/change_slide/{safe_str(slide_path)}")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the slide has been correctly changed
         layer = app.tia_pyramids["default"]["slide"]
         assert layer.wsi.info.file_path == slide_path
+
+        response = client.put(f"/tileserver/change_slide/{safe_str(slide_path2)}")
+        # check that the slide has been correctly changed
+        layer = app.tia_pyramids["default"]["slide"]
+        assert layer.wsi.info.file_path == slide_path2
 
 
 def test_change_cmap(app):
@@ -300,7 +331,7 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
     with empty_app.test_client() as client:
         user = setup_app(client)
         response = client.put(
-            f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
+            f"/tileserver/change_slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
         response = client.put(
@@ -326,7 +357,7 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
     with empty_app.test_client() as client:
         user = setup_app(client)
         response = client.put(
-            f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
+            f"/tileserver/change_slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
         response = client.put(f"/tileserver/change_overlay/{safe_str(geo_path)}")
@@ -338,10 +369,10 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         # reset tileserver and load overlay from .db instead
         response = client.get("tileserver/reset")
         response = client.put(
-            f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
+            f"/tileserver/change_slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
-        response = client.put(f"/tileserver/change_overlay/{safe_str(sample_store)}")
+        response = client.put(f"/tileserver/change_overlay/{safe_str(geo_path)}")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
@@ -357,6 +388,24 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         layer = empty_app.tia_pyramids[user][lname]
         assert layer.wsi.info.file_path == overlay_path
 
+        # replace existing store overlay
+        response = client.put(f"/tileserver/change_overlay/{safe_str(sample_store)}")
+        # check that the correct store has been loaded
+        con = empty_app.tia_pyramids[user]["overlay"].store.connection
+        assert SQLiteStore._connection_to_path(con) == sample_store
+
+        # add a .jpg overlay
+        response = client.get("tileserver/reset")
+        response = client.put(
+            f"/tileserver/change_slide/{safe_str(remote_sample('wsi2_4k_4k_svs'))}"
+        )
+        jpg_path = remote_sample("wsi2_4k_4k_jpg")
+        response = client.put(f"/tileserver/change_overlay/{safe_str(jpg_path)}")
+        # check that the overlay has been correctly added
+        lname = f"layer{len(empty_app.tia_pyramids[user])-1}"
+        layer = empty_app.tia_pyramids[user][lname]
+        assert np.all(layer.wsi.img == imread(jpg_path))
+
 
 def test_commit(empty_app, tmp_path, remote_sample):
     """Test committing annotations."""
@@ -365,7 +414,7 @@ def test_commit(empty_app, tmp_path, remote_sample):
     with empty_app.test_client() as client:
         setup_app(client)
         response = client.put(
-            f"/tileserver/change_slide/slide/{safe_str(remote_sample('svs-1-small'))}"
+            f"/tileserver/change_slide/{safe_str(remote_sample('svs-1-small'))}"
         )
         assert response.status_code == 200
         response = client.put(
@@ -393,6 +442,9 @@ def test_update_renderer(app):
         assert app.tia_pyramids["default"]["overlay"].renderer.blur_radius == 5
         assert app.overlaps["default"] == int(5 * 1.5)
 
+        response = client.put(f"/tileserver/update_renderer/where/{json.dumps(None)}")
+        assert app.tia_pyramids["default"]["overlay"].renderer.where is None
+
 
 def test_secondary_cmap(app):
     """Test secondary cmap."""
@@ -407,12 +459,15 @@ def test_secondary_cmap(app):
         assert layer.renderer.secondary_cmap["mapper"](0.5) == cm.get_cmap("Reds")(0.5)
 
 
-def test_get_props(app):
+def test_get_props(app_alt):
     """Test getting props."""
-    with app.test_client() as client:
-        response = client.get("/tileserver/get_prop_names")
+    with app_alt.test_client() as client:
+        response = client.get("/tileserver/get_prop_names/all")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+        assert set(json.loads(response.data)) == {"prob", "type", "other_prop"}
+
+        response = client.get("/tileserver/get_prop_names/'cell'")
         assert set(json.loads(response.data)) == {"prob", "type"}
 
 
@@ -432,12 +487,12 @@ def test_get_property_values(app):
         assert set(json.loads(response.data)) == {1}
 
 
-def test_reset(app):
+def test_reset(app_alt):
     """Test resetting tileserver."""
-    with app.test_client() as client:
+    with app_alt.test_client() as client:
         response = client.get("/tileserver/reset")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the tileserver has been correctly reset
-        assert len(app.tia_pyramids["default"]) == 0
-        assert app.tia_layers["default"] == {}
+        assert len(app_alt.tia_pyramids["default"]) == 0
+        assert app_alt.tia_layers["default"] == {}

@@ -90,18 +90,12 @@ paths:
         '200':
           description: Successful response
 
-  /tileserver/change_slide/{layer}/{layer_path}:
+  /tileserver/change_slide/{slide_path}:
     put:
-      summary: Update slide for a layer
+      summary: change the base slide. All overlays will be removed.
       parameters:
         - in: path
-          name: layer
-          description: Name of the layer
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: layer_path
+          name: slide_path
           description: Path to the slide in url safe form
           required: true
           schema:
