@@ -88,7 +88,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
         Replacement(
             pattern=(
                 r"(^\s*[!%]\s*)pip install "
-                "(git+https://github.com/TissueImageAnalytics/tiatoolbox.git@.*|tiatoolbox)"  # noqa: E501
+                r"(git+https://github.com/TissueImageAnalytics/tiatoolbox.git@.*|tiatoolbox)"  # noqa: E501
             ),
             replace=(
                 r"\1pip install "
