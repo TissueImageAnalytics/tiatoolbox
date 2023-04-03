@@ -19,6 +19,7 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
+from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -1330,7 +1331,11 @@ class SemanticSegmentor:
             )
 
         # clean up the cache directories
-        shutil.rmtree(self._cache_dir)
+        try:
+            shutil.rmtree(self._cache_dir)
+        except PermissionError:
+            logger.warning("Unable to remove %s", self._cache_dir)
+
         self._memory_cleanup()
 
         return self._outputs

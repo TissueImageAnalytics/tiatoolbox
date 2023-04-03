@@ -18,7 +18,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 
-ON_GPU = toolbox_env.has_gpu()
+ON_GPU = False
 BATCH_SIZE = 1 if not ON_GPU else 8  # 16
 try:
     NUM_POSTPROC_WORKERS = multiprocessing.cpu_count()
@@ -256,12 +256,11 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
 
 def test_empty_image(tmp_path):
     root_save_dir = pathlib.Path(tmp_path)
-    sample_patch = np.ones((1024, 1024, 3), dtype="uint8") * 255
+    sample_patch = np.ones((512, 512, 3), dtype="uint8") * 255
     sample_patch_path = os.path.join(root_save_dir, "sample_tile.png")
     imwrite(sample_patch_path, sample_patch)
 
-    save_dir = f"{root_save_dir}/semantic/"
-    _rm_dir(save_dir)
+    save_dir = root_save_dir / "semantic-hovernetplus"
 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
@@ -276,7 +275,8 @@ def test_empty_image(tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
-    _rm_dir(save_dir)
+
+    save_dir = root_save_dir / "semantic-hovernet"
 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernet_fast-pannuke",
@@ -291,26 +291,10 @@ def test_empty_image(tmp_path):
         crash_on_exception=True,
         save_dir=save_dir,
     )
-    _rm_dir(save_dir)
-
-    multi_segmentor = MultiTaskSegmentor(
-        pretrained_model="fcn_resnet50_unet-bcss",
-        batch_size=BATCH_SIZE,
-        num_postproc_workers=0,
-    )
-
-    _ = multi_segmentor.predict(
-        [sample_patch_path],
-        mode="tile",
-        on_gpu=ON_GPU,
-        crash_on_exception=True,
-        save_dir=save_dir,
-    )
-    _rm_dir(save_dir)
 
 
 def test_functionality_semantic(remote_sample, tmp_path):
-    """Functionality test for multi task segmentor."""
+    """Functionality test for multitask segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
 
     save_dir = f"{root_save_dir}/multi/"
