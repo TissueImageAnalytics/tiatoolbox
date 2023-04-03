@@ -148,6 +148,7 @@ def _process_tile_predictions(
 
     inst_dicts = [out for out in out_dicts if type(out) is dict]
     sem_maps = [out for out in out_dicts if type(out) is np.ndarray]
+    sem_maps = [np.argmax(s, axis=-1) if s.ndim == 3 else s for s in sem_maps]
 
     new_inst_dicts, remove_insts_in_origs = [], []
     for inst_id, inst_dict in enumerate(inst_dicts):
