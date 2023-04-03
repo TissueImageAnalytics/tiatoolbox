@@ -1333,7 +1333,7 @@ class SemanticSegmentor:
         # clean up the cache directories
         try:
             shutil.rmtree(self._cache_dir)
-        except PermissionError:
+        except PermissionError:  # pragma: no cover
             logger.warning("Unable to remove %s", self._cache_dir)
 
         self._memory_cleanup()
