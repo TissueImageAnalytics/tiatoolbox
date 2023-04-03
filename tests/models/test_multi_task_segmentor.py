@@ -33,9 +33,9 @@ def _rm_dir(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
-def _crash_func(x):
+def _crash_func():
     """Helper to induce crash."""
-    raise ValueError("Propataion Crash.")
+    raise ValueError("Propagation Crash.")
 
 
 def semantic_postproc_func(raw_output):
@@ -58,7 +58,7 @@ def test_functionality_local(remote_sample, tmp_path):
     save_dir = f"{root_save_dir}/multitask/"
     _rm_dir(save_dir)
 
-    # * generate full output w/o parallel post processing worker first
+    # * generate full output w/o parallel post-processing worker first
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
@@ -104,7 +104,7 @@ def test_functionality_local(remote_sample, tmp_path):
 
 
 def test_functionality_hovernetplus(remote_sample, tmp_path):
-    """Functionality test for multi task segmentor."""
+    """Functionality test for multitask segmentor."""
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
     required_dims = (258, 258)
@@ -173,7 +173,7 @@ def test_masked_segmentor(remote_sample, tmp_path):
     imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
     sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
-    save_dir = f"{root_save_dir}/instance/"
+    save_dir = root_save_dir / "instance"
 
     # resolution for travis testing, not the correct ones
     resolution = 4.0
@@ -216,7 +216,7 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
-    save_dir = f"{root_save_dir}/semantic/"
+    save_dir = root_save_dir / "semantic"
     _rm_dir(save_dir)
 
     semantic_segmentor = SemanticSegmentor(
@@ -256,11 +256,11 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
 
 def test_empty_image(tmp_path):
     root_save_dir = pathlib.Path(tmp_path)
-    sample_patch = np.ones((512, 512, 3), dtype="uint8") * 255
+    sample_patch = np.ones((256, 256, 3), dtype="uint8") * 255
     sample_patch_path = os.path.join(root_save_dir, "sample_tile.png")
     imwrite(sample_patch_path, sample_patch)
 
-    save_dir = root_save_dir / "semantic-hovernetplus"
+    save_dir = root_save_dir / "hovernetplus"
 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
@@ -276,12 +276,29 @@ def test_empty_image(tmp_path):
         save_dir=save_dir,
     )
 
-    save_dir = root_save_dir / "semantic-hovernet"
+    save_dir = root_save_dir / "hovernet"
 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=BATCH_SIZE,
         num_postproc_workers=0,
+    )
+
+    _ = multi_segmentor.predict(
+        [sample_patch_path],
+        mode="tile",
+        on_gpu=ON_GPU,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+
+    save_dir = root_save_dir / "semantic"
+
+    multi_segmentor = MultiTaskSegmentor(
+        pretrained_model="hovernet_fast-pannuke",
+        batch_size=BATCH_SIZE,
+        num_postproc_workers=0,
+        output_types=["semantic"],
     )
 
     _ = multi_segmentor.predict(
@@ -301,7 +318,7 @@ def test_functionality_semantic(remote_sample, tmp_path):
     _rm_dir(save_dir)
     with pytest.raises(
         ValueError,
-        match=r"Output type must be specificed for instance or semantic segmentation.",
+        match=r"Output type must be specified for instance or semantic segmentation.",
     ):
         MultiTaskSegmentor(
             pretrained_model="fcn_resnet50_unet-bcss",
@@ -380,7 +397,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
         pretrained_model="hovernetplus-oed",
     )
 
-    # * Test crash propagation when parallelize post processing
+    # * Test crash propagation when parallelize post-processing
     _rm_dir(save_dir)
     multi_segmentor.model.postproc_func = _crash_func
     with pytest.raises(ValueError, match=r"Crash."):
