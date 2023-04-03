@@ -399,25 +399,15 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             # !     will be deprecated upon finalization of SQL annotation store
             for inst_id, new_inst_dict in enumerate(new_inst_dicts):
                 self._wsi_inst_info[inst_id].update(new_inst_dict)
-                remove_uuid_list = remove_uuid_lists[inst_id]
-                for inst_uuid in remove_uuid_list:
+                for inst_uuid in remove_uuid_lists[inst_id]:
                     self._wsi_inst_info[inst_id].pop(inst_uuid, None)
 
             x_start, y_start, x_end, y_end = bounds
             for sem_id, tile in enumerate(tiles):
                 max_h, max_w = self.wsi_layers[sem_id].shape
-                x_end = min(x_end, max_w)
-                y_end = min(y_end, max_h)
-                w = x_end - x_start
-                h = y_end - y_start
-                tmp_tile = tile[0:h, 0:w]
-                # For semantic segmentor, outputs are sometimes stored in each
-                # dimension, instead of being combined into a single map.
-                # Combine below if needed.
-                if len(np.squeeze(tmp_tile).shape) == 3:
-                    tmp_tile = np.argmax(tmp_tile, axis=-1)
-                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tmp_tile
-
+                x_end, y_end = min(x_end, max_w), min(y_end, max_h)
+                tile = tile[0 : y_end - y_start, 0 : x_end - x_start]
+                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile
             # !
 
         for future in self._futures:
@@ -432,7 +422,6 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 raise future.exception()
 
             # aggregate the result via callback
-            result = future.result()
             # manually call the callback rather than
             # attaching it when receiving/creating the future
-            callback(*result)
+            callback(*future.result())
