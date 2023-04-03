@@ -295,10 +295,21 @@ def test_empty_image(tmp_path):
     save_dir = root_save_dir / "semantic"
 
     multi_segmentor = MultiTaskSegmentor(
-        pretrained_model="hovernet_fast-pannuke",
+        pretrained_model="fcn_resnet50_unet-bcss",
         batch_size=BATCH_SIZE,
         num_postproc_workers=0,
         output_types=["semantic"],
+    )
+
+    bcc_wsi_ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        output_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        tile_shape=2048,
+        patch_input_shape=[1024, 1024],
+        patch_output_shape=[512, 512],
+        stride_shape=[512, 512],
+        margin=128,
+        save_resolution={"units": "mpp", "resolution": 2},
     )
 
     _ = multi_segmentor.predict(
@@ -307,6 +318,7 @@ def test_empty_image(tmp_path):
         on_gpu=ON_GPU,
         crash_on_exception=True,
         save_dir=save_dir,
+        ioconfig=bcc_wsi_ioconfig,
     )
 
 

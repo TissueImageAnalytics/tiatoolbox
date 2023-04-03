@@ -137,7 +137,6 @@ def _process_tile_predictions(
         )
         head_raws.append(head_raw)
 
-    # debate whether to check size of objects
     if "hovernetplus" in model_name:
         _, inst_dict, layer_map, _ = postproc(head_raws)
         out_dicts = [inst_dict, layer_map]
@@ -323,9 +322,6 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         # ! running order of each set matters !
         self._futures = []
 
-        # ! DEPRECATION:
-        # !     will be deprecated upon finalization of SQL annotation store
-        # !
         indices_sem = [i for i, x in enumerate(self.output_types) if x == "semantic"]
 
         for s_id in range(len(indices_sem)):
@@ -364,7 +360,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 )
             self._merge_post_process_results()
 
-        # Maybe store semantic annotations as contours in .dat file...
+        # Maybe change to store semantic annotations as contours in .dat file...
         for i_id, inst_idx in enumerate(indices_inst):
             joblib.dump(self._wsi_inst_info[i_id], f"{save_path}.{inst_idx}.dat")
         self._wsi_inst_info = []  # clean up
@@ -414,7 +410,13 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 y_end = min(y_end, max_h)
                 w = x_end - x_start
                 h = y_end - y_start
-                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile[0:h, 0:w]
+                tmp_tile = tile[0:h, 0:w]
+                # For semantic segmentor, outputs are sometimes stored in each
+                # dimension, instead of being combined into a single map.
+                # Combine below if needed.
+                if len(np.squeeze(tmp_tile).shape) == 3:
+                    tmp_tile = np.argmax(tmp_tile, axis=-1)
+                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tmp_tile
 
             # !
 
