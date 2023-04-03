@@ -18,7 +18,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.metrics import f1_detection
 from tiatoolbox.utils.misc import imwrite
 
-ON_GPU = False
+ON_GPU = toolbox_env.has_gpu()
 BATCH_SIZE = 1 if not ON_GPU else 8  # 16
 try:
     NUM_POSTPROC_WORKERS = multiprocessing.cpu_count()
