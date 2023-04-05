@@ -8,7 +8,6 @@ import math
 import os
 import pathlib
 import re
-import warnings
 from datetime import datetime
 from numbers import Number
 from typing import Iterable, List, Optional, Tuple, Union
@@ -472,12 +471,11 @@ class WSIReader:
 
         # Check for requested resolution > than baseline resolution
         if any(np.array(scale) > 1):
-            warnings.warn(
+            logger.warning(
                 "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
                 " Interpolation of read regions may occur.",
-                stacklevel=2,
             )
         return level, scale
 
@@ -892,12 +890,10 @@ class WSIReader:
         )
         out_res = output_dict[output_unit] if output_unit is not None else output_dict
         if out_res is None:
-            warnings.warn(
+            logger.warning(
                 "Although unit conversion from input_unit has been done, the requested "
                 "output_unit is returned as None. Probably due to missing 'mpp' or "
                 "'objective_power' in slide's meta data.",
-                UserWarning,
-                stacklevel=2,
             )
         return out_res
 
@@ -924,23 +920,19 @@ class WSIReader:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
             rescale = np.int(rescale)
-            warnings.warn(
-                "Reading WSI at level 0. Desired tile_objective_value"
-                + str(tile_objective_value)
-                + "not available.",
-                UserWarning,
-                stacklevel=2,
+            logger.warning(
+                "Reading WSI at level 0. Desired tile_objective_value %s "
+                "not available.",
+                str(tile_objective_value),
             )
         except ValueError:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
-            warnings.warn(
-                "Reading WSI at level 0. Reading at tile_objective_value"
-                + str(tile_objective_value)
-                + "not allowed.",
-                UserWarning,
-                stacklevel=2,
+            logger.warning(
+                "Reading WSI at level 0. Reading at tile_objective_value %s "
+                "not allowed.",
+                str(tile_objective_value),
             )
             tile_objective_value = self.info.objective_power
 
@@ -1996,16 +1988,13 @@ class OpenSlideWSIReader(WSIReader):
             mpp_x = utils.misc.ppu2mpp(x_res, tiff_res_units)
             mpp_y = utils.misc.ppu2mpp(y_res, tiff_res_units)
 
-            warnings.warn(
+            logger.warning(
                 "Metadata: Falling back to TIFF resolution tag"
-                " for microns-per-pixel (MPP).",
-                stacklevel=2,
+                " for microns-per-pixel (MPP)."
             )
             return mpp_x, mpp_y
         except KeyError:
-            warnings.warn(
-                "Metadata: Unable to determine microns-per-pixel (MPP).", stacklevel=2
-            )
+            logger.warning("Metadata: Unable to determine microns-per-pixel (MPP).")
 
         # Return None value if metadata cannot be determined.
         return None
@@ -2038,14 +2027,11 @@ class OpenSlideWSIReader(WSIReader):
                 objective_power = utils.misc.mpp2common_objective_power(
                     float(np.mean(mpp))
                 )
-                warnings.warn(
+                logger.warning(
                     "Metadata: Objective power inferred from microns-per-pixel (MPP).",
-                    stacklevel=2,
                 )
             else:
-                warnings.warn(
-                    "Metadata: Unable to determine objective power.", stacklevel=2
-                )
+                logger.warning("Metadata: Unable to determine objective power.")
 
         return WSIMeta(
             file_path=self.input_path,
@@ -2510,10 +2496,9 @@ class OmnyxJP2WSIReader(WSIReader):
                 cod = segment
 
         if cod is None:
-            warnings.warn(
+            logger.warning(
                 "Metadata: JP2 codestream missing COD segment! "
-                "Cannot determine number of decompositions (levels)",
-                stacklevel=2,
+                "Cannot determine number of decompositions (levels)"
             )
             level_count = 1
         else:
@@ -3362,9 +3347,7 @@ class TIFFWSIReader(WSIReader):
         if mppx is not None and mppy is not None:
             return [mppx, mppy]
         if mppx is not None or mppy is not None:
-            warnings.warn(
-                "Only one MPP value found. Using it for both X  and Y.", stacklevel=2
-            )
+            logger.warning("Only one MPP value found. Using it for both X  and Y.")
             return [mppx or mppy] * 2
 
         return None
@@ -4423,10 +4406,8 @@ class NGFFWSIReader(WSIReader):
         # Check the units,
         # Currently only handle micrometer units
         if x.unit != y.unit != "micrometer":
-            warnings.warn(
-                f"Expected units of micrometer, got {x.unit} and {y.unit}",
-                UserWarning,
-                stacklevel=2,
+            logger.warning(
+                "Expected units of micrometer, got %s and %s", x.unit, y.unit
             )
             return None
 
