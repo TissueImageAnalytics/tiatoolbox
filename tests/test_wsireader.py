@@ -2128,7 +2128,7 @@ def test_ngff_omero_below_min_version(tmp_path):
         wsireader.WSIReader.open(sample_copy)
 
 
-def test_ngff_omero_above_max_version(tmp_path):
+def test_ngff_omero_above_max_version(tmp_path, caplog):
     """Test for FileNotSupported when omero version is above maximum."""
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample
@@ -2140,8 +2140,10 @@ def test_ngff_omero_above_max_version(tmp_path):
     zattrs["omero"]["version"] = "10.0"
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    with pytest.raises(FileNotSupported):
+    # Check that the warning is logged
+    with caplog.at_level(logging.WARNING):
         wsireader.WSIReader.open(sample_copy)
+    assert "maximum supported version" in caplog.text
 
 
 def test_ngff_multiscales_below_min_version(tmp_path):
@@ -2160,7 +2162,7 @@ def test_ngff_multiscales_below_min_version(tmp_path):
         wsireader.WSIReader.open(sample_copy)
 
 
-def test_ngff_multiscales_above_max_version(tmp_path):
+def test_ngff_multiscales_above_max_version(tmp_path, caplog):
     """Test for FileNotSupported when multiscales version is above maximum."""
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample
@@ -2172,8 +2174,10 @@ def test_ngff_multiscales_above_max_version(tmp_path):
     zattrs["multiscales"][0]["version"] = "10.0"
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    with pytest.raises(FileNotSupported):
+    # Check that the warning is logged
+    with caplog.at_level(logging.WARNING):
         wsireader.WSIReader.open(sample_copy)
+    assert "maximum supported version" in caplog.text
 
 
 def test_ngff_non_numeric_version(tmp_path, monkeypatch):
