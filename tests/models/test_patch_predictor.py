@@ -214,6 +214,9 @@ def test_patch_dataset_crash(tmp_path):
     ):
         predefined_preproc_func("secret-dataset")
 
+    with pytest.raises(ValueError, match=r".*Cannot load image data from.*"):
+        _ = PatchDataset(-1)  # not a file path or image
+
 
 def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     """A test for creation and bare output."""
@@ -451,7 +454,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
             units="mpp",
         )
 
-    ds = WSIPatchDataset(
+    ds_from_fp = WSIPatchDataset(
         input_img=mini_wsi_svs,
         mask=VirtualWSIReader(positive_mask, mode="bool"),
         mode="wsi",
@@ -462,7 +465,21 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
         units="mpp",
     )
 
-    assert len(ds) > 0
+    assert len(ds_from_fp) > 0
+
+    mini_wsi_svs_np = imread(mini_wsi_svs)
+    ds_from_np = WSIPatchDataset(
+        input_img=mini_wsi_svs_np,
+        mask=VirtualWSIReader(positive_mask, mode="bool"),
+        mode="wsi",
+        patch_input_shape=[512, 512],
+        stride_shape=[256, 256],
+        auto_get_mask=False,
+        resolution=1.0,
+        units="baseline",
+    )
+
+    assert len(ds_from_np) > 0
 
 
 def test_patch_dataset_abc():
