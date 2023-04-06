@@ -1052,13 +1052,14 @@ def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-def test_virtual_wsi_reader(source_image):
+def test_virtual_wsi_reader(source_image, caplog):
     """Test VirtualWSIReader"""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
-    with pytest.warns(UserWarning, match=r"Unknown scale"):
-        _ = wsi._info()
-    with pytest.warns(UserWarning, match=r"Raw data is None"):
-        _ = wsi._info()
+    _ = wsi._info()
+    assert "Unknown scale" in caplog.text
+
+    _ = wsi._info()
+    assert "Raw data is None" in caplog.text
 
     assert wsi.img.shape == (256, 256, 3)
 
