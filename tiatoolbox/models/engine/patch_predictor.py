@@ -543,7 +543,7 @@ class PatchPredictor:
             save_dir = pathlib.Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=False)
 
-        return save_dir or pathlib.Path(os.getcwd())
+        return save_dir
 
     def _predict_patch(
         self, input_imgs, labels, return_probabilities, return_labels, on_gpu
