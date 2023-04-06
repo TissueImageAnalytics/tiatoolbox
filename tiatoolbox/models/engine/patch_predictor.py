@@ -864,7 +864,6 @@ class PatchPredictor:
             ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
 
         """
-
         if mode not in ["patch", "wsi", "tile"]:
             raise ValueError(
                 f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
