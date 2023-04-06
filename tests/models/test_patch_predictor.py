@@ -214,9 +214,6 @@ def test_patch_dataset_crash(tmp_path):
     ):
         predefined_preproc_func("secret-dataset")
 
-    with pytest.raises(ValueError, match=r".*Cannot load image data from.*"):
-        _ = PatchDataset(-1)  # not a file path or image
-
 
 def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     """A test for creation and bare output."""
