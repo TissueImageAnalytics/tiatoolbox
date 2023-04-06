@@ -773,6 +773,7 @@ class PatchPredictor:
         merge_predictions: bool = False,
         save_dir: bool = None,
         save_output: bool = False,
+        ignore_resolutions: bool = False,
     ):
         """Make a prediction for a list of input data.
 
@@ -829,7 +830,11 @@ class PatchPredictor:
                 where the running script is invoked.
             save_output (bool):
                 Whether to save output for a single file. default=False
-
+            ignore_resolutions (bool):
+                Whether to ignore the resolution of the input images.
+                PatchPredictor won't rescale the input images and will
+                and use them in the original resolution.
+                Works with `mode='patch'` only.
         Returns:
             (:class:`numpy.ndarray`, dict):
                 Model predictions of the input dataset. If multiple
@@ -886,6 +891,16 @@ class PatchPredictor:
         ioconfig = self._update_ioconfig(
             ioconfig, patch_input_shape, stride_shape, resolution, units
         )
+
+        if mode == "tile" and ignore_resolutions:
+            warnings.warn(
+                "WSIPatchDataset only reads image tile at "
+                '`units="baseline"`. Resolutions will be converted '
+                "to baseline value. "
+                "Set ignore_resolutions to False to change this behaviour.",
+                stacklevel=2,
+            )
+            ioconfig = ioconfig.to_baseline()
 
         fx_list = ioconfig.scale_to_highest(
             ioconfig.input_resolutions, ioconfig.input_resolutions[0]["units"]
