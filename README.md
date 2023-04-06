@@ -85,7 +85,7 @@ tiatoolbox supports various features through command line. For more information,
 
 Prepare a computer as a convenient platform for further development of the Python package `tiatoolbox` and related programs as follows.
 
-1. Install [pre-requisite software](https://tia-toolbox.readthedocs.io/en/latest/installation.html)
+1. Install [pre-requisite software](https://tia-toolbox.readthedocs.io/en/latest/installation.html#prerequisites)
 1. Open a terminal window<br/>
 
 ```sh
@@ -117,6 +117,13 @@ or
     $ conda create -n tiatoolbox-dev python=3.8 # select version of your choice
     $ conda activate tiatoolbox-dev
     $ pip install -r requirements/requirements_dev.txt
+```
+
+or
+
+```sh
+    $ conda env create -f requirements/requirements.dev.conda.yml # for linux/mac only.
+    $ conda activate tiatoolbox-dev
 ```
 
 6. To use the packages installed in the environment, run the command:

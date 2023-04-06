@@ -6,6 +6,7 @@ defusedxml>=0.7.1
 flask>=2.2.2
 glymur>=0.12.1
 imagecodecs>=2022.9.26
+joblib>=1.1.1
 jupyterlab>=3.5.2
 matplotlib>=3.6.2
 numpy>=1.23.5, <1.24 # v1.24 produces error on Windows
