@@ -142,13 +142,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         units:
             See (:class:`.WSIReader`) for details.
         preproc_func:
-            Preprocessing function used to transform the input data. If
-            supplied, then torch.Compose will be used on the input
-            preprocs. preprocs is a list of torchvision transforms for
-            preprocessing the image. The transforms will be applied in
-            the order that they are given in the list. For more
-            information, visit the following link:
-            https://pytorch.org/vision/stable/transforms.html.
+            Preprocessing function used to transform the input data. It will
+            be called on each patch before returning it.
 
     """
 
@@ -162,6 +157,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         resolution=None,
         units=None,
         auto_get_mask=True,
+        min_mask_ratio=0,
+        preproc_func=None,
     ):
         """Create a WSI-level patch dataset.
 
@@ -187,12 +184,22 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 `units`. Expected to be positive and of (height, width).
                 Note, this is not at level 0.
             resolution:
-              Check (:class:`.WSIReader`) for details. When
-              `mode='tile'`, value is fixed to be `resolution=1.0` and
-              `units='baseline'` units: check (:class:`.WSIReader`) for
-              details.
+                Check (:class:`.WSIReader`) for details. When
+                `mode='tile'`, value is fixed to be `resolution=1.0` and
+                `units='baseline'` units: check (:class:`.WSIReader`) for
+                details.
+            units:
+                Units in which `resolution` is defined.
+            auto_get_mask:
+                If `True`, then automatically get simple threshold mask using
+                WSIReader.tissue_mask() function.
+            min_mask_ratio:
+                Only patches with positive area percentage above this value are
+                included. Defaults to 0.
             preproc_func:
-                Preprocessing function used to transform the input data.
+                Preprocessing function used to transform the input data. If
+                supplied, the function will be called on each patch before
+                returning it.
 
         Examples:
             >>> # A user defined preproc func and expected behavior
@@ -233,6 +240,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         ):
             raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
 
+        self.preproc_func = preproc_func
         img_path = pathlib.Path(img_path)
         if mode == "wsi":
             self.reader = WSIReader.open(img_path)
@@ -299,8 +307,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             selected = PatchExtractor.filter_coordinates(
                 mask_reader,  # must be at the same resolution
                 self.inputs,  # must already be at requested resolution
-                resolution=resolution,
-                units=units,
+                wsi_shape=wsi_shape,
+                min_mask_ratio=min_mask_ratio,
             )
             self.inputs = self.inputs[selected]
 
