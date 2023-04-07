@@ -158,6 +158,9 @@ class PatchExtractor(PatchExtractorABC):
         self.n = 0
         return self
 
+    def __len__(self):
+        return self.locations_df.shape[0] if self.locations_df is not None else 0
+
     def __next__(self):
         n = self.n
 
@@ -202,21 +205,10 @@ class PatchExtractor(PatchExtractorABC):
         )
 
         if self.mask is not None:
-            # convert the coordinate_list resolution unit to acceptable units
-            converted_units = self.wsi.convert_resolution_units(
-                input_res=self.resolution,
-                input_unit=self.units,
-            )
-            # find the first unit which is not None
-            converted_units = {
-                k: v for k, v in converted_units.items() if v is not None
-            }
-            converted_units_keys = list(converted_units.keys())
-            selected_coord_indices = self.filter_coordinates_fast(
+            selected_coord_indices = self.filter_coordinates(
                 self.mask,
                 self.coordinate_list,
-                coordinate_resolution=converted_units[converted_units_keys[0]],
-                coordinate_units=converted_units_keys[0],
+                wsi_shape=slide_dimension,
                 min_mask_ratio=self.min_mask_ratio,
             )
             self.coordinate_list = self.coordinate_list[selected_coord_indices]
@@ -234,13 +226,12 @@ class PatchExtractor(PatchExtractorABC):
         return self
 
     @staticmethod
-    def filter_coordinates_fast(
+    def filter_coordinates(
         mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
-        coordinate_resolution: float,
-        coordinate_units: str,
-        mask_resolution: float = None,
+        wsi_shape: Tuple[int, int],
         min_mask_ratio: float = 0,
+        func: Callable = None,
     ):
         """Validate patch extraction coordinates based on the input mask.
 
@@ -260,19 +251,19 @@ class PatchExtractor(PatchExtractorABC):
                 default `func=None`, K should be 4, as we expect the
                 `coordinates_list` to be bounding boxes in `[start_x,
                 start_y, end_x, end_y]` format.
-            coordinate_resolution (float):
-                Resolution value at which `coordinates_list` is
-                generated.
-            coordinate_units (str):
-                Resolution unit at which `coordinates_list` is generated.
-            mask_resolution (float):
-                Resolution at which mask array is extracted. It is
-                supposed to be in the same units as `coord_resolution`
-                i.e., `coordinate_units`. If not provided, a default
-                value will be selected based on `coordinate_units`.
+            wsi_shape (tuple(int, int)):
+                Shape of the WSI in the requested `resolution` and `units`.
             min_mask_ratio (float):
                 Only patches with positive area percentage above this value are
-                included. Defaults to 0.
+                included. Defaults to 0. Has no effect if `func` is not `None`.
+            func (callable):
+                Function to be used to validate the coordinates. The function
+                must take a `numpy.ndarray` of the mask and a `numpy.ndarray`
+                of the coordinates as input and return a bool indicating
+                whether the coordinate is valid or not. If `None`, a default
+                function that accepts patches with positive area proportion above
+                `min_mask_ratio` is used.
+
 
         Returns:
             :class:`numpy.ndarray`:
@@ -287,113 +278,46 @@ class PatchExtractor(PatchExtractorABC):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
         if coordinates_list.shape[-1] != 4:
             raise ValueError("`coordinates_list` must be of shape [N, 4].")
-        if isinstance(coordinate_resolution, (int, float)):
-            coordinate_resolution = [coordinate_resolution, coordinate_resolution]
 
         if not 0 <= min_mask_ratio <= 1:
             raise ValueError("`min_mask_ratio` must be between 0 and 1.")
 
-        # define default mask_resolution based on the input `coordinate_units`
-        if mask_resolution is None:
-            mask_res_dict = {"mpp": 8, "power": 1.25, "baseline": 0.03125}
-            mask_resolution = mask_res_dict[coordinate_units]
-
-        tissue_mask = mask_reader.slide_thumbnail(
-            resolution=mask_resolution, units=coordinate_units
-        )
+        # the tissue mask exists in the reader already, no need to generate it
+        tissue_mask = mask_reader.img
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
+        scale_factors = np.array(tissue_mask.shape[::-1]) / np.array(wsi_shape)
         scaled_coords = coordinates_list.copy().astype(np.float32)
-        scaled_coords[:, [0, 2]] *= coordinate_resolution[0] / mask_resolution
+        scaled_coords[:, [0, 2]] *= scale_factors[0]
         scaled_coords[:, [0, 2]] = np.clip(
             scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
         )
-        scaled_coords[:, [1, 3]] *= coordinate_resolution[1] / mask_resolution
+        scaled_coords[:, [1, 3]] *= scale_factors[1]
         scaled_coords[:, [1, 3]] = np.clip(
             scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
         )
         scaled_coords = list(np.int32(scaled_coords))
 
-        flag_list = []
-        for coord in scaled_coords:
+        def default_sel_func(tissue_mask, coord):
+            """Default selection function to filter coordinates.
+
+            This function selects a coordinate if the proportion of
+            positive mask in the corresponding patch is greater than
+            `min_mask_ratio`.
+
+            """
             this_part = tissue_mask[coord[1] : coord[3], coord[0] : coord[2]]
             patch_area = np.prod(this_part.shape)
             pos_area = np.count_nonzero(this_part)
-
-            if (
+            return (
                 (pos_area == patch_area) or (pos_area > patch_area * min_mask_ratio)
-            ) and (pos_area > 0 and patch_area > 0):
-                flag_list.append(True)
-            else:
-                flag_list.append(False)
-        return np.array(flag_list)
+            ) and (pos_area > 0 and patch_area > 0)
 
-    @staticmethod
-    def filter_coordinates(
-        mask_reader: wsireader.VirtualWSIReader,
-        coordinates_list: np.ndarray,
-        func: Callable = None,
-        resolution: float = None,
-        units: str = None,
-    ):
-        """Indicates which coordinate is valid for mask-based patch extraction.
-
-        Locations are validated by a custom or default filter `func`.
-
-        Args:
-            mask_reader (:class:`.VirtualReader`):
-                A virtual pyramidal reader of the mask related to the
-                WSI from which we want to extract the patches.
-            coordinates_list (ndarray and np.int32):
-                Coordinates to be checked via the `func`. They must be
-                in the same resolution as requested `resolution` and
-                `units`. The shape of `coordinates_list` is (N, K) where
-                N is the number of coordinate sets and K is either 2 for
-                centroids or 4 for bounding boxes. When using the
-                default `func=None`, K should be 4, as we expect the
-                `coordinates_list` to refer to bounding boxes in
-                `[start_x, start_y, end_x, end_y]` format.
-            func:
-                The coordinate validator function. A function that takes
-                `reader` and `coordinate` as arguments and return True
-                or False as indication of coordinate validity.
-            resolution (float):
-                The resolution value at which coordinates_list are
-                generated.
-            units (str):
-                The resolution unit at which coordinates_list are
-                generated.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                List of flags to indicate which coordinates are valid.
-
-        """
-
-        def default_sel_func(reader: wsireader.VirtualWSIReader, coord: np.ndarray):
-            """Accept coord as long as its box contains bits of mask."""
-            roi = reader.read_bounds(
-                coord,
-                resolution=reader.info.mpp if resolution is None else resolution,
-                units="mpp" if units is None else units,
-                interpolation="nearest",
-                coord_space="resolution",
-            )
-            return np.sum(roi > 0) > 0
-
-        if not isinstance(mask_reader, wsireader.VirtualWSIReader):
-            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
-        if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
-            coordinates_list.dtype, np.integer
-        ):
-            raise ValueError("`coordinates_list` should be ndarray of integer type.")
-        if func is None and coordinates_list.shape[-1] != 4:
-            raise ValueError(
-                f"Default `func` does not support "
-                f"`coordinates_list` of shape {coordinates_list.shape}."
-            )
         func = default_sel_func if func is None else func
-        flag_list = [func(mask_reader, coord) for coord in coordinates_list]
+        flag_list = []
+        for coord in scaled_coords:
+            flag_list.append(func(tissue_mask, coord))
+
         return np.array(flag_list)
 
     @staticmethod
