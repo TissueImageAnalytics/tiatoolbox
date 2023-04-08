@@ -109,9 +109,6 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             np.ndarray: image data.
 
         """
-        if isinstance(input_img, np.ndarray):
-            return input_img
-
         path = pathlib.Path(input_img)
 
         if path.suffix not in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):

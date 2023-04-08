@@ -915,6 +915,15 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
         )
     _rm_dir(kwargs["save_dir"])
 
+    _ = predictor.predict(
+        img_objects,
+        masks=[mini_wsi_msk, mini_wsi_msk],
+        mode="tile",
+        ignore_resolutions=True,
+        **kwargs,
+    )
+    _rm_dir(kwargs["save_dir"])
+
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["units"] = "baseline"
     _kwargs["resolution"] = 1.0
