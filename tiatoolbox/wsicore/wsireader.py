@@ -165,7 +165,7 @@ def is_ngff(
                 max_version,
                 multiscales_versions,
             )
-            return False
+            return True
 
     if len(multiscales_versions) > 1:
         logger.warning(
@@ -189,7 +189,7 @@ def is_ngff(
             max_version,
             multiscales_versions,
         )
-        return False
+        return True
 
     return is_zarr(path)
 
@@ -3881,7 +3881,7 @@ class DICOMWSIReader(WSIReader):
             )
             for level in self.wsi.levels
         ]
-        dataset = self.wsi.base_level.datasets[0]
+        dataset = self.wsi.levels.base_level.datasets[0]
         # Get pixel spacing in mm from DICOM file and convert to um/px (mpp)
         mm_per_pixel = dataset.pixel_spacing
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
