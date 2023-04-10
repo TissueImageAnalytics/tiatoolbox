@@ -3015,7 +3015,7 @@ class SQLiteStore(AnnotationStore):
             }
             for key, annotation in self.items()
         )
-        df = df.append(pd.json_normalize(df_rows))
+        df = pd.concat([df, pd.json_normalize(df_rows)])
         return df.set_index("key")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
