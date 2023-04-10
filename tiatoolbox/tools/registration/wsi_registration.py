@@ -102,8 +102,6 @@ def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
             A transformed image.
 
     Examples:
-        >>> from tiatoolbox.tools.registration.wsi_registration import \
-        ...    apply_affine_transformation
         >>> moving_image = apply_affine_transformation(
         ...     fixed_image, moving_image, transform_initializer
         ... )
