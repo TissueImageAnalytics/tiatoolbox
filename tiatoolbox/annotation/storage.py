@@ -701,7 +701,7 @@ class AnnotationStore(ABC, MutableMapping):
 
             True if centroid of the annotation is within the query
             geometry bounds.
-            
+
             """
             return Polygon.from_bounds(*query_geometry.bounds).contains(
                 annotation_geometry.centroid
