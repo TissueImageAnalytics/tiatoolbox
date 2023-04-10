@@ -86,6 +86,34 @@ def compute_center_of_mass(mask: np.ndarray) -> tuple:
     return (x_coord_center, y_coord_center)
 
 
+def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
+    """Apply affine transformation using opencv.
+
+    Args:
+        fixed_img (:class:`numpy.ndarray`):
+            A fixed image.
+        moving_img (:class:`numpy.ndarray`):
+            A moving image.
+        transform_initializer (:class:`numpy.ndarray`):
+            A rigid transformation matrix.
+
+    Returns:
+        :class:`numpy.ndarray`:
+            A transformed image.
+
+    Examples:
+        >>> from tiatoolbox.tools.registration.wsi_registration import \
+        ...    apply_affine_transformation
+        >>> moving_image = apply_affine_transformation(
+        ...     fixed_image, moving_image, transform_initializer
+        ... )
+
+    """
+    return cv2.warpAffine(
+        moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+    )
+
+
 def prealignment(
     fixed_img: np.ndarray,
     moving_img: np.ndarray,
@@ -210,12 +238,11 @@ def prealignment(
         pre_transform = all_transform[all_dice.index(dice_after)]
 
         # Apply transformation to both image and mask
-        moving_img = cv2.warpAffine(
-            orig_moving_img, pre_transform[0:-1][:], orig_fixed_img.shape[:2][::-1]
+        moving_img = apply_affine_transformation(
+            orig_fixed_img, orig_moving_img, pre_transform
         )
-        moving_mask = cv2.warpAffine(
-            moving_mask, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
-        )
+        moving_mask = apply_affine_transformation(fixed_img, moving_mask, pre_transform)
+
         return pre_transform, moving_img, moving_mask, dice_after
 
     logger.warning(
@@ -849,12 +876,13 @@ class DFBRegister:
         )
 
         # Apply transformation
-        moving_img = cv2.warpAffine(
-            moving_img, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_img = apply_affine_transformation(
+            fixed_img, moving_img, tissue_transform
         )
-        moving_mask = cv2.warpAffine(
-            moving_mask, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_mask = apply_affine_transformation(
+            fixed_img, moving_mask, tissue_transform
         )
+
         return tissue_transform, moving_img, moving_mask
 
     def perform_dfbregister_block_wise(
@@ -962,11 +990,9 @@ class DFBRegister:
         )
 
         # Apply transformation
-        moving_img = cv2.warpAffine(
-            moving_img, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
-        )
-        moving_mask = cv2.warpAffine(
-            moving_mask, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_img = apply_affine_transformation(fixed_img, moving_img, block_transform)
+        moving_mask = apply_affine_transformation(
+            fixed_img, moving_mask, block_transform
         )
 
         return block_transform, moving_img, moving_mask
@@ -1024,12 +1050,13 @@ class DFBRegister:
             )
         else:
             # Apply transformation to both image and mask
-            moving_img = cv2.warpAffine(
-                moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+            moving_img = apply_affine_transformation(
+                fixed_img, moving_img, transform_initializer
             )
-            moving_mask = cv2.warpAffine(
-                moving_mask, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+            moving_mask = apply_affine_transformation(
+                fixed_img, moving_mask, transform_initializer
             )
+
             before_dice = dice(fixed_mask, moving_mask)
 
         # Estimate transform using tissue regions
