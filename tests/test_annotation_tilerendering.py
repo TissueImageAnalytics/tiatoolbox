@@ -326,7 +326,7 @@ def test_categorical_mapper(fill_store, tmp_path):
             assert 0 <= val <= 1
 
 
-def test_colour_prop_warning(fill_store, tmp_path):
+def test_colour_prop_warning(fill_store, tmp_path, caplog):
     """Test warning when rendering annotations in which the provided
     score_prop does not exist.
     """
@@ -335,8 +335,8 @@ def test_colour_prop_warning(fill_store, tmp_path):
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(score_prop="nonexistant_prop")
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    with pytest.warns(UserWarning, match="not found in properties"):
-        tg.get_tile(1, 0, 0)
+    tg.get_tile(1, 0, 0)
+    assert "not found in properties" in caplog.text
 
 
 def test_blur(fill_store, tmp_path):
