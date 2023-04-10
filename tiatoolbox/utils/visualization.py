@@ -1,7 +1,6 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-import warnings
 from typing import Dict, List, Tuple, Union
 
 import cv2
@@ -14,6 +13,7 @@ from PIL import Image, ImageFilter, ImageOps
 from shapely import speedups
 from shapely.geometry import Polygon
 
+from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore
 
 if speedups.available:  # pragma: no branch
@@ -640,9 +640,7 @@ class AnnotationRenderer:
                     )
                 )
         except KeyError:
-            warnings.warn(
-                "score_prop not found in properties. Using default color.", stacklevel=2
-            )
+            logger.warning("'score_prop' not found in properties. Using default color.")
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
@@ -872,4 +870,4 @@ class AnnotationRenderer:
         elif geom_type == "LineString":
             self.render_line(tile, annotation, top_left, scale)
         else:
-            warnings.warn(f"Unknown geometry: {geom_type}", stacklevel=3)
+            logger.warning("Unknown geometry: %s", geom_type)

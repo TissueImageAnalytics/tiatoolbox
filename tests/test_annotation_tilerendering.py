@@ -249,7 +249,7 @@ def test_sub_tile_levels(fill_store, tmp_path):
     assert tile.size == (112, 112)
 
 
-def test_unknown_geometry(fill_store, tmp_path):
+def test_unknown_geometry(fill_store, tmp_path, caplog):
     """Test warning when unknown geometries are present that cannot
     be rendered.
     """
@@ -262,8 +262,8 @@ def test_unknown_geometry(fill_store, tmp_path):
     store.commit()
     renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    with pytest.warns(UserWarning, match="Unknown geometry"):
-        tg.get_tile(0, 0, 0)
+    tg.get_tile(0, 0, 0)
+    assert "Unknown geometry" in caplog.text
 
 
 def test_interp_pad_warning(fill_store, tmp_path):
