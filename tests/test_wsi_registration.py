@@ -215,8 +215,14 @@ def test_match_histogram_inputs():
 def test_match_histograms():
     """Test for preprocessing/normalization of an image pair."""
     image_a = np.random.randint(256, size=(256, 256))
-    image_b = np.random.randint(256, size=(256, 256))
-    _, _ = match_histograms(image_a, image_b, 3)
+    image_b = np.zeros(shape=(256, 256), dtype=int)
+    out_a, out_b = match_histograms(image_a, image_b, 3)
+    assert np.all(out_a == image_a)
+    assert np.all(out_b == 255)
+
+    out_a, out_b = match_histograms(image_b, image_a, 3)
+    assert np.all(out_a == 255)
+    assert np.all(out_b == image_a)
 
     image_a = np.random.randint(256, size=(256, 256, 1))
     image_b = np.random.randint(256, size=(256, 256, 1))
