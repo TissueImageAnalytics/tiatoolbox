@@ -1,5 +1,4 @@
 import itertools
-import warnings
 from numbers import Number
 from typing import Dict, Tuple, Union
 
@@ -13,6 +12,7 @@ from skimage import exposure, filters
 from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 
+from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
@@ -218,10 +218,9 @@ def prealignment(
         )
         return pre_transform, moving_img, moving_mask, dice_after
 
-    warnings.warn(
+    logger.warning(
         "Not able to find the best transformation for pre-alignment. "
         "Try changing the values for 'dice_overlap' and 'rotation_step'.",
-        stacklevel=2,
     )
     return np.eye(3), moving_img, moving_mask, dice_before
 

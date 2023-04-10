@@ -187,6 +187,7 @@ def test_warning(
     moving_image,
     fixed_mask,
     moving_mask,
+    caplog,
 ):
     """Test for displaying warning in prealignment function."""
     fixed_img = imread(pathlib.Path(fixed_image))
@@ -194,10 +195,10 @@ def test_warning(
     fixed_mask = imread(pathlib.Path(fixed_mask))
     moving_mask = imread(pathlib.Path(moving_mask))
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
-    with pytest.warns(UserWarning):
-        _ = prealignment(
-            fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.9
-        )
+
+    _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.9)
+
+    assert "Not able to find the best transformation" in caplog.text
 
 
 def test_match_histogram_inputs():
