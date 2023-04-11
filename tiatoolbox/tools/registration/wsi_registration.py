@@ -87,7 +87,7 @@ def compute_center_of_mass(mask: np.ndarray) -> tuple:
 
 
 def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
-    """Apply affine transformation using opencv.
+    """Apply affine transformation using OpenCV.
 
     Args:
         fixed_img (:class:`numpy.ndarray`):
