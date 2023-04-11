@@ -1,5 +1,4 @@
 """This file defines patch extraction methods for deep learning models."""
-import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, Tuple, Union
@@ -7,6 +6,7 @@ from typing import Callable, Tuple, Union
 import numpy as np
 from pandas import DataFrame
 
+from tiatoolbox import logger
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
@@ -213,7 +213,7 @@ class PatchExtractor(PatchExtractorABC):
             )
             self.coordinate_list = self.coordinate_list[selected_coord_indices]
             if len(self.coordinate_list) == 0:
-                warnings.warn(
+                logger.warning(
                     "No candidate coordinates left after "
                     "filtering by `input_mask` positions.",
                     stacklevel=2,
@@ -618,7 +618,19 @@ class PointsPatchExtractor(PatchExtractor):
         )
 
 
-def get_patch_extractor(method_name: str, **kwargs: str):
+def get_patch_extractor(
+    method_name: str,
+    **kwargs: Union[
+        Path,
+        wsireader.WSIReader,
+        None,
+        str,
+        int,
+        Tuple[int, int],
+        float,
+        Tuple[float, float],
+    ],
+):
     """Return a patch extractor object as requested.
 
     Args:
