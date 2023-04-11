@@ -6,7 +6,6 @@ import logging
 import os
 import pathlib
 import shutil
-import warnings
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import Namespace
 from typing import Callable, List, Tuple, Union
@@ -19,6 +18,7 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
+from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -322,7 +322,7 @@ class WSIStreamDataset(torch_data.Dataset):
         self.ioconfig = copy.deepcopy(ioconfig)
 
         if mode == "tile":
-            warnings.warn(
+            logger.warning(
                 "WSIPatchDataset only reads image tile at "
                 '`units="baseline"`. Resolutions will be converted '
                 "to baseline value.",
@@ -993,7 +993,7 @@ class SemanticSegmentor:
     def _prepare_save_dir(save_dir):
         """Prepare save directory and cache."""
         if save_dir is None:
-            warnings.warn(
+            logger.warning(
                 "Segmentor will only output to directory. "
                 "All subsequent output will be saved to current runtime "
                 "location under folder 'output'. Overwriting may happen! ",
@@ -1077,7 +1077,7 @@ class SemanticSegmentor:
                 stride_shape=stride_shape,
             )
         if mode == "tile":
-            warnings.warn(
+            logger.warning(
                 "WSIPatchDataset only reads image tile at "
                 '`units="baseline"`. Resolutions will be converted '
                 "to baseline value.",
