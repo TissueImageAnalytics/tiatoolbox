@@ -2971,8 +2971,9 @@ class DictionaryStore(AnnotationStore):
         return self.to_ndjson()
 
     def close(self) -> None:
-        logger.addFilter(DuplicateFilter())
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         # Try to commit any changes if the file is still open.
         with contextlib.suppress(ValueError):
             self.commit()
-        logger.removeFilter(DuplicateFilter())
+        logger.removeFilter(duplicate_filter)

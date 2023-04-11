@@ -212,7 +212,8 @@ class TilePyramidGenerator:
             raise IndexError
 
         # Don't print out multiple warnings about interpolation etc.
-        logger.addFilter(DuplicateFilter())
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         tile = self.wsi.read_rect(
             coord,
             size=[v * res for v in output_size],
@@ -221,7 +222,7 @@ class TilePyramidGenerator:
             pad_mode=pad_mode,
             interpolation=interpolation,
         )
-        logger.removeFilter(DuplicateFilter())
+        logger.removeFilter(duplicate_filter)
         return Image.fromarray(tile)
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
