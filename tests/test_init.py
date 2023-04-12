@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -104,3 +105,18 @@ def test_logger_output():
 
     # Test CRITICAL is written to stderr
     helper_logger_test(level="critical")
+
+
+def test_lazy_import():
+    import sys
+
+    from tiatoolbox import _lazy_import
+
+    assert "exceptions" not in sys.modules
+
+    _lazy_import(
+        "exceptions",
+        Path(__file__).parent.parent / "tiatoolbox" / "utils" / "exceptions.py",
+    )
+
+    assert "exceptions" in sys.modules
