@@ -155,4 +155,4 @@ If you find TIAToolbox useful or use it in your research, please consider citing
 
 ### License
 
-Source code is held under a [BSD-3-Clause license](https://github.com/TissueImageAnalytics/tiatoolbox/blob/develop/LICENSE). However, models weights are dependent on the datasets that they are trained on. Refer to the [documentation](https://tia-toolbox.readthedocs.io/en/latest/index.html) for more details. 
+Source code is held under a [BSD-3-Clause license](https://github.com/TissueImageAnalytics/tiatoolbox/blob/develop/LICENSE). However, models weights are dependent on the datasets that they are trained on. Refer to the [documentation](https://tia-toolbox.readthedocs.io/en/latest/index.html) for more details.
