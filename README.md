@@ -152,13 +152,3 @@ If you find TIAToolbox useful or use it in your research, please consider citing
     year = {2022}
 }
 ```
-
-### Auxiliary Files
-
-Auxiliary files, such as pre-trained model weights downloaded from the TIA Centre webpage (https://warwick.ac.uk/tia/), are provided under the [Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
-
-### Dual License
-
-If you would like to use any of the source code or auxiliary files (e.g. pre-trained model weights) under a different license agreement please contact the Tissue Image Analytics (TIA) Centre at the University of Warwick (tia@dcs.warwick.ac.uk).
-
-[the 3-clause bsd license]: https://opensource.org/licenses/BSD-3-Clause
