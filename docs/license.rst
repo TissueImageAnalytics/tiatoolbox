@@ -19,7 +19,7 @@ Patch Classification
 
 The model weights obtained from training on the `PCam dataset <https://github.com/basveeling/pcam>`_ are held under the `CC0 License <https://choosealicense.com/licenses/cc0-1.0/>`_.
 Model weights obtained from training on the `Kather100K dataset <https://zenodo.org/record/1214456#.ZDgceOzMKqB>`_ are held under the
-`Creative Commons Attribution 4.0 International License <https://creativecommons.org/licenses/by/4.0/legalcode>`_. 
+`Creative Commons Attribution 4.0 International License <https://creativecommons.org/licenses/by/4.0/legalcode>`_.
 
 .. collapse:: PCam Dataset Weights (`License <https://choosealicense.com/licenses/cc0-1.0/>`_)
 
@@ -60,7 +60,7 @@ Model weights obtained from training on the `Kather100K dataset <https://zenodo.
     - mobilenet_v3_large-kather100k
     - mobilenet_v3_small-kather100k
     - googlenet-kather100k
-  
+
 
 Semantic Segmentation
 ---------------------
@@ -80,9 +80,9 @@ Model weights optimized using the `BCSS dataset <https://bcsegmentation.grand-ch
 Nucleus Instance Segmentation
 -----------------------------
 
-Models weights trained on the `PanNuke <https://warwick.ac.uk/fac/cross_fac/tia/data/pannuke>`_, `MoNuSAC <https://monusac-2020.grand-challenge.org/>`_ and `Kumar <https://monuseg.grand-challenge.org/>`_ datasets are held under a 
+Models weights trained on the `PanNuke <https://warwick.ac.uk/fac/cross_fac/tia/data/pannuke>`_, `MoNuSAC <https://monusac-2020.grand-challenge.org/>`_ and `Kumar <https://monuseg.grand-challenge.org/>`_ datasets are held under a
 `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
-Models trained on the CoNSeP dataset are held under an `Apache 2.0 License <https://www.apache.org/licenses/LICENSE-2.0>`_. 
+Models trained on the CoNSeP dataset are held under an `Apache 2.0 License <https://www.apache.org/licenses/LICENSE-2.0>`_.
 
 .. collapse:: PanNuke Dataset Weights (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
@@ -106,7 +106,7 @@ Nucleus Detection
 -----------------
 
 We provide the following models trained using the `CRCHisto <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe//>`_
-and CoNIC datasets. All model weights obtained from training on these datasets are held under a 
+and CoNIC datasets. All model weights obtained from training on these datasets are held under a
 `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
 
 .. collapse:: CRCHisto Dataset Weights (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
@@ -123,7 +123,7 @@ and CoNIC datasets. All model weights obtained from training on these datasets a
 Multi-Task Segmentation
 -----------------------
 
-We provide the following model trained using a private OED dataset. The weights are held under a 
+We provide the following model trained using a private OED dataset. The weights are held under a
 `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
 
 
