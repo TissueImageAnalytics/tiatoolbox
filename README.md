@@ -127,7 +127,7 @@ or
 
 ### License
 
-The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [The 3-Clause BSD License].
+The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the \[The 3-Clause BSD License\].
 
 The full text of the licence is included in [LICENSE](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE).
 
