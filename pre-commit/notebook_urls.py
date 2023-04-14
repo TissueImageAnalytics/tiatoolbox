@@ -96,6 +96,16 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
             ),
             main_replacement=r"\1pip install tiatoolbox",
         ),
+        PatternReplacement(
+            pattern=(
+                r"https://github\.com/TissueImageAnalytics/tiatoolbox/(blob|tree)/"
+                r"(.*)/examples/(.*)\.ipynb",
+            ),
+            replacement=(
+                "https://github.com/TissueImageAnalytics/tiatoolbox/\1/"
+                f"{to_ref}/examples/\3.ipynb"
+            ),
+        ),
     ]
     passed = True
     print(f"From ref '{from_ref}' to ref '{to_ref}'")
