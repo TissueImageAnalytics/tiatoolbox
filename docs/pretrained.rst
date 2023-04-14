@@ -12,6 +12,7 @@ Kather Patch Dataset
 --------------------
 
 The following models are trained using :obj:`Kather Dataset <tiatoolbox.models.dataset.info.KatherPatchDataset>`.
+Model weights obtained from training on the Kather100K dataset are held under the `Creative Commons Attribution 4.0 International License <https://creativecommons.org/licenses/by/4.0/legalcode>`_.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
@@ -26,7 +27,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by/4.0/legalcode>`_)
+.. collapse:: Model names
 
     - alexnet-kather100k
     - resnet18-kather100k
@@ -49,7 +50,8 @@ They share the same input output configuration defined below:
 Patch Camelyon (PCam) Dataset
 -----------------------------
 
-The following models are trained using the `PCam dataset <https://github.com/basveeling/pcam/>`_.
+The following models are trained using the `PCam dataset <https://github.com/basveeling/pcam/>`_. 
+The model weights obtained from training on the PCam dataset are held under the `CC0 License <https://choosealicense.com/licenses/cc0-1.0/>`_.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
@@ -64,7 +66,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names (`License <https://choosealicense.com/licenses/cc0-1.0/>`_)
+.. collapse:: Model names
 
     - alexnet-pcam
     - resnet18-pcam
@@ -90,7 +92,8 @@ Semantic Segmentation
 Tissue Masking
 --------------
 
-The following models are trained using internal data of TIA Centre.
+The following models are trained using internal data of TIA Centre and are held under 
+the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
@@ -112,7 +115,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - fcn-tissue_mask
 
@@ -120,6 +123,7 @@ Breast Cancer
 -------------
 
 The following models are trained using the `BCSS dataset <https://bcsegmentation.grand-challenge.org/>`_.
+The model weights obtained from training on the BCSS dataset are held under the `CC0 License <https://choosealicense.com/licenses/cc0-1.0/>`_.
 They share the same input output configuration defined below:
 
 .. collapse:: Input Output Configuration Details
@@ -141,7 +145,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names (`License <https://choosealicense.com/licenses/cc0-1.0/>`_)
+.. collapse:: Model names
 
     - fcn_resnet50_unet-bcss
 
@@ -151,8 +155,9 @@ Nucleus Instance Segmentation
 PanNuke Dataset
 ---------------
 
-We provide the following models trained using the `PanNuke dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/pannuke>`_, which uses the following
-input output configuration:
+We provide the following models trained using the `PanNuke dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/pannuke>`_.
+All model weights trained on PanNuke are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The input output configuration is as follows:
 
 .. collapse:: Input Output Configuration Details
 
@@ -176,15 +181,16 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - hovernet_fast-pannuke
 
 MoNuSAC Dataset
 ---------------
 
-We provide the following models trained using the `MoNuSAC dataset <https://monusac.grand-challenge.org/>`_, which uses the following
-input output configuration:
+We provide the following models trained using the `MoNuSAC dataset <https://monusac.grand-challenge.org/>`_.
+All model weights trained on MoNuSAC are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The input output configuration is as follows:
 
 .. collapse:: Input Output Configuration Details
 
@@ -208,15 +214,16 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - hovernet_fast-monusac
 
 CoNSeP Dataset
 --------------
 
-We provide the following models trained using the `CoNSeP dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_, which uses the following
-input output configuration:
+We provide the following models trained using the `CoNSeP dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/hovernet/>`_.
+The model weights obtained from training on the CoNSeP dataset are held under the `Apache 2.0 License <https://www.apache.org/licenses/LICENSE-2.0>`_.
+The input output configuration is as follows:
 
 .. collapse:: Input Output Configuration Details
 
@@ -240,7 +247,7 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names (`License <https://www.apache.org/licenses/LICENSE-2.0>`_)
+.. collapse:: Model names
 
     - hovernet_original-consep
 
@@ -264,15 +271,16 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names (`License <https://www.apache.org/licenses/LICENSE-2.0>`_)
+.. collapse:: Model names
 
     - micronet_hovernet-consep
 
 Kumar Dataset
 -------------
 
-We provide the following models trained using the `Kumar dataset <https://monuseg.grand-challenge.org/>`_, which uses the following
-input output configuration:
+We provide the following models trained using the `Kumar dataset <https://monuseg.grand-challenge.org/>`_.
+All model weights trained on Kumar are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The input output configuration is as follows:
 
 .. collapse:: Input Output Configuration Details
 
@@ -296,7 +304,7 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - hovernet_original_kumar
 
@@ -306,8 +314,9 @@ Nucleus Detection
 CRCHisto Dataset
 --------------
 
-We provide the following models trained using the `CRCHisto dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe//>`_, which uses the following
-input output configuration:
+We provide the following models trained using the `CRCHisto dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/crchistolabelednucleihe//>`_.
+All model weights trained on CRCHisto are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The input output configuration is as follows:
 
 .. collapse:: Input Output Configuration Details
 
@@ -321,7 +330,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - sccnn-crchisto
 
@@ -337,7 +346,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - mapde-crchisto
 
@@ -345,8 +354,9 @@ input output configuration:
 CoNIC Dataset
 --------------
 
-We provide the following models trained using the `CoNIC dataset <https://conic-challenge.grand-challenge.org/>`_, which uses the following
-input output configuration:
+We provide the following models trained using the `CoNIC dataset <https://conic-challenge.grand-challenge.org/>`_.
+All model weights trained on CoNIC are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The input output configuration is as follows:
 
 .. collapse:: Input Output Configuration Details
 
@@ -360,7 +370,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - sccnn-conic
 
@@ -376,7 +386,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - mapde-conic
 
@@ -388,8 +398,9 @@ Oral Epithelial Dysplasia (OED) Dataset
 ---------------------------------------
 
 We provide the following model trained using a private OED dataset. The model outputs nuclear instance segmentation
-and classification results, as well as semantic segmentation of epithelial layers. The model uses the following
-input output configuration:
+and classification results, as well as semantic segmentation of epithelial layers. 
+All model weights trained on the private OED dataset are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The model uses the following input output configuration:
 
 .. collapse:: Input Output Configuration Details
 
@@ -414,6 +425,6 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.5}
         )
 
-.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
+.. collapse:: Model names
 
     - hovernetplus-oed
