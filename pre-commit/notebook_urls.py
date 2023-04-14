@@ -110,6 +110,10 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
     passed = True
     print(f"From ref '{from_ref}' to ref '{to_ref}'")
     for path in files:
+        if path.suffix != ".ipynb":
+            print(f"Skipping {path} (not a Jupyter Notebook).")
+            return passed
+
         changed, notebook = check_notebook(path, to_ref, replacements)
         passed = passed and not changed
         # Write the file if it has changed
@@ -119,7 +123,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
                 json.dump(notebook, fh, indent=1, ensure_ascii=False)
                 fh.write("\n")
         else:
-            print(f"Skipping {path} (no changes)")
+            print(f"Skipping {path} (no changes).")
     return passed
 
 
@@ -143,9 +147,10 @@ def check_notebook(
     project_root = Path(__file__).parent.parent
     changed = False
     # Check if the path is inside the project root
-    if path.resolve().parents[1] != project_root.resolve():
-        print(f"Skipping {path} (not inside the project directory)")
+    if project_root.resolve() not in list(path.resolve().parents):
+        print(f"\nSkipping {path} (not inside the project directory)")
         return changed, None
+
     # Load the notebook
     with open(path, encoding="utf-8") as fh:
         notebook = json.load(fh)
@@ -204,4 +209,4 @@ if __name__ == "__main__":
         default=git_branch_name(),
     )
     args = parser.parse_args()
-    sys.exit(1 - main(args.files, args.from_ref, args.to_ref))
+    sys.exit(main(args.files, args.from_ref, args.to_ref))

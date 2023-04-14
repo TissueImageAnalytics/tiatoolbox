@@ -86,4 +86,6 @@ install: clean ## install the package to the active Python's site-packages
 	python setup.py install
 
 update-notebook-urls:
-	python pre-commit/notebook_urls.py examples/*
+	python pre-commit/notebook_urls.py examples/*.ipynb
+	python pre-commit/notebook_urls.py examples/inference-pipelines/*.ipynb
+	python pre-commit/notebook_urls.py examples/full-pipelines/*.ipynb
