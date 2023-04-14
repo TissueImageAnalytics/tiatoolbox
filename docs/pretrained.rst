@@ -50,7 +50,7 @@ They share the same input output configuration defined below:
 Patch Camelyon (PCam) Dataset
 -----------------------------
 
-The following models are trained using the `PCam dataset <https://github.com/basveeling/pcam/>`_. 
+The following models are trained using the `PCam dataset <https://github.com/basveeling/pcam/>`_.
 The model weights obtained from training on the PCam dataset are held under the `CC0 License <https://choosealicense.com/licenses/cc0-1.0/>`_.
 They share the same input output configuration defined below:
 
@@ -92,7 +92,7 @@ Semantic Segmentation
 Tissue Masking
 --------------
 
-The following models are trained using internal data of TIA Centre and are held under 
+The following models are trained using internal data of TIA Centre and are held under
 the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
 They share the same input output configuration defined below:
 
@@ -398,7 +398,7 @@ Oral Epithelial Dysplasia (OED) Dataset
 ---------------------------------------
 
 We provide the following model trained using a private OED dataset. The model outputs nuclear instance segmentation
-and classification results, as well as semantic segmentation of epithelial layers. 
+and classification results, as well as semantic segmentation of epithelial layers.
 All model weights trained on the private OED dataset are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
 The model uses the following input output configuration:
 
