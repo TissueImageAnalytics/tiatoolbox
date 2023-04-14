@@ -914,7 +914,7 @@ def make_valid_poly(poly, origin=None):
         poly = translate(poly, -origin[0], -origin[1])
     if poly.is_valid:
         return poly
-    logger.warning("Invalid geometry found, fix using buffer().")
+    logger.warning("Invalid geometry found, fix using buffer().", stacklevel=3)
     return poly.buffer(0.01)
 
 

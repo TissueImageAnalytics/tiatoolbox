@@ -250,8 +250,10 @@ def test_sub_tile_levels(fill_store, tmp_path):
 
 
 def test_unknown_geometry(fill_store, tmp_path, caplog):
-    """Test warning when unknown geometries are present that cannot
+    """
+    Test warning when unknown geometries are present that cannot
     be rendered.
+
     """
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -327,8 +329,10 @@ def test_categorical_mapper(fill_store, tmp_path):
 
 
 def test_colour_prop_warning(fill_store, tmp_path, caplog):
-    """Test warning when rendering annotations in which the provided
+    """
+    Test warning when rendering annotations in which the provided
     score_prop does not exist.
+
     """
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
