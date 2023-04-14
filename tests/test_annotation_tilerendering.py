@@ -249,9 +249,11 @@ def test_sub_tile_levels(fill_store, tmp_path):
     assert tile.size == (112, 112)
 
 
-def test_unknown_geometry(fill_store, tmp_path):
-    """Test warning when unknown geometries are present that cannot
+def test_unknown_geometry(fill_store, tmp_path, caplog):
+    """
+    Test warning when unknown geometries are present that cannot
     be rendered.
+
     """
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -262,8 +264,8 @@ def test_unknown_geometry(fill_store, tmp_path):
     store.commit()
     renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    with pytest.warns(UserWarning, match="Unknown geometry"):
-        tg.get_tile(0, 0, 0)
+    tg.get_tile(0, 0, 0)
+    assert "Unknown geometry" in caplog.text
 
 
 def test_interp_pad_warning(fill_store, tmp_path, caplog):
@@ -326,17 +328,19 @@ def test_categorical_mapper(fill_store, tmp_path):
             assert 0 <= val <= 1
 
 
-def test_colour_prop_warning(fill_store, tmp_path):
-    """Test warning when rendering annotations in which the provided
+def test_colour_prop_warning(fill_store, tmp_path, caplog):
+    """
+    Test warning when rendering annotations in which the provided
     score_prop does not exist.
+
     """
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(score_prop="nonexistant_prop")
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    with pytest.warns(UserWarning, match="not found in properties"):
-        tg.get_tile(1, 0, 0)
+    tg.get_tile(1, 0, 0)
+    assert "not found in properties" in caplog.text
 
 
 def test_blur(fill_store, tmp_path):
