@@ -22,7 +22,7 @@
     <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
   </a>
   <br>
-  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/blob/develop/LICENSE">
+  <a href="#license">
     <img alt="GitHub license" src="https://img.shields.io/github/license/TissueImageAnalytics/tiatoolbox"></a>
   <br>
   <br>
