@@ -266,14 +266,14 @@ def test_unknown_geometry(fill_store, tmp_path):
         tg.get_tile(0, 0, 0)
 
 
-def test_interp_pad_warning(fill_store, tmp_path):
+def test_interp_pad_warning(fill_store, tmp_path, caplog):
     """Test warning when providing unused options."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     tg = AnnotationTileGenerator(wsi.info, store, tile_size=256)
-    with pytest.warns(UserWarning, match="interpolation, pad_mode are unused"):
-        tg.get_tile(0, 0, 0, pad_mode="constant")
+    tg.get_tile(0, 0, 0, pad_mode="constant")
+    assert "interpolation, pad_mode are unused" in caplog.text
 
 
 def test_user_provided_cm(fill_store, tmp_path):
