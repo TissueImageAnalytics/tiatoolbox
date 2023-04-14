@@ -99,7 +99,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
         PatternReplacement(
             pattern=(
                 r"https://github\.com/TissueImageAnalytics/tiatoolbox/(blob|tree)/"
-                r"(.*)/examples/(.*)\.ipynb",
+                r"(.*)/examples/(.*)\.ipynb"
             ),
             replacement=(
                 "https://github.com/TissueImageAnalytics/tiatoolbox/\1/"
