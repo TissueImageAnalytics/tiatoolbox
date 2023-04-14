@@ -129,7 +129,7 @@ or
 
 The source code TIA Toolbox (tiatoolbox) as hosted on GitHub is released under the [BSD-3-Clause license](https://github.com/TissueImageAnalytics/tiatoolbox/blob/develop/LICENSE). The full text of the licence is included in [LICENSE](https://raw.githubusercontent.com/TissueImageAnalytics/tiatoolbox/develop/LICENSE).
 
-Models weights are dependent on the datasets that they were trained on. Refer to the [documentation](https://tia-toolbox.readthedocs.io/en/latest/pretrained.html) for more details.
+Models weights are dependent on the datasets that they were trained on. Please refer to the [documentation](https://tia-toolbox.readthedocs.io/en/latest/pretrained.html) for more details.
 
 ### Cite this repository
 
