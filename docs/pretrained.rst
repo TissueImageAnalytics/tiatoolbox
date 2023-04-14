@@ -3,6 +3,8 @@
 Pretrained Neural Network Models
 ================================
 
+Despite the source code of TIAToolbox being held under a permissive license, the licenses of model weights are dependent on the datasets that they are trained on. We provide the licenses associated with the utilised datasets, but recommend that users also do their own due diligence for confirmation.
+
 Patch Classification
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -24,7 +26,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by/4.0/legalcode>`_)
 
     - alexnet-kather100k
     - resnet18-kather100k
@@ -62,7 +64,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://choosealicense.com/licenses/cc0-1.0/>`_)
 
     - alexnet-pcam
     - resnet18-pcam
@@ -110,7 +112,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - fcn-tissue_mask
 
@@ -139,7 +141,7 @@ They share the same input output configuration defined below:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://choosealicense.com/licenses/cc0-1.0/>`_)
 
     - fcn_resnet50_unet-bcss
 
@@ -174,7 +176,7 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - hovernet_fast-pannuke
 
@@ -206,7 +208,7 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - hovernet_fast-monusac
 
@@ -238,7 +240,7 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://www.apache.org/licenses/LICENSE-2.0>`_)
 
     - hovernet_original-consep
 
@@ -262,7 +264,8 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://www.apache.org/licenses/LICENSE-2.0>`_)
+
     - micronet_hovernet-consep
 
 Kumar Dataset
@@ -293,7 +296,7 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.25}
         )
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - hovernet_original_kumar
 
@@ -318,7 +321,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - sccnn-crchisto
 
@@ -334,7 +337,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - mapde-crchisto
 
@@ -357,7 +360,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - sccnn-conic
 
@@ -373,7 +376,7 @@ input output configuration:
         )
 
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - mapde-conic
 
@@ -411,6 +414,6 @@ input output configuration:
             save_resolution={'units': 'mpp', 'resolution': 0.5}
         )
 
-.. collapse:: Model names
+.. collapse:: Model names (`License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_)
 
     - hovernetplus-oed
