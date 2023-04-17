@@ -23,7 +23,7 @@
   </a>
   <br>
   <a href="#license">
-    <img alt="GitHub license" src="https://img.shields.io/github/license/TissueImageAnalytics/tiatoolbox"></a>
+    <img alt="GitHub license" src="https://img.shields.io/static/v1?label=license&message=BSD-3-Clause&color=green"></a>
   <br>
   <br>
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/pip-install.yml">
