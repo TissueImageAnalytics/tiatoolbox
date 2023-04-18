@@ -99,11 +99,41 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
         PatternReplacement(
             pattern=(
                 r"https://github\.com/TissueImageAnalytics/tiatoolbox/(blob|tree)/"
-                r"(.*)/examples/(.*)\.ipynb"
+                r"(.*)"
+                r"/examples/(.*)\.ipynb\)\\]"
+                r"\\\[\[Colab]"
             ),
             replacement=(
-                "https://github.com/TissueImageAnalytics/tiatoolbox/\1/"
-                f"{to_ref}/examples/\3.ipynb"
+                r"https://github.com/TissueImageAnalytics/tiatoolbox/blob/"
+                f"{to_ref}"
+                r"/examples/\g<3>.ipynb)\\]"
+                r"\\[[Colab]"
+            ),
+            main_replacement=(
+                r"https://github.com/TissueImageAnalytics/tiatoolbox/blob/"
+                f"{to_ref}"
+                r"/examples/\g<3>.ipynb)\\]"
+                r"\\[[Colab]"
+            ),
+        ),
+        PatternReplacement(
+            pattern=(
+                r"https://colab.research.google.com/"
+                r"github/TissueImageAnalytics/tiatoolbox/(blob|tree)/"
+                r"(.*)"
+                r"/examples/(.*)\.ipynb"
+            ),
+            replacement=(
+                r"https://colab.research.google.com/"
+                r"github/TissueImageAnalytics/tiatoolbox/blob/"
+                f"{to_ref}"
+                r"/examples/\g<3>.ipynb"
+            ),
+            main_replacement=(
+                r"https://colab.research.google.com/"
+                r"github/TissueImageAnalytics/tiatoolbox/blob/"
+                f"{to_ref}"
+                r"/examples/\g<3>.ipynb"
             ),
         ),
     ]
@@ -179,7 +209,7 @@ def replace_line(line: str, to_ref: str, replacements: List[PatternReplacement])
 
     """
     for rep in replacements:
-        if re.match(rep.pattern, line):
+        if re.search(rep.pattern, line):
             # Replace matches
             if to_ref in MAIN_BRANCHES:
                 line = re.sub(rep.pattern, rep.main_replacement, line)
