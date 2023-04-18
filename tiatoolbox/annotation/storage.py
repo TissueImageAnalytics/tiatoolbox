@@ -32,7 +32,6 @@ import sqlite3
 import sys
 import tempfile
 import uuid
-import warnings
 import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -66,7 +65,7 @@ from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
 import tiatoolbox
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
@@ -1985,7 +1984,7 @@ class SQLiteStore(AnnotationStore):
                 "EXPLAIN QUERY PLAN " + query_string, query_parameters
             ).fetchone()
             if "USING INDEX" not in query_plan[-1]:
-                warnings.warn(
+                logger.warning(
                     "Query is not using an index. "
                     "Consider adding an index to improve performance.",
                     stacklevel=2,
@@ -2768,7 +2767,7 @@ class SQLiteStore(AnnotationStore):
             }
             for key, annotation in self.items()
         )
-        df = df.append(pd.json_normalize(df_rows))
+        df = pd.concat([df, pd.json_normalize(df_rows)])
         return df.set_index("key")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
@@ -2959,7 +2958,7 @@ class DictionaryStore(AnnotationStore):
 
     def commit(self) -> None:
         if str(self.connection) == ":memory:":
-            warnings.warn("In-memory store. Nothing to commit.", stacklevel=2)
+            logger.warning("In-memory store. Nothing to commit.", stacklevel=2)
             return
         if not self.path.exists():
             self.path.touch()
@@ -2972,8 +2971,9 @@ class DictionaryStore(AnnotationStore):
         return self.to_ndjson()
 
     def close(self) -> None:
-        warnings.simplefilter("ignore")
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         # Try to commit any changes if the file is still open.
         with contextlib.suppress(ValueError):
             self.commit()
-        warnings.resetwarnings()
+        logger.removeFilter(duplicate_filter)

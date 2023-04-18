@@ -83,6 +83,7 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
     )
 
     assert isinstance(points, patchextraction.PointsPatchExtractor)
+    assert len(points) == 1860
 
     sliding_window = patchextraction.get_patch_extractor(
         input_img=input_img,
@@ -266,7 +267,7 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
 
 def test_get_coordinates():
-    """Test get tile cooordinates functionality."""
+    """Test get tile coordinates functionality."""
     expected_output = np.array(
         [
             [0, 0, 4, 4],
@@ -424,102 +425,67 @@ def test_filter_coordinates():
     mask = np.zeros([9, 6])
     mask[0:4, 3:8] = 1  # will flag first 2
     mask_reader = VirtualWSIReader(mask)
-
-    # Tests for (original) filter_coordinates method
-    # functionality test
-    flag_list = PatchExtractor.filter_coordinates(
-        mask_reader, bbox_list, resolution=1.0, units="baseline"
-    )
-    assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
-
-    # Test for bad mask input
-    with pytest.raises(
-        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
-    ):
-        PatchExtractor.filter_coordinates(
-            mask, bbox_list, resolution=1.0, units="baseline"
-        )
-
-    # Test for bad bbox coordinate list in the input
-    with pytest.raises(ValueError, match=r".*should be ndarray of integer type.*"):
-        PatchExtractor.filter_coordinates(
-            mask_reader, bbox_list.tolist(), resolution=1.0, units="baseline"
-        )
-
-    # Test for incomplete coordinate list
-    with pytest.raises(ValueError, match=r".*`coordinates_list` of shape.*"):
-        PatchExtractor.filter_coordinates(
-            mask_reader, bbox_list[:, :2], resolution=1.0, units="baseline"
-        )
+    slide_shape = (6, 9)  # slide shape (w, h) at requested resolution
 
     ###############################################
-    # Tests for filter_coordinates_fast (new) method
+    # Tests for filter_coordinates (new) method
     _info = mask_reader.info
     _info.mpp = 1.0
     mask_reader._m_info = _info
 
     # functionality test
-    flag_list = PatchExtractor.filter_coordinates_fast(
+    flag_list = PatchExtractor.filter_coordinates(
         mask_reader,
         bbox_list,
-        coordinate_resolution=1.0,
-        coordinate_units="mpp",
-        mask_resolution=1,
+        slide_shape,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
-    flag_list = PatchExtractor.filter_coordinates_fast(
-        mask_reader, bbox_list, coordinate_resolution=(1.0, 1.0), coordinate_units="mpp"
-    )
+    flag_list = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
 
     # Test for bad mask input
     with pytest.raises(
         ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
     ):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask,
             bbox_list,
-            coordinate_resolution=1.0,
-            coordinate_units="mpp",
+            slide_shape,
         )
 
     # Test for bad bbox coordinate list in the input
     with pytest.raises(ValueError, match=r".*should be ndarray of integer type.*"):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list.tolist(),
-            coordinate_resolution=1,
-            coordinate_units="mpp",
+            slide_shape,
         )
 
     # Test for incomplete coordinate list
     with pytest.raises(ValueError, match=r".*`coordinates_list` must be of shape.*"):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list[:, :2],
-            coordinate_resolution=1,
-            coordinate_units="mpp",
+            slide_shape,
         )
 
     # Test for put of range min_mask_ratio
     with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,
-            coordinate_resolution=1.0,
-            coordinate_units="mpp",
+            slide_shape,
             min_mask_ratio=-0.5,
         )
     with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
-        PatchExtractor.filter_coordinates_fast(
+        PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,
-            coordinate_resolution=1.0,
-            coordinate_units="mpp",
+            slide_shape,
             min_mask_ratio=1.1,
         )
 
 
-def test_mask_based_patch_extractor_ndpi(sample_ndpi):
+def test_mask_based_patch_extractor_ndpi(sample_ndpi, caplog):
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
     patch_size = stride = (400, 400)
@@ -529,7 +495,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Generating a test mask to read patches from
     mask_dim = (int(slide_dimensions[0] / 10), int(slide_dimensions[1] / 10))
-    wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
+    wsi_mask = np.zeros(mask_dim[::-1], dtype=np.uint8)  # reverse as dims are (w, h)
     # masking two column to extract patch from
     wsi_mask[:, :2] = 255
 
@@ -558,7 +524,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
     assert patches[0].shape == (patch_size[0], patch_size[1], 3)
 
     # Test None option for mask
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=input_img,
         input_mask=None,
         method_name="slidingwindow",
@@ -570,7 +536,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Test passing a VirtualWSI for mask
     mask_wsi = VirtualWSIReader(wsi_mask, info=wsi._m_info, mode="bool")
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=wsi,
         input_mask=mask_wsi,
         method_name="slidingwindow",
@@ -581,7 +547,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
     )
 
     # Test `otsu` option for mask
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=input_img,
         input_mask="otsu",
         method_name="slidingwindow",
@@ -591,7 +557,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
         stride=stride,
     )
 
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=wsi_mask,  # a numpy array to build VirtualSlideReader
         input_mask="morphological",
         method_name="slidingwindow",
@@ -603,13 +569,14 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Test passing an empty mask
     wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
-    with pytest.warns(UserWarning, match=".*No candidate coordinates left.*"):
-        _ = patchextraction.get_patch_extractor(
-            input_img=input_img,
-            input_mask=wsi_mask,
-            method_name="slidingwindow",
-            patch_size=patch_size,
-            resolution=res,
-            units="level",
-            stride=stride,
-        )
+
+    _ = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=wsi_mask,
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+    assert "No candidate coordinates left" in caplog.text
