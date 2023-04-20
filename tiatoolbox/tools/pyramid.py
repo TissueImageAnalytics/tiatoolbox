@@ -12,7 +12,6 @@ to disk.
 
 import tarfile
 import time
-import warnings
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -22,6 +21,7 @@ import defusedxml
 import numpy as np
 from PIL import Image
 
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.annotation.storage import AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
@@ -198,7 +198,7 @@ class TilePyramidGenerator:
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
         baseline_y = (y * self.tile_size * scale) - (self.overlap * scale)
         output_size = [self.output_tile_size] * 2
-        coord = [int(baseline_x), int(baseline_y)]
+        coord = (int(baseline_x), int(baseline_y))
         if level < self.sub_tile_level_count:
             output_size = self.output_tile_size // 2 ** (
                 self.sub_tile_level_count - level
@@ -211,17 +211,18 @@ class TilePyramidGenerator:
         if all(slide_dimensions < [baseline_x, baseline_y]):
             raise IndexError
 
-        # Don't print out any warnings about interpolation etc.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            tile = self.wsi.read_rect(
-                coord,
-                size=[v * res for v in output_size],
-                resolution=res / scale,
-                units="baseline",
-                pad_mode=pad_mode,
-                interpolation=interpolation,
-            )
+        # Don't print out multiple warnings about interpolation etc.
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
+        tile = self.wsi.read_rect(
+            coord,
+            size=[v * res for v in output_size],
+            resolution=res / scale,
+            units="baseline",
+            pad_mode=pad_mode,
+            interpolation=interpolation,
+        )
+        logger.removeFilter(duplicate_filter)
         return Image.fromarray(tile)
 
     def tile_path(self, level: int, x: int, y: int) -> Path:
@@ -582,7 +583,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         """
         if pad_mode is not None or interpolation is not None:
-            warnings.warn(
+            logger.warning(
                 "interpolation, pad_mode are unused by AnnotationTileGenerator",
                 stacklevel=2,
             )
