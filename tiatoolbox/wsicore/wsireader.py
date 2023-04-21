@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import math
 import os
 import pathlib
 import re
-import warnings
 from datetime import datetime
 from numbers import Number
 from typing import Iterable, List, Optional, Tuple, Union
@@ -18,9 +18,10 @@ import pandas as pd
 import tifffile
 import zarr
 from defusedxml import ElementTree
+from packaging.version import Version
 from PIL import Image
 
-from tiatoolbox import utils
+from tiatoolbox import logger, utils
 from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
@@ -35,6 +36,8 @@ IntPair = Tuple[int, int]
 Bounds = Tuple[Number, Number, Number, Number]
 IntBounds = Tuple[int, int, int, int]
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+MIN_NGFF_VERSION = Version("0.4")
+MAX_NGFF_VERSION = Version("0.4")
 
 
 def is_dicom(path: pathlib.Path) -> bool:
@@ -96,7 +99,11 @@ def is_zarr(path: pathlib.Path) -> bool:
         return False
 
 
-def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
+def is_ngff(
+    path: pathlib.Path,
+    min_version: Version = MIN_NGFF_VERSION,
+    max_version: Version = MAX_NGFF_VERSION,
+) -> bool:
     """Check if the input is a NGFF file.
 
     Args:
@@ -128,18 +135,61 @@ def is_ngff(path: pathlib.Path, min_version: Tuple[int, ...] = (0, 4)) -> bool:
                 all(isinstance(m, dict) for m in multiscales),
             ]
         ):
+            logger.warning(
+                "The NGFF file is not valid. "
+                "The multiscales, _ARRAY_DIMENSIONS and omero attributes "
+                "must be present and of the correct type."
+            )
             return False
     except KeyError:
         return False
-    multiscales_versions = tuple(
-        tuple(int(part) for part in scale.get("version", "").split("."))
-        for scale in multiscales
-    )
-    omero_version = tuple(int(part) for part in omero.get("version", "").split("."))
+    multiscales_versions = {
+        Version(scale["version"]) for scale in multiscales if "version" in scale
+    }
+    omero_version: Optional[str] = omero.get("version")
+    if omero_version:
+        omero_version: Version = Version(omero_version)
+        if omero_version < min_version:
+            logger.warning(
+                "The minimum supported version of the NGFF file is %s. "
+                "But the versions of the multiscales in the file are %s.",
+                min_version,
+                multiscales_versions,
+            )
+            return False
+        if omero_version > max_version:
+            logger.warning(
+                "The maximum supported version of the NGFF file is %s. "
+                "But the versions of the multiscales in the file are %s.",
+                max_version,
+                multiscales_versions,
+            )
+            return True
+
+    if len(multiscales_versions) > 1:
+        logger.warning(
+            "Found multiple versions for NGFF multiscales: %s",
+            multiscales_versions,
+        )
+
     if any(version < min_version for version in multiscales_versions):
+        logger.warning(
+            "The minimum supported version of the NGFF file is %s. "
+            "But the versions of the multiscales in the file are %s.",
+            min_version,
+            multiscales_versions,
+        )
         return False
-    if omero_version < min_version:
-        return False
+
+    if any(version > max_version for version in multiscales_versions):
+        logger.warning(
+            "The maximum supported version of the NGFF file is %s. "
+            "But the versions of the multiscales in the file are %s.",
+            max_version,
+            multiscales_versions,
+        )
+        return True
+
     return is_zarr(path)
 
 
@@ -421,12 +471,11 @@ class WSIReader:
 
         # Check for requested resolution > than baseline resolution
         if any(np.array(scale) > 1):
-            warnings.warn(
+            logger.warning(
                 "Read: Scale > 1."
                 "This means that the desired resolution is higher"
                 " than the WSI baseline (maximum encoded resolution)."
                 " Interpolation of read regions may occur.",
-                stacklevel=2,
             )
         return level, scale
 
@@ -841,12 +890,10 @@ class WSIReader:
         )
         out_res = output_dict[output_unit] if output_unit is not None else output_dict
         if out_res is None:
-            warnings.warn(
+            logger.warning(
                 "Although unit conversion from input_unit has been done, the requested "
                 "output_unit is returned as None. Probably due to missing 'mpp' or "
                 "'objective_power' in slide's meta data.",
-                UserWarning,
-                stacklevel=2,
             )
         return out_res
 
@@ -864,7 +911,7 @@ class WSIReader:
             level = np.log2(rescale)
             if not level.is_integer():
                 raise ValueError
-            level = np.int_(level)
+            level = np.int(level)
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
         # Raise index error if desired pyramid level not embedded
@@ -872,24 +919,20 @@ class WSIReader:
         except IndexError:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
-            rescale = np.int_(rescale)
-            warnings.warn(
-                "Reading WSI at level 0. Desired tile_objective_value"
-                + str(tile_objective_value)
-                + "not available.",
-                UserWarning,
-                stacklevel=2,
+            rescale = np.int(rescale)
+            logger.warning(
+                "Reading WSI at level 0. Desired tile_objective_value %s "
+                "not available.",
+                str(tile_objective_value),
             )
         except ValueError:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
-            warnings.warn(
-                "Reading WSI at level 0. Reading at tile_objective_value"
-                + str(tile_objective_value)
-                + "not allowed.",
-                UserWarning,
-                stacklevel=2,
+            logger.warning(
+                "Reading WSI at level 0. Reading at tile_objective_value %s "
+                "not allowed.",
+                str(tile_objective_value),
             )
             tile_objective_value = self.info.objective_power
 
@@ -1335,11 +1378,11 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: Union[str, pathlib.Path],
-        tile_objective_value: int,
-        tile_read_size: Tuple[int, int],
+        output_dir: Union[str, pathlib.Path] = "tiles",
+        tile_objective_value: int = 20,
+        tile_read_size: Tuple[int, int] = (5000, 5000),
         tile_format: str = ".jpg",
-        verbose: bool = True,
+        verbose: bool = False,
     ) -> None:
         """Generate image tiles from whole slide images.
 
@@ -1347,13 +1390,13 @@ class WSIReader:
             output_dir(str or :obj:`pathlib.Path`):
                 Output directory to save the tiles.
             tile_objective_value (int):
-                Objective value at which tile is generated.
+                Objective value at which tile is generated, default = 20
             tile_read_size (tuple(int)):
-                Tile (width, height).
+                Tile (width, height), default = (5000, 5000).
             tile_format (str):
-                File format to save image tiles, defaults to ".jpg".
+                File format to save image tiles, defaults = ".jpg".
             verbose (bool):
-                Print output, default to True.
+                Print output, default=False
 
         Examples:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -1367,6 +1410,12 @@ class WSIReader:
             >>> slide_param = wsi.info
 
         """
+
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+
+        logger.debug("Processing %s.", self.input_path.name)
+
         output_dir = pathlib.Path(output_dir, self.input_path.name)
 
         level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
@@ -1379,7 +1428,6 @@ class WSIReader:
         tile_h = tile_read_size[1]
         tile_w = tile_read_size[0]
 
-        iter_tot = 0
         output_dir = pathlib.Path(output_dir)
         output_dir.mkdir(parents=True)
         data = []
@@ -1401,26 +1449,17 @@ class WSIReader:
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
-            if verbose:
-                format_str = (
-                    "Tile%d:  start_w:%d, end_w:%d, "
-                    "start_h:%d, end_h:%d, "
-                    "width:%d, height:%d"
-                )
-
-                print(
-                    format_str
-                    % (
-                        iter_tot,
-                        start_w,
-                        end_w,
-                        start_h,
-                        end_h,
-                        end_w - start_w,
-                        end_h - start_h,
-                    ),
-                    flush=True,
-                )
+            logger.debug(
+                "Tile %d:  start_w: %d, end_w: %d, start_h: %d, end_h: %d, "
+                "width: %d, height: %d",
+                iter_tot,
+                start_w,
+                end_w,
+                start_h,
+                end_h,
+                end_w - start_w,
+                end_h - start_h,
+            )
 
             # Rescale to the correct objective value
             if rescale != 1:
@@ -1474,6 +1513,9 @@ class WSIReader:
         utils.misc.imwrite(
             output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
         )
+
+        if verbose:
+            logger.setLevel(logging.INFO)
 
 
 class OpenSlideWSIReader(WSIReader):
@@ -1946,16 +1988,13 @@ class OpenSlideWSIReader(WSIReader):
             mpp_x = utils.misc.ppu2mpp(x_res, tiff_res_units)
             mpp_y = utils.misc.ppu2mpp(y_res, tiff_res_units)
 
-            warnings.warn(
+            logger.warning(
                 "Metadata: Falling back to TIFF resolution tag"
-                " for microns-per-pixel (MPP).",
-                stacklevel=2,
+                " for microns-per-pixel (MPP)."
             )
             return mpp_x, mpp_y
         except KeyError:
-            warnings.warn(
-                "Metadata: Unable to determine microns-per-pixel (MPP).", stacklevel=2
-            )
+            logger.warning("Metadata: Unable to determine microns-per-pixel (MPP).")
 
         # Return None value if metadata cannot be determined.
         return None
@@ -1988,14 +2027,11 @@ class OpenSlideWSIReader(WSIReader):
                 objective_power = utils.misc.mpp2common_objective_power(
                     float(np.mean(mpp))
                 )
-                warnings.warn(
+                logger.warning(
                     "Metadata: Objective power inferred from microns-per-pixel (MPP).",
-                    stacklevel=2,
                 )
             else:
-                warnings.warn(
-                    "Metadata: Unable to determine objective power.", stacklevel=2
-                )
+                logger.warning("Metadata: Unable to determine objective power.")
 
         return WSIMeta(
             file_path=self.input_path,
@@ -2449,7 +2485,7 @@ class OmnyxJP2WSIReader(WSIReader):
         box = glymur_wsi.box
         description = box[3].xml.find("description")
         matches = re.search(r"(?<=AppMag = )\d\d", description.text)
-        objective_power = np.int_(matches[0])
+        objective_power = np.int(matches[0])
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
 
@@ -2460,10 +2496,9 @@ class OmnyxJP2WSIReader(WSIReader):
                 cod = segment
 
         if cod is None:
-            warnings.warn(
+            logger.warning(
                 "Metadata: JP2 codestream missing COD segment! "
-                "Cannot determine number of decompositions (levels)",
-                stacklevel=2,
+                "Cannot determine number of decompositions (levels)"
             )
             level_count = 1
         else:
@@ -3312,9 +3347,7 @@ class TIFFWSIReader(WSIReader):
         if mppx is not None and mppy is not None:
             return [mppx, mppy]
         if mppx is not None or mppy is not None:
-            warnings.warn(
-                "Only one MPP value found. Using it for both X  and Y.", stacklevel=2
-            )
+            logger.warning("Only one MPP value found. Using it for both X  and Y.")
             return [mppx or mppy] * 2
 
         return None
@@ -3831,7 +3864,7 @@ class DICOMWSIReader(WSIReader):
             )
             for level in self.wsi.levels
         ]
-        dataset = self.wsi.base_level.datasets[0]
+        dataset = self.wsi.levels.base_level.datasets[0]
         # Get pixel spacing in mm from DICOM file and convert to um/px (mpp)
         mm_per_pixel = dataset.pixel_spacing
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
@@ -4072,7 +4105,8 @@ class DICOMWSIReader(WSIReader):
         _, constrained_read_size = utils.transforms.bounds2locsize(
             constrained_read_bounds
         )
-        im_region = wsi.read_region(location, read_level, constrained_read_size)
+        dicom_level = wsi.levels[read_level].level
+        im_region = wsi.read_region(location, dicom_level, constrained_read_size)
         im_region = np.array(im_region)
 
         # Apply padding outside the slide area
@@ -4246,8 +4280,9 @@ class DICOMWSIReader(WSIReader):
             level_location, size_at_read_level, level_size
         )
         _, read_size = utils.transforms.bounds2locsize(read_bounds)
+        dicom_level = wsi.levels[read_level].level
         im_region = wsi.read_region(
-            location=location_at_baseline, level=read_level, size=read_size
+            location=location_at_baseline, level=dicom_level, size=read_size
         )
         im_region = np.array(im_region)
 
@@ -4371,10 +4406,8 @@ class NGFFWSIReader(WSIReader):
         # Check the units,
         # Currently only handle micrometer units
         if x.unit != y.unit != "micrometer":
-            warnings.warn(
-                f"Expected units of micrometer, got {x.unit} and {y.unit}",
-                UserWarning,
-                stacklevel=2,
+            logger.warning(
+                "Expected units of micrometer, got %s and %s", x.unit, y.unit
             )
             return None
 

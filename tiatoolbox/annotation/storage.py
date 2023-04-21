@@ -32,7 +32,6 @@ import sqlite3
 import sys
 import tempfile
 import uuid
-import warnings
 import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -66,7 +65,7 @@ from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
 import tiatoolbox
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
@@ -151,6 +150,15 @@ class Annotation:
 
 class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
+
+    def __new__(cls, *args, **kwargs):
+        """Return an instance of a subclass of AnnotationStore."""
+        if cls is AnnotationStore:
+            raise TypeError(
+                "AnnotationStore is an abstract class and cannot be instantiated."
+                " Use a subclass such as DictionaryStore or SQLiteStore instead."
+            )
+        return super().__new__(cls)
 
     @staticmethod
     def _is_right_angle(a, b, c) -> bool:
@@ -828,10 +836,10 @@ class AnnotationStore(ABC, MutableMapping):
                     A list of bounding boxes for each Annotation.
 
             Example:
-                >>> from tiatoolbox.annotation.storage import AnnotationStore
+                >>> from tiatoolbox.annotation.storage import DictionaryStore
                 >>> from shapely.geometry import Polygon
-                >>> store = AnnotationStore()
-                >>> store.add(
+                >>> store = DictionaryStore()
+                >>> store.append(
                 ...     Annotation(
                 ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
                 ...         properties={"class": 42},
@@ -850,7 +858,8 @@ class AnnotationStore(ABC, MutableMapping):
             key: annotation.geometry.bounds
             for key, annotation in self.items()
             if (
-                Polygon.from_bounds(*annotation.geometry.bounds).intersects(
+                query_geometry is None
+                or Polygon.from_bounds(*annotation.geometry.bounds).intersects(
                     Polygon.from_bounds(*query_geometry.bounds)
                 )
                 and self._eval_where(where, annotation.properties)
@@ -915,29 +924,29 @@ class AnnotationStore(ABC, MutableMapping):
 
         Examples:
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import DictionaryStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = DictionaryStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("*", unique=False)
             ... {'foo': {'class': 42}}
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import DictionaryStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = DictionaryStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42}
             >>> annotation =  Annotation(Point(1, 1), {"class": 123})
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42, 123}
 
@@ -1975,7 +1984,7 @@ class SQLiteStore(AnnotationStore):
                 "EXPLAIN QUERY PLAN " + query_string, query_parameters
             ).fetchone()
             if "USING INDEX" not in query_plan[-1]:
-                warnings.warn(
+                logger.warning(
                     "Query is not using an index. "
                     "Consider adding an index to improve performance.",
                     stacklevel=2,
@@ -2151,10 +2160,10 @@ class SQLiteStore(AnnotationStore):
                 A list of bounding boxes for each Annotation.
 
         Example:
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Polygon
-            >>> store = AnnotationStore()
-            >>> store.add(
+            >>> store = SQLiteStore()
+            >>> store.append(
             ...     Annotation(
             ...         geometry=Polygon.from_bounds(0, 0, 1, 1),
             ...         properties={"class": 42},
@@ -2406,29 +2415,29 @@ class SQLiteStore(AnnotationStore):
 
         Examples:
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = SQLiteStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("*", unique=False)
             ... {'foo': {'class': 42}}
 
-            >>> from tiatoolbox.annotation.storage import AnnotationStore
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Point
-            >>> store = AnnotationStore()
+            >>> store = SQLiteStore()
             >>> annotation =  Annotation(
             ...     geometry=Point(0, 0),
             ...     properties={"class": 42},
             ... )
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42}
             >>> annotation =  Annotation(Point(1, 1), {"class": 123})
-            >>> store.add(annotation, "foo")
+            >>> store.append(annotation, "foo")
             >>> store.pquery("props['class']")
             ... {42, 123}
 
@@ -2642,7 +2651,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
-        xy = dict(zip("xy", np.array(geometry.centroid)))
+        xy = dict(zip("xy", np.array(geometry.centroid.coords[0])))
         query_parameters = dict(
             **bounds,
             **xy,
@@ -2758,7 +2767,7 @@ class SQLiteStore(AnnotationStore):
             }
             for key, annotation in self.items()
         )
-        df = df.append(pd.json_normalize(df_rows))
+        df = pd.concat([df, pd.json_normalize(df_rows)])
         return df.set_index("key")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
@@ -2949,7 +2958,7 @@ class DictionaryStore(AnnotationStore):
 
     def commit(self) -> None:
         if str(self.connection) == ":memory:":
-            warnings.warn("In-memory store. Nothing to commit.", stacklevel=2)
+            logger.warning("In-memory store. Nothing to commit.", stacklevel=2)
             return
         if not self.path.exists():
             self.path.touch()
@@ -2962,8 +2971,9 @@ class DictionaryStore(AnnotationStore):
         return self.to_ndjson()
 
     def close(self) -> None:
-        warnings.simplefilter("ignore")
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         # Try to commit any changes if the file is still open.
         with contextlib.suppress(ValueError):
             self.commit()
-        warnings.resetwarnings()
+        logger.removeFilter(duplicate_filter)

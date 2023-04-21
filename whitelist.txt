@@ -20,6 +20,7 @@ Dataloader
 Dataset
 Datasets
 Delaunay
+E0110
 E1120
 FCN
 GPL
@@ -40,6 +41,7 @@ Nx4
 NxM
 NxN
 OME
+Omero
 Omnyx
 OpenCV
 Otsu's
@@ -127,8 +129,10 @@ macports
 memray
 mpp
 mse
+multiscales
 natively
 ndarray
+ngff
 nn
 noinspection
 normalizer

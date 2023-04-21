@@ -271,11 +271,11 @@ def test_sqlite_create_index_no_analyze(fill_store, tmp_path):
     assert "test_index" in store.indexes()
 
 
-def test_sqlite_pquery_warn_no_index(fill_store):
+def test_sqlite_pquery_warn_no_index(fill_store, caplog):
     """Test that querying without an index warns."""
     _, store = fill_store(SQLiteStore, ":memory:")
-    with pytest.warns(UserWarning, match="index"):
-        store.pquery("*", unique=False)
+    store.pquery("*", unique=False)
+    assert "Query is not using an index." in caplog.text
     # Check that there is no warning after creating the index
     store.create_index("test_index", "props['class']")
     with pytest.warns(None) as record:
@@ -511,6 +511,12 @@ def test_auto_commit(fill_store, tmp_path):
     store.close()
     store = SQLiteStore(tmp_path / "polygon2.db")
     assert len(store) == 2  # check explicitly committing works
+
+
+def test_init_base_class_exception():
+    """Test that the base class cannot be initialized."""
+    with pytest.raises(TypeError, match="abstract class"):
+        AnnotationStore()  # skipcq: PYL-E0110
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
@@ -1635,3 +1641,13 @@ class TestStore:
         with open(path, "w") as fh:
             store_cls._connection_to_path(fh)
             assert path == Path(fh.name)
+
+    @staticmethod
+    def test_bquery_only_where(store_cls):
+        """Test that bquery when only a where predicate is given.
+
+        This simply checks for no exceptions raised about None values.
+
+        """
+        store = store_cls()
+        assert store.bquery(where="props['foo'] == 'bar'") == {}

@@ -25,17 +25,34 @@ import logging
 # logging
 logging.captureWarnings(True)
 if not logging.getLogger().hasHandlers():
-    handler = logging.StreamHandler()
     formatter = logging.Formatter(
         "|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d|%H:%M:%S",
     )
-    handler.setFormatter(formatter)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(formatter)
+    stdout_handler.addFilter(lambda record: record.levelno <= logging.INFO)
+
+    stderr_handler = logging.StreamHandler()
+    stderr_handler.setFormatter(formatter)
+    stderr_handler.setLevel(logging.WARNING)
+
     logger = logging.getLogger()  # get root logger
     logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+    logger.addHandler(stdout_handler)
+    logger.addHandler(stderr_handler)
 else:
     logger = logging.getLogger()
+
+
+class DuplicateFilter(logging.Filter):
+    def filter(self, record):
+        current_log = (record.module, record.levelno, record.msg)
+        if current_log != getattr(self, "last_log", None):
+            self.last_log = current_log
+            return True
+        return False
+
 
 # runtime context parameters
 rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}

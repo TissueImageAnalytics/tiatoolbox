@@ -59,9 +59,10 @@ def main(files: List[Path]) -> None:
         )
         if not changed:
             continue
+        print("Formatting notebook", path)
         with open(path, "w") as fh:
-            json.dump(formatted_notebook, fh, indent=2)
-            print("Formatting notebook", path)
+            json.dump(formatted_notebook, fh, indent=1, ensure_ascii=False)
+            fh.write("\n")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,15 @@
 """Tests for reading whole-slide images."""
 
+import copy
 import json
+import logging
 import os
 import pathlib
 import random
 import re
 import shutil
 from copy import deepcopy
+from pathlib import Path
 from time import time
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
@@ -17,6 +20,7 @@ import numpy as np
 import pytest
 import zarr
 from click.testing import CliRunner
+from packaging.version import Version
 from skimage.filters import threshold_otsu
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.morphology import binary_dilation, disk, remove_small_objects
@@ -29,7 +33,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
-from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore import WSIReader, wsireader
 from tiatoolbox.wsicore.wsireader import (
     AnnotationStoreReader,
     ArrayView,
@@ -39,7 +43,6 @@ from tiatoolbox.wsicore.wsireader import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
-    WSIReader,
     is_ngff,
     is_zarr,
 )
@@ -405,6 +408,7 @@ def test_relative_level_scales_level_too_high(sample_svs):
 
 def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     sample_ndpi,
+    caplog,
 ):
     """Test finding optimal level for mpp read with scale > 1.
 
@@ -413,11 +417,16 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
 
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
-    with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    assert (
+        "Read: Scale > 1.This means that the desired resolution is higher"
+        in caplog.text
+    )
 
 
-def test_find_optimal_level_and_downsample_jp2_interpolation_warning(sample_jp2):
+def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
+    sample_jp2, caplog
+):
     """Test finding optimal level for mpp read with scale > 1.
 
     This tests the case where the scale is found to be > 1 and interpolation
@@ -425,8 +434,11 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(sample_jp2)
 
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
-    with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    assert (
+        "Read: Scale > 1.This means that the desired resolution is higher"
+        in caplog.text
+    )
 
 
 def test_find_optimal_level_and_downsample_mpp(sample_ndpi):
@@ -481,7 +493,7 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-def test_convert_resolution_units(sample_ndpi):
+def test_convert_resolution_units(sample_ndpi, caplog):
     """Test the resolution unit conversion code."""
     wsi = wsireader.WSIReader.open(sample_ndpi)
 
@@ -538,8 +550,8 @@ def test_convert_resolution_units(sample_ndpi):
     _info.mpp = None
     wsi._m_info = _info
     _ = wsi.convert_resolution_units(0, input_unit="baseline")
-    with pytest.warns(UserWarning, match=r".*output_unit is returned as None.*"):
-        _ = wsi.convert_resolution_units(0, input_unit="level", output_unit="mpp")
+    _ = wsi.convert_resolution_units(0, input_unit="level", output_unit="mpp")
+    assert "output_unit is returned as None." in caplog.text
 
 
 def test_find_read_rect_params_power(sample_ndpi):
@@ -937,7 +949,7 @@ def test_wsireader_save_tiles(sample_svs, tmp_path):
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
     wsi.save_tiles(
-        output_dir=str(tmp_path / ("test_wsireader_save_tiles")),
+        output_dir=str(tmp_path / "test_wsireader_save_tiles"),
         tile_objective_value=5,
         tile_read_size=(5000, 5000),
         verbose=True,
@@ -973,18 +985,17 @@ def test_incompatible_objective_value(sample_svs, tmp_path):
         )
 
 
-def test_incompatible_level(sample_svs, tmp_path):
+def test_incompatible_level(sample_svs, tmp_path, caplog):
     """Test for incompatible objective value."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
-    with pytest.warns(UserWarning):
-        wsi.save_tiles(
-            output_dir=str(
-                pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")
-            ),
-            tile_objective_value=1,
-            tile_read_size=(500, 500),
-            verbose=True,
-        )
+    wsi.save_tiles(
+        output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")),
+        tile_objective_value=1,
+        tile_read_size=(500, 500),
+        verbose=True,
+    )
+
+    assert "Reading at tile_objective_value 1 not allowed" in caplog.text
 
 
 def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
@@ -1008,23 +1019,23 @@ def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
     ).exists()
 
 
-def test_openslide_objective_power_from_mpp(sample_svs):
+def test_openslide_objective_power_from_mpp(sample_svs, caplog):
     """Test OpenSlideWSIReader approximation of objective power from mpp."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
     props = wsi.openslide_wsi._properties
 
     del props["openslide.objective-power"]  # skipcq
-    with pytest.warns(UserWarning, match=r"Objective power inferred"):
-        _ = wsi.info
+    _ = wsi.info
+    assert "Objective power inferred" in caplog.text
 
     del props["openslide.mpp-x"]  # skipcq
     del props["openslide.mpp-y"]  # skipcq
-    with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
-        _ = wsi._info()
+    _ = wsi._info()
+    assert "Unable to determine objective power" in caplog.text
 
 
-def test_openslide_mpp_from_tiff_resolution(sample_svs):
+def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
     """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
@@ -1035,19 +1046,20 @@ def test_openslide_mpp_from_tiff_resolution(sample_svs):
     props["tiff.ResolutionUnit"] = "centimeter"
     props["tiff.XResolution"] = 1e4  # Pixels per cm
     props["tiff.YResolution"] = 1e4  # Pixels per cm
-    with pytest.warns(UserWarning, match=r"Falling back to TIFF resolution"):
-        _ = wsi.info
+    _ = wsi.info
+    assert "Falling back to TIFF resolution" in caplog.text
 
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-def test_virtual_wsi_reader(source_image):
+def test_virtual_wsi_reader(source_image, caplog):
     """Test VirtualWSIReader"""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
-    with pytest.warns(UserWarning, match=r"Unknown scale"):
-        _ = wsi._info()
-    with pytest.warns(UserWarning, match=r"Raw data is None"):
-        _ = wsi._info()
+    _ = wsi._info()
+    assert "Unknown scale" in caplog.text
+
+    _ = wsi._info()
+    assert "Raw data is None" in caplog.text
 
     assert wsi.img.shape == (256, 256, 3)
 
@@ -1417,12 +1429,12 @@ def test_wsireader_open(
     shutil.rmtree(temp_dir)
 
 
-def test_jp2_missing_cod(sample_jp2):
+def test_jp2_missing_cod(sample_jp2, caplog):
     """Test for warning if JP2 is missing COD segment."""
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
     wsi.glymur_wsi.codestream.segment = []
-    with pytest.warns(UserWarning, match="missing COD"):
-        _ = wsi.info
+    _ = wsi.info
+    assert "missing COD" in caplog.text
 
 
 def test_read_rect_at_resolution(sample_wsi_dict):
@@ -1758,7 +1770,9 @@ def test_tiffwsireader_invalid_ome_metadata(sample_ome_tiff, monkeypatch):
         _ = wsi._info()
 
 
-def test_tiffwsireader_ome_metadata_missing_one_mppy(sample_ome_tiff, monkeypatch):
+def test_tiffwsireader_ome_metadata_missing_one_mppy(
+    sample_ome_tiff, monkeypatch, caplog
+):
     """Test no exception raised for missing x/y mpp but warning given."""
     for dim in "XY":
         wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
@@ -1767,8 +1781,8 @@ def test_tiffwsireader_ome_metadata_missing_one_mppy(sample_ome_tiff, monkeypatc
             "description",
             re.sub(f'PhysicalSize{dim}="[^"]*"', "", wsi.tiff.pages[0].description),
         )
-        with pytest.warns(UserWarning, match="Only one MPP"):
-            _ = wsi._info()
+        _ = wsi._info()
+        assert "Only one MPP" in caplog.text
 
 
 def test_arrayview_unsupported_axes():
@@ -1845,7 +1859,8 @@ def test_manual_power_invalid(sample_svs):
 def test_tiled_tiff_openslide(remote_sample):
     """Test reading a tiled TIFF file with OpenSlide."""
     sample_path = remote_sample("tiled-tiff-1-small-jpeg")
-    wsi = wsireader.WSIReader.open(sample_path)
+    # Test with top-level import
+    wsi = WSIReader.open(sample_path)
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
 
@@ -1988,7 +2003,7 @@ def test_store_reader_info_from_base(tmp_path, remote_sample):
     assert store_reader.info.mpp[0] == wsi_reader.info.mpp[0]
 
 
-def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path):
+def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, caplog):
     """Test that mpp is None if scale is not in micrometers."""
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample with a non-micrometer scale
@@ -1999,8 +2014,10 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path):
     zattrs["multiscales"][0]["axes"][0]["unit"] = "foo"
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    with pytest.warns(UserWarning, match="micrometer"):
-        wsi = wsireader.NGFFWSIReader(sample_copy)
+
+    wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert "micrometer" in caplog.text
+
     assert wsi.info.mpp is None
 
 
@@ -2034,11 +2051,11 @@ def test_ngff_empty_datasets_mpp(tmp_path):
     assert wsi.info.mpp is None
 
 
-def test_nff_no_scale_transforms_mpp(tmp_path):
+def test_ngff_no_scale_transforms_mpp(tmp_path):
     """Test that mpp is None if no scale transforms are present."""
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample with no axes
-    sample_copy = tmp_path / "ngff-1"
+    sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
     with open(sample_copy / ".zattrs", "r") as fh:
         zattrs = json.load(fh)
@@ -2049,6 +2066,176 @@ def test_nff_no_scale_transforms_mpp(tmp_path):
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
+
+
+def test_ngff_missing_omero_version(tmp_path):
+    """Test that the reader can handle missing omero version."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Remove the omero version
+    del zattrs["omero"]["version"]
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsireader.WSIReader.open(sample_copy)
+
+
+def test_ngff_missing_multiscales_returns_false(tmp_path):
+    """Test that missing multiscales key returns False for is_ngff."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Remove the multiscales key
+    del zattrs["multiscales"]
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    assert not wsireader.is_ngff(sample_copy)
+
+
+def test_ngff_wrong_format_metadata(tmp_path, caplog):
+    """Test that is_ngff is False and logs a warning if metadata is wrong."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["multiscales"] = "foo"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with caplog.at_level(logging.WARNING):
+        assert not wsireader.is_ngff(sample_copy)
+    assert "must be present and of the correct type" in caplog.text
+
+
+def test_ngff_omero_below_min_version(tmp_path):
+    """Test for FileNotSupported when omero version is below minimum."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["omero"]["version"] = "0.0"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with pytest.raises(FileNotSupported):
+        wsireader.WSIReader.open(sample_copy)
+
+
+def test_ngff_omero_above_max_version(tmp_path, caplog):
+    """Test for FileNotSupported when omero version is above maximum."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["omero"]["version"] = "10.0"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    # Check that the warning is logged
+    with caplog.at_level(logging.WARNING):
+        wsireader.WSIReader.open(sample_copy)
+    assert "maximum supported version" in caplog.text
+
+
+def test_ngff_multiscales_below_min_version(tmp_path):
+    """Test for FileNotSupported when multiscales version is below minimum."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["multiscales"][0]["version"] = "0.0"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    with pytest.raises(FileNotSupported):
+        wsireader.WSIReader.open(sample_copy)
+
+
+def test_ngff_multiscales_above_max_version(tmp_path, caplog):
+    """Test for FileNotSupported when multiscales version is above maximum."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Change the format to something else
+    zattrs["multiscales"][0]["version"] = "10.0"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    # Check that the warning is logged
+    with caplog.at_level(logging.WARNING):
+        wsireader.WSIReader.open(sample_copy)
+    assert "maximum supported version" in caplog.text
+
+
+def test_ngff_non_numeric_version(tmp_path, monkeypatch):
+    """Test that the reader can handle non-numeric omero versions."""
+
+    # Patch the is_ngff function to change the min/max version
+    if_ngff = wsireader.is_ngff  # noqa: F841
+    min_version = Version("0.4")
+    max_version = Version("0.5")
+
+    def patched_is_ngff(
+        path: Path,
+        min_version: Version = min_version,
+        max_version: Version = max_version,
+    ) -> bool:
+        """Patched is_ngff function with new min/max version."""
+        return is_ngff(path, min_version, max_version)
+
+    monkeypatch.setattr(wsireader, "is_ngff", patched_is_ngff)
+
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Set the omero version to a non-numeric string
+    zattrs["omero"]["version"] = "0.5-dev"
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    wsireader.WSIReader.open(sample_copy)
+
+
+def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
+    """Test that the reader logs a warning inconsistent multiscales versions."""
+    sample = _fetch_remote_sample("ngff-1")
+    # Create a copy of the sample
+    sample_copy = tmp_path / "ngff-1.zarr"
+    shutil.copytree(sample, sample_copy)
+    with open(sample_copy / ".zattrs", "r") as fh:
+        zattrs = json.load(fh)
+    # Set the versions to be inconsistent
+    multiscales = zattrs["multiscales"]
+    # Needs at least 2 multiscales to be inconsistent
+    if len(multiscales) < 2:
+        multiscales.append(copy.deepcopy(multiscales[0]))
+    for i, _ in enumerate(multiscales):
+        multiscales[i]["version"] = f"0.{i}-dev"
+    zattrs["omero"]["multiscales"] = multiscales
+    with open(sample_copy / ".zattrs", "w") as fh:
+        json.dump(zattrs, fh, indent=2)
+    # Capture logger output to check for warning
+    with caplog.at_level(logging.WARNING), pytest.raises(FileNotSupported):
+        wsireader.WSIReader.open(sample_copy)
+    assert "multiple versions" in caplog.text
 
 
 class TestReader:

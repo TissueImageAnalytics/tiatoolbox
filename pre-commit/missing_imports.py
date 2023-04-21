@@ -33,11 +33,11 @@ KNOWN_ALIASES = {
 }
 
 REQUIREMENTS_FILES = (
-    "requirements.txt",
-    "requirements_dev.txt",
-    "requirements.conda.yml",
-    "requirements.dev.conda.yml",
-    "requirements.win64.conda.yml",
+    "requirements/requirements.txt",
+    "requirements/requirements_dev.txt",
+    "requirements/requirements.conda.yml",
+    "requirements/requirements.dev.conda.yml",
+    "requirements/requirements.win64.conda.yml",
     "setup.py",
 )
 
