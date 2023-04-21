@@ -1410,7 +1410,6 @@ class WSIReader:
             >>> slide_param = wsi.info
 
         """
-
         if verbose:
             logger.setLevel(logging.DEBUG)
 

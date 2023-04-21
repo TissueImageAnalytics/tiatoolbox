@@ -2189,7 +2189,6 @@ def test_ngff_multiscales_above_max_version(tmp_path, caplog):
 
 def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     """Test that the reader can handle non-numeric omero versions."""
-
     # Patch the is_ngff function to change the min/max version
     if_ngff = wsireader.is_ngff  # noqa: F841
     min_version = Version("0.4")
