@@ -1994,8 +1994,12 @@ def test_store_reader_no_types(tmp_path, remote_sample):
 
 
 def test_store_reader_info_from_base(tmp_path, remote_sample):
-    """Test that AnnotationStoreReader will correctly get metadata
-    from a provided base_wsi if the store has no wsi metadata."""
+    """Test AnnotationStoreReader with no wsi metadata.
+
+    Test that AnnotationStoreReader will correctly get metadata
+    from a provided base_wsi if the store has no wsi metadata.
+
+    """
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     store_reader = AnnotationStoreReader(tmp_path / "store.db", base_wsi=wsi_reader)
@@ -2185,7 +2189,6 @@ def test_ngff_multiscales_above_max_version(tmp_path, caplog):
 
 def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     """Test that the reader can handle non-numeric omero versions."""
-
     # Patch the is_ngff function to change the min/max version
     if_ngff = wsireader.is_ngff  # noqa: F841
     min_version = Version("0.4")
