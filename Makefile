@@ -84,3 +84,6 @@ dist: clean ## builds source and wheel package
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+update-notebook-urls: # Recursively update the notebook URLs in ./examples
+	find ./examples -name "*.ipynb" | sort | xargs python pre-commit/notebook_urls.py
