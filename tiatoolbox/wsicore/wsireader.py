@@ -4386,21 +4386,19 @@ class NGFFWSIReader(WSIReader):
                 name=attrs.get("name"),
                 version=attrs.get("version"),
             ),
-            multiscales=[
-                ngff.Multiscales(
-                    version=multiscales.get("version"),
-                    axes=[ngff.Axis(**axis) for axis in axes],
-                    datasets=[
-                        ngff.Dataset(
-                            path=dataset["path"],
-                            coordinateTransformations=dataset.get(
-                                "coordinateTransformations",
-                            ),
-                        )
-                        for dataset in datasets
-                    ],
-                )
-            ],
+            multiscales=ngff.Multiscales(
+                version=multiscales.get("version"),
+                axes=[ngff.Axis(**axis) for axis in axes],
+                datasets=[
+                    ngff.Dataset(
+                        path=dataset["path"],
+                        coordinateTransformations=dataset.get(
+                            "coordinateTransformations",
+                        ),
+                    )
+                    for dataset in datasets
+                ],
+            ),
             omero=ngff.Omero(
                 name=omero.get("name"),
                 id=omero.get("id"),
