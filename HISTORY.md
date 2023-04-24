@@ -6,7 +6,7 @@
 
 - Removes Python 3.7 support
   - This allows upgrading all the dependencies which were dependent on an older version of Python.
-  - Python 3.11 support will be added later once all the dependencies are supported.
+  - Python 3.11 support will be added later once all the dependencies are supported. #500
 - Adds Neighbourhood Querying Support To AnnotationStore #540
   - This enables easy and efficient querying of annotations within a neighbourhood of other annotations.
 - Adds `MultiTaskSegmentor` engine #424
