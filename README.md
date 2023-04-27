@@ -109,13 +109,13 @@ Prepare a computer as a convenient platform for further development of the Pytho
 ```sh
     $ conda create -n tiatoolbox-dev python=3.8 # select version of your choice
     $ conda activate tiatoolbox-dev
-    $ pip install -r requirements_dev.txt
+    $ pip install -r requirements/requirements_dev.txt
 ```
 
 or
 
 ```sh
-    $ conda env create -f requirements.dev.conda.yml # for linux/mac only.
+    $ conda env create -f requirements/requirements.dev.conda.yml # for linux/mac only.
     $ conda activate tiatoolbox-dev
 ```
 

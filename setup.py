@@ -14,7 +14,7 @@ with open("HISTORY.md") as history_file:
 
 install_requires = [
     line
-    for line in Path("requirements.txt").read_text().splitlines()
+    for line in Path("requirements/requirements.txt").read_text().splitlines()
     if line and line[0] not in ("-", "#")
 ]
 
