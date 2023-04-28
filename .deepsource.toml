@@ -7,7 +7,7 @@ exclude_patterns = ["docs/*.py", "**/__init__.py"]
 [[analyzers]]
 name = "python"
 enabled = true
-dependency_file_paths = ["requirements_dev.txt"]
+dependency_file_paths = ["requirements/requirements_dev.txt"]
 
   [analyzers.meta]
   runtime_version = "3.x.x"

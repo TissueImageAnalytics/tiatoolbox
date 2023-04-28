@@ -3,7 +3,7 @@ include CONTRIBUTING.rst
 include HISTORY.md
 include LICENSE
 include README.md
-include requirements.txt
+include requirements/requirements.txt
 include make.bat
 include Makefile
 include conf.py

@@ -1436,7 +1436,7 @@ def test_from_multi_head_dat(tmp_path):
     assert len(result) == 1
 
 
-def test_invalid_poly(tmp_path):
+def test_invalid_poly(tmp_path, caplog):
     """Test that invalid polygons are dealt with correctly."""
     coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
     poly = Polygon(coords)
@@ -1448,8 +1448,9 @@ def test_invalid_poly(tmp_path):
         "type": 2,
     }
     joblib.dump(data, tmp_path / "test.dat")
-    with pytest.warns(UserWarning, match="Invalid geometry found, fix"):
-        store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+
+    assert "Invalid geometry found, fix" in caplog.text
 
     result = store.query(where="props['type'] == 2")
     assert next(iter(result.values())).geometry.is_valid
