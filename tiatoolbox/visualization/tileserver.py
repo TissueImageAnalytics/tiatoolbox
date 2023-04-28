@@ -9,10 +9,10 @@ import urllib
 from pathlib import Path
 from typing import Dict, List, Union
 
-import matplotlib.cm as cm
 import numpy as np
 from flask import Flask, Response, make_response, request, send_file
 from flask.templating import render_template
+from matplotlib import colormaps
 from PIL import Image
 
 from tiatoolbox import data
@@ -173,7 +173,7 @@ class TileServer(Flask):
         if cmap == "None":
             return None
         if isinstance(cmap, str):
-            return cm.get_cmap(cmap)
+            return colormaps[cmap]
 
         def cmapp(x):
             """Dictionary colormap callable wrapper"""

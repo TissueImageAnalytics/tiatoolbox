@@ -8,7 +8,7 @@ from typing import List, Union
 import joblib
 import numpy as np
 import pytest
-from matplotlib import cm
+from matplotlib import colormaps
 from shapely.geometry import LineString, Polygon
 from shapely.geometry.point import Point
 
@@ -29,10 +29,7 @@ def safe_str(name):
 def setup_app(client):
     client.get("/tileserver/get_user")
     # get the "user" cookie
-    cookie = next(
-        (cookie for cookie in client.cookie_jar if cookie.name == "user"), None
-    )
-    return cookie.value
+    return client.get_cookie("user").value
 
 
 @pytest.fixture(scope="session")
@@ -292,7 +289,7 @@ def test_change_cmap(app):
         assert response.content_type == "text/html; charset=utf-8"
         # check that the colormap has been correctly changed
         layer = app.tia_pyramids["default"]["overlay"]
-        assert layer.renderer.mapper(0.5) == cm.get_cmap("Reds")(0.5)
+        assert layer.renderer.mapper(0.5) == colormaps["Reds"](0.5)
 
         response = client.put("/tileserver/change_cmap/None")
         assert layer.renderer.mapper is None
@@ -482,7 +479,7 @@ def test_secondary_cmap(app):
         layer = app.tia_pyramids["default"]["overlay"]
         assert layer.renderer.secondary_cmap["type"] == "0"
         assert layer.renderer.secondary_cmap["score_prop"] == "prob"
-        assert layer.renderer.secondary_cmap["mapper"](0.5) == cm.get_cmap("Reds")(0.5)
+        assert layer.renderer.secondary_cmap["mapper"](0.5) == colormaps["Reds"](0.5)
 
 
 def test_get_props(app_alt):
