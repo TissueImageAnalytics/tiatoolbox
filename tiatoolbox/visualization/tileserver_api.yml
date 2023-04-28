@@ -72,6 +72,7 @@ paths:
   /tileserver/get_user:
     get:
       summary: Get user information
+      description: Set up new user and generate an identifier for them
       responses:
         '200':
           description: Successful response
@@ -89,6 +90,12 @@ paths:
       responses:
         '200':
           description: Successful response
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: user=your_token_here; HttpOnly
+
 
   /tileserver/change_slide/{slide_path}:
     put:
