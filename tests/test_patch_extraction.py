@@ -267,7 +267,7 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
 
 def test_get_coordinates():
-    """Test get tile cooordinates functionality."""
+    """Test get tile coordinates functionality."""
     expected_output = np.array(
         [
             [0, 0, 4, 4],
@@ -425,7 +425,7 @@ def test_filter_coordinates():
     mask = np.zeros([9, 6])
     mask[0:4, 3:8] = 1  # will flag first 2
     mask_reader = VirtualWSIReader(mask)
-    slide_shape = [6, 9]  # slide shape (w, h) at requested resolution
+    slide_shape = (6, 9)  # slide shape (w, h) at requested resolution
 
     ###############################################
     # Tests for filter_coordinates (new) method
@@ -485,7 +485,7 @@ def test_filter_coordinates():
         )
 
 
-def test_mask_based_patch_extractor_ndpi(sample_ndpi):
+def test_mask_based_patch_extractor_ndpi(sample_ndpi, caplog):
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
     patch_size = stride = (400, 400)
@@ -524,7 +524,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
     assert patches[0].shape == (patch_size[0], patch_size[1], 3)
 
     # Test None option for mask
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=input_img,
         input_mask=None,
         method_name="slidingwindow",
@@ -536,7 +536,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Test passing a VirtualWSI for mask
     mask_wsi = VirtualWSIReader(wsi_mask, info=wsi._m_info, mode="bool")
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=wsi,
         input_mask=mask_wsi,
         method_name="slidingwindow",
@@ -547,7 +547,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
     )
 
     # Test `otsu` option for mask
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=input_img,
         input_mask="otsu",
         method_name="slidingwindow",
@@ -557,7 +557,7 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
         stride=stride,
     )
 
-    patches = patchextraction.get_patch_extractor(
+    _ = patchextraction.get_patch_extractor(
         input_img=wsi_mask,  # a numpy array to build VirtualSlideReader
         input_mask="morphological",
         method_name="slidingwindow",
@@ -569,13 +569,14 @@ def test_mask_based_patch_extractor_ndpi(sample_ndpi):
 
     # Test passing an empty mask
     wsi_mask = np.zeros(mask_dim, dtype=np.uint8)
-    with pytest.warns(UserWarning, match=".*No candidate coordinates left.*"):
-        _ = patchextraction.get_patch_extractor(
-            input_img=input_img,
-            input_mask=wsi_mask,
-            method_name="slidingwindow",
-            patch_size=patch_size,
-            resolution=res,
-            units="level",
-            stride=stride,
-        )
+
+    _ = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=wsi_mask,
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=stride,
+    )
+    assert "No candidate coordinates left" in caplog.text

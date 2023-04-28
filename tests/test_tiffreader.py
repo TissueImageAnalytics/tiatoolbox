@@ -47,7 +47,7 @@ def test_ome_missing_physicalsize(monkeypatch):
     assert wsi.info.mpp is None
 
 
-def test_ome_missing_physicalsizey(monkeypatch):
+def test_ome_missing_physicalsizey(monkeypatch, caplog):
     """Test that an OME-TIFF can be read without physical size."""
     sample = _fetch_remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
@@ -64,8 +64,8 @@ def test_ome_missing_physicalsizey(monkeypatch):
     new_description = ElementTree.tostring(tree, encoding="unicode")
     monkeypatch.setattr(page, "description", new_description)
     monkeypatch.setattr(wsi, "_m_info", None)
-    with pytest.warns(UserWarning):
-        assert pytest.approx(wsi.info.mpp, abs=0.1) == 0.5
+    assert pytest.approx(wsi.info.mpp, abs=0.1) == 0.5
+    assert "Only one MPP value found. Using it for both X  and Y" in caplog.text
 
 
 def test_tiffreader_non_tiled_metadata(monkeypatch):
