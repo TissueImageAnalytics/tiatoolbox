@@ -58,7 +58,7 @@ class IOConfigABC(ABC):
         raise NotImplementedError
 
 
-class EnginesABC(ABC):
+class EngineABC(ABC):
     """Abstract base class for engines used in tiatoolbox."""
 
     def __init__(self):
