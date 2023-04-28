@@ -1785,7 +1785,9 @@ class SQLiteStore(AnnotationStore):
         self.compression_level = self.metadata["compression_level"]
 
         # Register predicate functions as custom SQLite functions
-        def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
+        def wkb_predicate(
+            name: str, wkb_a: bytes, b: bytes, cx: float, cy: float
+        ) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
             a = wkb.loads(wkb_a)
             b = self._unpack_geometry(b, cx, cy)
@@ -1797,7 +1799,7 @@ class SQLiteStore(AnnotationStore):
             properties = json.loads(properties)
             return fn(properties)
 
-        def get_area(wkb_bytes: bytes, cx: int, cy: int) -> float:
+        def get_area(wkb_bytes: bytes, cx: float, cy: float) -> float:
             """Function to get the area of a geometry."""
             return self._unpack_geometry(
                 wkb_bytes,
@@ -1862,11 +1864,11 @@ class SQLiteStore(AnnotationStore):
                 id INTEGER PRIMARY KEY,  -- Integer primary key
                 key TEXT UNIQUE,         -- Unique identifier (UUID)
                 objtype TEXT,            -- Object type
-                cx INTEGER NOT NULL,     -- X of centroid/representative point
-                cy INTEGER NOT NULL,     -- Y of centroid/representative point
+                cx FLOAT NOT NULL,       -- X of centroid/representative point
+                cy FLOAT NOT NULL,       -- Y of centroid/representative point
                 geometry BLOB,           -- Detailed geometry
                 properties TEXT,         -- JSON properties
-                area INTEGER NOT NULL    -- Area (for ordering)
+                area FLOAT NOT NULL      -- Area (for ordering)
             )
 
             """
@@ -1899,7 +1901,9 @@ class SQLiteStore(AnnotationStore):
             return zlib.compress(data, level=self.compression_level)
         raise ValueError("Unsupported compression method.")
 
-    def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
+    def _unpack_geometry(
+        self, data: Union[str, bytes], cx: float, cy: float
+    ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
         For space optimisation, points are stored as centroids and all
@@ -1912,7 +1916,7 @@ class SQLiteStore(AnnotationStore):
                 The WKB/WKT data to be unpacked.
             cx(int):
                 The X coordinate of the centroid/representative point.
-            cy(int):
+            cy(float):
                 The Y coordinate of the centroid/representative point.
 
         Returns:
@@ -2002,15 +2006,15 @@ class SQLiteStore(AnnotationStore):
         return {
             "key": key,
             "geometry": serialised_geometry,
-            "cx": int(geometry.centroid.x),
-            "cy": int(geometry.centroid.y),
+            "cx": geometry.centroid.x,
+            "cy": geometry.centroid.y,
             "min_x": geometry.bounds[0],
             "min_y": geometry.bounds[1],
             "max_x": geometry.bounds[2],
             "max_y": geometry.bounds[3],
             "geom_type": geometry.geom_type,
             "properties": json.dumps(annotation.properties, separators=(",", ":")),
-            "area": int(geometry.area),
+            "area": geometry.area,
         }
 
     def append_many(
