@@ -764,7 +764,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     # test prediction
     predictor = PatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
-        input_imgs=inputs,
+        imgs=inputs,
         return_probabilities=True,
         labels=[1, "a"],
         return_labels=True,

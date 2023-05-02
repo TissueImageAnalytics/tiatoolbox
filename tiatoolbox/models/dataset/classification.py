@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from tiatoolbox.models.dataset import dataset_abc
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import imread
-from tiatoolbox.wsicore.wsireader import Units, VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 
 class _TorchPreprocCaller:
@@ -154,7 +154,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         patch_input_shape: Union[Tuple[int, int], np.ndarray] = None,
         stride_shape: Union[Tuple[int, int], np.ndarray] = None,
         resolution: float = 1,
-        units: Units = "baseline",
+        units: str = "baseline",
         auto_get_mask=True,
         min_mask_ratio=0,
         preproc_func=None,

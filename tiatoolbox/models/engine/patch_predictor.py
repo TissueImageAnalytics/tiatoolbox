@@ -16,7 +16,7 @@ from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDatas
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.misc import save_as_json
-from tiatoolbox.wsicore.wsireader import Units, WSIReader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 class IOPatchPredictorConfig(IOSegmentorConfig):
@@ -758,7 +758,7 @@ class PatchPredictor:
 
     def predict(
         self,
-        input_imgs: List[Union[str, pathlib.Path, np.ndarray, WSIReader]],
+        imgs: List[Union[str, pathlib.Path, np.ndarray, WSIReader]],
         masks: List[Union[str, pathlib.Path, np.ndarray, WSIReader]] = None,
         labels: List = None,
         mode: Literal["patch", "tile", "wsi"] = "patch",
@@ -769,7 +769,7 @@ class PatchPredictor:
         patch_input_shape: Tuple[int, int] = None,
         stride_shape: Tuple[int, int] = None,
         resolution: float = None,
-        units: Units = None,
+        units: str = None,
         merge_predictions: bool = False,
         save_dir: bool = None,
         save_output: bool = False,
@@ -778,7 +778,7 @@ class PatchPredictor:
         """Make a prediction for a list of input data.
 
         Args:
-            input_imgs (list):
+            imgs (list):
                 List of inputs to process. Must be either a list of
                 images, a list of image file paths, WSIReader objects,
                 or a numpy array of an image list.
@@ -872,19 +872,19 @@ class PatchPredictor:
         if mode == "patch" and masks is not None:
             raise ValueError("masks are not supported for `patch` mode. ")
 
-        if not isinstance(input_imgs, list):
+        if not isinstance(imgs, list):
             raise ValueError(
                 "Input to `tile` and `wsi` mode must be a list of file paths."
             )
 
-        if mode == "wsi" and masks is not None and len(masks) != len(input_imgs):
+        if mode == "wsi" and masks is not None and len(masks) != len(imgs):
             raise ValueError(
-                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(input_imgs)}"
+                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
             )
 
         if mode == "patch":
             return self._predict_patch(
-                input_imgs, labels, return_probabilities, return_labels, on_gpu
+                imgs, labels, return_probabilities, return_labels, on_gpu
             )
 
         ioconfig = self._update_ioconfig(
@@ -908,10 +908,10 @@ class PatchPredictor:
         fx_list = sorted(fx_list, key=lambda x: x[0])
         highest_input_resolution = fx_list[0][1]
 
-        save_dir = self._prepare_save_dir(save_dir, input_imgs)
+        save_dir = self._prepare_save_dir(save_dir, imgs)
 
         return self._predict_tile_wsi(
-            input_imgs,
+            imgs,
             masks,
             labels,
             mode,
