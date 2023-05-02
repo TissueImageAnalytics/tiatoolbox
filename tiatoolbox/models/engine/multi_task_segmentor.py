@@ -218,7 +218,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
     Examples:
         >>> # Sample output of a network
         >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> predictor = MultiTaskSegmentor(model='hovernetplus-oed',
+        >>> predictor = MultiTaskSegmentor(model='hovernetplus-oed', \
             output_type=['instance', 'semantic'])
         >>> output = predictor.predict(wsis, mode='wsi')
         >>> list(output.keys())
