@@ -109,8 +109,8 @@ class NucleusDetector(SemanticSegmentor):
             Defined PyTorch model.
         pretrained_model (str):
             Name of the existing models support by tiatoolbox for
-            processing the data. For a full list of pretrained models,
-            refer to the `docs
+            processing the data e.g., mapde-conic, sccnn-conic.
+            For a full list of pretrained models, please refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
