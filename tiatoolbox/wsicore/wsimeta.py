@@ -8,13 +8,14 @@ format of this dictionary may vary between WSI formats.
 """
 from numbers import Number
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Tuple, Union
+from typing import List, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from tiatoolbox import logger
 
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+Units = Literal["mpp", "power", "baseline", "level"]
 
 
 class WSIMeta:
@@ -208,7 +209,7 @@ class WSIMeta:
         return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
 
     def relative_level_scales(
-        self, resolution: Resolution, units: str
+        self, resolution: Resolution, units: Units
     ) -> List[np.ndarray]:
         """Calculate scale of each level in the WSI relative to given resolution.
 
