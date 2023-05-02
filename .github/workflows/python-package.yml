@@ -31,7 +31,7 @@ jobs:
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest pytest-cov pytest-runner
-        pip install -r requirements.txt
+        pip install -r requirements/requirements.txt
     - name: Print Version Information
       run: |
         echo "---SQlite---"
@@ -93,7 +93,7 @@ jobs:
       run: |
         sudo apt-get install -y libopenslide-dev libopenjp2-7
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements/requirements.txt
         pip install build
     - name: Build package
       run: python -m build
