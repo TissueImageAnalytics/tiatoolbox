@@ -3,7 +3,6 @@ import copy
 import json
 import os
 import pathlib
-import warnings
 import zipfile
 from typing import IO, Dict, Optional, Tuple, Union
 
@@ -18,6 +17,7 @@ from shapely.affinity import translate
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 
+from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupported
 
@@ -857,7 +857,7 @@ def select_cv2_interpolation(scale_factor):
 
 
 def store_from_dat(
-    fp: Union[IO, str],
+    fp: Union[IO, str, pathlib.Path],
     scale_factor: Tuple[float, float] = (1, 1),
     typedict: Optional[Dict] = None,
     origin: Tuple[float, float] = (0, 0),
@@ -914,7 +914,7 @@ def make_valid_poly(poly, origin=None):
         poly = translate(poly, -origin[0], -origin[1])
     if poly.is_valid:
         return poly
-    warnings.warn("Invalid geometry found, fix using buffer().", stacklevel=3)
+    logger.warning("Invalid geometry found, fix using buffer().", stacklevel=3)
     return poly.buffer(0.01)
 
 

@@ -5,10 +5,12 @@ import logging
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
 import tiatoolbox
+from tiatoolbox import DuplicateFilter, logger
 
 
 def test_set_root_dir():
@@ -104,3 +106,36 @@ def test_logger_output():
 
     # Test CRITICAL is written to stderr
     helper_logger_test(level="critical")
+
+
+def test_duplicate_filter(caplog):
+    """Tests DuplicateFilter for warnings."""
+    for _ in range(2):
+        logger.warning("Test duplicate filter warnings.")
+    assert "Test duplicate filter warnings." in caplog.text
+    assert "\n" in caplog.text[:-2]
+
+    caplog.clear()
+
+    duplicate_filter = DuplicateFilter()
+    logger.addFilter(duplicate_filter)
+    for _ in range(2):
+        logger.warning("Test duplicate filter warnings.")
+    logger.removeFilter(duplicate_filter)
+    assert "Test duplicate filter warnings." in caplog.text
+    assert "\n" not in caplog.text[:-2]
+
+
+def test_lazy_import():
+    import sys
+
+    from tiatoolbox import _lazy_import
+
+    assert "exceptions" not in sys.modules
+
+    _lazy_import(
+        "exceptions",
+        Path(__file__).parent.parent / "tiatoolbox" / "utils" / "exceptions.py",
+    )
+
+    assert "exceptions" in sys.modules

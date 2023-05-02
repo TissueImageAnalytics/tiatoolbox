@@ -1,6 +1,9 @@
 BSD 3-Clause License
 
-Copyright (c) 2022, Tissue Image Analytics (TIA) Centre
+Model weights are provided under a different license. For details, please see
+https://tia-toolbox.readthedocs.io/en/latest/pretrained.html
+
+Copyright (c) 2023, Tissue Image Analytics (TIA) Centre
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

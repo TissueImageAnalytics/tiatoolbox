@@ -397,10 +397,12 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
 
 
 def test_patch_dataset_abc():
-    """Test for ABC methods."""
+    """Test for ABC methods.
 
-    # test missing definition for abstract
-    # intentionally created to check error
+    Test missing definition for abstract intentionally created to check error.
+
+    """
+
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq
