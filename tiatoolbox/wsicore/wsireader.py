@@ -280,7 +280,7 @@ class WSIReader:
         """
         Returns an appropriate :class:`.WSIReader` object
         based on the file extension.
-        
+
         """
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
