@@ -299,11 +299,11 @@ class AnnotationStore(ABC, MutableMapping):
         "overlaps",
         "touches",
         "within",
-        # Special non-shapely case, bounding-boxes intersect
+        # Special non-shapely case, bounding-boxes intersect.
         "bbox_intersects",
-        # Special non-shapely case, query bounding box contains
-        # stored bounding box centroid
-        "bbox_centre_within",
+        # Special non-shapely case, query centroid within k of
+        # annotation bounds center.
+        "centers_within_k",
     ]
 
     @classmethod  # noqa: A003
@@ -627,6 +627,7 @@ class AnnotationStore(ABC, MutableMapping):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
+        distance: float = 0,
     ) -> Dict[str, Annotation]:
         """Query the store for annotations.
 
@@ -669,6 +670,9 @@ class AnnotationStore(ABC, MutableMapping):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+            distance (float):
+                Distance used when performing a distance based query.
+                E.g. "centers_within_k" geometry predicate.
 
             Returns:
                 list:
@@ -685,6 +689,8 @@ class AnnotationStore(ABC, MutableMapping):
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
+        if geometry_predicate == "centers_within_k":
+            query_point = Polygon.from_bounds(*query_geometry.bounds).centroid
 
         def bbox_intersects(
             annotation_geometry: Geometry, query_geometry: Geometry
@@ -694,18 +700,16 @@ class AnnotationStore(ABC, MutableMapping):
                 Polygon.from_bounds(*annotation_geometry.bounds)
             )
 
-        def bbox_centre_within(
-            annotation_geometry: Geometry, query_geometry: Geometry
+        def centers_within_k(
+            annotation_geometry: Geometry, query_point: Point, distance: float
         ) -> bool:
-            """True if annotation bounds centre within query geometry bounds.
+            """True if centre of annotation within k of query geometry center.
 
-            True if centroid of the annotation is within the query
-            geometry bounds.
+            Here the "center" is the centroid of the bounds.
 
             """
-            return Polygon.from_bounds(*query_geometry.bounds).contains(
-                annotation_geometry.centroid
-            )
+            ann_centre = Polygon.from_bounds(*annotation_geometry.bounds).centroid
+            return query_point.dwithin(ann_centre, distance)
 
         def filter_function(annotation: Annotation) -> bool:
             """Filter function for querying annotations.
@@ -729,12 +733,14 @@ class AnnotationStore(ABC, MutableMapping):
                             and bbox_intersects(annotation.geometry, query_geometry)
                         ),
                         (
-                            geometry_predicate == "bbox_centre_within"
-                            and bbox_centre_within(annotation.geometry, query_geometry)
+                            geometry_predicate == "centers_within_k"
+                            and centers_within_k(
+                                annotation.geometry, query_point, distance
+                            )
                         ),
                         (
                             geometry_predicate
-                            not in ("bbox_intersects", "bbox_centre_within")
+                            not in ("bbox_intersects", "centers_within_k")
                             and self._geometry_predicate(
                                 geometry_predicate, query_geometry, annotation.geometry
                             )
@@ -1226,9 +1232,7 @@ class AnnotationStore(ABC, MutableMapping):
                     max_y + distance,
                 )
             elif from_mode == "boxpoint":
-                geometry_predicate = "bbox_centre_within"
-                geometry = Polygon.from_bounds(*ann.geometry.bounds).centroid
-                geometry = geometry.buffer(distance)
+                geometry_predicate = "centers_within_k"
             elif from_mode == "poly":  # pragma: no branch
                 geometry = ann.geometry
                 geometry = geometry.buffer(distance)
@@ -1236,6 +1240,7 @@ class AnnotationStore(ABC, MutableMapping):
                 geometry=geometry,
                 where=n_where,
                 geometry_predicate=geometry_predicate,
+                distance=distance,
             )
             if subquery_result:
                 result[key] = subquery_result
@@ -1851,7 +1856,7 @@ class SQLiteStore(AnnotationStore):
         # Create tables for geometry and RTree index
         self.con.execute(
             """
-            CREATE VIRTUAL TABLE rtree USING rtree_i32(
+            CREATE VIRTUAL TABLE rtree USING rtree(
                 id,                      -- Integer primary key
                 min_x, max_x,            -- 1st dimension min, max
                 min_y, max_y             -- 2nd dimension min, max
@@ -2076,8 +2081,13 @@ class SQLiteStore(AnnotationStore):
 
     @staticmethod
     def _initialize_query_string_parameters(
-        query_geometry, query_parameters, geometry_predicate, columns, where
-    ):
+        query_geometry: Optional[Geometry],
+        query_parameters: Dict[str, Any],
+        geometry_predicate: Optional[str],
+        columns: str,
+        where: Union[bytes, str],
+        distance: float = 0,
+    ) -> Tuple[str, Dict[str, Any]]:
         """Initialises the query string and parameters."""
         query_string = (
             "SELECT "  # skipcq: BAN-B608
@@ -2092,17 +2102,17 @@ class SQLiteStore(AnnotationStore):
         # rapidly narrow candidates down.
         if query_geometry is not None:
             # Add rtree index checks to the query.
-            # For special case of bbox_centre_within, Check for
-            # centroid of the annotation bounds within query geometry
-            # bounds.
-            if geometry_predicate == "bbox_centre_within":
+            # For special case of centers_within_k, Check for
+            # center of the annotation bounds within query geometry
+            # centroid + k.
+            if geometry_predicate == "centers_within_k":
+                # Use rtree index to check distance between points
                 query_string += (
-                    "AND (min_x + max_x)/2 >= :min_x "
-                    "AND (min_x + max_x)/2 <= :max_x "
-                    "AND (min_y + max_y)/2 >= :min_y "
-                    "AND (min_y + max_y)/2 <= :max_y "
+                    "AND (POWER((:min_x + :max_x)/2 - (min_x + max_x)/2, 2) + "
+                    " POWER((:min_y + :max_y)/2 - (min_y + max_y)/2, 2)) < :distance2 "
                 )
-            # Otherwise, perform a bounding box intersection
+                query_parameters["distance2"] = distance**2
+            # Otherwise, perform a regular bounding box intersection
             else:
                 query_string += (
                     "AND max_x >= :min_x "
@@ -2130,7 +2140,7 @@ class SQLiteStore(AnnotationStore):
             # check only.
             if geometry_predicate is not None and geometry_predicate not in (
                 "bbox_intersects",
-                "bbox_centre_within",
+                "centers_within_k",
             ):
                 query_string += (
                     "\nAND geometry_predicate("
@@ -2162,6 +2172,7 @@ class SQLiteStore(AnnotationStore):
         no_constraints_ok: bool = False,
         index_warning: bool = False,
         min_area=None,
+        distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -2188,6 +2199,9 @@ class SQLiteStore(AnnotationStore):
             index_warning(bool):
                 Whether to warn if the query is not using an index.
                 Defaults to False.
+            distance (float):
+                Distance used when performing a distance based query.
+                E.g. "centers_within_k" geometry predicate.
 
         Returns:
             sqlite3.Cursor:
@@ -2216,7 +2230,12 @@ class SQLiteStore(AnnotationStore):
         query_parameters = {}
 
         query_string, query_parameters = self._initialize_query_string_parameters(
-            query_geometry, query_parameters, geometry_predicate, columns, where
+            query_geometry,
+            query_parameters,
+            geometry_predicate,
+            columns,
+            where,
+            distance=distance,
         )
 
         if min_area is not None and "area" in self.table_columns:
@@ -2253,6 +2272,7 @@ class SQLiteStore(AnnotationStore):
         where: Optional[Predicate] = None,
         geometry_predicate="intersects",
         min_area=None,
+        k: float = 0,
     ) -> List[str]:
         """Query the store for annotation keys.
 
@@ -2327,6 +2347,7 @@ class SQLiteStore(AnnotationStore):
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
         min_area=None,
+        distance: float = 0,
     ) -> Dict[str, Annotation]:
         """Runs Query."""
         query_geometry = geometry
@@ -2336,6 +2357,7 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate=geometry_predicate,
             where=where,
             min_area=min_area,
+            distance=distance,
         )
         if isinstance(where, Callable):
             return {

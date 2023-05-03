@@ -1660,11 +1660,15 @@ class TestStore:
 
         .. code-block:: text
 
-            3^
-            2|   B
-            1| A
-            0+------>
-             0 1 2 3
+             ^
+            3|--****-----C
+             |*      *   |
+            2|         * |
+             |     B    *|
+            1|   A       *
+             |          *|
+            0+---------*-->
+             0   1   2   3
 
         Query for all points within a distance of 2 from A. Should
         return a dictionary with a single key, "A", and a value of
@@ -1678,13 +1682,20 @@ class TestStore:
         )
         store["A"] = ann_a
         ann_b = Annotation(
-            Point(2, 2),
+            Point(1.4, 1.4),
             {"class": "B"},
         )
         store["B"] = ann_b
+        # C is inside the bounding box of the radius around A but is not
+        # returned because it is not inside of the radius.
+        ann_c = Annotation(
+            Point(2.9, 2.9),
+            {"class": "C"},
+        )
+        store["C"] = ann_c
         result = store.nquery(
             where="props['class'] == 'A'",
-            n_where="props['class'] == 'B'",
+            n_where="props['class'] != 'A'",
             distance=2,
             mode="boxpoint-boxpoint",
         )
