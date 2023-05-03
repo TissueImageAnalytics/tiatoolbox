@@ -90,8 +90,8 @@ def dice(gt_mask, pred_mask):
     if gt_mask.shape != pred_mask.shape:
         raise ValueError(f'{"Shape mismatch between the two masks."}')
 
-    gt_mask = gt_mask.astype(np.bool)
-    pred_mask = pred_mask.astype(np.bool)
+    gt_mask = gt_mask.astype(np.bool_)
+    pred_mask = pred_mask.astype(np.bool_)
     sum_masks = gt_mask.sum() + pred_mask.sum()
     if sum_masks == 0:
         return np.NAN
