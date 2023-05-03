@@ -134,7 +134,9 @@ def test_patch_dataset_crash(tmp_path):
         _ = PatchDataset(imgs)
 
     # ndarray of mixed dtype
-    imgs = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
+    imgs = np.array(
+        [np.random.randint(0, 255, (4, 5, 3)), "Should crash"], dtype=object
+    )
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
         _ = PatchDataset(imgs)
 
@@ -397,10 +399,12 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
 
 
 def test_patch_dataset_abc():
-    """Test for ABC methods."""
+    """Test for ABC methods.
 
-    # test missing definition for abstract
-    # intentionally created to check error
+    Test missing definition for abstract intentionally created to check error.
+
+    """
+
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq

@@ -280,11 +280,11 @@ def test_sqlite_create_index_no_analyze(fill_store, tmp_path):
     assert "test_index" in store.indexes()
 
 
-def test_sqlite_pquery_warn_no_index(fill_store):
+def test_sqlite_pquery_warn_no_index(fill_store, caplog):
     """Test that querying without an index warns."""
     _, store = fill_store(SQLiteStore, ":memory:")
-    with pytest.warns(UserWarning, match="index"):
-        store.pquery("*", unique=False)
+    store.pquery("*", unique=False)
+    assert "Query is not using an index." in caplog.text
     # Check that there is no warning after creating the index
     store.create_index("test_index", "props['class']")
     with pytest.warns(None) as record:

@@ -186,7 +186,7 @@ def read_bounds_level_consistency(wsi, bounds):
     # from interpolation when calculating the downsampled levels. This
     # adds some tolerance for the comparison.
     blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-    as_float = [img.astype(np.float) for img in blurred]
+    as_float = [img.astype(np.float_) for img in blurred]
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
@@ -408,6 +408,7 @@ def test_relative_level_scales_level_too_high(sample_svs):
 
 def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     sample_ndpi,
+    caplog,
 ):
     """Test finding optimal level for mpp read with scale > 1.
 
@@ -416,11 +417,16 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
 
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
-    with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    assert (
+        "Read: Scale > 1.This means that the desired resolution is higher"
+        in caplog.text
+    )
 
 
-def test_find_optimal_level_and_downsample_jp2_interpolation_warning(sample_jp2):
+def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
+    sample_jp2, caplog
+):
     """Test finding optimal level for mpp read with scale > 1.
 
     This tests the case where the scale is found to be > 1 and interpolation
@@ -428,8 +434,11 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(sample_jp2)
 
     """
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
-    with pytest.warns(UserWarning):
-        _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
+    assert (
+        "Read: Scale > 1.This means that the desired resolution is higher"
+        in caplog.text
+    )
 
 
 def test_find_optimal_level_and_downsample_mpp(sample_ndpi):
@@ -484,7 +493,7 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-def test_convert_resolution_units(sample_ndpi):
+def test_convert_resolution_units(sample_ndpi, caplog):
     """Test the resolution unit conversion code."""
     wsi = wsireader.WSIReader.open(sample_ndpi)
 
@@ -541,8 +550,8 @@ def test_convert_resolution_units(sample_ndpi):
     _info.mpp = None
     wsi._m_info = _info
     _ = wsi.convert_resolution_units(0, input_unit="baseline")
-    with pytest.warns(UserWarning, match=r".*output_unit is returned as None.*"):
-        _ = wsi.convert_resolution_units(0, input_unit="level", output_unit="mpp")
+    _ = wsi.convert_resolution_units(0, input_unit="level", output_unit="mpp")
+    assert "output_unit is returned as None." in caplog.text
 
 
 def test_find_read_rect_params_power(sample_ndpi):
@@ -976,18 +985,17 @@ def test_incompatible_objective_value(sample_svs, tmp_path):
         )
 
 
-def test_incompatible_level(sample_svs, tmp_path):
+def test_incompatible_level(sample_svs, tmp_path, caplog):
     """Test for incompatible objective value."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
-    with pytest.warns(UserWarning):
-        wsi.save_tiles(
-            output_dir=str(
-                pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")
-            ),
-            tile_objective_value=1,
-            tile_read_size=(500, 500),
-            verbose=True,
-        )
+    wsi.save_tiles(
+        output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")),
+        tile_objective_value=1,
+        tile_read_size=(500, 500),
+        verbose=True,
+    )
+
+    assert "Reading at tile_objective_value 1 not allowed" in caplog.text
 
 
 def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
@@ -1011,23 +1019,23 @@ def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
     ).exists()
 
 
-def test_openslide_objective_power_from_mpp(sample_svs):
+def test_openslide_objective_power_from_mpp(sample_svs, caplog):
     """Test OpenSlideWSIReader approximation of objective power from mpp."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
     props = wsi.openslide_wsi._properties
 
     del props["openslide.objective-power"]  # skipcq
-    with pytest.warns(UserWarning, match=r"Objective power inferred"):
-        _ = wsi.info
+    _ = wsi.info
+    assert "Objective power inferred" in caplog.text
 
     del props["openslide.mpp-x"]  # skipcq
     del props["openslide.mpp-y"]  # skipcq
-    with pytest.warns(UserWarning, match=r"Unable to determine objective power"):
-        _ = wsi._info()
+    _ = wsi._info()
+    assert "Unable to determine objective power" in caplog.text
 
 
-def test_openslide_mpp_from_tiff_resolution(sample_svs):
+def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
     """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
@@ -1038,19 +1046,20 @@ def test_openslide_mpp_from_tiff_resolution(sample_svs):
     props["tiff.ResolutionUnit"] = "centimeter"
     props["tiff.XResolution"] = 1e4  # Pixels per cm
     props["tiff.YResolution"] = 1e4  # Pixels per cm
-    with pytest.warns(UserWarning, match=r"Falling back to TIFF resolution"):
-        _ = wsi.info
+    _ = wsi.info
+    assert "Falling back to TIFF resolution" in caplog.text
 
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-def test_virtual_wsi_reader(source_image):
+def test_virtual_wsi_reader(source_image, caplog):
     """Test VirtualWSIReader"""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
-    with pytest.warns(UserWarning, match=r"Unknown scale"):
-        _ = wsi._info()
-    with pytest.warns(UserWarning, match=r"Raw data is None"):
-        _ = wsi._info()
+    _ = wsi._info()
+    assert "Unknown scale" in caplog.text
+
+    _ = wsi._info()
+    assert "Raw data is None" in caplog.text
 
     assert wsi.img.shape == (256, 256, 3)
 
@@ -1420,12 +1429,12 @@ def test_wsireader_open(
     shutil.rmtree(temp_dir)
 
 
-def test_jp2_missing_cod(sample_jp2):
+def test_jp2_missing_cod(sample_jp2, caplog):
     """Test for warning if JP2 is missing COD segment."""
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
     wsi.glymur_wsi.codestream.segment = []
-    with pytest.warns(UserWarning, match="missing COD"):
-        _ = wsi.info
+    _ = wsi.info
+    assert "missing COD" in caplog.text
 
 
 def test_read_rect_at_resolution(sample_wsi_dict):
@@ -1761,7 +1770,9 @@ def test_tiffwsireader_invalid_ome_metadata(sample_ome_tiff, monkeypatch):
         _ = wsi._info()
 
 
-def test_tiffwsireader_ome_metadata_missing_one_mppy(sample_ome_tiff, monkeypatch):
+def test_tiffwsireader_ome_metadata_missing_one_mppy(
+    sample_ome_tiff, monkeypatch, caplog
+):
     """Test no exception raised for missing x/y mpp but warning given."""
     for dim in "XY":
         wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
@@ -1770,8 +1781,8 @@ def test_tiffwsireader_ome_metadata_missing_one_mppy(sample_ome_tiff, monkeypatc
             "description",
             re.sub(f'PhysicalSize{dim}="[^"]*"', "", wsi.tiff.pages[0].description),
         )
-        with pytest.warns(UserWarning, match="Only one MPP"):
-            _ = wsi._info()
+        _ = wsi._info()
+        assert "Only one MPP" in caplog.text
 
 
 def test_arrayview_unsupported_axes():
@@ -1983,8 +1994,12 @@ def test_store_reader_no_types(tmp_path, remote_sample):
 
 
 def test_store_reader_info_from_base(tmp_path, remote_sample):
-    """Test that AnnotationStoreReader will correctly get metadata
-    from a provided base_wsi if the store has no wsi metadata."""
+    """Test AnnotationStoreReader with no wsi metadata.
+
+    Test that AnnotationStoreReader will correctly get metadata
+    from a provided base_wsi if the store has no wsi metadata.
+
+    """
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     store_reader = AnnotationStoreReader(tmp_path / "store.db", base_wsi=wsi_reader)
@@ -1992,7 +2007,7 @@ def test_store_reader_info_from_base(tmp_path, remote_sample):
     assert store_reader.info.mpp[0] == wsi_reader.info.mpp[0]
 
 
-def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path):
+def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, caplog):
     """Test that mpp is None if scale is not in micrometers."""
     sample = _fetch_remote_sample("ngff-1")
     # Create a copy of the sample with a non-micrometer scale
@@ -2003,8 +2018,10 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path):
     zattrs["multiscales"][0]["axes"][0]["unit"] = "foo"
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    with pytest.warns(UserWarning, match="micrometer"):
-        wsi = wsireader.NGFFWSIReader(sample_copy)
+
+    wsi = wsireader.NGFFWSIReader(sample_copy)
+    assert "micrometer" in caplog.text
+
     assert wsi.info.mpp is None
 
 
@@ -2172,7 +2189,6 @@ def test_ngff_multiscales_above_max_version(tmp_path, caplog):
 
 def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     """Test that the reader can handle non-numeric omero versions."""
-
     # Patch the is_ngff function to change the min/max version
     if_ngff = wsireader.is_ngff  # noqa: F841
     min_version = Version("0.4")
@@ -2357,7 +2373,7 @@ class TestReader:
         # from interpolation when calculating the downsampled levels. This
         # adds some tolerance for the comparison.
         blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-        as_float = [img.astype(np.float) for img in blurred]
+        as_float = [img.astype(np.float_) for img in blurred]
 
         # Pair-wise check resolutions for mean squared error
         for i, a in enumerate(as_float):

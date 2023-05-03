@@ -32,7 +32,6 @@ import sqlite3
 import sys
 import tempfile
 import uuid
-import warnings
 import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -66,7 +65,7 @@ from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
 import tiatoolbox
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
@@ -2255,7 +2254,7 @@ class SQLiteStore(AnnotationStore):
                 "EXPLAIN QUERY PLAN " + query_string, query_parameters
             ).fetchone()
             if "USING INDEX" not in query_plan[-1]:
-                warnings.warn(
+                logger.warning(
                     "Query is not using an index. "
                     "Consider adding an index to improve performance.",
                     stacklevel=2,
@@ -3062,15 +3061,30 @@ class SQLiteStore(AnnotationStore):
         )
 
     def commit(self) -> None:
+        """Commit any in-memory changes to disk."""
         self.con.commit()
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
+        """Serialise a copy of the whole store to a file-like object.
+
+        Args:
+            fp(Path or str or IO):
+                A file path or file handle object for output to disk.
+
+        """
         if hasattr(fp, "write"):
             fp = fp.name
         target = sqlite3.connect(fp)
         self.con.backup(target)
 
     def dumps(self) -> str:
+        """Serialise and return a copy of store as a string or bytes.
+
+        Returns:
+            str or bytes:
+                The serialised store.
+
+        """
         return "\n".join(self.con.iterdump())
 
     def clear(self) -> None:
@@ -3181,7 +3195,22 @@ class DictionaryStore(AnnotationStore):
         self,
         annotation: Annotation,
         key: Optional[str] = None,
-    ) -> int:
+    ) -> str:
+        """Insert a new annotation, returning the key.
+
+        Args:
+            annotation (Annotation):
+                The shapely annotation to insert.
+            key (str):
+                Optional. The unique key used to identify the annotation in the
+                store. If not given a new UUID4 will be generated and returned
+                instead.
+
+        Returns:
+            str:
+                The unique key of the newly inserted annotation.
+
+        """
         if not isinstance(annotation.geometry, (Polygon, Point, LineString)):
             raise TypeError("Invalid geometry type.")
         key = key or str(uuid.uuid4())
@@ -3194,6 +3223,24 @@ class DictionaryStore(AnnotationStore):
         geometry: Optional[Geometry] = None,
         properties: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """Patch an annotation at given key.
+
+        Partial update of an annotation. Providing only a geometry will update
+        the geometry and leave properties unchanged. Providing a properties
+        dictionary applies a patch operation to the properties. Only updating
+        the properties which are given and leaving the rest unchanged. To
+        completely replace an annotation use `__setitem__`.
+
+        Args:
+            key(str):
+                The key of the annotation to update.
+            geometry(Geometry):
+                The new geometry. If None, the geometry is not updated.
+            properties(dict):
+                A dictionary of properties to patch and their new values.
+                If None, the existing properties are not altered.
+
+        """
         if key not in self:
             self.append(Annotation(geometry, properties), key)
             return
@@ -3205,6 +3252,13 @@ class DictionaryStore(AnnotationStore):
         self[key] = Annotation(geometry, new_properties)
 
     def remove(self, key: str) -> None:
+        """Remove annotation from the store with its unique key.
+
+        Args:
+            key (str):
+                The key of the annotation to be removed.
+
+        """
         del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
@@ -3228,25 +3282,43 @@ class DictionaryStore(AnnotationStore):
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":  # noqa: A003
+        """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)
 
     def commit(self) -> None:
+        """Commit any in-memory changes to disk."""
         if str(self.connection) == ":memory:":
-            warnings.warn("In-memory store. Nothing to commit.", stacklevel=2)
+            logger.warning("In-memory store. Nothing to commit.", stacklevel=2)
             return
         if not self.path.exists():
             self.path.touch()
         self.dump(self.connection)
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
+        """Serialise a copy of the whole store to a file-like object.
+
+        Args:
+            fp(Path or str or IO):
+                A file path or file handle object for output to disk.
+
+        """
         return self.to_ndjson(fp)
 
     def dumps(self) -> str:
+        """Serialise and return a copy of store as a string or bytes.
+
+        Returns:
+            str or bytes:
+                The serialised store.
+
+        """
         return self.to_ndjson()
 
     def close(self) -> None:
-        warnings.simplefilter("ignore")
+        """Closes :class:`DictionaryStore` from file pointer or path."""
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         # Try to commit any changes if the file is still open.
         with contextlib.suppress(ValueError):
             self.commit()
-        warnings.resetwarnings()
+        logger.removeFilter(duplicate_filter)
