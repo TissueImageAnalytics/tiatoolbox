@@ -486,7 +486,7 @@ class DFBRegister:
             axis=len(features_x.shape),
         )
 
-        feature_size_2d = np.int(np.sqrt(feature_distance.shape[0]))
+        feature_size_2d = np.int_(np.sqrt(feature_distance.shape[0]))
         ref_feature_size_2d = factor * feature_size_2d
         feature_size, ref_feature_size = feature_size_2d**2, ref_feature_size_2d**2
         feature_grid = np.kron(

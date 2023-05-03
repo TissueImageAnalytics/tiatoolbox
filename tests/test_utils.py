@@ -52,7 +52,7 @@ def test_imresize():
     # test for dtype conversion, pairs of
     # (original type, converted type)
     test_dtypes = [
-        (np.bool, np.uint8),
+        (np.bool_, np.uint8),
         (np.int8, np.int16),
         (np.int16, np.int16),
         (np.int32, np.float32),
@@ -1053,8 +1053,8 @@ def test_crop_and_pad_edges():
         l, t, r, b = bounds
         slide_width, slide_height = slide_dimensions
         x, y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
-        under = np.logical_or(x < 0, y < 0).astype(np.int)
-        over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int)
+        under = np.logical_or(x < 0, y < 0).astype(np.int_)
+        over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int_)
         return under, over
 
     loc = (-5, -5)
