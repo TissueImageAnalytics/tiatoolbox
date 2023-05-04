@@ -134,7 +134,9 @@ def test_patch_dataset_crash(tmp_path):
         _ = PatchDataset(imgs)
 
     # ndarray of mixed dtype
-    imgs = np.array([np.random.randint(0, 255, (4, 5, 3)), "Should crash"])
+    imgs = np.array(
+        [np.random.randint(0, 255, (4, 5, 3)), "Should crash"], dtype=object
+    )
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
         _ = PatchDataset(imgs)
 
