@@ -3,7 +3,6 @@
 import copy
 import os
 import pathlib
-import warnings
 from collections import OrderedDict
 from typing import Callable, Tuple, Union
 
@@ -11,6 +10,7 @@ import numpy as np
 import torch
 import tqdm
 
+from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
@@ -310,7 +310,7 @@ class PatchPredictor:
         """
         reader = WSIReader.open(img)
         if isinstance(reader, VirtualWSIReader):
-            warnings.warn(
+            logger.warning(
                 "Image is not pyramidal hence read is forced to be "
                 "at `units='baseline'` and `resolution=1.0`.",
                 stacklevel=2,
@@ -536,7 +536,7 @@ class PatchPredictor:
 
         """
         if save_dir is None and len(imgs) > 1:
-            warnings.warn(
+            logger.warning(
                 "More than 1 WSIs detected but there is no save directory set."
                 "All subsequent output will be saved to current runtime"
                 "location under folder 'output'. Overwriting may happen!",
@@ -544,7 +544,7 @@ class PatchPredictor:
             )
             save_dir = pathlib.Path(os.getcwd()).joinpath("output")
         elif save_dir is not None and len(imgs) > 1:
-            warnings.warn(
+            logger.warning(
                 "When providing multiple whole-slide images / tiles, "
                 "we save the outputs and return the locations "
                 "to the corresponding files.",
@@ -865,7 +865,7 @@ class PatchPredictor:
             ioconfig, patch_input_shape, stride_shape, resolution, units
         )
         if mode == "tile":
-            warnings.warn(
+            logger.warning(
                 "WSIPatchDataset only reads image tile at "
                 '`units="baseline"`. Resolutions will be converted '
                 "to baseline value.",
