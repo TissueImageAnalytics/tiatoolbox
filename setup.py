@@ -43,6 +43,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     description="Computational pathology toolbox developed by TIA Centre.",
     dependency_links=dependency_links,
