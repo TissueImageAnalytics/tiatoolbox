@@ -5,7 +5,6 @@ NuClick: a deep learning framework for interactive segmentation of microscopic i
 Medical Image Analysis, 65, 101771.
 
 """
-import warnings
 from typing import Tuple, Union
 
 import numpy as np
@@ -18,6 +17,7 @@ from skimage.morphology import (
     remove_small_objects,
 )
 
+from tiatoolbox import logger
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
 
@@ -607,8 +607,9 @@ class NuClick(ModelABC):
                     )
                     masks[i] = np.array([this_mask])
                 else:
-                    warnings.warn(
-                        f"Nuclei reconstruction was not done for nucleus #{i}",
+                    logger.warning(
+                        "Nuclei reconstruction was not done for nucleus #%d",
+                        i,
                         stacklevel=2,
                     )
         return masks
