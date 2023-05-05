@@ -65,9 +65,14 @@ paths:
   /:
     get:
       summary: Get index page
+      description: This endpoint serves a web page with a simple slide viewer
       responses:
         '200':
-          description: Successful response
+          description: The index page.
+          content:
+            text/html:
+              schema:
+                type: string
 
   /tileserver/get_user:
     get:
@@ -76,6 +81,11 @@ paths:
       responses:
         '200':
           description: Successful response
+          headers:
+          Set-Cookie:
+            schema:
+              type: string
+            description: The 'user' cookie containing the user identifier.
 
   /tileserver/change_color_prop/{prop}:
     put:
@@ -90,12 +100,6 @@ paths:
       responses:
         '200':
           description: Successful response
-          headers:
-            Set-Cookie:
-              schema:
-                type: string
-                example: user=your_token_here; HttpOnly
-
 
   /tileserver/change_slide/{slide_path}:
     put:
@@ -147,21 +151,26 @@ paths:
             format: float
       responses:
         '200':
-          description: Successful response
+          description: jsonified list of types of loaded annotations
+          content:
+            application/json:
 
   /tileserver/change_overlay/{overlay_path}:
     put:
-      summary: Change overlay image for a slide
+      summary: Change overlay for a slide
+      description: This endpoint changes the overlay. If the path points to some annotations, the current overlay is replaced with the new one. If the path points to an image, it is added as a new layer.
       parameters:
         - in: path
           name: overlay_path
-          description: Path to the new overlay image file
+          description: url safe path to the new overlay image file
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Successful response
+          description: jsonified list of types present in the overlay, if any
+          content:
+            application/json:
 
   /tileserver/commit/{save_path}:
     get:
@@ -224,21 +233,24 @@ paths:
         '200':
           description: Successful response
 
-  /tileserver/get_prop_names:
+  /tileserver/get_prop_names/{ann_type}:
     get:
-      summary: Get a list of available property names
+      summary: Get all the properties of the annotations in the store
+      description: This endpoint retrieves all the property names in the annotations in the store of the specified type.
+      parameters:
+        - name: ann_type
+          in: path
+          required: true
+          description: The annotation type to filter properties by, or "all" for all types.
+          schema:
+            type: string
       responses:
         '200':
-          description: Successful response
+          description: List of annotation properties.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  properties:
-                    type: array
-                    items:
-                      type: string
+                type: array
 
   /tileserver/get_prop_values/{prop}/{ann_type}:
     get:
