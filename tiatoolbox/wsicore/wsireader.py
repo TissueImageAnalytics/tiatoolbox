@@ -911,7 +911,7 @@ class WSIReader:
             level = np.log2(rescale)
             if not level.is_integer():
                 raise ValueError
-            level = np.int(level)
+            level = np.int_(level)
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
         # Raise index error if desired pyramid level not embedded
@@ -919,7 +919,7 @@ class WSIReader:
         except IndexError:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
-            rescale = np.int(rescale)
+            rescale = np.int_(rescale)
             logger.warning(
                 "Reading WSI at level 0. Desired tile_objective_value %s "
                 "not available.",
@@ -2508,7 +2508,7 @@ class OmnyxJP2WSIReader(WSIReader):
         box = glymur_wsi.box
         description = box[3].xml.find("description")
         matches = re.search(r"(?<=AppMag = )\d\d", description.text)
-        objective_power = np.int(matches[0])
+        objective_power = np.int_(matches[0])
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
 
