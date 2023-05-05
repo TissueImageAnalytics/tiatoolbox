@@ -4,9 +4,10 @@
 
 ### Major Updates and Feature Improvements
 
+- Adds Python 3.11 support \[experimental\] #500
+  - Python 3.11 is not fully supported by `pytorch` https://github.com/pytorch/pytorch/issues/86566 and `openslide` https://github.com/openslide/openslide-python/pull/188
 - Removes Python 3.7 support
   - This allows upgrading all the dependencies which were dependent on an older version of Python.
-  - Python 3.11 support will be added later once all the dependencies are supported. #500
 - Adds Neighbourhood Querying Support To AnnotationStore #540
   - This enables easy and efficient querying of annotations within a neighbourhood of other annotations.
 - Adds `MultiTaskSegmentor` engine #424
@@ -35,7 +36,7 @@
 - Fixes breaking changes in `DICOMWSIReader` to make it compatible with latest `wsidicom` version. #539, #580
 - Updates `shapely` dependency to version >=2.0.0 and fixes any breaking changes.
 - Fixes bug with `DictionaryStore.bquery` and `geometry=None`, i.e. only a where predicate given.
-  - Partly Fixes #532 contributed by @blaginin
+  - Partly Fixes #532 raised by @blaginin
 - Fixes local tests for Windows/Linux
 - Fixes `flake8`, `deepsource` errors.
 - Uses `logger` instead of `warnings` and `print` statements to properly log runs.
@@ -46,7 +47,7 @@
 - Moves `requirements*.txt` files to `requirements` folder
 - Removes `tox`
 - Uses `pyproject.toml` for `bdist_wheel`, `pytest` and `isort`
-- Adds `joblib` as dependency
+- Adds `joblib` and `numba` as dependencies.
 
 ## 1.3.3 (2023-03-02)
 
