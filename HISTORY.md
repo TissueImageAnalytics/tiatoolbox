@@ -1,5 +1,54 @@
 # History
 
+## 1.4.0 (2023-04-24)
+
+### Major Updates and Feature Improvements
+
+- Adds Python 3.11 support \[experimental\] #500
+  - Python 3.11 is not fully supported by `pytorch` https://github.com/pytorch/pytorch/issues/86566 and `openslide` https://github.com/openslide/openslide-python/pull/188
+- Removes Python 3.7 support
+  - This allows upgrading all the dependencies which were dependent on an older version of Python.
+- Adds Neighbourhood Querying Support To AnnotationStore #540
+  - This enables easy and efficient querying of annotations within a neighbourhood of other annotations.
+- Adds `MultiTaskSegmentor` engine #424
+- Fixes an issue with stain augmentation to apply augmentation to only tissue regions.
+  - #546 contributed by @navidstuv
+- Filters logger output to stdout instead of stderr.
+  - Fixes #255
+- Allows import of some modules at higher level for improved usability
+  - `WSIReader` can now be imported as `from tiatoolbox.wsicore import WSIReader`
+  - `WSIMeta` can now be imported as `from tiatoolbox.wsicore import WSIMeta`
+  - `HoVerNet`, `HoVerNetPlus`, `IDaRS`, `MapDe`, `MicroNet`, `NuClick`, `SCCNN` can now be imported as \`from tiatoolbox.models import HoVerNet, HoVerNetPlus, IDaRS, MapDe, MicroNet, NuClick, SCCNN
+- Improves `PatchExtractor` performance. Updates `WSIPatchDataset` to be consistent. #571
+- Updates documentation for `License` for clarity on source code and model weights license.
+
+### Changes to API
+
+- Updates SCCNN architecture to make it consistent with other models. #544
+
+### Bug Fixes and Other Changes
+
+- Fixes Parsing Missing Omero Version NGFF Metadata #568
+  - Fixes #535 raised by @benkamphaus
+- Fixes reading of DICOM WSIs at the correct level #564
+  - Fixes #529
+- Fixes `scipy`, `matplotlib`, `scikit-image` deprecated code
+- Fixes breaking changes in `DICOMWSIReader` to make it compatible with latest `wsidicom` version. #539, #580
+- Updates `shapely` dependency to version >=2.0.0 and fixes any breaking changes.
+- Fixes bug with `DictionaryStore.bquery` and `geometry=None`, i.e. only a where predicate given.
+  - Partly Fixes #532 raised by @blaginin
+- Fixes local tests for Windows/Linux
+- Fixes `flake8`, `deepsource` errors.
+- Uses `logger` instead of `warnings` and `print` statements to properly log runs.
+
+### Development related changes
+
+- Upgrades dependencies which are dependent on Python 3.7
+- Moves `requirements*.txt` files to `requirements` folder
+- Removes `tox`
+- Uses `pyproject.toml` for `bdist_wheel`, `pytest` and `isort`
+- Adds `joblib` and `numba` as dependencies.
+
 ## 1.3.3 (2023-03-02)
 
 ### Major Updates and Feature Improvements
