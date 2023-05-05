@@ -112,7 +112,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     # error). The `converted type` has been selected so that
     # they can maintain the numeric precision of the `original type`.
     dtype_mapping = [
-        (np.bool, np.uint8),
+        (np.bool_, np.uint8),
         (np.int8, np.int16),
         (np.int16, np.int16),
         (np.int32, np.float32),
