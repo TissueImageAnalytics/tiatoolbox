@@ -1,0 +1,14 @@
+name: tiatoolbox
+channels:
+  - conda
+  - conda-forge
+  - pytorch
+  - defaults
+dependencies:
+  - cython
+  - openslide
+  - pip>=20.0.2
+  - pixman>=0.39.0
+  - python>=3.8, <=3.11
+  - pip:
+    - -r requirements.txt

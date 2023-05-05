@@ -32,7 +32,6 @@ import sqlite3
 import sys
 import tempfile
 import uuid
-import warnings
 import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -66,7 +65,7 @@ from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
 import tiatoolbox
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.annotation.dsl import (
     PY_GLOBALS,
     SQL_GLOBALS,
@@ -147,6 +146,9 @@ class Annotation:
 
         """
         return json.dumps(self.to_feature())
+
+    def __repr__(self) -> str:
+        return f"Annotation({self.geometry}, {self.properties})"
 
 
 class AnnotationStore(ABC, MutableMapping):
@@ -296,7 +298,11 @@ class AnnotationStore(ABC, MutableMapping):
         "overlaps",
         "touches",
         "within",
-        "bbox_intersects",  # Special non-shapely case, bounding-boxes intersect
+        # Special non-shapely case, bounding-boxes intersect.
+        "bbox_intersects",
+        # Special non-shapely case, query centroid within k of
+        # annotation bounds center.
+        "centers_within_k",
     ]
 
     @classmethod  # noqa: A003
@@ -620,6 +626,7 @@ class AnnotationStore(ABC, MutableMapping):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
+        distance: float = 0,
     ) -> Dict[str, Annotation]:
         """Query the store for annotations.
 
@@ -662,6 +669,9 @@ class AnnotationStore(ABC, MutableMapping):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+            distance (float):
+                Distance used when performing a distance based query.
+                E.g. "centers_within_k" geometry predicate.
 
             Returns:
                 list:
@@ -678,6 +688,27 @@ class AnnotationStore(ABC, MutableMapping):
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
+        if geometry_predicate == "centers_within_k":
+            query_point = Polygon.from_bounds(*query_geometry.bounds).centroid
+
+        def bbox_intersects(
+            annotation_geometry: Geometry, query_geometry: Geometry
+        ) -> bool:
+            """True if bounding box of the annotation intersects the query geometry."""
+            return Polygon.from_bounds(*query_geometry.bounds).intersects(
+                Polygon.from_bounds(*annotation_geometry.bounds)
+            )
+
+        def centers_within_k(
+            annotation_geometry: Geometry, query_point: Point, distance: float
+        ) -> bool:
+            """True if centre of annotation within k of query geometry center.
+
+            Here the "center" is the centroid of the bounds.
+
+            """
+            ann_centre = Polygon.from_bounds(*annotation_geometry.bounds).centroid
+            return query_point.dwithin(ann_centre, distance)
 
         def filter_function(annotation: Annotation) -> bool:
             """Filter function for querying annotations.
@@ -694,8 +725,26 @@ class AnnotationStore(ABC, MutableMapping):
             """
             return (  # Geometry is None or the geometry predicate matches
                 query_geometry is None
-                or self._geometry_predicate(
-                    geometry_predicate, query_geometry, annotation.geometry
+                or any(
+                    [
+                        (
+                            geometry_predicate == "bbox_intersects"
+                            and bbox_intersects(annotation.geometry, query_geometry)
+                        ),
+                        (
+                            geometry_predicate == "centers_within_k"
+                            and centers_within_k(
+                                annotation.geometry, query_point, distance
+                            )
+                        ),
+                        (
+                            geometry_predicate
+                            not in ("bbox_intersects", "centers_within_k")
+                            and self._geometry_predicate(
+                                geometry_predicate, query_geometry, annotation.geometry
+                            )
+                        ),
+                    ]
                 )
             ) and self._eval_where(where, annotation.properties)
 
@@ -1006,6 +1055,196 @@ class AnnotationStore(ABC, MutableMapping):
         return self._handle_pquery_results(
             select, unique, squeeze, items, select_values
         )
+
+    def nquery(
+        self,
+        geometry: Optional[Geometry] = None,
+        where: Optional[Predicate] = None,
+        n_where: Optional[Predicate] = None,
+        distance: float = 5.0,
+        geometry_predicate: str = "intersects",
+        mode: str = "poly-poly",
+    ) -> Dict[str, Dict[str, Annotation]]:
+        """Query for annotations within a distance of another annotation.
+
+        Args:
+            geometry (Geometry):
+                A geometry to use to query for the initial set of
+                annotations to perform a neighbourhood search around. If
+                None, all annotations in the store are considered.
+                Defaults to None.
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will be
+                returned. Defaults to None (assume always true). This may
+                be a string, callable, or pickled function as bytes.
+                Callables are called to filter each result returned the
+                annotation store backend in python before being returned
+                to the user. A pickle object is, where possible, hooked
+                into the backend as a user defined function to filter
+                results during the backend query. Strings are expected to
+                be in a domain specific language and are converted to SQL
+                on a best-effort basis. For supported operators of the DSL
+                see :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query. It is
+                important to note that untrusted user input should never
+                be accepted to this argument as arbitrary code can be
+                run via pickle or the parsing of the string statement.
+            n_where (str or bytes or Callable):
+                Predicate to filter the nearest annotations by. Defaults
+                to None (assume always true). See `where` for more
+                details.
+            distance (float):
+                The distance to search for annotations within. Defaults to
+                5.0.
+            geometry_predicate (str):
+                The predicate to use when comparing geometries. Defaults
+                to "intersects". Other options include "within" and
+                "contains". Ignored if `mode` is "boxpoint-boxpoint" or
+                "box-box".
+            mode (tuple[str, str] or str):
+                The method to use for determining distance during the
+                query. Defaults to "box-box". This may significantly
+                change performance depending on the backend. Possible
+                options are:
+                  - "poly-poly": Polygon boundary to polygon boundary.
+                  - "boxpoint-boxpoint": Bounding box centre point to
+                    bounding box centre point.
+                  - "box-box": Bounding box to bounding box.
+                May be specified as a dash separated string or a tuple
+                of two strings. The first string is the mode for the
+                query geometry and the second string is the mode for
+                the nearest annotation geometry.
+
+        Returns:
+            Dict[str, Dict[str, Annotation]]:
+                A dictionary mapping annotation keys to another
+                dictionary which represents an annotation key and all
+                annotations within `distance` of it.
+
+        The `mode` argument is used to determine how to calculate the
+        distance between annotations. The default mode is "box-box".
+
+        The "box-box" mode uses the bounding boxes of stored annotations
+        and the query geometry when determining if annotations are
+        within the neighbourhood.
+
+        .. figure:: ../images/nquery-box-box.png
+            :width: 512
+            :alt: "box-box" mode
+
+        The "poly-poly" performs full polygon-polygon intersection with
+        the polygon boundary of stored annotations and the query
+        geometry to determine if annotations are within the
+        neighbourhood.
+
+        .. figure:: ../images/nquery-poly-poly.png
+            :width: 512
+            :alt: "poly-poly" mode
+
+
+        The "boxpoint-boxpoint" mode uses the centre point of the
+        bounding box of stored annotations and the query geometry when
+        determining if annotations are within the neighbourhood.
+
+        .. figure:: ../images/nquery-boxpoint-boxpoint.png
+            :width: 512
+            :alt: "boxpoint-boxpoint" mode
+
+
+        Examples:
+            Example bounding box query with one neighbour within a
+            distance of 2.0.
+
+            >>> from shapely.geometry import Point, Polyon
+            >>> from tiatoolbox.annotation.storage import Annotation, SQLiteStore
+            >>> store = SQLiteStore()
+            >>> annotation = Annotation(Point(0, 0), {"class": 42})
+            >>> store.append(annotation, "foo")
+            >>> neighbour = Annotation(Point(1, 1), {"class": 123})
+            >>> store.add(neighbour, "bar")
+            >>> store.nquery((-.5, -.5, .5, .5), distance=2.0)
+            {
+              "foo": {
+                Annotation(POINT (0 0), {'class': 42}): {
+                  "bar": Annotation(POINT (1 1), {'class': 123}),
+                }
+              },
+            }
+
+            Example bounding box query with no neighbours within a
+            distance of 1.0.
+
+            >>> from shapely.geometry import Point
+            >>> from tiatoolbox.annotation.storage import Annotation, SQLiteStore
+            >>> store = SQLiteStore()
+            >>> annotation = Annotation(Point(0, 0), {"class": 42})
+            >>> store.add(annotation, "foo")
+            >>> store.nquery((-.5, -.5, .5, .5), distance=1.0)
+            {"foo": {Annotation(POINT (0 0), {'class': 42}): {}}}
+
+            Example of querying for TILs - lympocytes within 3 units
+            of tumour cells.
+
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
+            >>> store = SQLiteStore("hovernet-pannuke-output.db")
+            >>> tils = store.nquery(
+            ...     where="props['class'] == 1",   # Tumour cells
+            ...     n_where="props['class'] == 0",  # Lymphocytes
+            ...     distance=32.0,  # n_where within 32 units of where
+            ...     mode="point-point",  # Use point to point distance
+            ... )
+
+        """
+        # This is a naive generic implementation which can be overridden
+        # by back ends which can do this more efficiently.
+        if not isinstance(mode, (str, tuple)):
+            raise TypeError("mode must be a string or tuple of strings")
+        if isinstance(mode, str):
+            mode = tuple(mode.split("-"))
+        if mode not in (("box", "box"), ("boxpoint", "boxpoint"), ("poly", "poly")):
+            raise ValueError(
+                "mode must be one of 'box-box', 'boxpoint-boxpoint', or 'poly-poly'"
+            )
+        from_mode, _ = mode
+
+        # Initial selection of annotations to query around
+        selection = self.query(
+            geometry=geometry,
+            where=where,
+        )
+
+        # Query for others within the distance of initial selection
+        result = {}
+        for key, ann in selection.items():
+            geometry = ann.geometry
+            if from_mode == "box":
+                geometry_predicate = "bbox_intersects"
+                min_x, min_y, max_x, max_y = ann.geometry.bounds
+                geometry = Polygon.from_bounds(
+                    min_x - distance,
+                    min_y - distance,
+                    max_x + distance,
+                    max_y + distance,
+                )
+            elif from_mode == "boxpoint":
+                geometry_predicate = "centers_within_k"
+            elif from_mode == "poly":  # pragma: no branch
+                geometry = ann.geometry
+                geometry = geometry.buffer(distance)
+            subquery_result = self.query(
+                geometry=geometry,
+                where=n_where,
+                geometry_predicate=geometry_predicate,
+                distance=distance,
+            )
+            if subquery_result:
+                result[key] = subquery_result
+
+        return result
 
     @staticmethod
     def _handle_pquery_results(
@@ -1550,7 +1789,9 @@ class SQLiteStore(AnnotationStore):
         self.compression_level = self.metadata["compression_level"]
 
         # Register predicate functions as custom SQLite functions
-        def wkb_predicate(name: str, wkb_a: bytes, b: bytes, cx: int, cy: int) -> bool:
+        def wkb_predicate(
+            name: str, wkb_a: bytes, b: bytes, cx: float, cy: float
+        ) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
             a = wkb.loads(wkb_a)
             b = self._unpack_geometry(b, cx, cy)
@@ -1562,7 +1803,7 @@ class SQLiteStore(AnnotationStore):
             properties = json.loads(properties)
             return fn(properties)
 
-        def get_area(wkb_bytes: bytes, cx: int, cy: int) -> float:
+        def get_area(wkb_bytes: bytes, cx: float, cy: float) -> float:
             """Function to get the area of a geometry."""
             return self._unpack_geometry(
                 wkb_bytes,
@@ -1614,7 +1855,7 @@ class SQLiteStore(AnnotationStore):
         # Create tables for geometry and RTree index
         self.con.execute(
             """
-            CREATE VIRTUAL TABLE rtree USING rtree_i32(
+            CREATE VIRTUAL TABLE rtree USING rtree(
                 id,                      -- Integer primary key
                 min_x, max_x,            -- 1st dimension min, max
                 min_y, max_y             -- 2nd dimension min, max
@@ -1627,11 +1868,11 @@ class SQLiteStore(AnnotationStore):
                 id INTEGER PRIMARY KEY,  -- Integer primary key
                 key TEXT UNIQUE,         -- Unique identifier (UUID)
                 objtype TEXT,            -- Object type
-                cx INTEGER NOT NULL,     -- X of centroid/representative point
-                cy INTEGER NOT NULL,     -- Y of centroid/representative point
+                cx FLOAT NOT NULL,       -- X of centroid/representative point
+                cy FLOAT NOT NULL,       -- Y of centroid/representative point
                 geometry BLOB,           -- Detailed geometry
                 properties TEXT,         -- JSON properties
-                area INTEGER NOT NULL    -- Area (for ordering)
+                area FLOAT NOT NULL      -- Area (for ordering)
             )
 
             """
@@ -1664,7 +1905,9 @@ class SQLiteStore(AnnotationStore):
             return zlib.compress(data, level=self.compression_level)
         raise ValueError("Unsupported compression method.")
 
-    def _unpack_geometry(self, data: Union[str, bytes], cx: int, cy: int) -> Geometry:
+    def _unpack_geometry(
+        self, data: Union[str, bytes], cx: float, cy: float
+    ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
         For space optimisation, points are stored as centroids and all
@@ -1677,7 +1920,7 @@ class SQLiteStore(AnnotationStore):
                 The WKB/WKT data to be unpacked.
             cx(int):
                 The X coordinate of the centroid/representative point.
-            cy(int):
+            cy(float):
                 The Y coordinate of the centroid/representative point.
 
         Returns:
@@ -1767,15 +2010,15 @@ class SQLiteStore(AnnotationStore):
         return {
             "key": key,
             "geometry": serialised_geometry,
-            "cx": int(geometry.centroid.x),
-            "cy": int(geometry.centroid.y),
+            "cx": geometry.centroid.x,
+            "cy": geometry.centroid.y,
             "min_x": geometry.bounds[0],
             "min_y": geometry.bounds[1],
             "max_x": geometry.bounds[2],
             "max_y": geometry.bounds[3],
             "geom_type": geometry.geom_type,
             "properties": json.dumps(annotation.properties, separators=(",", ":")),
-            "area": int(geometry.area),
+            "area": geometry.area,
         }
 
     def append_many(
@@ -1837,8 +2080,13 @@ class SQLiteStore(AnnotationStore):
 
     @staticmethod
     def _initialize_query_string_parameters(
-        query_geometry, query_parameters, geometry_predicate, columns, where
-    ):
+        query_geometry: Optional[Geometry],
+        query_parameters: Dict[str, Any],
+        geometry_predicate: Optional[str],
+        columns: str,
+        where: Union[bytes, str],
+        distance: float = 0,
+    ) -> Tuple[str, Dict[str, Any]]:
         """Initialises the query string and parameters."""
         query_string = (
             "SELECT "  # skipcq: BAN-B608
@@ -1852,13 +2100,25 @@ class SQLiteStore(AnnotationStore):
         # There is query geometry, add a simple rtree bounds check to
         # rapidly narrow candidates down.
         if query_geometry is not None:
-            # Add rtree index checks to the query
-            query_string += """
-                    AND max_x >= :min_x
-                    AND min_x <= :max_x
-                    AND max_y >= :min_y
-                    AND min_y <= :max_y
-                    """
+            # Add rtree index checks to the query.
+            # For special case of centers_within_k, Check for
+            # center of the annotation bounds within query geometry
+            # centroid + k.
+            if geometry_predicate == "centers_within_k":
+                # Use rtree index to check distance between points
+                query_string += (
+                    "AND (POWER((:min_x + :max_x)/2 - (min_x + max_x)/2, 2) + "
+                    " POWER((:min_y + :max_y)/2 - (min_y + max_y)/2, 2)) < :distance2 "
+                )
+                query_parameters["distance2"] = distance**2
+            # Otherwise, perform a regular bounding box intersection
+            else:
+                query_string += (
+                    "AND max_x >= :min_x "
+                    "AND min_x <= :max_x "
+                    "AND max_y >= :min_y "
+                    "AND min_y <= :max_y "
+                )
 
             # Find the bounds of the geometry for the rtree index
             min_x, min_y, max_x, max_y = query_geometry.bounds
@@ -1877,9 +2137,9 @@ class SQLiteStore(AnnotationStore):
 
             # The query is a full intersection check, not a simple bounds
             # check only.
-            if (
-                geometry_predicate is not None
-                and geometry_predicate != "bbox_intersects"
+            if geometry_predicate is not None and geometry_predicate not in (
+                "bbox_intersects",
+                "centers_within_k",
             ):
                 query_string += (
                     "\nAND geometry_predicate("
@@ -1911,6 +2171,7 @@ class SQLiteStore(AnnotationStore):
         no_constraints_ok: bool = False,
         index_warning: bool = False,
         min_area=None,
+        distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -1937,6 +2198,9 @@ class SQLiteStore(AnnotationStore):
             index_warning(bool):
                 Whether to warn if the query is not using an index.
                 Defaults to False.
+            distance (float):
+                Distance used when performing a distance based query.
+                E.g. "centers_within_k" geometry predicate.
 
         Returns:
             sqlite3.Cursor:
@@ -1965,7 +2229,12 @@ class SQLiteStore(AnnotationStore):
         query_parameters = {}
 
         query_string, query_parameters = self._initialize_query_string_parameters(
-            query_geometry, query_parameters, geometry_predicate, columns, where
+            query_geometry,
+            query_parameters,
+            geometry_predicate,
+            columns,
+            where,
+            distance=distance,
         )
 
         if min_area is not None and "area" in self.table_columns:
@@ -1985,7 +2254,7 @@ class SQLiteStore(AnnotationStore):
                 "EXPLAIN QUERY PLAN " + query_string, query_parameters
             ).fetchone()
             if "USING INDEX" not in query_plan[-1]:
-                warnings.warn(
+                logger.warning(
                     "Query is not using an index. "
                     "Consider adding an index to improve performance.",
                     stacklevel=2,
@@ -2002,6 +2271,7 @@ class SQLiteStore(AnnotationStore):
         where: Optional[Predicate] = None,
         geometry_predicate="intersects",
         min_area=None,
+        distance: float = 0,
     ) -> List[str]:
         """Query the store for annotation keys.
 
@@ -2047,6 +2317,9 @@ class SQLiteStore(AnnotationStore):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+            distance (float):
+                Distance used when performing a distance based query.
+                E.g. "centers_within_k" geometry predicate.
 
         Returns:
             list:
@@ -2061,6 +2334,7 @@ class SQLiteStore(AnnotationStore):
             where=where,
             callable_columns="[key], properties",
             min_area=min_area,
+            distance=distance,
         )
         if isinstance(where, Callable):
             return [
@@ -2076,6 +2350,7 @@ class SQLiteStore(AnnotationStore):
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
         min_area=None,
+        distance: float = 0,
     ) -> Dict[str, Annotation]:
         """Runs Query."""
         query_geometry = geometry
@@ -2085,6 +2360,7 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate=geometry_predicate,
             where=where,
             min_area=min_area,
+            distance=distance,
         )
         if isinstance(where, Callable):
             return {
@@ -2789,15 +3065,30 @@ class SQLiteStore(AnnotationStore):
         )
 
     def commit(self) -> None:
+        """Commit any in-memory changes to disk."""
         self.con.commit()
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
+        """Serialise a copy of the whole store to a file-like object.
+
+        Args:
+            fp(Path or str or IO):
+                A file path or file handle object for output to disk.
+
+        """
         if hasattr(fp, "write"):
             fp = fp.name
         target = sqlite3.connect(fp)
         self.con.backup(target)
 
     def dumps(self) -> str:
+        """Serialise and return a copy of store as a string or bytes.
+
+        Returns:
+            str or bytes:
+                The serialised store.
+
+        """
         return "\n".join(self.con.iterdump())
 
     def clear(self) -> None:
@@ -2908,7 +3199,22 @@ class DictionaryStore(AnnotationStore):
         self,
         annotation: Annotation,
         key: Optional[str] = None,
-    ) -> int:
+    ) -> str:
+        """Insert a new annotation, returning the key.
+
+        Args:
+            annotation (Annotation):
+                The shapely annotation to insert.
+            key (str):
+                Optional. The unique key used to identify the annotation in the
+                store. If not given a new UUID4 will be generated and returned
+                instead.
+
+        Returns:
+            str:
+                The unique key of the newly inserted annotation.
+
+        """
         if not isinstance(annotation.geometry, (Polygon, Point, LineString)):
             raise TypeError("Invalid geometry type.")
         key = key or str(uuid.uuid4())
@@ -2921,6 +3227,24 @@ class DictionaryStore(AnnotationStore):
         geometry: Optional[Geometry] = None,
         properties: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """Patch an annotation at given key.
+
+        Partial update of an annotation. Providing only a geometry will update
+        the geometry and leave properties unchanged. Providing a properties
+        dictionary applies a patch operation to the properties. Only updating
+        the properties which are given and leaving the rest unchanged. To
+        completely replace an annotation use `__setitem__`.
+
+        Args:
+            key(str):
+                The key of the annotation to update.
+            geometry(Geometry):
+                The new geometry. If None, the geometry is not updated.
+            properties(dict):
+                A dictionary of properties to patch and their new values.
+                If None, the existing properties are not altered.
+
+        """
         if key not in self:
             self.append(Annotation(geometry, properties), key)
             return
@@ -2932,6 +3256,13 @@ class DictionaryStore(AnnotationStore):
         self[key] = Annotation(geometry, new_properties)
 
     def remove(self, key: str) -> None:
+        """Remove annotation from the store with its unique key.
+
+        Args:
+            key (str):
+                The key of the annotation to be removed.
+
+        """
         del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
@@ -2955,25 +3286,43 @@ class DictionaryStore(AnnotationStore):
 
     @classmethod  # noqa: A003
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":  # noqa: A003
+        """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)
 
     def commit(self) -> None:
+        """Commit any in-memory changes to disk."""
         if str(self.connection) == ":memory:":
-            warnings.warn("In-memory store. Nothing to commit.", stacklevel=2)
+            logger.warning("In-memory store. Nothing to commit.", stacklevel=2)
             return
         if not self.path.exists():
             self.path.touch()
         self.dump(self.connection)
 
     def dump(self, fp: Union[Path, str, IO]) -> None:
+        """Serialise a copy of the whole store to a file-like object.
+
+        Args:
+            fp(Path or str or IO):
+                A file path or file handle object for output to disk.
+
+        """
         return self.to_ndjson(fp)
 
     def dumps(self) -> str:
+        """Serialise and return a copy of store as a string or bytes.
+
+        Returns:
+            str or bytes:
+                The serialised store.
+
+        """
         return self.to_ndjson()
 
     def close(self) -> None:
-        warnings.simplefilter("ignore")
+        """Closes :class:`DictionaryStore` from file pointer or path."""
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         # Try to commit any changes if the file is still open.
         with contextlib.suppress(ValueError):
             self.commit()
-        warnings.resetwarnings()
+        logger.removeFilter(duplicate_filter)

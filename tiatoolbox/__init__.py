@@ -10,7 +10,7 @@ import yaml
 
 __author__ = """TIA Lab"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "1.3.3"
+__version__ = "1.4.0"
 
 # This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux
@@ -43,6 +43,16 @@ if not logging.getLogger().hasHandlers():
     logger.addHandler(stderr_handler)
 else:
     logger = logging.getLogger()
+
+
+class DuplicateFilter(logging.Filter):
+    def filter(self, record):
+        current_log = (record.module, record.levelno, record.msg)
+        if current_log != getattr(self, "last_log", None):
+            self.last_log = current_log
+            return True
+        return False
+
 
 # runtime context parameters
 rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}

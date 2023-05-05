@@ -52,7 +52,7 @@ def test_imresize():
     # test for dtype conversion, pairs of
     # (original type, converted type)
     test_dtypes = [
-        (np.bool, np.uint8),
+        (np.bool_, np.uint8),
         (np.int8, np.int16),
         (np.int16, np.int16),
         (np.int32, np.float32),
@@ -1053,8 +1053,8 @@ def test_crop_and_pad_edges():
         l, t, r, b = bounds
         slide_width, slide_height = slide_dimensions
         x, y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
-        under = np.logical_or(x < 0, y < 0).astype(np.int)
-        over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int)
+        under = np.logical_or(x < 0, y < 0).astype(np.int_)
+        over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int_)
         return under, over
 
     loc = (-5, -5)
@@ -1435,7 +1435,7 @@ def test_from_multi_head_dat(tmp_path):
     assert len(result) == 1
 
 
-def test_invalid_poly(tmp_path):
+def test_invalid_poly(tmp_path, caplog):
     """Test that invalid polygons are dealt with correctly."""
     coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
     poly = Polygon(coords)
@@ -1447,8 +1447,9 @@ def test_invalid_poly(tmp_path):
         "type": 2,
     }
     joblib.dump(data, tmp_path / "test.dat")
-    with pytest.warns(UserWarning, match="Invalid geometry found, fix"):
-        store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+
+    assert "Invalid geometry found, fix" in caplog.text
 
     result = store.query(where="props['type'] == 2")
     assert next(iter(result.values())).geometry.is_valid
