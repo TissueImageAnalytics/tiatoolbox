@@ -130,6 +130,15 @@ def annotations_center_of_mass(annotations):
     return MultiPoint(centroids).centroid
 
 
+def test_annotation_repr():
+    """Test the repr of an annotation."""
+    annotation = Annotation(Polygon([(0, 0), (1, 1), (2, 0)]))
+    assert isinstance(repr(annotation), str)
+    assert repr(annotation).startswith("Annotation(")
+    assert "POLYGON" in repr(annotation)
+    assert repr(annotation).endswith(")")
+
+
 # Fixtures
 
 
@@ -190,7 +199,7 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
     )
     SQLiteStore()
     monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
-    with pytest.raises(Exception, match="RTREE and JSON1"):
+    with pytest.raises(EnvironmentError, match="RTREE and JSON1"):
         SQLiteStore()
 
 
@@ -199,7 +208,7 @@ def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
     monkeypatch.setattr(
         SQLiteStore, "compile_options", lambda x: ["OMIT_JSON"], raising=True
     )
-    with pytest.raises(Exception, match="JSON must not"):
+    with pytest.raises(EnvironmentError, match="JSON must not"):
         SQLiteStore()
 
 
@@ -232,7 +241,7 @@ def test_sqlite_store_index_version_error(monkeypatch):
     """Test adding an index with SQlite <3.9."""
     store = SQLiteStore()
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
-    with pytest.raises(Exception, match="Requires sqlite version 3.9.0"):
+    with pytest.raises(EnvironmentError, match="Requires sqlite version 3.9.0"):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
@@ -271,11 +280,11 @@ def test_sqlite_create_index_no_analyze(fill_store, tmp_path):
     assert "test_index" in store.indexes()
 
 
-def test_sqlite_pquery_warn_no_index(fill_store):
+def test_sqlite_pquery_warn_no_index(fill_store, caplog):
     """Test that querying without an index warns."""
     _, store = fill_store(SQLiteStore, ":memory:")
-    with pytest.warns(UserWarning, match="index"):
-        store.pquery("*", unique=False)
+    store.pquery("*", unique=False)
+    assert "Query is not using an index." in caplog.text
     # Check that there is no warning after creating the index
     store.create_index("test_index", "props['class']")
     with pytest.warns(None) as record:
@@ -300,7 +309,7 @@ def test_sqlite_drop_index_error(fill_store, tmp_path):
 def test_sqlite_store_unsupported_compression(sample_triangle):
     """Test that using an unsupported compression str raises error."""
     store = SQLiteStore(compression="foo")
-    with pytest.raises(Exception, match="Unsupported"):
+    with pytest.raises(ValueError, match="Unsupported"):
         _ = store.serialise_geometry(sample_triangle)
 
 
@@ -321,7 +330,7 @@ def test_sqlite_store_no_compression(sample_triangle):
 def test_sqlite_store_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
-    with pytest.raises(Exception, match="Unsupported"):
+    with pytest.raises(ValueError, match="Unsupported"):
         _ = store.deserialize_geometry(bytes())
 
 
@@ -511,6 +520,12 @@ def test_auto_commit(fill_store, tmp_path):
     store.close()
     store = SQLiteStore(tmp_path / "polygon2.db")
     assert len(store) == 2  # check explicitly committing works
+
+
+def test_init_base_class_exception():
+    """Test that the base class cannot be initialized."""
+    with pytest.raises(TypeError, match="abstract class"):
+        AnnotationStore()  # skipcq: PYL-E0110
 
 
 # Annotation Store Interface Tests (AnnotationStoreABC)
@@ -1204,9 +1219,9 @@ class TestStore:
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py37_init(fill_store, store_cls, monkeypatch):
-        """Test that __init__ is compatible with Python 3.7."""
-        py37_version = (3, 7, 0)
+    def test_py38_init(fill_store, store_cls, monkeypatch):
+        """Test that __init__ is compatible with Python 3.8."""
+        py38_version = (3, 8, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""
@@ -1215,7 +1230,7 @@ class TestStore:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 
-        monkeypatch.setattr(sys, "version_info", py37_version)
+        monkeypatch.setattr(sys, "version_info", py38_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
 
@@ -1635,3 +1650,487 @@ class TestStore:
         with open(path, "w") as fh:
             store_cls._connection_to_path(fh)
             assert path == Path(fh.name)
+
+    @staticmethod
+    def test_nquery_boxpoint_boxpoint(store_cls):
+        """Test simple querying within a neighbourhood.
+
+        Test that a neighbourhood query returns the correct results
+        for a simple data store with two points.
+
+        .. code-block:: text
+
+             ^
+            3|--****-----C
+             |*      *   |
+            2|         * |
+             |     B    *|
+            1|   A       *
+             |          *|
+            0+---------*-->
+             0   1   2   3
+
+        Query for all points within a distance of 2 from A. Should
+        return a dictionary with a single key, "A", and a value of
+        {"B": B}.
+
+        """
+        store: AnnotationStore = store_cls()
+        ann_a = Annotation(
+            Point(1, 1),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+        ann_b = Annotation(
+            Point(1.4, 1.4),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+        # C is inside the bounding box of the radius around A but is not
+        # returned because it is not inside of the radius.
+        ann_c = Annotation(
+            Point(2.9, 2.9),
+            {"class": "C"},
+        )
+        store["C"] = ann_c
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] != 'A'",
+            distance=2,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1
+        assert "A" in result
+        assert result["A"] == {"B": ann_b}
+
+    @staticmethod
+    def test_nquery_boxpoint_boxpoint_no_results(store_cls):
+        """Test querying within a neighbourhood with no results.
+
+        Test that a neighbourhood query returns an empty dictionary
+        when there are no results.
+
+        .. code-block:: text
+
+            3^
+            2|
+            1|
+            0+----->
+             0 1 2 3
+
+        Query for all points within a distance of 2 from A. Should
+        return an empty dictionary.
+
+        """
+        store: AnnotationStore = store_cls()
+        ann_a = Annotation(
+            Point(1, 1),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=2,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 0
+
+    @staticmethod
+    def test_nquery_boxpoint_boxpoint_multiple(store_cls):
+        """Test querying within a neighbourhood with multiple results.
+
+        Test that a neighbourhood query returns the correct results
+        for a simple data store with four points.
+
+        .. code-block:: text
+
+            3^
+            2|   B
+            1| A C D <-- D is outside the neighbourhood
+            0+------>
+             0 1 2 3
+
+        Query for all points within a distance of 2 from A. Should
+        return a dictionary with a single key, "A", and a value of
+        {"B": B, "C": C}.
+
+        """
+        store: AnnotationStore = store_cls()
+        ann_a = Annotation(
+            Point(1, 1),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+
+        ann_b = Annotation(
+            Point(2, 2),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+
+        ann_c = Annotation(
+            Point(2, 1),
+            {"class": "C"},
+        )
+        store["C"] = ann_c
+
+        ann_d = Annotation(
+            Point(3, 1),
+            {"class": "D"},
+        )
+        store["D"] = ann_d
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="(props['class'] == 'B') | (props['class'] == 'C')",
+            distance=2,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1
+        assert "A" in result
+        assert result["A"] == {"B": ann_b, "C": ann_c}
+
+    @staticmethod
+    def test_nquery_poly_poly(store_cls):
+        """Test querying within a neighbourhood with multiple results.
+
+        Test that a neighbourhood query returns the correct results
+        for a simple data store with two polygons.
+
+        .. code-block:: text
+
+            3^
+            2|   B
+            1| A
+            0+------>
+             0 1 2 3
+
+        """
+        store: AnnotationStore = store_cls()
+
+        ann_a = Annotation(  # Triangle
+            Polygon([(0, 0), (0, 1), (1, 0)]),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+
+        ann_b = Annotation(  # Square
+            Polygon.from_bounds(1, 1, 2, 2),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=2,
+            mode="poly-poly",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1
+
+    @staticmethod
+    def test_nquery_poly_poly_vs_boxpoint_boxpoint(store_cls):
+        """Test querying within a neighbourhood with two polygons.
+
+        Test that a full polygon neighbourhood query returns results
+        where a centroid query would return no results.
+
+        .. code-block:: text
+
+             ^
+            3|
+             |         <----2---->
+            2|     +-----+     +-----+
+             |     |  +  |<-1->|  +  |
+            1|     +-----+     +-----+
+             |
+            0+------------------------>
+             0     1     2     3     4
+
+        """
+        store: AnnotationStore = store_cls()
+
+        ann_a = Annotation(
+            Polygon.from_bounds(1, 1, 2, 2),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+
+        ann_b = Annotation(
+            Polygon.from_bounds(3, 1, 4, 2),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+
+        distance = 1.25
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=distance,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 0
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=distance,
+            mode=("poly", "poly"),
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1
+
+    @staticmethod
+    def test_nquery_polygon_boundary_alt(store_cls):
+        """Test querying within a neighbourhood with two polygons.
+
+        This test is similar to test_nquery_polygon_boundary, but
+        the centroids are closer than the boundaries.
+
+        .. code-block:: text
+
+             ^
+            5|     +-----------------+
+             |     +---------------+ |
+            4|        <-----2----->| |  centroid-boundary = 2
+             |        <--1-->      | |  centroid-centroid = 1
+            3|     +-----+         | |
+             |     |  +  |  +  ^   | |  centroid-boundary = 2
+            2|     +-----+     |   | |
+             |        ^        |2  | |
+            1|        v1.5     v   | |  boundary-boundary = 1.5
+             |     +---------------+ |
+            0+-----+-----------------+-->
+             0     1     2     3     4
+        """
+        store: AnnotationStore = store_cls()
+
+        # Annotation A: A 1x1 box
+        ann_a = Annotation(
+            Polygon.from_bounds(1, 2, 2, 3),
+            {"class": "A"},
+        )
+        store["A"] = ann_a
+
+        # C shaped polygon around annotation A
+        ann_b = Annotation(
+            Polygon(
+                [
+                    (1, 0),
+                    (4, 0),
+                    (4, 5),
+                    (1, 5),
+                    (1, 4.5),
+                    (3.5, 4.5),
+                    (3.5, 0.5),
+                    (1, 0.5),
+                ]
+            ),
+            {"class": "B"},
+        )
+        store["B"] = ann_b
+
+        distance = 1.75
+
+        centroid = Polygon.from_bounds(*ann_b.geometry.bounds).centroid
+
+        print(centroid)
+        print(ann_a.geometry.centroid)
+        print(
+            centroid.buffer(distance)
+            .intersection(ann_a.geometry.centroid.buffer(distance))
+            .area
+        )
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=distance,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == 1
+
+    @staticmethod
+    def test_nquery_overlapping_grid_box_box(store_cls):
+        """Find duplicate (overlapping) cell boundaries via bounding boxes.
+
+        This generates an :math:`n \\times n` (where :math:`n=10`) grid
+        of overlapping fake cell boundary polygons, where each polygon
+        has radius of 5 and the grid has a spacing of 30.
+
+        The grid is then queried with a "box-box" neighbourhood query
+        (intersection of bounding boxes) and a `distance` paramete of 0
+        (no expansion of bounding boxes).
+
+        """
+        store: AnnotationStore = store_cls()
+
+        grid_size = 10
+        spacing = 30
+        radius = 5
+        grid = np.ndindex((grid_size, grid_size))
+
+        for x, y in grid:
+            cell_a = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_a = Annotation(cell_a, {"class": "A"})
+            cell_b = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_b = Annotation(cell_b, {"class": "B"})
+
+            store[f"A_{x}_{y}"] = ann_a
+            store[f"B_{x}_{y}"] = ann_b
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=0,
+            mode="box-box",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == grid_size**2
+        for v in result.values():
+            assert len(v) == 1
+
+    @staticmethod
+    def test_nquery_overlapping_grid_boxpoint_boxpoint(store_cls):
+        """Find duplicate (overlapping) cell boundaries via bbox centroid distance.
+
+        This generates an :math:`n \\times n` (where :math:`n=10`) grid
+        of overlapping fake cell boundary polygons, where each polygon
+        has radius of 5 and the grid has a spacing of 30.
+
+        The grid is then queried with a "boxpoint-boxpoint"
+        neighbourhood query and a `distance` of 2 (use a buffer of 2
+        around the point).
+
+        """
+        store: AnnotationStore = store_cls()
+
+        grid_size = 10
+        spacing = 10
+        radius = 5
+        grid = np.ndindex((grid_size, grid_size))
+
+        for x, y in grid:
+            cell_a = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_a = Annotation(cell_a, {"class": "A"})
+            cell_b = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_b = Annotation(cell_b, {"class": "B"})
+
+            store[f"A_{x}_{y}"] = ann_a
+            store[f"B_{x}_{y}"] = ann_b
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=2,
+            mode="boxpoint-boxpoint",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == grid_size**2
+        for v in result.values():
+            assert len(v) == 1
+
+    @staticmethod
+    def test_nquery_overlapping_grid_poly_poly(store_cls):
+        """Find duplicate (overlapping) cell boundaries via polygon intersection.
+
+        This generates an :math:`n \\times n` (where :math:`n=10`) grid
+        of overlapping fake cell boundary polygons, where each polygon
+        has radius of 5 and the grid has a spacing of 30.
+
+        The grid is then queried with a "poly-poly" neighbourhood query
+        (intersection of polygons) and a `distance` parameter of 2.
+
+        """
+        store: AnnotationStore = store_cls()
+
+        grid_size = 10
+        spacing = 30
+        radius = 5
+        grid = np.ndindex((grid_size, grid_size))
+
+        for x, y in grid:
+            cell_a = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_a = Annotation(cell_a, {"class": "A"})
+            cell_b = cell_polygon(
+                (x * spacing + radius, y * spacing + radius), radius=radius
+            )
+            ann_b = Annotation(cell_b, {"class": "B"})
+
+            store[f"A_{x}_{y}"] = ann_a
+            store[f"B_{x}_{y}"] = ann_b
+
+        result = store.nquery(
+            where="props['class'] == 'A'",
+            n_where="props['class'] == 'B'",
+            distance=2,
+            mode="poly-poly",
+        )
+        assert isinstance(result, dict)
+        assert len(result) == grid_size**2
+        for v in result.values():
+            assert len(v) == 1
+
+    @staticmethod
+    def test_invalid_mode_type(store_cls):
+        store: AnnotationStore = store_cls()
+
+        with pytest.raises(TypeError, match="string or tuple of strings"):
+            store.nquery(
+                where="props['class'] == 'A'",
+                n_where="props['class'] == 'B'",
+                distance=2,
+                mode=123,
+            )
+
+    @staticmethod
+    def test_invalid_mode_format(store_cls):
+        store: AnnotationStore = store_cls()
+
+        with pytest.raises(ValueError, match="must be one of"):
+            store.nquery(
+                where="props['class'] == 'A'",
+                n_where="props['class'] == 'B'",
+                distance=2,
+                mode="invalid-invalid-invalid",
+            )
+
+    @staticmethod
+    def test_invalid_mode(store_cls):
+        store: AnnotationStore = store_cls()
+
+        with pytest.raises(ValueError, match="must be one of"):
+            store.nquery(
+                where="props['class'] == 'A'",
+                n_where="props['class'] == 'B'",
+                distance=2,
+                mode="invalid",
+            )
+
+    @staticmethod
+    def test_bquery_only_where(store_cls):
+        """Test that bquery when only a where predicate is given.
+
+        This simply checks for no exceptions raised about None values.
+
+        """
+        store = store_cls()
+        assert store.bquery(where="props['foo'] == 'bar'") == {}

@@ -1,13 +1,12 @@
-"""Unit test package for Nuclick."""
+"""Unit test package for NuClick."""
 
 import pathlib
 
 import numpy as np
-import pytest
 import torch
 
+from tiatoolbox.models import NuClick
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.nuclick import NuClick
 from tiatoolbox.utils.misc import imread
 
 ON_GPU = False
@@ -15,8 +14,8 @@ ON_GPU = False
 # Test pretrained Model =============================
 
 
-def test_functional_nuclcik(remote_sample, tmp_path):
-    """Tests for nuclick."""
+def test_functional_nuclick(remote_sample, tmp_path, caplog):
+    """Tests for NuClick."""
     # convert to pathlib Path to prevent wsireader complaint
     tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
     img = imread(tile_path)
@@ -25,7 +24,7 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     fetch_pretrained_weights("nuclick_original-pannuke", _pretrained_path)
 
     # test creation
-    model = NuClick(num_input_channels=5, num_output_channels=1)
+    _ = NuClick(num_input_channels=5, num_output_channels=1)
 
     # test inference
     # create image patch, inclusion and exclusion maps
@@ -67,7 +66,7 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     # test failed reconstruction in post-processing
     inclusion_map = np.zeros((128, 128))
     inclusion_map[0, 0] = 1
-    with pytest.warns(UserWarning, match=r"Nuclei reconstruction was not done"):
-        _ = model.postproc(
-            output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
-        )
+    _ = model.postproc(
+        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+    )
+    assert "Nuclei reconstruction was not done" in caplog.text

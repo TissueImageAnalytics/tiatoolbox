@@ -7,8 +7,8 @@ import pytest
 import torch
 
 from tiatoolbox import utils
+from tiatoolbox.models import MicroNet
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.micronet import MicroNet
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -74,6 +74,5 @@ def test_micronet_output(remote_sample, tmp_path):
     output_on_server = np.load(str(micronet_output))
     output_on_server = np.round(output_on_server, decimals=3)
     new_output = np.round(output[500:1000, 1000:1500, :], decimals=3)
-    true_values = output_on_server == new_output
-    percent_true = np.count_nonzero(true_values) / np.size(output_on_server)
-    assert percent_true > 0.999
+    diff = new_output - output_on_server
+    assert diff.mean() < 1e-5

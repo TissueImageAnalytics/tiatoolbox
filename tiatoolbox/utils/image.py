@@ -1,10 +1,10 @@
 """Miscellaneous utilities which operate on image data."""
-import warnings
 from typing import Tuple, Union
 
 import numpy as np
 from PIL import Image
 
+from tiatoolbox import logger
 from tiatoolbox.utils.misc import conv_out_size
 from tiatoolbox.utils.transforms import (
     bounds2locsize,
@@ -547,7 +547,9 @@ def sub_pixel_read(  # noqa: CCR001
     # than the right/end_x and bottom/end_y values.
     bounds, fliplr, flipud = make_bounds_size_positive(bounds)
     if fliplr or flipud:
-        warnings.warn("Bounds have a negative size, output will be flipped.")
+        logger.warning(
+            "Bounds have a negative size, output will be flipped.", stacklevel=2
+        )
 
     if isinstance(image, Image.Image):
         image = np.array(image)
@@ -572,7 +574,6 @@ def sub_pixel_read(  # noqa: CCR001
     overlap_bounds = find_overlap(*bounds2locsize(bounds), image_size=image_size)
     if pad_mode is None:
         read_bounds = overlap_bounds
-    pad_width = np.zeros((2, 2), int)
 
     baseline_padding = padding
     if not pad_at_baseline:

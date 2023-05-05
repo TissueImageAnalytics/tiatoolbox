@@ -6,12 +6,13 @@ The raw metadata is also preserved and accessible via a dictionary. The
 format of this dictionary may vary between WSI formats.
 
 """
-import warnings
 from numbers import Number
 from pathlib import Path
 from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
+
+from tiatoolbox import logger
 
 Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
 
@@ -142,37 +143,37 @@ class WSIMeta:
         # Fatal conditions: Should return False if not True
 
         if len(set(self.axes) - set(self._valid_axes_characters)) > 0:
-            warnings.warn(
-                "Axes contains invalid characters. "
-                f"Valid characters are '{self._valid_axes_characters}'."
+            logger.warning(
+                "Axes contains invalid characters. Valid characters are %s.",
+                self._valid_axes_characters,
             )
             passed = False
 
         if self.level_count < 1:
-            warnings.warn("Level count is not a positive integer")
+            logger.warning("Level count is not a positive integer.")
             passed = False
 
         if self.level_dimensions is None:
-            warnings.warn("level_dimensions is None")
+            logger.warning("'level_dimensions' is None.")
             passed = False
         elif len(self.level_dimensions) != self.level_count:
-            warnings.warn("Length of level dimensions != level count")
+            logger.warning("Length of level dimensions != level count")
             passed = False
 
         if self.level_downsamples is None:
-            warnings.warn("Level downsamples is None")
+            logger.warning("Level downsamples is None.")
             passed = False
         elif len(self.level_downsamples) != self.level_count:
-            warnings.warn("Length of level downsamples != level count")
+            logger.warning("Length of level downsamples != level count")
             passed = False
 
         # Non-fatal conditions: Raise warning only, do not fail validation
 
         if self.raw is None:
-            warnings.warn("Raw data is None")
+            logger.warning("Raw data is None.")
 
         if all(x is None for x in [self.objective_power, self.mpp]):
-            warnings.warn("Unknown scale (no objective_power or mpp)")
+            logger.warning("Unknown scale (no objective_power or mpp)")
 
         return passed  # noqa
 

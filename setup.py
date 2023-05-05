@@ -14,7 +14,7 @@ with open("HISTORY.md") as history_file:
 
 install_requires = [
     line
-    for line in Path("requirements.txt").read_text().splitlines()
+    for line in Path("requirements/requirements.txt").read_text().splitlines()
     if line and line[0] not in ("-", "#")
 ]
 
@@ -34,16 +34,16 @@ test_requirements = [
 setup(
     author="TIA Centre",
     author_email="tia@dcs.warwick.ac.uk",
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     description="Computational pathology toolbox developed by TIA Centre.",
     dependency_links=dependency_links,
@@ -63,6 +63,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/TissueImageAnalytics/tiatoolbox",
-    version="1.3.3",
+    version="1.4.0",
     zip_safe=False,
 )

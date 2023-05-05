@@ -1,0 +1,33 @@
+# torch installation
+--extra-index-url https://download.pytorch.org/whl/cu117; sys_platform != "darwin"
+albumentations>=1.3.0, <=1.3.0
+Click>=8.1.3, <=8.1.3
+defusedxml>=0.7.1, <=0.7.1
+flask>=2.2.2, <=2.3.2
+glymur>=0.12.1, <=0.12.5
+imagecodecs>=2022.9.26, <=2023.3.16
+joblib>=1.1.1, <=1.2.0
+jupyterlab>=3.5.2, <=3.6.3
+matplotlib>=3.6.2, <=3.7.1
+numba>=0.57.0, <=0.57.0
+numpy>=1.23.5, <=1.24.3
+opencv-python>=4.6.0, <=4.7.0
+openslide-python>=1.2.0, <=1.2.0
+pandas>=2.0.0, <=2.0.1
+pillow>=9.3.0, <=9.5.0
+pydicom>=2.3.1, <=2.3.1 # Used by wsidicom
+pyyaml>=6.0, <=6.0
+requests>=2.28.1, <=2.30.0
+scikit-image>=0.20, <=0.20.0
+scikit-learn>=1.2.0, <=1.2.2
+scipy>=1.8, <=1.10.1
+shapely>=2.0.0, <=2.0.1
+SimpleITK>=2.2.1, <=2.2.1
+sphinx>=5.3.0, <=7.0.0
+tifffile>=2022.10.10, <=2023.4.12
+torch>=1.13.1, <=2.0.0
+torchvision>=0.14.1, <=0.15.1
+tqdm>=4.64.1, <=4.65.0
+umap-learn>=0.5.3, <=0.5.3
+wsidicom>=0.7.0, <=0.9.0
+zarr>=2.13.3, <=2.14.2

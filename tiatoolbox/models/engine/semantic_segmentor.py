@@ -6,7 +6,6 @@ import logging
 import os
 import pathlib
 import shutil
-import warnings
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import Namespace
 from typing import Callable, List, Tuple, Union
@@ -19,6 +18,7 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
+from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -322,10 +322,11 @@ class WSIStreamDataset(torch_data.Dataset):
         self.ioconfig = copy.deepcopy(ioconfig)
 
         if mode == "tile":
-            warnings.warn(
+            logger.warning(
                 "WSIPatchDataset only reads image tile at "
                 '`units="baseline"`. Resolutions will be converted '
-                "to baseline value."
+                "to baseline value.",
+                stacklevel=2,
             )
             self.ioconfig = self.ioconfig.to_baseline()
 
@@ -992,12 +993,11 @@ class SemanticSegmentor:
     def _prepare_save_dir(save_dir):
         """Prepare save directory and cache."""
         if save_dir is None:
-            warnings.warn(
-                (
-                    "Segmentor will only output to directory. "
-                    "All subsequent output will be saved to current runtime "
-                    "location under folder 'output'. Overwriting may happen! "
-                )
+            logger.warning(
+                "Segmentor will only output to directory. "
+                "All subsequent output will be saved to current runtime "
+                "location under folder 'output'. Overwriting may happen! ",
+                stacklevel=2,
             )
             save_dir = os.path.join(os.getcwd(), "output")
 
@@ -1077,10 +1077,11 @@ class SemanticSegmentor:
                 stride_shape=stride_shape,
             )
         if mode == "tile":
-            warnings.warn(
+            logger.warning(
                 "WSIPatchDataset only reads image tile at "
                 '`units="baseline"`. Resolutions will be converted '
-                "to baseline value."
+                "to baseline value.",
+                stacklevel=2,
             )
             return ioconfig.to_baseline()
 
@@ -1329,7 +1330,11 @@ class SemanticSegmentor:
             )
 
         # clean up the cache directories
-        shutil.rmtree(self._cache_dir)
+        try:
+            shutil.rmtree(self._cache_dir)
+        except PermissionError:  # pragma: no cover
+            logger.warning("Unable to remove %s", self._cache_dir)
+
         self._memory_cleanup()
 
         return self._outputs

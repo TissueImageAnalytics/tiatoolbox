@@ -118,7 +118,7 @@ class StainAugmentor(ImageOnlyTransform):
 
         if self.method.lower() not in {"macenko", "vahadane"}:
             raise ValueError(
-                f"Unsupported stain extractor method '{self.method}' for "
+                f"Unsupported stain extractor method {self.method!r} for "
                 "StainAugmentor. Choose either 'vahadane' or 'macenko'."
             )
         self.stain_normalizer = get_normalizer(self.method.lower())
@@ -158,7 +158,10 @@ class StainAugmentor(ImageOnlyTransform):
                 img, self.stain_matrix
             )
         self.n_stains = self.source_concentrations.shape[1]
-        self.tissue_mask = get_luminosity_tissue_mask(img, threshold=threshold).ravel()
+        if not self.augment_background:
+            self.tissue_mask = get_luminosity_tissue_mask(
+                img, threshold=threshold
+            ).ravel()
         self.img_shape = img.shape
 
     def augment(self):
@@ -191,7 +194,7 @@ class StainAugmentor(ImageOnlyTransform):
         img_augmented = np.clip(img_augmented, 0, 255)
         return np.uint8(img_augmented)
 
-    def apply(self, img, **params):  # alpha=None, beta=None,
+    def apply(self, img, **params):  # alpha=None, beta=None,  # skipcq: PYL-W0613
         """Call the `fit` and `augment` functions to generate a stain augmented image.
 
         Args:
@@ -213,10 +216,11 @@ class StainAugmentor(ImageOnlyTransform):
         self.beta = random.uniform(-self.sigma2, self.sigma2)
         return {}
 
-    def get_params_dependent_on_targets(self, params):
+    def get_params_dependent_on_targets(self, params):  # skipcq: PYL-W0613, PYL-R0201
         """Does nothing, added to resolve flake 8 error"""
         return {}
 
-    def get_transform_init_args_names(self):
+    @staticmethod
+    def get_transform_init_args_names(**kwargs):
         """Return the argument names for albumentations use."""
-        return ("method", "stain_matrix", "sigma1", "sigma2", "augment_background")
+        return "method", "stain_matrix", "sigma1", "sigma2", "augment_background"
