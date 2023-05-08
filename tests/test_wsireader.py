@@ -186,7 +186,7 @@ def read_bounds_level_consistency(wsi, bounds):
     # from interpolation when calculating the downsampled levels. This
     # adds some tolerance for the comparison.
     blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-    as_float = [img.astype(np.float) for img in blurred]
+    as_float = [img.astype(np.float_) for img in blurred]
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
@@ -2381,7 +2381,7 @@ class TestReader:
         # from interpolation when calculating the downsampled levels. This
         # adds some tolerance for the comparison.
         blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-        as_float = [img.astype(np.float) for img in blurred]
+        as_float = [img.astype(np.float_) for img in blurred]
 
         # Pair-wise check resolutions for mean squared error
         for i, a in enumerate(as_float):
