@@ -306,7 +306,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 mask_reader = mask
 
             elif isinstance(mask, np.ndarray):
-                if mask.dtype != np.bool:
+                if mask.dtype != bool:
                     raise ValueError(
                         "`mask` must be binary, i.e. `ndarray.dtype` has to be bool"
                     )
