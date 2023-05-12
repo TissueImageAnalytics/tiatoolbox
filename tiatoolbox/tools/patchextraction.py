@@ -286,7 +286,9 @@ class PatchExtractor(PatchExtractorABC):
         tissue_mask = mask_reader.img
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
-        scale_factors = np.array(tissue_mask.shape[::-1]) / np.array(wsi_shape)
+        scale_factors = np.array(tissue_mask.shape[:2][::-1]) / np.array(
+            wsi_shape[:2]
+        )  # [:2] is to ignore the channel dimension if it exists
         scaled_coords = coordinates_list.copy().astype(np.float32)
         scaled_coords[:, [0, 2]] *= scale_factors[0]
         scaled_coords[:, [0, 2]] = np.clip(

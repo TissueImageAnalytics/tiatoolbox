@@ -1386,11 +1386,11 @@ def test_invalid_masker_method(sample_svs):
 
 
 def test_wsireader_open(
-    sample_svs, sample_ndpi, sample_jp2, sample_ome_tiff, source_image
+    sample_svs, sample_ndpi, sample_jp2, sample_ome_tiff, source_image, blank_sample
 ):
     """Test WSIReader.open() to return correct object."""
-    with pytest.raises(FileNotSupported):
-        _ = WSIReader.open("./sample.csv")
+    with blank_sample(".csv") as path, pytest.raises(FileNotSupported):
+        _ = WSIReader.open(path)
 
     with pytest.raises(TypeError):
         _ = WSIReader.open([1, 2])
@@ -1656,13 +1656,15 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
 
 def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
     """Test JP2 read_bounds."""
+    input_img = pathlib.Path(sample_jp2)
+
     runner = CliRunner()
     read_bounds_result = runner.invoke(
         cli.main,
         [
             "read-bounds",
             "--img-input",
-            str(pathlib.Path(sample_jp2)),
+            str(input_img),
             "--resolution",
             "0",
             "--units",
@@ -1673,7 +1675,9 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
     )
 
     assert read_bounds_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
+    input_dir = pathlib.Path(input_img).parent.parent
+    output_path = os.path.join(input_dir, "im_region.jpg")
+    assert pathlib.Path(output_path).is_file()
 
 
 @pytest.mark.skipif(
@@ -1701,23 +1705,25 @@ def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
     assert read_bounds_result.exit_code == 0
 
 
-def test_command_line_unsupported_file_read_bounds(sample_svs, tmp_path):
+def test_command_line_unsupported_file_read_bounds(sample_svs, tmp_path, blank_sample):
     """Test unsupported file read bounds."""
     runner = CliRunner()
-    read_bounds_result = runner.invoke(
-        cli.main,
-        [
-            "read-bounds",
-            "--img-input",
-            str(pathlib.Path(sample_svs))[:-1],
-            "--resolution",
-            "0",
-            "--units",
-            "level",
-            "--mode",
-            "save",
-        ],
-    )
+
+    with blank_sample(".csv") as file:
+        read_bounds_result = runner.invoke(
+            cli.main,
+            [
+                "read-bounds",
+                "--img-input",
+                str(file),
+                "--resolution",
+                "0",
+                "--units",
+                "level",
+                "--mode",
+                "save",
+            ],
+        )
 
     assert read_bounds_result.output == ""
     assert read_bounds_result.exit_code == 1
@@ -1985,7 +1991,9 @@ def test_store_reader_alpha(remote_sample):
 
 
 def test_store_reader_no_types(tmp_path, remote_sample):
-    """Test AnnotationStoreReader with no types."""
+    """
+    Test AnnotationStoreReader with no types.
+    """
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     reader = AnnotationStoreReader(tmp_path / "store.db", wsi_reader.info)

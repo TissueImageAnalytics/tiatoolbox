@@ -253,6 +253,7 @@ class WSIReader:
             raise TypeError(
                 "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path"
             )
+
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
 
@@ -261,10 +262,28 @@ class WSIReader:
 
         # Input is a string or pathlib.Path, normalise to pathlib.Path
         input_path = pathlib.Path(input_img)
+        if not os.path.exists(input_path):
+            raise ValueError("`input_img` path must exist")
+
         WSIReader.verify_supported_wsi(input_path)
+        return WSIReader.get_reader_by_filepath(
+            input_path, mpp=mpp, power=power, **kwargs
+        )
+
+    @staticmethod
+    def get_reader_by_filepath(
+        input_path: pathlib.Path,
+        mpp: Optional[Tuple[Number, Number]] = None,
+        power: Optional[Number] = None,
+        **kwargs,
+    ) -> WSIReader:
+        """
+        Returns an appropriate :class:`.WSIReader` object
+        based on the file extension.
+
+        """
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
-
         if is_dicom(input_path):
             return DICOMWSIReader(input_path, mpp=mpp, power=power)
 

@@ -25,7 +25,7 @@ from tiatoolbox.models.engine.patch_predictor import (
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, imread, imwrite
-from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
 
@@ -224,9 +224,9 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     mini_wsi_jpg = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
     mini_wsi_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
-    def reuse_init(img_path=mini_wsi_svs, **kwargs):
+    def reuse_init(input_img=mini_wsi_svs, **kwargs):
         """Testing function."""
-        return WSIPatchDataset(img_path=img_path, **kwargs)
+        return WSIPatchDataset(input_img=input_img, **kwargs)
 
     def reuse_init_wsi(**kwargs):
         """Testing function."""
@@ -251,9 +251,9 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
         Proto()  # skipcq
 
     # invalid path input
-    with pytest.raises(ValueError, match=r".*`img_path` must be a valid file path.*"):
+    with pytest.raises(ValueError, match=r".*`input_img` path must exist.*"):
         WSIPatchDataset(
-            img_path="aaaa",
+            input_img="aaaa",
             mode="wsi",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
@@ -261,10 +261,23 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
         )
 
     # invalid mask path input
-    with pytest.raises(ValueError, match=r".*`mask_path` must be a valid file path.*"):
+    with pytest.raises(ValueError, match=r".*`mask` must be a valid file path.*"):
         WSIPatchDataset(
-            img_path=mini_wsi_svs,
-            mask_path="aaaa",
+            input_img=mini_wsi_svs,
+            mask="aaaa",
+            mode="wsi",
+            patch_input_shape=[512, 512],
+            stride_shape=[256, 256],
+            resolution=1.0,
+            units="mpp",
+            auto_get_mask=False,
+        )
+
+    # mask as not VirtualWSIReader
+    with pytest.raises(ValueError, match=r".*`mask` must be .* VirtualWSIReader.*"):
+        WSIPatchDataset(
+            input_img=mini_wsi_svs,
+            mask=WSIReader.open(mini_wsi_svs),
             mode="wsi",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
@@ -276,6 +289,10 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     # invalid mode
     with pytest.raises(ValueError, match="`X` is not supported."):
         reuse_init(mode="X")
+
+    # invalid units
+    with pytest.raises(ValueError, match="`X` is not supported."):
+        reuse_init(units="X")
 
     # invalid patch
     with pytest.raises(ValueError, match="Invalid `patch_input_shape` value None."):
@@ -348,8 +365,8 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     )
     assert len(ds) > 0
     ds = WSIPatchDataset(
-        img_path=mini_wsi_svs,
-        mask_path=mini_wsi_msk,
+        input_img=mini_wsi_svs,
+        mask=mini_wsi_msk,
         mode="wsi",
         patch_input_shape=[512, 512],
         stride_shape=[256, 256],
@@ -363,8 +380,8 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     imwrite(negative_mask_path, negative_mask)
     with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
         ds = WSIPatchDataset(
-            img_path=mini_wsi_svs,
-            mask_path=negative_mask_path,
+            input_img=mini_wsi_svs,
+            mask=negative_mask_path,
             mode="wsi",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
@@ -376,7 +393,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     # * for tile
     reader = WSIReader.open(mini_wsi_jpg)
     tile_ds = WSIPatchDataset(
-        img_path=mini_wsi_jpg,
+        input_img=mini_wsi_jpg,
         mode="tile",
         patch_input_shape=patch_size,
         stride_shape=stride_size,
@@ -396,6 +413,72 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     assert roi1.shape[0] == roi2.shape[0]
     assert roi1.shape[1] == roi2.shape[1]
     assert np.min(correlation) > 0.9, correlation
+
+    positive_mask = (negative_mask + 1).astype(bool)
+    # check mask as np array
+    with pytest.raises(ValueError, match=r".*`mask` must be binary.*"):
+        WSIPatchDataset(
+            input_img=mini_wsi_svs,
+            mask=np.array([[0, 0, 1]]),
+            mode="wsi",
+            patch_input_shape=[512, 512],
+            stride_shape=[256, 256],
+            auto_get_mask=False,
+            resolution=1.0,
+            units="mpp",
+        )
+    ds = WSIPatchDataset(
+        input_img=mini_wsi_svs,
+        mask=positive_mask,
+        mode="wsi",
+        patch_input_shape=[512, 512],
+        stride_shape=[256, 256],
+        auto_get_mask=False,
+        resolution=1.0,
+        units="mpp",
+    )
+
+    assert len(ds) > 0
+
+    # check mask VirtualWSIReader
+    with pytest.raises(ValueError, match=r".*`mask` must be binary.*"):
+        WSIPatchDataset(
+            input_img=mini_wsi_svs,
+            mask=VirtualWSIReader(np.array([[0, 0, 5]])),
+            mode="wsi",
+            patch_input_shape=[512, 512],
+            stride_shape=[256, 256],
+            auto_get_mask=False,
+            resolution=1.0,
+            units="mpp",
+        )
+
+    ds_from_fp = WSIPatchDataset(
+        input_img=mini_wsi_svs,
+        mask=VirtualWSIReader(positive_mask, mode="bool"),
+        mode="wsi",
+        patch_input_shape=[512, 512],
+        stride_shape=[256, 256],
+        auto_get_mask=False,
+        resolution=1.0,
+        units="mpp",
+    )
+
+    assert len(ds_from_fp) > 0
+
+    mini_wsi_svs_np = imread(mini_wsi_svs)
+    ds_from_np = WSIPatchDataset(
+        input_img=mini_wsi_svs_np,
+        mask=VirtualWSIReader(positive_mask, mode="bool"),
+        mode="wsi",
+        patch_input_shape=[512, 512],
+        stride_shape=[256, 256],
+        auto_get_mask=False,
+        resolution=1.0,
+        units="baseline",
+    )
+
+    assert len(ds_from_np) > 0
 
 
 def test_patch_dataset_abc():
@@ -493,6 +576,12 @@ def test_predictor_crash():
         predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi")
     with pytest.raises(ValueError, match=r".*labels.*!=.*imgs.*"):
         predictor.predict([1, 2, 3], labels=[1, 2], mode="patch")
+    # mask on patch are not supported
+    with pytest.raises(ValueError, match=r".*masks are not supported .* `patch`.*"):
+        predictor.predict(
+            [np.array([1, 2, 3])], masks=[np.array([1, 2, 3])], mode="patch"
+        )
+
     # remove previously generated data
     _rm_dir("output")
 
@@ -677,7 +766,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     # test prediction
     predictor = PatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.predict(
-        inputs,
+        imgs=inputs,
         return_probabilities=True,
         labels=[1, "a"],
         return_labels=True,
@@ -802,6 +891,58 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
 
     # remove previously generated data
     _rm_dir("output")
+
+    # check that predictor can take in WSIReader object
+    svs_objects = [WSIReader.open(i) for i in [mini_wsi_svs, mini_wsi_svs]]
+    output = predictor.predict(
+        svs_objects,
+        masks=[mini_wsi_msk, mini_wsi_msk],
+        mode="wsi",
+        **kwargs,
+    )
+    assert str(mini_wsi_svs) in output
+    # remove previously generated data
+    _rm_dir(kwargs["save_dir"])
+
+    # check that predictor can take in ndarray object
+    img_objects = [
+        WSIReader.open(i).slide_thumbnail(1, "baseline")
+        for i in [mini_wsi_svs, mini_wsi_svs]
+    ]
+
+    with pytest.raises(ValueError, match=".*Cannot determine scale.*"):
+        predictor.predict(
+            img_objects,
+            masks=[mini_wsi_msk, mini_wsi_msk],
+            mode="wsi",
+            **kwargs,
+        )
+    _rm_dir(kwargs["save_dir"])
+
+    _ = predictor.predict(
+        img_objects,
+        masks=[mini_wsi_msk, mini_wsi_msk],
+        mode="tile",
+        ignore_resolutions=True,
+        **kwargs,
+    )
+    _rm_dir(kwargs["save_dir"])
+
+    _kwargs = copy.deepcopy(kwargs)
+    _kwargs["units"] = "baseline"
+    _kwargs["resolution"] = 1.0
+
+    output = predictor.predict(
+        img_objects,
+        masks=[mini_wsi_msk, mini_wsi_msk],
+        mode="wsi",
+        **_kwargs,
+    )
+
+    assert len(output) == 2
+    assert 0 in output
+    assert 1 in output
+    _rm_dir(_kwargs["save_dir"])
 
 
 def test_wsi_predictor_merge_predictions(sample_wsi_dict):
