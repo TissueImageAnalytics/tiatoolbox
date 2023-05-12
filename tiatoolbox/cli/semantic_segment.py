@@ -57,10 +57,7 @@ def semantic_segment(
     verbose,
 ):
     """Process an image/directory of input images with a patch classification CNN."""
-    from tiatoolbox.models.engine.semantic_segmentor import (
-        IOSegmentorConfig,
-        SemanticSegmentor,
-    )
+    from tiatoolbox.models import IOSegmentorConfig, SemanticSegmentor
     from tiatoolbox.utils.misc import save_as_json
 
     files_all, masks_all, output_path = prepare_model_cli(
