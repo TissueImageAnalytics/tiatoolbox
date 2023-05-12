@@ -24,8 +24,8 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     _process_tile_predictions,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils import imwrite
 from tiatoolbox.utils.metrics import f1_detection
-from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
