@@ -282,9 +282,16 @@ paths:
                     items:
                       type: string
 
-  /tileserver/reset:
+  /tileserver/reset/{user}:
     get:
       summary: Remove no longer needed objects if user closed the browser
+      parameters:
+        - in: path
+          name: user
+          description: Name of the user
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: Successful response
