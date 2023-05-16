@@ -346,7 +346,7 @@ class TileServer(Flask):
             session_id = "default"
         else:
             session_id = secrets.token_urlsafe(16)
-        resp.set_cookie("session_id", session_id, httponly=True)
+        resp.set_cookie("session_id", session_id, httponly=True)  # skipcq: PTC-W6003
         self.renderers[session_id] = copy.deepcopy(self.renderer)
         self.overlaps[session_id] = 0
         self.tia_layers[session_id] = {}
@@ -403,7 +403,7 @@ class TileServer(Flask):
         """Update a property in the renderer."""
         session_id = self._get_session_id()
         val = json.loads(val)
-        if val == "None" or val == "null":
+        if val in ["None", "null"]:
             val = None
         self.renderers[session_id].__setattr__(prop, val)
         self.renderers[session_id].__setattr__(prop, val)
