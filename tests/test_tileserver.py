@@ -512,6 +512,16 @@ def test_get_property_values(app):
         assert set(json.loads(response.data)) == {1}
 
 
+def test_get_property_values_no_overlay(empty_app):
+    """Test getting property values when no overlay is present."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.get("/tileserver/prop_values/type/all")
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        assert json.loads(response.data) == []
+
+
 def test_reset(app_alt):
     """Test resetting tileserver."""
     with app_alt.test_client() as client:

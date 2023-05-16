@@ -412,34 +412,6 @@ class TileServer(Flask):
             self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
         return "done"
 
-    def update_where(self):
-        """Update the where callable in the renderer."""
-        session_id = self._get_session_id()
-        get_types = json.loads(request.form["types"])
-        filter_val = json.loads(request.form["filter"])
-
-        if filter_val == "None":
-            if len(get_types) == 0:
-                pred = None
-            else:
-
-                def pred(props):
-                    return props["type"] in get_types
-
-        else:
-            if len(get_types) == 0:
-
-                def pred(props):
-                    return eval(filter_val)
-
-            else:
-
-                def pred(props):
-                    return eval(filter_val) and props["type"] in get_types
-
-        self.renderers[session_id].where = pred
-        return "done"
-
     def load_annotations(self, file_path, model_mpp):
         """Load annotations from a dat file.
 
