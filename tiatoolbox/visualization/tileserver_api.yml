@@ -8,7 +8,7 @@ info:
     AnnotationRenderer used to render the annotations.
 
 paths:
-  /tileserver/layer/{layer}/{user}/zoomify/TileGroup{tile_group}/{z}-{x}-{y}@{res}x.jpg:
+  /tileserver/layer/{layer}/{session_id}/zoomify/TileGroup{tile_group}/{z}-{x}-{y}@{res}x.jpg:
     get:
       summary: Get zoomify tiles for a layer
       parameters:
@@ -19,8 +19,8 @@ paths:
           schema:
             type: string
         - in: path
-          name: user
-          description: Name of the user
+          name: session_id
+          description: Name of the session_id
           required: true
           schema:
             type: string
@@ -74,10 +74,10 @@ paths:
               schema:
                 type: string
 
-  /tileserver/get_user:
+  /tileserver/session_id:
     get:
-      summary: Get user information
-      description: Set up new user and generate an identifier for them
+      summary: Get session_id information
+      description: Set up new session_id identifier to disambiguate different sessions
       responses:
         '200':
           description: Successful response
@@ -85,11 +85,11 @@ paths:
           Set-Cookie:
             schema:
               type: string
-            description: The 'user' cookie containing the user identifier.
+            description: The 'session_id' cookie containing the session_id identifier.
 
-  /tileserver/change_color_prop/{prop}:
+  /tileserver/color_prop/{prop}:
     put:
-      summary: Update property to color annotations by
+      summary: Update the property used to determine the colors of rendered annotations
       parameters:
         - in: path
           name: prop
@@ -101,7 +101,7 @@ paths:
         '200':
           description: Successful response
 
-  /tileserver/change_slide/{slide_path}:
+  /tileserver/slide/{slide_path}:
     put:
       summary: change the base slide. All overlays will be removed.
       parameters:
@@ -115,9 +115,9 @@ paths:
         '200':
           description: Successful response
 
-  /tileserver/change_cmap/{cmap}:
+  /tileserver/cmap/{cmap}:
     put:
-      summary: Change colormap for a layer
+      summary: Change colormap for annotation layer
       parameters:
         - in: path
           name: cmap
@@ -155,7 +155,7 @@ paths:
           content:
             application/json:
 
-  /tileserver/change_overlay/{overlay_path}:
+  /tileserver/overlay/{overlay_path}:
     put:
       summary: Change overlay for a slide
       description: This endpoint changes the overlay. If the path points to some annotations, the current overlay is replaced with the new one. If the path points to an image, it is added as a new layer.
@@ -186,7 +186,7 @@ paths:
         '200':
           description: Successful response
 
-  /tileserver/update_renderer/{prop}/{val}:
+  /tileserver/renderer/{prop}/{val}:
     put:
       summary: Update annotation renderer properties
       parameters:
@@ -206,7 +206,7 @@ paths:
         '200':
           description: Successful response
 
-  /tileserver/change_secondary_cmap/{type_id}/{prop}/{cmap}:
+  /tileserver/secondary_cmap/{type_id}/{prop}/{cmap}:
     put:
       summary: Change secondary color map for a property type
       parameters:
@@ -233,7 +233,7 @@ paths:
         '200':
           description: Successful response
 
-  /tileserver/get_prop_names/{ann_type}:
+  /tileserver/prop_names/{ann_type}:
     get:
       summary: Get all the properties of the annotations in the store
       description: This endpoint retrieves all the property names in the annotations in the store of the specified type.
@@ -252,7 +252,7 @@ paths:
               schema:
                 type: array
 
-  /tileserver/get_prop_values/{prop}/{ann_type}:
+  /tileserver/prop_values/{prop}/{ann_type}:
     get:
       summary: Get a list of available values for a property
       parameters:
@@ -282,13 +282,13 @@ paths:
                     items:
                       type: string
 
-  /tileserver/reset/{user}:
-    get:
-      summary: Remove no longer needed objects if user closed the browser
+  /tileserver/reset/{session_id}:
+    put:
+      summary: Remove no longer needed objects if session is closed
       parameters:
         - in: path
-          name: user
-          description: Name of the user
+          name: session_id
+          description: Name of the session_id
           required: true
           schema:
             type: string

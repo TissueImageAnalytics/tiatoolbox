@@ -138,7 +138,7 @@ class TileServer(Flask):
         self.route("/tileserver/renderer/<prop>/<val>", methods=["PUT"])(
             self.update_renderer
         )
-        self.route("/tileserver/reset/<session_id>")(self.reset)
+        self.route("/tileserver/reset/<session_id>", methods=["PUT"])(self.reset)
         self.route(
             "/tileserver/secondary_cmap/<type_id>/<prop>/<cmap>", methods=["PUT"]
         )(self.change_secondary_cmap)

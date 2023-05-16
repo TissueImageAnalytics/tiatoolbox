@@ -366,7 +366,7 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         )
 
         # reset tileserver and load overlay from .db instead
-        response = client.get(f"tileserver/reset/{session_id}")
+        response = client.put(f"tileserver/reset/{session_id}")
         session_id = setup_app(client)
         response = client.put(
             f"/tileserver/slide/{safe_str(remote_sample('svs-1-small'))}"
@@ -397,7 +397,7 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         assert SQLiteStore._connection_to_path(con) == sample_store
 
         # add a .jpg overlay
-        response = client.get(f"tileserver/reset/{session_id}")
+        response = client.put(f"tileserver/reset/{session_id}")
         session_id = setup_app(client)
         response = client.put(
             f"/tileserver/slide/{safe_str(remote_sample('wsi2_4k_4k_svs'))}"
@@ -516,7 +516,7 @@ def test_reset(app_alt):
     """Test resetting tileserver."""
     with app_alt.test_client() as client:
         session_id = setup_app(client)
-        response = client.get(f"/tileserver/reset/{session_id}")
+        response = client.put(f"/tileserver/reset/{session_id}")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the tileserver has been correctly reset
