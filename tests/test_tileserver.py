@@ -467,7 +467,7 @@ def test_update_renderer(app):
         assert app.tia_pyramids["default"]["overlay"].renderer.blur_radius == 5
         assert app.overlaps["default"] == int(5 * 1.5)
 
-        response = client.put("/tileserver/renderer/where/None")
+        response = client.put(f"/tileserver/renderer/where/{json.dumps('None')}")
         assert app.tia_pyramids["default"]["overlay"].renderer.where is None
 
 
