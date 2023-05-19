@@ -18,7 +18,7 @@ from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.visualization import TileServer
-from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.wsicore import WSIReader
 
 
 def safe_str(name):
