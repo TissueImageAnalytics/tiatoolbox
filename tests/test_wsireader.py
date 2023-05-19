@@ -29,8 +29,8 @@ from skimage.registration import phase_cross_correlation
 from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.data import _fetch_remote_sample
+from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import WSIReader, wsireader

@@ -16,9 +16,9 @@ from tests.test_annotation_stores import cell_polygon
 from tests.test_utils import make_simple_dat
 from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.cli.common import cli_name
-from tiatoolbox.utils.misc import imread, imwrite
+from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.visualization import TileServer
-from tiatoolbox.wsicore import WSIReader
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 def safe_str(name):

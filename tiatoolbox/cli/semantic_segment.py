@@ -61,7 +61,7 @@ def semantic_segment(
         IOSegmentorConfig,
         SemanticSegmentor,
     )
-    from tiatoolbox.utils.misc import save_as_json
+    from tiatoolbox.utils import save_as_json
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
