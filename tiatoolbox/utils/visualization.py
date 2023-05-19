@@ -14,7 +14,7 @@ from shapely import speedups
 from shapely.geometry import Polygon
 
 from tiatoolbox import logger
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore
+from tiatoolbox.annotation import Annotation, AnnotationStore
 
 if speedups.available:  # pragma: no branch
     speedups.enable()

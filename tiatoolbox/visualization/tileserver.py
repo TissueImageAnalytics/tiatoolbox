@@ -16,7 +16,7 @@ from matplotlib import colormaps
 from PIL import Image
 
 from tiatoolbox import data
-from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
+from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.misc import add_from_dat, store_from_dat
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
@@ -67,9 +67,9 @@ class TileServer(Flask):
             static_url_path="",
             static_folder=data._local_sample_path(Path("visualization") / "static"),
         )
-        self.tia_title = title
-        self.tia_layers = {}
-        self.tia_pyramids = {}
+        self.title = title
+        self.layers = {}
+        self.pyramids = {}
         self.renderer = renderer
         self.overlap = 0
         if renderer is None:  # pragma: no branch
@@ -97,20 +97,18 @@ class TileServer(Flask):
         # so just set default session_id
         self.default_session_id = len(layers) > 0
         if self.default_session_id:
-            self.tia_layers["default"] = {}
-            self.tia_pyramids["default"] = {}
+            self.layers["default"] = {}
+            self.pyramids["default"] = {}
             self.renderers["default"] = copy.deepcopy(self.renderer)
         for i, (key, layer) in enumerate(layers.items()):
             layer = self._get_layer_as_wsireader(layer, meta)
 
-            self.tia_layers["default"][key] = layer
+            self.layers["default"][key] = layer
 
             if isinstance(layer, WSIReader):
-                self.tia_pyramids["default"][key] = ZoomifyGenerator(layer)
+                self.pyramids["default"][key] = ZoomifyGenerator(layer)
             else:
-                self.tia_pyramids["default"][
-                    key
-                ] = layer  # it's an AnnotationTileGenerator
+                self.pyramids["default"][key] = layer  # it's an AnnotationTileGenerator
 
             if i == 0:
                 meta = layer.info  # base slide info
@@ -134,7 +132,7 @@ class TileServer(Flask):
         self.route("/tileserver/overlay/<overlay_path>", methods=["PUT"])(
             self.change_overlay
         )
-        self.route("/tileserver/commit/<save_path>")(self.commit_db)
+        self.route("/tileserver/commit/<save_path>", methods=["POST"])(self.commit_db)
         self.route("/tileserver/renderer/<prop>/<val>", methods=["PUT"])(
             self.update_renderer
         )
@@ -170,7 +168,7 @@ class TileServer(Flask):
             return colormaps[cmap]
 
         def cmapp(x):
-            """Dictionary colormap callable wrapper"""
+            """Dictionary colormap callable wrapper."""
             return cmap[x]
 
         return cmapp
@@ -263,10 +261,10 @@ class TileServer(Flask):
 
         """
         try:
-            pyramid = self.tia_pyramids[session_id][layer]
+            pyramid = self.pyramids[session_id][layer]
             interpolation = (
                 "nearest"
-                if isinstance(self.tia_layers[session_id][layer], VirtualWSIReader)
+                if isinstance(self.layers[session_id][layer], VirtualWSIReader)
                 else "optimise"
             )
             if isinstance(pyramid, AnnotationTileGenerator):
@@ -298,7 +296,7 @@ class TileServer(Flask):
 
     def get_ann_layer(self, session_id):
         """Get the annotation layer for a session_id."""
-        for layer in self.tia_pyramids[session_id].values():
+        for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 return layer
         raise ValueError("No annotation layer found.")
@@ -320,17 +318,17 @@ class TileServer(Flask):
                 "size": [int(x) for x in layer.info.slide_dimensions],
                 "mpp": float(np.mean(layer.info.mpp)),
             }
-            for name, layer in self.tia_layers[session_id].items()
+            for name, layer in self.layers[session_id].items()
         ]
 
         return render_template(
-            "index.html", title=self.tia_title, layers=json.dumps(layers)
+            "index.html", title=self.title, layers=json.dumps(layers)
         )
 
     def change_prop(self, prop):
         """Change the property to colour annotations by."""
         session_id = self._get_session_id()
-        for layer in self.tia_pyramids[session_id].values():
+        for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 if prop == "None":
                     prop = None
@@ -349,14 +347,14 @@ class TileServer(Flask):
         resp.set_cookie("session_id", session_id, httponly=True)  # skipcq: PTC-W6003
         self.renderers[session_id] = copy.deepcopy(self.renderer)
         self.overlaps[session_id] = 0
-        self.tia_layers[session_id] = {}
-        self.tia_pyramids[session_id] = {}
+        self.layers[session_id] = {}
+        self.pyramids[session_id] = {}
         return resp
 
     def reset(self, session_id):
         """Reset the tileserver."""
-        del self.tia_layers[session_id]
-        del self.tia_pyramids[session_id]
+        del self.layers[session_id]
+        del self.pyramids[session_id]
         del self.slide_mpps[session_id]
         del self.renderers[session_id]
         del self.overlaps[session_id]
@@ -367,15 +365,13 @@ class TileServer(Flask):
         session_id = self._get_session_id()
         slide_path = self.decode_safe_name(slide_path)
 
-        self.tia_layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
-        self.tia_pyramids[session_id] = {
-            "slide": ZoomifyGenerator(
-                self.tia_layers[session_id]["slide"], tile_size=256
-            )
+        self.layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
+        self.pyramids[session_id] = {
+            "slide": ZoomifyGenerator(self.layers[session_id]["slide"], tile_size=256)
         }
-        if self.tia_layers[session_id]["slide"].info.mpp is None:
-            self.tia_layers[session_id]["slide"].info.mpp = [1, 1]
-        self.slide_mpps[session_id] = self.tia_layers[session_id]["slide"].info.mpp
+        if self.layers[session_id]["slide"].info.mpp is None:
+            self.layers[session_id]["slide"].info.mpp = [1, 1]
+        self.slide_mpps[session_id] = self.layers[session_id]["slide"].info.mpp
 
         return "done"
 
@@ -422,7 +418,7 @@ class TileServer(Flask):
         session_id = self._get_session_id()
         file_path = self.decode_safe_name(file_path)
 
-        for layer in self.tia_pyramids[session_id].values():
+        for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 add_from_dat(
                     layer.store,
@@ -435,15 +431,13 @@ class TileServer(Flask):
         sq = store_from_dat(
             file_path, np.array(model_mpp) / np.array(self.slide_mpps[session_id])
         )
-        self.tia_pyramids[session_id]["overlay"] = AnnotationTileGenerator(
-            self.tia_layers[session_id]["slide"].info,
+        self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
+            self.layers[session_id]["slide"].info,
             sq,
             self.renderers[session_id],
             overlap=self.overlaps[session_id],
         )
-        self.tia_layers[session_id]["overlay"] = self.tia_pyramids[session_id][
-            "overlay"
-        ]
+        self.layers[session_id]["overlay"] = self.pyramids[session_id]["overlay"]
         types = self.update_types(sq)
         return json.dumps(types)
 
@@ -459,19 +453,19 @@ class TileServer(Flask):
         overlay_path = self.decode_safe_name(overlay_path)
 
         if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
-            layer = f"layer{len(self.tia_pyramids[session_id])}"
+            layer = f"layer{len(self.pyramids[session_id])}"
             if overlay_path.suffix == ".tiff":
-                self.tia_layers[session_id][layer] = OpenSlideWSIReader(
-                    overlay_path, mpp=self.tia_layers[session_id]["slide"].info.mpp[0]
+                self.layers[session_id][layer] = OpenSlideWSIReader(
+                    overlay_path, mpp=self.layers[session_id]["slide"].info.mpp[0]
                 )
             elif overlay_path.suffix in [".jpg", ".png"]:
-                self.tia_layers[session_id][layer] = VirtualWSIReader(
-                    Path(overlay_path), info=self.tia_layers[session_id]["slide"].info
+                self.layers[session_id][layer] = VirtualWSIReader(
+                    Path(overlay_path), info=self.layers[session_id]["slide"].info
                 )
             else:
-                self.tia_layers[session_id][layer] = WSIReader.open(overlay_path)
-            self.tia_pyramids[session_id][layer] = ZoomifyGenerator(
-                self.tia_layers[session_id][layer]
+                self.layers[session_id][layer] = WSIReader.open(overlay_path)
+            self.pyramids[session_id][layer] = ZoomifyGenerator(
+                self.layers[session_id][layer]
             )
             return json.dumps(layer)
         if overlay_path.suffix == ".geojson":
@@ -481,24 +475,20 @@ class TileServer(Flask):
         else:
             sq = SQLiteStore(overlay_path, auto_commit=False)
 
-        for layer in self.tia_pyramids[session_id].values():
+        for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 layer.store = sq
                 print(f"loaded {len(sq)} annotations")
                 types = self.update_types(sq)
                 return json.dumps(types)
-        self.tia_pyramids[session_id]["overlay"] = AnnotationTileGenerator(
-            self.tia_layers[session_id]["slide"].info,
+        self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
+            self.layers[session_id]["slide"].info,
             sq,
             self.renderers[session_id],
             overlap=self.overlaps[session_id],
         )
-        print(
-            f'loaded {len(self.tia_pyramids[session_id]["overlay"].store)} annotations'
-        )
-        self.tia_layers[session_id]["overlay"] = self.tia_pyramids[session_id][
-            "overlay"
-        ]
+        print(f'loaded {len(self.pyramids[session_id]["overlay"].store)} annotations')
+        self.layers[session_id]["overlay"] = self.pyramids[session_id]["overlay"]
         types = self.update_types(sq)
         return json.dumps(types)
 
@@ -524,7 +514,7 @@ class TileServer(Flask):
         where = None
         if ann_type != "all":
             where = f'props["type"]=={ann_type}'
-        if "overlay" not in self.tia_pyramids[session_id]:
+        if "overlay" not in self.pyramids[session_id]:
             return json.dumps([])
         ann_props = self.get_ann_layer(session_id).store.pquery(
             select=f"props['{prop}']",
@@ -542,7 +532,7 @@ class TileServer(Flask):
         """
         session_id = self._get_session_id()
         save_path = self.decode_safe_name(save_path)
-        for layer in self.tia_pyramids[session_id].values():
+        for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 if layer.store.path.suffix == ".db":
                     print("db committed")

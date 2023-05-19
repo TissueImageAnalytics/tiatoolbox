@@ -173,7 +173,7 @@ paths:
             application/json:
 
   /tileserver/commit/{save_path}:
-    get:
+    post:
       summary: Commit database changes
       parameters:
         - in: path
