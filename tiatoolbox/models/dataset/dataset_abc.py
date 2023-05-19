@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
