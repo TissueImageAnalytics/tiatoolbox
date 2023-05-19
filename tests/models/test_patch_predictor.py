@@ -23,8 +23,9 @@ from tiatoolbox.models.engine.patch_predictor import (
     IOPatchPredictorConfig,
     PatchPredictor,
 )
+from tiatoolbox.utils import download_data
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import download_data, imread, imwrite
+from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
