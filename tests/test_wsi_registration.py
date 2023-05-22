@@ -13,8 +13,8 @@ from tiatoolbox.tools.registration.wsi_registration import (
     match_histograms,
     prealignment,
 )
+from tiatoolbox.utils import imread
 from tiatoolbox.utils.metrics import dice
-from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 

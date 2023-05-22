@@ -179,7 +179,7 @@ class MorphologicalMasker(OtsuTissueMasker):
     is known:
 
         >>> from tiatoolbox.tools.tissuemask import MorphologicalMasker
-        >>> from tiatoolbox.utils.misc import imread
+        >>> from tiatoolbox.utils import imread
         >>> thumbnail = imread("thumbnail.png")
         >>> masker = MorphologicalMasker(power=1.25)
         >>> masks = masker.fit_transform([thumbnail])

@@ -1483,7 +1483,7 @@ class WSIReader:
                 + tile_format
             )
 
-            utils.misc.imwrite(image_path=output_dir / img_save_name, img=im)
+            utils.imwrite(image_path=output_dir / img_save_name, img=im)
 
             data.append(
                 [
@@ -1516,9 +1516,7 @@ class WSIReader:
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
-        utils.misc.imwrite(
-            output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
-        )
+        utils.imwrite(output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb)
 
         if verbose:
             logger.setLevel(logging.INFO)
@@ -2606,7 +2604,7 @@ class VirtualWSIReader(WSIReader):
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
-            self.img = utils.misc.imread(self.input_path)
+            self.img = utils.imread(self.input_path)
 
         if info is not None:
             self._m_info = info

@@ -230,7 +230,7 @@ def test_safe_padded_read_padding_formats():
 
 def test_safe_padded_read_pad_kwargs(source_image):
     """Test passing extra kwargs to safe_padded_read for np.pad."""
-    data = utils.misc.imread(str(source_image))
+    data = utils.imread(str(source_image))
     bounds = (0, 0, 8, 8)
     padding = 2
     region = utils.image.safe_padded_read(
@@ -345,7 +345,7 @@ def test_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with known tricky parameters."""
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
     pillow_test_image = Image.fromarray(test_image)
 
     x = 6
@@ -373,7 +373,7 @@ def test_aligned_padded_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with pixel-aligned bounds."""
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
 
     x = 1
     y = 1
@@ -391,7 +391,7 @@ def test_sub_pixel_read_with_pad_kwargs(source_image):
     """Test sub-pixel numpy image reads with pad kwargs."""
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
 
     x = 1
     y = 1
@@ -416,7 +416,7 @@ def test_non_aligned_padded_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with non-pixel-aligned bounds."""
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
 
     x = 0.5
     y = 0.5
@@ -437,7 +437,7 @@ def test_non_baseline_padded_sub_pixel_read(source_image):
     """Test sub-pixel numpy image reads with baseline padding."""
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
 
     x = 0.5
     y = 0.5
@@ -545,7 +545,7 @@ def test_sub_pixel_read_negative_size_bounds(source_image):
     """Test sub_pixel_read with different padding argument formats."""
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
 
     ow = 25
     oh = 25
@@ -574,7 +574,7 @@ def test_fuzz_sub_pixel_read(source_image):
 
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
 
     for _ in range(10000):
         x = random.randint(-5, 32 - 5)
@@ -599,7 +599,7 @@ def test_fuzz_padded_sub_pixel_read(source_image):
 
     image_path = Path(source_image)
     assert image_path.exists()
-    test_image = utils.misc.imread(image_path)
+    test_image = utils.imread(image_path)
 
     for _ in range(10000):
         x = random.randint(-5, 32 - 5)
@@ -1324,25 +1324,25 @@ def test_save_as_json_parents(tmp_path):
 def test_save_yaml_exists(tmp_path):
     """Test save data to yaml which already exists."""
     dictionary = {"a": 1, "b": 2}
-    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
     with pytest.raises(FileExistsError, match="File already exists"):
-        misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
-    misc.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
+        utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
 
 
 def test_save_yaml_parents(tmp_path):
     """Test save data to yaml where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
+        utils.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
 
-    misc.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
+    utils.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
 
 
 def test_imread_none_args():
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
-        utils.misc.imread(img)
+        utils.imread(img)
 
 
 def test_detect_pixman():

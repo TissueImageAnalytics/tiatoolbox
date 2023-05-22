@@ -9,7 +9,7 @@ import pytest
 from tiatoolbox.data import stain_norm_target
 from tiatoolbox.tools.stainaugment import StainAugmentor
 from tiatoolbox.tools.stainnorm import get_normalizer
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 
 
 def test_stainaugment(source_image, norm_vahadane):
