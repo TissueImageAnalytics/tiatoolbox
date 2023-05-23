@@ -7,7 +7,7 @@ import torch
 
 from tiatoolbox.models import NuClick
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 
 ON_GPU = False
 

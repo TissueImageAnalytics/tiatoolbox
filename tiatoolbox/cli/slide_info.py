@@ -46,7 +46,7 @@ def slide_info(img_input, output_path, file_types, mode, verbose):
             out_path = pathlib.Path(
                 output_path, wsi.info.file_path.with_suffix(".yaml").name
             )
-            utils.misc.save_yaml(
+            utils.save_yaml(
                 wsi.info.as_dict(),
                 out_path,
             )

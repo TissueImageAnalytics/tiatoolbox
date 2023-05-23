@@ -64,7 +64,7 @@ def nucleus_instance_segment(
 ):
     """Process an image/directory of input images with a patch classification CNN."""
     from tiatoolbox.models import IOSegmentorConfig, NucleusInstanceSegmentor
-    from tiatoolbox.utils.misc import save_as_json
+    from tiatoolbox.utils import save_as_json
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,

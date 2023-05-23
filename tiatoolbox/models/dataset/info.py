@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from tiatoolbox import rcParam
-from tiatoolbox.utils.misc import download_data, grab_files_from_dir, unzip_data
+from tiatoolbox.utils import download_data, unzip_data
+from tiatoolbox.utils.misc import grab_files_from_dir
 
 
 class DatasetInfoABC(ABC):

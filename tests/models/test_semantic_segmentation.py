@@ -28,7 +28,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import imread, imwrite
+from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
