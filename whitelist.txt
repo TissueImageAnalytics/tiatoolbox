@@ -164,6 +164,7 @@ sigma1
 sigma2
 skipcq
 skipcq
+sqlite3
 superset
 svs
 tiatoolbox
