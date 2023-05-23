@@ -123,9 +123,9 @@ def is_ngff(
     """
     path = pathlib.Path(path)
     store = zarr.SQLiteStore(path) if is_sqlite3(path) else path
-    if not zarr.storage.contains_group(store):
+    zarr_group = zarr.open(store, mode="r")
+    if not isinstance(zarr_group, zarr.hierarchy.Group):
         return False
-    zarr_group = zarr.open(store)
     group_attrs = zarr_group.attrs.asdict()
     try:
         multiscales: Multiscales = group_attrs["multiscales"]

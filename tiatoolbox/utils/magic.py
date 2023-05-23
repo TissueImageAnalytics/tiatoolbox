@@ -36,3 +36,16 @@ def is_sqlite3(file: Union[str, Path, bytes]) -> bool:
     header = _normalize_file(file, 16)
 
     return header == b"SQLite format 3\x00"
+
+
+def is_zip(file: Union[str, Path, bytes]) -> bool:
+    """Check if a file is a ZIP archive.
+
+    Args:
+        file (Union[str, Path, bytes]):
+            The file to check.
+
+    """
+    header = _normalize_file(file, 4)
+
+    return header in {b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"}
