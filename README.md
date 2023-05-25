@@ -44,6 +44,8 @@
 
 ## Getting Started
 
+TIAToolbox is a computational pathology toolbox developed by TIA Centre that provides an end-to-end API for pathology image analysis using best practices. It is based on **[PyTorch](https://pytorch.org/)**, a popular deep learning framework that enables efficient and flexible implementation of state-of-the-art algorithms. TIAToolbox supports many features through a command-line interface and can integrate with standard PyTorch modules. It also offers tools for data loading, pre-processing, model inference, post-processing, and visualization. Whether you are a computational, biomedical, or clinical researcher, TIAToolbox can help you get started in digital pathology with minimal effort.
+
 ### All Users
 
 This package is for those interested in digital pathology: including graduate students, medical staff, members of the TIA Centre and of PathLAKE, and anyone, anywhere, who may find it useful. We will continue to improve this package, taking account of developments in pathology, microscopy, computing and related disciplines. Please send comments and criticisms to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
