@@ -15,6 +15,16 @@ from tiatoolbox.data import _fetch_remote_sample
 # -------------------------------------------------------------------------------------
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--notebooks",
+        action="store_true",
+        dest="notebooks",
+        default=False,
+        help="run tests for notebooks",
+    )
+
+
 def pytest_generate_tests(metafunc):
     """Generate (parameterize) test scenarios.
 
