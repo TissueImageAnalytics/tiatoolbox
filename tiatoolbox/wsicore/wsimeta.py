@@ -220,9 +220,9 @@ class WSIMeta:
         target and < 1 indicates that it is smaller.
 
         Args:
-            resolution (float or tuple(float)):
+            resolution (Resolution):
                 Scale to calculate relative to units.
-            units (str):
+            units (Units):
                 Units of the scale. Allowed values are: `"mpp"`,
                 `"power"`, `"level"`, `"baseline"`. Baseline refers to
                 the largest resolution in the WSI (level 0).

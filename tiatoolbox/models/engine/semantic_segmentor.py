@@ -1048,9 +1048,9 @@ class SemanticSegmentor:
                 are at requested read resolution and must be positive.
                 If not provided, `stride_shape=patch_input_shape` is
                 used.
-            resolution (float):
+            resolution (Resolution):
                 Resolution used for reading the image.
-            units (str):
+            units (Units):
                 Units of resolution used for reading the image. Choose
                 from either `"level"`, `"power"` or `"mpp"`.
 
@@ -1248,7 +1248,7 @@ class SemanticSegmentor:
                 used.
             resolution (float):
                 Resolution used for reading the image.
-            units (str):
+            units (Units):
                 Units of resolution used for reading the image. Choose
                 from either `"level"`, `"power"` or `"mpp"`.
             save_dir (str or pathlib.Path):
@@ -1534,9 +1534,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 are at requested read resolution and must be positive.
                 If not provided, `stride_shape=patch_input_shape` is
                 used.
-            resolution (float):
+            resolution (Resolution):
                 Resolution used for reading the image.
-            units (str):
+            units (Units):
                 Units of resolution used for reading the image. Choose
                 from either `"level"`, `"power"` or `"mpp"`.
             save_dir (str):
