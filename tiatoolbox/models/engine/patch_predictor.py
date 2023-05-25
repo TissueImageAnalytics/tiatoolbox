@@ -475,9 +475,7 @@ class PatchPredictor:
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
         units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
-            :obj:`WSIReader` for details.
+            Units of resolution used for reading the image.
 
         Returns:
             Updated Patch Predictor IO configuration.

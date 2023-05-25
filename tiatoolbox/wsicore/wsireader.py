@@ -434,8 +434,7 @@ class WSIReader:
             resolution (Resolution):
                 Resolution to find optimal read parameters for
             units (Units):
-                Units of the scale. Allowed values are the same as for
-                `WSIReader._relative_level_scales`
+                Units of the scale.
             precision (int or optional):
                 Decimal places to use when finding optimal scale. This
                 can be adjusted to avoid errors when an unnecessary

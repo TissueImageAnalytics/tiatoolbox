@@ -1051,8 +1051,7 @@ class SemanticSegmentor:
             resolution (Resolution):
                 Resolution used for reading the image.
             units (Units):
-                Units of resolution used for reading the image. Choose
-                from either `"level"`, `"power"` or `"mpp"`.
+                Units of resolution used for reading the image.
 
         Returns:
             :class:`IOSegmentorConfig`:
@@ -1537,8 +1536,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             resolution (Resolution):
                 Resolution used for reading the image.
             units (Units):
-                Units of resolution used for reading the image. Choose
-                from either `"level"`, `"power"` or `"mpp"`.
+                Units of resolution used for reading the image.
             save_dir (str):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`

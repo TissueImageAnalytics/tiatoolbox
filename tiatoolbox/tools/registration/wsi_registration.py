@@ -1502,9 +1502,9 @@ class AffineWSITransformer:
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
             resolution (Resolution):
-                Pyramid level/resolution layer.
+                Resolution used for reading the image.
             units (Units):
-                Units of the scale.
+                Units of resolution used for reading the image.
 
         Returns:
             :class:`numpy.ndarray`:

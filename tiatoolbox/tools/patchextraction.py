@@ -56,10 +56,7 @@ class PatchExtractor(PatchExtractorABC):
             units="level" will read at level at pyramid level /
             resolution layer 3.
         units (Units):
-            Units of resolution, default = "level". Supported units are:
-            microns per pixel (mpp), objective power (power), pyramid /
-            resolution level (level), Only pyramid / resolution levels
-            (level) embedded in the whole slide image are supported.
+            Units of resolution, default = "level".
         pad_mode (str):
             Method for padding at edges of the WSI. Default to
             'constant'. See :func:`numpy.pad` for more information.
@@ -478,11 +475,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             units="level" will read at level at pyramid level /
             resolution layer 3.
         units (Units):
-            The units of resolution, default = "level". Supported units
-            are: microns per pixel (mpp), objective power (power),
-            pyramid / resolution level (level), Only pyramid /
-            resolution levels (level) embedded in the whole slide image
-            are supported.
+            The units of resolution, default = "level".
         pad_mode (str):
             Method for padding at edges of the WSI. Default to
             'constant'. See :func:`numpy.pad` for more information.
