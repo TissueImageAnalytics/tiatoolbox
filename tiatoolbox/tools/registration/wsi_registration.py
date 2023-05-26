@@ -1,6 +1,5 @@
 import itertools
-from numbers import Number
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple
 
 import cv2
 import numpy as np
@@ -16,10 +15,8 @@ from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
-
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
-IntBounds = Tuple[int, int, int, int]
+from tiatoolbox.wsicore.wsimeta import Resolution, Units
+from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
 
 
 def _check_dims(
@@ -1491,7 +1488,7 @@ class AffineWSITransformer:
         location: Tuple[int, int],
         size: Tuple[int, int],
         resolution: Resolution,
-        units: str,
+        units: Units,
     ) -> np.ndarray:
         """Read a transformed region of the transformed whole slide image.
 
@@ -1504,10 +1501,10 @@ class AffineWSITransformer:
                 reference frame.
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
-            resolution (float or tuple(float)):
-                Pyramid level/resolution layer.
-            units (str):
-                Units of the scale.
+            resolution (Resolution):
+                Resolution used for reading the image.
+            units (Units):
+                Units of resolution used for reading the image.
 
         Returns:
             :class:`numpy.ndarray`:
