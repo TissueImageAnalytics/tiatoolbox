@@ -1,7 +1,5 @@
 import itertools
-import warnings
-from numbers import Number
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple
 
 import cv2
 import numpy as np
@@ -13,13 +11,12 @@ from skimage import exposure, filters
 from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 
+from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
-
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
-IntBounds = Tuple[int, int, int, int]
+from tiatoolbox.wsicore.wsimeta import Resolution, Units
+from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
 
 
 def _check_dims(
@@ -84,6 +81,32 @@ def compute_center_of_mass(mask: np.ndarray) -> tuple:
     x_coord_center = moments["m10"] / moments["m00"]
     y_coord_center = moments["m01"] / moments["m00"]
     return (x_coord_center, y_coord_center)
+
+
+def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
+    """Apply affine transformation using OpenCV.
+
+    Args:
+        fixed_img (:class:`numpy.ndarray`):
+            A fixed image.
+        moving_img (:class:`numpy.ndarray`):
+            A moving image.
+        transform_initializer (:class:`numpy.ndarray`):
+            A rigid transformation matrix.
+
+    Returns:
+        :class:`numpy.ndarray`:
+            A transformed image.
+
+    Examples:
+        >>> moving_image = apply_affine_transformation(
+        ...     fixed_image, moving_image, transform_initializer
+        ... )
+
+    """
+    return cv2.warpAffine(
+        moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+    )
 
 
 def prealignment(
@@ -210,18 +233,16 @@ def prealignment(
         pre_transform = all_transform[all_dice.index(dice_after)]
 
         # Apply transformation to both image and mask
-        moving_img = cv2.warpAffine(
-            orig_moving_img, pre_transform[0:-1][:], orig_fixed_img.shape[:2][::-1]
+        moving_img = apply_affine_transformation(
+            orig_fixed_img, orig_moving_img, pre_transform
         )
-        moving_mask = cv2.warpAffine(
-            moving_mask, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
-        )
+        moving_mask = apply_affine_transformation(fixed_img, moving_mask, pre_transform)
+
         return pre_transform, moving_img, moving_mask, dice_after
 
-    warnings.warn(
+    logger.warning(
         "Not able to find the best transformation for pre-alignment. "
         "Try changing the values for 'dice_overlap' and 'rotation_step'.",
-        stacklevel=2,
     )
     return np.eye(3), moving_img, moving_mask, dice_before
 
@@ -486,7 +507,7 @@ class DFBRegister:
             axis=len(features_x.shape),
         )
 
-        feature_size_2d = np.int(np.sqrt(feature_distance.shape[0]))
+        feature_size_2d = np.int_(np.sqrt(feature_distance.shape[0]))
         ref_feature_size_2d = factor * feature_size_2d
         feature_size, ref_feature_size = feature_size_2d**2, ref_feature_size_2d**2
         feature_grid = np.kron(
@@ -850,12 +871,13 @@ class DFBRegister:
         )
 
         # Apply transformation
-        moving_img = cv2.warpAffine(
-            moving_img, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_img = apply_affine_transformation(
+            fixed_img, moving_img, tissue_transform
         )
-        moving_mask = cv2.warpAffine(
-            moving_mask, tissue_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_mask = apply_affine_transformation(
+            fixed_img, moving_mask, tissue_transform
         )
+
         return tissue_transform, moving_img, moving_mask
 
     def perform_dfbregister_block_wise(
@@ -963,11 +985,9 @@ class DFBRegister:
         )
 
         # Apply transformation
-        moving_img = cv2.warpAffine(
-            moving_img, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
-        )
-        moving_mask = cv2.warpAffine(
-            moving_mask, block_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_img = apply_affine_transformation(fixed_img, moving_img, block_transform)
+        moving_mask = apply_affine_transformation(
+            fixed_img, moving_mask, block_transform
         )
 
         return block_transform, moving_img, moving_mask
@@ -1025,12 +1045,13 @@ class DFBRegister:
             )
         else:
             # Apply transformation to both image and mask
-            moving_img = cv2.warpAffine(
-                moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+            moving_img = apply_affine_transformation(
+                fixed_img, moving_img, transform_initializer
             )
-            moving_mask = cv2.warpAffine(
-                moving_mask, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+            moving_mask = apply_affine_transformation(
+                fixed_img, moving_mask, transform_initializer
             )
+
             before_dice = dice(fixed_mask, moving_mask)
 
         # Estimate transform using tissue regions
@@ -1467,7 +1488,7 @@ class AffineWSITransformer:
         location: Tuple[int, int],
         size: Tuple[int, int],
         resolution: Resolution,
-        units: str,
+        units: Units,
     ) -> np.ndarray:
         """Read a transformed region of the transformed whole slide image.
 
@@ -1480,10 +1501,10 @@ class AffineWSITransformer:
                 reference frame.
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
-            resolution (float or tuple(float)):
-                Pyramid level/resolution layer.
-            units (str):
-                Units of the scale.
+            resolution (Resolution):
+                Resolution used for reading the image.
+            units (Units):
+                Units of resolution used for reading the image.
 
         Returns:
             :class:`numpy.ndarray`:

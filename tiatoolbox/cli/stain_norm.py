@@ -38,7 +38,7 @@ from tiatoolbox.cli.common import (
 def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_types):
     """Stain normalize an input image/directory of input images."""
     from tiatoolbox.tools import stainnorm as sn
-    from tiatoolbox.utils.misc import imread, imwrite
+    from tiatoolbox.utils import imread, imwrite
 
     files_all, output_path = prepare_file_dir_cli(
         img_input, output_path, file_types, "save", "stainnorm_output"

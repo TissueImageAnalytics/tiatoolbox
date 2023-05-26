@@ -1,15 +1,15 @@
 import os
 import pathlib
-import warnings
 
 import cv2
 import numpy as np
 import PIL
 import torchvision.transforms as transforms
 
+from tiatoolbox import logger
 from tiatoolbox.models.dataset import dataset_abc
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
@@ -245,7 +245,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         if mode == "wsi":
             self.reader = WSIReader.open(img_path)
         else:
-            warnings.warn(
+            logger.warning(
                 "WSIPatchDataset only reads image tile at "
                 '`units="baseline"` and `resolution=1.0`.',
                 stacklevel=2,

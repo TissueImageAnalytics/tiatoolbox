@@ -7,13 +7,14 @@ import pytest
 from tiatoolbox.tools.registration.wsi_registration import (
     AffineWSITransformer,
     DFBRegister,
+    apply_affine_transformation,
     apply_bspline_transform,
     estimate_bspline_transform,
     match_histograms,
     prealignment,
 )
+from tiatoolbox.utils import imread
 from tiatoolbox.utils.metrics import dice
-from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -187,6 +188,7 @@ def test_warning(
     moving_image,
     fixed_mask,
     moving_mask,
+    caplog,
 ):
     """Test for displaying warning in prealignment function."""
     fixed_img = imread(pathlib.Path(fixed_image))
@@ -194,10 +196,10 @@ def test_warning(
     fixed_mask = imread(pathlib.Path(fixed_mask))
     moving_mask = imread(pathlib.Path(moving_mask))
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
-    with pytest.warns(UserWarning):
-        _ = prealignment(
-            fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.9
-        )
+
+    _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.9)
+
+    assert "Not able to find the best transformation" in caplog.text
 
 
 def test_match_histogram_inputs():
@@ -213,8 +215,14 @@ def test_match_histogram_inputs():
 def test_match_histograms():
     """Test for preprocessing/normalization of an image pair."""
     image_a = np.random.randint(256, size=(256, 256))
-    image_b = np.random.randint(256, size=(256, 256))
-    _, _ = match_histograms(image_a, image_b, 3)
+    image_b = np.zeros(shape=(256, 256), dtype=int)
+    out_a, out_b = match_histograms(image_a, image_b, 3)
+    assert np.all(out_a == image_a)
+    assert np.all(out_b == 255)
+
+    out_a, out_b = match_histograms(image_b, image_a, 3)
+    assert np.all(out_a == 255)
+    assert np.all(out_b == image_a)
 
     image_a = np.random.randint(256, size=(256, 256, 1))
     image_b = np.random.randint(256, size=(256, 256, 1))
@@ -438,31 +446,32 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     """Test for estimate_bspline_transform function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
-    fixed_msk = imread(fixed_mask)
-    moving_msk = imread(moving_mask)
+    fixed_mask_ = imread(fixed_mask)
+    moving_mask_ = imread(moving_mask)
 
     rigid_transform = np.array(
         [[-0.99683, -0.00333, 338.69983], [-0.03201, -0.98420, 770.22941], [0, 0, 1]]
     )
-    moving_img = cv2.warpAffine(
-        moving_img, rigid_transform[0:-1][:], fixed_img.shape[:2][::-1]
-    )
-    moving_msk = cv2.warpAffine(
-        moving_msk, rigid_transform[0:-1][:], fixed_img.shape[:2][::-1]
-    )
+    moving_img = apply_affine_transformation(fixed_img, moving_img, rigid_transform)
+    moving_mask_ = apply_affine_transformation(fixed_img, moving_mask_, rigid_transform)
 
     # Grayscale images as input
     transform = estimate_bspline_transform(
-        fixed_img[:, :, 0], moving_img[:, :, 0], fixed_msk[:, :, 0], moving_msk[:, :, 0]
+        fixed_img[:, :, 0],
+        moving_img[:, :, 0],
+        fixed_mask_[:, :, 0],
+        moving_mask_[:, :, 0],
     )
     _ = apply_bspline_transform(fixed_img[:, :, 0], moving_img[:, :, 0], transform)
 
     # RGB images as input
-    transform = estimate_bspline_transform(fixed_img, moving_img, fixed_msk, moving_msk)
+    transform = estimate_bspline_transform(
+        fixed_img, moving_img, fixed_mask_, moving_mask_
+    )
 
     _ = apply_bspline_transform(fixed_img, moving_img, transform)
-    registered_msk = apply_bspline_transform(fixed_msk, moving_msk, transform)
-    mask_overlap = dice(fixed_msk, registered_msk)
+    registered_msk = apply_bspline_transform(fixed_mask_, moving_mask_, transform)
+    mask_overlap = dice(fixed_mask_, registered_msk)
     assert mask_overlap > 0.75
 
 

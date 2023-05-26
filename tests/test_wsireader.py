@@ -29,8 +29,8 @@ from skimage.registration import phase_cross_correlation
 from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.data import _fetch_remote_sample
+from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import FileNotSupported
-from tiatoolbox.utils.misc import imread
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import WSIReader, wsireader
@@ -186,7 +186,7 @@ def read_bounds_level_consistency(wsi, bounds):
     # from interpolation when calculating the downsampled levels. This
     # adds some tolerance for the comparison.
     blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-    as_float = [img.astype(np.float) for img in blurred]
+    as_float = [img.astype(np.float_) for img in blurred]
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
@@ -2373,7 +2373,7 @@ class TestReader:
         # from interpolation when calculating the downsampled levels. This
         # adds some tolerance for the comparison.
         blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-        as_float = [img.astype(np.float) for img in blurred]
+        as_float = [img.astype(np.float_) for img in blurred]
 
         # Pair-wise check resolutions for mean squared error
         for i, a in enumerate(as_float):

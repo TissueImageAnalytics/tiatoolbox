@@ -27,7 +27,7 @@ from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
-from tiatoolbox.wsicore.wsimeta import WSIMeta
+from tiatoolbox.wsicore.wsimeta import Resolution, Units, WSIMeta
 
 pixman_warning()
 
@@ -35,7 +35,6 @@ NumPair = Tuple[Number, Number]
 IntPair = Tuple[int, int]
 Bounds = Tuple[Number, Number, Number, Number]
 IntBounds = Tuple[int, int, int, int]
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
 MIN_NGFF_VERSION = Version("0.4")
 MAX_NGFF_VERSION = Version("0.4")
 
@@ -422,7 +421,7 @@ class WSIReader:
         raise NotImplementedError
 
     def _find_optimal_level_and_downsample(
-        self, resolution: Resolution, units: str, precision: int = 3
+        self, resolution: Resolution, units: Units, precision: int = 3
     ) -> Tuple[int, np.ndarray]:
         """Find the optimal level to read at for a desired resolution and units.
 
@@ -432,11 +431,10 @@ class WSIReader:
         factor required, post read, to achieve the desired resolution.
 
         Args:
-            resolution (float or tuple(float)):
+            resolution (Resolution):
                 Resolution to find optimal read parameters for
-            units (str):
-                Units of the scale. Allowed values are the same as for
-                `WSIReader._relative_level_scales`
+            units (Units):
+                Units of the scale.
             precision (int or optional):
                 Decimal places to use when finding optimal scale. This
                 can be adjusted to avoid errors when an unnecessary
@@ -484,7 +482,7 @@ class WSIReader:
         location: IntPair,
         size: IntPair,
         resolution: Resolution,
-        units: str,
+        units: Units,
         precision: int = 3,
     ) -> Tuple[int, IntPair, IntPair, NumPair, IntPair]:
         """Find optimal parameters for reading a rect at a given resolution.
@@ -507,9 +505,9 @@ class WSIReader:
                 resolution.
             size (tuple(int)):
                 Desired output size in pixels (width, height) tuple.
-            resolution (float):
+            resolution (Resolution):
                 Desired output resolution.
-            units (str):
+            units (Units):
                 Units of scale, default = "level". Supported units are:
                 - microns per pixel ('mpp')
                 - objective power ('power')
@@ -561,7 +559,7 @@ class WSIReader:
         )
 
     def _find_read_params_at_resolution(
-        self, location: IntPair, size: IntPair, resolution: Resolution, units: str
+        self, location: IntPair, size: IntPair, resolution: Resolution, units: Units
     ) -> Tuple[int, NumPair, IntPair, IntPair, IntPair, IntPair]:
         """Works similarly to `_find_read_rect_params`.
 
@@ -575,9 +573,9 @@ class WSIReader:
             size (tuple(int)):
                 Desired output size in pixels (width, height) tuple and
                 in the requested resolution system.
-            resolution (float):
+            resolution (Resolution):
                 Desired output resolution.
-            units (str):
+            units (Units):
                 Units of scale, default = "level". Supported units are:
                 - microns per pixel ('mpp') - objective power ('power')
                 - pyramid / resolution level ('level') - pixels per
@@ -648,7 +646,7 @@ class WSIReader:
         ) + output
 
     def _bounds_at_resolution_to_baseline(
-        self, bounds: Bounds, resolution: Resolution, units: str
+        self, bounds: Bounds, resolution: Resolution, units: Units
     ) -> Bounds:
         """Find corresponding bounds in baseline.
 
@@ -676,15 +674,15 @@ class WSIReader:
         return np.concatenate([tl_at_baseline, br_at_baseline])  # bounds at baseline
 
     def slide_dimensions(
-        self, resolution: Resolution, units: str, precisions: int = 3
+        self, resolution: Resolution, units: Units, precisions: int = 3
     ) -> IntPair:
         """Return the size of WSI at requested resolution.
 
         Args:
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution to read thumbnail at, default = 1.25
                 (objective power).
-            units (str):
+            units (Units):
                 resolution units, default="power".
 
         Returns:
@@ -710,7 +708,7 @@ class WSIReader:
         return wsi_shape_at_resolution
 
     def _find_read_bounds_params(
-        self, bounds: Bounds, resolution: Resolution, units: str, precision: int = 3
+        self, bounds: Bounds, resolution: Resolution, units: Units, precision: int = 3
     ) -> Tuple[int, IntBounds, IntPair, IntPair, np.ndarray]:
         """Find optimal parameters for reading bounds at a given resolution.
 
@@ -719,9 +717,9 @@ class WSIReader:
                 Tuple of (start_x, start_y, end_x, end_y) i.e. (left,
                 top, right, bottom) of the region in baseline reference
                 frame.
-            resolution (float):
+            resolution (Resolution):
                 desired output resolution
-            units (str):
+            units (Units):
                 units of scale, default = "level". Supported units are:
                 microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -911,7 +909,7 @@ class WSIReader:
             level = np.log2(rescale)
             if not level.is_integer():
                 raise ValueError
-            level = np.int(level)
+            level = np.int_(level)
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
         # Raise index error if desired pyramid level not embedded
@@ -919,7 +917,7 @@ class WSIReader:
         except IndexError:
             level = 0
             slide_dimension = self.info.level_dimensions[level]
-            rescale = np.int(rescale)
+            rescale = np.int_(rescale)
             logger.warning(
                 "Reading WSI at level 0. Desired tile_objective_value %s "
                 "not available.",
@@ -943,7 +941,7 @@ class WSIReader:
         location: NumPair,
         size: NumPair,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -975,7 +973,7 @@ class WSIReader:
         location: IntPair,
         size: IntPair,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -1003,7 +1001,7 @@ class WSIReader:
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1011,7 +1009,7 @@ class WSIReader:
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -1169,7 +1167,7 @@ class WSIReader:
         self,
         bounds: Bounds,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -1198,7 +1196,7 @@ class WSIReader:
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1206,7 +1204,7 @@ class WSIReader:
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -1307,17 +1305,17 @@ class WSIReader:
             location=location, size=size, resolution=level, units="level"
         )
 
-    def slide_thumbnail(self, resolution: Resolution = 1.25, units: str = "power"):
+    def slide_thumbnail(self, resolution: Resolution = 1.25, units: Units = "power"):
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see
         :func:`read_rect`
 
         Args:
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution to read thumbnail at, default = 1.25
                 (objective power)
-            units (str):
+            units (Units):
                 Resolution units, default="power".
 
         Returns:
@@ -1338,7 +1336,7 @@ class WSIReader:
         self,
         method: str = "otsu",
         resolution: Resolution = 1.25,
-        units: str = "power",
+        units: Units = "power",
         **masker_kwargs,
     ) -> "VirtualWSIReader":
         """Create a tissue mask and wrap it in a VirtualWSIReader.
@@ -1358,7 +1356,7 @@ class WSIReader:
             resolution (float):
                 Resolution to produce the mask at.
                 Defaults to 1.25.
-            units (str):
+            units (Units):
                 Units of resolution. Defaults to "power".
             **masker_kwargs:
                 Extra kwargs passed to the masker class.
@@ -1484,7 +1482,7 @@ class WSIReader:
                 + tile_format
             )
 
-            utils.misc.imwrite(image_path=output_dir / img_save_name, img=im)
+            utils.imwrite(image_path=output_dir / img_save_name, img=im)
 
             data.append(
                 [
@@ -1517,9 +1515,7 @@ class WSIReader:
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
-        utils.misc.imwrite(
-            output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb
-        )
+        utils.imwrite(output_dir / f"slide_thumbnail{tile_format}", img=slide_thumb)
 
         if verbose:
             logger.setLevel(logging.INFO)
@@ -1588,7 +1584,7 @@ class OpenSlideWSIReader(WSIReader):
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1596,7 +1592,7 @@ class OpenSlideWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -1831,7 +1827,7 @@ class OpenSlideWSIReader(WSIReader):
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1839,7 +1835,7 @@ class OpenSlideWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -2119,7 +2115,7 @@ class OmnyxJP2WSIReader(WSIReader):
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2127,7 +2123,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -2359,7 +2355,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2367,7 +2363,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -2508,7 +2504,7 @@ class OmnyxJP2WSIReader(WSIReader):
         box = glymur_wsi.box
         description = box[3].xml.find("description")
         matches = re.search(r"(?<=AppMag = )\d\d", description.text)
-        objective_power = np.int(matches[0])
+        objective_power = np.int_(matches[0])
         image_header = box[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
 
@@ -2607,7 +2603,7 @@ class VirtualWSIReader(WSIReader):
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
-            self.img = utils.misc.imread(self.input_path)
+            self.img = utils.imread(self.input_path)
 
         if info is not None:
             self._m_info = info
@@ -2694,7 +2690,7 @@ class VirtualWSIReader(WSIReader):
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2702,7 +2698,7 @@ class VirtualWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -2936,7 +2932,7 @@ class VirtualWSIReader(WSIReader):
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2944,7 +2940,7 @@ class VirtualWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -3497,7 +3493,7 @@ class TIFFWSIReader(WSIReader):
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -3505,7 +3501,7 @@ class TIFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -3735,7 +3731,7 @@ class TIFFWSIReader(WSIReader):
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -3743,7 +3739,7 @@ class TIFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -3951,7 +3947,7 @@ class DICOMWSIReader(WSIReader):
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -3959,7 +3955,7 @@ class DICOMWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -4207,7 +4203,7 @@ class DICOMWSIReader(WSIReader):
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -4215,7 +4211,7 @@ class DICOMWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -4507,7 +4503,7 @@ class NGFFWSIReader(WSIReader):
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -4515,7 +4511,7 @@ class NGFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -4745,7 +4741,7 @@ class NGFFWSIReader(WSIReader):
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -4753,7 +4749,7 @@ class NGFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -4994,7 +4990,7 @@ class AnnotationStoreReader(WSIReader):
             size (tuple(int)):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -5002,7 +4998,7 @@ class AnnotationStoreReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -5250,8 +5246,8 @@ class AnnotationStoreReader(WSIReader):
     def read_bounds(
         self,
         bounds,
-        resolution=0,
-        units="level",
+        resolution: Resolution = 0,
+        units: Units = "level",
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
@@ -5281,7 +5277,7 @@ class AnnotationStoreReader(WSIReader):
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -5289,7 +5285,7 @@ class AnnotationStoreReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline

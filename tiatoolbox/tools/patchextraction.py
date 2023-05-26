@@ -10,6 +10,7 @@ from tiatoolbox import logger
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupported
 from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsimeta import Resolution, Units
 
 
 class PatchExtractorABC(ABC):
@@ -46,7 +47,7 @@ class PatchExtractor(PatchExtractorABC):
             'morphological', a tissue mask is generated for the
             input_image using tiatoolbox :class:`TissueMasker`
             functionality.
-        resolution (int or float or tuple of float):
+        resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
             valid. This value is in terms of the corresponding units.
@@ -54,11 +55,8 @@ class PatchExtractor(PatchExtractorABC):
             slide at 0.5 microns per-pixel, and resolution=3,
             units="level" will read at level at pyramid level /
             resolution layer 3.
-        units (str):
-            Units of resolution, default = "level". Supported units are:
-            microns per pixel (mpp), objective power (power), pyramid /
-            resolution level (level), Only pyramid / resolution levels
-            (level) embedded in the whole slide image are supported.
+        units (Units):
+            Units of resolution, default = "level".
         pad_mode (str):
             Method for padding at edges of the WSI. Default to
             'constant'. See :func:`numpy.pad` for more information.
@@ -78,13 +76,13 @@ class PatchExtractor(PatchExtractorABC):
 
 
     Attributes:
-        wsi(WSIReader):
+        wsi (WSIReader):
             Input image for patch extraction of type :obj:`WSIReader`.
-        patch_size(tuple(int)):
+        patch_size (tuple(int)):
             Patch size tuple (width, height).
-        resolution(tuple(int)):
+        resolution (Resolution):
             Resolution at which to read the image.
-        units (str):
+        units (Units):
             Units of resolution.
         n (int):
             Current state of the iterator.
@@ -114,8 +112,8 @@ class PatchExtractor(PatchExtractorABC):
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
         input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
-        resolution: Union[int, float, Tuple[float, float]] = 0,
-        units: str = "level",
+        resolution: Resolution = 0,
+        units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,
@@ -468,7 +466,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             'morphological', a tissue mask is generated for the
             input_image using tiatoolbox :class:`TissueMasker`
             functionality.
-        resolution (int or float or tuple of float):
+        resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
             valid. This value is in terms of the corresponding units.
@@ -476,12 +474,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             slide at 0.5 microns per-pixel, and resolution=3,
             units="level" will read at level at pyramid level /
             resolution layer 3.
-        units (str):
-            The units of resolution, default = "level". Supported units
-            are: microns per pixel (mpp), objective power (power),
-            pyramid / resolution level (level), Only pyramid /
-            resolution levels (level) embedded in the whole slide image
-            are supported.
+        units (Units):
+            The units of resolution, default = "level".
         pad_mode (str):
             Method for padding at edges of the WSI. Default to
             'constant'. See :func:`numpy.pad` for more information.
@@ -513,8 +507,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
         input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
-        resolution: Union[int, float, Tuple[float, float]] = 0,
-        units: str = "level",
+        resolution: Resolution = 0,
+        units: Units = "level",
         stride: Union[int, Tuple[int, int]] = None,
         pad_mode: str = "constant",
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
@@ -558,7 +552,7 @@ class PointsPatchExtractor(PatchExtractor):
             resolution).
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        resolution (int or float or tuple of float):
+        resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
             valid. This value is in terms of the corresponding units.
@@ -566,7 +560,7 @@ class PointsPatchExtractor(PatchExtractor):
             slide at 0.5 microns per-pixel, and resolution=3,
             units="level" will read at level at pyramid level /
             resolution layer 3.
-        units (str):
+        units (Units):
             The units of resolution, default = "level". Supported units
             are: microns per pixel (mpp), objective power (power),
             pyramid / resolution level (level), Only pyramid /
@@ -593,8 +587,8 @@ class PointsPatchExtractor(PatchExtractor):
         input_img: Union[str, Path, np.ndarray],
         locations_list: Union[np.ndarray, DataFrame, str, Path],
         patch_size: Union[int, Tuple[int, int]] = (224, 224),
-        resolution: Union[int, float, Tuple[float, float]] = 0,
-        units: str = "level",
+        resolution: Resolution = 0,
+        units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,

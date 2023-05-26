@@ -95,7 +95,7 @@ def _local_sample_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
         >>> # Get the path to a sample target image for performing
         >>> # stain normalization.
         >>> from tiatoolbox.data import stain_norm_target
-        >>> img = stainnorm_target()
+        >>> img = stain_norm_target()
 
     """
     return pkg_resources.resource_filename(
@@ -105,7 +105,7 @@ def _local_sample_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
 
 def stain_norm_target() -> np.ndarray:
     """Target image for stain normalization."""
-    from tiatoolbox.utils.misc import imread
+    from tiatoolbox.utils import imread
 
     return imread(_local_sample_path("target_image.png"))
 

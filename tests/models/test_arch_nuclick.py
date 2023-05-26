@@ -3,19 +3,18 @@
 import pathlib
 
 import numpy as np
-import pytest
 import torch
 
 from tiatoolbox.models import NuClick
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 
 ON_GPU = False
 
 # Test pretrained Model =============================
 
 
-def test_functional_nuclcik(remote_sample, tmp_path):
+def test_functional_nuclick(remote_sample, tmp_path, caplog):
     """Tests for NuClick."""
     # convert to pathlib Path to prevent wsireader complaint
     tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
@@ -67,7 +66,7 @@ def test_functional_nuclcik(remote_sample, tmp_path):
     # test failed reconstruction in post-processing
     inclusion_map = np.zeros((128, 128))
     inclusion_map[0, 0] = 1
-    with pytest.warns(UserWarning, match=r"Nuclei reconstruction was not done"):
-        _ = model.postproc(
-            output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
-        )
+    _ = model.postproc(
+        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+    )
+    assert "Nuclei reconstruction was not done" in caplog.text

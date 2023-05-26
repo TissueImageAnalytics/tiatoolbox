@@ -10,7 +10,7 @@ from tiatoolbox import cli
 from tiatoolbox.data import _local_sample_path, stain_norm_target
 from tiatoolbox.tools import stainextract
 from tiatoolbox.tools.stainnorm import get_normalizer
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 
 
 def test_stain_extract():

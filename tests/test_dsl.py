@@ -62,7 +62,7 @@ def test_json_contains():
 
 
 def sqlite_eval(query: Union[str, Number]):
-    """Evaluate an SQL predicate on dummpy data and return the result.
+    """Evaluate an SQL predicate on dummy data and return the result.
 
     Args:
         query (Union[str, Number]): SQL predicate to evaluate.
@@ -89,6 +89,21 @@ def sqlite_eval(query: Union[str, Number]):
         cur.execute(f"SELECT {query} FROM test")
         (result,) = cur.fetchone()
     return result
+
+
+class TestSQLite:  # noqa: PIE798
+    """Test converting from our DSL to an SQLite backend."""
+
+    @staticmethod
+    def test_prop_or_prop():
+        """Test OR operator between two prop accesses."""
+        query = eval(  # skipcq: PYL-W0123
+            "(props['int'] == 2) | (props['int'] == 3)", SQL_GLOBALS, {}
+        )
+        assert str(query) == (
+            '((json_extract(properties, "$.int") == 2) OR '
+            '(json_extract(properties, "$.int") == 3))'
+        )
 
 
 class TestPredicate:

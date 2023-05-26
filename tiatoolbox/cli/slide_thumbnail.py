@@ -30,7 +30,7 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
     """
     from PIL import Image
 
-    from tiatoolbox.utils.misc import imwrite
+    from tiatoolbox.utils import imwrite
     from tiatoolbox.wsicore.wsireader import WSIReader
 
     files_all, output_path = prepare_file_dir_cli(
