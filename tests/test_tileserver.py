@@ -470,12 +470,12 @@ def test_update_renderer(app):
 def test_secondary_cmap(app):
     """Test secondary cmap."""
     with app.test_client() as client:
-        response = client.put("/tileserver/secondary_cmap/0/prob/Reds")
+        response = client.put(f"/tileserver/secondary_cmap/{json.dumps(0)}/prob/Reds")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the renderer has been correctly updated
         layer = app.pyramids["default"]["overlay"]
-        assert layer.renderer.secondary_cmap["type"] == "0"
+        assert layer.renderer.secondary_cmap["type"] == 0
         assert layer.renderer.secondary_cmap["score_prop"] == "prob"
         assert layer.renderer.secondary_cmap["mapper"](0.5) == colormaps["Reds"](0.5)
 
