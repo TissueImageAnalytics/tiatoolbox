@@ -1,7 +1,9 @@
 """Tests for detecting magic numbers and signatures in files."""
 import sqlite3
 
-from tiatoolbox.utils.magic import is_dcm, is_sqlite3
+import pytest
+
+from tiatoolbox.utils.magic import _normalize_binaryio, is_dcm, is_sqlite3
 
 
 def test_is_sqlite3(tmp_path):
@@ -23,3 +25,9 @@ def test_is_dcm(remote_sample):
     path = remote_sample("dicom-1")
     for subpath in path.glob("**/*.dcm"):
         assert is_dcm(subpath)
+
+
+def test_normalize_must_exist():
+    """Test that must_exist raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError):
+        _normalize_binaryio("nonexistent", must_exist=True)

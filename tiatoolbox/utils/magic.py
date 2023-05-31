@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import BinaryIO, Union
 
 
-def _normalize_binaryio(file: Union[str, Path, bytes, BinaryIO]) -> BinaryIO:
+def _normalize_binaryio(
+    file: Union[str, Path, bytes, BinaryIO],
+    must_exist: bool = False,
+) -> BinaryIO:
     """Normalize the input to a BinaryIO object.
 
     To be used in a context manager so that the io is closed after use.
@@ -19,6 +22,8 @@ def _normalize_binaryio(file: Union[str, Path, bytes, BinaryIO]) -> BinaryIO:
     Args:
         file (str or Path or bytes or BinaryIO):
             The file to normalize.
+        must_exist (bool, optional):
+            Whether the file must exist. Defaults to False.
 
     Returns:
         BinaryIO
@@ -26,6 +31,11 @@ def _normalize_binaryio(file: Union[str, Path, bytes, BinaryIO]) -> BinaryIO:
 
     """
     if isinstance(file, (str, Path)):
+        path = Path(file)
+        if not path.exists():
+            if must_exist:
+                raise FileNotFoundError(f"File {path} does not exist.")
+            return BytesIO()
         return open(file, "rb")  # noqa: SIM115 -- intentional
     if isinstance(file, BinaryIO):
         return file
