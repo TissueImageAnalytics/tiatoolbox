@@ -12,6 +12,7 @@ import torch
 from click.testing import CliRunner
 
 from tiatoolbox import cli, rcParam
+from tiatoolbox.models import IOPatchPredictorConfig, PatchPredictor
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import (
     PatchDataset,
@@ -19,12 +20,9 @@ from tiatoolbox.models.dataset import (
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.models.engine.patch_predictor import (
-    IOPatchPredictorConfig,
-    PatchPredictor,
-)
+from tiatoolbox.utils import download_data
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import download_data, imread, imwrite
+from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
