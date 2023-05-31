@@ -1,7 +1,7 @@
 """Tests for detecting magic numbers and signatures in files."""
 import sqlite3
 
-from tiatoolbox.utils.magic import is_sqlite3
+from tiatoolbox.utils.magic import is_dcm, is_sqlite3
 
 
 def test_is_sqlite3(tmp_path):
@@ -16,3 +16,10 @@ def test_is_sqlite3(tmp_path):
 
     assert is_sqlite3(tmp_path / "test.db")
     assert not is_sqlite3(tmp_path / "test.txt")
+
+
+def test_is_dcm(remote_sample):
+    """Get a dummy DICOM file and use tiatoolbox.magic.is_dicom()."""
+    path = remote_sample("dicom-1")
+    for subpath in path.glob("**/*.dcm"):
+        assert is_dcm(subpath)

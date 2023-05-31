@@ -15,6 +15,7 @@ Byfield
 CHW
 CUDA
 DICOM
+DICOMDIR
 DNS
 Dataloader
 Dataset
