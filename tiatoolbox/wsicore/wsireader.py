@@ -122,7 +122,10 @@ def is_ngff(
     """
     path = pathlib.Path(path)
     store = zarr.SQLiteStore(path) if is_sqlite3(path) else path
-    zarr_group = zarr.open(store, mode="r")
+    try:
+        zarr_group = zarr.open(store, mode="r")
+    except zarr.errors.FSPathExistNotDir:
+        return False
     if not isinstance(zarr_group, zarr.hierarchy.Group):
         return False
     group_attrs = zarr_group.attrs.asdict()
