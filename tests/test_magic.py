@@ -1,6 +1,8 @@
 """Tests for detecting magic numbers and signatures in files."""
 import sqlite3
 import zipfile
+from io import BytesIO
+from typing import BinaryIO
 
 import pytest
 
@@ -42,6 +44,27 @@ def test_normalize_must_exist():
     """Test that must_exist raises FileNotFoundError."""
     with pytest.raises(FileNotFoundError):
         _normalize_binaryio("nonexistent", must_exist=True)
+
+
+def test_normalize_bytes():
+    """Test that _normalize_binaryio() returns BytesIO for bytes."""
+    assert isinstance(_normalize_binaryio(b"test"), (BytesIO, BinaryIO))
+
+
+def test_normalize_binaryio():
+    """Test that _normalize_binaryio() returns BinaryIO for BinaryIO."""
+    assert isinstance(_normalize_binaryio(BytesIO(b"test")), (BytesIO, BinaryIO))
+
+
+def test_normalize_type_error():
+    """Test that _normalize_binaryio() raises TypeError for invalid types."""
+    with pytest.raises(TypeError):
+        _normalize_binaryio(1)
+
+
+def test_normalize_non_existent(tmp_path):
+    """Test that _normalize_binaryio() returns empty BinaryIO for non-existant file."""
+    assert isinstance(_normalize_binaryio(tmp_path / "foo"), (BytesIO, BinaryIO))
 
 
 def test_is_sqlite3_dir(tmp_path):

@@ -12,7 +12,7 @@ from typing import BinaryIO, Union
 
 
 def _normalize_binaryio(
-    file: Union[str, Path, bytes, BinaryIO],
+    file: Union[str, Path, bytes, BinaryIO, BytesIO],
     must_exist: bool = False,
 ) -> BinaryIO:
     """Normalize the input to a BinaryIO object.
@@ -37,7 +37,7 @@ def _normalize_binaryio(
                 raise FileNotFoundError(f"File {path} does not exist.")
             return BytesIO()
         return open(file, "rb")  # noqa: SIM115 -- intentional
-    if isinstance(file, BinaryIO):
+    if isinstance(file, (BinaryIO, BytesIO)):
         return file
     if isinstance(file, bytes):
         return BytesIO(file)
@@ -47,7 +47,7 @@ def _normalize_binaryio(
     )
 
 
-def is_dir(file: Union[str, Path, bytes, BinaryIO]) -> bool:
+def is_dir(file: Union[str, Path, bytes, BinaryIO, BytesIO]) -> bool:
     """Check if file is a directory.
 
     Thin wrapper around `pathlib.Path.is_dir()` to handle multiple input types.
@@ -64,7 +64,7 @@ def is_dir(file: Union[str, Path, bytes, BinaryIO]) -> bool:
     return Path(file).is_dir() if isinstance(file, (str, Path)) else False
 
 
-def is_sqlite3(file: Union[str, Path, bytes, BinaryIO]) -> bool:
+def is_sqlite3(file: Union[str, Path, bytes, BinaryIO, BytesIO]) -> bool:
     """Check if a file is a SQLite database.
 
     Args:
@@ -82,7 +82,7 @@ def is_sqlite3(file: Union[str, Path, bytes, BinaryIO]) -> bool:
         return io.read(16) == b"SQLite format 3\x00"
 
 
-def is_zip(file: Union[str, Path, bytes, BytesIO]) -> bool:
+def is_zip(file: Union[str, Path, bytes, BytesIO, BytesIO]) -> bool:
     """Check if a file is a ZIP archive.
 
     Args:
@@ -96,7 +96,7 @@ def is_zip(file: Union[str, Path, bytes, BytesIO]) -> bool:
         return zipfile.is_zipfile(io)
 
 
-def is_dcm(file: Union[str, Path, bytes, BytesIO]) -> bool:
+def is_dcm(file: Union[str, Path, bytes, BytesIO, BytesIO]) -> bool:
     """Determines whether the given file is a DICOM file.
 
     Checks if the first 128 bytes of the file contain the 'DICM'
