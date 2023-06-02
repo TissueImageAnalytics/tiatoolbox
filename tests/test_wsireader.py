@@ -1921,7 +1921,8 @@ def test_is_zarr_group(tmp_path):
 def test_is_ngff_regular_zarr(tmp_path):
     """Test is_ngff is false for a regular zarr."""
     zarr_path = tmp_path / "zarr.zarr"
-    zarr.open(zarr_path, "w")
+    # Create zarr array on disk
+    zarr.array(np.random.rand(32, 32), store=zarr.DirectoryStore(zarr_path))
     assert is_zarr(zarr_path)
     assert not is_ngff(zarr_path)
 
