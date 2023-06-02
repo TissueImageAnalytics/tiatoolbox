@@ -4,6 +4,7 @@ Checks here are based on the file signature, not the file extension.
 They are all intented to be fast and lightweight, and should not require
 parsing the entire file. There may occationally be false positives which
 should be caught when attemping to parse the file.
+
 """
 import zipfile
 from io import BytesIO

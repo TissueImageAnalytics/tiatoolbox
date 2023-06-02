@@ -1936,6 +1936,7 @@ def test_is_ngff_sqlite3(tmp_path, remote_sample):
 
     Copies the ngff-1 sample to a sqlite3 file and checks that it is
     identified as an ngff file.
+
     """
     ngff_path = remote_sample("ngff-1")
     source = zarr.DirectoryStore(ngff_path)
