@@ -77,6 +77,6 @@ def test_is_dcm_dir(tmp_path):
     assert not is_dcm(tmp_path)
 
 
-def is_zip_dir(tmp_path):
+def test_is_zip_dir(tmp_path):
     """Test that is_zip() returns False for directories."""
     assert not is_zip(tmp_path)
