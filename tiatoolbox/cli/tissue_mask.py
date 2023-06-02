@@ -56,7 +56,7 @@ def tissue_mask(
     import numpy as np
     from PIL import Image
 
-    from tiatoolbox.utils.misc import imwrite
+    from tiatoolbox.utils import imwrite
     from tiatoolbox.wsicore.wsireader import WSIReader
 
     files_all, output_path = prepare_file_dir_cli(

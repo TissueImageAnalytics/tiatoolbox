@@ -8,8 +8,9 @@ import pytest
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset import DatasetInfoABC, KatherPatchDataset, PatchDataset
+from tiatoolbox.utils import download_data
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import download_data, unzip_data
+from tiatoolbox.utils import unzip_data
 
 
 class Proto1(DatasetInfoABC):

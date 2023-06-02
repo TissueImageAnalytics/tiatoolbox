@@ -11,7 +11,7 @@ from shapely.geometry.point import Point
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.cli.common import cli_name
-from tiatoolbox.utils.misc import imwrite
+from tiatoolbox.utils import imwrite
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.wsicore.wsireader import WSIReader
 

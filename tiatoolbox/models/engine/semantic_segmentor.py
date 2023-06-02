@@ -22,8 +22,8 @@ from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.engine.engine_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread, misc
+from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 
@@ -196,7 +196,7 @@ class IOSegmentorConfig(IOConfigABC):
             raise ValueError(f"Invalid resolution units `{units[0]}`.")
 
     @staticmethod
-    def scale_to_highest(resolutions: List[dict], units: str):
+    def scale_to_highest(resolutions: List[dict], units: Units):
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
@@ -206,7 +206,7 @@ class IOSegmentorConfig(IOConfigABC):
             resolutions (list):
                 A list of resolutions where one is defined as
                 `{'resolution': value, 'unit': value}`
-            units (str):
+            units (Units):
                 Units that the resolutions are at.
 
         Returns:
@@ -602,8 +602,8 @@ class SemanticSegmentor:
     def filter_coordinates(
         mask_reader: VirtualWSIReader,
         bounds: np.ndarray,
-        resolution: Union[float, int] = None,
-        units: str = None,
+        resolution: Resolution = None,
+        units: Units = None,
     ):
         """
         Indicates which coordinate is valid basing on the mask.
@@ -625,7 +625,10 @@ class SemanticSegmentor:
                 default `func=None`, K should be 4, as we expect the
                 `coordinates` to be bounding boxes in `[start_x,
                 start_y, end_x, end_y]` format.
-
+            resolution (Resolution):
+                Resolution of the requested patch.
+            units (Units):
+                Units of the requested patch.
         Returns:
             :class:`numpy.ndarray`:
                 List of flags to indicate which coordinate is valid.
@@ -1045,11 +1048,10 @@ class SemanticSegmentor:
                 are at requested read resolution and must be positive.
                 If not provided, `stride_shape=patch_input_shape` is
                 used.
-            resolution (float):
+            resolution (Resolution):
                 Resolution used for reading the image.
-            units (str):
-                Units of resolution used for reading the image. Choose
-                from either `"level"`, `"power"` or `"mpp"`.
+            units (Units):
+                Units of resolution used for reading the image.
 
         Returns:
             :class:`IOSegmentorConfig`:
@@ -1245,7 +1247,7 @@ class SemanticSegmentor:
                 used.
             resolution (float):
                 Resolution used for reading the image.
-            units (str):
+            units (Units):
                 Units of resolution used for reading the image. Choose
                 from either `"level"`, `"power"` or `"mpp"`.
             save_dir (str or pathlib.Path):
@@ -1531,11 +1533,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 are at requested read resolution and must be positive.
                 If not provided, `stride_shape=patch_input_shape` is
                 used.
-            resolution (float):
+            resolution (Resolution):
                 Resolution used for reading the image.
-            units (str):
-                Units of resolution used for reading the image. Choose
-                from either `"level"`, `"power"` or `"mpp"`.
+            units (Units):
+                Units of resolution used for reading the image.
             save_dir (str):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
