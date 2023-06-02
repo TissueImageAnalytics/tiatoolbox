@@ -259,6 +259,12 @@ def test_color_prop(app):
         # check that the color prop has been correctly set
         assert app.pyramids["default"]["overlay"].renderer.score_prop == "test_prop"
 
+        # test corresponding get
+        response = client.get("/tileserver/color_prop")
+        assert response.status_code == 200
+        assert response.content_type == "application/json; charset=utf-8"
+        assert response.get_json() == "test_prop"
+
         response = client.put("/tileserver/color_prop/None")
         assert app.pyramids["default"]["overlay"].renderer.score_prop is None
 
@@ -280,6 +286,13 @@ def test_change_slide(app, remote_sample):
         layer = app.pyramids["default"]["slide"]
         assert layer.wsi.info.file_path == slide_path2
 
+        # test corresponding get
+        response = client.get("/tileserver/slide")
+        assert response.status_code == 200
+        assert response.content_type == "text/json; charset=utf-8"
+        info = layer.wsi.info.to_dict()
+        assert response.get_json() == info
+
 
 def test_change_cmap(app):
     """Test changing colormap."""
@@ -297,6 +310,12 @@ def test_change_cmap(app):
         cdict = {"type1": (1, 0, 0), "type2": (0, 1, 0)}
         response = client.put(f"/tileserver/cmap/{json.dumps(cdict)}")
         assert layer.renderer.mapper("type2") == [0, 1, 0]
+
+        # test corresponding get
+        response = client.get("/tileserver/cmap")
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        assert response.json == cdict
 
 
 def test_load_save_annotations(app, tmp_path):
@@ -339,6 +358,15 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
         assert set(json.loads(response.data)) == {0, 1}
         # check that the 2 annotations have been correctly loaded
         assert len(empty_app.pyramids[session_id]["overlay"].store) == 2
+
+        # test corresponding get
+        response = client.get(
+            "/tileserver/annotations/",
+            data={"bounds": [0, 0, 30000, 30000], "where": None},
+        )
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        assert len(json.loads(response.data)) == 2
 
 
 def test_change_overlay(empty_app, tmp_path, remote_sample):
@@ -422,6 +450,12 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
 
+        # test corresponding get
+        response = client.get(f"/tileserver/overlay")
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        assert set(json.loads(response.data)) == sample_store
+
 
 def test_commit(empty_app, tmp_path, remote_sample):
     """Test committing annotations."""
@@ -466,6 +500,12 @@ def test_update_renderer(app):
         response = client.put(f"/tileserver/renderer/where/{json.dumps('None')}")
         assert app.pyramids["default"]["overlay"].renderer.where is None
 
+        # test corresponding get
+        response = client.get("/tileserver/renderer/edge_thickness")
+        assert response.status_code == 200
+        assert response.content_type == "application/json; charset=utf-8"
+        assert json.loads(response.data) == 5
+
 
 def test_secondary_cmap(app):
     """Test secondary cmap."""
@@ -478,6 +518,16 @@ def test_secondary_cmap(app):
         assert layer.renderer.secondary_cmap["type"] == 0
         assert layer.renderer.secondary_cmap["score_prop"] == "prob"
         assert layer.renderer.secondary_cmap["mapper"](0.5) == colormaps["Reds"](0.5)
+
+        # test corresponding get
+        response = client.get("/tileserver/secondary_cmap")
+        assert response.status_code == 200
+        assert response.content_type == "text/json; charset=utf-8"
+        assert json.loads(response.data) == {
+            "type": 0,
+            "score_prop": "prob",
+            "cmap": "Reds",
+        }
 
 
 def test_get_props(app_alt):

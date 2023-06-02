@@ -556,15 +556,19 @@ class AnnotationRenderer:
         score_prop_edge=None,
     ):
         if mapper is None:
+            self.raw_mapper = "jet"
             mapper = colormaps["jet"]
         if isinstance(mapper, str) and mapper != "categorical":
+            self.raw_mapper = mapper
             mapper = colormaps[mapper]
         if isinstance(mapper, list):
             colors = random_colors(len(mapper))
             mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
         if isinstance(mapper, dict):
+            self.raw_mapper = mapper
             self.mapper = lambda x: mapper[x]
         else:
+            self.raw_mapper = "function"
             self.mapper = mapper
         self.score_prop = score_prop
         self.score_prop_edge = score_prop_edge

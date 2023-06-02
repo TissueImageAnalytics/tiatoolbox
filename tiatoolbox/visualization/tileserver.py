@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
-from flask import Flask, Response, make_response, request, send_file
+from flask import Flask, Response, jsonify, make_response, request, send_file
 from flask.templating import render_template
 from matplotlib import colormaps
 from PIL import Image
@@ -143,6 +143,15 @@ class TileServer(Flask):
         self.route("/tileserver/prop_names/<ann_type>")(self.get_properties)
         self.route("/tileserver/prop_values/<prop>/<ann_type>")(
             self.get_property_values
+        )
+        self.route("/tileserver/color_prop", methods=["GET"])(self.get_color_prop)
+        self.route("/tileserver/slide", methods=["GET"])(self.get_slide)
+        self.route("/tileserver/cmap", methods=["GET"])(self.get_mapper)
+        self.route("/tileserver/annotations/", methods=["GET"])(self.get_annotations)
+        self.route("/tileserver/overlay", methods=["GET"])(self.get_overlay)
+        self.route("/tileserver/renderer/<prop>", methods=["GET"])(self.get_renderer)
+        self.route("/tileserver/secondary_cmap", methods=["GET"])(
+            self.get_secondary_cmap
         )
 
     def _get_session_id(self):
@@ -328,11 +337,7 @@ class TileServer(Flask):
     def change_prop(self, prop):
         """Change the property to colour annotations by."""
         session_id = self._get_session_id()
-        for layer in self.pyramids[session_id].values():
-            if isinstance(layer, AnnotationTileGenerator):
-                if prop == "None":
-                    prop = None
-                layer.renderer.score_prop = prop
+        self.renderers[session_id].score_prop = prop
 
         return "done"
 
@@ -543,3 +548,50 @@ class TileServer(Flask):
                     print(f"db saved to {save_path}")
                 return "done"
         return "nothing to save"
+
+    def get_color_prop(self):
+        """Get the property used to color annotations from renderer."""
+        session_id = self._get_session_id()
+        return jsonify(self.renderers[session_id].score_prop)
+
+    def get_slide(self):
+        """Get the slide metadata."""
+        session_id = self._get_session_id()
+        info = self.layers[session_id]["slide"].info.as_dict()
+        info["file_path"] = str(info["file_path"])
+        return jsonify(self.layers[session_id]["slide"].info.as_dict())
+
+    def get_mapper(self):
+        """Get the mapper used to color annotations from renderer."""
+        session_id = self._get_session_id()
+        mapper = self.renderers[session_id].raw_mapper
+        return jsonify(mapper)
+
+    def get_annotations(self):
+        """Get the annotations in the specified bounds."""
+        session_id = self._get_session_id()
+        bounds = request.args.get("bounds")
+        bounds = json.loads(bounds)
+        where = request.args.get("where")
+        where = json.loads(where)
+        annotations = self.get_ann_layer(session_id).store.query(
+            bounds=bounds,
+            where=where,
+        )
+        return jsonify(annotations)
+
+    def get_overlay(self):
+        """Get the overlay info."""
+        session_id = self._get_session_id()
+        return jsonify(self.get_ann_layer(session_id).store.path)
+
+    def get_renderer(self, prop):
+        """Get the requested property from the renderer."""
+        session_id = self._get_session_id()
+        return jsonify(getattr(self.renderers[session_id], prop))
+
+    def get_secondary_cmap(self):
+        """Get the secondary cmap from the renderer."""
+        session_id = self._get_session_id()
+        mapper = self.renderers[session_id].raw_secondary_cmap
+        return jsonify(mapper)
