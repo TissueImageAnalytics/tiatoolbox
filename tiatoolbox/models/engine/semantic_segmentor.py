@@ -174,7 +174,6 @@ class IOSegmentorConfig(IOConfigABC):
         self.save_resolution = save_resolution
 
         self._validate()
-        self._set_highest_input_resolution()
 
     def to_baseline(self):
         """Return a new config object converted to baseline form.

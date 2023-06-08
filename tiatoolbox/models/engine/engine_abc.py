@@ -45,7 +45,14 @@ class IOConfigABC(ABC):
         for variable, value in kwargs.items():
             self.__setattr__(variable, value)
 
-        self._validate()
+        if self.resolution_unit == "mpp":
+            self.highest_input_resolution = min(
+                self.input_resolutions, key=lambda x: x["resolution"]
+            )
+        else:
+            self.highest_input_resolution = max(
+                self.input_resolutions, key=lambda x: x["resolution"]
+            )
 
     def _validate(self):
         """Validate the data format."""
@@ -58,17 +65,6 @@ class IOConfigABC(ABC):
             "mpp",
         ]:
             raise ValueError(f"Invalid resolution units `{units[0]}`.")
-
-    def _set_highest_input_resolution(self):
-        """Identifies and sets highest input resolution available."""
-        if self.resolution_unit == "mpp":
-            self.highest_input_resolution = min(
-                self.input_resolutions, key=lambda x: x["resolution"]
-            )
-        else:
-            self.highest_input_resolution = max(
-                self.input_resolutions, key=lambda x: x["resolution"]
-            )
 
     @staticmethod
     def scale_to_highest(resolutions: List[dict], units: Units):
