@@ -6,7 +6,7 @@ import numpy as np
 from tiatoolbox.wsicore.wsimeta import Units
 
 
-class ModelIOConfigABC(ABC):
+class ModelIOConfigABC(ABC):  # noqa: B024
     """Defines an abstract class for holding a CNN model's I/O information.
 
     Enforcing such that following attributes must always be defined by
@@ -93,7 +93,6 @@ class ModelIOConfigABC(ABC):
             return np.min(old_val) / np.array(old_val)
         return np.array(old_val) / np.max(old_val)
 
-    @abstractmethod
     def to_baseline(self):
         """Returns a new config object converted to baseline form.
 
