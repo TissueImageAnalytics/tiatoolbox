@@ -210,6 +210,7 @@ class IOSegmentorConfig(IOConfigABC):
             output_resolutions=output_resolutions,
             patch_input_shape=self.patch_input_shape,
             patch_output_shape=self.patch_output_shape,
+            stride_shape=self.stride_shape,
             save_resolution=save_resolution,
             **self._kwargs,
         )
