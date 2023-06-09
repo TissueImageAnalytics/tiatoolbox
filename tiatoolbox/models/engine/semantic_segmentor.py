@@ -25,7 +25,7 @@ from tiatoolbox.utils import imread, misc
 from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
-from .engine_abc import IOConfigABC
+from .engine_abc import ModelIOConfigABC
 
 
 def _estimate_canvas_parameters(sample_prediction, canvas_shape):
@@ -97,7 +97,7 @@ def _prepare_save_output(
     return is_on_drive, count_canvas, cum_canvas
 
 
-class IOSegmentorConfig(IOConfigABC):
+class IOSegmentorConfig(ModelIOConfigABC):
     """Contain semantic segmentor input and output information.
 
     Args:
@@ -176,7 +176,7 @@ class IOSegmentorConfig(IOConfigABC):
         self._validate()
 
     def to_baseline(self):
-        """Return a new config object converted to baseline form.
+        """Returns a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
         resolutions have been converted to baseline format with the
@@ -184,18 +184,15 @@ class IOSegmentorConfig(IOConfigABC):
         reference.
 
         """
-        resolutions = self.input_resolutions + self.output_resolutions
+        new_config = super().to_baseline()
+        resolutions = new_config.input_resolutions + self.output_resolutions
         if self.save_resolution is not None:
             resolutions.append(self.save_resolution)
 
         scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
-        num_input_resolutions = len(self.input_resolutions)
+        num_input_resolutions = len(new_config.input_resolutions)
         num_output_resolutions = len(self.output_resolutions)
 
-        end_idx = num_input_resolutions
-        input_resolutions = [
-            {"units": "baseline", "resolution": v} for v in scale_factors[:end_idx]
-        ]
         end_idx = num_input_resolutions + num_output_resolutions
         output_resolutions = [
             {"units": "baseline", "resolution": v}
@@ -206,7 +203,7 @@ class IOSegmentorConfig(IOConfigABC):
         if self.save_resolution is not None:
             save_resolution = {"units": "baseline", "resolution": scale_factors[-1]}
         return IOSegmentorConfig(
-            input_resolutions=input_resolutions,
+            input_resolutions=new_config.input_resolutions,
             output_resolutions=output_resolutions,
             patch_input_shape=self.patch_input_shape,
             patch_output_shape=self.patch_output_shape,
