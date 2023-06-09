@@ -122,24 +122,20 @@ class TileServer(Flask):
         )
         self.route("/")(self.index)
         self.route("/tileserver/session_id")(self.session_id)
-        self.route("/tileserver/color_prop/<prop>", methods=["PUT"])(self.change_prop)
-        self.route("/tileserver/slide/<slide_path>", methods=["PUT"])(self.change_slide)
-        self.route("/tileserver/cmap/<cmap>", methods=["PUT"])(self.change_mapper)
+        self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
+        self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
+        self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
         self.route(
-            "/tileserver/load_annotations/<file_path>/<float:model_mpp>",
+            "/tileserver/annotations",
             methods=["PUT"],
         )(self.load_annotations)
-        self.route("/tileserver/overlay/<overlay_path>", methods=["PUT"])(
-            self.change_overlay
-        )
-        self.route("/tileserver/commit/<save_path>", methods=["POST"])(self.commit_db)
-        self.route("/tileserver/renderer/<prop>/<val>", methods=["PUT"])(
-            self.update_renderer
-        )
+        self.route("/tileserver/overlay", methods=["PUT"])(self.change_overlay)
+        self.route("/tileserver/commit", methods=["POST"])(self.commit_db)
+        self.route("/tileserver/renderer/<prop>", methods=["PUT"])(self.update_renderer)
         self.route("/tileserver/reset/<session_id>", methods=["PUT"])(self.reset)
-        self.route(
-            "/tileserver/secondary_cmap/<type_id>/<prop>/<cmap>", methods=["PUT"]
-        )(self.change_secondary_cmap)
+        self.route("/tileserver/secondary_cmap", methods=["PUT"])(
+            self.change_secondary_cmap
+        )
         self.route("/tileserver/prop_names/<ann_type>")(self.get_properties)
         self.route("/tileserver/prop_values/<prop>/<ann_type>")(
             self.get_property_values
@@ -334,10 +330,11 @@ class TileServer(Flask):
             "index.html", title=self.title, layers=json.dumps(layers)
         )
 
-    def change_prop(self, prop):
+    def change_prop(self):
         """Change the property to colour annotations by."""
+        prop = request.form["prop"]
         session_id = self._get_session_id()
-        self.renderers[session_id].score_prop = prop
+        self.renderers[session_id].score_prop = json.loads(prop)
 
         return "done"
 
@@ -365,9 +362,10 @@ class TileServer(Flask):
         del self.overlaps[session_id]
         return "done"
 
-    def change_slide(self, slide_path):
+    def change_slide(self):
         """Change the slide."""
         session_id = self._get_session_id()
+        slide_path = request.form["slide_path"]
         slide_path = self.decode_safe_name(slide_path)
 
         self.layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
@@ -380,19 +378,21 @@ class TileServer(Flask):
 
         return "done"
 
-    def change_mapper(self, cmap):
+    def change_mapper(self):
         """Change the colour mapper for the overlay."""
         session_id = self._get_session_id()
-        cmapp = self._get_cmap(cmap)
-
-        self.renderers[session_id].mapper = cmapp
+        cmap = request.form["cmap"]
+        self.renderers[session_id].mapper = json.loads(cmap)
         self.renderers[session_id].function_mapper = None
 
         return "done"
 
-    def change_secondary_cmap(self, type_id, prop, cmap):
+    def change_secondary_cmap(self):
         """Change the type-specific colour mapper for the overlay."""
         session_id = self._get_session_id()
+        cmap = request.form["cmap"]
+        type_id = request.form["type_id"]
+        prop = request.form["prop"]
         cmapp = self._get_cmap(cmap)
 
         cmap_dict = {"type": json.loads(type_id), "score_prop": prop, "mapper": cmapp}
@@ -400,9 +400,10 @@ class TileServer(Flask):
 
         return "done"
 
-    def update_renderer(self, prop, val):
+    def update_renderer(self, prop):
         """Update a property in the renderer."""
         session_id = self._get_session_id()
+        val = request.form["val"]
         val = json.loads(val)
         if val in ["None", "null"]:
             val = None
@@ -413,7 +414,7 @@ class TileServer(Flask):
             self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
         return "done"
 
-    def load_annotations(self, file_path, model_mpp):
+    def load_annotations(self):
         """Load annotations from a dat file.
 
         Adds to an existing store if one is already present,
@@ -421,6 +422,8 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        file_path = request.form["file_path"]
+        model_mpp = json.loads(request.form["model_mpp"])
         file_path = self.decode_safe_name(file_path)
 
         for layer in self.pyramids[session_id].values():
@@ -446,7 +449,7 @@ class TileServer(Flask):
         types = self.update_types(sq)
         return json.dumps(types)
 
-    def change_overlay(self, overlay_path):
+    def change_overlay(self):
         """Change the overlay.
 
         If the path points to some annotations, the current overlay
@@ -455,6 +458,7 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
 
         if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
@@ -528,7 +532,7 @@ class TileServer(Flask):
         )
         return json.dumps(list(ann_props))
 
-    def commit_db(self, save_path):
+    def commit_db(self):
         """Commit changes to the current store.
 
         If the store is not already associated with a .db file,
@@ -536,6 +540,7 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        save_path = request.form["save_path"]
         save_path = self.decode_safe_name(save_path)
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
@@ -559,7 +564,7 @@ class TileServer(Flask):
         session_id = self._get_session_id()
         info = self.layers[session_id]["slide"].info.as_dict()
         info["file_path"] = str(info["file_path"])
-        return jsonify(self.layers[session_id]["slide"].info.as_dict())
+        return jsonify(info)
 
     def get_mapper(self):
         """Get the mapper used to color annotations from renderer."""
@@ -570,20 +575,22 @@ class TileServer(Flask):
     def get_annotations(self):
         """Get the annotations in the specified bounds."""
         session_id = self._get_session_id()
-        bounds = request.args.get("bounds")
-        bounds = json.loads(bounds)
-        where = request.args.get("where")
-        where = json.loads(where)
+        bounds = json.loads(request.form["bounds"])
+        where = json.loads(request.form["where"])
         annotations = self.get_ann_layer(session_id).store.query(
-            bounds=bounds,
+            geometry=bounds,
             where=where,
         )
+        annotations = [
+            {"geom": ann.geometry.wkt, "properties": ann.properties}
+            for ann in annotations.values()
+        ]
         return jsonify(annotations)
 
     def get_overlay(self):
         """Get the overlay info."""
         session_id = self._get_session_id()
-        return jsonify(self.get_ann_layer(session_id).store.path)
+        return jsonify(str(self.get_ann_layer(session_id).store.path))
 
     def get_renderer(self, prop):
         """Get the requested property from the renderer."""
@@ -593,5 +600,6 @@ class TileServer(Flask):
     def get_secondary_cmap(self):
         """Get the secondary cmap from the renderer."""
         session_id = self._get_session_id()
-        mapper = self.renderers[session_id].raw_secondary_cmap
+        mapper = self.renderers[session_id].secondary_cmap
+        mapper["mapper"] = mapper["mapper"].__class__.__name__
         return jsonify(mapper)

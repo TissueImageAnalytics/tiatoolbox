@@ -253,7 +253,9 @@ def test_get_session_id(app):
 def test_color_prop(app):
     """Test endpoint to change property to color by."""
     with app.test_client() as client:
-        response = client.put("/tileserver/color_prop/test_prop")
+        response = client.put(
+            "/tileserver/color_prop", data={"prop": json.dumps("test_prop")}
+        )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the color prop has been correctly set
@@ -262,10 +264,10 @@ def test_color_prop(app):
         # test corresponding get
         response = client.get("/tileserver/color_prop")
         assert response.status_code == 200
-        assert response.content_type == "application/json; charset=utf-8"
+        assert response.content_type == "application/json"
         assert response.get_json() == "test_prop"
 
-        response = client.put("/tileserver/color_prop/None")
+        response = client.put("/tileserver/color_prop", data={"prop": json.dumps(None)})
         assert app.pyramids["default"]["overlay"].renderer.score_prop is None
 
 
@@ -274,41 +276,46 @@ def test_change_slide(app, remote_sample):
     slide_path = remote_sample("svs-1-small")
     slide_path2 = remote_sample("wsi2_4k_4k_jpg")
     with app.test_client() as client:
-        response = client.put(f"/tileserver/slide/{safe_str(slide_path)}")
+        response = client.put(
+            "/tileserver/slide", data={"slide_path": safe_str(slide_path)}
+        )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the slide has been correctly changed
         layer = app.pyramids["default"]["slide"]
         assert layer.wsi.info.file_path == slide_path
 
-        response = client.put(f"/tileserver/slide/{safe_str(slide_path2)}")
+        response = client.put(
+            "/tileserver/slide", data={"slide_path": safe_str(slide_path2)}
+        )
         # check that the slide has been correctly changed
-        layer = app.pyramids["default"]["slide"]
-        assert layer.wsi.info.file_path == slide_path2
+        layer = app.layers["default"]["slide"]
+        assert layer.info.file_path == slide_path2
 
         # test corresponding get
         response = client.get("/tileserver/slide")
         assert response.status_code == 200
-        assert response.content_type == "text/json; charset=utf-8"
-        info = layer.wsi.info.to_dict()
-        assert response.get_json() == info
+        assert response.content_type == "application/json"
+        info = layer.info.as_dict()
+        assert response.get_json()["file_path"] == str(info["file_path"])
 
 
 def test_change_cmap(app):
     """Test changing colormap."""
     with app.test_client() as client:
-        response = client.put("/tileserver/cmap/Reds")
+        response = client.put("/tileserver/cmap", data={"cmap": json.dumps("Reds")})
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the colormap has been correctly changed
         layer = app.pyramids["default"]["overlay"]
         assert layer.renderer.mapper(0.5) == colormaps["Reds"](0.5)
 
-        response = client.put("/tileserver/cmap/None")
-        assert layer.renderer.mapper is None
+        # None should use default jet colormap
+        response = client.put("/tileserver/cmap", data={"cmap": json.dumps(None)})
+        assert layer.renderer.mapper(0.5) == colormaps["jet"](0.5)
 
-        cdict = {"type1": (1, 0, 0), "type2": (0, 1, 0)}
-        response = client.put(f"/tileserver/cmap/{json.dumps(cdict)}")
+        cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
+        response = client.put("/tileserver/cmap", data={"cmap": json.dumps(cdict)})
         assert layer.renderer.mapper("type2") == [0, 1, 0]
 
         # test corresponding get
@@ -325,7 +332,11 @@ def test_load_save_annotations(app, tmp_path):
     with app.test_client() as client:
         num_annotations = len(app.pyramids["default"]["overlay"].store)
         response = client.put(
-            f"/tileserver/load_annotations/{safe_str(tmp_path / 'test.dat')}/{0.5}"
+            "/tileserver/annotations",
+            data={
+                "file_path": safe_str(tmp_path / "test.dat"),
+                "model_mpp": json.dumps(0.5),
+            },
         )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
@@ -333,7 +344,9 @@ def test_load_save_annotations(app, tmp_path):
         # check that the extra 2 annotations have been correctly loaded
         assert len(app.pyramids["default"]["overlay"].store) == num_annotations + 2
 
-        response = client.post("/tileserver/commit/none")
+        response = client.post(
+            "/tileserver/commit", data={"save_path": json.dumps(None)}
+        )
 
     # check that the annotations have been correctly saved
     store = SQLiteStore(app.pyramids["default"]["overlay"].store.path)
@@ -347,11 +360,16 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
     with empty_app.test_client() as client:
         session_id = setup_app(client)
         response = client.put(
-            f"/tileserver/slide/{safe_str(remote_sample('svs-1-small'))}"
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
         assert response.status_code == 200
         response = client.put(
-            f"/tileserver/load_annotations/{safe_str(tmp_path / 'test.dat')}/{0.5}"
+            "/tileserver/annotations",
+            data={
+                "file_path": safe_str(tmp_path / "test.dat"),
+                "model_mpp": json.dumps(0.5),
+            },
         )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
@@ -362,7 +380,10 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
         # test corresponding get
         response = client.get(
             "/tileserver/annotations/",
-            data={"bounds": [0, 0, 30000, 30000], "where": None},
+            data={
+                "bounds": json.dumps([0, 0, 30000, 30000]),
+                "where": json.dumps(None),
+            },
         )
         assert response.status_code == 200
         assert response.content_type == "application/json"
@@ -382,10 +403,13 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
     with empty_app.test_client() as client:
         session_id = setup_app(client)
         response = client.put(
-            f"/tileserver/slide/{safe_str(remote_sample('svs-1-small'))}"
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
         assert response.status_code == 200
-        response = client.put(f"/tileserver/overlay/{safe_str(geo_path)}")
+        response = client.put(
+            "/tileserver/overlay", data={"overlay_path": safe_str(geo_path)}
+        )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the annotations have been correctly loaded
@@ -395,10 +419,13 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         response = client.put(f"tileserver/reset/{session_id}")
         session_id = setup_app(client)
         response = client.put(
-            f"/tileserver/slide/{safe_str(remote_sample('svs-1-small'))}"
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
         assert response.status_code == 200
-        response = client.put(f"/tileserver/overlay/{safe_str(geo_path)}")
+        response = client.put(
+            "/tileserver/overlay", data={"overlay_path": safe_str(geo_path)}
+        )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
@@ -406,7 +433,9 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         assert len(empty_app.pyramids[session_id]["overlay"].store) == num_annotations
 
         # add another image layer
-        response = client.put(f"/tileserver/overlay/{safe_str(overlay_path)}")
+        response = client.put(
+            "/tileserver/overlay", data={"overlay_path": safe_str(overlay_path)}
+        )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the overlay has been correctly added
@@ -415,19 +444,30 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         assert layer.wsi.info.file_path == overlay_path
 
         # replace existing store overlay
-        response = client.put(f"/tileserver/overlay/{safe_str(sample_store)}")
+        response = client.put(
+            "/tileserver/overlay", data={"overlay_path": safe_str(sample_store)}
+        )
         # check that the correct store has been loaded
-        con = empty_app.pyramids[session_id]["overlay"].store.connection
-        assert SQLiteStore._connection_to_path(con) == sample_store
+        store_path = empty_app.pyramids[session_id]["overlay"].store.path
+        assert SQLiteStore._connection_to_path(store_path) == sample_store
+
+        # test corresponding get
+        response = client.get("/tileserver/overlay")
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        assert json.loads(response.data) == str(sample_store)
 
         # add a .jpg overlay
         response = client.put(f"tileserver/reset/{session_id}")
         session_id = setup_app(client)
         response = client.put(
-            f"/tileserver/slide/{safe_str(remote_sample('wsi2_4k_4k_svs'))}"
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("wsi2_4k_4k_svs"))},
         )
         jpg_path = remote_sample("wsi2_4k_4k_jpg")
-        response = client.put(f"/tileserver/overlay/{safe_str(jpg_path)}")
+        response = client.put(
+            "/tileserver/overlay", data={"overlay_path": safe_str(jpg_path)}
+        )
         # check that the overlay has been correctly added
         lname = f"layer{len(empty_app.pyramids[session_id])-1}"
         layer = empty_app.pyramids[session_id][lname]
@@ -436,25 +476,24 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         # add an overlay from a .dat file
         data = make_simple_dat()
         joblib.dump(data, tmp_path / "test.dat")
-        response = client.put(f"/tileserver/overlay/{safe_str(tmp_path / 'test.dat')}")
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(tmp_path / "test.dat")},
+        )
         assert set(json.loads(response.data)) == {0, 1}
 
         # add a .tiff overlay
         response = client.put(
-            f"/tileserver/slide/{safe_str(remote_sample('svs-1-small'))}"
+            "/tileserver/slide", data=safe_str(remote_sample("svs-1-small"))
         )
         tiff_path = remote_sample("tiled-tiff-1-small-jpeg")
-        response = client.put(f"/tileserver/overlay/{safe_str(tiff_path)}")
+        response = client.put(
+            "/tileserver/overlay", data={"overlay_path": safe_str(tiff_path)}
+        )
         # check that the overlay has been correctly added
         lname = f"layer{len(empty_app.pyramids[session_id])-1}"
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
-
-        # test corresponding get
-        response = client.get(f"/tileserver/overlay")
-        assert response.status_code == 200
-        assert response.content_type == "application/json"
-        assert set(json.loads(response.data)) == sample_store
 
 
 def test_commit(empty_app, tmp_path, remote_sample):
@@ -464,20 +503,28 @@ def test_commit(empty_app, tmp_path, remote_sample):
     with empty_app.test_client() as client:
         setup_app(client)
         response = client.put(
-            f"/tileserver/slide/{safe_str(remote_sample('svs-1-small'))}"
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
         assert response.status_code == 200
 
         # try to commit now - should return "nothing to save"
-        response = client.post(f"/tileserver/commit/{safe_str(tmp_path / 'test.db')}")
+        response = client.post(
+            "/tileserver/commit", data={"save_path": safe_str(tmp_path / "test.db")}
+        )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert response.data == b"nothing to save"
 
-        response = client.put(f"/tileserver/overlay/{safe_str(tmp_path / 'test.dat')}")
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(tmp_path / "test.dat")},
+        )
         assert response.status_code == 200
         # commit the changes
-        response = client.post(f"/tileserver/commit/{safe_str(tmp_path / 'test.db')}")
+        response = client.post(
+            "/tileserver/commit", data={"save_path": safe_str(tmp_path / "test.db")}
+        )
 
     # check that the annotations have been correctly saved
     store = SQLiteStore(tmp_path / "test.db")
@@ -487,30 +534,35 @@ def test_commit(empty_app, tmp_path, remote_sample):
 def test_update_renderer(app):
     """Test updating renderer."""
     with app.test_client() as client:
-        response = client.put("/tileserver/renderer/edge_thickness/5")
+        response = client.put("/tileserver/renderer/edge_thickness", data={"val": 5})
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the renderer has been correctly updated
         assert app.pyramids["default"]["overlay"].renderer.edge_thickness == 5
 
-        response = client.put("/tileserver/renderer/blur_radius/5")
-        assert app.pyramids["default"]["overlay"].renderer.blur_radius == 5
-        assert app.overlaps["default"] == int(5 * 1.5)
-
-        response = client.put(f"/tileserver/renderer/where/{json.dumps('None')}")
-        assert app.pyramids["default"]["overlay"].renderer.where is None
-
         # test corresponding get
         response = client.get("/tileserver/renderer/edge_thickness")
         assert response.status_code == 200
-        assert response.content_type == "application/json; charset=utf-8"
+        assert response.content_type == "application/json"
         assert json.loads(response.data) == 5
+
+        response = client.put("/tileserver/renderer/blur_radius", data={"val": 5})
+        assert app.pyramids["default"]["overlay"].renderer.blur_radius == 5
+        assert app.overlaps["default"] == int(5 * 1.5)
+
+        response = client.put(
+            "/tileserver/renderer/where", data={"val": json.dumps(None)}
+        )
+        assert app.pyramids["default"]["overlay"].renderer.where is None
 
 
 def test_secondary_cmap(app):
     """Test secondary cmap."""
     with app.test_client() as client:
-        response = client.put(f"/tileserver/secondary_cmap/{json.dumps(0)}/prob/Reds")
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={"type_id": json.dumps(0), "prop": "prob", "cmap": "Reds"},
+        )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the renderer has been correctly updated
@@ -522,11 +574,11 @@ def test_secondary_cmap(app):
         # test corresponding get
         response = client.get("/tileserver/secondary_cmap")
         assert response.status_code == 200
-        assert response.content_type == "text/json; charset=utf-8"
+        assert response.content_type == "application/json"
         assert json.loads(response.data) == {
             "type": 0,
             "score_prop": "prob",
-            "cmap": "Reds",
+            "mapper": "LinearSegmentedColormap",
         }
 
 
@@ -584,6 +636,9 @@ def test_no_ann_layer(empty_app, remote_sample):
     """Test doing something needing annotation layer when none exists."""
     with empty_app.test_client() as client:
         setup_app(client)
-        client.put(f"/tileserver/slide/{safe_str(remote_sample('svs-1-small'))}")
+        client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
         with pytest.raises(ValueError, match="No annotation layer found."):
             client.get("/tileserver/prop_names/all")
