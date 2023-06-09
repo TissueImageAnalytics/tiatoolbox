@@ -13,9 +13,9 @@ from skimage.util import img_as_float
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
 
 
