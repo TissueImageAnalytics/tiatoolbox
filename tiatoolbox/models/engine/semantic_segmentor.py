@@ -185,12 +185,12 @@ class IOSegmentorConfig(ModelIOConfigABC):
 
         """
         new_config = super().to_baseline()
-        resolutions = new_config.input_resolutions + self.output_resolutions
+        resolutions = self.input_resolutions + self.output_resolutions
         if self.save_resolution is not None:
             resolutions.append(self.save_resolution)
 
         scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
-        num_input_resolutions = len(new_config.input_resolutions)
+        num_input_resolutions = len(self.input_resolutions)
         num_output_resolutions = len(self.output_resolutions)
 
         end_idx = num_input_resolutions + num_output_resolutions
@@ -202,6 +202,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
         save_resolution = None
         if self.save_resolution is not None:
             save_resolution = {"units": "baseline", "resolution": scale_factors[-1]}
+
         return IOSegmentorConfig(
             input_resolutions=new_config.input_resolutions,
             output_resolutions=output_resolutions,
