@@ -87,151 +87,253 @@ paths:
               type: string
             description: The 'session_id' cookie containing the session_id identifier.
 
-  /tileserver/color_prop/{prop}:
+  /tileserver/color_prop:
     put:
       summary: Update the property used to determine the colors of rendered annotations
-      parameters:
-        - in: path
-          name: prop
-          description: Name of the property
-          required: true
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                prop:
+                  type: string
+                  description: The property to color annotations by
       responses:
         '200':
           description: Successful response
+    get:
+      summary: Get the property used to color annotations from renderer.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
 
-  /tileserver/slide/{slide_path}:
+  /tileserver/slide:
     put:
       summary: change the base slide. All overlays will be removed.
-      parameters:
-        - in: path
-          name: slide_path
-          description: Path to the slide in url safe form
-          required: true
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                slide_path:
+                  type: string
+                  description: Path to the slide in url safe form
       responses:
         '200':
           description: Successful response
+    get:
+      summary: Get the slide metadata.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
-  /tileserver/cmap/{cmap}:
+  /tileserver/cmap:
     put:
       summary: Change colormap for annotation layer
-      parameters:
-        - in: path
-          name: cmap
-          description: Name of the colormap, should be a matplotlib colormap
-            or a dict string
-          required: true
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                cmap:
+                  type: string
+                  description: Name of the colormap, should be a matplotlib colormap or a dict string
       responses:
         '200':
           description: Successful response
+    get:
+      summary: Get the mapper used to color annotations from renderer.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
-  /tileserver/load_annotations/{file_path}/{model_mpp}:
+  /tileserver/annotations:
     put:
       summary: Load annotations for a slide
-      parameters:
-        - in: path
-          name: file_path
-          description: Path to the annotation file in url safe form
-            can be a .db, .dat or .geojson file
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: model_mpp
-          description: Model microns per pixel, used if annotations are output
-            of a model not at baseline
-          required: true
-          schema:
-            type: number
-            format: float
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                file_path:
+                  type: string
+                  description: Path to the annotation file in url safe form. Can be a .db, .dat or .geojson file
+                model_mpp:
+                  type: float
+                  description: Model microns per pixel, used if annotations are output of a model not at baseline
       responses:
         '200':
           description: jsonified list of types of loaded annotations
           content:
             application/json:
+    get:
+      summary: Get the annotations in the specified bounds.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                bounds:
+                  type: list
+                  description: a list of 4 numbers, [xmin, ymin, xmax, ymax] describing the bounds of the query
+                where:
+                  type: string
+                  description: a valid AnnotationStore filter string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    geom:
+                      type: string
+                    properties:
+                      type: object
 
-  /tileserver/overlay/{overlay_path}:
+  /tileserver/overlay:
     put:
       summary: Change overlay for a slide
       description: This endpoint changes the overlay. If the path points to some annotations, the current overlay is replaced with the new one. If the path points to an image, it is added as a new layer.
-      parameters:
-        - in: path
-          name: overlay_path
-          description: url safe path to the new overlay image file
-          required: true
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                overlay_path:
+                  type: string
+                  description: url safe path to the new overlay image file
       responses:
         '200':
           description: jsonified list of types present in the overlay, if any
           content:
             application/json:
+    get:
+      summary: Get the overlay info.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+              type: string
 
-  /tileserver/commit/{save_path}:
+  /tileserver/commit:
     post:
       summary: Commit database changes
-      parameters:
-        - in: path
-          name: save_path
-          description: Url safe path to save the database changes
-          required: true
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                save_path:
+                  type: string
+                  description: Url safe path to save the database changes
       responses:
         '200':
           description: Successful response
 
-  /tileserver/renderer/{prop}/{val}:
+  /tileserver/renderer/{prop}:
     put:
       summary: Update annotation renderer properties
       parameters:
-        - in: path
-          name: prop
-          description: Property to update
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: val
-          description: New value for the property
-          required: true
-          schema:
-            type: string
+        in: path
+        name: prop
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                prop:
+                  type: string
+                  description: The renderer property to update
+                val:
+                  type: string
+                  description: The value to set the property to
       responses:
         '200':
           description: Successful response
+    get:
+      summary: Get the requested property from the renderer.
+      parameters:
+        in: path
+        name: prop
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
-  /tileserver/secondary_cmap/{type_id}/{prop}/{cmap}:
+  /tileserver/secondary_cmap:
     put:
       summary: Change secondary color map for a property type
-      parameters:
-        - in: path
-          name: type_id
-          description: The type for which you want to override the primary
-            color map
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: prop
-          description: Property to use to color annotations of the chose type
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: cmap
-          description: Color map to use for the property
-          required: true
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                type_id:
+                  type: string
+                  description: The type for which you want to override the primary color map
+                prop:
+                  type: string
+                  description: Property to use to color annotations of the chosen type
+                cmap:
+                  type: string
+                  description: Color map to use for the property
       responses:
         '200':
           description: Successful response
+    get:
+      summary: Get the secondary cmap from the renderer.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
   /tileserver/prop_names/{ann_type}:
     get:
