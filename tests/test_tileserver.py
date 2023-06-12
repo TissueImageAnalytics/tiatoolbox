@@ -27,6 +27,7 @@ def safe_str(name):
 
 
 def setup_app(client):
+    """Setup the app for testing."""
     client.get("/tileserver/session_id")
     # get the "session_id" cookie
     return client.get_cookie("session_id").value

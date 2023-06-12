@@ -749,10 +749,8 @@ class AnnotationRenderer:
                 __value = {key: (*color, 1) for key, color in zip(__value, colors)}
             if isinstance(__value, dict):
                 self.raw_mapper = __value
-                self.__dict__["mapper"] = lambda x: __value[x]
-            else:
-                self.__dict__["mapper"] = __value
-            return
+                self.__dict__[__name] = lambda x: __value[x]
+                return
         if __name == "blur_radius":
             # need to change additional settings
             if __value > 0:
