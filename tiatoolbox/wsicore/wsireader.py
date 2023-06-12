@@ -25,6 +25,7 @@ from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
 from tiatoolbox.wsicore.wsimeta import Resolution, Units, WSIMeta
@@ -103,7 +104,10 @@ def is_ngff(
     min_version: Version = MIN_NGFF_VERSION,
     max_version: Version = MAX_NGFF_VERSION,
 ) -> bool:
-    """Check if the input is a NGFF file.
+    """Check if the input is an NGFF file.
+
+    This should return True for a zarr groups stored in a directory, zip
+    file, or SQLite database.
 
     Args:
         path (pathlib.Path):
@@ -113,15 +117,18 @@ def is_ngff(
 
     Returns:
         bool:
-            True if the file is a NGFF file.
+            True if the file is an NGFF file.
 
     """
     path = pathlib.Path(path)
-    zattrs_path = path / ".zattrs"
-    if not zattrs_path.is_file():
+    store = zarr.SQLiteStore(path) if path.is_file() and is_sqlite3(path) else path
+    try:
+        zarr_group = zarr.open(store, mode="r")
+    except (zarr.errors.FSPathExistNotDir, zarr.errors.PathNotFoundError):
         return False
-    with open(zattrs_path, "rb") as fh:
-        group_attrs = json.load(fh)
+    if not isinstance(zarr_group, zarr.hierarchy.Group):
+        return False
+    group_attrs = zarr_group.attrs.asdict()
     try:
         multiscales: Multiscales = group_attrs["multiscales"]
         omero = group_attrs["omero"]
@@ -4371,7 +4378,8 @@ class NGFFWSIReader(WSIReader):
         from tiatoolbox.wsicore.metadata import ngff
 
         numcodecs.register_codecs()
-        self._zarr_group: zarr.hierarchy.Group = zarr.open(path, mode="r")
+        store = zarr.SQLiteStore(path) if is_sqlite3(path) else path
+        self._zarr_group: zarr.hierarchy.Group = zarr.open(store, mode="r")
         attrs = self._zarr_group.attrs
         multiscales = attrs["multiscales"][0]
         axes = multiscales["axes"]
