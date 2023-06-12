@@ -555,6 +555,10 @@ def test_update_renderer(app):
             "/tileserver/renderer/where", data={"val": json.dumps(None)}
         )
         assert app.pyramids["default"]["overlay"].renderer.where is None
+        response = client.put(
+            "/tileserver/renderer/where", data={"val": json.dumps("None")}
+        )
+        assert app.pyramids["default"]["overlay"].renderer.where is None
 
 
 def test_secondary_cmap(app):
@@ -562,7 +566,7 @@ def test_secondary_cmap(app):
     with app.test_client() as client:
         response = client.put(
             "/tileserver/secondary_cmap",
-            data={"type_id": json.dumps(0), "prop": "prob", "cmap": "Reds"},
+            data={"type_id": json.dumps(0), "prop": "prob", "cmap": json.dumps("Reds")},
         )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
@@ -581,6 +585,20 @@ def test_secondary_cmap(app):
             "score_prop": "prob",
             "mapper": "LinearSegmentedColormap",
         }
+
+        # None should use default jet colormap
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={"type_id": json.dumps(0), "prop": "prob", "cmap": json.dumps("None")},
+        )
+        assert layer.renderer.secondary_cmap["mapper"](0.5) == colormaps["jet"](0.5)
+
+        cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={"type_id": json.dumps(0), "prop": "type", "cmap": json.dumps(cdict)},
+        )
+        assert layer.renderer.secondary_cmap["mapper"]("type2") == [0, 1, 0]
 
 
 def test_get_props(app_alt):

@@ -1,5 +1,4 @@
 """Simple Flask WSGI apps to display tiles as slippery maps."""
-import ast
 import copy
 import io
 import json
@@ -164,11 +163,9 @@ class TileServer(Flask):
     @staticmethod
     def _get_cmap(cmap):
         """Get the colourmap from the string sent."""
-        if cmap[0] == "{":
-            cmap = ast.literal_eval(cmap)
 
         if cmap == "None":
-            return None
+            return colormaps["jet"]
         if isinstance(cmap, str):
             return colormaps[cmap]
 
@@ -390,7 +387,7 @@ class TileServer(Flask):
     def change_secondary_cmap(self):
         """Change the type-specific colour mapper for the overlay."""
         session_id = self._get_session_id()
-        cmap = request.form["cmap"]
+        cmap = json.loads(request.form["cmap"])
         type_id = request.form["type_id"]
         prop = request.form["prop"]
         cmapp = self._get_cmap(cmap)
