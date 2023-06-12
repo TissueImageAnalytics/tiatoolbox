@@ -555,6 +555,7 @@ class AnnotationRenderer:
         blur_radius=0,
         score_prop_edge=None,
     ):
+        self.raw_mapper = None
         self.mapper = mapper
         self.score_prop = score_prop
         self.score_prop_edge = score_prop_edge
