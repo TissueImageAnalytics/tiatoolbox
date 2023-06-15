@@ -9,7 +9,7 @@ from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import select_device
 
 
-def _get_architecture(arch_name, pretrained=True, **kwargs):
+def _get_architecture(arch_name, weights="Default", **kwargs):
     """Get a model.
 
     Model architectures are either already defined within torchvision or
@@ -48,7 +48,7 @@ def _get_architecture(arch_name, pretrained=True, **kwargs):
         raise ValueError(f"Backbone `{arch_name}` is not supported.")
 
     creator = backbone_dict[arch_name]
-    model = creator(weights="DEFAULT", **kwargs)
+    model = creator(weights=weights, **kwargs)
 
     # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in arch_name or "resnext" in arch_name:
