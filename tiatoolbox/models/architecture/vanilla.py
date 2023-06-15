@@ -48,7 +48,7 @@ def _get_architecture(arch_name, pretrained=True, **kwargs):
         raise ValueError(f"Backbone `{arch_name}` is not supported.")
 
     creator = backbone_dict[arch_name]
-    model = creator(pretrained=pretrained, **kwargs)
+    model = creator(weights="DEFAULT", **kwargs)
 
     # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in arch_name or "resnext" in arch_name:

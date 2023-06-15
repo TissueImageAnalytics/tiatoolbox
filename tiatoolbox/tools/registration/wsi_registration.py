@@ -10,6 +10,7 @@ from numpy.linalg import inv
 from skimage import exposure, filters
 from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
+from torchvision.models import VGG16_Weights
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -306,7 +307,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
         self.features: dict = dict.fromkeys(output_layers_key, None)
         self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
-            pretrained=True
+            weights=VGG16_Weights.IMAGENET1K_V1
         ).features
         self.f_hooks = []
 
