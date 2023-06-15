@@ -22,7 +22,9 @@ from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteSto
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
-def split_path_name_ext(full_path):
+def split_path_name_ext(
+    full_path: Union[str, pathlib.Path]
+) -> Tuple[pathlib.Path, str, list[str]]:
     """Split path of a file to directory path, file name and extensions.
 
     Args:
@@ -45,7 +47,10 @@ def split_path_name_ext(full_path):
     return input_path.parent.absolute(), input_path.name, input_path.suffixes
 
 
-def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
+def grab_files_from_dir(
+    input_path: Union[str, pathlib.Path],
+    file_types: Union[str, Tuple[str]] = ("*.jpg", "*.png", "*.tif"),
+) -> list[pathlib.Path]:
     """Grab file paths specified by file extensions.
 
     Args:
@@ -122,7 +127,7 @@ def save_yaml(
         yaml.dump(input_dict, yaml_file)
 
 
-def imwrite(image_path, img) -> None:
+def imwrite(image_path: Union[str, pathlib.Path], img: np.ndarray) -> None:
     """Write numpy array to an image.
 
     Args:
