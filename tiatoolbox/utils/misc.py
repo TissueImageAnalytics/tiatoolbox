@@ -4,7 +4,7 @@ import json
 import os
 import pathlib
 import zipfile
-from typing import IO, Dict, Optional, Tuple, Union
+from typing import IO, Dict, List, Optional, Tuple, Union
 
 import cv2
 import joblib
@@ -25,7 +25,7 @@ from tiatoolbox.utils.exceptions import FileNotSupported
 
 def split_path_name_ext(
     full_path: Union[str, pathlib.Path]
-) -> Tuple[pathlib.Path, str, list[str]]:
+) -> Tuple[pathlib.Path, str, List[str]]:
     """Split path of a file to directory path, file name and extensions.
 
     Args:
@@ -51,7 +51,7 @@ def split_path_name_ext(
 def grab_files_from_dir(
     input_path: Union[str, pathlib.Path],
     file_types: Union[str, Tuple[str]] = ("*.jpg", "*.png", "*.tif"),
-) -> list[pathlib.Path]:
+) -> List[pathlib.Path]:
     """Grab file paths specified by file extensions.
 
     Args:
@@ -953,7 +953,7 @@ def make_valid_poly(poly: geometry, origin: Tuple[float, float] = None) -> geome
 
 def anns_from_hoverdict(
     data: dict, props: list, typedict: dict, origin: Tuple, scale_factor: float
-) -> list[Annotation]:
+) -> List[Annotation]:
     """Helper function to create list of Annotation objects.
 
     Creates annotations from a hovernet-style dict of segmentations, mapping types
@@ -1026,7 +1026,7 @@ def make_default_dict(data: dict, subcat: str) -> dict:
 
 
 def add_from_dat(
-    store: list[AnnotationStore],
+    store: List[AnnotationStore],
     fp: Union[IO, str],
     scale_factor: Tuple[float, float] = (1, 1),
     typedict: Optional[Dict] = None,
