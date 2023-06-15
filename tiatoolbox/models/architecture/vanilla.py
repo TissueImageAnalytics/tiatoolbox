@@ -9,7 +9,7 @@ from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import select_device
 
 
-def _get_architecture(arch_name, weights="Default", **kwargs):
+def _get_architecture(arch_name, weights="DEFAULT", **kwargs):
     """Get a model.
 
     Model architectures are either already defined within torchvision or
