@@ -440,7 +440,7 @@ class PatchPredictor:
         """
 
         Args:
-            ioconfig (tiatoolbox.models.IOPatchPredictorConfig):
+            ioconfig (:class:`IOPatchPredictorConfig`):
         patch_input_shape (tuple):
             Size of patches input to the model. Patches are at
             requested read resolution, not with respect to level 0,
@@ -495,6 +495,9 @@ class PatchPredictor:
             input_resolutions=[{"resolution": resolution, "units": units}],
             patch_input_shape=patch_input_shape,
             stride_shape=stride_shape,
+            highest_input_resolution={},
+            output_resolutions=[],
+            resolution_unit="mpp",
         )
 
     @staticmethod
