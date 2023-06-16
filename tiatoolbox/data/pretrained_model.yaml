@@ -644,7 +644,7 @@ hovernet_fast-pannuke:
             num_types: 6
             mode: "fast"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: nucleus_instance_segmentor.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -667,7 +667,7 @@ hovernet_fast-monusac:
             num_types: 5
             mode: "fast"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: nucleus_instance_segmentor.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -690,7 +690,7 @@ hovernet_original-consep:
             num_types: 5
             mode: "original"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: nucleus_instance_segmentor.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -713,7 +713,7 @@ hovernet_original-kumar:
             num_types: null  # None in python ?, only do instance segmentation
             mode: "original"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: nucleus_instance_segmentor.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -735,7 +735,7 @@ hovernetplus-oed:
             num_types: 3
             num_layers: 5
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: nucleus_instance_segmentor.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.50}
