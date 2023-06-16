@@ -8,20 +8,16 @@ from .architecture.mapde import MapDe
 from .architecture.micronet import MicroNet
 from .architecture.nuclick import NuClick
 from .architecture.sccnn import SCCNN
-from .engine.multi_task_segmentor import MultiTaskSegmentor
-from .engine.nucleus_instance_segmentor import (
+from .engine.io_config import (
     IOInstanceSegmentorConfig,
-    NucleusInstanceSegmentor,
-)
-from .engine.patch_predictor import (
     IOPatchPredictorConfig,
-    PatchDataset,
-    PatchPredictor,
-    WSIPatchDataset,
+    IOSegmentorConfig,
 )
+from .engine.multi_task_segmentor import MultiTaskSegmentor
+from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from .engine.patch_predictor import PatchDataset, PatchPredictor, WSIPatchDataset
 from .engine.semantic_segmentor import (
     DeepFeatureExtractor,
-    IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
 )
@@ -38,5 +34,7 @@ __all__ = [
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",
+    "IOPatchPredictorConfig",
+    "IOSegmentorConfig",
     "IOInstanceSegmentorConfig",
 ]

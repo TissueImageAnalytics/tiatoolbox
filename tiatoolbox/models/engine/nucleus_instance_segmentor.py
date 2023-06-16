@@ -2,7 +2,7 @@
 
 import uuid
 from collections import deque
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Union
 
 # replace with the sql database once the PR in place
 import joblib
@@ -12,8 +12,8 @@ import tqdm
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
+from tiatoolbox.models import IOInstanceSegmentorConfig
 from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
 )
@@ -296,112 +296,6 @@ def _process_tile_predictions(
     )
 
     return new_inst_dict, remove_insts_in_orig
-
-
-class IOInstanceSegmentorConfig(IOSegmentorConfig):
-    """Contain instance segmentor input and output information.
-
-    Args:
-        input_resolutions (list):
-            Resolution of each input head of model inference, must be in
-            the same order as `target model.forward()`.
-        output_resolutions (list):
-            Resolution of each output head from model inference, must be
-            in the same order as target model.infer_batch().
-        stride_shape (:class:`numpy.ndarray`, list(int)):
-            Stride in (x, y) direction for patch extraction.
-        patch_input_shape (:class:`numpy.ndarray`, list(int)):
-            Shape of the largest input in (height, width).
-        patch_output_shape (:class:`numpy.ndarray`, list(int)):
-            Shape of the largest output in (height, width).
-        save_resolution (dict):
-            Resolution to save all output.
-        margin (int):
-            Tile margin to accumulate the output.
-        tile_shape (tuple(int, int)):
-            Tile shape to process the WSI.
-
-    Examples:
-        >>> # Defining io for a network having 1 input and 1 output at the
-        >>> # same resolution
-        >>> ioconfig = IOSegmentorConfig(
-        ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
-        ... )
-
-    Examples:
-        >>> # Defining io for a network having 3 input and 2 output
-        >>> # at the same resolution, the output is then merged at a
-        >>> # different resolution.
-        >>> ioconfig = IOSegmentorConfig(
-        ...     input_resolutions=[
-        ...         {"units": "mpp", "resolution": 0.25},
-        ...         {"units": "mpp", "resolution": 0.50},
-        ...         {"units": "mpp", "resolution": 0.75},
-        ...     ],
-        ...     output_resolutions=[
-        ...         {"units": "mpp", "resolution": 0.25},
-        ...         {"units": "mpp", "resolution": 0.50},
-        ...     ],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
-        ...     save_resolution={"units": "mpp", "resolution": 4.0},
-        ... )
-
-    """
-
-    margin: int
-    tile_shape: Tuple[int, int]
-
-    def __init__(
-        self,
-        input_resolutions: List[dict],
-        output_resolutions: List[dict],
-        patch_input_shape: Union[List[int], np.ndarray],
-        stride_shape: Union[List[int], np.ndarray, Tuple[int]],
-        patch_output_shape: Union[List[int], np.ndarray],
-        save_resolution: dict = None,
-        margin: int = None,
-        tile_shape: Tuple[int, int] = None,
-    ):
-        super().__init__(
-            input_resolutions=input_resolutions,
-            output_resolutions=output_resolutions,
-            patch_input_shape=patch_input_shape,
-            stride_shape=stride_shape,
-            patch_output_shape=patch_output_shape,
-            save_resolution=save_resolution,
-        )
-        self.margin = margin
-        self.tile_shape = tile_shape
-
-        self._validate()
-
-    def to_baseline(self):
-        """Returns a new config object converted to baseline form.
-
-        This will return a new :class:`IOSegmentorConfig` where
-        resolutions have been converted to baseline format with the
-        highest possible resolution found in both input and output as
-        reference.
-
-        """
-        new_config = super().to_baseline()
-
-        return IOInstanceSegmentorConfig(
-            input_resolutions=new_config.input_resolutions,
-            output_resolutions=new_config.output_resolutions,
-            patch_input_shape=self.patch_input_shape,
-            patch_output_shape=self.patch_output_shape,
-            stride_shape=self.stride_shape,
-            save_resolution=new_config.save_resolution,
-            margin=self.margin,
-            tile_shape=self.tile_shape,
-        )
 
 
 class NucleusInstanceSegmentor(SemanticSegmentor):

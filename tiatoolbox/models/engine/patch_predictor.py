@@ -17,24 +17,7 @@ from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
-from .engine_abc import ModelIOConfigABC
-
-
-class IOPatchPredictorConfig(ModelIOConfigABC):
-    """Contains patch predictor input and output information."""
-
-    def __init__(
-        self,
-        input_resolutions=None,
-        patch_input_shape=None,
-        stride_shape=None,
-    ):
-        stride_shape = patch_input_shape if stride_shape is None else stride_shape
-        super().__init__(
-            input_resolutions=input_resolutions,
-            stride_shape=stride_shape,
-            patch_input_shape=patch_input_shape,
-        )
+from .. import IOPatchPredictorConfig
 
 
 class PatchPredictor:
@@ -457,7 +440,7 @@ class PatchPredictor:
         """
 
         Args:
-            ioconfig (IOPatchPredictorConfig):
+            ioconfig (tiatoolbox.models.IOPatchPredictorConfig):
         patch_input_shape (tuple):
             Size of patches input to the model. Patches are at
             requested read resolution, not with respect to level 0,

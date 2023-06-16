@@ -35,7 +35,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     _process_instance_predictions,
 )
 
-from .nucleus_instance_segmentor import IOInstanceSegmentorConfig
+from .. import IOInstanceSegmentorConfig
 from .semantic_segmentor import WSIStreamDataset
 
 
