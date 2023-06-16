@@ -4,6 +4,7 @@ Borrowed from https://github.com/John-P/wsic
 
 Based on version 0.4 of the specification:
 https://ngff.openmicroscopy.org/0.4/
+
 """
 from dataclasses import dataclass, field
 from numbers import Number
@@ -75,11 +76,13 @@ TCZYX = Literal["t", "c", "z", "y", "x"]
 @dataclass
 class Creator:
     """Record the creator (wsic) information.
+
     Attributes:
         name (str):
             The name of the creator.
         version (str):
             The version of the creator.
+
     """
 
     name: str = "tiatoolbox"
@@ -89,11 +92,13 @@ class Creator:
 @dataclass
 class CoordinateTransform:
     """Transformation from the zarr to slide coordinate system.
+
     Attributes:
         type (str):
             The type of coordinate transform. E.g. "scale".
         scale (List[float]):
             The scale factors. Must be one for each axis.
+
     """
 
     type: str = "identity"  # noqa: A003
