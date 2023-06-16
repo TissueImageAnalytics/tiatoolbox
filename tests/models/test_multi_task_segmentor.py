@@ -13,7 +13,11 @@ import joblib
 import numpy as np
 import pytest
 
-from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor, SemanticSegmentor
+from tiatoolbox.models import (
+    IOInstanceSegmentorConfig,
+    MultiTaskSegmentor,
+    SemanticSegmentor,
+)
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imwrite
 from tiatoolbox.utils.metrics import f1_detection
@@ -178,7 +182,7 @@ def test_masked_segmentor(remote_sample, tmp_path):
 
     # resolution for travis testing, not the correct ones
     resolution = 4.0
-    ioconfig = IOSegmentorConfig(
+    ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
             {"units": "mpp", "resolution": resolution},
@@ -302,7 +306,7 @@ def test_empty_image(tmp_path):
         output_types=["semantic"],
     )
 
-    bcc_wsi_ioconfig = IOSegmentorConfig(
+    bcc_wsi_ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": 0.25}],
         output_resolutions=[{"units": "mpp", "resolution": 0.25}],
         tile_shape=2048,
@@ -350,7 +354,7 @@ def test_functionality_semantic(remote_sample, tmp_path):
         output_types=["semantic"],
     )
 
-    bcc_wsi_ioconfig = IOSegmentorConfig(
+    bcc_wsi_ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": 0.25}],
         output_resolutions=[{"units": "mpp", "resolution": 0.25}],
         tile_shape=2048,
@@ -391,7 +395,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
 
     # resolution for travis testing, not the correct ones
     resolution = 4.0
-    ioconfig = IOSegmentorConfig(
+    ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
             {"units": "mpp", "resolution": resolution},

@@ -9,7 +9,10 @@ from .architecture.micronet import MicroNet
 from .architecture.nuclick import NuClick
 from .architecture.sccnn import SCCNN
 from .engine.multi_task_segmentor import MultiTaskSegmentor
-from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from .engine.nucleus_instance_segmentor import (
+    IOInstanceSegmentorConfig,
+    NucleusInstanceSegmentor,
+)
 from .engine.patch_predictor import (
     IOPatchPredictorConfig,
     PatchDataset,
@@ -35,4 +38,5 @@ __all__ = [
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",
+    "IOInstanceSegmentorConfig",
 ]

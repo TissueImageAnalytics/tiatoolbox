@@ -59,7 +59,7 @@ def _process_tile_predictions(
     using the output from each task.
 
     Args:
-        ioconfig (:class:`IOSegmentorConfig`): Object defines information
+        ioconfig (:class:`IOInstanceSegmentorConfig`): Object defines information
             about input and output placement of patches.
         tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
             (top_left_x, top_left_y, bottom_x, bottom_y).
@@ -286,8 +286,8 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
         Args:
             wsi_idx (int): Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOSegmentorConfig): Object which defines I/O placement during
-                inference and when assembling back to full tile/wsi.
+            ioconfig (IOInstanceSegmentorConfig): Object which defines I/O placement
+                during inference and when assembling back to full tile/wsi.
             loader (torch.Dataloader): The loader object which return batch of data
                 to be input to model.
             save_path (str): Location to save output prediction as well as possible

@@ -381,6 +381,28 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
 
         self._validate()
 
+    def to_baseline(self):
+        """Returns a new config object converted to baseline form.
+
+        This will return a new :class:`IOSegmentorConfig` where
+        resolutions have been converted to baseline format with the
+        highest possible resolution found in both input and output as
+        reference.
+
+        """
+        new_config = super().to_baseline()
+
+        return IOInstanceSegmentorConfig(
+            input_resolutions=new_config.input_resolutions,
+            output_resolutions=new_config.output_resolutions,
+            patch_input_shape=self.patch_input_shape,
+            patch_output_shape=self.patch_output_shape,
+            stride_shape=self.stride_shape,
+            save_resolution=new_config.save_resolution,
+            margin=self.margin,
+            tile_shape=self.tile_shape,
+        )
+
 
 class NucleusInstanceSegmentor(SemanticSegmentor):
     """An engine specifically designed to handle tiles or WSIs inference.
@@ -485,7 +507,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     @staticmethod
     def _get_tile_info(
         image_shape: Union[List[int], np.ndarray],
-        ioconfig: IOSegmentorConfig,
+        ioconfig: IOInstanceSegmentorConfig,
     ):
         """Generating tile information.
 
@@ -503,7 +525,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             image_shape (:class:`numpy.ndarray`, list(int)):
                 The shape of WSI to extract the tile from, assumed to be
                 in `[width, height]`.
-            ioconfig (:obj:IOSegmentorConfig):
+            ioconfig (:obj:IOInstanceSegmentorConfig):
                 The input and output configuration objects.
 
         Returns:
@@ -740,7 +762,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     def _predict_one_wsi(
         self,
         wsi_idx: int,
-        ioconfig: IOSegmentorConfig,
+        ioconfig: IOInstanceSegmentorConfig,
         save_path: str,
         mode: str,
     ):
@@ -749,7 +771,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         Args:
             wsi_idx (int):
                 Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOSegmentorConfig):
+            ioconfig (IOInstanceSegmentorConfig):
                 Object which defines I/O placement during inference and
                 when assembling back to full tile/wsi.
             save_path (str):
