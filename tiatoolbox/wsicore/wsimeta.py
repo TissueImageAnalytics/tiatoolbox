@@ -299,7 +299,7 @@ class WSIMeta:
 
         Returns:
             dict:
-                Whole slide image meta data as dictionary.
+                Whole slide image metadata as dictionary.
 
         """
         if self.mpp is None:
