@@ -28,14 +28,12 @@ class IOPatchPredictorConfig(ModelIOConfigABC):
         input_resolutions=None,
         patch_input_shape=None,
         stride_shape=None,
-        **kwargs,
     ):
         stride_shape = patch_input_shape if stride_shape is None else stride_shape
         super().__init__(
             input_resolutions=input_resolutions,
             stride_shape=stride_shape,
             patch_input_shape=patch_input_shape,
-            **kwargs,
         )
 
 

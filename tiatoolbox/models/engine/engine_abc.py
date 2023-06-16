@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -25,22 +25,24 @@ class ModelIOConfigABC:
 
     """
 
+    input_resolutions: List[dict]
+    patch_input_shape: Union[List[int], np.ndarray, Tuple[int]]
+    stride_shape: Union[List[int], np.ndarray, Tuple[int]]
+    highest_input_resolution: dict
+    output_resolutions: List[dict] = field(default_factory=list)
+    resolution_unit: Units = "mpp"
+
     def __init__(
         self,
         input_resolutions: List[dict],
         patch_input_shape: Union[List[int], np.ndarray, Tuple[int]],
         stride_shape: Union[List[int], np.ndarray, Tuple[int]],
-        **kwargs,
     ):
-        self._kwargs = kwargs
         self.patch_input_shape = patch_input_shape
         self.stride_shape = stride_shape
         self.input_resolutions = input_resolutions
         self.output_resolutions = []
         self.resolution_unit = input_resolutions[0]["units"]
-
-        for variable, value in kwargs.items():
-            self.__setattr__(variable, value)
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
@@ -121,7 +123,6 @@ class ModelIOConfigABC:
             input_resolutions=input_resolutions,
             patch_input_shape=self.patch_input_shape,
             stride_shape=self.stride_shape,
-            **self._kwargs,
         )
 
 

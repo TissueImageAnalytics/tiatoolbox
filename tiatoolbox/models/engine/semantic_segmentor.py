@@ -161,13 +161,11 @@ class IOSegmentorConfig(ModelIOConfigABC):
         stride_shape: Union[List[int], np.ndarray, Tuple[int]],
         patch_output_shape: Union[List[int], np.ndarray],
         save_resolution: dict = None,
-        **kwargs,
     ):
         super().__init__(
             input_resolutions=input_resolutions,
             patch_input_shape=patch_input_shape,
             stride_shape=stride_shape,
-            **kwargs,
         )
         self.patch_output_shape = patch_output_shape
         self.output_resolutions = output_resolutions
@@ -210,7 +208,6 @@ class IOSegmentorConfig(ModelIOConfigABC):
             patch_output_shape=self.patch_output_shape,
             stride_shape=self.stride_shape,
             save_resolution=save_resolution,
-            **self._kwargs,
         )
 
 
