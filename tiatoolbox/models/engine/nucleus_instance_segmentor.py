@@ -318,7 +318,8 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
             Resolution to save all output.
         margin (int):
             Tile margin to accumulate the output.
-
+        tile_shape (tuple(int, int)):
+            Tile shape to process the WSI.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
@@ -354,6 +355,7 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
     """
 
     margin: int
+    tile_shape: Tuple[int, int]
 
     def __init__(
         self,
@@ -364,6 +366,7 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         patch_output_shape: Union[List[int], np.ndarray],
         save_resolution: dict = None,
         margin: int = None,
+        tile_shape: Tuple[int, int] = None,
     ):
         super().__init__(
             input_resolutions=input_resolutions,
@@ -374,6 +377,7 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
             save_resolution=save_resolution,
         )
         self.margin = margin
+        self.tile_shape = tile_shape
 
         self._validate()
 
