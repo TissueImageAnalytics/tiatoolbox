@@ -103,12 +103,14 @@ class CoordinateTransform:
 @dataclass
 class Dataset:
     """Description of a single resolution.
+
     Attributes:
         path (str):
             Path to the dataset. This will usually be a string of an
             integer e.g. "0".
         coordinateTransformations (List[CoordinateTransform]):
             Transformations from the zarr to slide coordinate system.
+
     """
 
     path: str = "0"
@@ -120,6 +122,7 @@ class Dataset:
 @dataclass
 class Axis:
     """Description of an axis including type and units.
+
     Attributes:
         name (str):
             The name of the axis. Must be one of: "t", "c", "z", "y",
@@ -129,6 +132,7 @@ class Axis:
             "channel".
         unit (str):
             The units of the axis.
+
     """
 
     name: TCZYX
@@ -139,6 +143,7 @@ class Axis:
 @dataclass
 class Multiscales:
     """Description of multiple resolutions present.
+
     Attributes:
         axes (List[Axis]):
             The axes of the multiscales.
@@ -146,6 +151,7 @@ class Multiscales:
             The datasets of the multiscales.
         version (str):
             The version of the specification.
+
     """
 
     axes: List[Axis] = field(
@@ -162,6 +168,7 @@ class Multiscales:
 @dataclass
 class Window:
     """The range of values within a channel.
+
     Attributes:
         end (int):
             The end of the window.
@@ -171,6 +178,7 @@ class Window:
             The minimum value in the window.
         start (int):
             The start of the window.
+
     """
 
     end: Number = 255
@@ -182,6 +190,7 @@ class Window:
 @dataclass
 class Channel:
     """Description of a single channel.
+
     Attributes:
         active (bool):
             Whether the channel is active by default.
@@ -194,6 +203,7 @@ class Channel:
             Whether the channel is inverted.
         window (Window):
             The min and max values represented in the channel.
+
     """
 
     active: bool = True
@@ -208,13 +218,15 @@ class Channel:
 @dataclass
 class RDefs:
     """Defaults for axes and colour model.
+
     Attributes:
         defaultT (int):
-            Default timepoint.
+            Default time point.
         defaultZ (int):
             Default z-plane.
         model (str):
             Colour model: "color" or "greyscale".
+
     """
 
     defaultT: int = 0  # noqa: N815
@@ -225,6 +237,7 @@ class RDefs:
 @dataclass
 class Omero:
     """Display information e.g. colour channel information.
+
     Attributes:
         name (str):
             The display name.
@@ -236,6 +249,7 @@ class Omero:
             The default values for axes and colour model.
         version (str):
             The version of the specification.
+
     """
 
     name: Optional[str] = None
@@ -254,6 +268,7 @@ class Omero:
 @dataclass
 class Zattrs:
     """Root metadata.
+
     Attributes:
         _creator (Creator):
             Information about the creator.
@@ -263,6 +278,7 @@ class Zattrs:
             The dimensions of the array, for xarray compatibility.
         omero (Omero):
             Information about the display of image data.
+
     """
 
     _creator: Creator = field(default_factory=Creator)
