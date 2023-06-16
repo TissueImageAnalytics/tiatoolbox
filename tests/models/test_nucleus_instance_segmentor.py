@@ -15,7 +15,7 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.models import (
-    IOSegmentorConfig,
+    IOInstanceSegmentorConfig,
     NucleusInstanceSegmentor,
     SemanticSegmentor,
 )
@@ -62,7 +62,7 @@ def helper_tile_info():
     # | 12 | 13 | 14 | 15 |
     # ---------------------
     # ! assume flag index ordering: left right top bottom
-    ioconfig = IOSegmentorConfig(
+    ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": 0.25}],
         output_resolutions=[
             {"units": "mpp", "resolution": 0.25},
@@ -70,7 +70,7 @@ def helper_tile_info():
             {"units": "mpp", "resolution": 0.25},
         ],
         margin=1,
-        tile_shape=[4, 4],
+        tile_shape=(4, 4),
         stride_shape=[4, 4],
         patch_input_shape=[4, 4],
         patch_output_shape=[4, 4],
@@ -245,7 +245,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
 
     # resolution for travis testing, not the correct ones
     resolution = 4.0
-    ioconfig = IOSegmentorConfig(
+    ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
             {"units": "mpp", "resolution": resolution},
@@ -253,7 +253,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
             {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[512, 512],
+        tile_shape=(512, 512),
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
@@ -297,14 +297,14 @@ def test_functionality_travis(remote_sample, tmp_path):
 
     # * test run on wsi, test run with worker
     # resolution for travis testing, not the correct ones
-    ioconfig = IOSegmentorConfig(
+    ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
             {"units": "mpp", "resolution": resolution},
             {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[1024, 1024],
+        tile_shape=(1024, 1024),
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
@@ -338,7 +338,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 0.5
-    ioconfig = IOSegmentorConfig(
+    ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": resolution}],
         output_resolutions=[
             {"units": "mpp", "resolution": resolution},
@@ -346,7 +346,7 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
             {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[512, 512],
+        tile_shape=(512, 512),
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
