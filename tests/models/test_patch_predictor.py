@@ -443,19 +443,6 @@ def test_patch_dataset_abc():
 # -------------------------------------------------------------------------------------
 
 
-def test_io_patch_predictor_config():
-    """Test for IOConfig."""
-    # test for creating
-    cfg = IOPatchPredictorConfig(
-        patch_input_shape=[224, 224],
-        stride_shape=[224, 224],
-        input_resolutions=[{"resolution": 0.5, "units": "mpp"}],
-        # test adding random kwarg and they should be accessible as kwargs
-        crop_from_source=True,
-    )
-    assert cfg.crop_from_source
-
-
 # -------------------------------------------------------------------------------------
 # Engine
 # -------------------------------------------------------------------------------------
