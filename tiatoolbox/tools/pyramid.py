@@ -162,6 +162,8 @@ class TilePyramidGenerator:
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
+            res (int):
+
             pad_mode (str):
                 Method for padding when reading areas outside the
                 input image. Default is constant (0 padding). This is
@@ -183,7 +185,7 @@ class TilePyramidGenerator:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> wsi = WSIReader.open("sample.svs")
             >>> tile_generator = TilePyramidGenerator(
-            ...   wsi=reader,
+            ...   wsi=wsi,
             ...   tile_size=256,
             ... )
             >>> tile_0_0_0 = tile_generator.get_tile(level=0, x=0, y=0)
@@ -381,7 +383,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
             \times\text{overlap}`.
         downsample (int):
             The downsample factor between levels. Default is 2.
-        tile_overlap (int):
+        overlap (int):
             The number of extra pixel to add to each edge of the tile.
             Default is 0.
 
@@ -449,7 +451,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         info (WSIMeta):
             An WSIMeta Object storing the metadata of the slide this
             generator is rendering tiles for
-        Store (AnnotationStore):
+        store (AnnotationStore):
             An AnnotationStore Object containing annotations to be
             rendered for given slide
         renderer (AnnotationRenderer):
@@ -564,6 +566,12 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
+            res (int):
+
+            pad_mode (str):
+
+            interpolation (str):
+
 
         Returns:
             PIL.Image:
