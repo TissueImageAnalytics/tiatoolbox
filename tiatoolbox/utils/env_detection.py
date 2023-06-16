@@ -213,7 +213,7 @@ def colab_has_gpu() -> bool:
 
 
 def has_network(
-    hostname="one.one.one.one", timeout: Number = 3
+    hostname: str = "one.one.one.one", timeout: Number = 3
 ) -> bool:  # noqa: CCR001
     """Detect if the current environment has a network connection.
 
