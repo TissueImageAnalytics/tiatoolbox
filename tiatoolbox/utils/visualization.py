@@ -773,12 +773,16 @@ class AnnotationRenderer:
         annotation geometries are decimated if appropriate.
 
         Args:
-            rgb (np.ndarray):
-                The image to render the annotation on.
-            bound_geom (Polygon):
-                A polygon representing the bounding box of the tile.
+            store (AnnotationStore):
+
+            bounds (tuple(float, float, float, float)):
+
             scale (float):
-                The scale at which we are rendering the tile.
+
+            res (int):
+
+            border (int):
+
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.

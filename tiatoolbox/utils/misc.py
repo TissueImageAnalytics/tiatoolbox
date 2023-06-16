@@ -1001,6 +1001,8 @@ def add_from_dat(
     Make the best effort to create valid shapely geometries from provided contours.
 
     Args:
+        store (AnnotationStore):
+
         fp (Union[IO, str, Path]):
             The file path or handle to load from.
         scale_factor (float):
@@ -1016,7 +1018,7 @@ def add_from_dat(
             For multi-head output, should be a dict of dicts, e.g.:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
             'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
-        origin [float, float]:
+        origin (tuple(float, float)):
             The x and y coordinates to use as the origin for the annotations.
 
     """
