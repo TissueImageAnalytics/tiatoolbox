@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -28,20 +28,14 @@ class ModelIOConfigABC:
     patch_input_shape: Union[List[int], np.ndarray, Tuple[int]]
     stride_shape: Union[List[int], np.ndarray, Tuple[int]]
     highest_input_resolution: dict
-    output_resolutions: List[dict] = field(default_factory=list)
-    resolution_unit: Units = "mpp"
+    output_resolutions: List[dict]
+    resolution_unit: Units
 
-    def __init__(
-        self,
-        input_resolutions: List[dict],
-        patch_input_shape: Union[List[int], np.ndarray, Tuple[int]],
-        stride_shape: Union[List[int], np.ndarray, Tuple[int]],
-    ):
-        self.patch_input_shape = patch_input_shape
-        self.stride_shape = stride_shape
-        self.input_resolutions = input_resolutions
-        self.output_resolutions = []
-        self.resolution_unit = input_resolutions[0]["units"]
+    def __post_init__(self):
+        if not self.output_resolutions:
+            self.output_resolutions = []
+
+        self.resolution_unit = self.input_resolutions[0]["units"]
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
@@ -51,6 +45,8 @@ class ModelIOConfigABC:
             self.highest_input_resolution = max(
                 self.input_resolutions, key=lambda x: x["resolution"]
             )
+
+        self._validate()
 
     def _validate(self):
         """Validate the data format."""
@@ -122,9 +118,13 @@ class ModelIOConfigABC:
             input_resolutions=input_resolutions,
             patch_input_shape=self.patch_input_shape,
             stride_shape=self.stride_shape,
+            highest_input_resolution=self.highest_input_resolution,
+            resolution_unit=self.resolution_unit,
+            output_resolutions=self.output_resolutions,
         )
 
 
+@dataclass
 class IOSegmentorConfig(ModelIOConfigABC):
     """Contain semantic segmentor input and output information.
 
@@ -178,27 +178,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
     """
 
     patch_output_shape: Union[List[int], np.ndarray]
-    save_resolution: dict = None
-
-    def __init__(
-        self,
-        input_resolutions: List[dict],
-        output_resolutions: List[dict],
-        patch_input_shape: Union[List[int], np.ndarray],
-        stride_shape: Union[List[int], np.ndarray, Tuple[int]],
-        patch_output_shape: Union[List[int], np.ndarray],
-        save_resolution: dict = None,
-    ):
-        super().__init__(
-            input_resolutions=input_resolutions,
-            patch_input_shape=patch_input_shape,
-            stride_shape=stride_shape,
-        )
-        self.patch_output_shape = patch_output_shape
-        self.output_resolutions = output_resolutions
-        self.save_resolution = save_resolution
-
-        self._validate()
+    save_resolution: dict
 
     def to_baseline(self):
         """Returns a new config object converted to baseline form.
@@ -235,26 +215,22 @@ class IOSegmentorConfig(ModelIOConfigABC):
             patch_output_shape=self.patch_output_shape,
             stride_shape=self.stride_shape,
             save_resolution=save_resolution,
+            highest_input_resolution=self.highest_input_resolution,
+            resolution_unit=self.resolution_unit,
         )
 
 
 class IOPatchPredictorConfig(ModelIOConfigABC):
     """Contains patch predictor input and output information."""
 
-    def __init__(
-        self,
-        input_resolutions=None,
-        patch_input_shape=None,
-        stride_shape=None,
-    ):
-        stride_shape = patch_input_shape if stride_shape is None else stride_shape
-        super().__init__(
-            input_resolutions=input_resolutions,
-            stride_shape=stride_shape,
-            patch_input_shape=patch_input_shape,
+    def __post_init__(self):
+        self.stride_shape = (
+            self.patch_input_shape if self.stride_shape is None else self.stride_shape
         )
+        super().__post_init__()
 
 
+@dataclass
 class IOInstanceSegmentorConfig(IOSegmentorConfig):
     """Contain instance segmentor input and output information.
 
@@ -314,30 +290,6 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
     margin: int
     tile_shape: Tuple[int, int]
 
-    def __init__(
-        self,
-        input_resolutions: List[dict],
-        output_resolutions: List[dict],
-        patch_input_shape: Union[List[int], np.ndarray],
-        stride_shape: Union[List[int], np.ndarray, Tuple[int]],
-        patch_output_shape: Union[List[int], np.ndarray],
-        save_resolution: dict = None,
-        margin: int = None,
-        tile_shape: Tuple[int, int] = None,
-    ):
-        super().__init__(
-            input_resolutions=input_resolutions,
-            output_resolutions=output_resolutions,
-            patch_input_shape=patch_input_shape,
-            stride_shape=stride_shape,
-            patch_output_shape=patch_output_shape,
-            save_resolution=save_resolution,
-        )
-        self.margin = margin
-        self.tile_shape = tile_shape
-
-        self._validate()
-
     def to_baseline(self):
         """Returns a new config object converted to baseline form.
 
@@ -358,4 +310,6 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
             save_resolution=new_config.save_resolution,
             margin=self.margin,
             tile_shape=self.tile_shape,
+            highest_input_resolution=self.highest_input_resolution,
+            resolution_unit=self.resolution_unit,
         )
