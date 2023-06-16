@@ -149,9 +149,8 @@ class IOSegmentorConfig(ModelIOConfigABC):
 
     """
 
-    # We pre-define to follow enforcement, actual initialisation in init
-    input_resolutions = None
-    output_resolutions = None
+    patch_output_shape: Union[List[int], np.ndarray]
+    save_resolution: dict = None
 
     def __init__(
         self,

@@ -34,10 +34,9 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
     _process_instance_predictions,
 )
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-    WSIStreamDataset,
-)
+
+from .nucleus_instance_segmentor import IOInstanceSegmentorConfig
+from .semantic_segmentor import WSIStreamDataset
 
 
 # Python is yet to be able to natively pickle Object method/static method.
@@ -279,7 +278,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
     def _predict_one_wsi(
         self,
         wsi_idx: int,
-        ioconfig: IOSegmentorConfig,
+        ioconfig: IOInstanceSegmentorConfig,
         save_path: str,
         mode: str,
     ):
