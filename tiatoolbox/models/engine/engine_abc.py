@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -6,8 +7,9 @@ import numpy as np
 from tiatoolbox.wsicore.wsimeta import Units
 
 
-class ModelIOConfigABC(ABC):  # noqa: B024
-    """Defines an abstract class for holding a CNN model's I/O information.
+@dataclass
+class ModelIOConfigABC:
+    """Defines a data class for holding a deep learning model's I/O information.
 
     Enforcing such that following attributes must always be defined by
     the subclass.
