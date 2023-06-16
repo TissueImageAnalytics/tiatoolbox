@@ -25,7 +25,7 @@ from tiatoolbox.utils import imread, misc
 from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
-from .. import IOSegmentorConfig
+from .io_config import IOSegmentorConfig
 
 
 def _estimate_canvas_parameters(sample_prediction, canvas_shape):
@@ -112,7 +112,7 @@ class WSIStreamDataset(torch_data.Dataset):
         mp_shared_space (:class:`Namespace`):
             A shared multiprocessing space, must be from
             `torch.multiprocessing`.
-        ioconfig (:class:`tiatoolbox.models.IOSegmentorConfig`):
+        ioconfig (:class:`IOSegmentorConfig`):
             An object which contains I/O placement for patches.
         wsi_paths (list): List of paths pointing to a WSI or tiles.
         preproc (Callable):
