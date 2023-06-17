@@ -495,9 +495,7 @@ class PatchPredictor:
             input_resolutions=[{"resolution": resolution, "units": units}],
             patch_input_shape=patch_input_shape,
             stride_shape=stride_shape,
-            highest_input_resolution={},
             output_resolutions=[],
-            resolution_unit="mpp",
         )
 
     @staticmethod

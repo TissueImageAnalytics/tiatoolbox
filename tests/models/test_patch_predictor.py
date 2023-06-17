@@ -516,9 +516,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         patch_input_shape=[512, 512],
         stride_shape=[256, 256],
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
-        highest_input_resolution={},
         output_resolutions=[],
-        resolution_unit="mpp",
     )
     predictor.predict(
         [mini_wsi_svs],

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -27,9 +27,7 @@ class ModelIOConfigABC:
     input_resolutions: List[dict]
     patch_input_shape: Union[List[int], np.ndarray, Tuple[int]]
     stride_shape: Union[List[int], np.ndarray, Tuple[int]]
-    highest_input_resolution: dict
-    output_resolutions: List[dict]
-    resolution_unit: Units
+    output_resolutions: List[dict] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.output_resolutions:
@@ -118,8 +116,6 @@ class ModelIOConfigABC:
             input_resolutions=input_resolutions,
             patch_input_shape=self.patch_input_shape,
             stride_shape=self.stride_shape,
-            highest_input_resolution=self.highest_input_resolution,
-            resolution_unit=self.resolution_unit,
             output_resolutions=self.output_resolutions,
         )
 
@@ -177,8 +173,8 @@ class IOSegmentorConfig(ModelIOConfigABC):
 
     """
 
-    patch_output_shape: Union[List[int], np.ndarray]
-    save_resolution: dict
+    patch_output_shape: Union[List[int], np.ndarray] = None
+    save_resolution: dict = None
 
     def to_baseline(self):
         """Returns a new config object converted to baseline form.
@@ -215,8 +211,6 @@ class IOSegmentorConfig(ModelIOConfigABC):
             patch_output_shape=self.patch_output_shape,
             stride_shape=self.stride_shape,
             save_resolution=save_resolution,
-            highest_input_resolution=self.highest_input_resolution,
-            resolution_unit=self.resolution_unit,
         )
 
 
@@ -287,8 +281,8 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
 
     """
 
-    margin: int
-    tile_shape: Tuple[int, int]
+    margin: int = None
+    tile_shape: Tuple[int, int] = None
 
     def to_baseline(self):
         """Returns a new config object converted to baseline form.
@@ -310,6 +304,4 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
             save_resolution=new_config.save_resolution,
             margin=self.margin,
             tile_shape=self.tile_shape,
-            highest_input_resolution=self.highest_input_resolution,
-            resolution_unit=self.resolution_unit,
         )
