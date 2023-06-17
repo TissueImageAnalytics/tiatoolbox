@@ -332,6 +332,8 @@ def test_crash_segmentor(remote_sample):
         mode="wsi",
         on_gpu=ON_GPU,
         crash_on_exception=False,
+        resolution=1.0,
+        units="baseline",
     )
     _rm_dir("output")
 
@@ -427,7 +429,7 @@ def test_functional_segmentor_merging(tmp_path):
     _rm_dir(save_dir)
     os.mkdir(save_dir)
 
-    # * with out of bound location
+    # * without of bound location
     canvas = semantic_segmentor.merge_prediction(
         [4, 4],
         [
