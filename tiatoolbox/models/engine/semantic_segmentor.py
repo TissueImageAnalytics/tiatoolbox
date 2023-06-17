@@ -1113,13 +1113,14 @@ class SemanticSegmentor:
                 "`patch_input_shape` and `patch_output_shape`"
             )
 
-        if ioconfig is None and resolution is None and units is None:
-            raise ValueError(
-                f"Invalid resolution: `{resolution}` and units: `{units}`. "
-            )
+        if resolution is None and units is None:
+            if ioconfig is None:
+                raise ValueError(
+                    f"Invalid resolution: `{resolution}` and units: `{units}`. "
+                )
 
-        resolution = ioconfig.input_resolutions[0]["resolution"]
-        units = ioconfig.input_resolutions[0]["units"]
+            resolution = ioconfig.input_resolutions[0]["resolution"]
+            units = ioconfig.input_resolutions[0]["units"]
 
         ioconfig = self._update_ioconfig(
             ioconfig,

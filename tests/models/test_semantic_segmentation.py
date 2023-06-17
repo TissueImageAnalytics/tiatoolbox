@@ -265,8 +265,8 @@ def test_crash_segmentor(remote_sample):
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
-    # post processing workers because baseline Semantic Segmentor does not support
-    # post processing out of the box. It only contains condition to create it
+    # post-processing workers because baseline Semantic Segmentor does not support
+    # post-processing out of the box. It only contains condition to create it
     # for any subclass
     semantic_segmentor.num_postproc_workers = 1
 
@@ -297,7 +297,7 @@ def test_crash_segmentor(remote_sample):
             crash_on_exception=True,
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
-        semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
+        semantic_segmentor.predict([], mode="tile", patch_input_shape=(2048, 2048))
     _rm_dir("output")  # default output dir test
 
     # * test not providing any io_config info when not using pretrained model
@@ -310,23 +310,25 @@ def test_crash_segmentor(remote_sample):
         )
     _rm_dir("output")  # default output dir test
 
-    # * Test crash propagation when parallelize post processing
+    # * Test crash propagation when parallelize post-processing
     _rm_dir("output")
     semantic_segmentor.num_postproc_workers = 2
     semantic_segmentor.model.forward = _crash_func
     with pytest.raises(ValueError, match=r"Propagation Crash."):
         semantic_segmentor.predict(
             [mini_wsi_svs],
-            patch_input_shape=[2048, 2048],
+            patch_input_shape=(2048, 2048),
             mode="wsi",
             on_gpu=ON_GPU,
             crash_on_exception=True,
+            resolution=1.0,
+            units="baseline",
         )
     _rm_dir("output")
     # test ignore crash
     semantic_segmentor.predict(
         [mini_wsi_svs],
-        patch_input_shape=[2048, 2048],
+        patch_input_shape=(2048, 2048),
         mode="wsi",
         on_gpu=ON_GPU,
         crash_on_exception=False,
@@ -461,8 +463,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
-    # post processing workers because baseline Semantic Segmentor does not support
-    # post processing out of the box. It only contains condition to create it
+    # post-processing workers because baseline Semantic Segmentor does not support
+    # post-processing out of the box. It only contains condition to create it
     # for any subclass
     semantic_segmentor.num_postproc_workers = 1
 
@@ -482,7 +484,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[512, 512],
+        patch_input_shape=(512, 512),
         resolution=1 / resolution,
         units="baseline",
         crash_on_exception=True,
