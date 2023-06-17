@@ -190,7 +190,7 @@ def test_masked_segmentor(remote_sample, tmp_path):
             {"units": "mpp", "resolution": resolution},
         ],
         margin=128,
-        tile_shape=[512, 512],
+        tile_shape=(512, 512),
         patch_input_shape=[256, 256],
         patch_output_shape=[164, 164],
         stride_shape=[164, 164],
@@ -309,7 +309,7 @@ def test_empty_image(tmp_path):
     bcc_wsi_ioconfig = IOInstanceSegmentorConfig(
         input_resolutions=[{"units": "mpp", "resolution": 0.25}],
         output_resolutions=[{"units": "mpp", "resolution": 0.25}],
-        tile_shape=2048,
+        tile_shape=(2048, 2048),
         patch_input_shape=[1024, 1024],
         patch_output_shape=[512, 512],
         stride_shape=[512, 512],

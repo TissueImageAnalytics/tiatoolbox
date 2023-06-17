@@ -51,7 +51,14 @@ class ModelIOConfigABC:
         resolutions = self.input_resolutions + self.output_resolutions
         units = [v["units"] for v in resolutions]
         units = np.unique(units)
-        if len(units) != 1 or units[0] not in [
+
+        if len(units) != 1:
+            raise ValueError(
+                f"Invalid resolution units `{units}`. "
+                f"The resolution units must be unique."
+            )
+
+        if units[0] not in [
             "power",
             "baseline",
             "mpp",
