@@ -1022,8 +1022,8 @@ class SemanticSegmentor:
         patch_input_shape=None,
         patch_output_shape=None,
         stride_shape=None,
-        resolution=1.0,
-        units="baseline",
+        resolution=None,
+        units=None,
         save_dir=None,
         crash_on_exception=False,
     ):
@@ -1110,6 +1110,17 @@ class SemanticSegmentor:
             raise ValueError(f"{mode} is not a valid mode. Use either `tile` or `wsi`.")
 
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
+
+        if not ioconfig:
+            ioconfig = self.ioconfig
+
+        if not resolution and not units and ioconfig.input_resolutions:
+            resolution = ioconfig.input_resolutions[0]["resolution"]
+            units = ioconfig.resolution_unit[0]["units"]
+        else:
+            raise ValueError(
+                f"Invalid resolution: `{resolution}` and units: `{units}`. "
+            )
 
         ioconfig = self._update_ioconfig(
             ioconfig,
