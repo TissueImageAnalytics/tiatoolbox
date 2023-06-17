@@ -120,7 +120,7 @@ class ModelIOConfigABC:
             input_resolutions=input_resolutions,
             patch_input_shape=self.patch_input_shape,
             stride_shape=self.stride_shape,
-            output_resolutions=self.output_resolutions,
+            output_resolutions=[],
         )
 
 
