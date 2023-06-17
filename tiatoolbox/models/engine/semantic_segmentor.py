@@ -1117,7 +1117,7 @@ class SemanticSegmentor:
         if not resolution and not units:
             if ioconfig.input_resolutions:
                 resolution = ioconfig.input_resolutions[0]["resolution"]
-                units = ioconfig.resolution_unit[0]["units"]
+                units = ioconfig.input_resolutions[0]["units"]
             elif not ioconfig:
                 raise ValueError(
                     f"Invalid resolution: `{resolution}` and units: `{units}`. "
