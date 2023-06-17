@@ -844,8 +844,8 @@ class SemanticSegmentor:
 
         return save_dir, cache_dir
 
+    @staticmethod
     def _update_ioconfig(
-        self,
         ioconfig,
         mode,
         patch_input_shape,
