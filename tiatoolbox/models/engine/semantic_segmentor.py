@@ -1114,13 +1114,14 @@ class SemanticSegmentor:
         if not ioconfig:
             ioconfig = self.ioconfig
 
-        if not resolution and not units and ioconfig.input_resolutions:
-            resolution = ioconfig.input_resolutions[0]["resolution"]
-            units = ioconfig.resolution_unit[0]["units"]
-        else:
-            raise ValueError(
-                f"Invalid resolution: `{resolution}` and units: `{units}`. "
-            )
+        if not resolution and not units:
+            if ioconfig.input_resolutions:
+                resolution = ioconfig.input_resolutions[0]["resolution"]
+                units = ioconfig.resolution_unit[0]["units"]
+            elif not ioconfig:
+                raise ValueError(
+                    f"Invalid resolution: `{resolution}` and units: `{units}`. "
+                )
 
         ioconfig = self._update_ioconfig(
             ioconfig,
@@ -1378,7 +1379,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Resolution used for reading the image.
             units (Units):
                 Units of resolution used for reading the image.
-            save_dir (str):
+            save_dir (str or pathlib.Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.

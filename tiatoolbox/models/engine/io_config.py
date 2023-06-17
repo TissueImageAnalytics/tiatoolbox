@@ -30,9 +30,6 @@ class ModelIOConfigABC:
     output_resolutions: List[dict] = field(default_factory=list)
 
     def __post_init__(self):
-        if not self.output_resolutions:
-            self.output_resolutions = []
-
         self.resolution_unit = self.input_resolutions[0]["units"]
 
         if self.resolution_unit == "mpp":
