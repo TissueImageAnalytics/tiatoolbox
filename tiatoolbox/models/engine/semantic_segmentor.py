@@ -893,14 +893,7 @@ class SemanticSegmentor:
         if stride_shape is None:
             stride_shape = patch_output_shape
 
-        if ioconfig is None and patch_input_shape is None:
-            if self.ioconfig is None:
-                raise ValueError(
-                    "Must provide either `ioconfig` or "
-                    "`patch_input_shape` and `patch_output_shape`"
-                )
-            ioconfig = copy.deepcopy(self.ioconfig)
-        elif ioconfig is None:
+        if ioconfig is None:
             ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
                 output_resolutions=[{"resolution": resolution, "units": units}],
@@ -1111,17 +1104,22 @@ class SemanticSegmentor:
 
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
 
-        if not ioconfig:
-            ioconfig = self.ioconfig
+        if ioconfig is None:
+            ioconfig = copy.deepcopy(self.ioconfig)
 
-        if not resolution and not units:
-            if ioconfig.input_resolutions:
-                resolution = ioconfig.input_resolutions[0]["resolution"]
-                units = ioconfig.input_resolutions[0]["units"]
-            elif not ioconfig:
-                raise ValueError(
-                    f"Invalid resolution: `{resolution}` and units: `{units}`. "
-                )
+        if ioconfig is None and patch_input_shape is None:
+            raise ValueError(
+                "Must provide either `ioconfig` or "
+                "`patch_input_shape` and `patch_output_shape`"
+            )
+
+        if ioconfig is None and resolution is None and units is None:
+            raise ValueError(
+                f"Invalid resolution: `{resolution}` and units: `{units}`. "
+            )
+
+        resolution = ioconfig.input_resolutions[0]["resolution"]
+        units = ioconfig.input_resolutions[0]["units"]
 
         ioconfig = self._update_ioconfig(
             ioconfig,
