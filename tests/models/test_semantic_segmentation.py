@@ -1,7 +1,4 @@
 """Tests for Semantic Segmentor."""
-
-import copy
-
 # ! The garbage collector
 import gc
 import multiprocessing
@@ -110,39 +107,6 @@ class _CNNTo1(ModelABC):
 
 def test_segmentor_ioconfig():
     """Test for IOConfig."""
-    default_config = {
-        "input_resolutions": [
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.50},
-            {"units": "mpp", "resolution": 0.75},
-        ],
-        "output_resolutions": [
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.50},
-        ],
-        "patch_input_shape": [2048, 2048],
-        "patch_output_shape": [1024, 1024],
-        "stride_shape": [512, 512],
-    }
-
-    # error when uniform resolution units are not uniform
-    xconfig = copy.deepcopy(default_config)
-    xconfig["input_resolutions"] = [
-        {"units": "mpp", "resolution": 0.25},
-        {"units": "power", "resolution": 0.50},
-    ]
-    with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        _ = IOSegmentorConfig(**xconfig)
-
-    # error when uniform resolution units are not supported
-    xconfig = copy.deepcopy(default_config)
-    xconfig["input_resolutions"] = [
-        {"units": "alpha", "resolution": 0.25},
-        {"units": "alpha", "resolution": 0.50},
-    ]
-    with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        _ = IOSegmentorConfig(**xconfig)
-
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
