@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -138,12 +138,7 @@ class ModelIOConfigABC:
             {"units": "baseline", "resolution": v} for v in scale_factors[:end_idx]
         ]
 
-        return ModelIOConfigABC(
-            input_resolutions=input_resolutions,
-            patch_input_shape=self.patch_input_shape,
-            stride_shape=self.stride_shape,
-            output_resolutions=[],
-        )
+        return replace(self, input_resolutions=input_resolutions, output_resolutions=[])
 
 
 @dataclass
@@ -250,12 +245,10 @@ class IOSegmentorConfig(ModelIOConfigABC):
         if self.save_resolution is not None:
             save_resolution = {"units": "baseline", "resolution": scale_factors[-1]}
 
-        return IOSegmentorConfig(
+        return replace(
+            self,
             input_resolutions=new_config.input_resolutions,
             output_resolutions=output_resolutions,
-            patch_input_shape=self.patch_input_shape,
-            patch_output_shape=self.patch_output_shape,
-            stride_shape=self.stride_shape,
             save_resolution=save_resolution,
         )
 
@@ -292,12 +285,6 @@ class IOPatchPredictorConfig(ModelIOConfigABC):
             resolution and improves performance.
 
     """
-
-    def __post_init__(self):
-        self.stride_shape = (
-            self.patch_input_shape if self.stride_shape is None else self.stride_shape
-        )
-        super().__post_init__()
 
 
 @dataclass
@@ -395,13 +382,9 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         """
         new_config = super().to_baseline()
 
-        return IOInstanceSegmentorConfig(
+        return replace(
+            self,
             input_resolutions=new_config.input_resolutions,
             output_resolutions=new_config.output_resolutions,
-            patch_input_shape=self.patch_input_shape,
-            patch_output_shape=self.patch_output_shape,
-            stride_shape=self.stride_shape,
             save_resolution=new_config.save_resolution,
-            margin=self.margin,
-            tile_shape=self.tile_shape,
         )
