@@ -17,16 +17,35 @@ class ModelIOConfigABC:
         input_resolutions (list(dict)):
             Resolution of each input head of model inference, must be in
             the same order as `target model.forward()`.
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Shape of the largest input in (height, width).
         stride_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
             Stride in (x, y) direction for patch extraction.
-        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
+        output_resolutions (list(dict)):
+            Resolution of each output head from model inference, must be
+            in the same order as target model.infer_batch().
+
+    Attributes:
+        input_resolutions (list(dict)):
+            Resolution of each input head of model inference, must be in
+            the same order as `target model.forward()`.
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
             Shape of the largest input in (height, width).
+        stride_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Stride in (x, y) direction for patch extraction.
+        output_resolutions (list(dict)):
+            Resolution of each output head from model inference, must be
+            in the same order as target model.infer_batch().
+        highest_input_resolution (dict):
+            Highest resolution to process the image based on input and
+            output resolutions. This helps to read the image at the optimal
+            resolution and improves performance.
 
     """
 
     input_resolutions: List[dict]
-    patch_input_shape: Union[List[int], np.ndarray, Tuple[int]]
-    stride_shape: Union[List[int], np.ndarray, Tuple[int]]
+    patch_input_shape: Union[List[int], np.ndarray, Tuple[int, int]]
+    stride_shape: Union[List[int], np.ndarray, Tuple[int, int]]
     output_resolutions: List[dict] = field(default_factory=list)
 
     def __post_init__(self):
@@ -126,23 +145,43 @@ class ModelIOConfigABC:
 
 @dataclass
 class IOSegmentorConfig(ModelIOConfigABC):
-    """Contain semantic segmentor input and output information.
+    """Contains semantic segmentor input and output information.
 
     Args:
-        input_resolutions (list):
+        input_resolutions (list(dict)):
             Resolution of each input head of model inference, must be in
             the same order as `target model.forward()`.
-        output_resolutions (list):
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Shape of the largest input in (height, width).
+        stride_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
+            Stride in (x, y) direction for patch extraction.
+        output_resolutions (list(dict)):
             Resolution of each output head from model inference, must be
             in the same order as target model.infer_batch().
-        stride_shape (:class:`numpy.ndarray`, list(int)):
-            Stride in (x, y) direction for patch extraction.
-        patch_input_shape (:class:`numpy.ndarray`, list(int)):
-            Shape of the largest input in (height, width).
         patch_output_shape (:class:`numpy.ndarray`, list(int)):
             Shape of the largest output in (height, width).
         save_resolution (dict):
             Resolution to save all output.
+
+    Attributes:
+        input_resolutions (list(dict)):
+            Resolution of each input head of model inference, must be in
+            the same order as `target model.forward()`.
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Shape of the largest input in (height, width).
+        stride_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Stride in (x, y) direction for patch extraction.
+        output_resolutions (list(dict)):
+            Resolution of each output head from model inference, must be
+            in the same order as target model.infer_batch().
+        patch_output_shape (:class:`numpy.ndarray`, list(int)):
+            Shape of the largest output in (height, width).
+        save_resolution (dict):
+            Resolution to save all output.
+        highest_input_resolution (dict):
+            Highest resolution to process the image based on input and
+            output resolutions. This helps to read the image at the optimal
+            resolution and improves performance.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
@@ -150,9 +189,9 @@ class IOSegmentorConfig(ModelIOConfigABC):
         >>> ioconfig = IOSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
+        ...     patch_input_shape=(2048, 2048),
+        ...     patch_output_shape=(1024, 1024),
+        ...     stride_shape=(512, 512),
         ... )
 
     Examples:
@@ -169,15 +208,15 @@ class IOSegmentorConfig(ModelIOConfigABC):
         ...         {"units": "mpp", "resolution": 0.25},
         ...         {"units": "mpp", "resolution": 0.50},
         ...     ],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
+        ...     patch_input_shape=(2048, 2048),
+        ...     patch_output_shape=(1024, 1024),
+        ...     stride_shape=(512, 512),
         ...     save_resolution={"units": "mpp", "resolution": 4.0},
         ... )
 
     """
 
-    patch_output_shape: Union[List[int], np.ndarray] = None
+    patch_output_shape: Union[List[int], np.ndarray, Tuple[int, int]] = None
     save_resolution: dict = None
 
     def to_baseline(self):
@@ -219,7 +258,37 @@ class IOSegmentorConfig(ModelIOConfigABC):
 
 
 class IOPatchPredictorConfig(ModelIOConfigABC):
-    """Contains patch predictor input and output information."""
+    """Contains patch predictor input and output information.
+
+    Args:
+        input_resolutions (list(dict)):
+            Resolution of each input head of model inference, must be in
+            the same order as `target model.forward()`.
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
+            Shape of the largest input in (height, width).
+        stride_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
+            Stride in (x, y) direction for patch extraction.
+        output_resolutions (list(dict)):
+            Resolution of each output head from model inference, must be
+            in the same order as target model.infer_batch().
+
+    Attributes:
+        input_resolutions (list(dict)):
+            Resolution of each input head of model inference, must be in
+            the same order as `target model.forward()`.
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
+            Shape of the largest input in (height, width).
+        stride_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
+            Stride in (x, y) direction for patch extraction.
+        output_resolutions (list(dict)):
+            Resolution of each output head from model inference, must be
+            in the same order as target model.infer_batch().
+        highest_input_resolution (dict):
+            Highest resolution to process the image based on input and
+            output resolutions. This helps to read the image at the optimal
+            resolution and improves performance.
+
+    """
 
     def __post_init__(self):
         self.stride_shape = (
@@ -230,23 +299,47 @@ class IOPatchPredictorConfig(ModelIOConfigABC):
 
 @dataclass
 class IOInstanceSegmentorConfig(IOSegmentorConfig):
-    """Contain instance segmentor input and output information.
+    """Contains instance segmentor input and output information.
 
     Args:
-        input_resolutions (list):
+        input_resolutions (list(dict)):
             Resolution of each input head of model inference, must be in
             the same order as `target model.forward()`.
-        output_resolutions (list):
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Shape of the largest input in (height, width).
+        stride_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Stride in (x, y) direction for patch extraction.
+        output_resolutions (list(dict)):
             Resolution of each output head from model inference, must be
             in the same order as target model.infer_batch().
-        stride_shape (:class:`numpy.ndarray`, list(int)):
-            Stride in (x, y) direction for patch extraction.
-        patch_input_shape (:class:`numpy.ndarray`, list(int)):
-            Shape of the largest input in (height, width).
         patch_output_shape (:class:`numpy.ndarray`, list(int)):
             Shape of the largest output in (height, width).
         save_resolution (dict):
             Resolution to save all output.
+        margin (int):
+            Tile margin to accumulate the output.
+        tile_shape (tuple(int, int)):
+            Tile shape to process the WSI.
+
+    Attributes:
+        input_resolutions (list(dict)):
+            Resolution of each input head of model inference, must be in
+            the same order as `target model.forward()`.
+        patch_input_shape (:class:`numpy.ndarray`, list(int), tuple(int, int)):
+            Shape of the largest input in (height, width).
+        stride_shape (:class:`numpy.ndarray`, list(int), tuple(int)):
+            Stride in (x, y) direction for patch extraction.
+        output_resolutions (list(dict)):
+            Resolution of each output head from model inference, must be
+            in the same order as target model.infer_batch().
+        patch_output_shape (:class:`numpy.ndarray`, list(int)):
+            Shape of the largest output in (height, width).
+        save_resolution (dict):
+            Resolution to save all output.
+        highest_input_resolution (dict):
+            Highest resolution to process the image based on input and
+            output resolutions. This helps to read the image at the optimal
+            resolution and improves performance.
         margin (int):
             Tile margin to accumulate the output.
         tile_shape (tuple(int, int)):
@@ -258,9 +351,9 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         >>> ioconfig = IOSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
+        ...     patch_input_shape=(2048, 2048),
+        ...     patch_output_shape=(1024, 1024),
+        ...     stride_shape=(512, 512),
         ... )
 
     Examples:
@@ -277,9 +370,9 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         ...         {"units": "mpp", "resolution": 0.25},
         ...         {"units": "mpp", "resolution": 0.50},
         ...     ],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
+        ...     patch_input_shape=(2048, 2048),
+        ...     patch_output_shape=(1024, 1024),
+        ...     stride_shape=(512, 512),
         ...     save_resolution={"units": "mpp", "resolution": 4.0},
         ... )
 
