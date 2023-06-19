@@ -324,6 +324,18 @@ def test_crash_segmentor(remote_sample):
             resolution=1.0,
             units="baseline",
         )
+
+    _rm_dir("output")
+
+    with pytest.raises(ValueError, match=r"Invalid resolution.*"):
+        semantic_segmentor.predict(
+            [mini_wsi_svs],
+            patch_input_shape=(2048, 2048),
+            mode="wsi",
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+        )
+
     _rm_dir("output")
     # test ignore crash
     semantic_segmentor.predict(
