@@ -441,7 +441,7 @@ def test_functional_segmentor_merging(tmp_path):
     _rm_dir(save_dir)
     os.mkdir(save_dir)
 
-    # * without of bound location
+    # * with an out of bound location
     canvas = semantic_segmentor.merge_prediction(
         [4, 4],
         [

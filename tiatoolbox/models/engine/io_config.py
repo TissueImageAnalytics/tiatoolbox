@@ -73,8 +73,8 @@ class ModelIOConfigABC:
 
         if len(units) != 1:
             raise ValueError(
-                f"Invalid resolution units `{units}`. "
-                f"The resolution units must be unique."
+                f"Multiple resolution units found: `{units}`. "
+                f"Mixing resolution units is not allowed."
             )
 
         if units[0] not in [
