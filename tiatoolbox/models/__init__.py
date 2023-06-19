@@ -12,6 +12,7 @@ from .engine.io_config import (
     IOInstanceSegmentorConfig,
     IOPatchPredictorConfig,
     IOSegmentorConfig,
+    ModelIOConfigABC,
 )
 from .engine.multi_task_segmentor import MultiTaskSegmentor
 from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
@@ -37,4 +38,5 @@ __all__ = [
     "IOPatchPredictorConfig",
     "IOSegmentorConfig",
     "IOInstanceSegmentorConfig",
+    "ModelIOConfigABC",
 ]

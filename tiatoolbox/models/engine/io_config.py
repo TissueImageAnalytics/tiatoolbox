@@ -45,10 +45,13 @@ class ModelIOConfigABC:
 
     input_resolutions: List[dict]
     patch_input_shape: Union[List[int], np.ndarray, Tuple[int, int]]
-    stride_shape: Union[List[int], np.ndarray, Tuple[int, int]]
+    stride_shape: Union[List[int], np.ndarray, Tuple[int, int]] = None
     output_resolutions: List[dict] = field(default_factory=list)
 
     def __post_init__(self):
+        if self.stride_shape is None:
+            self.stride_shape = self.patch_input_shape
+
         self.resolution_unit = self.input_resolutions[0]["units"]
 
         if self.resolution_unit == "mpp":
