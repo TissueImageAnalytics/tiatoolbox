@@ -75,8 +75,8 @@ repos:
         additional_dependencies: ['click==8.0.4']  # Currently >8.0.4 breaks black
       - id: black-jupyter
         language: python
-  -   repo: https://github.com/astral-sh/ruff-pre-commit
-      # Ruff version.
-      rev: v0.0.274
-      hooks:
-          -   id: ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.0.274
+    hooks:
+      - id: ruff
