@@ -1021,7 +1021,7 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            # (0, 0, 1024, 1024),  # noqa: E800
+            # (0, 0, 1024, 1024),  # noqa: E800, ERA001
             where=lambda props: props.get("class")
             == 123,
         )

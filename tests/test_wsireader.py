@@ -94,7 +94,7 @@ def strictly_increasing(sequence: Iterable) -> bool:
         bool: True if strictly increasing.
 
     """
-    return all(a < b for a, b in zip(sequence, sequence[1:]))
+    return all(a < b for a, b in zip(sequence, sequence[1:], strict=True))
 
 
 def strictly_decreasing(sequence: Iterable) -> bool:
@@ -451,7 +451,7 @@ def test_find_optimal_level_and_downsample_mpp(sample_ndpi):
     expected_scales = [[0.91282519, 0.91012514], [0.73026016, 0.72810011]]
 
     for mpp, expected_level, expected_scale in zip(
-        mpps, expected_levels, expected_scales
+        mpps, expected_levels, expected_scales, strict=True
     ):
         read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
             mpp, "mpp"
@@ -467,7 +467,9 @@ def test_find_optimal_level_and_downsample_power(sample_ndpi):
 
     objective_powers = [20, 10, 5, 2.5, 1.25]
     expected_levels = [0, 1, 2, 3, 4]
-    for objective_power, expected_level in zip(objective_powers, expected_levels):
+    for objective_power, expected_level in zip(
+        objective_powers, expected_levels, strict=True
+    ):
         read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
             objective_power, "power"
         )
@@ -916,8 +918,8 @@ def test_read_bounds_interpolated(sample_svs):
         units="mpp",
     )
 
-    assert 0.1 < wsi.info.mpp[0]
-    assert 0.1 < wsi.info.mpp[1]
+    assert wsi.info.mpp[0] > 0.1
+    assert wsi.info.mpp[1] > 0.1
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape[2] == 3
@@ -1325,7 +1327,7 @@ def test_tissue_mask_morphological(sample_svs):
     resolutions = [5, 10]
     units = ["power", "mpp"]
     scale_fns = [lambda x: x * 2, lambda x: 32 / x]
-    for unit, scaler in zip(units, scale_fns):
+    for unit, scaler in zip(units, scale_fns, strict=True):
         for resolution in resolutions:
             mask = wsi.tissue_mask(
                 method="morphological", resolution=resolution, units=unit
