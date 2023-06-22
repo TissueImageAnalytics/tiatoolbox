@@ -19,11 +19,11 @@ import yaml
 from click.testing import CliRunner
 
 from tiatoolbox import cli
+from tiatoolbox.models import SemanticSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import centre_crop
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
-    SemanticSegmentor,
     WSIStreamDataset,
 )
 from tiatoolbox.models.models_abc import ModelABC
