@@ -54,7 +54,9 @@ def main(files: List[Path]) -> None:
         changed = any(
             cell != formatted_cell
             for cell, formatted_cell in zip(
-                notebook["cells"], formatted_notebook["cells"]
+                notebook["cells"],
+                formatted_notebook["cells"],
+                strict=True,
             )
         )
         if not changed:

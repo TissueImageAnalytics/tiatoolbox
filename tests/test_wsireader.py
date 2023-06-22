@@ -108,7 +108,7 @@ def strictly_decreasing(sequence: Iterable) -> bool:
         bool: True if strictly decreasing.
 
     """
-    return all(a > b for a, b in zip(sequence, sequence[1:]))
+    return all(a > b for a, b in zip(sequence, sequence[1:], strict=True))
 
 
 def read_rect_objective_power(wsi, location, size):
