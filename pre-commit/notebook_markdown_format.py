@@ -56,7 +56,6 @@ def main(files: List[Path]) -> None:
             for cell, formatted_cell in zip(
                 notebook["cells"],
                 formatted_notebook["cells"],
-                strict=True,
             )
         )
         if not changed:
