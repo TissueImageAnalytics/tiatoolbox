@@ -181,7 +181,7 @@ def affinity_to_edge_index(
     if isinstance(affinity_matrix, torch.Tensor):
         return (affinity_matrix > threshold).nonzero().t().contiguous()
     return np.ascontiguousarray(
-        np.stack((affinity_matrix > threshold).nonzero(), axis=1).T
+        np.stack((affinity_matrix > threshold).nonzero(), axis=1).T,
     )
 
 
@@ -321,7 +321,8 @@ class SlideGraphConstructor:  # noqa: PIE798
         # distance (nearest -> farthest).
         kd_tree = cKDTree(points)
         neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
-            x=points, k=len(points)
+            x=points,
+            k=len(points),
         )
 
         # Initialise an empty 1-D condensed distance matrix.
@@ -346,12 +347,13 @@ class SlideGraphConstructor:  # noqa: PIE798
             neighbour_feature_similarities = np.exp(
                 -lambda_f
                 * np.linalg.norm(
-                    features[i] - features[neighbour_indexes_single_point], axis=1
-                )
+                    features[i] - features[neighbour_indexes_single_point],
+                    axis=1,
+                ),
             )
             # Called d in paper
             neighbour_distance_similarities = np.exp(
-                -lambda_d * neighbour_distances_single_point
+                -lambda_d * neighbour_distances_single_point,
             )
             # 1 - product of similarities (1 - fd)
             # (1 = most un-similar 0 = most similar)
@@ -482,7 +484,9 @@ class SlideGraphConstructor:  # noqa: PIE798
         # Plot the edges
         line_segments = nodes[edges.T]
         edge_collection = mc.LineCollection(
-            line_segments, colors=edge_color, linewidths=1
+            line_segments,
+            colors=edge_color,
+            linewidths=1,
         )
         ax.add_collection(edge_collection)
 

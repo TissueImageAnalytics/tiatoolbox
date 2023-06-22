@@ -119,7 +119,7 @@ class StainAugmentor(ImageOnlyTransform):
         if self.method.lower() not in {"macenko", "vahadane"}:
             raise ValueError(
                 f"Unsupported stain extractor method {self.method!r} for "
-                "StainAugmentor. Choose either 'vahadane' or 'macenko'."
+                "StainAugmentor. Choose either 'vahadane' or 'macenko'.",
             )
         self.stain_normalizer = get_normalizer(self.method.lower())
 
@@ -155,12 +155,14 @@ class StainAugmentor(ImageOnlyTransform):
             self.source_concentrations = self.stain_normalizer.target_concentrations
         else:
             self.source_concentrations = self.stain_normalizer.get_concentrations(
-                img, self.stain_matrix
+                img,
+                self.stain_matrix,
             )
         self.n_stains = self.source_concentrations.shape[1]
         if not self.augment_background:
             self.tissue_mask = get_luminosity_tissue_mask(
-                img, threshold=threshold
+                img,
+                threshold=threshold,
             ).ravel()
         self.img_shape = img.shape
 
@@ -188,7 +190,7 @@ class StainAugmentor(ImageOnlyTransform):
                 augmented_concentrations[self.tissue_mask, i] *= self.alpha
                 augmented_concentrations[self.tissue_mask, i] += self.beta
         img_augmented = 255 * np.exp(
-            -1 * np.dot(augmented_concentrations, self.stain_matrix)
+            -1 * np.dot(augmented_concentrations, self.stain_matrix),
         )
         img_augmented = img_augmented.reshape(self.img_shape)
         img_augmented = np.clip(img_augmented, 0, 255)

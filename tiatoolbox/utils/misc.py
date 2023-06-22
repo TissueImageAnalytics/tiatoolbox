@@ -117,7 +117,8 @@ def save_yaml(
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
     with open(  # skipcq: PTC-W6004: PTC-W6004
-        str(pathlib.Path(output_path)), "w"
+        str(pathlib.Path(output_path)),
+        "w",
     ) as yaml_file:
         yaml.dump(input_dict, yaml_file)
 
@@ -198,7 +199,7 @@ def load_stain_matrix(stain_matrix_input):
         if suffixes[-1] not in [".csv", ".npy"]:
             raise FileNotSupportedError(
                 "If supplying a path to a stain matrix, use either a \
-                npy or a csv file"
+                npy or a csv file",
             )
 
         if suffixes[-1] == ".csv":
@@ -211,7 +212,7 @@ def load_stain_matrix(stain_matrix_input):
         return stain_matrix_input
 
     raise TypeError(
-        "Stain_matrix must be either a path to npy/csv file or a numpy array"
+        "Stain_matrix must be either a path to npy/csv file or a numpy array",
     )
 
 
@@ -247,7 +248,8 @@ def get_luminosity_tissue_mask(img, threshold):
 
 
 def mpp2common_objective_power(
-    mpp, common_powers=(1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100)
+    mpp,
+    common_powers=(1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100),
 ):
     """Approximate (commonly used value) of objective power from mpp.
 
@@ -281,7 +283,8 @@ def mpp2common_objective_power(
 
 
 mpp2common_objective_power = np.vectorize(
-    mpp2common_objective_power, excluded={"common_powers"}
+    mpp2common_objective_power,
+    excluded={"common_powers"},
 )
 
 
@@ -373,7 +376,9 @@ def contrast_enhancer(img, low_p=2, high_p=98):
         p_low, p_high = np.min(img_out), np.max(img_out)
     if p_high > p_low:
         img_out = exposure.rescale_intensity(
-            img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
+            img_out,
+            in_range=(p_low, p_high),
+            out_range=(0.0, 255.0),
         )
     return np.uint8(img_out)
 
@@ -657,10 +662,11 @@ def __walk_list_dict(in_list_dict):
     elif isinstance(in_list_dict, np.generic):
         in_list_dict = in_list_dict.item()
     elif in_list_dict is not None and not isinstance(
-        in_list_dict, (int, float, str, bool)
+        in_list_dict,
+        (int, float, str, bool),
     ):
         raise ValueError(
-            f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
+            f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified.",
         )
     return in_list_dict
 
@@ -947,7 +953,7 @@ def anns_from_hoverdict(data, props, typedict, origin, scale_factor):
                     {
                         "type": ann.get("geom_type", "Polygon"),
                         "coordinates": scale_factor * np.array([ann["contour"]]),
-                    }
+                    },
                 ),
                 origin,
             ),
@@ -1039,8 +1045,12 @@ def add_from_dat(
                 typedict_sub = typedict[subcat]
             anns.extend(
                 anns_from_hoverdict(
-                    data[subcat], props, typedict_sub, origin, scale_factor
-                )
+                    data[subcat],
+                    props,
+                    typedict_sub,
+                    origin,
+                    scale_factor,
+                ),
             )
     else:
         anns = anns_from_hoverdict(data, props, typedict, origin, scale_factor)

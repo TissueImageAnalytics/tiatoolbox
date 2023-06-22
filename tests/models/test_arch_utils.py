@@ -24,7 +24,7 @@ def test_all():
             [1, 1, 2, 2],
             [3, 3, 4, 4],
             [3, 3, 4, 4],
-        ]
+        ],
     )
     assert np.sum(_output - output) == 0
 

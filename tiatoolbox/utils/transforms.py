@@ -43,7 +43,7 @@ def background_composite(image, fill=255, alpha=False):
     image = image.convert("RGBA")
 
     composite = Image.fromarray(
-        np.full(list(image.size[::-1]) + [4], fill, dtype=np.uint8)
+        np.full(list(image.size[::-1]) + [4], fill, dtype=np.uint8),
     )
     composite.alpha_composite(image)
     if not alpha:
@@ -129,7 +129,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     original_dtype = img.dtype
     if original_dtype not in source_dtypes:
         raise ValueError(
-            f"Does not support resizing for array of dtype: {original_dtype}"
+            f"Does not support resizing for array of dtype: {original_dtype}",
         )
 
     converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
@@ -145,7 +145,8 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     if len(img.shape) == 3 and img.shape[-1] > 4:
         img_channels = [
             cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
-                ..., None
+                ...,
+                None,
             ]
             for ch in range(img.shape[-1])
         ]

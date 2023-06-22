@@ -136,7 +136,7 @@ def raise_source_exception(
     annotated_source = "\n".join(source_lines)
     exception = type(exception) if exception else SyntaxError
     raise exception(
-        f"{rel_path}:{file_lineno}: {message}\n{annotated_source}"
+        f"{rel_path}:{file_lineno}: {message}\n{annotated_source}",
     ) from None
 
 

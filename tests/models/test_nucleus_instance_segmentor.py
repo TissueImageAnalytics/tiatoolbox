@@ -90,14 +90,14 @@ def test_get_tile_info():
     assert (
         np.sum(
             np.nonzero(flag[:, 0])
-            != np.array([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+            != np.array([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]),
         )
         == 0
     ), "Fail Top"
     # removal flag at bottom edges
     assert (
         np.sum(
-            np.nonzero(flag[:, 1]) != np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+            np.nonzero(flag[:, 1]) != np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
         )
         == 0
     ), "Fail Bottom"
@@ -105,14 +105,15 @@ def test_get_tile_info():
     assert (
         np.sum(
             np.nonzero(flag[:, 2])
-            != np.array([1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15])
+            != np.array([1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15]),
         )
         == 0
     ), "Fail Left"
     # removal flag at right edges
     assert (
         np.sum(
-            np.nonzero(flag[:, 3]) != np.array([0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14])
+            np.nonzero(flag[:, 3])
+            != np.array([0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]),
         )
         == 0
     ), "Fail Right"
@@ -135,7 +136,7 @@ def test_vertical_boundary_boxes():
             [3, 12, 5, 16],
             [7, 12, 9, 16],
             [11, 12, 13, 16],
-        ]
+        ],
     )
     _flag = np.array(
         [
@@ -151,7 +152,7 @@ def test_vertical_boundary_boxes():
             [1, 0, 0, 0],
             [1, 0, 0, 0],
             [1, 0, 0, 0],
-        ]
+        ],
     )
     boxes, flag = info[1]
     assert np.sum(_boxes - boxes) == 0, "Wrong Vertical Bounds"
@@ -175,7 +176,7 @@ def test_horizontal_boundary_boxes():
             [4, 11, 8, 13],
             [8, 11, 12, 13],
             [12, 11, 16, 13],
-        ]
+        ],
     )
     _flag = np.array(
         [
@@ -191,7 +192,7 @@ def test_horizontal_boundary_boxes():
             [0, 0, 1, 1],
             [0, 0, 1, 1],
             [0, 0, 1, 0],
-        ]
+        ],
     )
     boxes, flag = info[2]
     assert np.sum(_boxes - boxes) == 0, "Wrong Horizontal Bounds"
@@ -212,7 +213,7 @@ def test_cross_section_boundary_boxes():
             [2, 10, 6, 14],
             [6, 10, 10, 14],
             [10, 10, 14, 14],
-        ]
+        ],
     )
     _flag = np.array(
         [
@@ -225,7 +226,7 @@ def test_cross_section_boundary_boxes():
             [1, 1, 1, 1],
             [1, 1, 1, 1],
             [1, 1, 1, 1],
-        ]
+        ],
     )
     boxes, flag = info[3]
     assert np.sum(boxes - _boxes) == 0, "Wrong Cross Section Bounds"
@@ -520,7 +521,8 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
     imwrite(mini_wsi_jpg, thumb)
 
     fetch_pretrained_weights(
-        "hovernet_fast-pannuke", str(tmp_path.joinpath("hovernet_fast-pannuke.pth"))
+        "hovernet_fast-pannuke",
+        str(tmp_path.joinpath("hovernet_fast-pannuke.pth")),
     )
 
     # resolution for travis testing, not the correct ones

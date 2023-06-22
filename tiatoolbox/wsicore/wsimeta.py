@@ -209,7 +209,9 @@ class WSIMeta:
         return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
 
     def relative_level_scales(
-        self, resolution: Resolution, units: Units
+        self,
+        resolution: Resolution,
+        units: Units,
     ) -> List[np.ndarray]:
         """Calculate scale of each level in the WSI relative to given resolution.
 
@@ -268,7 +270,7 @@ class WSIMeta:
             if resolution >= len(level_downsamples):
                 raise ValueError(
                     f"Target scale level {resolution} "
-                    f"> number of levels {len(level_downsamples)} in WSI"
+                    f"> number of levels {len(level_downsamples)} in WSI",
                 )
             base_scale, resolution = 1, self.level_downsample(resolution)
 
@@ -283,7 +285,7 @@ class WSIMeta:
             if self.objective_power is None:
                 raise ValueError(
                     "Objective power is None. "
-                    "Cannot determine scale in terms of objective power."
+                    "Cannot determine scale in terms of objective power.",
                 )
             base_scale, resolution = 1 / self.objective_power, 1 / resolution
 

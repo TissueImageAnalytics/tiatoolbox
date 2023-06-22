@@ -218,7 +218,8 @@ def cell_polygon(
 
 
 def cell_grid(
-    size: Tuple[int, int] = (10, 10), spacing: Number = 25
+    size: Tuple[int, int] = (10, 10),
+    spacing: Number = 25,
 ) -> Generator[Polygon, None, None]:
     """Generate a grid of cell boundaries."""
     return (
@@ -254,7 +255,9 @@ def main(
         tracker_filepath.unlink()
 
     with NamedTemporaryFile(mode="w+") as temp_file, memray.Tracker(
-        tracker_filepath, native_traces=True, follow_fork=True
+        tracker_filepath,
+        native_traces=True,
+        follow_fork=True,
     ):
         io = ":memory:" if in_memory else temp_file  # Backing (memory/disk)
         print(f"Storing {size[0] * size[1]} cells")

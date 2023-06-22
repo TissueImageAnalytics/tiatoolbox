@@ -32,7 +32,7 @@ def show_wsi(img_input, name, colour_by, colour_map):  # pragma: no cover
     if colour_by is not None:
         if colour_map is None:
             raise ValueError(
-                "If colouring by a property, must also define a colour map."
+                "If colouring by a property, must also define a colour map.",
             )
         renderer = AnnotationRenderer(score_prop=colour_by, mapper=colour_map)
 

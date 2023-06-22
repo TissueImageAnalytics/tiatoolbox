@@ -98,7 +98,10 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
 
 
 def test_points_patch_extractor_image_format(
-    sample_svs, sample_jp2, source_image, patch_extr_csv
+    sample_svs,
+    sample_jp2,
+    source_image,
+    patch_extr_csv,
 ):
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = pathlib.Path(__file__).parent
@@ -182,7 +185,9 @@ def test_points_patch_extractor(
 
 
 def test_points_patch_extractor_svs(
-    sample_svs, patch_extr_svs_csv, patch_extr_svs_npy_read
+    sample_svs,
+    patch_extr_svs_csv,
+    patch_extr_svs_npy_read,
 ):
     """Test PointsPatchExtractor for svs image."""
     locations_list = pathlib.Path(patch_extr_svs_csv)
@@ -201,7 +206,9 @@ def test_points_patch_extractor_svs(
 
 
 def test_points_patch_extractor_jp2(
-    sample_jp2, patch_extr_jp2_csv, patch_extr_jp2_read
+    sample_jp2,
+    patch_extr_jp2_csv,
+    patch_extr_jp2_read,
 ):
     """Test PointsPatchExtractor for jp2 image."""
     locations_list = pathlib.Path(patch_extr_jp2_csv)
@@ -239,7 +246,8 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
     num_patches_img = len(coord_list)
     img_patches = np.zeros(
-        (num_patches_img, patch_size[1], patch_size[0], 3), dtype=img.dtype
+        (num_patches_img, patch_size[1], patch_size[0], 3),
+        dtype=img.dtype,
     )
 
     for i, coord in enumerate(coord_list):
@@ -272,7 +280,7 @@ def test_get_coordinates():
         [
             [0, 0, 4, 4],
             [4, 0, 8, 4],
-        ]
+        ],
     )
     output = PatchExtractor.get_coordinates(
         image_shape=[9, 6],
@@ -290,7 +298,7 @@ def test_get_coordinates():
             [4, 4, 8, 8],
             [8, 0, 12, 4],
             [8, 4, 12, 8],
-        ]
+        ],
     )
     output = PatchExtractor.get_coordinates(
         image_shape=[9, 6],
@@ -420,7 +428,7 @@ def test_filter_coordinates():
             [4, 4, 8, 8],
             [8, 0, 12, 4],
             [8, 4, 12, 8],
-        ]
+        ],
     )
     mask = np.zeros([9, 6])
     mask[0:4, 3:8] = 1  # will flag first 2
@@ -444,7 +452,8 @@ def test_filter_coordinates():
 
     # Test for bad mask input
     with pytest.raises(
-        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
+        ValueError,
+        match="`mask_reader` should be wsireader.VirtualWSIReader.",
     ):
         PatchExtractor.filter_coordinates(
             mask,

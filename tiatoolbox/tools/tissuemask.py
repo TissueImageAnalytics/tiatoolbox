@@ -104,7 +104,7 @@ class OtsuTissueMasker(TissueMasker):
         if len(images_shape) != 4:
             raise ValueError(
                 "Expected 4 dimensional input shape (N, height, width, 3)"
-                f" but received shape of {images_shape}."
+                f" but received shape of {images_shape}.",
             )
 
         # Convert RGB images to greyscale
@@ -187,7 +187,12 @@ class MorphologicalMasker(OtsuTissueMasker):
     """
 
     def __init__(
-        self, *, mpp=None, power=None, kernel_size=None, min_region_size=None
+        self,
+        *,
+        mpp=None,
+        power=None,
+        kernel_size=None,
+        min_region_size=None,
     ) -> None:
         """Initialise a morphological masker.
 

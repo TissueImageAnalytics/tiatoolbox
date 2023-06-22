@@ -28,7 +28,10 @@ def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
     output = utils.image.sub_pixel_read(
-        pillow_test_image, bounds, (ow, oh), stride=[1, 1]
+        pillow_test_image,
+        bounds,
+        (ow, oh),
+        stride=[1, 1],
     )
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
@@ -156,7 +159,8 @@ def test_mpp2common_objective_power(sample_svs):
     for mpp, result in mapping:
         assert utils.misc.mpp2common_objective_power(mpp) == result
         assert np.array_equal(
-            utils.misc.mpp2common_objective_power([mpp] * 2), [result] * 2
+            utils.misc.mpp2common_objective_power([mpp] * 2),
+            [result] * 2,
         )
 
 
@@ -183,7 +187,8 @@ def test_assert_dtype_int():
     utils.misc.assert_dtype_int(input_var=np.array([1, 2]))
     with pytest.raises(AssertionError):
         utils.misc.assert_dtype_int(
-            input_var=np.array([1.0, 2]), message="Bounds must be integers."
+            input_var=np.array([1.0, 2]),
+            message="Bounds must be integers.",
         )
 
 
@@ -427,7 +432,10 @@ def test_non_aligned_padded_sub_pixel_read(source_image):
         ow = 4
         oh = 4
         output = utils.image.sub_pixel_read(
-            test_image, bounds, (ow, oh), padding=padding
+            test_image,
+            bounds,
+            (ow, oh),
+            padding=padding,
         )
 
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
@@ -448,10 +456,14 @@ def test_non_baseline_padded_sub_pixel_read(source_image):
         ow = 8
         oh = 8
         output = utils.image.sub_pixel_read(
-            test_image, bounds, (ow, oh), padding=padding, pad_at_baseline=True
+            test_image,
+            bounds,
+            (ow, oh),
+            padding=padding,
+            pad_at_baseline=True,
         )
         assert (ow + 2 * 2 * padding, oh + 2 * 2 * padding) == tuple(
-            output.shape[:2][::-1]
+            output.shape[:2][::-1],
         )
 
 
@@ -495,7 +507,11 @@ def test_sub_pixel_read_pad_at_baseline():
     bounds = (0, 0, 8, 8)
     for padding in range(3):
         region = utils.image.sub_pixel_read(
-            data, bounds, output_size=out_size, padding=padding, pad_at_baseline=True
+            data,
+            bounds,
+            output_size=out_size,
+            padding=padding,
+            pad_at_baseline=True,
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
 
@@ -534,7 +550,11 @@ def test_sub_pixel_read_padding_formats():
     bounds = (0, 0, 8, 8)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
         region = utils.image.sub_pixel_read(
-            data, bounds, out_size, padding=padding, pad_at_baseline=True
+            data,
+            bounds,
+            out_size,
+            padding=padding,
+            pad_at_baseline=True,
         )
         assert region.shape == (16 + 4, 16 + 4)
         region = utils.image.sub_pixel_read(data, bounds, out_size, padding=padding)
@@ -713,7 +733,7 @@ def test_fuzz_roundtrip_bounds2size():
         loc = (np.random.rand(2) - 0.5) * 1000
         size = (np.random.rand(2) - 0.5) * 1000
         assert utils.transforms.bounds2locsize(
-            utils.transforms.locsize2bounds(loc, size)
+            utils.transforms.locsize2bounds(loc, size),
         )
 
 
@@ -911,12 +931,14 @@ def test_grab_files_from_dir(sample_visual_fields):
     file_types = "*.tif, *.png, *.jpg"
 
     out = utils.misc.grab_files_from_dir(
-        input_path=sample_visual_fields, file_types=file_types
+        input_path=sample_visual_fields,
+        file_types=file_types,
     )
     assert len(out) == 5
 
     out = utils.misc.grab_files_from_dir(
-        input_path=input_path.parent, file_types="test_utils*"
+        input_path=input_path.parent,
+        file_types="test_utils*",
     )
 
     assert len(out) == 1
@@ -993,7 +1015,8 @@ def test_download_data():
     save_path = os.path.join(save_dir_path, "temp")
     with pytest.raises(ConnectionError):
         misc.download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url", save_path
+            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url",
+            save_path,
         )
 
 
@@ -1053,7 +1076,9 @@ def test_crop_and_pad_edges():
         left, top, right, bottom = bounds
         slide_width, slide_height = slide_dimensions
         x, y = np.meshgrid(
-            np.arange(left, right), np.arange(top, bottom), indexing="ij"
+            np.arange(left, right),
+            np.arange(top, bottom),
+            indexing="ij",
         )
         under = np.logical_or(x < 0, y < 0).astype(np.int_)
         over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int_)
@@ -1136,7 +1161,7 @@ def test_fuzz_crop_and_pad_edges_output_size_no_padding():
         slide_dimensions = np.array([random.randint(5, 50) for _ in range(2)])
 
         loc = np.array(
-            [random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2)]
+            [random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2)],
         )
         size = np.array([10, 10])
         expected = np.maximum(
@@ -1257,17 +1282,23 @@ def test_save_as_json(tmp_path):
     # should fail because key is not of primitive type [str, int, float, bool]
     with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
         misc.save_as_json(
-            {frozenset(key_dict): sample}, tmp_path / "sample_json.json", exist_ok=True
+            {frozenset(key_dict): sample},
+            tmp_path / "sample_json.json",
+            exist_ok=True,
         )
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
     with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(
-            list(not_jsonable.values()), tmp_path / "sample_json.json", exist_ok=True
+            list(not_jsonable.values()),
+            tmp_path / "sample_json.json",
+            exist_ok=True,
         )
     with pytest.raises(ValueError, match=r"Type.*`data`.*.*must.*dict, list.*"):
         misc.save_as_json(
-            np.random.rand(2, 2), tmp_path / "sample_json.json", exist_ok=True
+            np.random.rand(2, 2),
+            tmp_path / "sample_json.json",
+            exist_ok=True,
         )
     # test complex nested dict
     print(sample)
@@ -1288,7 +1319,9 @@ def test_save_as_json(tmp_path):
 
     # test complex list of data
     misc.save_as_json(
-        list(sample.values()), tmp_path / "sample_json.json", exist_ok=True
+        list(sample.values()),
+        tmp_path / "sample_json.json",
+        exist_ok=True,
     )
     # test read because == is useless when value is mutable
     with open(tmp_path / "sample_json.json") as fptr:
@@ -1298,7 +1331,9 @@ def test_save_as_json(tmp_path):
 
     # test numpy generic
     misc.save_as_json(
-        [np.int32(1), np.float32(2)], tmp_path / "sample_json.json", exist_ok=True
+        [np.int32(1), np.float32(2)],
+        tmp_path / "sample_json.json",
+        exist_ok=True,
     )
     misc.save_as_json(
         {"a": np.int32(1), "b": np.float32(2)},
@@ -1399,7 +1434,8 @@ def test_from_dat_type_dict(tmp_path):
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat", typedict={0: "cell0", 1: "cell1"}
+        tmp_path / "test.dat",
+        typedict={0: "cell0", 1: "cell1"},
     )
     result = store.query(where="props['type'] == 'cell1'")
     assert len(result) == 1
@@ -1410,7 +1446,9 @@ def test_from_dat_transformed(tmp_path):
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat", scale_factor=2, origin=(50, 50)
+        tmp_path / "test.dat",
+        scale_factor=2,
+        origin=(50, 50),
     )
     result = store.query(where="props['type'] == 1")
     # check centroid is at 150,150

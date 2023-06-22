@@ -63,6 +63,7 @@ select = [
   "N",   # pep8-naming
   "C4",  # flake8-comprehensions
   "C90", # mccabe
+  "COM", # flake8-commas
   "ERA", # eradicate
   "FIX", # flake8-fixme
   "PIE", # flake8-pie

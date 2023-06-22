@@ -172,7 +172,7 @@ def running_on_ci() -> bool:
             running_on_travis(),
             running_on_github(),
             running_on_circleci(),
-        )
+        ),
     )
 
 
@@ -213,7 +213,8 @@ def colab_has_gpu() -> bool:
 
 
 def has_network(
-    hostname="one.one.one.one", timeout: Number = 3
+    hostname="one.one.one.one",
+    timeout: Number = 3,
 ) -> bool:  # noqa: CCR001
     """Detect if the current environment has a network connection.
 
@@ -268,7 +269,8 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         try:
             conda_list = subprocess.Popen(("conda", "list"), stdout=subprocess.PIPE)
             conda_pixman = subprocess.check_output(
-                ("grep", "pixman"), stdin=conda_list.stdout
+                ("grep", "pixman"),
+                stdin=conda_list.stdout,
             )
             conda_list.wait()
         except subprocess.SubprocessError:
@@ -285,7 +287,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         using = "dpkg"
         try:
             dkpg_output = subprocess.check_output(
-                ["/usr/bin/dpkg", "-s", "libpixman-1-0"]
+                ["/usr/bin/dpkg", "-s", "libpixman-1-0"],
             )
         except subprocess.SubprocessError:
             dkpg_output = b""
@@ -301,10 +303,12 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         using = "brew"
         try:
             brew_list = subprocess.Popen(
-                ("brew", "list", "--versions"), stdout=subprocess.PIPE
+                ("brew", "list", "--versions"),
+                stdout=subprocess.PIPE,
             )
             brew_pixman = subprocess.check_output(
-                ("grep", "pixman"), stdin=brew_list.stdout
+                ("grep", "pixman"),
+                stdin=brew_list.stdout,
             )
             brew_list.wait()
         except subprocess.SubprocessError:
@@ -322,7 +326,8 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         using = "port"
         port_list = subprocess.Popen(("port", "installed"), stdout=subprocess.PIPE)
         port_pixman = subprocess.check_output(
-            ("grep", "pixman"), stdin=port_list.stdout
+            ("grep", "pixman"),
+            stdin=port_list.stdout,
         )
         port_list.wait()
         matches = re.findall(

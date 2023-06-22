@@ -21,7 +21,10 @@ def test_functionality(remote_sample, tmp_path):
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (0, 0, 252, 252), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 252, 252),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
 
     model = MicroNet()

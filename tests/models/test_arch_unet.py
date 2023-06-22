@@ -42,7 +42,7 @@ def test_functional_unet(remote_sample, tmp_path):
             # noqa
             reader.read_bounds([0, 0, 1024, 1024], **read_kwargs),
             reader.read_bounds([1024, 1024, 2048, 2048], **read_kwargs),
-        ]
+        ],
     )
     batch = torch.from_numpy(batch)
 

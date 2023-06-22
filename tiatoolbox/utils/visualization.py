@@ -108,7 +108,7 @@ def overlay_prediction_mask(
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(
             f"Mismatch shape "
-            f"`img` {img.shape[:2]} vs `prediction` {prediction.shape[:2]}."
+            f"`img` {img.shape[:2]} vs `prediction` {prediction.shape[:2]}.",
         )
     if np.issubdtype(img.dtype, np.floating):
         if not (img.max() <= 1.0 and img.min() >= 0):
@@ -136,7 +136,8 @@ def overlay_prediction_mask(
         raise ValueError(f"Missing label for: {missing_label_uids}.")
 
     rgb_prediction = np.zeros(
-        [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
+        [prediction.shape[0], prediction.shape[1], 3],
+        dtype=np.uint8,
     )
     for label_uid, (_, overlay_rgb) in label_info.items():
         sel = prediction == label_uid
@@ -181,7 +182,8 @@ def overlay_prediction_mask(
 
 
 def _validate_label_info(
-    label_info: Dict[int, Tuple[str, ArrayLike]], predicted_classes
+    label_info: Dict[int, Tuple[str, ArrayLike]],
+    predicted_classes,
 ) -> List[int]:
     """Validate the label_info dictionary.
 
@@ -210,22 +212,22 @@ def _validate_label_info(
         if not isinstance(label_uid, int):
             raise ValueError(
                 "Wrong `label_info` format: label_uid "
-                f"{[label_uid, (label_name, label_colour)]}"
+                f"{[label_uid, (label_name, label_colour)]}",
             )
         if not isinstance(label_name, str):
             raise ValueError(
                 "Wrong `label_info` format: label_name "
-                f"{[label_uid, (label_name, label_colour)]}"
+                f"{[label_uid, (label_name, label_colour)]}",
             )
         if not isinstance(label_colour, (tuple, list, np.ndarray)):
             raise ValueError(
                 "Wrong `label_info` format: label_colour "
-                f"{[label_uid, (label_name, label_colour)]}"
+                f"{[label_uid, (label_name, label_colour)]}",
             )
         if len(label_colour) != 3:
             raise ValueError(
                 "Wrong `label_info` format: label_colour "
-                f"{[label_uid, (label_name, label_colour)]}"
+                f"{[label_uid, (label_name, label_colour)]}",
             )
 
     return check_uid_list
@@ -338,7 +340,7 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
     if img.shape[:2] != prediction.shape[:2]:
         raise ValueError(
             f"Mismatch shape `img` {img.shape[:2]}"
-            f" vs `prediction` {prediction.shape[:2]}."
+            f" vs `prediction` {prediction.shape[:2]}.",
         )
 
     if prediction.max() > 1.0:
@@ -410,7 +412,7 @@ def overlay_prediction_contours(
         inst_colours = np.array([inst_colours] * len(inst_dict))
     elif not isinstance(inst_colours, np.ndarray):
         raise ValueError(
-            f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
+            f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}",
         )
     inst_colours = inst_colours.astype(np.uint8)
 
@@ -421,7 +423,11 @@ def overlay_prediction_contours(
         else:
             inst_colour = (inst_colours[idx]).tolist()
         cv2.drawContours(
-            overlay, [np.array(inst_contour)], -1, inst_colour, line_thickness
+            overlay,
+            [np.array(inst_contour)],
+            -1,
+            inst_colour,
+            line_thickness,
         )
 
         if draw_dot:
@@ -623,8 +629,8 @@ class AnnotationRenderer:
                     int(c * 255)
                     for c in self.secondary_cmap["mapper"](
                         self.score_fn(
-                            annotation.properties[self.secondary_cmap["score_prop"]]
-                        )
+                            annotation.properties[self.secondary_cmap["score_prop"]],
+                        ),
                     )
                 )
             if score_prop == "color":
@@ -634,7 +640,7 @@ class AnnotationRenderer:
                 return tuple(
                     int(c * 255)
                     for c in self.mapper(
-                        self.score_fn(annotation.properties[score_prop])
+                        self.score_fn(annotation.properties[score_prop]),
                     )
                 )
         except KeyError:
@@ -670,7 +676,12 @@ class AnnotationRenderer:
         cnt = self.to_tile_coords(annotation.geometry.exterior.coords, top_left, scale)
         if self.thickness > -1:
             cv2.drawContours(
-                tile, [cnt], 0, col, self.edge_thickness, lineType=cv2.LINE_8
+                tile,
+                [cnt],
+                0,
+                col,
+                self.edge_thickness,
+                lineType=cv2.LINE_8,
             )
         else:
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
@@ -838,7 +849,7 @@ class AnnotationRenderer:
         if self.blur is None:
             return tile
         return np.array(
-            ImageOps.crop(Image.fromarray(tile).filter(self.blur), border * res)
+            ImageOps.crop(Image.fromarray(tile).filter(self.blur), border * res),
         )
 
     def render_by_type(

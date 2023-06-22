@@ -17,7 +17,8 @@ def test_stain_extract():
     """Test stain extraction class."""
     stain_matrix = np.array([0.65, 0.70, 0.29])
     with pytest.raises(
-        ValueError, match=r"Stain matrix must have shape \(2, 3\) or \(3, 3\)."
+        ValueError,
+        match=r"Stain matrix must have shape \(2, 3\) or \(3, 3\).",
     ):
         _ = stainextract.CustomExtractor(stain_matrix)
 

@@ -172,7 +172,8 @@ def test_transform_fit_otsu_wrong_shape():
 def test_transform_morphological_conflicting_args():
     """Test giving conflicting arguments to morphological masker."""
     with pytest.raises(
-        ValueError, match="Only one of mpp, power, kernel_size can be given."
+        ValueError,
+        match="Only one of mpp, power, kernel_size can be given.",
     ):
         tissuemask.MorphologicalMasker(mpp=32, power=1.25)
 

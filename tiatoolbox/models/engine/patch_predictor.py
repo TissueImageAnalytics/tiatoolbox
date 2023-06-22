@@ -323,7 +323,8 @@ class PatchPredictor:
 
         # may crash here, do we need to deal with this ?
         output_shape = reader.slide_dimensions(
-            resolution=output["resolution"], units=output["units"]
+            resolution=output["resolution"],
+            units=output["units"],
         )
         output_shape = output_shape[::-1]  # XY to YX
         fx = np.array(canvas_shape) / np.array(output_shape)
@@ -405,7 +406,11 @@ class PatchPredictor:
 
         if self.verbose:
             pbar = tqdm.tqdm(
-                total=int(len(dataloader)), leave=True, ncols=80, ascii=True, position=0
+                total=int(len(dataloader)),
+                leave=True,
+                ncols=80,
+                ascii=True,
+                position=0,
             )
 
         # use external for testing
@@ -419,11 +424,13 @@ class PatchPredictor:
         }
         for _, batch_data in enumerate(dataloader):
             batch_output_probabilities = self.model.infer_batch(
-                model, batch_data["image"], on_gpu
+                model,
+                batch_data["image"],
+                on_gpu,
             )
             # We get the index of the class with the maximum probability
             batch_output_predictions = self.model.postproc_func(
-                batch_output_probabilities
+                batch_output_probabilities,
             )
 
             # tolist might be very expensive
@@ -492,7 +499,7 @@ class PatchPredictor:
         if self.ioconfig is None and any(config_flag):
             raise ValueError(
                 "Must provide either `ioconfig` or "
-                "`patch_input_shape`, `resolution`, and `units`."
+                "`patch_input_shape`, `resolution`, and `units`.",
             )
 
         if stride_shape is None:
@@ -587,14 +594,18 @@ class PatchPredictor:
 
         if labels and len(labels) != len(imgs):
             raise ValueError(
-                f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}"
+                f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}",
             )
 
         # don't return coordinates if patches are already extracted
         return_coordinates = False
         dataset = PatchDataset(imgs, labels)
         return self._predict_engine(
-            dataset, return_probabilities, return_labels, return_coordinates, on_gpu
+            dataset,
+            return_probabilities,
+            return_labels,
+            return_coordinates,
+            on_gpu,
         )
 
     def _predict_tile_wsi(
@@ -842,25 +853,33 @@ class PatchPredictor:
         """
         if mode not in ["patch", "wsi", "tile"]:
             raise ValueError(
-                f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
+                f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`",
             )
         if mode == "patch":
             return self._predict_patch(
-                imgs, labels, return_probabilities, return_labels, on_gpu
+                imgs,
+                labels,
+                return_probabilities,
+                return_labels,
+                on_gpu,
             )
 
         if not isinstance(imgs, list):
             raise ValueError(
-                "Input to `tile` and `wsi` mode must be a list of file paths."
+                "Input to `tile` and `wsi` mode must be a list of file paths.",
             )
 
         if mode == "wsi" and masks is not None and len(masks) != len(imgs):
             raise ValueError(
-                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}"
+                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}",
             )
 
         ioconfig = self._update_ioconfig(
-            ioconfig, patch_input_shape, stride_shape, resolution, units
+            ioconfig,
+            patch_input_shape,
+            stride_shape,
+            resolution,
+            units,
         )
         if mode == "tile":
             logger.warning(
@@ -872,7 +891,8 @@ class PatchPredictor:
             ioconfig = ioconfig.to_baseline()
 
         fx_list = ioconfig.scale_to_highest(
-            ioconfig.input_resolutions, ioconfig.input_resolutions[0]["units"]
+            ioconfig.input_resolutions,
+            ioconfig.input_resolutions[0]["units"],
         )
         fx_list = zip(fx_list, ioconfig.input_resolutions)
         fx_list = sorted(fx_list, key=lambda x: x[0])

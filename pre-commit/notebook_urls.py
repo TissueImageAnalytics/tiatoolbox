@@ -29,7 +29,7 @@ def git_branch_modified_paths(from_ref: str, to_ref: str) -> Set[Path]:
                 "diff",
                 "--name-only",
                 from_to,
-            ]
+            ],
         )
         .decode()
         .strip()
@@ -42,7 +42,7 @@ def git_previous_commit_modified_paths() -> Set[Path]:
     return {
         Path(p)
         for p in subprocess.check_output(
-            ["/usr/bin/git", "diff", "--name-only", "HEAD~"]
+            ["/usr/bin/git", "diff", "--name-only", "HEAD~"],
         )
         .decode()
         .strip()
@@ -159,7 +159,9 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
 
 
 def check_notebook(
-    path: Path, to_ref: str, replacements: List[PatternReplacement]
+    path: Path,
+    to_ref: str,
+    replacements: List[PatternReplacement],
 ) -> Tuple[bool, dict]:
     """Check the notebook for URL replacements.
 
@@ -230,7 +232,11 @@ if __name__ == "__main__":
         default=list(Path.cwd().rglob("*.ipynb")),
     )
     parser.add_argument(
-        "-f", "--from-ref", help="Reference to diff from", type=str, default="develop"
+        "-f",
+        "--from-ref",
+        help="Reference to diff from",
+        type=str,
+        default="develop",
     )
     parser.add_argument(
         "-t",

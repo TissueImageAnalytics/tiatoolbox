@@ -69,10 +69,13 @@ class StainNormalizer:
         """
         self.stain_matrix_target = self.extractor.get_stain_matrix(target)
         self.target_concentrations = self.get_concentrations(
-            target, self.stain_matrix_target
+            target,
+            self.stain_matrix_target,
         )
         self.maxC_target = np.percentile(
-            self.target_concentrations, 99, axis=0
+            self.target_concentrations,
+            99,
+            axis=0,
         ).reshape((1, 2))
         # useful to visualize.
         self.stain_matrix_target_RGB = od2rgb(self.stain_matrix_target)
@@ -94,7 +97,7 @@ class StainNormalizer:
         max_c_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
         source_concentrations *= self.maxC_target / max_c_source
         trans = 255 * np.exp(
-            -1 * np.dot(source_concentrations, self.stain_matrix_target)
+            -1 * np.dot(source_concentrations, self.stain_matrix_target),
         )
 
         # ensure between 0 and 255
@@ -381,7 +384,7 @@ def get_normalizer(method_name, stain_matrix=None):
 
     if stain_matrix is not None and method_name.lower() != "custom":
         raise ValueError(
-            '`stain_matrix` is only defined when using `method_name`="custom".'
+            '`stain_matrix` is only defined when using `method_name`="custom".',
         )
 
     if method_name.lower() == "reinhard":

@@ -80,7 +80,11 @@ class ResNetEncoder(ResNet):
         model = ResNetEncoder(ResNetBottleneck, downsampling_levels)
         if num_input_channels != 3:
             model.conv1 = nn.Conv2d(  # skipcq: PYL-W0201
-                num_input_channels, 64, 7, stride=2, padding=3
+                num_input_channels,
+                64,
+                7,
+                stride=2,
+                padding=3,
             )
         return model
 
@@ -141,8 +145,8 @@ class UnetEncoder(nn.Module):
                             nn.ReLU(),
                         ),
                         nn.AvgPool2d(2, stride=2),
-                    ]
-                )
+                    ],
+                ),
             )
             input_channels = output_channels
 
@@ -201,7 +205,7 @@ def create_block(pre_activation, kernels, input_ch, output_ch):
                         padding=int((ksize - 1) // 2),  # same padding
                         bias=False,
                     ),
-                ]
+                ],
             )
         else:
             layers.extend(
@@ -215,7 +219,7 @@ def create_block(pre_activation, kernels, input_ch, output_ch):
                     ),
                     nn.BatchNorm2d(output_ch),
                     nn.ReLU(),
-                ]
+                ],
             )
         input_ch = output_ch
     return layers
@@ -413,7 +417,10 @@ class UNetModel(ModelABC):
             logits = model(imgs)
             probs = F.softmax(logits, 1)
             probs = F.interpolate(
-                probs, scale_factor=2, mode="bilinear", align_corners=False
+                probs,
+                scale_factor=2,
+                mode="bilinear",
+                align_corners=False,
             )
             probs = centre_crop(probs, crop_shape)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC

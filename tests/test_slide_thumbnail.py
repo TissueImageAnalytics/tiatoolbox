@@ -92,7 +92,10 @@ def test_command_line_jp2_slide_thumbnail_mode_show(sample_jp2, tmp_path):
     runner = CliRunner()
 
     command_line_slide_thumbnail(
-        runner, sample=sample_jp2, tmp_path=tmp_path, mode="show"
+        runner,
+        sample=sample_jp2,
+        tmp_path=tmp_path,
+        mode="show",
     )
 
 

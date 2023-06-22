@@ -44,7 +44,7 @@ def _normalize_binaryio(
         return BytesIO(file)
     raise TypeError(
         "Input must be a str, Path, bytes, or BinaryIO. "
-        f"Recieved {type(file).__name__}."
+        f"Recieved {type(file).__name__}.",
     )
 
 

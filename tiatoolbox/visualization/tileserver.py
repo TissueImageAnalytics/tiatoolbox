@@ -54,7 +54,7 @@ class TileServer(Flask):
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
-                Path("visualization") / "templates"
+                Path("visualization") / "templates",
             ),
             static_url_path="",
             static_folder=data._local_sample_path(Path("visualization") / "static"),
@@ -84,7 +84,7 @@ class TileServer(Flask):
 
         self.route(
             "/layer/<layer>/zoomify/TileGroup<int:tile_group>/"
-            "<int:z>-<int:x>-<int:y>.jpg"
+            "<int:z>-<int:x>-<int:y>.jpg",
         )(
             self.zoomify,
         )
@@ -112,7 +112,9 @@ class TileServer(Flask):
             elif layer_path.suffix == ".db":
                 # Assume it's an annotation store.
                 layer = AnnotationTileGenerator(
-                    meta, SQLiteStore(layer_path), self.renderer
+                    meta,
+                    SQLiteStore(layer_path),
+                    self.renderer,
                 )
             elif layer_path.suffix == ".geojson":
                 # Assume annotations in geojson format
@@ -133,7 +135,12 @@ class TileServer(Flask):
         return layer
 
     def zoomify(
-        self, layer: str, tile_group: int, z: int, x: int, y: int  # skipcq: PYL-w0613
+        self,
+        layer: str,
+        tile_group: int,
+        z: int,
+        x: int,
+        y: int,  # skipcq: PYL-w0613
     ) -> Response:
         """Serve a Zoomify tile for a particular layer.
 
@@ -190,5 +197,7 @@ class TileServer(Flask):
         ]
 
         return render_template(
-            "index.html", title=self.tia_title, layers=json.dumps(layers)
+            "index.html",
+            title=self.tia_title,
+            layers=json.dumps(layers),
         )

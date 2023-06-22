@@ -69,7 +69,10 @@ def main(files: list[Path]) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Lint notebook markdown files.")
     parser.add_argument(
-        "files", nargs="*", help="Notebook markdown files to lint.", type=Path
+        "files",
+        nargs="*",
+        help="Notebook markdown files to lint.",
+        type=Path,
     )
     args = parser.parse_args()
     main(sorted(args.files))

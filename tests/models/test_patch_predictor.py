@@ -80,7 +80,8 @@ def test_patch_dataset_list_imgs(tmp_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     os.makedirs(save_dir_path)
     np.save(
-        os.path.join(save_dir_path, "sample2.npy"), np.random.randint(0, 255, (4, 4, 3))
+        os.path.join(save_dir_path, "sample2.npy"),
+        np.random.randint(0, 255, (4, 4, 3)),
     )
     imgs = [
         os.path.join(save_dir_path, "sample2.npy"),
@@ -127,13 +128,15 @@ def test_patch_dataset_crash(tmp_path):
     # not supported input type
     imgs = {"a": np.random.randint(0, 255, (4, 4, 4))}
     with pytest.raises(
-        ValueError, match=r".*Input must be either a list/array of images.*"
+        ValueError,
+        match=r".*Input must be either a list/array of images.*",
     ):
         _ = PatchDataset(imgs)
 
     # ndarray of mixed dtype
     imgs = np.array(
-        [np.random.randint(0, 255, (4, 5, 3)), "Should crash"], dtype=object
+        [np.random.randint(0, 255, (4, 5, 3)), "Should crash"],
+        dtype=object,
     )
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
         _ = PatchDataset(imgs)
@@ -157,7 +160,8 @@ def test_patch_dataset_crash(tmp_path):
         np.random.randint(0, 255, (4, 4)),
     ]
     with pytest.raises(
-        ValueError, match="Each sample must be an array of the form HWC."
+        ValueError,
+        match="Each sample must be an array of the form HWC.",
     ):
         _ = PatchDataset(imgs)
 
@@ -193,7 +197,8 @@ def test_patch_dataset_crash(tmp_path):
     os.makedirs(save_dir_path)
     torch.save({"a": "a"}, os.path.join(save_dir_path, "sample1.tar"))
     np.save(
-        os.path.join(save_dir_path, "sample2.npy"), np.random.randint(0, 255, (4, 4, 3))
+        os.path.join(save_dir_path, "sample2.npy"),
+        np.random.randint(0, 255, (4, 4, 3)),
     )
 
     imgs = [
@@ -244,7 +249,8 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
             pass
 
     with pytest.raises(
-        ValueError, match=r".*`inputs` should be a list of patch coordinates.*"
+        ValueError,
+        match=r".*`inputs` should be a list of patch coordinates.*",
     ):
         Proto()  # skipcq
 
@@ -279,31 +285,37 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     with pytest.raises(ValueError, match="Invalid `patch_input_shape` value None."):
         reuse_init()
     with pytest.raises(
-        ValueError, match=r"Invalid `patch_input_shape` value \[512 512 512\]."
+        ValueError,
+        match=r"Invalid `patch_input_shape` value \[512 512 512\].",
     ):
         reuse_init_wsi(patch_input_shape=[512, 512, 512])
     with pytest.raises(
-        ValueError, match=r"Invalid `patch_input_shape` value \['512' 'a'\]."
+        ValueError,
+        match=r"Invalid `patch_input_shape` value \['512' 'a'\].",
     ):
         reuse_init_wsi(patch_input_shape=[512, "a"])
     with pytest.raises(ValueError, match="Invalid `stride_shape` value None."):
         reuse_init_wsi(patch_input_shape=512)
     # invalid stride
     with pytest.raises(
-        ValueError, match=r"Invalid `stride_shape` value \['512' 'a'\]."
+        ValueError,
+        match=r"Invalid `stride_shape` value \['512' 'a'\].",
     ):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, "a"])
     with pytest.raises(
-        ValueError, match=r"Invalid `stride_shape` value \[512 512 512\]."
+        ValueError,
+        match=r"Invalid `stride_shape` value \[512 512 512\].",
     ):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, 512, 512])
     # negative
     with pytest.raises(
-        ValueError, match=r"Invalid `patch_input_shape` value \[ 512 -512\]."
+        ValueError,
+        match=r"Invalid `patch_input_shape` value \[ 512 -512\].",
     ):
         reuse_init_wsi(patch_input_shape=[512, -512], stride_shape=[512, 512])
     with pytest.raises(
-        ValueError, match=r"Invalid `stride_shape` value \[ 512 -512\]."
+        ValueError,
+        match=r"Invalid `stride_shape` value \[ 512 -512\].",
     ):
         reuse_init_wsi(patch_input_shape=[512, 512], stride_shape=[512, -512])
 
@@ -326,7 +338,10 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     start = (step_idx * stride_size[1], 0)
     end = (start[0] + patch_size[0], start[1] + patch_size[1])
     rd_roi = reader.read_bounds(
-        start + end, resolution=1.0, units="mpp", coord_space="resolution"
+        start + end,
+        resolution=1.0,
+        units="mpp",
+        coord_space="resolution",
     )
     correlation = np.corrcoef(
         cv2.cvtColor(ds_roi, cv2.COLOR_RGB2GRAY).flatten(),
@@ -384,7 +399,10 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     start = (step_idx * stride_size[1], 0)
     end = (start[0] + patch_size[0], start[1] + patch_size[1])
     roi2 = reader.read_bounds(
-        start + end, resolution=1.0, units="baseline", coord_space="resolution"
+        start + end,
+        resolution=1.0,
+        units="baseline",
+        coord_space="resolution",
     )
     roi1 = tile_ds[3]["image"]  # match with step_index
     correlation = np.corrcoef(
@@ -540,7 +558,11 @@ def test_io_config_delegation(remote_sample, tmp_path):
     _rm_dir(f"{tmp_path}/dump")
 
     predictor.predict(
-        [mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump", on_gpu=ON_GPU, **kwargs
+        [mini_wsi_svs],
+        mode="wsi",
+        save_dir=f"{tmp_path}/dump",
+        on_gpu=ON_GPU,
+        **kwargs,
     )
     _rm_dir(f"{tmp_path}/dump")
 
@@ -819,7 +841,10 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
         "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
     }
     merged = PatchPredictor.merge_predictions(
-        np.zeros([4, 4]), output, resolution=1.0, units="baseline"
+        np.zeros([4, 4]),
+        output,
+        resolution=1.0,
+        units="baseline",
     )
     _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
     assert np.sum(merged - _merged) == 0
@@ -833,7 +858,12 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict):
         return_raw=True,
     )
     _merged = np.array(
-        [[0.45, 0.45, 0, 0], [0.45, 0.45, 0, 0], [0, 0, 0.90, 0.90], [0, 0, 0.90, 0.90]]
+        [
+            [0.45, 0.45, 0, 0],
+            [0.45, 0.45, 0, 0],
+            [0, 0, 0.90, 0.90],
+            [0, 0, 0.90, 0.90],
+        ],
     )
     assert merged.shape == (4, 4, 2)
     assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
@@ -903,7 +933,9 @@ def _test_predictor_output(
 ):
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = PatchPredictor(
-        pretrained_model=pretrained_model, batch_size=32, verbose=False
+        pretrained_model=pretrained_model,
+        batch_size=32,
+        verbose=False,
     )
     # don't run test on GPU
     output = predictor.predict(

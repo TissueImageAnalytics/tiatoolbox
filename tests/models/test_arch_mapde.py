@@ -31,7 +31,10 @@ def test_functionality(remote_sample, tmp_path):
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (0, 0, 252, 252), resolution=0.50, units="mpp", coord_space="resolution"
+        (0, 0, 252, 252),
+        resolution=0.50,
+        units="mpp",
+        coord_space="resolution",
     )
 
     model = _load_mapde(tmp_path=tmp_path, name="mapde-crchisto")

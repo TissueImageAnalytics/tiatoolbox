@@ -77,7 +77,7 @@ def find_imports(py_source_path: Path) -> List[str]:
 
     """
     with open(  # This file could be any python file anywhere, skipcq
-        py_source_path
+        py_source_path,
     ) as fh:
         source = fh.read()
     tree = ast.parse(source)
@@ -127,14 +127,14 @@ def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[str, str]]:
     if isinstance(node, ast.ImportFrom):
         return [(node.module, node.module.split(".")[0])]
     raise TypeError(
-        f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom."
+        f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom.",
     )
 
 
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Static analysis of requirements files and import statements."
+        description="Static analysis of requirements files and import statements.",
     )
     parser.add_argument(
         "files",
@@ -160,7 +160,9 @@ def main():
 
 
 def find_bad_imports(
-    root: Path, source_files: List[Path], requirements_path: Path
+    root: Path,
+    source_files: List[Path],
+    requirements_path: Path,
 ) -> List[Tuple[Union[ast.Import, ast.ImportFrom], ast.alias]]:
     """Find bad imports in the given requirements file.
 
@@ -208,7 +210,7 @@ def find_bad_imports(
                 print(
                     f"{path.relative_to(root)}:{node.lineno}:"
                     f" Import not in {requirements_path.name}:"
-                    f" {stem}" + (f" ({alias})" if alias != stem else "")
+                    f" {stem}" + (f" ({alias})" if alias != stem else ""),
                 )
     return result
 

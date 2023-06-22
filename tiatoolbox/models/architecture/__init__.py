@@ -112,7 +112,9 @@ def get_pretrained_model(
     if pretrained_weights is None:
         file_name = info["url"].split("/")[-1]
         pretrained_weights = os.path.join(
-            rcParam["TIATOOLBOX_HOME"], "models/", file_name
+            rcParam["TIATOOLBOX_HOME"],
+            "models/",
+            file_name,
         )
         fetch_pretrained_weights(pretrained_model, pretrained_weights, overwrite)
 

@@ -13,7 +13,8 @@ import yaml
 
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
-    "tiatoolbox", "data/remote_samples.yaml"
+    "tiatoolbox",
+    "data/remote_samples.yaml",
 )
 with open(SAMPLE_FILES_REGISTRY_PATH) as registry_handle:
     SAMPLE_FILES = yaml.safe_load(registry_handle)["files"]
@@ -22,7 +23,8 @@ __all__ = ["stain_norm_target"]
 
 
 def _fetch_remote_sample(
-    key: str, tmp_path: Optional[Union[str, pathlib.Path]] = None
+    key: str,
+    tmp_path: Optional[Union[str, pathlib.Path]] = None,
 ) -> pathlib.Path:
     """Get the path to a sample file, after downloading from remote if required.
 
@@ -99,7 +101,8 @@ def _local_sample_path(path: Union[str, pathlib.Path]) -> pathlib.Path:
 
     """
     return pkg_resources.resource_filename(
-        "tiatoolbox", str(pathlib.Path("data") / path)
+        "tiatoolbox",
+        str(pathlib.Path("data") / path),
     )
 
 

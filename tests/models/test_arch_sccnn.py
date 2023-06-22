@@ -31,7 +31,10 @@ def test_functionality(remote_sample, tmp_path):
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (30, 30, 61, 61), resolution=0.25, units="mpp", coord_space="resolution"
+        (30, 30, 61, 61),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = _load_sccnn(tmp_path=tmp_path, name="sccnn-crchisto")

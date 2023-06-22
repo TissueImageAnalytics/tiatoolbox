@@ -180,7 +180,8 @@ class MacenkoExtractor:
 
         # convert to OD and ignore background
         tissue_mask = get_luminosity_tissue_mask(
-            img, threshold=luminosity_threshold
+            img,
+            threshold=luminosity_threshold,
         ).reshape((-1,))
         img_od = rgb2od(img).reshape((-1, 3))
         img_od = img_od[tissue_mask]
@@ -262,7 +263,8 @@ class VahadaneExtractor:
         regularizer = self.__regularizer
         # convert to OD and ignore background
         tissue_mask = get_luminosity_tissue_mask(
-            img, threshold=luminosity_threshold
+            img,
+            threshold=luminosity_threshold,
         ).reshape((-1,))
         img_od = rgb2od(img).reshape((-1, 3))
         img_od = img_od[tissue_mask]

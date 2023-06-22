@@ -25,7 +25,10 @@ def test_stainaugment(source_image, norm_vahadane):
     # 1. Testing without stain matrix.
     # Test with macenko stain extractor
     augmentor = StainAugmentor(
-        method="macenko", sigma1=3.0, sigma2=3.0, augment_background=True
+        method="macenko",
+        sigma1=3.0,
+        sigma2=3.0,
+        augment_background=True,
     )
     augmentor.fit(source_img)
     source_img_aug = augmentor.augment()
@@ -64,7 +67,7 @@ def test_stainaugment(source_image, norm_vahadane):
                 sigma1=0.0,
                 sigma2=0.0,
                 always_apply=True,
-            )
+            ),
         ],
         p=1,
     )

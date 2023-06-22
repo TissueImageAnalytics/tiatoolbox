@@ -50,7 +50,7 @@ def normalize_padding_size(padding):
     padding_shape = np.shape(padding)
     if len(padding_shape) > 1:
         raise ValueError(
-            "Invalid input padding shape. Must be scalar or 1 dimensional."
+            "Invalid input padding shape. Must be scalar or 1 dimensional.",
         )
     padding_size = np.size(padding)
     if padding_size == 3:
@@ -548,7 +548,8 @@ def sub_pixel_read(  # noqa: C901
     bounds, fliplr, flipud = make_bounds_size_positive(bounds)
     if fliplr or flipud:
         logger.warning(
-            "Bounds have a negative size, output will be flipped.", stacklevel=2
+            "Bounds have a negative size, output will be flipped.",
+            stacklevel=2,
         )
 
     if isinstance(image, Image.Image):
@@ -568,7 +569,7 @@ def sub_pixel_read(  # noqa: C901
     if pad_mode is None:
         output_size = np.round(
             bounds2locsize(find_overlap(*bounds2locsize(bounds), image_size))[1]
-            * scaling
+            * scaling,
         ).astype(int)
 
     overlap_bounds = find_overlap(*bounds2locsize(bounds), image_size=image_size)
@@ -591,12 +592,13 @@ def sub_pixel_read(  # noqa: C901
         [
             np.floor(start),
             np.ceil(end),
-        ]
+        ],
     )
     residuals = np.abs(int_read_bounds - read_bounds)
     read_bounds = int_read_bounds
     valid_int_bounds = find_overlap(
-        *bounds2locsize(int_read_bounds), image_size
+        *bounds2locsize(int_read_bounds),
+        image_size,
     ).astype(int)
 
     # 1 Read the region
@@ -640,8 +642,8 @@ def sub_pixel_read(  # noqa: C901
             pad_bounds(
                 locsize2bounds((0, 0), region_size),
                 (-(interpolation_padding + residuals) * np.tile(scaling, 2)),
-            )
-        )
+            ),
+        ),
     )
     region = region[trimming + (...,)]
     region_size = region.shape[:2][::-1]
@@ -650,13 +652,15 @@ def sub_pixel_read(  # noqa: C901
         total_padding_per_axis = padding.reshape(2, 2).sum(axis=0)
         if pad_at_baseline:
             output_size = np.round(
-                np.add(output_size, total_padding_per_axis * scaling)
+                np.add(output_size, total_padding_per_axis * scaling),
             ).astype(int)
         else:
             output_size = np.add(output_size, total_padding_per_axis)
         if not np.array_equal(region_size, output_size):
             region = imresize(
-                region, output_size=tuple(output_size), interpolation=interpolation
+                region,
+                output_size=tuple(output_size),
+                interpolation=interpolation,
             )
     # 5 Apply flips to account for negative bounds
     if fliplr:

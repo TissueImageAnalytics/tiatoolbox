@@ -57,7 +57,7 @@ def predefined_preproc_func(dataset_name):
 
     if dataset_name not in preproc_dict:
         raise ValueError(
-            f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
+            f"Predefined preprocessing for dataset `{dataset_name}` does not exist.",
         )
 
     preprocs = preproc_dict[dataset_name]

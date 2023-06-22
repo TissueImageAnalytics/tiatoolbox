@@ -253,7 +253,9 @@ class MapDe(MicroNet):
 
     @staticmethod
     def infer_batch(
-        model: torch.nn.Module, batch_data: np.ndarray, on_gpu: bool
+        model: torch.nn.Module,
+        batch_data: np.ndarray,
+        on_gpu: bool,
     ) -> np.ndarray:
         """Run inference on an input batch.
 

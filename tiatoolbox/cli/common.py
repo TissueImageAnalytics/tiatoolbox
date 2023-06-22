@@ -6,7 +6,8 @@ import click
 
 
 def add_default_to_usage_help(
-    usage_help: str, default: str or int or float or bool
+    usage_help: str,
+    default: str or int or float or bool,
 ) -> str:
     """Adds default value to usage help string.
 
@@ -110,7 +111,8 @@ def cli_units(
     """Enables --units option for cli."""
     if input_type is None:
         input_type = click.Choice(
-            ["mpp", "power", "level", "baseline"], case_sensitive=False
+            ["mpp", "power", "level", "baseline"],
+            case_sensitive=False,
         )
     return click.option(
         "--units",
@@ -121,7 +123,8 @@ def cli_units(
 
 
 def cli_resolution(
-    usage_help: str = "Image resolution to read the image.", default: float = 0
+    usage_help: str = "Image resolution to read the image.",
+    default: float = 0,
 ) -> callable:
     """Enables --resolution option for cli."""
     return click.option(
@@ -133,7 +136,8 @@ def cli_resolution(
 
 
 def cli_tile_objective(
-    usage_help: str = "Objective value for the saved tiles.", default: int = 20
+    usage_help: str = "Objective value for the saved tiles.",
+    default: int = 20,
 ) -> callable:
     """Enables --tile-objective-value option for cli."""
     return click.option(
@@ -314,7 +318,8 @@ def cli_yaml_config_path(
 
 
 def cli_on_gpu(
-    usage_help: str = "Run the model on GPU.", default: bool = False
+    usage_help: str = "Run the model on GPU.",
+    default: bool = False,
 ) -> callable:
     """Enables --on-gpu option for cli."""
     return click.option(
@@ -353,7 +358,8 @@ def cli_num_postproc_workers(
 
 
 def cli_verbose(
-    usage_help: str = "Prints the console output.", default: bool = True
+    usage_help: str = "Prints the console output.",
+    default: bool = True,
 ) -> callable:
     """Enables --verbose option for cli."""
     return click.option(
@@ -374,7 +380,8 @@ class TIAToolboxCLI(click.Group):
 
 
 def no_input_message(
-    input_file: str or pathlib.Path = None, message: str = "No image input provided.\n"
+    input_file: str or pathlib.Path = None,
+    message: str = "No image input provided.\n",
 ) -> None:
     """This function is called if no input is provided.
 

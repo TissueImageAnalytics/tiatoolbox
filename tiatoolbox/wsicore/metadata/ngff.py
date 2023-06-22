@@ -108,7 +108,7 @@ class Dataset:
 
     path: str = "0"
     coordinateTransformations: List[CoordinateTransform] = field(  # noqa: N815
-        default_factory=lambda: [CoordinateTransform()]
+        default_factory=lambda: [CoordinateTransform()],
     )
 
 
@@ -148,7 +148,7 @@ class Multiscales:
             Axis("y", "space", "micrometer"),
             Axis("x", "space", "micrometer"),
             Axis("c", "channel", None),
-        ]
+        ],
     )
     datasets: List[Dataset] = field(default_factory=lambda: [Dataset()])
     version: str = "0.4"
@@ -240,7 +240,7 @@ class Omero:
             Channel(label="Red", color="FF0000"),
             Channel(label="Green", color="00FF00"),
             Channel(label="Blue", color="0000FF"),
-        ]
+        ],
     )
     rdefs: RDefs = field(default_factory=RDefs)
     version: str = "0.4"
@@ -262,7 +262,7 @@ class Zattrs:
 
     _creator: Creator = field(default_factory=Creator)
     multiscales: Union[Multiscales, List[Multiscales]] = field(
-        default_factory=lambda: [Multiscales()]
+        default_factory=lambda: [Multiscales()],
     )
     _ARRAY_DIMENSIONS: List[TCZYX] = field(default_factory=lambda: ["y", "x", "c"])
     omero: Omero = field(default_factory=Omero)

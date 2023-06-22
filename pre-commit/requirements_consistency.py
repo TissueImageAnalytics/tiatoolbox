@@ -17,7 +17,8 @@ REQUIREMENTS_FILES = [
 
 
 def parse_pip(
-    file_path: Path = None, lines: List[str] = None
+    file_path: Path = None,
+    lines: List[str] = None,
 ) -> Dict[str, Requirement]:
     """Parse a pip requirements file.
 
@@ -55,7 +56,7 @@ def parse_pip(
         # Check for duplicate packages
         if requirement.key in packages:
             raise ValueError(
-                f"Duplicate dependency: {requirement.name} in {file_path.name}"
+                f"Duplicate dependency: {requirement.name} in {file_path.name}",
             )
         packages[requirement.key] = requirement
     return packages
@@ -89,7 +90,7 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
         # Check for duplicate packages
         if requirement.key in packages:
             raise ValueError(
-                f"Duplicate dependency: {requirement.key} in {file_path.name}"
+                f"Duplicate dependency: {requirement.key} in {file_path.name}",
             )
         packages[requirement.key] = requirement
     return packages
@@ -144,7 +145,8 @@ def test_files_exist(root_dir: Path) -> None:
 
 
 def parse_requirements(
-    file_path: Path = None, lines: List[str] = None
+    file_path: Path = None,
+    lines: List[str] = None,
 ) -> Dict[str, Tuple[str, Tuple[str, ...], str]]:
     """Parse a requirements file (pip or conda).
 
@@ -214,7 +216,7 @@ def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -
         formatted_reqs = [f"{c}{v} ({p.name})" for p, c, v in zipped_file_specs]
         if any(x != constraints[0] for x in constraints):
             print(
-                f"{key} has inconsistent constraints:" f" {', '.join(formatted_reqs)}."
+                f"{key} has inconsistent constraints:" f" {', '.join(formatted_reqs)}.",
             )
             consistent = False
         if any(x != versions[0] for x in versions):

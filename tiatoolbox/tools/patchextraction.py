@@ -142,13 +142,17 @@ class PatchExtractor(PatchExtractorABC):
                 self.mask = None
             else:
                 self.mask = self.wsi.tissue_mask(
-                    method=input_mask, resolution=1.25, units="power"
+                    method=input_mask,
+                    resolution=1.25,
+                    units="power",
                 )
         elif isinstance(input_mask, wsireader.VirtualWSIReader):
             self.mask = input_mask
         else:
             self.mask = wsireader.VirtualWSIReader(
-                input_mask, info=self.wsi.info, mode="bool"
+                input_mask,
+                info=self.wsi.info,
+                mode="bool",
             )
         self.within_bound = within_bound
 
@@ -271,7 +275,8 @@ class PatchExtractor(PatchExtractorABC):
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
             raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
         if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
-            coordinates_list.dtype, np.integer
+            coordinates_list.dtype,
+            np.integer,
         ):
             raise ValueError("`coordinates_list` should be ndarray of integer type.")
         if coordinates_list.shape[-1] != 4:
@@ -288,11 +293,15 @@ class PatchExtractor(PatchExtractorABC):
         scaled_coords = coordinates_list.copy().astype(np.float32)
         scaled_coords[:, [0, 2]] *= scale_factors[0]
         scaled_coords[:, [0, 2]] = np.clip(
-            scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
+            scaled_coords[:, [0, 2]],
+            0,
+            tissue_mask.shape[1],
         )
         scaled_coords[:, [1, 3]] *= scale_factors[1]
         scaled_coords[:, [1, 3]] = np.clip(
-            scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
+            scaled_coords[:, [1, 3]],
+            0,
+            tissue_mask.shape[0],
         )
         scaled_coords = list(np.int32(scaled_coords))
 
@@ -396,14 +405,14 @@ class PatchExtractor(PatchExtractorABC):
             raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
         if validate_shape(patch_output_shape):
             raise ValueError(
-                f"Invalid `patch_output_shape` value {patch_output_shape}."
+                f"Invalid `patch_output_shape` value {patch_output_shape}.",
             )
         if validate_shape(stride_shape):
             raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
         if np.any(patch_input_shape < patch_output_shape):
             raise ValueError(
                 f"`patch_input_shape` must larger than `patch_output_shape`"
-                f" {patch_input_shape} must > {patch_output_shape}."
+                f" {patch_input_shape} must > {patch_output_shape}.",
             )
         if np.any(stride_shape < 1):
             raise ValueError(f"`stride_shape` value {stride_shape} must > 1.")
@@ -436,10 +445,12 @@ class PatchExtractor(PatchExtractorABC):
             sel |= np.any(input_tl_list < 0, axis=1)
         ####
         input_bound_list = np.concatenate(
-            [input_tl_list[~sel], input_br_list[~sel]], axis=-1
+            [input_tl_list[~sel], input_br_list[~sel]],
+            axis=-1,
         )
         output_bound_list = np.concatenate(
-            [output_tl_list[~sel], output_br_list[~sel]], axis=-1
+            [output_tl_list[~sel], output_br_list[~sel]],
+            axis=-1,
         )
         if return_output_bound:
             return input_bound_list, output_bound_list
@@ -603,10 +614,10 @@ class PointsPatchExtractor(PatchExtractor):
 
         self.locations_df = misc.read_locations(input_table=locations_list)
         self.locations_df["x"] = self.locations_df["x"] - int(
-            (self.patch_size[1] - 1) / 2
+            (self.patch_size[1] - 1) / 2,
         )
         self.locations_df["y"] = self.locations_df["y"] - int(
-            (self.patch_size[1] - 1) / 2
+            (self.patch_size[1] - 1) / 2,
         )
 
 
@@ -645,7 +656,7 @@ def get_patch_extractor(
     """
     if method_name.lower() not in ["point", "slidingwindow"]:
         raise MethodNotSupportedError(
-            f"{method_name.lower()} method is not currently supported."
+            f"{method_name.lower()} method is not currently supported.",
         )
 
     if method_name.lower() == "point":

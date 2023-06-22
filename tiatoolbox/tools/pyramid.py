@@ -84,7 +84,7 @@ class TilePyramidGenerator:
         """
         baseline_dims = self.wsi.info.slide_dimensions
         level_dims = np.ceil(
-            np.divide(baseline_dims, self.level_downsample(level))
+            np.divide(baseline_dims, self.level_downsample(level)),
         ).astype(int)
         return tuple(level_dims)
 
@@ -99,7 +99,9 @@ class TilePyramidGenerator:
         if level < 0 or level >= self.level_count:
             raise IndexError("Invalid level.")
         return tuple(
-            np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(int)
+            np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(
+                int,
+            ),
         )
 
     @property
@@ -133,7 +135,9 @@ class TilePyramidGenerator:
         out_dims = np.round(slide_dims / slide_dims.max() * tile_dim).astype(int)
         bounds = (0, 0, *slide_dims)
         thumb = self.wsi.read_bounds(
-            bounds, resolution=self.wsi.info.level_count - 1, units="level"
+            bounds,
+            resolution=self.wsi.info.level_count - 1,
+            units="level",
         )
         thumb = imresize(thumb, output_size=out_dims)
         return Image.fromarray(thumb)
@@ -245,7 +249,10 @@ class TilePyramidGenerator:
         raise NotImplementedError
 
     def dump(  # noqa: CCR001
-        self, path: Union[str, Path], container=None, compression=None
+        self,
+        path: Union[str, Path],
+        container=None,
+        compression=None,
     ):
         """Write all tiles to disk.
 
@@ -302,7 +309,9 @@ class TilePyramidGenerator:
                 raise ValueError("Unsupported compression for zip.")
 
             archive = zipfile.ZipFile(
-                path, mode="w", compression=compression2enum[compression]
+                path,
+                mode="w",
+                compression=compression2enum[compression],
             )
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
@@ -489,7 +498,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         output_size = [self.output_tile_size] * 2
         self.empty_img = Image.fromarray(
-            np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8)
+            np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8),
         )
         if self.renderer.mapper == "categorical":
             # get the possible categories for given score_prop from store
@@ -522,7 +531,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         """
         baseline_dims = self.info.slide_dimensions
         level_dims = np.ceil(
-            np.divide(baseline_dims, self.level_downsample(level))
+            np.divide(baseline_dims, self.level_downsample(level)),
         ).astype(int)
         return tuple(level_dims)
 
@@ -610,7 +619,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         bounds = locsize2bounds(coord, [self.output_tile_size * scale] * 2)
         tile = self.renderer.render_annotations(
-            self.store, bounds, scale, res, self.overlap
+            self.store,
+            bounds,
+            scale,
+            res,
+            self.overlap,
         )
 
         return Image.fromarray(tile)
