@@ -24,7 +24,7 @@ from PIL import Image
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import pixman_warning
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
@@ -282,7 +282,7 @@ class WSIReader:
 
         if last_suffix in (".zarr",):
             if not is_ngff(input_path):
-                raise FileNotSupported(
+                raise FileNotSupportedError(
                     f"File {input_path} does not appear to be a v0.4 NGFF zarr."
                 )
             return NGFFWSIReader(input_path, mpp=mpp, power=power)
@@ -352,7 +352,9 @@ class WSIReader:
             ".zarr",
             ".db",
         ]:
-            raise FileNotSupported(f"File {input_path} is not a supported file format.")
+            raise FileNotSupportedError(
+                f"File {input_path} is not a supported file format."
+            )
 
     def __init__(
         self,

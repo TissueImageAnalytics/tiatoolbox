@@ -30,7 +30,7 @@ from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils import imread
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
@@ -1390,7 +1390,7 @@ def test_wsireader_open(
     sample_svs, sample_ndpi, sample_jp2, sample_ome_tiff, source_image
 ):
     """Test WSIReader.open() to return correct object."""
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         _ = WSIReader.open("./sample.csv")
 
     with pytest.raises(TypeError):
@@ -1722,7 +1722,7 @@ def test_command_line_unsupported_file_read_bounds(sample_svs, tmp_path):
 
     assert read_bounds_result.output == ""
     assert read_bounds_result.exit_code == 1
-    assert isinstance(read_bounds_result.exception, FileNotSupported)
+    assert isinstance(read_bounds_result.exception, FileNotSupportedError)
 
 
 def test_openslide_read_rect_edge_reflect_padding(sample_svs):
@@ -1927,7 +1927,7 @@ def test_is_ngff_regular_zarr(tmp_path):
     assert not is_ngff(zarr_path)
 
     # check we get the appropriate error message if we open it
-    with pytest.raises(FileNotSupported, match="does not appear to be a v0.4"):
+    with pytest.raises(FileNotSupportedError, match="does not appear to be a v0.4"):
         WSIReader.open(zarr_path)
 
 
@@ -2159,7 +2159,7 @@ def test_ngff_omero_below_min_version(tmp_path):
     zattrs["omero"]["version"] = "0.0"
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
 
 
@@ -2193,7 +2193,7 @@ def test_ngff_multiscales_below_min_version(tmp_path):
     zattrs["multiscales"][0]["version"] = "0.0"
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
 
 
@@ -2264,7 +2264,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
     with open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     # Capture logger output to check for warning
-    with caplog.at_level(logging.WARNING), pytest.raises(FileNotSupported):
+    with caplog.at_level(logging.WARNING), pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
     assert "multiple versions" in caplog.text
 

@@ -8,7 +8,7 @@ from tiatoolbox.tools.stainextract import (
     RuifrokExtractor,
     VahadaneExtractor,
 )
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupportedError
 from tiatoolbox.utils.misc import load_stain_matrix
 from tiatoolbox.utils.transforms import od2rgb, rgb2od
 
@@ -377,7 +377,7 @@ def get_normalizer(method_name, stain_matrix=None):
         "vahadane",
         "custom",
     ]:
-        raise MethodNotSupported
+        raise MethodNotSupportedError
 
     if stain_matrix is not None and method_name.lower() != "custom":
         raise ValueError(

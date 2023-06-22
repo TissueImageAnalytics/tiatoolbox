@@ -8,7 +8,7 @@ from pandas import DataFrame
 
 from tiatoolbox import logger
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupportedError
 from tiatoolbox.wsicore import wsireader
 from tiatoolbox.wsicore.wsimeta import Resolution, Units
 
@@ -646,7 +646,7 @@ def get_patch_extractor(
 
     """
     if method_name.lower() not in ["point", "slidingwindow"]:
-        raise MethodNotSupported(
+        raise MethodNotSupportedError(
             f"{method_name.lower()} method is not currently supported."
         )
 

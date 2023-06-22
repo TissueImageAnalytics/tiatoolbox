@@ -19,7 +19,7 @@ from skimage import exposure
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 
 def split_path_name_ext(full_path):
@@ -196,7 +196,7 @@ def load_stain_matrix(stain_matrix_input):
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
-            raise FileNotSupported(
+            raise FileNotSupportedError(
                 "If supplying a path to a stain matrix, use either a \
                 npy or a csv file"
             )
@@ -474,7 +474,7 @@ def read_locations(input_table):
             out_table = pd.read_json(input_table)
             return __assign_unknown_class(out_table)
 
-        raise FileNotSupported("File type not supported.")
+        raise FileNotSupportedError("File type not supported.")
 
     if isinstance(input_table, np.ndarray):
         return __numpy_array_to_table(input_table)

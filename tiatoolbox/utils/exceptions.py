@@ -1,7 +1,7 @@
 """Custom Errors and Exceptions for TIAToolbox."""
 
 
-class FileNotSupported(Exception):
+class FileNotSupportedError(Exception):
     """Raise No supported file found error."""
 
     def __init__(self, message="File format is not supported"):
@@ -9,7 +9,7 @@ class FileNotSupported(Exception):
         super().__init__(self.message)
 
 
-class MethodNotSupported(Exception):
+class MethodNotSupportedError(Exception):
     """Raise No supported file found error."""
 
     def __init__(self, message="Method is not supported"):
