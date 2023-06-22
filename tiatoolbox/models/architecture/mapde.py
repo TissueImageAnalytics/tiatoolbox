@@ -227,7 +227,7 @@ class MapDe(MicroNet):
         out = F.conv2d(logits, self.dist_filter, padding="same")
         return F.relu(out)
 
-    #  skipcq: PYL-W0221  # noqa: E800
+    #  skipcq: PYL-W0221  # noqa: E800, ERA001
     def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 
