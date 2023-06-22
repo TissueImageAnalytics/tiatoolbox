@@ -75,26 +75,8 @@ repos:
         additional_dependencies: ['click==8.0.4']  # Currently >8.0.4 breaks black
       - id: black-jupyter
         language: python
-  - repo: https://github.com/PyCQA/flake8
-    rev: 5.0.4
-    hooks:
-      - id: flake8
-        additional_dependencies: [
-          flake8-bugbear, # Detect potential bugs
-          flake8-builtins, # Check for built-ins being used as variables
-          flake8-cognitive-complexity, # Check max function complexity
-          flake8-comprehensions, # Suggestions for better list/set/dict comprehensions
-          flake8-eradicate, # Find dead/commented out code
-          flake8-expression-complexity, # Check max expression complexity
-          flake8-fixme, # Check for FIXME, TODO, and XXX left in comments
-          flake8-isort, # Check import ordering
-          flake8-logging-format, # Validate (lack of) logging format strings
-          flake8-mutable, # Check for mutable default arguments
-          flake8-pie, # Misc. linting rules
-          flake8-pytest-style, # Check against pytest style guide
-          flake8-return, # Check return statements
-          flake8-simplify, # Suggestions to simplify code
-          flake8-spellcheck, # Spelling checker
-          flake8-use-fstring, # Encourages use of f-strings vs old style
-          pep8-naming, # Check PEP8 class naming
-        ]
+  -   repo: https://github.com/astral-sh/ruff-pre-commit
+      # Ruff version.
+      rev: v0.0.274
+      hooks:
+          -   id: ruff
