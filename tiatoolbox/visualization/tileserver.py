@@ -137,10 +137,10 @@ class TileServer(Flask):
     def zoomify(
         self,
         layer: str,
-        tile_group: int,
+        tile_group: int,  # skipcq: PYL-W0613
         z: int,
         x: int,
-        y: int,  # skipcq: PYL-w0613
+        y: int,
     ) -> Response:
         """Serve a Zoomify tile for a particular layer.
 
