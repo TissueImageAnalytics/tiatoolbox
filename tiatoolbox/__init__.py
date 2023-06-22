@@ -46,7 +46,7 @@ else:
 
 
 class DuplicateFilter(logging.Filter):
-    def filter(self, record):
+    def filter(self, record):  # noqa: A003
         current_log = (record.module, record.levelno, record.msg)
         if current_log != getattr(self, "last_log", None):
             self.last_log = current_log
@@ -55,7 +55,9 @@ class DuplicateFilter(logging.Filter):
 
 
 # runtime context parameters
-rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
+rcParam = {  # noqa: N816
+    "TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")
+}
 
 # Load a dictionary of sample files data (names and urls)
 PRETRAINED_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
