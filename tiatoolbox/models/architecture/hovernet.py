@@ -239,10 +239,7 @@ class ResidualBlock(nn.Module):
 
     def forward(self, prev_feat: torch.Tensor):
         """Logic for using layers defined in init."""
-        if self.shortcut is None:
-            shortcut = prev_feat
-        else:
-            shortcut = self.shortcut(prev_feat)
+        shortcut = prev_feat if self.shortcut is None else self.shortcut(prev_feat)
 
         for _, unit in enumerate(self.units):
             new_feat = prev_feat
@@ -689,7 +686,7 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221  # noqa: E800
+    # skipcq: PYL-W0221  # noqa: E800, ERA001
     def postproc(raw_maps: List[np.ndarray]):
         """Post-processing script for image tiles.
 

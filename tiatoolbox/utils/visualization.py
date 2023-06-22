@@ -610,10 +610,8 @@ class AnnotationRenderer:
                 A color tuple (rgba).
 
         """
-        if edge:
-            score_prop = self.score_prop_edge
-        else:
-            score_prop = self.score_prop
+        score_prop = self.score_prop_edge if edge else self.score_prop
+
         try:
             if (
                 self.secondary_cmap is not None

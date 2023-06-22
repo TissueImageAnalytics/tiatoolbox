@@ -481,12 +481,7 @@ def prepare_model_cli(
         img_input,
     ]
 
-    if masks is None:
-        masks_all = None
-    else:
-        masks_all = [
-            masks,
-        ]
+    masks_all = None if masks is None else [masks]
 
     if os.path.isdir(img_input):
         files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)

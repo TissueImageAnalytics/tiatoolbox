@@ -231,10 +231,8 @@ class SQLJSONDictionary(SQLExpression):
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
     def __getitem__(self, key: str) -> "SQLJSONDictionary":
-        if isinstance(key, (int,)):
-            key_str = f"[{key}]"
-        else:
-            key_str = str(key)
+        key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
+
         joiner = "." if self.acc and not isinstance(key, int) else ""
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 

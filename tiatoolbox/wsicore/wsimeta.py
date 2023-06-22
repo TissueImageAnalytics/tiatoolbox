@@ -299,13 +299,11 @@ class WSIMeta:
 
         Returns:
             dict:
-                Whole slide image meta data as dictionary.
+                Whole slide image metadata as dictionary.
 
         """
-        if self.mpp is None:
-            mpp = (self.mpp, self.mpp)
-        else:
-            mpp = tuple(self.mpp)
+        mpp = (self.mpp, self.mpp) if self.mpp is None else tuple(self.mpp)
+
         return {
             "objective_power": self.objective_power,
             "slide_dimensions": self.slide_dimensions,

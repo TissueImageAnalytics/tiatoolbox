@@ -372,10 +372,7 @@ class UNetModel(ModelABC):
             # block
             y = en_list[-idx]
             x_ = self.upsample2x(x)
-            if self.skip_type == "add":
-                x = x_ + y
-            else:
-                x = torch.cat([x_, y], dim=1)
+            x = x_ + y if self.skip_type == "add" else torch.cat([x_, y], dim=1)
             x = self.uplist[idx - 1](x)
         return self.clf(x)
 

@@ -312,10 +312,7 @@ def group4_arch_branch(
             An output of type :class:`torch.nn.ModuleDict`
 
     """
-    if activation == "relu":
-        activation = nn.ReLU()
-    else:
-        activation = nn.Tanh()
+    activation = nn.ReLU() if activation == "relu" else nn.Tanh()
 
     module_dict = OrderedDict()
     module_dict["up1"] = nn.ConvTranspose2d(
@@ -355,10 +352,8 @@ def out_arch_branch(
             An output of type :class:`torch.nn.Sequential`
 
     """
-    if activation == "relu":
-        activation = nn.ReLU()
-    else:
-        activation = nn.Softmax()
+    activation = nn.ReLU() if activation == "relu" else nn.Softmax()
+
     return nn.Sequential(
         nn.Dropout2d(p=0.5),
         nn.Conv2d(
