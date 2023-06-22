@@ -1272,7 +1272,7 @@ def test_save_as_json(tmp_path):
     # test complex nested dict
     print(sample)
     misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
-    with open(tmp_path / "sample_json.json", "r") as fptr:
+    with open(tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
@@ -1280,7 +1280,7 @@ def test_save_as_json(tmp_path):
 
     # Allow parent directories
     misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
-    with open(tmp_path / "foo" / "sample_json.json", "r") as fptr:
+    with open(tmp_path / "foo" / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
@@ -1291,7 +1291,7 @@ def test_save_as_json(tmp_path):
         list(sample.values()), tmp_path / "sample_json.json", exist_ok=True
     )
     # test read because == is useless when value is mutable
-    with open(tmp_path / "sample_json.json", "r") as fptr:
+    with open(tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
@@ -1360,7 +1360,7 @@ def test_detect_pixman():
         assert isinstance(using, str)
         assert isinstance(versions, list)
         assert len(versions) > 0
-    except EnvironmentError:
+    except OSError:
         pass
 
 

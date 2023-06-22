@@ -334,7 +334,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
             versions = [version_to_tuple(matches.group(1))]
     if versions:
         return versions, using
-    raise EnvironmentError("Unable to detect pixman version(s).")
+    raise OSError("Unable to detect pixman version(s).")
 
 
 def version_to_tuple(match: str) -> Tuple[int, ...]:
@@ -368,7 +368,7 @@ def pixman_warning() -> None:  # pragma: no cover
         """Show a warning message if pixman is version 0.38."""
         try:
             versions, using = pixman_versions()
-        except EnvironmentError:
+        except OSError:
             # Unable to determine the pixman version
             return
 

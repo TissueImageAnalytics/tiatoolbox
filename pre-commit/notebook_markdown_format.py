@@ -5,12 +5,12 @@ import argparse
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import mdformat
 
 
-def format_notebook(notebook: Dict[str, Any]) -> Dict[str, Any]:
+def format_notebook(notebook: dict[str, Any]) -> dict[str, Any]:
     """Format a notebook in MyST style.
 
     Args:
@@ -36,7 +36,7 @@ def format_notebook(notebook: Dict[str, Any]) -> Dict[str, Any]:
     return notebook
 
 
-def main(files: List[Path]) -> None:
+def main(files: list[Path]) -> None:
     """Check markdown cells in notebooks for common mistakes.
 
     Args:

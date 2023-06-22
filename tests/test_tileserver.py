@@ -53,7 +53,7 @@ def fill_store(cell_grid, points_grid):
         ]
         lines = [
             Annotation(
-                LineString(((x, x + 500) for x in range(100, 400, 10))),
+                LineString((x, x + 500) for x in range(100, 400, 10)),
                 {"type": "line", "prob": 0.75},
             )
         ]

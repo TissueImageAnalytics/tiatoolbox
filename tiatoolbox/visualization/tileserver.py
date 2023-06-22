@@ -4,7 +4,6 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
-from typing import Dict, List, Union
 
 import numpy as np
 from flask import Flask, Response, send_file
@@ -49,7 +48,7 @@ class TileServer(Flask):
     def __init__(
         self,
         title: str,
-        layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
+        layers: dict[str, WSIReader | str] | list[WSIReader | str],
         renderer: AnnotationRenderer = None,
     ) -> None:
         super().__init__(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from numbers import Number
-from typing import Callable, Dict, Optional, Union
+from typing import Callable
 
 import numpy as np
 import torch
@@ -147,9 +147,9 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
 
 
 def affinity_to_edge_index(
-    affinity_matrix: Union[torch.Tensor, ArrayLike],
+    affinity_matrix: torch.Tensor | ArrayLike,
     threshold: Number = 0.5,
-) -> Union[torch.tensor, ArrayLike]:
+) -> torch.tensor | ArrayLike:
     """Convert an affinity matrix (similarity matrix) to an edge index.
 
     Converts an NxN affinity matrix to a 2xM edge index, where M is the
@@ -196,7 +196,7 @@ class SlideGraphConstructor:  # noqa: PIE798
     """
 
     @staticmethod
-    def _umap_reducer(graph: Dict[str, ArrayLike]) -> ArrayLike:
+    def _umap_reducer(graph: dict[str, ArrayLike]) -> ArrayLike:
         """Default reduction which reduces `graph["x"]` to 3D values.
 
         Reduces graph features to 3D values using UMAP which are suitable
@@ -226,8 +226,8 @@ class SlideGraphConstructor:  # noqa: PIE798
         lambda_h: Number = 0.8,
         connectivity_distance: Number = 4000,
         neighbour_search_radius: Number = 2000,
-        feature_range_thresh: Optional[Number] = 1e-4,
-    ) -> Dict[str, ArrayLike]:
+        feature_range_thresh: Number | None = 1e-4,
+    ) -> dict[str, ArrayLike]:
         """Build a graph via hybrid clustering in spatial and feature space.
 
         The graph is constructed via hybrid hierarchical clustering
@@ -402,10 +402,10 @@ class SlideGraphConstructor:  # noqa: PIE798
     @classmethod
     def visualise(
         cls,
-        graph: Dict[str, ArrayLike],
-        color: Union[ArrayLike, str, Callable] = None,
-        node_size: Union[Number, ArrayLike, Callable] = 25,
-        edge_color: Union[str, ArrayLike] = (0, 0, 0, 0.33),
+        graph: dict[str, ArrayLike],
+        color: ArrayLike | str | Callable = None,
+        node_size: Number | ArrayLike | Callable = 25,
+        edge_color: str | ArrayLike = (0, 0, 0, 0.33),
         ax: Axes = None,
     ) -> Axes:
         """Visualise a graph.

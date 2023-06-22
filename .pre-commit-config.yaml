@@ -80,3 +80,4 @@ repos:
     rev: v0.0.274
     hooks:
       - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]

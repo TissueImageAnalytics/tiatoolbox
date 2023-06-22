@@ -77,7 +77,7 @@ def find_imports(py_source_path: Path) -> List[str]:
 
     """
     with open(  # This file could be any python file anywhere, skipcq
-        py_source_path, "r"
+        py_source_path
     ) as fh:
         source = fh.read()
     tree = ast.parse(source)

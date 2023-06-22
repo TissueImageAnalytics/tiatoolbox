@@ -402,10 +402,8 @@ class PatchExtractor(PatchExtractorABC):
             raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
         if np.any(patch_input_shape < patch_output_shape):
             raise ValueError(
-                (
-                    f"`patch_input_shape` must larger than `patch_output_shape`"
-                    f" {patch_input_shape} must > {patch_output_shape}."
-                )
+                f"`patch_input_shape` must larger than `patch_output_shape`"
+                f" {patch_input_shape} must > {patch_output_shape}."
             )
         if np.any(stride_shape < 1):
             raise ValueError(f"`stride_shape` value {stride_shape} must > 1.")

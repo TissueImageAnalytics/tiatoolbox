@@ -100,7 +100,7 @@ def get_pretrained_model(
     info = PRETRAINED_INFO[pretrained_model]
 
     arch_info = info["architecture"]
-    creator = locate((f"tiatoolbox.models.architecture" f'.{arch_info["class"]}'))
+    creator = locate(f"tiatoolbox.models.architecture" f'.{arch_info["class"]}')
 
     model = creator(**arch_info["kwargs"])
     # TODO: a dictionary of dataset specific or transformation ?  # noqa: FIX002
@@ -123,7 +123,7 @@ def get_pretrained_model(
 
     # !
     io_info = info["ioconfig"]
-    creator = locate((f"tiatoolbox.models.engine" f'.{io_info["class"]}'))
+    creator = locate(f"tiatoolbox.models.engine" f'.{io_info["class"]}')
 
     iostate = creator(**io_info["kwargs"])
     return model, iostate

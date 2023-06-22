@@ -67,7 +67,7 @@ select = [
   "PT",  # flake8-pytest-style
   "RET", # flake8-return
   "SIM", # flake8-simplify
-  # "UP",  # pyupgrade
+  "UP",  # pyupgrade
 ]
 ignore = []
 
