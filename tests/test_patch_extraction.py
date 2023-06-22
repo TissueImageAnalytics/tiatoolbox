@@ -39,13 +39,13 @@ def read_points_patches(
     data = np.empty([3, patch_size[0], patch_size[1], 3])
     try:
         data[0] = next(patches)
-    except StopIteration:
-        raise StopIteration("Index out of bounds.")
+    except StopIteration as exc:
+        raise StopIteration("Index out of bounds.") from exc
 
     try:
         data[1] = next(patches)
-    except StopIteration:
-        raise StopIteration("Index out of bounds.")
+    except StopIteration as exc:
+        raise StopIteration("Index out of bounds.") from exc
 
     data[2] = patches[item]
 

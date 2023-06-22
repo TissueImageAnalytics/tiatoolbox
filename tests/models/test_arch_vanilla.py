@@ -41,8 +41,8 @@ def test_functional():
             model = CNNModel(backbone, num_classes=1)
             model_ = model_to(on_gpu=ON_GPU, model=model)
             model.infer_batch(model_, samples, on_gpu=ON_GPU)
-        except ValueError:
-            raise AssertionError(f"Model {backbone} failed.")
+        except ValueError as exc:
+            raise AssertionError(f"Model {backbone} failed.") from exc
 
     # skipcq
     with pytest.raises(ValueError, match=r".*Backbone.*not supported.*"):
