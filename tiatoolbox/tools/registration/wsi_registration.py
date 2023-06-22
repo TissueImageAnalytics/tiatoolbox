@@ -311,9 +311,9 @@ class DFBRFeatureExtractor(torch.nn.Module):
         ).features
         self.f_hooks = []
 
-        for i, l in enumerate(output_layers_id):
+        for i, layer in enumerate(output_layers_id):
             self.f_hooks.append(
-                getattr(self.pretrained, l).register_forward_hook(
+                getattr(self.pretrained, layer).register_forward_hook(
                     self.forward_hook(output_layers_key[i])
                 )
             )
