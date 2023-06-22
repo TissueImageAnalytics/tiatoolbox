@@ -406,7 +406,7 @@ def safe_padded_read(
     )
 
 
-def sub_pixel_read(  # noqa: CCR001
+def sub_pixel_read(  # noqa: C901
     image,
     bounds,
     output_size,

@@ -56,11 +56,13 @@
 select = [
   "A",   # flake8-builtins
   "B",   # flake8-bugbear
+  # "D",   # pydocstyle, need to enable for docstrings check.
   "E",   # pycodestyle
   "F",   # pyflakes
   "G",   # flake8-logging-format
   "N",   # pep8-naming
   "C4",  # flake8-comprehensions
+  "C90", # mccabe
   "ERA", # eradicate
   "FIX", # flake8-fixme
   "PIE", # flake8-pie
@@ -103,4 +105,9 @@ target-version = "py38"
 
 [tool.ruff.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
-max-complexity = 10
+max-complexity = 14
+
+# need to enable for docstrings check.
+# [tool.ruff.pydocstyle]
+# Use Google-style docstrings.
+# convention = "google"
