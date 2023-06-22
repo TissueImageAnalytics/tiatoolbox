@@ -213,7 +213,7 @@ class HoVerNetPlus(HoVerNet):
         return layer_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221  # noqa: E800
+    # skipcq: PYL-W0221  # noqa: E800, ERA001
     def postproc(raw_maps: List[np.ndarray]):
         """Post-processing script for image tiles.
 
