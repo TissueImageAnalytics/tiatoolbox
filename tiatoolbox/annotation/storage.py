@@ -31,6 +31,7 @@ import pickle
 import sqlite3
 import sys
 import tempfile
+import threading
 import uuid
 import zlib
 from abc import ABC, abstractmethod
@@ -58,7 +59,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from shapely import wkb, wkt
+from shapely import speedups, wkb, wkt
 from shapely.affinity import scale, translate
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
@@ -75,6 +76,9 @@ from tiatoolbox.annotation.dsl import (
 )
 
 sqlite3.enable_callback_tracebacks(True)
+
+if speedups.available:  # pragma: no branch
+    speedups.enable()
 
 Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]
@@ -143,6 +147,16 @@ class Annotation:
 
         """
         return json.dumps(self.to_feature())
+
+    def to_wkb_geometry(self):
+        """
+        Return the annotation with a WKB geometry.
+
+        Returns:
+            Annotation:
+                The annotation with a WKB geometry.
+        """
+        return Annotation(self.geometry.wkb, self.properties)
 
     def __repr__(self) -> str:
         return f"Annotation({self.geometry}, {self.properties})"
@@ -623,7 +637,9 @@ class AnnotationStore(ABC, MutableMapping):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate: str = "intersects",
+        min_area: Optional[float] = None,
         distance: float = 0,
+        as_raw: bool = False,
     ) -> Dict[str, Annotation]:
         """Query the store for annotations.
 
@@ -669,6 +685,9 @@ class AnnotationStore(ABC, MutableMapping):
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
+            as_raw (bool):
+                If True, return geometries as raw wkb bytes instead of
+                shapely geometries. Defaults to False.
 
             Returns:
                 list:
@@ -720,6 +739,8 @@ class AnnotationStore(ABC, MutableMapping):
                     query result.
 
             """
+            if min_area is not None and annotation.geometry.area < min_area:
+                return False
             return (  # Geometry is None or the geometry predicate matches
                 query_geometry is None
                 or any(
@@ -746,7 +767,7 @@ class AnnotationStore(ABC, MutableMapping):
             ) and self._eval_where(where, annotation.properties)
 
         return {
-            key: annotation
+            key: annotation.to_wkb_geometry() if as_raw else annotation
             for key, annotation in self.items()
             if filter_function(annotation)
         }
@@ -1061,6 +1082,7 @@ class AnnotationStore(ABC, MutableMapping):
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
         mode: str = "poly-poly",
+        as_raw: bool = False,
     ) -> Dict[str, Dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
@@ -1115,6 +1137,9 @@ class AnnotationStore(ABC, MutableMapping):
                 of two strings. The first string is the mode for the
                 query geometry and the second string is the mode for
                 the nearest annotation geometry.
+            as_raw (bool):
+                If True, return geometries as raw wkb bytes instead of
+                shapely geometries. Defaults to False.
 
         Returns:
             Dict[str, Dict[str, Annotation]]:
@@ -1237,6 +1262,7 @@ class AnnotationStore(ABC, MutableMapping):
                 where=n_where,
                 geometry_predicate=geometry_predicate,
                 distance=distance,
+                as_raw=as_raw,
             )
             if subquery_result:
                 result[key] = subquery_result
@@ -1771,8 +1797,7 @@ class SQLiteStore(AnnotationStore):
             self.path.is_file()
             and self.path.stat().st_size > 0
         )
-        self.con = sqlite3.connect(str(self.path), isolation_level="DEFERRED")
-        self.con.execute("BEGIN")
+        self.cons = {}
 
         # Set up metadata
         self.metadata = SQLiteMetadata(self.con)
@@ -1784,66 +1809,6 @@ class SQLiteStore(AnnotationStore):
         # store locally as constantly fetching from db in (de)serialization is slow
         self.compression = self.metadata["compression"]
         self.compression_level = self.metadata["compression_level"]
-
-        # Register predicate functions as custom SQLite functions
-        def wkb_predicate(
-            name: str, wkb_a: bytes, b: bytes, cx: float, cy: float
-        ) -> bool:
-            """Wrapper function to allow WKB as inputs to binary predicates."""
-            a = wkb.loads(wkb_a)
-            b = self._unpack_geometry(b, cx, cy)
-            return self._geometry_predicate(name, a, b)
-
-        def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
-            """Function to load and execute pickle bytes with a "properties" dict."""
-            fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
-            properties = json.loads(properties)
-            return fn(properties)
-
-        def get_area(wkb_bytes: bytes, cx: float, cy: float) -> float:
-            """Function to get the area of a geometry."""
-            return self._unpack_geometry(
-                wkb_bytes,
-                cx,
-                cy,
-            ).area
-
-        # Register custom functions
-        def register_custom_function(
-            name: str, nargs: int, fn: Callable, deterministic: bool = False
-        ) -> None:
-            """Register a custom SQLite function.
-
-            Only Python >= 3.8 supports deterministic functions,
-            fallback to without this argument if not available.
-
-            Args:
-                name:
-                    The name of the function.
-                nargs:
-                    The number of arguments the function takes.
-                fn:
-                    The function to register.
-                deterministic:
-                    Whether the function is deterministic.
-
-            """
-            try:
-                self.con.create_function(name, nargs, fn, deterministic=deterministic)
-            except TypeError:
-                self.con.create_function(name, nargs, fn)
-
-        register_custom_function(
-            "geometry_predicate", 5, wkb_predicate, deterministic=True
-        )
-        register_custom_function(
-            "pickle_expression", 2, pickle_expression, deterministic=True
-        )
-        register_custom_function("REGEXP", 2, py_regexp)
-        register_custom_function("REGEXP", 3, py_regexp)
-        register_custom_function("LISTSUM", 1, json_list_sum)
-        register_custom_function("CONTAINS", 1, json_contains)
-        register_custom_function("get_area", 3, get_area)
 
         if exists:
             self.table_columns = self._get_table_columns()
@@ -1878,6 +1843,81 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
         self.table_columns = self._get_table_columns()
 
+    def __getattribute__(self, name: str) -> Any:
+        """if attr is con, return thread-local connection."""
+        if name == "con":
+            return self.get_connection(threading.get_ident())
+        return super().__getattribute__(name)
+
+    def get_connection(self, thread_id) -> sqlite3.Connection:
+        """Get a connection to the database."""
+        if thread_id not in self.cons:
+            con = sqlite3.connect(str(self.path), isolation_level="DEFERRED")
+            con.execute("BEGIN")
+
+            # Register predicate functions as custom SQLite functions
+            def wkb_predicate(
+                name: str, wkb_a: bytes, b: bytes, cx: float, cy: float
+            ) -> bool:
+                """Wrapper function to allow WKB as inputs to binary predicates."""
+                a = wkb.loads(wkb_a)
+                b = self._unpack_geometry(b, cx, cy)
+                return self._geometry_predicate(name, a, b)
+
+            def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
+                """Function to load and execute pickle bytes with a "properties" dict."""
+                fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
+                properties = json.loads(properties)
+                return fn(properties)
+
+            def get_area(wkb_bytes: bytes, cx: float, cy: float) -> float:
+                """Function to get the area of a geometry."""
+                return self._unpack_geometry(
+                    wkb_bytes,
+                    cx,
+                    cy,
+                ).area
+
+            # Register custom functions
+            def register_custom_function(
+                name: str, nargs: int, fn: Callable, deterministic: bool = False
+            ) -> None:
+                """Register a custom SQLite function.
+
+                Only Python >= 3.8 supports deterministic functions,
+                fallback to without this argument if not available.
+
+                Args:
+                    name:
+                        The name of the function.
+                    nargs:
+                        The number of arguments the function takes.
+                    fn:
+                        The function to register.
+                    deterministic:
+                        Whether the function is deterministic.
+
+                """
+                try:
+                    con.create_function(name, nargs, fn, deterministic=deterministic)
+                except TypeError:
+                    con.create_function(name, nargs, fn)
+
+            register_custom_function(
+                "geometry_predicate", 5, wkb_predicate, deterministic=True
+            )
+            register_custom_function(
+                "pickle_expression", 2, pickle_expression, deterministic=True
+            )
+            register_custom_function("REGEXP", 2, py_regexp)
+            register_custom_function("REGEXP", 3, py_regexp)
+            register_custom_function("LISTSUM", 1, json_list_sum)
+            register_custom_function("CONTAINS", 1, json_contains)
+            register_custom_function("get_area", 3, get_area)
+            self.cons[thread_id] = con
+            return con
+        return self.cons[thread_id]
+
     def serialise_geometry(  # skipcq: PYL-W0221
         self, geometry: Geometry
     ) -> Union[str, bytes]:
@@ -1903,7 +1943,7 @@ class SQLiteStore(AnnotationStore):
         raise ValueError("Unsupported compression method.")
 
     def _unpack_geometry(
-        self, data: Union[str, bytes], cx: float, cy: float
+        self, data: Union[str, bytes], cx: int, cy: int, as_raw: bool = False
     ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
@@ -1925,6 +1965,16 @@ class SQLiteStore(AnnotationStore):
                 The Shapely geometry.
 
         """
+        if as_raw:
+            if data is None:
+                # make wkb point
+                return (
+                    np.uint8(0).tobytes()
+                    + np.uint32(1).tobytes()
+                    + np.double(cx).tobytes()
+                    + np.double(cy).tobytes()
+                )
+            return data if self.compression is None else zlib.decompress(data)
         return Point(cx, cy) if data is None else self.deserialize_geometry(data)
 
     def deserialize_geometry(  # skipcq: PYL-W0221
@@ -2169,6 +2219,7 @@ class SQLiteStore(AnnotationStore):
         index_warning: bool = False,
         min_area=None,
         distance: float = 0,
+        con: Optional[str] = None,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -2214,6 +2265,7 @@ class SQLiteStore(AnnotationStore):
                 "Invalid geometry predicate."
                 f"Allowed values are: {', '.join(self._geometry_predicate_names)}."
             )
+
         cur = self.con.cursor()
 
         # Normalise query geometry and determine if it is a rectangle
@@ -2267,7 +2319,6 @@ class SQLiteStore(AnnotationStore):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate="intersects",
-        min_area=None,
         distance: float = 0,
     ) -> List[str]:
         """Query the store for annotation keys.
@@ -2330,7 +2381,6 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate=geometry_predicate,
             where=where,
             callable_columns="[key], properties",
-            min_area=min_area,
             distance=distance,
         )
         if isinstance(where, Callable):
@@ -2348,6 +2398,7 @@ class SQLiteStore(AnnotationStore):
         geometry_predicate: str = "intersects",
         min_area=None,
         distance: float = 0,
+        as_raw: bool = False,
     ) -> Dict[str, Annotation]:
         """Runs Query."""
         query_geometry = geometry
@@ -2362,7 +2413,7 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, Callable):
             return {
                 key: Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy),
+                    geometry=self._unpack_geometry(blob, cx, cy, as_raw=as_raw),
                     properties=json.loads(properties),
                 )
                 for key, properties, cx, cy, blob in cur.fetchall()
@@ -2370,7 +2421,7 @@ class SQLiteStore(AnnotationStore):
             }
         return {
             key: Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy),
+                geometry=self._unpack_geometry(blob, cx, cy, as_raw=as_raw),
                 properties=json.loads(properties),
             )
             for key, properties, cx, cy, blob in cur.fetchall()
@@ -2380,7 +2431,6 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[QueryGeometry] = None,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        min_area=None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
@@ -2454,7 +2504,6 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate="bbox_intersects",
             where=where,
             callable_columns="[key], properties, min_x, min_y, max_x, max_y",
-            min_area=min_area,
         )
         if isinstance(where, Callable):
             return {
@@ -2774,7 +2823,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str) -> Annotation:
+    def __getitem__(self, key: str, as_raw=False) -> Annotation:
         cur = self.con.cursor()
         cur.execute(
             """
@@ -2793,6 +2842,7 @@ class SQLiteStore(AnnotationStore):
             serialised_geometry,
             cx,
             cy,
+            as_raw=as_raw,
         )
         return Annotation(geometry, properties)
 
