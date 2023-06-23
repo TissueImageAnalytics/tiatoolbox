@@ -10,14 +10,10 @@ import numpy as np
 from matplotlib import colormaps
 from numpy.typing import ArrayLike
 from PIL import Image, ImageFilter, ImageOps
-from shapely import speedups
 from shapely.geometry import Polygon
 
 from tiatoolbox import logger
 from tiatoolbox.annotation import Annotation, AnnotationStore
-
-if speedups.available:  # pragma: no branch
-    speedups.enable()
 
 
 def random_colors(num_colors, bright=True):
