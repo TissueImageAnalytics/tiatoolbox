@@ -682,6 +682,10 @@ class AnnotationStore(ABC, MutableMapping):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+            min_area (float):
+                Minimum area of the annotation geometry. Only
+                annotations with an area greater than or equal to this
+                value will be returned. Defaults to None (no min).
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
@@ -2233,6 +2237,8 @@ class SQLiteStore(AnnotationStore):
             callable_columns(str):
                 The columns to select when a callable is given to
                 `where`.
+            geometry_predicate(str):
+                The geometry predicate to use when querying.
             where (str or bytes or Callable):
                 The predicate to evaluate against candidate properties
                 during the query.
@@ -2246,6 +2252,8 @@ class SQLiteStore(AnnotationStore):
             index_warning(bool):
                 Whether to warn if the query is not using an index.
                 Defaults to False.
+            min_area(float):
+                Minimum area of the annotation to be returned.
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
