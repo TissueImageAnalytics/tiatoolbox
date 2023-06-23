@@ -99,7 +99,7 @@ paths:
               properties:
                 prop:
                   type: string
-                  description: The property to color annotations by
+                  description: json encoded property name to color annotations by
       responses:
         '200':
           description: Successful response
@@ -151,7 +151,7 @@ paths:
               properties:
                 cmap:
                   type: string
-                  description: Name of the colormap, should be a matplotlib colormap or a dict string
+                  description: The colormap, should be a json encoded matplotlib colormap name or dict of possible property values as keys, and RGBA tuples as values
       responses:
         '200':
           description: Successful response
@@ -180,7 +180,7 @@ paths:
                   description: Path to the annotation file in url safe form. Can be a .db, .dat or .geojson file
                 model_mpp:
                   type: float
-                  description: Model microns per pixel, used if annotations are output of a model not at baseline
+                  description: json enoced model microns per pixel, used if annotations are output of a model not at baseline
       responses:
         '200':
           description: jsonified list of types of loaded annotations
@@ -197,10 +197,10 @@ paths:
               properties:
                 bounds:
                   type: list
-                  description: a list of 4 numbers, [xmin, ymin, xmax, ymax] describing the bounds of the query
+                  description: a json encoded list of 4 numbers, [xmin, ymin, xmax, ymax] describing the bounds of the query
                 where:
                   type: string
-                  description: a valid AnnotationStore filter string
+                  description: a valid AnnotationStore filter string, json encoded
       responses:
         '200':
           description: OK
@@ -278,12 +278,9 @@ paths:
             schema:
               type: object
               properties:
-                prop:
-                  type: string
-                  description: The renderer property to update
                 val:
                   type: string
-                  description: The value to set the property to
+                  description: The json encoded value to set the property to
       responses:
         '200':
           description: Successful response
@@ -315,13 +312,13 @@ paths:
               properties:
                 type_id:
                   type: string
-                  description: The type for which you want to override the primary color map
+                  description: json encoded type for which you want to override the primary color map
                 prop:
                   type: string
                   description: Property to use to color annotations of the chosen type
                 cmap:
                   type: string
-                  description: Color map to use for the property
+                  description: json encoded matplotlib colormap name or dict, to use to generate colors from property values
       responses:
         '200':
           description: Successful response
