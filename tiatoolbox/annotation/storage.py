@@ -58,7 +58,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from shapely import speedups, wkb, wkt
+from shapely import wkb, wkt
 from shapely.affinity import scale, translate
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
@@ -75,9 +75,6 @@ from tiatoolbox.annotation.dsl import (
 )
 
 sqlite3.enable_callback_tracebacks(True)
-
-if speedups.available:  # pragma: no branch
-    speedups.enable()
 
 Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]

@@ -397,7 +397,7 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         return {
             "x": feature_centroids,
-            "edge_index": edge_index,
+            "edge_index": edge_index.astype(np.int64),
             "coordinates": point_centroids,
         }
 
