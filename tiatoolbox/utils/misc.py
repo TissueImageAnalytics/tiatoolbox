@@ -1,4 +1,6 @@
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+from __future__ import annotations
+
 import copy
 import json
 import os
