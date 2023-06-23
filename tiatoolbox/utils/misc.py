@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import zipfile
+from os import PathLike
 from typing import IO, Dict, List, Optional, Tuple, Union
 
 import cv2
@@ -20,15 +21,16 @@ from skimage import exposure
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
-from tiatoolbox.typing import PathLike
 from tiatoolbox.utils.exceptions import FileNotSupported
 
 
-def split_path_name_ext(full_path: PathLike) -> Tuple[pathlib.Path, str, List[str]]:
+def split_path_name_ext(
+    full_path: os | PathLike,
+) -> Tuple[pathlib.Path, str, List[str]]:
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (PathLike):
+        full_path (os | PathLike):
             Path to a file.
 
     Returns:
@@ -48,13 +50,13 @@ def split_path_name_ext(full_path: PathLike) -> Tuple[pathlib.Path, str, List[st
 
 
 def grab_files_from_dir(
-    input_path: PathLike,
+    input_path: os | PathLike,
     file_types: Union[str, Tuple[str]] = ("*.jpg", "*.png", "*.tif"),
 ) -> List[pathlib.Path]:
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (PathLike):
+        input_path (os | PathLike):
             Path to the directory where files
             need to be searched.
         file_types (str or tuple(str)):
@@ -90,7 +92,7 @@ def grab_files_from_dir(
 
 def save_yaml(
     input_dict: dict,
-    output_path: PathLike = "output.yaml",
+    output_path: os | PathLike = "output.yaml",
     parents: bool = False,
     exist_ok: bool = False,
 ):
@@ -99,7 +101,7 @@ def save_yaml(
     Args:
         input_dict (dict):
             A variable of type 'dict'.
-        output_path (PathLike):
+        output_path (os | PathLike):
             Path to save the output file.
         parents (bool):
             Make parent directories if they do not exist. Default is
@@ -127,11 +129,11 @@ def save_yaml(
         yaml.dump(input_dict, yaml_file)
 
 
-def imwrite(image_path: PathLike, img: np.ndarray) -> None:
+def imwrite(image_path: os | PathLike, img: np.ndarray) -> None:
     """Write numpy array to an image.
 
     Args:
-        image_path (PathLike):
+        image_path (os | PathLike):
             File path (including extension) to save image to.
         img (:class:`numpy.ndarray`):
             Image array of dtype uint8, MxNx3.
@@ -148,11 +150,11 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def imread(image_path: PathLike, as_uint8: bool = True) -> np.ndarray:
+def imread(image_path: os | PathLike, as_uint8: bool = True) -> np.ndarray:
     """Read an image as numpy array.
 
     Args:
-        image_path (PathLike):
+        image_path (os | PathLike):
             File path (including extension) to read image.
         as_uint8 (bool):
             Read an image in uint8 format.
@@ -180,11 +182,11 @@ def imread(image_path: PathLike, as_uint8: bool = True) -> np.ndarray:
     return image
 
 
-def load_stain_matrix(stain_matrix_input: Union[np.ndarray, PathLike]) -> np.ndarray:
+def load_stain_matrix(stain_matrix_input: np.ndarray | os | PathLike) -> np.ndarray:
     """Load a stain matrix as a numpy array.
 
     Args:
-        stain_matrix_input (ndarray or PathLike):
+        stain_matrix_input (ndarray or os | PathLike):
             Either a 2x3 or 3x3 numpy array or a path to a saved .npy /
             .csv file. If using a .csv file, there should be no column
             headers provided
@@ -450,12 +452,12 @@ def __assign_unknown_class(
 
 
 def read_locations(
-    input_table: Union[PathLike, np.ndarray, pd.DataFrame]
+    input_table: os | PathLike | np.ndarray | pd.DataFrame,
 ) -> pd.DataFrame:
     """Read annotations as pandas DataFrame.
 
     Args:
-        input_table (PathLike or :class:`numpy.ndarray` or
+        input_table (os | PathLike | :class:`numpy.ndarray` |
             :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
             :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             First column in the table represents x position, second
@@ -618,13 +620,13 @@ def assert_dtype_int(
         raise AssertionError(message)
 
 
-def download_data(url: str, save_path: PathLike, overwrite: bool = False):
+def download_data(url: str, save_path: os | PathLike, overwrite: bool = False):
     """Download data from a given URL to location. Can overwrite data if demanded
     else no action is taken
 
     Args:
         url (path): URL from where to download the data.
-        save_path (PathLike): Location to unzip the data.
+        save_path (os | PathLike): Location to unzip the data.
         overwrite (bool): True to force overwriting of existing data, default=False
 
     """
@@ -649,12 +651,12 @@ def download_data(url: str, save_path: PathLike, overwrite: bool = False):
         f.write(r.content)
 
 
-def unzip_data(zip_path: PathLike, save_path: PathLike, del_zip: bool = True):
+def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool = True):
     """Extract data from zip file.
 
     Args:
-        zip_path (PathLike): Path where the zip file is located.
-        save_path (PathLike): Path where to save extracted files.
+        zip_path (os | PathLike): Path where the zip file is located.
+        save_path (os | PathLike): Path where to save extracted files.
         del_zip (bool): Whether to delete initial zip file after extraction.
 
     """
@@ -720,7 +722,7 @@ def __walk_dict(dct: dict):
 
 def save_as_json(
     data: Union[dict, list],
-    save_path: PathLike,
+    save_path: os | PathLike,
     parents: bool = False,
     exist_ok: bool = False,
 ):
@@ -733,7 +735,7 @@ def save_as_json(
     Args:
         data (dict or list):
             Input data to save.
-        save_path (PathLike):
+        save_path (os | PathLike):
             Output to save the json of `input`.
         parents (bool):
             Make parent directories if they do not exist. Default is
@@ -886,7 +888,7 @@ def select_cv2_interpolation(scale_factor: Union[int, float]) -> str:
 
 
 def store_from_dat(
-    fp: Union[IO, PathLike],
+    fp: IO | os | PathLike,
     scale_factor: Tuple[float, float] = (1, 1),
     typedict: Optional[Dict] = None,
     origin: Tuple[float, float] = (0, 0),
@@ -895,7 +897,7 @@ def store_from_dat(
     """Load annotations from a hovernet-style .dat file.
 
     Args:
-        fp (Union[IO, PathLike]):
+        fp (IO | os | PathLike):
             The file path or handle to load from.
         scale_factor (Tuple[float, float]):
             The scale factor in each dimension to use when loading the annotations.
@@ -1024,7 +1026,7 @@ def make_default_dict(data: dict, subcat: str) -> dict:
 
 def add_from_dat(
     store: List[AnnotationStore],
-    fp: Union[IO, PathLike],
+    fp: IO | os | PathLike,
     scale_factor: Tuple[float, float] = (1, 1),
     typedict: Optional[Dict] = None,
     origin: Tuple[float, float] = (0, 0),
@@ -1036,7 +1038,7 @@ def add_from_dat(
     Args:
         store (AnnotationStore):
             An :class:`AnnotationStore` object.
-        fp (Union[IO, PathLike]):
+        fp (IO | os | PathLike):
             The file path or handle to load from.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
