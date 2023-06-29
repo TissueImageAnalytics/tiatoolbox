@@ -163,6 +163,7 @@ class IOSegmentorConfig(IOConfigABC):
         save_resolution: dict = None,
         **kwargs,
     ):
+        """Initializes :class:`IOSegmentorConfig`."""
         self._kwargs = kwargs
         self.patch_input_shape = patch_input_shape
         self.patch_output_shape = patch_output_shape
@@ -321,6 +322,7 @@ class WSIStreamDataset(torch_data.Dataset):
         preproc: Callable[[np.ndarray], np.ndarray] = None,
         mode="wsi",
     ):
+        """Initializes :class:`WSIStreamDataset`."""
         super().__init__()
         self.mode = mode
         self.preproc = preproc
@@ -510,6 +512,7 @@ class SemanticSegmentor:
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
     ):
+        """Initializes :class:`SemanticSegmentor`."""
         super().__init__()
 
         if model is None and pretrained_model is None:
@@ -1451,6 +1454,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
     ):
+        """Initializes :class:`DeepFeatureExtractor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,

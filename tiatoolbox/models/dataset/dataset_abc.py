@@ -14,6 +14,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     def __init__(
         self,
     ):
+        """Initializes :class:`PatchDatasetABC`."""
         super().__init__()
         self._preproc = self.preproc
         self.data_is_npy_alike = False

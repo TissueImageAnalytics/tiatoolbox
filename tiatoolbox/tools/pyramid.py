@@ -56,6 +56,7 @@ class TilePyramidGenerator:
         downsample: int = 2,
         overlap: int = 0,
     ) -> None:
+        """Initializes :class:`TilePyramidGenerator`."""
         self.wsi = wsi
         self.tile_size = tile_size
         self.overlap = overlap

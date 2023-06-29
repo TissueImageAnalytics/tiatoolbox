@@ -79,8 +79,6 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         labels:
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
-        preproc_func:
-            Preprocessing function used to transform the input data.
 
     Examples:
         >>> # A user defined preproc func and expected behavior
@@ -89,12 +87,13 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         >>> # create a dataset to get patches preprocessed by the above function
         >>> ds = PatchDataset(
         ...     inputs=['/A/B/C/img1.png', '/A/B/C/img2.png'],
-        ...     preproc_func=preproc_func
+        ...     labels=["labels1", "labels2"],
         ... )
 
     """
 
     def __init__(self, inputs, labels=None):
+        """Initializes :class:`PatchDataset`."""
         super().__init__()
 
         self.data_is_npy_alike = False

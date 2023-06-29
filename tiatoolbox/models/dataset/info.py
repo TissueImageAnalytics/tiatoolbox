@@ -71,6 +71,7 @@ class KatherPatchDataset(DatasetInfoABC):
         self,
         save_dir_path=None,
     ):
+        """Initializes :class:`KatherPatchDataset`."""
         label_names = [
             "BACK",
             "NORM",

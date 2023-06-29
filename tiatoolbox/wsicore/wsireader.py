@@ -360,6 +360,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
+        """Initializes :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
         else:
@@ -699,7 +700,7 @@ class WSIReader:
         self,
         resolution: Resolution,
         units: Units,
-        precisions: int = 3,
+        precision: int = 3,
     ) -> IntPair:
         """Return the size of WSI at requested resolution.
 
@@ -709,6 +710,9 @@ class WSIReader:
                 (objective power).
             units (Units):
                 resolution units, default="power".
+            precision (int, optional):
+                Decimal places to use when finding optimal scale. See
+                :func:`find_optimal_level_and_downsample` for more.
 
         Returns:
             :py:obj:`tuple`:
@@ -731,7 +735,7 @@ class WSIReader:
             [0, 0] + list(wsi_shape_at_baseline),
             resolution,
             units,
-            precisions,
+            precision,
         )
         return wsi_shape_at_resolution
 
@@ -1600,6 +1604,7 @@ class OpenSlideWSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
+        """Initializes :class:`OpenSlideWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
@@ -2135,6 +2140,7 @@ class OmnyxJP2WSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
+        """Initializes :class:`OmnyxJP2WSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         import glymur
 
@@ -2657,6 +2663,7 @@ class VirtualWSIReader(WSIReader):
         info: WSIMeta = None,
         mode="rgb",
     ) -> None:
+        """Initializes :class:`VirtualWSIReader`."""
         super().__init__(
             input_img=input_img,
             mpp=mpp,
@@ -3196,6 +3203,7 @@ class TIFFWSIReader(WSIReader):
         series="auto",
         cache_size=2**28,
     ) -> None:
+        """Initializes :class:`TIFFWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
         self._axes = self.tiff.pages[0].axes
@@ -3953,6 +3961,7 @@ class DICOMWSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
+        """Initializes :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom
 
         super().__init__(input_img, mpp, power)
@@ -4454,6 +4463,7 @@ class NGFFWSIReader(WSIReader):
     """
 
     def __init__(self, path, **kwargs):
+        """Initializes :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs
 
@@ -5014,6 +5024,7 @@ class AnnotationStoreReader(WSIReader):
         alpha=1.0,
         **kwargs,
     ):
+        """Initializes :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
         self.store = (
             SQLiteStore(pathlib.Path(store))
@@ -5067,7 +5078,9 @@ class AnnotationStoreReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
-        """Read a region of the annotation mask, or annotated whole slide
+        """Read a region using start location and size (width, height).
+
+        Read a region of the annotation mask, or annotated whole slide
         image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
@@ -5354,7 +5367,9 @@ class AnnotationStoreReader(WSIReader):
         coord_space="baseline",
         **kwargs,
     ):
-        """Read a region of the annotation mask, or annotated whole slide
+        """Read a region by defining boundary locations.
+
+        Read a region of the annotation mask, or annotated whole slide
         image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum

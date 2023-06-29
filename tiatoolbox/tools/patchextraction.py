@@ -119,6 +119,7 @@ class PatchExtractor(PatchExtractorABC):
         within_bound: bool = False,
         min_mask_ratio: float = 0,
     ):
+        """Initializes :class:`PatchExtractor`."""
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
         else:
@@ -524,6 +525,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         within_bound: bool = False,
         min_mask_ratio: float = 0,
     ):
+        """Initializes :class:`SlidingWindowPatchExtractor`."""
         super().__init__(
             input_img=input_img,
             input_mask=input_mask,
@@ -602,6 +604,7 @@ class PointsPatchExtractor(PatchExtractor):
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,
     ):
+        """Initializes :class:`PointsPatchExtractor`."""
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
