@@ -107,7 +107,8 @@ class StainAugmentor(ImageOnlyTransform):
         augment_background: bool = False,
         always_apply=False,
         p=0.5,
-    ) -> np.ndarray:
+    ):
+        """Initializes :class:`StainAugmentor`."""
         super().__init__(always_apply=always_apply, p=p)
 
         self.augment_background = augment_background
@@ -202,6 +203,8 @@ class StainAugmentor(ImageOnlyTransform):
         Args:
             img (:class:`numpy.ndarray`):
                 Input RGB image in the form of unit8 numpy array.
+            params (dict):
+                Additional parameters.
 
         Returns:
             :class:`numpy.ndarray`:
