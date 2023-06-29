@@ -103,6 +103,7 @@ class UpSample2x(nn.Module):
     """
 
     def __init__(self):
+        """Initializes :class:`UpSample2x`."""
         super().__init__()
         # correct way to create constant within module
         self.register_buffer(
