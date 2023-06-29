@@ -46,7 +46,15 @@ else:
 
 
 class DuplicateFilter(logging.Filter):
+    """Defines an object to filter duplicate logs.
+
+    The DuplicateFilter filters logs to avoid printing them multiple times
+    while running code in a loop.
+
+    """
+
     def filter(self, record):  # noqa: A003
+        """Filters input record."""
         current_log = (record.module, record.levelno, record.msg)
         if current_log != getattr(self, "last_log", None):
             self.last_log = current_log
