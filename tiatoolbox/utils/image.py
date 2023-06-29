@@ -472,9 +472,9 @@ def sub_pixel_read(  # noqa: C901
         pad_constant_values (int, tuple(int)): Constant values to use
             when padding with constant pad mode. Passed to the
             :func:`numpy.pad` `constant_values` argument. Default is 0.
-        **read_kwargs (dict):
+        read_kwargs (dict):
             Arbitrary keyword arguments passed through to `read_func`.
-        **pad_kwargs (dict):
+        pad_kwargs (dict):
             Arbitrary keyword arguments passed through to the padding
             function :func:`numpy.pad`.
 
