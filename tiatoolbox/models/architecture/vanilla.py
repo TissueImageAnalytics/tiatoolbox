@@ -4,12 +4,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.models as torch_models
+from torchvision.models import WeightsEnum
 
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import select_device
 
 
-def _get_architecture(arch_name, weights="DEFAULT", **kwargs):
+def _get_architecture(arch_name, weights: str or WeightsEnum = "DEFAULT", **kwargs):
     """Get a model.
 
     Model architectures are either already defined within torchvision or
@@ -18,6 +19,10 @@ def _get_architecture(arch_name, weights="DEFAULT", **kwargs):
     Args:
         arch_name (str):
             Architecture name.
+        weights (str or WeightsEnum):
+            torchvision model weights (get_model_weights).
+        kwargs (dict):
+            Key-word arguments.
 
     Returns:
         List of PyTorch network layers wrapped with `nn.Sequential`.
@@ -86,6 +91,7 @@ class CNNModel(ModelABC):
     """
 
     def __init__(self, backbone, num_classes=1):
+        """Initializes :class:`CNNModel`."""
         super().__init__()
         self.num_classes = num_classes
 
@@ -194,6 +200,7 @@ class CNNBackbone(ModelABC):
     """
 
     def __init__(self, backbone):
+        """Initializes :class:`CNNBackbone`."""
         super().__init__()
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
