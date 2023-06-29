@@ -588,6 +588,7 @@ class AnnotationRenderer:
     @staticmethod
     def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: float):
         """Return coords relative to top left of tile, as array suitable for cv2.
+
         Args:
             coords (List):
                 List of coordinates in the form [x, y].
@@ -595,6 +596,7 @@ class AnnotationRenderer:
                 The top left corner of the tile in wsi.
             scale (float):
                 The zoom scale at which we are rendering.
+
         Returns:
             np.array:
                 Array of coordinates in tile space in the form [x, y].
@@ -604,9 +606,11 @@ class AnnotationRenderer:
 
     def get_color(self, annotation: Annotation, edge=False):
         """Get the color for an annotation.
+
         Args:
             annotation (Annotation):
                 Annotation to get color for.
+
         Returns:
             tuple:
                 A color tuple (rgba).
@@ -656,6 +660,7 @@ class AnnotationRenderer:
         scale: float,
     ):
         """Render a polygon annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -686,7 +691,7 @@ class AnnotationRenderer:
             cv2.drawContours(tile, [cnt], 0, edge_col, 1, lineType=cv2.LINE_8)
 
     def render_multipoly(self, tile, annotation, top_left, scale):
-        """render a multipolygon annotation onto a tile using cv2"""
+        """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation)
 
         for poly in annotation.geometry.geoms:
@@ -701,6 +706,7 @@ class AnnotationRenderer:
         scale: float,
     ):
         """Render a point annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -729,6 +735,7 @@ class AnnotationRenderer:
         scale: float,
     ):
         """Render a line annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -784,6 +791,7 @@ class AnnotationRenderer:
                 A polygon representing the bounding box of the tile.
             scale (float):
                 The scale at which we are rendering the tile.
+
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.

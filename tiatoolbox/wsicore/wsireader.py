@@ -1142,7 +1142,6 @@ class WSIReader:
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
             >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
@@ -1730,7 +1729,6 @@ class OpenSlideWSIReader(WSIReader):
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
             >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
@@ -2034,7 +2032,7 @@ class OpenSlideWSIReader(WSIReader):
 
     @staticmethod
     def _estimate_mpp(props):
-        """Find microns per pixel (mpp)
+        """Find microns per pixel (mpp).
 
         Args:
             props (:class:`OpenSlide.properties`):
@@ -2269,7 +2267,6 @@ class OmnyxJP2WSIReader(WSIReader):
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
             >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
@@ -2851,7 +2848,6 @@ class VirtualWSIReader(WSIReader):
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
             >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
@@ -3662,7 +3658,6 @@ class TIFFWSIReader(WSIReader):
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
             >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
@@ -4124,7 +4119,6 @@ class DICOMWSIReader(WSIReader):
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
             >>> wsi = WSIReader.open(input_img="./CMU-1.ndpi")
@@ -4694,7 +4688,6 @@ class NGFFWSIReader(WSIReader):
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load a WSI image
             >>> wsi = WSIReader.open(input_img="./CMU-1.ome.zarr")
@@ -5191,7 +5184,6 @@ class AnnotationStoreReader(WSIReader):
         fixed level.
 
         Examples:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # Load an annotation store and associated wsi to be
             >>> # overlaid upon.
@@ -5268,7 +5260,6 @@ class AnnotationStoreReader(WSIReader):
         are assumed to be saved at the baseline resolution given in the metadata).
 
         Example:
-
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> # get metadata from the slide (could also manually create a
             >>> # WSIMeta object if you know the slide info but do not have the

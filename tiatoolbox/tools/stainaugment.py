@@ -219,7 +219,7 @@ class StainAugmentor(ImageOnlyTransform):
         return {}
 
     def get_params_dependent_on_targets(self, params):  # skipcq: PYL-W0613, PYL-R0201
-        """Does nothing, added to resolve flake 8 error"""
+        """Does nothing, added to resolve flake 8 error."""
         return {}
 
     @staticmethod

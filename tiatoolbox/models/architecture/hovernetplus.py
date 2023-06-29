@@ -287,6 +287,7 @@ class HoVerNetPlus(HoVerNet):
                             },
                             ...
                         }
+
         Examples:
             >>> from tiatoolbox.models.architecture.hovernetplus import HoVerNetPlus
             >>> import torch

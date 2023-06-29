@@ -80,7 +80,7 @@ COLOR_DICT = {
 
 
 def _get_temp_folder_path(prefix="temp"):
-    """Return unique temp folder path"""
+    """Return unique temp folder path."""
     return os.path.join(rcParam["TIATOOLBOX_HOME"], f"{prefix}-{int(time())}")
 
 
@@ -1066,7 +1066,7 @@ def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
 
 
 def test_virtual_wsi_reader(source_image, caplog):
-    """Test VirtualWSIReader"""
+    """Test VirtualWSIReader."""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
     _ = wsi._info()
     assert "Unknown scale" in caplog.text
@@ -1090,7 +1090,7 @@ def test_virtual_wsi_reader_invalid_mode(source_image):
 
 
 def test_virtual_wsi_reader_read_bounds(source_image):
-    """Test VirtualWSIReader read bounds"""
+    """Test VirtualWSIReader read bounds."""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
     assert img.shape == (100, 50, 3)

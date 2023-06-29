@@ -124,7 +124,6 @@ class OtsuTissueMasker(TissueMasker):
     def transform(self, images: np.ndarray) -> np.ndarray:
         """Create masks using the threshold found during :func:`fit`.
 
-
         Args:
             images (:class:`numpy.ndarray`):
                 List of images with a length 4 shape (N, height, width,
@@ -252,7 +251,6 @@ class MorphologicalMasker(OtsuTissueMasker):
 
     def transform(self, images: np.ndarray):
         """Create masks using the found threshold followed by morphological operations.
-
 
         Args:
             images (:class:`numpy.ndarray`):

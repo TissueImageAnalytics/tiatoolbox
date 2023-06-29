@@ -70,6 +70,7 @@ TCZYX = Literal["t", "c", "z", "y", "x"]
 @dataclass
 class Creator:
     """Record the creator (wsic) information.
+
     Attributes:
         name (str):
             The name of the creator.
@@ -84,6 +85,7 @@ class Creator:
 @dataclass
 class CoordinateTransform:
     """Transformation from the zarr to slide coordinate system.
+
     Attributes:
         type (str):
             The type of coordinate transform. E.g. "scale".
@@ -98,6 +100,7 @@ class CoordinateTransform:
 @dataclass
 class Dataset:
     """Description of a single resolution.
+
     Attributes:
         path (str):
             Path to the dataset. This will usually be a string of an
@@ -115,6 +118,7 @@ class Dataset:
 @dataclass
 class Axis:
     """Description of an axis including type and units.
+
     Attributes:
         name (str):
             The name of the axis. Must be one of: "t", "c", "z", "y",
@@ -134,6 +138,7 @@ class Axis:
 @dataclass
 class Multiscales:
     """Description of multiple resolutions present.
+
     Attributes:
         axes (List[Axis]):
             The axes of the multiscales.
@@ -157,6 +162,7 @@ class Multiscales:
 @dataclass
 class Window:
     """The range of values within a channel.
+
     Attributes:
         end (int):
             The end of the window.
@@ -177,6 +183,7 @@ class Window:
 @dataclass
 class Channel:
     """Description of a single channel.
+
     Attributes:
         active (bool):
             Whether the channel is active by default.
@@ -203,6 +210,7 @@ class Channel:
 @dataclass
 class RDefs:
     """Defaults for axes and colour model.
+
     Attributes:
         defaultT (int):
             Default timepoint.
@@ -220,6 +228,7 @@ class RDefs:
 @dataclass
 class Omero:
     """Display information e.g. colour channel information.
+
     Attributes:
         name (str):
             The display name.
@@ -249,6 +258,7 @@ class Omero:
 @dataclass
 class Zattrs:
     """Root metadata.
+
     Attributes:
         _creator (Creator):
             Information about the creator.

@@ -39,8 +39,7 @@ def _crash_func(_):
 
 
 def semantic_postproc_func(raw_output):
-    """
-    Function to post process semantic segmentations to form one
+    """Function to post process semantic segmentations to form one
     map as an output.
 
     """

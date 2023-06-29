@@ -1,5 +1,5 @@
 """tests for annotation rendering using
-AnnotationRenderer and AnnotationTileGenerator
+AnnotationRenderer and AnnotationTileGenerator.
 """
 from pathlib import Path
 from typing import List, Union
@@ -254,8 +254,7 @@ def test_sub_tile_levels(fill_store, tmp_path):
 
 
 def test_unknown_geometry(fill_store, tmp_path, caplog):
-    """
-    Test warning when unknown geometries are present that cannot
+    """Test warning when unknown geometries are present that cannot
     be rendered.
 
     """
@@ -333,8 +332,7 @@ def test_categorical_mapper(fill_store, tmp_path):
 
 
 def test_colour_prop_warning(fill_store, tmp_path, caplog):
-    """
-    Test warning when rendering annotations in which the provided
+    """Test warning when rendering annotations in which the provided
     score_prop does not exist.
 
     """

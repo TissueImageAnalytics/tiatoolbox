@@ -42,7 +42,7 @@ def cli_name(
     usage_help: str = "User defined name to be used as an identifier.",
     multiple: bool = False,
 ) -> callable:
-    """enables --name option for cli"""
+    """Enables --name option for cli."""
     if multiple:
         usage_help = usage_help + " Multiple instances may be provided."
     return click.option("--name", help=usage_help, type=str, multiple=multiple)

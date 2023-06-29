@@ -282,6 +282,7 @@ class PatchPredictor:
             return_raw (bool):
                 Return raw result without applying the `postproc_func`
                 on the assembled image.
+
         Returns:
             :class:`numpy.ndarray`:
                 Merged predictions as a 2D array.
@@ -465,9 +466,7 @@ class PatchPredictor:
         resolution,
         units,
     ):
-        """
-
-        Args:
+        """Args:
             ioconfig (IOPatchPredictorConfig):
         patch_input_shape (tuple):
             Size of patches input to the model. Patches are at

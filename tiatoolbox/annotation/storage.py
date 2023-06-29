@@ -117,8 +117,7 @@ class Annotation:
     properties: Properties = field(default_factory=dict)
 
     def to_feature(self) -> Dict:
-        """
-        Return a feature representation of this annotation.
+        """Return a feature representation of this annotation.
 
         A feature representation is a Python dictionary with the
         same schema as a geoJSON feature.
@@ -134,8 +133,7 @@ class Annotation:
         }
 
     def to_geojson(self) -> str:
-        """
-        Return a GeoJSON string representation of this annotation.
+        """Return a GeoJSON string representation of this annotation.
 
         Returns:
             str:
@@ -670,7 +668,7 @@ class AnnotationStore(ABC, MutableMapping):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
 
-            Returns:
+        Returns:
                 list:
                     A list of Annotation objects.
 
@@ -809,7 +807,7 @@ class AnnotationStore(ABC, MutableMapping):
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
 
-            Returns:
+        Returns:
                 list:
                     A list of keys for each Annotation.
 
@@ -887,11 +885,11 @@ class AnnotationStore(ABC, MutableMapping):
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
 
-            Returns:
+        Returns:
                 list:
                     A list of bounding boxes for each Annotation.
 
-            Example:
+        Example:
                 >>> from tiatoolbox.annotation.storage import DictionaryStore
                 >>> from shapely.geometry import Polygon
                 >>> store = DictionaryStore()

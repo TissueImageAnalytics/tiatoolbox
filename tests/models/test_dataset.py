@@ -70,7 +70,7 @@ def test_kather_dataset_default(tmp_path):
 
 
 def test_kather_nonexisting_dir():
-    """pytest for not exist dir."""
+    """Pytest for not exist dir."""
     with pytest.raises(
         ValueError,
         match=r".*not exist.*",

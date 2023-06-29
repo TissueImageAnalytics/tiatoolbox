@@ -35,6 +35,7 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
             Patch prediction assuming to be of shape HWC.
         canvas_shape (:class:`numpy.ndarray`):
             HW of the supposed assembled image.
+
     Returns:
         (tuple, tuple, bool):
             Canvas Shape, Canvas Count and whether to add singleton dimension.
@@ -297,7 +298,6 @@ class WSIStreamDataset(torch_data.Dataset):
             in `wsi_paths`.
 
     Examples:
-
         >>> ioconfig = IOSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
@@ -612,8 +612,7 @@ class SemanticSegmentor:
         resolution: Resolution = None,
         units: Units = None,
     ):
-        """
-        Indicates which coordinate is valid basing on the mask.
+        """Indicates which coordinate is valid basing on the mask.
 
         To use your own approaches, either subclass to overwrite or
         directly assign your own function to this name. In either cases,
@@ -636,6 +635,7 @@ class SemanticSegmentor:
                 Resolution of the requested patch.
             units (Units):
                 Units of the requested patch.
+
         Returns:
             :class:`numpy.ndarray`:
                 List of flags to indicate which coordinate is valid.
@@ -919,7 +919,6 @@ class SemanticSegmentor:
                 An image contains merged data.
 
         Examples:
-
         >>> SemanticSegmentor.merge_prediction(
         ...     canvas_shape=[4, 4],
         ...     predictions=[

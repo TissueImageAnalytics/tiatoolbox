@@ -1,4 +1,4 @@
-"""Defines original NuClick architecture
+"""Defines original NuClick architecture.
 
 Koohbanani, N. A., Jahanifar, M., Tajadin, N. Z., & Rajpoot, N. (2020).
 NuClick: a deep learning framework for interactive segmentation of microscopic images.
@@ -239,6 +239,7 @@ class MultiscaleConvBlock(nn.Module):
         Args:
             input_map (torch.Tensor):
                 Input, the tensor is of the shape NCHW.
+
         Returns:
             output (torch.Tensor):
                 The inference output.

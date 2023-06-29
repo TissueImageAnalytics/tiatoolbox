@@ -419,7 +419,7 @@ def test_get_coordinates():
 
 
 def test_filter_coordinates():
-    """Test different coordinate filtering functions for patch extraction"""
+    """Test different coordinate filtering functions for patch extraction."""
     bbox_list = np.array(
         [
             [0, 0, 4, 4],

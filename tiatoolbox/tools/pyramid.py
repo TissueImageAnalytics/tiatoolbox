@@ -452,7 +452,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
 class AnnotationTileGenerator(ZoomifyGenerator):
     r"""Tile generator using an AnnotationRenderer to render tiles
-    showing annotations held in an AnnotationStore
+    showing annotations held in an AnnotationStore.
 
     Args:
         info (WSIMeta):

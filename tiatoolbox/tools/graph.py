@@ -206,6 +206,7 @@ class SlideGraphConstructor:  # noqa: PIE798
             graph (dict):
                 A graph with keys "x", "edge_index", and optionally
                 "coordinates".
+
         Returns:
             ArrayLike:
                 A UMAP embedding of `graph["x"]` with shape (N, 3) and

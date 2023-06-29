@@ -150,7 +150,7 @@ def test_prealignment_rotation_step():
 
 
 def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask):
-    """Test for prealignment of an image pair"""
+    """Test for prealignment of an image pair."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
     fixed_mask = imread(fixed_mask)

@@ -1,4 +1,4 @@
-"""Unit test package for architecture utilities"""
+"""Unit test package for architecture utilities."""
 
 import numpy as np
 import pytest

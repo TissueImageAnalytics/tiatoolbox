@@ -596,7 +596,7 @@ def assert_dtype_int(input_var, message="Input must be integer."):
 
 def download_data(url, save_path, overwrite=False):
     """Download data from a given URL to location. Can overwrite data if demanded
-    else no action is taken
+    else no action is taken.
 
     Args:
         url (path): URL from where to download the data.
@@ -817,7 +817,7 @@ def string_to_tuple(in_str):
 
 
 def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
-    """Convert pixels per unit (ppu) to microns per pixel (mpp)
+    """Convert pixels per unit (ppu) to microns per pixel (mpp).
 
     Args:
         ppu (int):
@@ -942,6 +942,7 @@ def anns_from_hoverdict(data, props, typedict, origin, scale_factor):
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
             will be multiplied by this factor.
+
     Returns:
         A list of Annotation objects.
 
@@ -982,6 +983,7 @@ def make_default_dict(data, subcat):
             The data loaded from the .dat file.
         subcat:
             The subcategory of the data, eg 'Gland' or 'Nuclei'.
+
     Returns:
         A dictionary mapping types to more descriptive names.
 

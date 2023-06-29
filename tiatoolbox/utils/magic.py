@@ -118,7 +118,6 @@ def is_dcm(file: Union[str, Path, bytes, BytesIO, BytesIO]) -> bool:
             A boolean indicating whether the file is a .dcm file or not.
 
     """
-
     if is_dir(file):
         return False
     with _normalize_binaryio(file) as io:
