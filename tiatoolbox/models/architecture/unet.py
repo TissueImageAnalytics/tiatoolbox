@@ -114,6 +114,7 @@ class UnetEncoder(nn.Module):
         num_input_channels: int,
         layer_output_channels: List[int],
     ):
+        """Initializes :class:`UnetEncoder`."""
         super().__init__()
 
         self.blocks = nn.ModuleList()
@@ -283,6 +284,7 @@ class UNetModel(ModelABC):
         decoder_block: Tuple[int] = None,
         skip_type: str = "add",
     ):
+        """Initializes :class:`UNetModel`."""
         super().__init__()
 
         if encoder.lower() not in {"resnet50", "unet"}:
@@ -353,6 +355,10 @@ class UNetModel(ModelABC):
         Args:
             imgs (:class:`torch.Tensor`):
                 Input images, the tensor is of the shape NCHW.
+            args (list):
+                List of input arguments.
+            kwargs (dict):
+                Key-word arguments.
 
         Returns:
             :class:`torch.Tensor`:
