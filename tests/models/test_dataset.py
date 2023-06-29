@@ -17,6 +17,7 @@ class Proto1(DatasetInfoABC):
     """Intentionally created to check error with new attribute a."""
 
     def __init__(self):
+        """Proto1 initialization."""
         self.a = "a"
 
 
@@ -24,6 +25,7 @@ class Proto2(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs."""
 
     def __init__(self):
+        """Proto2 initialization."""
         self.inputs = "a"
 
 
@@ -31,6 +33,7 @@ class Proto3(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and labels."""
 
     def __init__(self):
+        """Proto3 initialization."""
         self.inputs = "a"
         self.labels = "a"
 
@@ -39,6 +42,7 @@ class Proto4(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and label names."""
 
     def __init__(self):
+        """Proto4 initialization."""
         self.inputs = "a"
         self.label_names = "a"
 
