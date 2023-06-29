@@ -494,7 +494,9 @@ def plot_graph(
 
 
 class AnnotationRenderer:
-    """Renderer containing information and methods to render annotations
+    """Renders AnnotationStore to a tile.
+
+    Renderer containing information and methods to render annotations
     from an AnnotationStore to a tile.
 
     Args:
@@ -557,6 +559,7 @@ class AnnotationRenderer:
         blur_radius=0,
         score_prop_edge=None,
     ):
+        """Initializes :class:`AnnotationRenderer`."""
         if mapper is None:
             mapper = colormaps["jet"]
         if isinstance(mapper, str) and mapper != "categorical":
@@ -610,6 +613,8 @@ class AnnotationRenderer:
         Args:
             annotation (Annotation):
                 Annotation to get color for.
+            edge (bool):
+                If annotation has an edge.
 
         Returns:
             tuple:
@@ -757,6 +762,7 @@ class AnnotationRenderer:
         )
 
     def __setattr__(self, __name: str, __value) -> None:
+        """Set attribute each time an attribute is set."""
         if __name == "blur_radius":
             # need to change additional settings
             if __value > 0:
@@ -785,12 +791,16 @@ class AnnotationRenderer:
         annotation geometries are decimated if appropriate.
 
         Args:
-            rgb (np.ndarray):
-                The image to render the annotation on.
-            bound_geom (Polygon):
-                A polygon representing the bounding box of the tile.
+            store (AnnotationStore):
+                AnnotationStore object for rendering.
+            bounds (tuple(float, float, float, float)):
+                Bounds to render annotations.
             scale (float):
-                The scale at which we are rendering the tile.
+                Scale at which annotations are to be rendered.
+            res (int):
+                Resolution at which annotations are to be rendered.
+            border (int):
+                Defines borders around annotation rendering.
 
         Returns:
             np.ndarray:
