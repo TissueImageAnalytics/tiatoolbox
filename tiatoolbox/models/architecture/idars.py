@@ -59,19 +59,20 @@ class IDaRS(CNNModel):
     """
 
     def __init__(self, backbone, num_classes=1):
+        """Initializes :class:`IDaRS`."""
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
     # noqa: E800
     def preproc(image: np.ndarray):
-        """Define preprocessing steps.
+        """Defines preprocessing steps.
 
         Args:
-            img (:class:`numpy.ndarray`):
+            image (:class:`numpy.ndarray`):
                 An image of shape HWC.
 
         Return:
-            img (:class:`torch.Tensor`):
+            image (:class:`torch.Tensor`):
                 An image of shape HWC.
 
         """
