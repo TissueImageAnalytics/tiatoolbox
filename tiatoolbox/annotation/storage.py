@@ -1415,8 +1415,8 @@ class AnnotationStore(ABC, MutableMapping):
         scale_factor: Tuple[float, float] = (1, 1),
         origin: Tuple[float, float] = (0, 0),
     ) -> None:
-        """Add annotations from a .geojson file to an existing store. Make
-        the best effort to create valid shapely geometries from provided contours.
+        """Add annotations from a .geojson file to an existing store.
+        Make the best effort to create valid shapely geometries from provided contours.
 
         Args:
             fp (Union[IO, str, Path]):
@@ -1674,6 +1674,7 @@ class SQLiteMetadata(MutableMapping):
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
+        """Initializes :class:`SQLiteMetadata`."""
         self.con = con
         self.con.execute(
             "CREATE TABLE IF NOT EXISTS metadata (key TEXT UNIQUE, value TEXT)",
@@ -1744,6 +1745,7 @@ class SQLiteStore(AnnotationStore):
         compression_level: int = 9,
         auto_commit: bool = True,
     ) -> None:
+        """Initializes :class:`SQLiteStore`."""
         super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
@@ -3217,6 +3219,7 @@ class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
 
     def __init__(self, connection: Union[Path, str, IO] = ":memory:") -> None:
+        """Initializes :class:`DictionaryStore`."""
         super().__init__()
         self._rows = {}
         self.connection = connection

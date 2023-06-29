@@ -180,6 +180,7 @@ class SQLTriplet(SQLExpression):
         op: Union[Callable, str] = None,
         rhs: Union["SQLTriplet", str] = None,
     ):
+        """Initializes :class:`SQLTriplet`."""
         self.lhs = lhs
         self.op = op
         self.rhs = rhs
@@ -225,6 +226,7 @@ class SQLJSONDictionary(SQLExpression):
     """Representation of an SQL expression to access JSON properties."""
 
     def __init__(self, acc: str = None) -> None:
+        """Initializes :class:`SQLJSONDictionary`."""
         self.acc = acc or ""
 
     def __str__(self) -> str:
@@ -245,6 +247,7 @@ class SQLRegex(SQLExpression):
     """Representation of an SQL expression to match a string against a regex."""
 
     def __init__(self, pattern: str, string: str, flags: int = 0) -> None:
+        """Initializes :class:`SQLRegex`."""
         self.pattern = pattern
         self.string = string
         self.flags = flags
