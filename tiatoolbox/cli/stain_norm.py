@@ -12,6 +12,11 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
+input_type = click.Choice(
+    ["reinhard", "custom", "ruifrok", "macenko", "vahadane"],
+    case_sensitive=False,
+)
+
 
 @tiatoolbox_cli.command()
 @cli_img_input(
@@ -22,10 +27,7 @@ from tiatoolbox.cli.common import (
 @cli_method(
     usage_help="Stain normalization method to use.",
     default="reinhard",
-    input_type=click.Choice(
-        ["reinhard", "custom", "ruifrok", "macenko", "vahadane"],
-        case_sensitive=False,
-    ),
+    input_type=input_type,
 )
 # inputs specific to this function
 @click.option("--target-input", help="Input path to the target image")
