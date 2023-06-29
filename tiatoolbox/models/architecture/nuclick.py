@@ -61,6 +61,7 @@ class ConvBnRelu(nn.Module):
         activation: str = "relu",
         do_batchnorm: bool = True,
     ):
+        """Initializes :class:`ConvBnRelu`."""
         super().__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -119,7 +120,7 @@ class ConvBnRelu(nn.Module):
                 Size of stride in the convolution layer.
             use_bias (bool):
                 Whether to use bias in the convolution layer.
-            dilation_rates (list):
+            dilation_rate (list):
                 Dilation rate for each convolution layer.
             activation (str):
                 Name of the activation function to use.
@@ -189,6 +190,7 @@ class MultiscaleConvBlock(nn.Module):
         activation: str = "relu",
         use_bias: bool = False,
     ):
+        """Initializes :class:`MultiscaleConvBlock`."""
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
@@ -287,6 +289,7 @@ class ResidualConv(nn.Module):
         use_bias: bool = False,
         dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
     ):
+        """Initializes :class:`ResidualConv`."""
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
@@ -355,6 +358,7 @@ class NuClick(ModelABC):
     """
 
     def __init__(self, num_input_channels: int, num_output_channels: int):
+        """Initializes :class:`NuClick`."""
         super().__init__()
         self.net_name = "NuClick"
 
