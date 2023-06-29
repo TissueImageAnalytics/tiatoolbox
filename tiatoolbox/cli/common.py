@@ -374,6 +374,7 @@ class TIAToolboxCLI(click.Group):
     """Defines TIAToolbox Commandline Interface Click group."""
 
     def __init__(self, *args, **kwargs):
+        """Initializes TIAToolboxCLI."""
         super().__init__(*args, **kwargs)
         self.help = "Computational pathology toolbox by TIA Centre."
         self.add_help_option = {"help_option_names": ["-h", "--help"]}
