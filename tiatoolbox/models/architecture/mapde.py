@@ -78,6 +78,7 @@ class MapDe(MicroNet):
         threshold_abs: float = 250,
         num_classes: int = 1,
     ):
+        """Initializes :class:`MapDe`."""
         super().__init__(
             num_output_channels=num_classes * 2,
             num_input_channels=num_input_channels,
