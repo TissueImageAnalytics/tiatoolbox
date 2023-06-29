@@ -444,6 +444,7 @@ class MicroNet(ModelABC):
         num_output_channels=2,
         out_activation="softmax",
     ):
+        """Initializes :class:`MicroNet`."""
         super().__init__()
         if num_output_channels < 2:
             raise ValueError("Number of classes should be >=2.")
