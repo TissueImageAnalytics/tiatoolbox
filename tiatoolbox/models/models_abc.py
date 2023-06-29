@@ -15,11 +15,13 @@ class IOConfigABC(ABC):
     @property
     @abstractmethod
     def input_resolutions(self):
+        """Abstract method to update input_resolution."""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def output_resolutions(self):
+        """Abstract method to update output_resolutions."""
         raise NotImplementedError
 
 
@@ -27,6 +29,7 @@ class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(self):
+        """Initializes Abstract class ModelABC."""
         super().__init__()
         self._postproc = self.postproc
         self._preproc = self.preproc
