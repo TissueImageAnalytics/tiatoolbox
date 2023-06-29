@@ -127,6 +127,7 @@ def test_duplicate_filter(caplog):
 
 
 def test_lazy_import():
+    """Tests lazy import for tiatoolbox."""
     import sys
 
     from tiatoolbox import _lazy_import
