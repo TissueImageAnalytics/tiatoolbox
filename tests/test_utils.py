@@ -1377,6 +1377,7 @@ def test_save_yaml_parents(tmp_path):
 
 
 def test_imread_none_args():
+    """Tests imread with wrong input type."""
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.imread(img)
@@ -1409,6 +1410,7 @@ def test_detect_gpu():
 
 
 def make_simple_dat(centroids=((0, 0), (100, 100))):
+    """Creates a `.dat` file for tests."""
     polys = [cell_polygon(cent) for cent in centroids]
     return {
         f"ann{i}": {
