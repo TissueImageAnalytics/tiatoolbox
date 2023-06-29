@@ -210,10 +210,12 @@ class DummyMutableOpenSlideObject:
     """Dummy OpenSlide object with mutable properties."""
 
     def __init__(self, openslide_obj) -> None:
+        """DummyMutableOpenSlideObject initialization."""
         self.openslide_obj = openslide_obj
         self._properties = dict(openslide_obj.properties)
 
     def __getattr__(self, name: str):
+        """Catch references to OpenSlide object attributes."""
         return getattr(self.openslide_obj, name)
 
     @property
@@ -666,6 +668,7 @@ def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff):
 
 
 def test_is_tiled_tiff(source_image):
+    """Tests if source_image is a tiled tiff."""
     source_image.replace(source_image.with_suffix(".tiff"))
     assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
@@ -2318,6 +2321,8 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
 
 
 class TestReader:
+    """TestReader class to run tests for multiple input formats."""
+
     scenarios = [
         (
             "AnnotationReaderOverlaid",
