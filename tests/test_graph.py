@@ -198,6 +198,8 @@ def test_slidegraph_build_feature_range_thresh_none():
 
 
 class TestConstructor:
+    """Defines class to test constructors."""
+
     scenarios = [
         ("SlideGraph", {"graph_constructor": SlideGraphConstructor}),
     ]
