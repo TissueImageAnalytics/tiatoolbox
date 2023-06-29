@@ -1,3 +1,4 @@
+"""Tests WSI Registration."""
 import pathlib
 
 import cv2
@@ -529,6 +530,7 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
 
 
 def test_affine_wsi_transformer(sample_ome_tiff):
+    """Tests Affine WSI transformer."""
     test_locations = [(1001, 600), (1000, 500), (800, 701)]  # at base level 0
     resolution = 0
     size = (100, 100)
