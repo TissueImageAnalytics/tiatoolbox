@@ -167,11 +167,11 @@ def find_bad_imports(
     """Find bad imports in the given requirements file.
 
     Args:
-        root (pathlib.Path):
+        root (Path):
             Root directory of the project.
-        source_root (pathlib.Path):
+        source_files (list(Path)):
             Root directory of the source code.
-        requirements_path (pathlib.Path):
+        requirements_path (Path):
             Path to the requirements file.
 
     Returns:
