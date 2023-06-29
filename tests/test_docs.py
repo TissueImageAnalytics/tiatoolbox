@@ -1,3 +1,4 @@
+"""Tests docstring examples and imports are valid."""
 import ast
 import doctest
 import importlib
