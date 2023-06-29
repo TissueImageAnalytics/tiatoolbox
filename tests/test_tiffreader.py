@@ -1,3 +1,4 @@
+"""Tests TIFFWSIReader."""
 import pytest
 from defusedxml import ElementTree
 
