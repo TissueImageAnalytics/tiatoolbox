@@ -185,11 +185,13 @@ def fill_store(cell_grid, points_grid):
 
 
 def test_sqlite_store_compile_options():
+    """Tests SQLiteStore compile options."""
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
 
 def test_sqlite_store_compile_options_exception(monkeypatch):
+    """Tests SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 37, 0))
     monkeypatch.setattr(
         SQLiteStore,
@@ -204,6 +206,7 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
 
 
 def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
+    """Tests SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
     monkeypatch.setattr(
         SQLiteStore,
@@ -228,6 +231,7 @@ def test_sqlite_store_compile_options_missing_math(monkeypatch, caplog):
 
 
 def test_sqlite_store_multiple_connection(tmp_path):
+    """Tests SQLiteStore multiple connections."""
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
     assert len(store) == len(store2)
@@ -535,6 +539,8 @@ def test_init_base_class_exception():
 
 
 class TestStore:
+    """Defines TestStore to test AnnotationStore for multiple scenarios."""
+
     scenarios = [
         ("Dictionary", {"store_cls": DictionaryStore}),
         ("SQLite", {"store_cls": SQLiteStore}),
@@ -1968,7 +1974,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_box_box(store_cls):
-        """Find duplicate (overlapping) cell boundaries via bounding boxes.
+        r"""Find duplicate (overlapping) cell boundaries via bounding boxes.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
         of overlapping fake cell boundary polygons, where each polygon
@@ -2014,7 +2020,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_boxpoint_boxpoint(store_cls):
-        """Find duplicate (overlapping) cell boundaries via bbox centroid distance.
+        r"""Find duplicate (overlapping) cell boundaries via bbox centroid distance.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
         of overlapping fake cell boundary polygons, where each polygon
@@ -2060,7 +2066,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_poly_poly(store_cls):
-        """Find duplicate (overlapping) cell boundaries via polygon intersection.
+        r"""Find duplicate (overlapping) cell boundaries via polygon intersection.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
         of overlapping fake cell boundary polygons, where each polygon
@@ -2105,6 +2111,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode_type(store_cls):
+        """Tests invalid mode type for AnnotationStore."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(TypeError, match="string or tuple of strings"):
@@ -2117,6 +2124,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode_format(store_cls):
+        """Tests invalid mode format for AnnotationStore."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(ValueError, match="must be one of"):
@@ -2129,6 +2137,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode(store_cls):
+        """Tests invalid mode for AnnotationStore."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(ValueError, match="must be one of"):
