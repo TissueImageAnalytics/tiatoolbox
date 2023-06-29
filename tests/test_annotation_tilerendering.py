@@ -1,5 +1,7 @@
-"""tests for annotation rendering using
-AnnotationRenderer and AnnotationTileGenerator.
+"""Tests for rendering tile annotations.
+
+Tests for annotation rendering using AnnotationRenderer and AnnotationTileGenerator.
+
 """
 from pathlib import Path
 from typing import List, Union
@@ -254,10 +256,7 @@ def test_sub_tile_levels(fill_store, tmp_path):
 
 
 def test_unknown_geometry(fill_store, tmp_path, caplog):
-    """Test warning when unknown geometries are present that cannot
-    be rendered.
-
-    """
+    """Test warning when unknown geometries cannot be rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -332,7 +331,9 @@ def test_categorical_mapper(fill_store, tmp_path):
 
 
 def test_colour_prop_warning(fill_store, tmp_path, caplog):
-    """Test warning when rendering annotations in which the provided
+    """Test warning when score_prop does not exist.
+
+    Test warning when rendering annotations in which the provided
     score_prop does not exist.
 
     """
