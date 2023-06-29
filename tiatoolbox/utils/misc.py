@@ -102,9 +102,6 @@ def save_yaml(
         exist_ok (bool):
             Overwrite the output file if it exists. Default is False.
 
-
-    Returns:
-
     Examples:
         >>> from tiatoolbox import utils
         >>> input_dict = {'hello': 'Hello World!'}
@@ -345,8 +342,9 @@ def mpp2objective_power(mpp):
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):
-    """Enhancing contrast of the input image using intensity adjustment.
-       This method uses both image low and high percentiles.
+    """Enhances contrast of the input image using intensity adjustment.
+
+    This method uses both image low and high percentiles.
 
     Args:
         img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
@@ -385,6 +383,7 @@ def contrast_enhancer(img, low_p=2, high_p=98):
 
 def __numpy_array_to_table(input_table):
     """Checks numpy array to be 2 or 3 columns.
+
     If it has two columns then class should be assigned None.
 
     Args:
@@ -412,7 +411,8 @@ def __assign_unknown_class(input_table):
     """Creates a column and assigns None if class is unknown.
 
     Args:
-        input_table (np.ndarray or pd.DataFrame): input table.
+        input_table: (np.ndarray or pd.DataFrame):
+            input table.
 
     Returns:
         table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
@@ -435,7 +435,8 @@ def read_locations(input_table):
     """Read annotations as pandas DataFrame.
 
     Args:
-        input_table (str or pathlib.Path or :class:`numpy.ndarray` or
+        input_table :
+            (str or pathlib.Path or :class:`numpy.ndarray` or
             :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
             :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             First column in the table represents x position, second
@@ -444,7 +445,8 @@ def read_locations(input_table):
             Json should have `x`, `y` and `class` fields.
 
     Returns:
-        pd.DataFrame: DataFrame with x, y location and class type.
+        pd.DataFrame:
+            DataFrame with x, y location and class type.
 
     Raises:
         FileNotSupported:
@@ -595,13 +597,14 @@ def assert_dtype_int(input_var, message="Input must be integer."):
 
 
 def download_data(url, save_path, overwrite=False):
-    """Download data from a given URL to location. Can overwrite data if demanded
-    else no action is taken.
+    """Download data from a given URL to location.
+
+    The function can overwrite data if demanded else no action is taken.
 
     Args:
-        url (path): URL from where to download the data.
-        save_path (str): Location to unzip the data.
-        overwrite (bool): True to force overwriting of existing data, default=False
+        url: (path): URL from where to download the data.
+        save_path: (str): Location to unzip the data.
+        overwrite: (bool): True to force overwriting of existing data, default=False
 
     """
     print(f"Download from {url}")
@@ -1009,6 +1012,8 @@ def add_from_dat(
     Make the best effort to create valid shapely geometries from provided contours.
 
     Args:
+        store (AnnotationStore):
+            AnnotationStore object.
         fp (Union[IO, str, Path]):
             The file path or handle to load from.
         scale_factor (float):
@@ -1024,7 +1029,7 @@ def add_from_dat(
             For multi-head output, should be a dict of dicts, e.g.:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
             'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
-        origin [float, float]:
+        origin (tuple(float, float)):
             The x and y coordinates to use as the origin for the annotations.
 
     """
