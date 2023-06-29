@@ -1,3 +1,4 @@
+"""Defines wsi_registration classes and methods."""
 import itertools
 from typing import Dict, Tuple
 
@@ -312,6 +313,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
     """
 
     def __init__(self):
+        """Initializes :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
@@ -411,6 +413,7 @@ class DFBRegister:
     """
 
     def __init__(self, patch_size: Tuple[int, int] = (224, 224)):
+        """Initializes :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
         self.feature_extractor = DFBRFeatureExtractor()
