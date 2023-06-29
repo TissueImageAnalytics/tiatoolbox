@@ -80,6 +80,7 @@ class CustomExtractor:
     """
 
     def __init__(self, stain_matrix):
+        """Initializes :class:`CustomExtractor`."""
         self.stain_matrix = stain_matrix
         if self.stain_matrix.shape not in [(2, 3), (3, 3)]:
             raise ValueError("Stain matrix must have shape (2, 3) or (3, 3).")
@@ -117,6 +118,7 @@ class RuifrokExtractor:
     """
 
     def __init__(self):
+        """Initializes :class:`RuifrokExtractor`."""
         self.__stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
 
     def get_stain_matrix(self, _):
@@ -159,6 +161,7 @@ class MacenkoExtractor:
     """
 
     def __init__(self, luminosity_threshold=0.8, angular_percentile=99):
+        """Initializes :class:`MacenkoExtractor`."""
         self.__luminosity_threshold = luminosity_threshold
         self.__angular_percentile = angular_percentile
 
@@ -243,6 +246,7 @@ class VahadaneExtractor:
     """
 
     def __init__(self, luminosity_threshold=0.8, regularizer=0.1):
+        """Initializes :class:`VahadaneExtractor`."""
         self.__luminosity_threshold = luminosity_threshold
         self.__regularizer = regularizer
 
