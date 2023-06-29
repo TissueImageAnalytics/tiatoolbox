@@ -104,6 +104,7 @@ class WSIMeta:
         file_path: Optional[Path] = None,
         raw: Optional[Mapping[str, str]] = None,
     ):
+        """Initializas WSIMeta."""
         self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = tuple(int(x) for x in slide_dimensions)
