@@ -51,6 +51,7 @@ class TileServer(Flask):
         layers: dict[str, WSIReader | str] | list[WSIReader | str],
         renderer: AnnotationRenderer = None,
     ) -> None:
+        """Initializes :class:`TileServer`."""
         super().__init__(
             __name__,
             template_folder=data._local_sample_path(
