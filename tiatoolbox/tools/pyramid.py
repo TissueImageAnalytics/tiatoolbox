@@ -451,14 +451,16 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
 
 class AnnotationTileGenerator(ZoomifyGenerator):
-    r"""Tile generator using an AnnotationRenderer to render tiles
+    r"""Defines AnnotationTileGenerator for rendering AnnotationStore.
+
+    Tile generator using an AnnotationRenderer to render tiles
     showing annotations held in an AnnotationStore.
 
     Args:
         info (WSIMeta):
             An WSIMeta Object storing the metadata of the slide this
             generator is rendering tiles for
-        Store (AnnotationStore):
+        store (AnnotationStore):
             An AnnotationStore Object containing annotations to be
             rendered for given slide
         renderer (AnnotationRenderer):
@@ -485,6 +487,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         downsample: int = 2,
         overlap: int = 0,
     ):
+        """Initializes :class:`AnnotationTileGenerator`."""
         super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store

@@ -56,7 +56,9 @@ def _process_tile_predictions(
     merge_predictions,
     model_name,
 ):
-    """Function to merge new tile prediction with existing prediction,
+    """Process Tile Predictions.
+
+    Function to merge new tile prediction with existing prediction,
     using the output from each task.
 
     Args:

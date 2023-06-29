@@ -62,6 +62,7 @@ def remote_sample(tmp_path_factory: TempPathFactory) -> Callable:
 @pytest.fixture(scope="session")
 def sample_ndpi(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for ndpi images.
+
     Download ndpi image for pytest.
 
     """
@@ -82,6 +83,7 @@ def sample_ndpi2(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_svs(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for svs images.
+
     Download svs image for pytest.
 
     """
@@ -91,6 +93,7 @@ def sample_svs(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_ome_tiff(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for ome-tiff (brightfield pyramid) images.
+
     Download ome-tiff image for pytest.
 
     """
@@ -100,6 +103,7 @@ def sample_ome_tiff(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_jp2(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for JP2 images.
+
     Download jp2 image for pytest.
 
     """
@@ -147,6 +151,7 @@ def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
 @pytest.fixture(scope="session")
 def source_image(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for source image.
+
     Download stain normalization source image for pytest.
 
     """
@@ -156,6 +161,7 @@ def source_image(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def norm_macenko(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for norm_macenko image.
+
     Download norm_macenko image for pytest.
 
     """
@@ -165,6 +171,7 @@ def norm_macenko(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def norm_reinhard(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for norm_reinhard image.
+
     Download norm_reinhard image for pytest.
 
     """
@@ -174,6 +181,7 @@ def norm_reinhard(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def norm_ruifrok(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for norm_ruifrok image.
+
     Download norm_ruifrok image for pytest.
 
     """
@@ -183,6 +191,7 @@ def norm_ruifrok(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def norm_vahadane(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for norm_vahadane image.
+
     Download norm_vahadane image for pytest.
 
     """
@@ -220,6 +229,7 @@ def sample_visual_fields(
 @pytest.fixture(scope="session")
 def patch_extr_vf_image(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for a visual field image.
+
     Download TCGA-HE-7130-01Z-00-DX1 image for pytest.
 
     """
@@ -229,6 +239,7 @@ def patch_extr_vf_image(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_csv(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction csv.
+
     Download sample patch extraction csv for pytest.
 
     """
@@ -238,6 +249,7 @@ def patch_extr_csv(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_json(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction json.
+
     Download sample patch extraction json for pytest.
 
     """
@@ -247,6 +259,7 @@ def patch_extr_json(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_npy(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction npy.
+
     Download sample patch extraction npy for pytest.
 
     """
@@ -256,6 +269,7 @@ def patch_extr_npy(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_csv_noheader(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction noheader csv.
+
     Download sample patch extraction noheader csv for pytest.
 
     """
@@ -265,6 +279,7 @@ def patch_extr_csv_noheader(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_2col_json(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction 2col json.
+
     Download sample patch extraction 2col json for pytest.
 
     """
@@ -274,6 +289,7 @@ def patch_extr_2col_json(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_2col_npy(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction 2col npy.
+
     Download sample patch extraction 2col npy for pytest.
 
     """
@@ -283,6 +299,7 @@ def patch_extr_2col_npy(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_jp2_csv(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction jp2 csv.
+
     Download sample patch extraction jp2 csv for pytest.
 
     """
@@ -292,6 +309,7 @@ def patch_extr_jp2_csv(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_jp2_read(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction jp2 read npy.
+
     Download sample patch extraction jp2 read npy for pytest.
 
     """
@@ -301,6 +319,7 @@ def patch_extr_jp2_read(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_npy_read(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction read npy.
+
     Download sample patch extraction read npy for pytest.
 
     """
@@ -310,6 +329,7 @@ def patch_extr_npy_read(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_svs_csv(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction svs csv.
+
     Download sample patch extraction svs csv for pytest.
 
     """
@@ -319,6 +339,7 @@ def patch_extr_svs_csv(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_svs_header(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction svs_header csv.
+
     Download sample patch extraction svs_header csv for pytest.
 
     """
@@ -328,6 +349,7 @@ def patch_extr_svs_header(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def patch_extr_svs_npy_read(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch extraction svs_read npy.
+
     Download sample patch extraction svs_read npy for pytest.
 
     """
@@ -337,6 +359,7 @@ def patch_extr_svs_npy_read(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_patch1(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch 1.
+
     Download sample patch 1 (Kather100K) for pytest.
 
     """
@@ -346,6 +369,7 @@ def sample_patch1(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_patch2(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch 2.
+
     Download sample patch 2 (Kather100K) for pytest.
 
     """
@@ -355,6 +379,7 @@ def sample_patch2(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_patch3(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch 3.
+
     Download sample patch 3 (PCam) for pytest.
 
     """
@@ -364,6 +389,7 @@ def sample_patch3(remote_sample) -> pathlib.Path:
 @pytest.fixture(scope="session")
 def sample_patch4(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for sample patch 4.
+
     Download sample patch 4 (PCam) for pytest.
 
     """
@@ -388,6 +414,7 @@ def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory):
 @pytest.fixture(scope="session")
 def sample_wsi_dict(remote_sample):
     """Sample pytest fixture for torch wsi dataset.
+
     Download svs image for pytest.
 
     """

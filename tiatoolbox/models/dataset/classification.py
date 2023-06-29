@@ -66,7 +66,9 @@ def predefined_preproc_func(dataset_name):
 
 
 class PatchDataset(dataset_abc.PatchDatasetABC):
-    """Defines a simple patch dataset, which inherits from the
+    """Defines PatchDataset for torch inference.
+
+    Defines a simple patch dataset, which inherits from the
       `torch.utils.data.Dataset` class.
 
     Attributes:
