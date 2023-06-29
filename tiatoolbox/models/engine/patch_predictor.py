@@ -29,6 +29,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
         stride_shape=None,
         **kwargs,
     ):
+        """Initializes :class:`IOPatchPredictorConfig`."""
         stride_shape = patch_input_shape if stride_shape is None else stride_shape
         super().__init__(
             input_resolutions=input_resolutions,
@@ -227,6 +228,7 @@ class PatchPredictor:
         pretrained_weights=None,
         verbose=True,
     ):
+        """Initializes :class:`PatchPredictor`."""
         super().__init__()
 
         self.imgs = None
@@ -466,22 +468,25 @@ class PatchPredictor:
         resolution,
         units,
     ):
-        """Args:
+        """Updates the ioconfig.
+
+        Args:
             ioconfig (IOPatchPredictorConfig):
-        patch_input_shape (tuple):
-            Size of patches input to the model. Patches are at
-            requested read resolution, not with respect to level 0,
-            and must be positive.
-        stride_shape (tuple):
-            Stride using during tile and WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
-            :obj:`WSIReader` for details.
-        units (Units):
-            Units of resolution used for reading the image.
+                Input ioconfig for PatchPredictor.
+            patch_input_shape (tuple):
+                Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to level 0,
+                and must be positive.
+            stride_shape (tuple):
+                Stride using during tile and WSI processing. Stride is
+                at requested read resolution, not with respect to
+                level 0, and must be positive. If not provided,
+                `stride_shape=patch_input_shape`.
+            resolution (Resolution):
+                Resolution used for reading the image. Please see
+                :obj:`WSIReader` for details.
+            units (Units):
+                Units of resolution used for reading the image.
 
         Returns:
             Updated Patch Predictor IO configuration.
@@ -660,7 +665,8 @@ class PatchPredictor:
                 where the running script is invoked.
             save_output (bool):
                 Whether to save output for a single file. default=False
-            highest_input_resolution:
+            highest_input_resolution (list(dict)):
+                Highest available input resolution.
 
 
         Returns:
