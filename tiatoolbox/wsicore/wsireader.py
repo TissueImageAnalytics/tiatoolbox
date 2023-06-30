@@ -10,7 +10,7 @@ import pathlib
 import re
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, Tuple
+from typing import TYPE_CHECKING, Iterable, Tuple
 
 import numpy as np
 import openslide
@@ -27,8 +27,10 @@ from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
-from tiatoolbox.wsicore.metadata.ngff import Multiscales
 from tiatoolbox.wsicore.wsimeta import Resolution, Units, WSIMeta
+
+if TYPE_CHECKING:
+    from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()
 

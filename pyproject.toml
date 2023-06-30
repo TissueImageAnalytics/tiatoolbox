@@ -88,7 +88,10 @@ select = [
   "RSE",   # flake8-raise
   # "SLF",   # flake8-self
   "SIM",   # flake8-simplify
+  "TID",   # flake8-tidy-imports
+  "TCH",   # flake8-type-checking
   "YTT",   # flake8-2020
+  "SLOT",  # flake8-slots
   "ASYNC", # flake8-async
 ]
 ignore = []

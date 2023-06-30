@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import itertools
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -18,8 +19,10 @@ from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
+
+if TYPE_CHECKING:
+    from tiatoolbox.wsicore.wsimeta import Resolution, Units
 
 
 def _check_dims(

@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from collections import defaultdict
 from numbers import Number
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
 import umap
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
-from numpy.typing import ArrayLike
 from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from numpy.typing import ArrayLike
 
 
 def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
