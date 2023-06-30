@@ -1,3 +1,4 @@
+"""Defines classes and methods for dataset information."""
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -13,10 +14,10 @@ class DatasetInfoABC(ABC):
     Enforcing such that following attributes must always be defined by
     the subclass.
 
-    Attributes:
+    Property:
         inputs (list):
             A list of paths where each path points to a sample image.
-            labels (list): A list of `int` where each is the label of
+        labels (list): A list of `int` where each is the label of
             the sample at the same index.
         label_names (dict):
             A dict indicates the possible associate name of each label
@@ -27,16 +28,19 @@ class DatasetInfoABC(ABC):
     @property
     @abstractmethod
     def inputs(self):
+        """A list of paths where each path points to a sample image."""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def labels(self):
+        """A list of labels where each is the label of the sample at the same index."""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def label_names(self):
+        """A dict indicates the possible associate name of each label value."""
         raise NotImplementedError
 
 
