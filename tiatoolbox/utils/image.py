@@ -251,7 +251,7 @@ def crop_and_pad_edges(
 
     # Add extra padding dimension for colour channels
     if len(region.shape) > 2:
-        padding = padding + (0, 0)
+        padding = (*padding, 0, 0)
 
     # Crop the region
     slices = bounds2slices(overlap)
