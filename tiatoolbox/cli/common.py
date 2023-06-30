@@ -481,7 +481,8 @@ def prepare_model_cli(
     file_types = string_to_tuple(in_str=file_types)
 
     if output_path.exists():
-        raise FileExistsError("Path already exists.")
+        msg = "Path already exists."
+        raise FileExistsError(msg)
 
     if not os.path.exists(img_input):
         raise FileNotFoundError

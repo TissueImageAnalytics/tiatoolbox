@@ -49,13 +49,15 @@ def _check_dims(
 
     """
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(moving_mask)) == 1:
-        raise ValueError("The foreground is missing in the mask.")
+        msg = "The foreground is missing in the mask."
+        raise ValueError(msg)
 
     if (
         fixed_img.shape[:2] != fixed_mask.shape
         or moving_img.shape[:2] != moving_mask.shape
     ):
-        raise ValueError("Mismatch of shape between image and its corresponding mask.")
+        msg = "Mismatch of shape between image and its corresponding mask."
+        raise ValueError(msg)
 
     if len(fixed_img.shape) == 3:
         fixed_img = cv2.cvtColor(fixed_img, cv2.COLOR_BGR2GRAY)
@@ -170,10 +172,12 @@ def prealignment(
     fixed_img, moving_img = _check_dims(fixed_img, moving_img, fixed_mask, moving_mask)
 
     if rotation_step < 10 or rotation_step > 20:
-        raise ValueError("Please select the rotation step in between 10 and 20.")
+        msg = "Please select the rotation step in between 10 and 20."
+        raise ValueError(msg)
 
     if dice_overlap < 0 or dice_overlap > 1:
-        raise ValueError("The dice_overlap should be in between 0 and 1.0.")
+        msg = "The dice_overlap should be in between 0 and 1.0."
+        raise ValueError(msg)
 
     fixed_img = exposure.rescale_intensity(img_as_float(fixed_img), in_range=(0, 1))
     moving_img = exposure.rescale_intensity(img_as_float(moving_img), in_range=(0, 1))
@@ -288,7 +292,8 @@ def match_histograms(
     """
     image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
     if len(image_a.shape) == 3 or len(image_b.shape) == 3:
-        raise ValueError("The input images should be grayscale images.")
+        msg = "The input images should be grayscale images."
+        raise ValueError(msg)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
     entropy_a, entropy_b = filters.rank.entropy(image_a, kernel), filters.rank.entropy(
@@ -578,7 +583,8 @@ class DFBRegister:
 
         """
         if len(features) != 3:
-            raise ValueError("The feature mapping step expects 3 blocks of features.")
+            msg = "The feature mapping step expects 3 blocks of features."
+            raise ValueError(msg)
 
         pool3_feat = features["block3_pool"].detach().numpy()
         pool4_feat = features["block4_pool"].detach().numpy()
@@ -1074,12 +1080,14 @@ class DFBRegister:
 
         """
         if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
+            msg = "The required shape for fixed and moving images is n x m x 3."
             raise ValueError(
-                "The required shape for fixed and moving images is n x m x 3.",
+                msg,
             )
 
         if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
-            raise ValueError("The input images are expected to have 3 channels.")
+            msg = "The input images are expected to have 3 channels."
+            raise ValueError(msg)
 
         if len(fixed_mask.shape) > 2:
             fixed_mask = fixed_mask[:, :, 0]
@@ -1276,12 +1284,14 @@ def estimate_bspline_transform(
 
     fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
     if len(fixed_image.shape) > 3 or len(moving_image.shape) > 3:
-        raise ValueError("The input images can only be grayscale or RGB images.")
+        msg = "The input images can only be grayscale or RGB images."
+        raise ValueError(msg)
 
     if (len(fixed_image.shape) == 3 and fixed_image.shape[2] != 3) or (
         len(moving_image.shape) == 3 and moving_image.shape[2] != 3
     ):
-        raise ValueError("The input images can only have 3 channels.")
+        msg = "The input images can only have 3 channels."
+        raise ValueError(msg)
 
     # Inverting intensity values
     fixed_image_inv = np.invert(fixed_image)

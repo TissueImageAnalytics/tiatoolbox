@@ -260,8 +260,12 @@ class WSIReader:
         """
         # Validate inputs
         if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
+            msg = (
+                "Invalid input: Must be a "
+                "WSIRead, numpy array, string or pathlib.Path"
+            )
             raise TypeError(
-                "Invalid input: Must be a WSIRead, numpy array, string or pathlib.Path",
+                msg,
             )
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(input_img, mpp=mpp, power=power)
@@ -286,8 +290,9 @@ class WSIReader:
 
         if last_suffix in (".zarr",):
             if not is_ngff(input_path):
+                msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
                 raise FileNotSupportedError(
-                    f"File {input_path} does not appear to be a v0.4 NGFF zarr.",
+                    msg,
                 )
             return NGFFWSIReader(input_path, mpp=mpp, power=power)
 
@@ -354,8 +359,9 @@ class WSIReader:
             ".zarr",
             ".db",
         ]:
+            msg = f"File {input_path} is not a supported file format."
             raise FileNotSupportedError(
-                f"File {input_path} is not a supported file format.",
+                msg,
             )
 
     def __init__(
@@ -370,19 +376,22 @@ class WSIReader:
         else:
             self.input_path = pathlib.Path(input_img)
             if not self.input_path.exists():
-                raise FileNotFoundError(f"Input path does not exist: {self.input_path}")
+                msg = f"Input path does not exist: {self.input_path}"
+                raise FileNotFoundError(msg)
         self._m_info = None
 
         # Set a manual mpp value
         if mpp and isinstance(mpp, Number):
             mpp = (mpp, mpp)
         if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
-            raise TypeError("`mpp` must be a number or iterable of length 2.")
+            msg = "`mpp` must be a number or iterable of length 2."
+            raise TypeError(msg)
         self._manual_mpp = tuple(mpp) if mpp else None
 
         # Set a manual power value
         if power and not isinstance(power, Number):
-            raise TypeError("`power` must be a number.")
+            msg = "`power` must be a number."
+            raise TypeError(msg)
         self._manual_power = power
 
     @property
@@ -821,25 +830,38 @@ class WSIReader:
 
         """
         if input_unit not in {"mpp", "power", "level", "baseline"}:
+            msg = (
+                "Invalid input_unit: argument accepts only one of the "
+                "following options: `'mpp'`, `'power'`, `'level'`, `'baseline'`."
+            )
             raise ValueError(
-                "Invalid input_unit: argument accepts only one of the following "
-                " options: `'mpp'`, `'power'`, `'level'`, `'baseline'`.",
+                msg,
             )
         if output_unit not in {"mpp", "power", "baseline", None}:
+            msg = (
+                "Invalid output_unit: argument accepts only one of the "
+                "following options: `'mpp'`, `'power'`, `'baseline'`, "
+                "or None (to return all units)."
+            )
             raise ValueError(
-                "Invalid output_unit: argument accepts only one of the following"
-                " options: `'mpp'`, `'power'`, `'baseline'`, or None (to return"
-                " all units).",
+                msg,
             )
         if baseline_mpp is None and input_unit == "mpp":
+            msg = (
+                "Missing 'mpp': `input_unit` has been set to 'mpp' while "
+                "there is no information about 'mpp' in WSI meta data."
+            )
             raise ValueError(
-                "Missing 'mpp': `input_unit` has been set to 'mpp' while there "
-                "is no information about 'mpp' in WSI meta data.",
+                msg,
             )
         if baseline_power is None and input_unit == "power":
+            msg = (
+                "Missing 'objective_power': `input_unit` has been set to 'power' "
+                "while there is no information about 'objective_power' "
+                "in WSI meta data."
+            )
             raise ValueError(
-                "Missing 'objective_power': `input_unit` has been set to 'power' while "
-                "there is no information about 'objective_power' in WSI meta data.",
+                msg,
             )
 
     def _prepare_output_dict(
@@ -954,9 +976,12 @@ class WSIReader:
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
         if not rescale.is_integer():
-            raise ValueError(
+            msg = (
                 "Tile objective value must be an integer multiple of the "
-                "objective power of the slide.",
+                "objective power of the slide."
+            )
+            raise ValueError(
+                msg,
             )
         try:
             level = np.log2(rescale)
@@ -1421,7 +1446,8 @@ class WSIReader:
 
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
-            raise ValueError(f"Invalid tissue masking method: {method}.")
+            msg = f"Invalid tissue masking method: {method}."
+            raise ValueError(msg)
         if method == "morphological":
             mpp = None
             power = None
@@ -2671,7 +2697,8 @@ class VirtualWSIReader(WSIReader):
             power=power,
         )
         if mode.lower() not in ["rgb", "bool"]:
-            raise ValueError("Invalid mode.")
+            msg = "Invalid mode."
+            raise ValueError(msg)
         self.mode = mode.lower()
         if isinstance(input_img, np.ndarray):
             self.img = input_img
@@ -3192,7 +3219,8 @@ class ArrayView:
             y, x, s = index
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
-        raise ValueError(f"Unsupported axes `{self.axes}`.")
+        msg = f"Unsupported axes `{self.axes}`."
+        raise ValueError(msg)
 
 
 class TIFFWSIReader(WSIReader):
@@ -3221,11 +3249,13 @@ class TIFFWSIReader(WSIReader):
             ],
         )
         if not any([self.tiff.is_svs, self.tiff.is_ome, is_single_page_tiled]):
-            raise ValueError("Unsupported TIFF WSI format.")
+            msg = "Unsupported TIFF WSI format."
+            raise ValueError(msg)
 
         self.series_n = series
         if self.tiff.series is None or len(self.tiff.series) == 0:  # pragma: no cover
-            raise Exception("TIFF does not contain any valid series.")
+            msg = "TIFF does not contain any valid series."
+            raise Exception(msg)
         # Find the largest series if series="auto"
         if self.series_n == "auto":
             all_series = self.tiff.series or []
@@ -3269,7 +3299,8 @@ class TIFFWSIReader(WSIReader):
             return shape
         if self._axes == "SYX":
             return np.roll(shape, -1)
-        raise ValueError(f"Unsupported axes `{self._axes}`.")
+        msg = f"Unsupported axes `{self._axes}`."
+        raise ValueError(msg)
 
     def _parse_svs_metadata(self) -> dict:
         """Extract SVS specific metadata.
@@ -3311,8 +3342,9 @@ class TIFFWSIReader(WSIReader):
             """
             pair = string.split("=")
             if len(pair) != 2:
+                msg = "Invalid metadata. Expected string of the format 'key=value'."
                 raise ValueError(
-                    "Invalid metadata. Expected string of the format 'key=value'.",
+                    msg,
                 )
             key, value_string = pair
             key = key.strip()
@@ -3428,8 +3460,9 @@ class TIFFWSIReader(WSIReader):
             objective = objectives[(instrument_ref_id, objective_settings_id)]
             return float(objective.attrib.get("NominalMagnification"))
         except KeyError as e:
+            msg = "No matching Instrument for image InstrumentRef in OME-XML."
             raise KeyError(
-                "No matching Instrument for image InstrumentRef in OME-XML.",
+                msg,
             ) from e
 
     def _get_ome_mpp(
@@ -5048,9 +5081,12 @@ class AnnotationStoreReader(WSIReader):
                     info = self.base_wsi.info
                 else:
                     # we cant find any metadata
+                    msg = (
+                        "No metadata found in store. "
+                        "Please provide either info or base slide."
+                    )
                     raise ValueError(
-                        """No metadata found in store. Please provide either
-                        info or base slide.""",
+                        msg,
                     ) from exc
         self.info = info
         if renderer is None:

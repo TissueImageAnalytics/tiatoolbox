@@ -50,7 +50,8 @@ class TissueMasker(ABC):
 
         """
         if not self.fitted:
-            raise SyntaxError("Fit must be called before transform.")
+            msg = "Fit must be called before transform."
+            raise SyntaxError(msg)
 
     def fit_transform(self, images: np.ndarray, **kwargs) -> np.ndarray:
         """Perform :func:`fit` then :func:`transform`.
@@ -104,9 +105,12 @@ class OtsuTissueMasker(TissueMasker):
         """
         images_shape = np.shape(images)
         if len(images_shape) != 4:
+            msg = (
+                f"Expected 4 dimensional input shape (N, height, width, 3) "
+                f"but received shape of {images_shape}."
+            )
             raise ValueError(
-                "Expected 4 dimensional input shape (N, height, width, 3)"
-                f" but received shape of {images_shape}.",
+                msg,
             )
 
         # Convert RGB images to greyscale
@@ -219,7 +223,8 @@ class MorphologicalMasker(OtsuTissueMasker):
 
         # Check for conflicting arguments
         if sum(arg is not None for arg in [mpp, power, kernel_size]) > 1:
-            raise ValueError("Only one of mpp, power, kernel_size can be given.")
+            msg = "Only one of mpp, power, kernel_size can be given."
+            raise ValueError(msg)
 
         # Default to kernel_size of (1, 1) if no arguments given
         if all(arg is None for arg in [mpp, power, kernel_size]):

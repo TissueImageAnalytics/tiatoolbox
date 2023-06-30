@@ -41,11 +41,14 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     """
     # Validate inputs
     if not isinstance(dthresh, Number):
-        raise TypeError("dthresh must be a number.")
+        msg = "dthresh must be a number."
+        raise TypeError(msg)
     if len(points) < 4:
-        raise ValueError("Points must have length >= 4.")
+        msg = "Points must have length >= 4."
+        raise ValueError(msg)
     if len(np.shape(points)) != 2:
-        raise ValueError("Points must have an NxM shape.")
+        msg = "Points must have an NxM shape."
+        raise ValueError(msg)
     # Apply Delaunay triangulation to the coordinates to get a
     # tessellation of triangles.
     tessellation = Delaunay(points)
@@ -96,7 +99,8 @@ def triangle_signed_area(triangle: ArrayLike) -> int:
     # Validate inputs
     triangle = np.asarray(triangle)
     if triangle.shape != (3, 2):
-        raise ValueError("Input triangle must be a 3x2 array.")
+        msg = "Input triangle must be a 3x2 array."
+        raise ValueError(msg)
     # Calculate the area of the triangle
     return 0.5 * (
         triangle[0, 0] * (triangle[1, 1] - triangle[2, 1])
@@ -126,7 +130,8 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
     # Validate inputs
     edge_index_shape = np.shape(edge_index)
     if edge_index_shape[0] != 2 or len(edge_index_shape) != 2:
-        raise ValueError("Input edge_index must be a 2xM matrix.")
+        msg = "Input edge_index must be a 2xM matrix."
+        raise ValueError(msg)
     nodes = np.unique(edge_index).tolist()
     neighbours = defaultdict(set)
     edges = edge_index.T.tolist()
@@ -176,7 +181,8 @@ def affinity_to_edge_index(
     # Validate inputs
     input_shape = np.shape(affinity_matrix)
     if len(input_shape) != 2 or len(np.unique(input_shape)) != 1:
-        raise ValueError("Input affinity_matrix must be square (NxN).")
+        msg = "Input affinity_matrix must be square (NxN)."
+        raise ValueError(msg)
     # Handle cases for pytorch and numpy inputs
     if isinstance(affinity_matrix, torch.Tensor):
         return (affinity_matrix > threshold).nonzero().t().contiguous()
@@ -469,11 +475,14 @@ class SlideGraphConstructor:
 
         # Check that the graph is valid
         if "x" not in graph:
-            raise ValueError("Graph must contain key `x`.")
+            msg = "Graph must contain key `x`."
+            raise ValueError(msg)
         if "edge_index" not in graph:
-            raise ValueError("Graph must contain key `edge_index`.")
+            msg = "Graph must contain key `edge_index`."
+            raise ValueError(msg)
         if "coordinates" not in graph:
-            raise ValueError("Graph must contain key `coordinates`")
+            msg = "Graph must contain key `coordinates`"
+            raise ValueError(msg)
         if ax is None:
             _, ax = plt.subplots()
         if color is None:

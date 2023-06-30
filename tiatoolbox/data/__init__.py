@@ -49,7 +49,8 @@ def _fetch_remote_sample(
         pathlib.Path(tmp_path) if tmp_path else pathlib.Path(tempfile.gettempdir())
     )
     if not tmp_path.is_dir():
-        raise ValueError("tmp_path must be a directory.")
+        msg = "tmp_path must be a directory."
+        raise ValueError(msg)
     sample = SAMPLE_FILES[key]
     url = "/".join(sample["url"])
     url_filename = pathlib.Path(urlparse(url).path).name

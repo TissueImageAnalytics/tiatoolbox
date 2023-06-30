@@ -235,7 +235,8 @@ class PatchPredictor:
         self.mode = None
 
         if model is None and pretrained_model is None:
-            raise ValueError("Must provide either `model` or `pretrained_model`.")
+            msg = "Must provide either `model` or `pretrained_model`."
+            raise ValueError(msg)
 
         if model is not None:
             self.model = model
@@ -501,9 +502,12 @@ class PatchPredictor:
             return ioconfig
 
         if self.ioconfig is None and any(config_flag):
+            msg = (
+                "Must provide either "
+                "`ioconfig` or `patch_input_shape`, `resolution`, and `units`."
+            )
             raise ValueError(
-                "Must provide either `ioconfig` or "
-                "`patch_input_shape`, `resolution`, and `units`.",
+                msg,
             )
 
         if stride_shape is None:
@@ -597,8 +601,9 @@ class PatchPredictor:
             return_labels = bool(labels)
 
         if labels and len(labels) != len(imgs):
+            msg = f"len(labels) != len(imgs) : {len(labels)} != {len(imgs)}"
             raise ValueError(
-                f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}",
+                msg,
             )
 
         # don't return coordinates if patches are already extracted
@@ -857,8 +862,9 @@ class PatchPredictor:
 
         """
         if mode not in ["patch", "wsi", "tile"]:
+            msg = f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             raise ValueError(
-                f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`",
+                msg,
             )
         if mode == "patch":
             return self._predict_patch(
@@ -870,13 +876,15 @@ class PatchPredictor:
             )
 
         if not isinstance(imgs, list):
+            msg = "Input to `tile` and `wsi` mode must be a list of file paths."
             raise ValueError(
-                "Input to `tile` and `wsi` mode must be a list of file paths.",
+                msg,
             )
 
         if mode == "wsi" and masks is not None and len(masks) != len(imgs):
+            msg = f"len(masks) != len(imgs) : {len(masks)} != {len(imgs)}"
             raise ValueError(
-                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}",
+                msg,
             )
 
         ioconfig = self._update_ioconfig(

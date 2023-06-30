@@ -83,7 +83,8 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
     """
     if scale_factor is None and output_size is None:
-        raise TypeError("One of scale_factor and output_size must be not None.")
+        msg = "One of scale_factor and output_size must be not None."
+        raise TypeError(msg)
     if scale_factor is not None:
         scale_factor = np.array(scale_factor)
         if scale_factor.size == 1:
@@ -128,8 +129,9 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     source_dtypes = [v[0] for v in dtype_mapping]
     original_dtype = img.dtype
     if original_dtype not in source_dtypes:
+        msg = f"Does not support resizing for array of dtype: {original_dtype}"
         raise ValueError(
-            f"Does not support resizing for array of dtype: {original_dtype}",
+            msg,
         )
 
     converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
@@ -246,7 +248,8 @@ def bounds2locsize(bounds, origin="upper"):
         return np.array([left, top]), np.array([right - left, bottom - top])
     if origin == "lower":
         return np.array([left, bottom]), np.array([right - left, top - bottom])
-    raise ValueError("Invalid origin. Only 'upper' or 'lower' are valid.")
+    msg = "Invalid origin. Only 'upper' or 'lower' are valid."
+    raise ValueError(msg)
 
 
 def locsize2bounds(location, size):
@@ -305,7 +308,8 @@ def bounds2slices(
 
     """
     if np.size(stride) not in [1, 2]:
-        raise ValueError("Invalid stride shape.")
+        msg = "Invalid stride shape."
+        raise ValueError(msg)
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
     elif np.size(stride) == 2:  # pragma: no cover
@@ -339,11 +343,13 @@ def pad_bounds(
 
     """
     if np.size(bounds) % 2 != 0:
-        raise ValueError("Bounds must have an even number of elements.")
+        msg = "Bounds must have an even number of elements."
+        raise ValueError(msg)
     ndims = np.size(bounds) // 2
 
     if np.size(padding) not in [1, 2, np.size(bounds)]:
-        raise ValueError("Invalid number of padding elements.")
+        msg = "Invalid number of padding elements."
+        raise ValueError(msg)
 
     if np.size(padding) == 1 or np.size(padding) == np.size(bounds):
         pass

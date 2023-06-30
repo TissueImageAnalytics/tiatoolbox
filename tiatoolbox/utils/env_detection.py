@@ -339,7 +339,8 @@ def pixman_versions() -> List[Tuple[int, ...]]:
             versions = [version_to_tuple(matches.group(1))]
     if versions:
         return versions, using
-    raise OSError("Unable to detect pixman version(s).")
+    msg = "Unable to detect pixman version(s)."
+    raise OSError(msg)
 
 
 def version_to_tuple(match: str) -> Tuple[int, ...]:
@@ -357,7 +358,8 @@ def version_to_tuple(match: str) -> Tuple[int, ...]:
     """
     # Check that the string only contains integers and periods
     if not re.match(r"^\d+([._]\d+)*$", match):
-        raise ValueError(f"{match} is not a valid version string.")
+        msg = f"{match} is not a valid version string."
+        raise ValueError(msg)
     return tuple(int(part) for part in match.split("."))
 
 

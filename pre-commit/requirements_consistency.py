@@ -38,7 +38,8 @@ def parse_pip(
 
     """
     if lines and file_path:
-        raise ValueError("Only one of file_path or lines may be specified")
+        msg = "Only one of file_path or lines may be specified"
+        raise ValueError(msg)
     if not lines:
         with file_path.open("r") as fh:
             lines = fh.readlines()
@@ -55,8 +56,9 @@ def parse_pip(
         requirement = Requirement.parse(line)
         # Check for duplicate packages
         if requirement.key in packages:
+            msg = f"Duplicate dependency: {requirement.name} in {file_path.name}"
             raise ValueError(
-                f"Duplicate dependency: {requirement.name} in {file_path.name}",
+                msg,
             )
         packages[requirement.key] = requirement
     return packages
@@ -89,8 +91,9 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
         requirement = Requirement.parse(dependency)
         # Check for duplicate packages
         if requirement.key in packages:
+            msg = f"Duplicate dependency: {requirement.key} in {file_path.name}"
             raise ValueError(
-                f"Duplicate dependency: {requirement.key} in {file_path.name}",
+                msg,
             )
         packages[requirement.key] = requirement
     return packages
@@ -137,11 +140,13 @@ def test_files_exist(root_dir: Path) -> None:
     for sub_name, super_name in REQUIREMENTS_FILES:
         sub_path = root_dir / sub_name
         if not sub_path.exists():
-            raise FileNotFoundError(f"Missing file: {sub_path}")
+            msg = f"Missing file: {sub_path}"
+            raise FileNotFoundError(msg)
         if super_name:
             super_path = root_dir / super_name
             if not super_path.exists():
-                raise FileNotFoundError(f"Missing file: {super_path}")
+                msg = f"Missing file: {super_path}"
+                raise FileNotFoundError(msg)
 
 
 def parse_requirements(
@@ -162,7 +167,8 @@ def parse_requirements(
             pkg_resources.Requirement.
     """
     if lines and file_path:
-        raise ValueError("Only one of file_path or lines may be specified")
+        msg = "Only one of file_path or lines may be specified"
+        raise ValueError(msg)
     if file_path.name == "setup.py":
         return parse_setup_py(file_path)
     if file_path.suffix == ".yml":
@@ -170,7 +176,8 @@ def parse_requirements(
     if file_path.suffix == ".txt":
         return parse_pip(file_path, lines)
 
-    raise ValueError(f"Unsupported file type: {file_path.suffix}")
+    msg = f"Unsupported file type: {file_path.suffix}"
+    raise ValueError(msg)
 
 
 def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -> bool:

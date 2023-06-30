@@ -76,7 +76,8 @@ class DenseBlock(nn.Module):
         """Initializes :class:`DenseBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info.")
+            msg = "Unbalance Unit Info."
+            raise ValueError(msg)
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -164,7 +165,8 @@ class ResidualBlock(nn.Module):
         """Initializes :class:`ResidualBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info.")
+            msg = "Unbalance Unit Info."
+            raise ValueError(msg)
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -332,9 +334,12 @@ class HoVerNet(ModelABC):
         self.num_types = num_types
 
         if mode not in ["original", "fast"]:
-            raise ValueError(
+            msg = (
                 f"Invalid mode {mode} for HoVerNet. "
-                "Only support `original` or `fast`.",
+                f"Only support `original` or `fast`."
+            )
+            raise ValueError(
+                msg,
             )
 
         modules = [

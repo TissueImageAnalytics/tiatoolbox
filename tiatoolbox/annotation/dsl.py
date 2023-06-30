@@ -250,7 +250,8 @@ class SQLTriplet(SQLExpression):
             rhs = f'"{rhs}"'
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
-        raise ValueError("Invalid SQLTriplet.")
+        msg = "Invalid SQLTriplet."
+        raise ValueError(msg)
 
 
 class SQLJSONDictionary(SQLExpression):
@@ -404,7 +405,8 @@ def sql_has_key(dictionary: SQLJSONDictionary, key: Union[str, int]) -> SQLTripl
 
     """
     if not isinstance(dictionary, (SQLJSONDictionary,)):
-        raise TypeError("Unsupported type for has_key.")
+        msg = "Unsupported type for has_key."
+        raise TypeError(msg)
     return SQLTriplet(dictionary[key], "is_not_none")
 
 

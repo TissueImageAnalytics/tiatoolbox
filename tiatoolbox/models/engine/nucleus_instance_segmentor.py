@@ -140,7 +140,8 @@ def _process_instance_predictions(
 
         sel_indices = [geo for bounds in sel_boxes for geo in tile_rtree.query(bounds)]
     else:
-        raise ValueError(f"Unknown tile mode {tile_mode}.")
+        msg = f"Unknown tile mode {tile_mode}."
+        raise ValueError(msg)
 
     def retrieve_sel_uids(sel_indices, inst_dict):
         """Helper to retrieved selected instance uids."""

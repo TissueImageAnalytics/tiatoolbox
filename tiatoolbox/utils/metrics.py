@@ -90,7 +90,8 @@ def dice(gt_mask, pred_mask):
 
     """
     if gt_mask.shape != pred_mask.shape:
-        raise ValueError(f'{"Shape mismatch between the two masks."}')
+        msg = f"{'Shape mismatch between the two masks.'}"
+        raise ValueError(msg)
 
     gt_mask = gt_mask.astype(np.bool_)
     pred_mask = pred_mask.astype(np.bool_)

@@ -64,9 +64,11 @@ select = [
   # "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "C4",    # flake8-comprehensions
+  "EM",    # flake8-errmsg
   "PT",    # flake8-pytest-style
   "UP",    # pyupgrade
   "C90",   # mccabe
+  "T10",   # flake8-debugger
   # "ANN",   # flake8-annotations
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas

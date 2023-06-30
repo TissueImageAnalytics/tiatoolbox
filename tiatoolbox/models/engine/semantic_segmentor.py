@@ -66,10 +66,12 @@ def _prepare_save_output(
             cum_canvas = np.load(save_path, mmap_mode="r+")
             count_canvas = np.load(cache_count_path, mmap_mode="r+")
             if canvas_cum_shape_ != cum_canvas.shape:
-                raise ValueError("Existing image shape in `save_path` does not match.")
+                msg = "Existing image shape in `save_path` does not match."
+                raise ValueError(msg)
             if canvas_count_shape_ != count_canvas.shape:
+                msg = "Existing image shape in `cache_count_path` does not match."
                 raise ValueError(
-                    "Existing image shape in `cache_count_path` does not match.",
+                    msg,
                 )
         else:
             cum_canvas = np.lib.format.open_memmap(
@@ -200,7 +202,8 @@ class IOSegmentorConfig(IOConfigABC):
             "baseline",
             "mpp",
         ]:
-            raise ValueError(f"Invalid resolution units `{units[0]}`.")
+            msg = f"Invalid resolution units `{units[0]}`."
+            raise ValueError(msg)
 
     @staticmethod
     def scale_to_highest(resolutions: List[dict], units: Units):
@@ -224,9 +227,12 @@ class IOSegmentorConfig(IOConfigABC):
         """
         old_val = [v["resolution"] for v in resolutions]
         if units not in ["baseline", "mpp", "power"]:
-            raise ValueError(
+            msg = (
                 f"Unknown units `{units}`. "
-                "Units should be one of 'baseline', 'mpp' or 'power'.",
+                f"Units should be one of 'baseline', 'mpp' or 'power'."
+            )
+            raise ValueError(
+                msg,
             )
         if units == "baseline":
             return old_val
@@ -518,7 +524,8 @@ class SemanticSegmentor:
         super().__init__()
 
         if model is None and pretrained_model is None:
-            raise ValueError("Must provide either of `model` or `pretrained_model`")
+            msg = "Must provide either of `model` or `pretrained_model`"
+            raise ValueError(msg)
 
         if model is not None:
             self.model = model
@@ -656,12 +663,14 @@ class SemanticSegmentor:
 
         """
         if not isinstance(mask_reader, VirtualWSIReader):
-            raise ValueError("`mask_reader` should be VirtualWSIReader.")
+            msg = "`mask_reader` should be VirtualWSIReader."
+            raise ValueError(msg)
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
             bounds.dtype,
             np.integer,
         ):
-            raise ValueError("`coordinates` should be ndarray of integer type.")
+            msg = "`coordinates` should be ndarray of integer type."
+            raise ValueError(msg)
 
         mask_real_shape = mask_reader.img.shape[:2]
         mask_resolution_shape = mask_reader.slide_dimensions(
@@ -692,7 +701,8 @@ class SemanticSegmentor:
         mask_reader = None
         if mask_path is not None:
             if not os.path.isfile(mask_path):
-                raise ValueError("`mask_path` must be a valid file path.")
+                msg = "`mask_path` must be a valid file path."
+                raise ValueError(msg)
             mask = imread(mask_path)  # assume to be gray
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
@@ -945,7 +955,8 @@ class SemanticSegmentor:
         sample_prediction = predictions[0]
 
         if len(sample_prediction.shape) not in (2, 3):
-            raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
+            msg = f"Prediction is no HW or HWC: {sample_prediction.shape}."
+            raise ValueError(msg)
 
         (
             canvas_cum_shape_,
@@ -1035,7 +1046,8 @@ class SemanticSegmentor:
         save_dir = os.path.abspath(save_dir)
         save_dir = pathlib.Path(save_dir)
         if save_dir.is_dir():
-            raise ValueError(f"`save_dir` already exists! {save_dir}")
+            msg = f"`save_dir` already exists! {save_dir}"
+            raise ValueError(msg)
         save_dir.mkdir(parents=True)
         cache_dir = f"{save_dir}/cache"
         os.makedirs(cache_dir)
@@ -1093,9 +1105,12 @@ class SemanticSegmentor:
 
         if ioconfig is None and patch_input_shape is None:
             if self.ioconfig is None:
+                msg = (
+                    "Must provide either `ioconfig` or `patch_input_shape` "
+                    "and `patch_output_shape`"
+                )
                 raise ValueError(
-                    "Must provide either `ioconfig` or "
-                    "`patch_input_shape` and `patch_output_shape`",
+                    msg,
                 )
             ioconfig = copy.deepcopy(self.ioconfig)
         elif ioconfig is None:
@@ -1312,7 +1327,8 @@ class SemanticSegmentor:
 
         """
         if mode not in ["wsi", "tile"]:
-            raise ValueError(f"{mode} is not a valid mode. Use either `tile` or `wsi`.")
+            msg = f"{mode} is not a valid mode. Use either `tile` or `wsi`."
+            raise ValueError(msg)
 
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
 

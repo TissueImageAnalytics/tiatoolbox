@@ -110,7 +110,8 @@ def save_yaml(
     """
     path = pathlib.Path(output_path)
     if path.exists() and not exist_ok:
-        raise FileExistsError("File already exists.")
+        msg = "File already exists."
+        raise FileExistsError(msg)
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
     with open(  # skipcq: PTC-W6004: PTC-W6004
@@ -194,9 +195,12 @@ def load_stain_matrix(stain_matrix_input):
     if isinstance(stain_matrix_input, (str, pathlib.Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
+            msg = (
+                "If supplying a path to a stain matrix, "
+                "use either a npy or a csv file"
+            )
             raise FileNotSupportedError(
-                "If supplying a path to a stain matrix, use either a \
-                npy or a csv file",
+                msg,
             )
 
         if suffixes[-1] == ".csv":
@@ -208,8 +212,9 @@ def load_stain_matrix(stain_matrix_input):
     if isinstance(stain_matrix_input, np.ndarray):
         return stain_matrix_input
 
+    msg = "Stain_matrix must be either a path to npy/csv file or a numpy array"
     raise TypeError(
-        "Stain_matrix must be either a path to npy/csv file or a numpy array",
+        msg,
     )
 
 
@@ -239,7 +244,8 @@ def get_luminosity_tissue_mask(img, threshold):
 
     # check it's not empty
     if tissue_mask.sum() == 0:
-        raise ValueError("Empty tissue mask computed.")
+        msg = "Empty tissue mask computed."
+        raise ValueError(msg)
 
     return tissue_mask
 
@@ -366,8 +372,9 @@ def contrast_enhancer(img, low_p=2, high_p=98):
 
     """
     # check if image is not uint8
-    if not img.dtype == np.uint8:
-        raise AssertionError("Image should be uint8.")
+    if img.dtype != np.uint8:
+        msg = "Image should be uint8."
+        raise AssertionError(msg)
     img_out = img.copy()
     p_low, p_high = np.percentile(img_out, (low_p, high_p))
     if p_low >= p_high:
@@ -404,7 +411,8 @@ def __numpy_array_to_table(input_table):
     if input_table.shape[1] == 3:
         return pd.DataFrame(input_table, columns=["x", "y", "class"])
 
-    raise ValueError("Numpy table should be of format `x, y` or `x, y, class`.")
+    msg = "Numpy table should be of format `x, y` or `x, y, class`."
+    raise ValueError(msg)
 
 
 def __assign_unknown_class(input_table):
@@ -423,7 +431,8 @@ def __assign_unknown_class(input_table):
 
     """
     if input_table.shape[1] not in [2, 3]:
-        raise ValueError("Input table must have 2 or 3 columns.")
+        msg = "Input table must have 2 or 3 columns."
+        raise ValueError(msg)
 
     if input_table.shape[1] == 2:
         input_table["class"] = None
@@ -481,7 +490,8 @@ def read_locations(input_table):
             out_table = pd.read_json(input_table)
             return __assign_unknown_class(out_table)
 
-        raise FileNotSupportedError("File type not supported.")
+        msg = "File type not supported."
+        raise FileNotSupportedError(msg)
 
     if isinstance(input_table, np.ndarray):
         return __numpy_array_to_table(input_table)
@@ -489,7 +499,8 @@ def read_locations(input_table):
     if isinstance(input_table, pd.DataFrame):
         return __assign_unknown_class(input_table)
 
-    raise TypeError("Please input correct image path or an ndarray image.")
+    msg = "Please input correct image path or an ndarray image."
+    raise TypeError(msg)
 
 
 @np.vectorize
@@ -575,7 +586,8 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
         return cv2.INTER_CUBIC
     if interpolation in ["lanczos", cv2.INTER_LANCZOS4]:
         return cv2.INTER_LANCZOS4
-    raise ValueError("Invalid interpolation mode.")
+    msg = "Invalid interpolation mode."
+    raise ValueError(msg)
 
 
 def assert_dtype_int(input_var, message="Input must be integer."):
@@ -622,7 +634,8 @@ def download_data(url, save_path, overwrite=False):
     url_exists = status_code == 200
 
     if not url_exists:
-        raise ConnectionError(f"Could not find URL at {url}")
+        msg = f"Could not find URL at {url}"
+        raise ConnectionError(msg)
 
     with open(save_path, "wb") as f:
         f.write(r.content)
@@ -668,8 +681,9 @@ def __walk_list_dict(in_list_dict):
         in_list_dict,
         (int, float, str, bool),
     ):
+        msg = f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
         raise ValueError(
-            f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified.",
+            msg,
         )
     return in_list_dict
 
@@ -694,7 +708,8 @@ def __walk_dict(dct):
     """
     for k, v in dct.items():
         if not isinstance(k, (int, float, str, bool)):
-            raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+            msg = f"Key type `{type(k)}` `{k}` is not jsonified."
+            raise ValueError(msg)
         dct[k] = __walk_list_dict(v)
 
 
@@ -725,7 +740,8 @@ def save_as_json(
     """
     shadow_data = copy.deepcopy(data)  # make a copy of source input
     if not isinstance(shadow_data, (dict, list)):
-        raise ValueError(f"Type of `data` ({type(data)}) must be in (dict, list).")
+        msg = f"Type of `data` ({type(data)}) must be in (dict, list)."
+        raise ValueError(msg)
 
     if isinstance(shadow_data, dict):
         __walk_dict(shadow_data)
@@ -734,7 +750,8 @@ def save_as_json(
 
     save_path = pathlib.Path(save_path)
     if save_path.exists() and not exist_ok:
-        raise FileExistsError("File already exists.")
+        msg = "File already exists."
+        raise FileExistsError(msg)
     if parents:
         save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w") as handle:  # skipcq: PTC-W6004
@@ -844,7 +861,8 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
         3: 1e4,  # cm in TIFF tags
     }
     if units not in microns_per_unit:
-        raise ValueError(f"Invalid units: {units}")
+        msg = f"Invalid units: {units}"
+        raise ValueError(msg)
     return 1 / ppu * microns_per_unit[units]
 
 

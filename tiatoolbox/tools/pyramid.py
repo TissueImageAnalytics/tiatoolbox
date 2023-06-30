@@ -98,7 +98,8 @@ class TilePyramidGenerator:
 
         """
         if level < 0 or level >= self.level_count:
-            raise IndexError("Invalid level.")
+            msg = "Invalid level."
+            raise IndexError(msg)
         return tuple(
             np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(
                 int,
@@ -199,7 +200,8 @@ class TilePyramidGenerator:
         if level < 0:
             raise IndexError
         if level > self.level_count:
-            raise IndexError("Invalid level.")
+            msg = "Invalid level."
+            raise IndexError(msg)
 
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
@@ -288,12 +290,14 @@ class TilePyramidGenerator:
         """
         path = Path(path)
         if container not in [None, "zip", "tar"]:
-            raise ValueError("Unsupported container.")
+            msg = "Unsupported container."
+            raise ValueError(msg)
 
         if container is None:
             path.mkdir(parents=False)
             if compression is not None:
-                raise ValueError("Unsupported compression for container None.")
+                msg = "Unsupported compression for container None."
+                raise ValueError(msg)
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output directory."""
@@ -309,7 +313,8 @@ class TilePyramidGenerator:
                 "lzma": zipfile.ZIP_LZMA,
             }
             if compression not in compression2enum:
-                raise ValueError("Unsupported compression for zip.")
+                msg = "Unsupported compression for zip."
+                raise ValueError(msg)
 
             archive = zipfile.ZipFile(
                 path,
@@ -337,7 +342,8 @@ class TilePyramidGenerator:
                 "lzma": "w:xz",
             }
             if compression not in compression2mode:
-                raise ValueError("Unsupported compression for tar.")
+                msg = "Unsupported compression for tar."
+                raise ValueError(msg)
 
             archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
 
@@ -618,7 +624,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         if level < 0:
             raise IndexError
         if level > self.level_count:
-            raise IndexError("Invalid level.")
+            msg = "Invalid level."
+            raise IndexError(msg)
 
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)

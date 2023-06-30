@@ -102,13 +102,17 @@ def overlay_prediction_mask(
     """
     # Validate inputs
     if img.shape[:2] != prediction.shape[:2]:
+        msg = (
+            f"Mismatch shape `img` {img.shape[:2]} "
+            f"vs `prediction` {prediction.shape[:2]}."
+        )
         raise ValueError(
-            f"Mismatch shape "
-            f"`img` {img.shape[:2]} vs `prediction` {prediction.shape[:2]}.",
+            msg,
         )
     if np.issubdtype(img.dtype, np.floating):
         if not (img.max() <= 1.0 and img.min() >= 0):
-            raise ValueError("Not support float `img` outside [0, 1].")
+            msg = "Not support float `img` outside [0, 1]."
+            raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
     # If `min_val` is defined, only display the overlay for areas with pred > min_val
     if min_val > 0:
@@ -129,7 +133,8 @@ def overlay_prediction_mask(
     # Validate label_info
     missing_label_uids = _validate_label_info(label_info, predicted_classes)
     if len(missing_label_uids) != 0:
-        raise ValueError(f"Missing label for: {missing_label_uids}.")
+        msg = f"Missing label for: {missing_label_uids}."
+        raise ValueError(msg)
 
     rgb_prediction = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3],
@@ -206,24 +211,36 @@ def _validate_label_info(
         if label_uid in check_uid_list:
             check_uid_list.remove(label_uid)
         if not isinstance(label_uid, int):
+            msg = (
+                f"Wrong `label_info` format: label_uid "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
             raise ValueError(
-                "Wrong `label_info` format: label_uid "
-                f"{[label_uid, (label_name, label_colour)]}",
+                msg,
             )
         if not isinstance(label_name, str):
+            msg = (
+                f"Wrong `label_info` format: label_name "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
             raise ValueError(
-                "Wrong `label_info` format: label_name "
-                f"{[label_uid, (label_name, label_colour)]}",
+                msg,
             )
         if not isinstance(label_colour, (tuple, list, np.ndarray)):
+            msg = (
+                f"Wrong `label_info` format: label_colour "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
             raise ValueError(
-                "Wrong `label_info` format: label_colour "
-                f"{[label_uid, (label_name, label_colour)]}",
+                msg,
             )
         if len(label_colour) != 3:
+            msg = (
+                f"Wrong `label_info` format: label_colour "
+                f"{[label_uid, (label_name, label_colour)]}"
+            )
             raise ValueError(
-                "Wrong `label_info` format: label_colour "
-                f"{[label_uid, (label_name, label_colour)]}",
+                msg,
             )
 
     return check_uid_list
@@ -331,30 +348,40 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
 
     """
     if prediction.ndim != 2:
-        raise ValueError("The input prediction must be 2-dimensional of the form HW.")
+        msg = "The input prediction must be 2-dimensional of the form HW."
+        raise ValueError(msg)
 
     if img.shape[:2] != prediction.shape[:2]:
+        msg = (
+            f"Mismatch shape `img` {img.shape[:2]} "
+            f"vs `prediction` {prediction.shape[:2]}."
+        )
         raise ValueError(
-            f"Mismatch shape `img` {img.shape[:2]}"
-            f" vs `prediction` {prediction.shape[:2]}.",
+            msg,
         )
 
     if prediction.max() > 1.0:
-        raise ValueError("Not support float `prediction` outside [0, 1].")
+        msg = "Not support float `prediction` outside [0, 1]."
+        raise ValueError(msg)
     if prediction.min() < 0:
-        raise ValueError("Not support float `prediction` outside [0, 1].")
+        msg = "Not support float `prediction` outside [0, 1]."
+        raise ValueError(msg)
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
     if min_val < 0.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
+        msg = f"`min_val={min_val}` is not between [0, 1]."
+        raise ValueError(msg)
     if min_val > 1.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
+        msg = f"`min_val={min_val}` is not between [0, 1]."
+        raise ValueError(msg)
 
     if np.issubdtype(img.dtype, np.floating):
         if img.max() > 1.0:
-            raise ValueError("Not support float `img` outside [0, 1].")
+            msg = "Not support float `img` outside [0, 1]."
+            raise ValueError(msg)
         if img.min() < 0:
-            raise ValueError("Not support float `img` outside [0, 1].")
+            msg = "Not support float `img` outside [0, 1]."
+            raise ValueError(msg)
         return np.array(img * 255, dtype=np.uint8)
     return img
 
@@ -407,8 +434,9 @@ def overlay_prediction_contours(
     elif isinstance(inst_colours, tuple):
         inst_colours = np.array([inst_colours] * len(inst_dict))
     elif not isinstance(inst_colours, np.ndarray):
+        msg = f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
         raise ValueError(
-            f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}",
+            msg,
         )
     inst_colours = inst_colours.astype(np.uint8)
 

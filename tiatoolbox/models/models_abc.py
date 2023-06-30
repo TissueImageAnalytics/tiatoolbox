@@ -90,7 +90,8 @@ class ModelABC(ABC, nn.Module):
 
         """
         if func is not None and not callable(func):
-            raise ValueError(f"{func} is not callable!")
+            msg = f"{func} is not callable!"
+            raise ValueError(msg)
 
         if func is None:
             self._preproc = self.preproc
@@ -119,7 +120,8 @@ class ModelABC(ABC, nn.Module):
 
         """
         if func is not None and not callable(func):
-            raise ValueError(f"{func} is not callable!")
+            msg = f"{func} is not callable!"
+            raise ValueError(msg)
 
         if func is None:
             self._postproc = self.postproc

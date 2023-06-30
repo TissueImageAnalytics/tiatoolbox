@@ -389,8 +389,9 @@ def get_normalizer(method_name, stain_matrix=None):
         raise MethodNotSupportedError
 
     if stain_matrix is not None and method_name.lower() != "custom":
+        msg = '`stain_matrix` is only defined when using `method_name`="custom".'
         raise ValueError(
-            '`stain_matrix` is only defined when using `method_name`="custom".',
+            msg,
         )
 
     if method_name.lower() == "reinhard":

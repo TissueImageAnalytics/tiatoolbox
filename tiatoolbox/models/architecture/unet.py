@@ -288,7 +288,8 @@ class UNetModel(ModelABC):
         super().__init__()
 
         if encoder.lower() not in {"resnet50", "unet"}:
-            raise ValueError(f"Unknown encoder `{encoder}`")
+            msg = f"Unknown encoder `{encoder}`"
+            raise ValueError(msg)
 
         if encoder_levels is None:
             encoder_levels = [64, 128, 256, 512, 1024]
@@ -304,7 +305,8 @@ class UNetModel(ModelABC):
             self.backbone = UnetEncoder(num_input_channels, encoder_levels)
 
         if skip_type.lower() not in {"add", "concat"}:
-            raise ValueError(f"Unknown type of skip connection: `{skip_type}`")
+            msg = f"Unknown type of skip connection: `{skip_type}`"
+            raise ValueError(msg)
         self.skip_type = skip_type.lower()
 
         img_list = torch.rand([1, num_input_channels, 256, 256])

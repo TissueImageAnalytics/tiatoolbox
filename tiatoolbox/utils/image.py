@@ -49,12 +49,14 @@ def normalize_padding_size(padding):
     """
     padding_shape = np.shape(padding)
     if len(padding_shape) > 1:
+        msg = "Invalid input padding shape. Must be scalar or 1 dimensional."
         raise ValueError(
-            "Invalid input padding shape. Must be scalar or 1 dimensional.",
+            msg,
         )
     padding_size = np.size(padding)
     if padding_size == 3:
-        raise ValueError("Padding has invalid size 3. Valid sizes are 1, 2, or 4.")
+        msg = "Padding has invalid size 3. Valid sizes are 1, 2, or 4."
+        raise ValueError(msg)
 
     if padding_size == 1:
         return np.repeat(padding, 4)
@@ -229,10 +231,12 @@ def crop_and_pad_edges(
     loc, size = bounds2locsize(bounds)
 
     if np.min(max_dimensions) < 0:
-        raise ValueError("Max dimensions must be >= 0.")
+        msg = "Max dimensions must be >= 0."
+        raise ValueError(msg)
 
     if np.min(size) <= 0:
-        raise ValueError("Bounds must have size (width and height) > 0.")
+        msg = "Bounds must have size (width and height) > 0."
+        raise ValueError(msg)
 
     padding = find_padding(loc, size, max_dimensions)
     if len(region.shape) > 2:
@@ -341,17 +345,20 @@ def safe_padded_read(
     padding = np.array(padding)
     # Ensure the bounds are integers.
     if not issubclass(np.array(bounds).dtype.type, (int, np.integer)):
-        raise ValueError("Bounds must be integers.")
+        msg = "Bounds must be integers."
+        raise ValueError(msg)
 
     if np.any(padding < 0):
-        raise ValueError("Padding cannot be negative.")
+        msg = "Padding cannot be negative."
+        raise ValueError(msg)
 
     # Allow padding to be a 2-tuple in addition to an int or 4-tuple
     padding = normalize_padding_size(padding)
 
     # Ensure stride is a 2-tuple
     if np.size(stride) not in [1, 2]:
-        raise ValueError("Stride must be of size 1 or 2.")
+        msg = "Stride must be of size 1 or 2."
+        raise ValueError(msg)
     if np.size(stride) == 1:
         stride = np.tile(stride, 2)
     x_stride, y_stride = stride
@@ -537,7 +544,8 @@ def sub_pixel_read(  # noqa: C901
         pad_kwargs["constant_values"] = pad_constant_values
 
     if 0 in bounds2locsize(bounds)[1]:
-        raise ValueError("Bounds must have non-zero size")
+        msg = "Bounds must have non-zero size"
+        raise ValueError(msg)
 
     # Normalize padding
     padding = normalize_padding_size(padding)
@@ -583,7 +591,8 @@ def sub_pixel_read(  # noqa: C901
     # Check the padded bounds do not have zero size
     _, padded_bounds_size = bounds2locsize(pad_bounds(bounds, baseline_padding))
     if 0 in padded_bounds_size:
-        raise ValueError("Bounds have zero size after padding.")
+        msg = "Bounds have zero size after padding."
+        raise ValueError(msg)
 
     read_bounds = pad_bounds(read_bounds, interpolation_padding + baseline_padding)
     # 0 Expand to integers and find residuals
@@ -608,10 +617,12 @@ def sub_pixel_read(  # noqa: C901
     else:
         region = read_func(image, valid_int_bounds, stride, **read_kwargs)
         if region is None or 0 in region.shape:
-            raise ValueError("Read region is empty or None.")
+            msg = "Read region is empty or None."
+            raise ValueError(msg)
         region_size = region.shape[:2][::-1]
         if not np.array_equal(region_size, valid_int_size):
-            raise ValueError("Read function returned a region of incorrect size.")
+            msg = "Read function returned a region of incorrect size."
+            raise ValueError(msg)
 
     # 1.5 Pad the region
     pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)

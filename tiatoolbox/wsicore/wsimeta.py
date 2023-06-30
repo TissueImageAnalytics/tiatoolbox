@@ -256,7 +256,8 @@ class WSIMeta:
 
         """
         if units not in ("mpp", "power", "level", "baseline"):
-            raise ValueError("Invalid units")
+            msg = "Invalid units"
+            raise ValueError(msg)
 
         level_downsamples = self.level_downsamples
 
@@ -269,9 +270,12 @@ class WSIMeta:
 
         if units == "level":
             if resolution >= len(level_downsamples):
+                msg = (
+                    f"Target scale level {resolution} > "
+                    f"number of levels {len(level_downsamples)} in WSI"
+                )
                 raise ValueError(
-                    f"Target scale level {resolution} "
-                    f"> number of levels {len(level_downsamples)} in WSI",
+                    msg,
                 )
             base_scale, resolution = 1, self.level_downsample(resolution)
 
@@ -279,14 +283,18 @@ class WSIMeta:
 
         if units == "mpp":
             if self.mpp is None:
-                raise ValueError("MPP is None. Cannot determine scale in terms of MPP.")
+                msg = "MPP is None. Cannot determine scale in terms of MPP."
+                raise ValueError(msg)
             base_scale = self.mpp
 
         if units == "power":
             if self.objective_power is None:
-                raise ValueError(
+                msg = (
                     "Objective power is None. "
-                    "Cannot determine scale in terms of objective power.",
+                    "Cannot determine scale in terms of objective power."
+                )
+                raise ValueError(
+                    msg,
                 )
             base_scale, resolution = 1 / self.objective_power, 1 / resolution
 

@@ -40,12 +40,14 @@ def read_points_patches(
     try:
         data[0] = next(patches)
     except StopIteration as exc:
-        raise StopIteration("Index out of bounds.") from exc
+        msg = "Index out of bounds."
+        raise StopIteration(msg) from exc
 
     try:
         data[1] = next(patches)
     except StopIteration as exc:
-        raise StopIteration("Index out of bounds.") from exc
+        msg = "Index out of bounds."
+        raise StopIteration(msg) from exc
 
     data[2] = patches[item]
 

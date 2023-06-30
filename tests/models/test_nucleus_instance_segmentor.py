@@ -42,7 +42,8 @@ def _rm_dir(path):
 
 def _crash_func(x):
     """Helper to induce crash."""
-    raise ValueError("Propataion Crash.")
+    msg = "Propataion Crash."
+    raise ValueError(msg)
 
 
 def helper_tile_info():

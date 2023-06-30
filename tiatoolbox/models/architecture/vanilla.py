@@ -50,7 +50,8 @@ def _get_architecture(arch_name, weights: str or WeightsEnum = "DEFAULT", **kwar
         "mobilenet_v3_small": torch_models.mobilenet_v3_small,
     }
     if arch_name not in backbone_dict:
-        raise ValueError(f"Backbone `{arch_name}` is not supported.")
+        msg = f"Backbone `{arch_name}` is not supported."
+        raise ValueError(msg)
 
     creator = backbone_dict[arch_name]
     model = creator(weights=weights, **kwargs)

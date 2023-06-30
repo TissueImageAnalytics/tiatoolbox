@@ -35,16 +35,20 @@ def _normalize_binaryio(
         path = Path(file)
         if not path.exists():
             if must_exist:
-                raise FileNotFoundError(f"File {path} does not exist.")
+                msg = f"File {path} does not exist."
+                raise FileNotFoundError(msg)
             return BytesIO()
         return open(file, "rb")  # noqa: SIM115 -- intentional
     if isinstance(file, (BinaryIO, BytesIO)):
         return file
     if isinstance(file, bytes):
         return BytesIO(file)
+    msg = (
+        f"Input must be a str, Path, bytes, or BinaryIO. "
+        f"Received {type(file).__name__}."
+    )
     raise TypeError(
-        "Input must be a str, Path, bytes, or BinaryIO. "
-        f"Recieved {type(file).__name__}.",
+        msg,
     )
 
 

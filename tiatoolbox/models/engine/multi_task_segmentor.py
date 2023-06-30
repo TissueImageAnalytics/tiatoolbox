@@ -275,8 +275,9 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             if "instance" in self.output_types:
                 self._wsi_inst_info = []
         else:
+            msg = "Output type must be specified for instance or semantic segmentation."
             raise ValueError(
-                "Output type must be specified for instance or semantic segmentation.",
+                msg,
             )
 
     def _predict_one_wsi(

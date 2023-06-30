@@ -50,7 +50,8 @@ def _rm_dir(path):
 
 def _crash_func(x):
     """Helper to induce crash."""
-    raise ValueError("Propagation Crash.")
+    msg = "Propagation Crash."
+    raise ValueError(msg)
 
 
 class _CNNTo1(ModelABC):

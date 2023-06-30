@@ -153,9 +153,12 @@ class AnnotationStore(ABC, MutableMapping):
     def __new__(cls, *args, **kwargs):
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:
+            msg = (
+                "AnnotationStore is an abstract class and cannot be instantiated. "
+                "Use a subclass such as DictionaryStore or SQLiteStore instead."
+            )
             raise TypeError(
-                "AnnotationStore is an abstract class and cannot be instantiated."
-                " Use a subclass such as DictionaryStore or SQLiteStore instead.",
+                msg,
             )
         return super().__new__(cls)
 
@@ -239,9 +242,12 @@ class AnnotationStore(ABC, MutableMapping):
                 tempfile._TemporaryFileWrapper,  # skipcq: PYL-W0212
             ),
         ):
+            msg = (
+                f"Connection must be a string, Path, or an IO object, "
+                f"not {type(connection)}"
+            )
             raise TypeError(
-                "Connection must be a string, Path, or an IO object, "
-                f"not {type(connection)}",
+                msg,
             )
         if isinstance(
             connection,
@@ -259,7 +265,8 @@ class AnnotationStore(ABC, MutableMapping):
         """Validate that all given args are either None or have the same length."""
         lengths = [len(v) for v in args if v is not None]
         if lengths and any(length != lengths[0] for length in lengths):
-            raise ValueError("All arguments must be None or of equal length.")
+            msg = "All arguments must be None or of equal length."
+            raise ValueError(msg)
 
     @staticmethod
     def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
@@ -487,8 +494,9 @@ class AnnotationStore(ABC, MutableMapping):
         """
         # Validate inputs
         if not any([geometries, properties_iter]):
+            msg = "At least one of geometries or properties_iter must be given"
             raise ValueError(
-                "At least one of geometries or properties_iter must be given",
+                msg,
             )
         keys = list(keys)
         geometries = list(geometries) if geometries else None
@@ -540,7 +548,8 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         if not isinstance(default, Annotation):
-            raise TypeError("default value must be an Annotation instance.")
+            msg = "default value must be an Annotation instance."
+            raise TypeError(msg)
         return super().setdefault(key, default)
 
     def __delitem__(self, key: str) -> None:
@@ -677,11 +686,15 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         if all(x is None for x in (geometry, where)):
-            raise ValueError("At least one of geometry or where must be set.")
+            msg = "At least one of geometry or where must be set."
+            raise ValueError(msg)
         if geometry_predicate not in self._geometry_predicate_names:
+            msg = (
+                f"Invalid geometry predicate.Allowed values are: "
+                f"{', '.join(self._geometry_predicate_names)}."
+            )
             raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}.",
+                msg,
             )
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
@@ -816,9 +829,12 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         if geometry_predicate not in self._geometry_predicate_names:
+            msg = (
+                f"Invalid geometry predicate.Allowed values are: "
+                f"{', '.join(self._geometry_predicate_names)}."
+            )
             raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}.",
+                msg,
             )
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
@@ -1009,10 +1025,12 @@ class AnnotationStore(ABC, MutableMapping):
 
         """  # noqa
         if where is not None and type(select) is not type(where):
-            raise TypeError("select and where must be of the same type")
+            msg = "select and where must be of the same type"
+            raise TypeError(msg)
         if not isinstance(select, (str, bytes)) and not callable(select):
+            msg = f"select must be str, bytes, or callable, not {type(select)}"
             raise TypeError(
-                f"select must be str, bytes, or callable, not {type(select)}",
+                msg,
             )
         # Are we scanning through all annotations?
         is_scan = not any((geometry, where))
@@ -1047,7 +1065,8 @@ class AnnotationStore(ABC, MutableMapping):
 
             """  # Q440, Q441
             if select == "*" and unique:
-                raise ValueError("unique=True cannot be used with select='*'")
+                msg = "unique=True cannot be used with select='*'"
+                raise ValueError(msg)
 
             if select == "*":  # Special case for all properties
                 return annotation.properties
@@ -1214,12 +1233,14 @@ class AnnotationStore(ABC, MutableMapping):
         # This is a naive generic implementation which can be overridden
         # by back ends which can do this more efficiently.
         if not isinstance(mode, (str, tuple)):
-            raise TypeError("mode must be a string or tuple of strings")
+            msg = "mode must be a string or tuple of strings"
+            raise TypeError(msg)
         if isinstance(mode, str):
             mode = tuple(mode.split("-"))
         if mode not in (("box", "box"), ("boxpoint", "boxpoint"), ("poly", "poly")):
+            msg = "mode must be one of 'box-box', 'boxpoint-boxpoint', or 'poly-poly'"
             raise ValueError(
-                "mode must be one of 'box-box', 'boxpoint-boxpoint', or 'poly-poly'",
+                msg,
             )
         from_mode, _ = mode
 
@@ -1382,7 +1403,8 @@ class AnnotationStore(ABC, MutableMapping):
             return string_fn(fp)
         if hasattr(fp, "read"):
             return file_fn(fp)
-        raise OSError("Invalid file handle or path.")
+        msg = "Invalid file handle or path."
+        raise OSError(msg)
 
     @classmethod
     def from_geojson(
@@ -1764,15 +1786,19 @@ class SQLiteStore(AnnotationStore):
             if not all(
                 ["OMIT_JSON" not in compile_options, "ENABLE_RTREE" in compile_options],
             ):
+                msg = (
+                    "RTREE sqlite3 compile option is required, and\n"
+                    "JSON must not be disabled with OMIT_JSON compile option"
+                )
                 raise OSError(
-                    """RTREE sqlite3 compile option is required, and
-                    JSON must not be disabled with OMIT_JSON compile option""",
+                    msg,
                 )
         else:
             if not all(
                 ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options],
             ):
-                raise OSError("RTREE and JSON1 sqlite3 compile options are required.")
+                msg = "RTREE and JSON1 sqlite3 compile options are required."
+                raise OSError(msg)
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:
@@ -1939,7 +1965,8 @@ class SQLiteStore(AnnotationStore):
             return data
         if self.compression == "zlib":
             return zlib.compress(data, level=self.compression_level)
-        raise ValueError("Unsupported compression method.")
+        msg = "Unsupported compression method."
+        raise ValueError(msg)
 
     def _unpack_geometry(
         self,
@@ -1987,7 +2014,8 @@ class SQLiteStore(AnnotationStore):
         if self.compression == "zlib":
             data = zlib.decompress(data)
         elif self.compression is not None:
-            raise ValueError("Unsupported compression method.")
+            msg = "Unsupported compression method."
+            raise ValueError(msg)
         if isinstance(data, str):
             return wkt.loads(data)
         return wkb.loads(data)
@@ -2255,14 +2283,18 @@ class SQLiteStore(AnnotationStore):
 
         """
         if not no_constraints_ok and all(x is None for x in (geometry, where)):
-            raise ValueError("At least one of `geometry` or `where` must be specified.")
+            msg = "At least one of `geometry` or `where` must be specified."
+            raise ValueError(msg)
         query_geometry = geometry
         if callable_columns is None:
             callable_columns = columns
         if geometry_predicate not in self._geometry_predicate_names:
+            msg = (
+                f"Invalid geometry predicate.Allowed values are: "
+                f"{', '.join(self._geometry_predicate_names)}."
+            )
             raise ValueError(
-                "Invalid geometry predicate."
-                f"Allowed values are: {', '.join(self._geometry_predicate_names)}.",
+                msg,
             )
         cur = self.con.cursor()
 
@@ -2287,9 +2319,12 @@ class SQLiteStore(AnnotationStore):
         if min_area is not None and "area" in self.table_columns:
             query_string += f"\nAND area > {min_area}"
         elif min_area is not None:
+            msg = (
+                "Cannot use `min_area` without an area column.\n"
+                "SQLiteStore.add_area_column() can be used to add an area column."
+            )
             raise ValueError(
-                """Cannot use `min_area` without an area column.
-            SQLiteStore.add_area_column() can be used to add an area column.""",
+                msg,
             )
 
         if unique:
@@ -2674,10 +2709,12 @@ class SQLiteStore(AnnotationStore):
 
         """
         if where is not None and type(select) is not type(where):
-            raise TypeError("select and where must be of the same type")
+            msg = "select and where must be of the same type"
+            raise TypeError(msg)
         if not isinstance(select, (str, bytes)) and not callable(select):
+            msg = f"select must be str, bytes, or callable, not {type(select)}"
             raise TypeError(
-                f"select must be str, bytes, or callable, not {type(select)}",
+                msg,
             )
 
     def pquery(
@@ -2787,7 +2824,8 @@ class SQLiteStore(AnnotationStore):
         return_columns = []  # Initialise return rows list of column names
 
         if is_star_query and unique:
-            raise ValueError("unique=True cannot be used with select='*'")
+            msg = "unique=True cannot be used with select='*'"
+            raise ValueError(msg)
 
         if not unique:
             return_columns.append("[key]")
@@ -2939,8 +2977,9 @@ class SQLiteStore(AnnotationStore):
         """
         # Validate inputs
         if not any([geometries, properties_iter]):
+            msg = "At least one of geometries or properties_iter must be given"
             raise ValueError(
-                "At least one of geometries or properties_iter must be given",
+                msg,
             )
         keys = list(keys)
         geometries = list(geometries) if geometries else None
@@ -3193,10 +3232,12 @@ class SQLiteStore(AnnotationStore):
         """
         _, minor, _ = sqlite3.sqlite_version_info
         if minor < 9:
-            raise OSError("Requires sqlite version 3.9.0 or higher.")
+            msg = "Requires sqlite version 3.9.0 or higher."
+            raise OSError(msg)
         cur = self.con.cursor()
         if not isinstance(where, str):
-            raise TypeError(f"Invalid type for `where` ({type(where)}).")
+            msg = f"Invalid type for `where` ({type(where)})."
+            raise TypeError(msg)
         sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
         cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
         if analyze:
@@ -3287,7 +3328,8 @@ class DictionaryStore(AnnotationStore):
 
         """
         if not isinstance(annotation.geometry, (Polygon, Point, LineString)):
-            raise TypeError("Invalid geometry type.")
+            msg = "Invalid geometry type."
+            raise TypeError(msg)
         key = key or str(uuid.uuid4())
         self._rows[key] = {"annotation": annotation}
         return key

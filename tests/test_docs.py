@@ -136,8 +136,9 @@ def raise_source_exception(
         source_lines.insert(source_lineno, f"{' '*(source_offset+3)}^ {message}")
     annotated_source = "\n".join(source_lines)
     exception = type(exception) if exception else SyntaxError
+    msg = f"{rel_path}:{file_lineno}: {message}\n{annotated_source}"
     raise exception(
-        f"{rel_path}:{file_lineno}: {message}\n{annotated_source}",
+        msg,
     ) from None
 
 
@@ -147,7 +148,8 @@ def import_node_names(import_node: Union[ast.Import, ast.ImportFrom]) -> List[st
         return [import_node.module]
     if isinstance(import_node, ast.Import):
         return [name.name for name in import_node.names]
-    raise TypeError("Unknown node type")
+    msg = "Unknown node type"
+    raise TypeError(msg)
 
 
 def check_ast(doc, rel_path) -> ast.AST:

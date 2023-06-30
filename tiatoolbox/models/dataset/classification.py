@@ -58,8 +58,9 @@ def predefined_preproc_func(dataset_name):
     }
 
     if dataset_name not in preproc_dict:
+        msg = f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
         raise ValueError(
-            f"Predefined preprocessing for dataset `{dataset_name}` does not exist.",
+            msg,
         )
 
     preprocs = preproc_dict[dataset_name]
@@ -225,9 +226,11 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         # Is there a generic func for path test in toolbox?
         if not os.path.isfile(img_path):
-            raise ValueError("`img_path` must be a valid file path.")
+            msg = "`img_path` must be a valid file path."
+            raise ValueError(msg)
         if mode not in ["wsi", "tile"]:
-            raise ValueError(f"`{mode}` is not supported.")
+            msg = f"`{mode}` is not supported."
+            raise ValueError(msg)
         patch_input_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
 
@@ -236,13 +239,15 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             or np.size(patch_input_shape) > 2
             or np.any(patch_input_shape < 0)
         ):
-            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
+            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+            raise ValueError(msg)
         if (
             not np.issubdtype(stride_shape.dtype, np.integer)
             or np.size(stride_shape) > 2
             or np.any(stride_shape < 0)
         ):
-            raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
+            msg = f"Invalid `stride_shape` value {stride_shape}."
+            raise ValueError(msg)
 
         self.preproc_func = preproc_func
         img_path = pathlib.Path(img_path)
@@ -293,7 +298,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         mask_reader = None
         if mask_path is not None:
             if not os.path.isfile(mask_path):
-                raise ValueError("`mask_path` must be a valid file path.")
+                msg = "`mask_path` must be a valid file path."
+                raise ValueError(msg)
             mask = imread(mask_path)  # assume to be gray
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
@@ -317,7 +323,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             self.inputs = self.inputs[selected]
 
         if len(self.inputs) == 0:
-            raise ValueError("No patch coordinates remain after filtering.")
+            msg = "No patch coordinates remain after filtering."
+            raise ValueError(msg)
 
         self.patch_input_shape = patch_input_shape
         self.resolution = resolution

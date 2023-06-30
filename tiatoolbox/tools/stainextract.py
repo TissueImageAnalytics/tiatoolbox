@@ -83,7 +83,8 @@ class CustomExtractor:
         """Initializes :class:`CustomExtractor`."""
         self.stain_matrix = stain_matrix
         if self.stain_matrix.shape not in [(2, 3), (3, 3)]:
-            raise ValueError("Stain matrix must have shape (2, 3) or (3, 3).")
+            msg = "Stain matrix must have shape (2, 3) or (3, 3)."
+            raise ValueError(msg)
 
     def get_stain_matrix(self, _):
         """Get the user defined stain matrix.

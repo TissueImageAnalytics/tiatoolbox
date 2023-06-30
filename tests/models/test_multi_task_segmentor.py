@@ -35,7 +35,8 @@ def _rm_dir(path):
 
 def _crash_func(_):
     """Helper to induce crash."""
-    raise ValueError("Propagation Crash.")
+    msg = "Propagation Crash."
+    raise ValueError(msg)
 
 
 def semantic_postproc_func(raw_output):

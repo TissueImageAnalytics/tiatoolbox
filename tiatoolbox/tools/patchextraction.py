@@ -181,7 +181,8 @@ class PatchExtractor(PatchExtractorABC):
     def __getitem__(self, item: int):
         """Defines the behaviour when an item is accessed."""
         if not isinstance(item, int):
-            raise TypeError("Index should be an integer.")
+            msg = "Index should be an integer."
+            raise TypeError(msg)
 
         if item >= self.locations_df.shape[0]:
             raise IndexError
@@ -281,17 +282,21 @@ class PatchExtractor(PatchExtractorABC):
 
         """
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
-            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
+            msg = "`mask_reader` should be wsireader.VirtualWSIReader."
+            raise ValueError(msg)
         if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
             coordinates_list.dtype,
             np.integer,
         ):
-            raise ValueError("`coordinates_list` should be ndarray of integer type.")
+            msg = "`coordinates_list` should be ndarray of integer type."
+            raise ValueError(msg)
         if coordinates_list.shape[-1] != 4:
-            raise ValueError("`coordinates_list` must be of shape [N, 4].")
+            msg = "`coordinates_list` must be of shape [N, 4]."
+            raise ValueError(msg)
 
         if not 0 <= min_mask_ratio <= 1:
-            raise ValueError("`min_mask_ratio` must be between 0 and 1.")
+            msg = "`min_mask_ratio` must be between 0 and 1."
+            raise ValueError(msg)
 
         # the tissue mask exists in the reader already, no need to generate it
         tissue_mask = mask_reader.img
@@ -408,22 +413,30 @@ class PatchExtractor(PatchExtractorABC):
             )
 
         if validate_shape(image_shape):
-            raise ValueError(f"Invalid `image_shape` value {image_shape}.")
+            msg = f"Invalid `image_shape` value {image_shape}."
+            raise ValueError(msg)
         if validate_shape(patch_input_shape):
-            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
+            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+            raise ValueError(msg)
         if validate_shape(patch_output_shape):
+            msg = f"Invalid `patch_output_shape` value {patch_output_shape}."
             raise ValueError(
-                f"Invalid `patch_output_shape` value {patch_output_shape}.",
+                msg,
             )
         if validate_shape(stride_shape):
-            raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
+            msg = f"Invalid `stride_shape` value {stride_shape}."
+            raise ValueError(msg)
         if np.any(patch_input_shape < patch_output_shape):
+            msg = (
+                f"`patch_input_shape` must larger than `patch_output_shape` "
+                f"{patch_input_shape} must > {patch_output_shape}."
+            )
             raise ValueError(
-                f"`patch_input_shape` must larger than `patch_output_shape`"
-                f" {patch_input_shape} must > {patch_output_shape}.",
+                msg,
             )
         if np.any(stride_shape < 1):
-            raise ValueError(f"`stride_shape` value {stride_shape} must > 1.")
+            msg = f"`stride_shape` value {stride_shape} must > 1."
+            raise ValueError(msg)
 
         def flat_mesh_grid_coord(x, y):
             """Helper function to obtain coordinate grid."""
@@ -665,8 +678,9 @@ def get_patch_extractor(
 
     """
     if method_name.lower() not in ["point", "slidingwindow"]:
+        msg = f"{method_name.lower()} method is not currently supported."
         raise MethodNotSupportedError(
-            f"{method_name.lower()} method is not currently supported.",
+            msg,
         )
 
     if method_name.lower() == "point":

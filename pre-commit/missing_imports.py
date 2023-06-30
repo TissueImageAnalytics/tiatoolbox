@@ -126,8 +126,9 @@ def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[str, str]]:
         return [(alias.name, alias.name.split(".")[0]) for alias in node.names]
     if isinstance(node, ast.ImportFrom):
         return [(node.module, node.module.split(".")[0])]
+    msg = f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom."
     raise TypeError(
-        f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom.",
+        msg,
     )
 
 

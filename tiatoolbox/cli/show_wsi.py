@@ -31,20 +31,21 @@ def show_wsi(img_input, name, colour_by, colour_map):  # pragma: no cover
     renderer = AnnotationRenderer()
     if colour_by is not None:
         if colour_map is None:
+            msg = "If colouring by a property, must also define a colour map."
             raise ValueError(
-                "If colouring by a property, must also define a colour map.",
+                msg,
             )
         renderer = AnnotationRenderer(score_prop=colour_by, mapper=colour_map)
 
     if len(img_input) == 0:
-        raise ValueError("At least one image path must be provided.")
+        msg = "At least one image path must be provided."
+        raise ValueError(msg)
     if len(name) == 0:
         app = TileServer("TileServer", list(img_input), renderer=renderer)
     elif len(name) == len(img_input):
         app = TileServer("TileServer", dict(zip(name, img_input)), renderer=renderer)
     else:
-        raise (
-            ValueError("if names are provided, must match the number of paths provided")
-        )
+        msg = "if names are provided, must match the number of paths provided"
+        raise (ValueError(msg))
 
     app.run(threaded=False)
