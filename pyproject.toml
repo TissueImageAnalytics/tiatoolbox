@@ -54,26 +54,29 @@
 
 [tool.ruff]
 select = [
-  "A",   # flake8-builtins
-  "B",   # flake8-bugbear
-  "D",   # pydocstyle, need to enable for docstrings check.
-  "E",   # pycodestyle - Error
-  "F",   # pyflakes
-  "G",   # flake8-logging-format
-  "N",   # pep8-naming
-  "W",   # pycodestyle - Warning
-  "C4",  # flake8-comprehensions
-  "PT",  # flake8-pytest-style
-  "UP",  # pyupgrade
-  "C90", # mccabe
-  # "ANN", # flake8-annotations
-  "COM", # flake8-commas
-  "ERA", # eradicate
-  "FIX", # flake8-fixme
-  "PIE", # flake8-pie
-  "RET", # flake8-return
-  "SIM", # flake8-simplify
-  "YTT", # flake8-2020
+  "A",     # flake8-builtins
+  "B",     # flake8-bugbear
+  "D",     # pydocstyle, need to enable for docstrings check.
+  "E",     # pycodestyle - Error
+  "F",     # pyflakes
+  "G",     # flake8-logging-format
+  "N",     # pep8-naming
+  # "S",     # flake8-bandit
+  "W",     # pycodestyle - Warning
+  "C4",    # flake8-comprehensions
+  "PT",    # flake8-pytest-style
+  "UP",    # pyupgrade
+  "C90",   # mccabe
+  # "ANN",   # flake8-annotations
+  "BLE",   # flake8-blind-except
+  "COM",   # flake8-commas
+  "ERA",   # eradicate
+  "FIX",   # flake8-fixme
+  "PIE",   # flake8-pie
+  "RET",   # flake8-return
+  "SIM",   # flake8-simplify
+  "YTT",   # flake8-2020
+  "ASYNC", # flake8-async
 ]
 ignore = []
 
