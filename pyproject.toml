@@ -70,6 +70,7 @@ select = [
   "UP",    # pyupgrade
   "C90",   # mccabe
   "T10",   # flake8-debugger
+  "T20",   # flake8-print
   # "ANN",   # flake8-annotations
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
@@ -77,6 +78,8 @@ select = [
   "ERA",   # eradicate
   # "FBT",   # flake8-boolean-trap
   "FIX",   # flake8-fixme
+  "ICN",   # flake8-import-conventions
+  "INP",   # flake8-no-pep420
   "ISC",   # flake8-implicit-str-concat
   "PIE",   # flake8-pie
   "RET",   # flake8-return

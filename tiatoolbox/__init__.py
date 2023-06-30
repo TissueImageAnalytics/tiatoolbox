@@ -88,7 +88,7 @@ def _lazy_import(name: str, module_location: Path):
 
 
 if __name__ == "__main__":
-    print("tiatoolbox version:" + str(__version__))
+    print("tiatoolbox version:" + str(__version__))  # noqa: T201
     location = Path(__file__).parent
     annotation = _lazy_import("annotation", location)
     models = _lazy_import("models", location)
