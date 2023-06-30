@@ -12,8 +12,8 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
-import torch.nn as nn
 from skimage.feature import peak_local_max
+from torch import nn
 
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc

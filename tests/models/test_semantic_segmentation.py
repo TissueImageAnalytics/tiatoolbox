@@ -13,10 +13,10 @@ import numpy as np
 import pytest
 import torch
 import torch.multiprocessing as torch_mp
-import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 import yaml
 from click.testing import CliRunner
+from torch import nn
 
 from tiatoolbox import cli
 from tiatoolbox.models import SemanticSegmentor

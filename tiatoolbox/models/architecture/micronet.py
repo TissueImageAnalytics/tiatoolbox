@@ -11,10 +11,10 @@ from typing import Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as functional
 from scipy import ndimage
 from skimage import morphology
+from torch import nn
+from torch.nn import functional
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.models_abc import ModelABC

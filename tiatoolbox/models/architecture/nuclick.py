@@ -9,13 +9,13 @@ from typing import Tuple, Union
 
 import numpy as np
 import torch
-import torch.nn as nn
 from skimage.morphology import (
     disk,
     reconstruction,
     remove_small_holes,
     remove_small_objects,
 )
+from torch import nn
 
 from tiatoolbox import logger
 from tiatoolbox.models.models_abc import ModelABC

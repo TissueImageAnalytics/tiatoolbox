@@ -5,9 +5,9 @@ from typing import List, Optional
 import cv2
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 from skimage import morphology
+from torch import nn
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.architecture.utils import UpSample2x

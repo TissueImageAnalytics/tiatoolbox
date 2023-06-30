@@ -283,7 +283,7 @@ class PatchExtractor(PatchExtractorABC):
         """
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
             msg = "`mask_reader` should be wsireader.VirtualWSIReader."
-            raise ValueError(msg)
+            raise TypeError(msg)
         if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
             coordinates_list.dtype,
             np.integer,

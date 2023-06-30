@@ -664,7 +664,7 @@ class SemanticSegmentor:
         """
         if not isinstance(mask_reader, VirtualWSIReader):
             msg = "`mask_reader` should be VirtualWSIReader."
-            raise ValueError(msg)
+            raise TypeError(msg)
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
             bounds.dtype,
             np.integer,
@@ -1230,7 +1230,7 @@ class SemanticSegmentor:
             wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
                 raise err
-            logging.error("Crashed on %s", wsi_save_path)
+            logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(
         self,

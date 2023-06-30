@@ -5,7 +5,7 @@ import pathlib
 import cv2
 import numpy as np
 import PIL
-import torchvision.transforms as transforms
+from torchvision import transforms
 
 from tiatoolbox import logger
 from tiatoolbox.models.dataset import dataset_abc

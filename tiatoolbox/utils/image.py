@@ -346,7 +346,7 @@ def safe_padded_read(
     # Ensure the bounds are integers.
     if not issubclass(np.array(bounds).dtype.type, (int, np.integer)):
         msg = "Bounds must be integers."
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     if np.any(padding < 0):
         msg = "Padding cannot be negative."

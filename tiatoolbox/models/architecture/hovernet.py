@@ -6,11 +6,11 @@ from typing import List, Optional
 import cv2
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 from scipy import ndimage
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
+from torch import nn
 
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,

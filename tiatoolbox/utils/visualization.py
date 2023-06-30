@@ -215,7 +215,7 @@ def _validate_label_info(
                 f"Wrong `label_info` format: label_uid "
                 f"{[label_uid, (label_name, label_colour)]}"
             )
-            raise ValueError(
+            raise TypeError(
                 msg,
             )
         if not isinstance(label_name, str):
@@ -223,7 +223,7 @@ def _validate_label_info(
                 f"Wrong `label_info` format: label_name "
                 f"{[label_uid, (label_name, label_colour)]}"
             )
-            raise ValueError(
+            raise TypeError(
                 msg,
             )
         if not isinstance(label_colour, (tuple, list, np.ndarray)):
@@ -231,7 +231,7 @@ def _validate_label_info(
                 f"Wrong `label_info` format: label_colour "
                 f"{[label_uid, (label_name, label_colour)]}"
             )
-            raise ValueError(
+            raise TypeError(
                 msg,
             )
         if len(label_colour) != 3:
@@ -435,7 +435,7 @@ def overlay_prediction_contours(
         inst_colours = np.array([inst_colours] * len(inst_dict))
     elif not isinstance(inst_colours, np.ndarray):
         msg = f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
-        raise ValueError(
+        raise TypeError(
             msg,
         )
     inst_colours = inst_colours.astype(np.uint8)

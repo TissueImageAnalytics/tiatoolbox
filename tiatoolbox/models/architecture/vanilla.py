@@ -2,8 +2,8 @@
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torchvision.models as torch_models
+from torch import nn
 from torchvision.models import WeightsEnum
 
 from tiatoolbox.models.models_abc import ModelABC

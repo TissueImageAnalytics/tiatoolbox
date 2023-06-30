@@ -1,7 +1,7 @@
 """Defines Abstract Base Class for Models defined in tiatoolbox."""
 from abc import ABC, abstractmethod
 
-import torch.nn as nn
+from torch import nn
 
 
 class IOConfigABC(ABC):

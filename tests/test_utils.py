@@ -1239,8 +1239,8 @@ def test_select_device():
 
 def test_model_to():
     """Test for placing model on device."""
-    import torch.nn as nn
     import torchvision.models as torch_models
+    from torch import nn
 
     # Test on GPU
     # no GPU on Travis so this will crash

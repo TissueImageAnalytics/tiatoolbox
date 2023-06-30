@@ -709,7 +709,7 @@ def __walk_dict(dct):
     for k, v in dct.items():
         if not isinstance(k, (int, float, str, bool)):
             msg = f"Key type `{type(k)}` `{k}` is not jsonified."
-            raise ValueError(msg)
+            raise TypeError(msg)
         dct[k] = __walk_list_dict(v)
 
 
@@ -741,7 +741,7 @@ def save_as_json(
     shadow_data = copy.deepcopy(data)  # make a copy of source input
     if not isinstance(shadow_data, (dict, list)):
         msg = f"Type of `data` ({type(data)}) must be in (dict, list)."
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     if isinstance(shadow_data, dict):
         __walk_dict(shadow_data)

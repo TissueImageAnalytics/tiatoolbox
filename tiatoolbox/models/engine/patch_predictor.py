@@ -877,7 +877,7 @@ class PatchPredictor:
 
         if not isinstance(imgs, list):
             msg = "Input to `tile` and `wsi` mode must be a list of file paths."
-            raise ValueError(
+            raise TypeError(
                 msg,
             )
 

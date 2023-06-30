@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from tiatoolbox.models import HoVerNet
 from tiatoolbox.models.architecture import fetch_pretrained_weights

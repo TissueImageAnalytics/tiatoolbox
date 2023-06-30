@@ -93,7 +93,7 @@ def get_pretrained_model(
     """
     if not isinstance(pretrained_model, str):
         msg = "pretrained_model must be a string."
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     if pretrained_model not in PRETRAINED_INFO:
         msg = f"Pretrained model `{pretrained_model}` does not exist."
