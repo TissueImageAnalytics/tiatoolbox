@@ -682,7 +682,7 @@ def __walk_list_dict(in_list_dict):
         (int, float, str, bool),
     ):
         msg = f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
-        raise ValueError(
+        raise TypeError(
             msg,
         )
     return in_list_dict
