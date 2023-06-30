@@ -616,8 +616,8 @@ def download_data(url, save_path, overwrite=False):
     if not overwrite and os.path.exists(save_path):
         return
 
-    r = requests.get(url)
-    request_response = requests.head(url)
+    r = requests.get(url, timeout=500)
+    request_response = requests.head(url, timeout=500)
     status_code = request_response.status_code
     url_exists = status_code == 200
 
