@@ -282,7 +282,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_travis(remote_sample, tmp_path):
+def test_functionality_ci(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     gc.collect()
     root_save_dir = pathlib.Path(tmp_path)
@@ -333,7 +333,7 @@ def test_functionality_travis(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
+def test_functionality_merge_tile_predictions_ci(remote_sample, tmp_path):
     """Functional tests for merging tile predictions."""
     gc.collect()  # Force clean up everything on hold
     save_dir = pathlib.Path(f"{tmp_path}/output")

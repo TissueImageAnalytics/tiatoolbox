@@ -490,7 +490,7 @@ def test_predictor_crash():
         PatchPredictor(pretrained_model="secret_model-kather100k")
 
     # provide wrong model of unknown type, deprecated later with type hint
-    with pytest.raises(ValueError, match=r".*must be a string.*"):
+    with pytest.raises(TypeError, match=r".*must be a string.*"):
         PatchPredictor(pretrained_model=123)
 
     # test predict crash
