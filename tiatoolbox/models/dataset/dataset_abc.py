@@ -1,3 +1,4 @@
+"""Defines dataset abstract classes."""
 import os
 import pathlib
 from abc import ABC, abstractmethod
@@ -147,8 +148,10 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             raise ValueError(f"{func} is not callable!")
 
     def __len__(self):
+        """Returns the length of the instance attributes."""
         return len(self.inputs)
 
     @abstractmethod
     def __getitem__(self, idx):
+        """Defines the behaviour when an item is accessed."""
         ...  # pragma: no cover
