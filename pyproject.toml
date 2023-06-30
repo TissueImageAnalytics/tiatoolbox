@@ -64,6 +64,7 @@ select = [
   # "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "C4",    # flake8-comprehensions
+  "FA",    # flake8-future-annotations
   "EM",    # flake8-errmsg
   "PT",    # flake8-pytest-style
   "UP",    # pyupgrade

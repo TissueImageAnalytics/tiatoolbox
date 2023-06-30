@@ -1,6 +1,7 @@
 """Defines wsi_registration classes and methods."""
+from __future__ import annotations
+
 import itertools
-from typing import Dict, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -26,7 +27,7 @@ def _check_dims(
     moving_img: np.ndarray,
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Check the dimensionality of images and mask.
 
     This function verify the dimensionality of images and their corresponding masks.
@@ -122,7 +123,7 @@ def prealignment(
     moving_mask: np.ndarray,
     dice_overlap: float = 0.5,
     rotation_step: int = 10,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """Coarse registration of an image pair.
 
     This function performs initial alignment of a moving image with respect to a
@@ -264,7 +265,7 @@ def match_histograms(
     image_a: np.ndarray,
     image_b: np.ndarray,
     kernel_size: int = 7,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Image normalization function.
 
     This function performs histogram equalization to unify the
@@ -349,7 +350,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         def hook(
             _module: torch.nn.MaxPool2d,
-            _module_input: Tuple[torch.Tensor],
+            _module_input: tuple[torch.Tensor],
             module_output: torch.Tensor,
         ) -> None:
             """Forward hook for feature extraction.
@@ -370,7 +371,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -417,7 +418,7 @@ class DFBRegister:
 
     """
 
-    def __init__(self, patch_size: Tuple[int, int] = (224, 224)) -> None:
+    def __init__(self, patch_size: tuple[int, int] = (224, 224)) -> None:
         """Initializes :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
@@ -428,7 +429,7 @@ class DFBRegister:
         self,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """CNN based feature extraction for registration.
 
         This function extracts multiscale features from a pre-trained
@@ -473,7 +474,7 @@ class DFBRegister:
         return self.feature_extractor(x)
 
     @staticmethod
-    def finding_match(feature_dist: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def finding_match(feature_dist: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Computes matching points.
 
         This function computes all the possible matching points
@@ -557,9 +558,9 @@ class DFBRegister:
 
     def feature_mapping(
         self,
-        features: Dict[str, torch.Tensor],
+        features: dict[str, torch.Tensor],
         num_matching_points: int = 128,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find mapping between CNN features.
 
         This function maps features of a fixed image to that of
@@ -687,7 +688,7 @@ class DFBRegister:
         fixed_mask: np.ndarray,
         moving_image: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> Tuple[np.array, np.array, np.array, np.array, IntBounds]:
+    ) -> tuple[np.array, np.array, np.array, np.array, IntBounds]:
         """Extract tissue region.
 
         This function uses binary mask for extracting tissue
@@ -787,7 +788,7 @@ class DFBRegister:
         fixed_matched_points: np.ndarray,
         moving_matched_points: np.ndarray,
         quality: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Filter the matching points.
 
         This function removes the duplicated points and the points
@@ -871,7 +872,7 @@ class DFBRegister:
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Perform DFBR to align a pair of image.
 
         This function aligns a pair of images using Deep
@@ -936,7 +937,7 @@ class DFBRegister:
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Perform DFBR to align a pair of images in a block wise manner.
 
         This function divides the images into four equal parts and then
@@ -1055,7 +1056,7 @@ class DFBRegister:
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
-        transform_initializer: Optional[np.ndarray] = None,
+        transform_initializer: np.ndarray | None = None,
     ) -> np.ndarray:
         """Perform whole slide image registration.
 
@@ -1456,9 +1457,9 @@ class AffineWSITransformer:
 
     def get_patch_dimensions(
         self,
-        size: Tuple[int, int],
+        size: tuple[int, int],
         transform: np.ndarray,
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """Compute patch size needed for transformation.
 
         Args:
@@ -1502,10 +1503,10 @@ class AffineWSITransformer:
 
     def get_transformed_location(
         self,
-        location: Tuple[int, int],
-        size: Tuple[int, int],
+        location: tuple[int, int],
+        size: tuple[int, int],
         level: int,
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """Get corresponding location on unregistered image and the required patch size.
 
         This function applies inverse transformation to the centre point of the region.
@@ -1547,7 +1548,7 @@ class AffineWSITransformer:
         )
         return transformed_location, transformed_size
 
-    def transform_patch(self, patch: np.ndarray, size: Tuple[int, int]) -> np.ndarray:
+    def transform_patch(self, patch: np.ndarray, size: tuple[int, int]) -> np.ndarray:
         """Apply transformation to the given patch.
 
         This function applies the transformation matrix after removing the translation.
@@ -1574,8 +1575,8 @@ class AffineWSITransformer:
 
     def read_rect(
         self,
-        location: Tuple[int, int],
-        size: Tuple[int, int],
+        location: tuple[int, int],
+        size: tuple[int, int],
         resolution: Resolution,
         units: Units,
     ) -> np.ndarray:
