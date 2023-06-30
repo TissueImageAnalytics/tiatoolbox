@@ -67,12 +67,16 @@ select = [
   "C4",    # flake8-comprehensions
   "FA",    # flake8-future-annotations
   "EM",    # flake8-errmsg
+  # "PD",    # pandas-vet
+  # "PL",  # Pylint
   "PT",    # flake8-pytest-style
+  "TD",    # flake8-todos
   "UP",    # pyupgrade
   "C90",   # mccabe
   "T10",   # flake8-debugger
   "T20",   # flake8-print
   # "ANN",   # flake8-annotations
+  # "ARG",   # flake8-unused-arguments
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
   "DTZ",   # flake8-datetimez
@@ -81,8 +85,11 @@ select = [
   "FIX",   # flake8-fixme
   "ICN",   # flake8-import-conventions
   "INP",   # flake8-no-pep420
+  "INT",   # flake8-gettext
   "ISC",   # flake8-implicit-str-concat
+  "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
+  # "PTH",   # flake8-use-pathlib
   "PYI",   # flake8-pyi
   "RET",   # flake8-return
   "RSE",   # flake8-raise
@@ -115,7 +122,7 @@ exclude = [
 ]
 
 # Ignore `F401` (import violations) in all `__init__.py` files.
-per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"]}
+per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"]}
 
 # Same as Black.
 line-length = 88

@@ -622,7 +622,11 @@ class AnnotationStore(ABC, MutableMapping):
             return True
         if isinstance(predicate, str):
             return bool(
-                eval(predicate, PY_GLOBALS, {"props": properties}),  # skipcq: PYL-W0123
+                eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                    predicate,
+                    PY_GLOBALS,
+                    {"props": properties},
+                ),
             )
         if isinstance(predicate, bytes):
             predicate = pickle.loads(predicate)  # skipcq: BAN-B301
@@ -996,7 +1000,6 @@ class AnnotationStore(ABC, MutableMapping):
                 of a list of sets.
 
         Examples:
-
             >>> from tiatoolbox.annotation.storage import DictionaryStore
             >>> from shapely.geometry import Point
             >>> store = DictionaryStore()
@@ -1023,7 +1026,7 @@ class AnnotationStore(ABC, MutableMapping):
             >>> store.pquery("props['class']")
             ... {42, 123}
 
-        """  # noqa
+        """
         if where is not None and type(select) is not type(where):
             msg = "select and where must be of the same type"
             raise TypeError(msg)
@@ -1073,7 +1076,11 @@ class AnnotationStore(ABC, MutableMapping):
 
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
-                return eval(select, PY_GLOBALS, py_locals)  # skipcq: PYL-W0123
+                return eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                    select,
+                    PY_GLOBALS,
+                    py_locals,
+                )
             if isinstance(select, bytes):
                 return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
 
@@ -2222,7 +2229,11 @@ class SQLiteStore(AnnotationStore):
             query_parameters["where"] = where
         # Predicate is a string
         if isinstance(where, str):
-            sql_predicate = eval(where, SQL_GLOBALS, {})  # skipcq: PYL-W0123
+            sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                where,
+                SQL_GLOBALS,
+                {},
+            )
             query_string += f" AND {sql_predicate}"
 
         return query_string, query_parameters
@@ -2783,7 +2794,6 @@ class SQLiteStore(AnnotationStore):
                 of a list of sets.
 
         Examples:
-
             >>> from tiatoolbox.annotation.storage import SQLiteStore
             >>> from shapely.geometry import Point
             >>> store = SQLiteStore()
@@ -2810,8 +2820,7 @@ class SQLiteStore(AnnotationStore):
             >>> store.pquery("props['class']")
             ... {42, 123}
 
-        """  # noqa
-
+        """
         self._validate_select_where_type(select, where)
 
         is_callable_query, is_pickle_query, is_str_query = self._kind_of_pquery(
@@ -2830,7 +2839,11 @@ class SQLiteStore(AnnotationStore):
         if not unique:
             return_columns.append("[key]")
         if is_str_query and not is_star_query:
-            select_names = eval(select, SQL_GLOBALS, {})  # skipcq: PYL-W0123
+            select_names = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                select,
+                SQL_GLOBALS,
+                {},
+            )
             return_columns += [str(select_names)]
         if is_callable_query or is_star_query or is_pickle_query:
             return_columns.append("properties")
@@ -3238,7 +3251,10 @@ class SQLiteStore(AnnotationStore):
         if not isinstance(where, str):
             msg = f"Invalid type for `where` ({type(where)})."
             raise TypeError(msg)
-        sql_predicate = eval(where, SQL_GLOBALS)  # skipcq: PYL-W0123
+        sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+            where,
+            SQL_GLOBALS,
+        )
         cur.execute(f"CREATE INDEX {name} ON annotations({sql_predicate})")
         if analyze:
             cur.execute(f"ANALYZE {name}")

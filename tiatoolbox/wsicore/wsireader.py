@@ -136,7 +136,7 @@ def is_ngff(
     try:
         multiscales: Multiscales = group_attrs["multiscales"]
         omero = group_attrs["omero"]
-        _ARRAY_DIMENSIONS = group_attrs["_ARRAY_DIMENSIONS"]  # noqa N806
+        _ARRAY_DIMENSIONS = group_attrs["_ARRAY_DIMENSIONS"]  # noqa: N806
         if not all(
             [
                 isinstance(multiscales, list),

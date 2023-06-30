@@ -105,7 +105,7 @@ def get_pretrained_model(
     creator = locate(f"tiatoolbox.models.architecture.{arch_info['class']}")
 
     model = creator(**arch_info["kwargs"])
-    # TODO: a dictionary of dataset specific or transformation ?  # noqa: FIX002
+    # TODO(TBC): Dictionary of dataset specific or transformation?  # noqa: FIX002,TD003
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
         # ! associated pre-processing coming from dataset (Kumar, Kather, etc.)
