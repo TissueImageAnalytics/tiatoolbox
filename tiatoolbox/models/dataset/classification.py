@@ -1,3 +1,4 @@
+"""Defines classes and methods for classification datasets."""
 import os
 import pathlib
 
@@ -105,6 +106,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
+        """Defines the behaviour when an item is accessed."""
         patch = self.inputs[idx]
 
         # Mode 0 is list of paths
@@ -325,6 +327,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
+        """Defines the behaviour when an item is accessed."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
