@@ -46,6 +46,6 @@ def show_wsi(img_input, name, colour_by, colour_map):  # pragma: no cover
         app = TileServer("TileServer", dict(zip(name, img_input)), renderer=renderer)
     else:
         msg = "if names are provided, must match the number of paths provided"
-        raise (ValueError(msg))
+        raise ValueError(msg)
 
     app.run(threaded=False)
