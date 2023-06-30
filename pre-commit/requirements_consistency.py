@@ -1,8 +1,9 @@
 """Test for ensuring that requirements files are valid and consistent."""
+from __future__ import annotations
+
 import importlib
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import yaml
 from pkg_resources import Requirement
@@ -17,9 +18,9 @@ REQUIREMENTS_FILES = [
 
 
 def parse_pip(
-    file_path: Optional[Path] = None,
-    lines: Optional[List[str]] = None,
-) -> Dict[str, Requirement]:
+    file_path: Path | None = None,
+    lines: list[str] | None = None,
+) -> dict[str, Requirement]:
     """Parse a pip requirements file.
 
     Note that package names are case insensitive and underscores and
@@ -64,7 +65,7 @@ def parse_pip(
     return packages
 
 
-def parse_conda(file_path: Path) -> Dict[str, Requirement]:
+def parse_conda(file_path: Path) -> dict[str, Requirement]:
     """Parse a conda requirements file.
 
     Args:
@@ -79,7 +80,7 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
     """
     with file_path.open("r") as fh:
         config = yaml.safe_load(fh)
-    dependencies: List[str] = config["dependencies"]
+    dependencies: list[str] = config["dependencies"]
     packages = {}
     for dependency in dependencies:
         # pip-style dependency
@@ -99,7 +100,7 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
     return packages
 
 
-def parse_setup_py(file_path) -> Dict[str, Requirement]:
+def parse_setup_py(file_path) -> dict[str, Requirement]:
     """Parse a setup.py file.
 
     Args:
@@ -150,9 +151,9 @@ def test_files_exist(root_dir: Path) -> None:
 
 
 def parse_requirements(
-    file_path: Optional[Path] = None,
-    lines: Optional[List[str]] = None,
-) -> Dict[str, Tuple[str, Tuple[str, ...], str]]:
+    file_path: Path | None = None,
+    lines: list[str] | None = None,
+) -> dict[str, tuple[str, tuple[str, ...], str]]:
     """Parse a requirements file (pip or conda).
 
     Args:
@@ -180,7 +181,7 @@ def parse_requirements(
     raise ValueError(msg)
 
 
-def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -> bool:
+def in_common_consistent(all_requirements: dict[Path, dict[str, Requirement]]) -> bool:
     """Test that in-common requirements are consistent.
 
     Args:
@@ -223,11 +224,11 @@ def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -
         formatted_reqs = [f"{c}{v} ({p.name})" for p, c, v in zipped_file_specs]
         if any(x != constraints[0] for x in constraints):
             print(
-                f"{key} has inconsistent constraints:" f" {', '.join(formatted_reqs)}.",
+                f"{key} has inconsistent constraints: {', '.join(formatted_reqs)}.",
             )
             consistent = False
         if any(x != versions[0] for x in versions):
-            print(f"{key} has inconsistent versions:" f" {', '.join(formatted_reqs)}.")
+            print(f"{key} has inconsistent versions: {', '.join(formatted_reqs)}.")
             consistent = False
     return consistent
 
@@ -240,7 +241,7 @@ def main():
     passed = True
 
     # Keep track of all parsed files
-    all_requirements: Dict[Path, Dict[str, Requirement]] = {}
+    all_requirements: dict[Path, dict[str, Requirement]] = {}
 
     # Check that packages in main are also in super (dev)
     for sub_name, super_name in REQUIREMENTS_FILES:

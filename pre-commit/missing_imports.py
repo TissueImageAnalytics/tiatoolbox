@@ -5,6 +5,8 @@ Any found bad imports will be printed and the script will exit with a non-zero
 status.
 
 """
+from __future__ import annotations
+
 import argparse
 import ast
 import importlib
@@ -12,7 +14,6 @@ import os
 import sys
 import tokenize
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
 
 from requirements_consistency import parse_requirements
 
@@ -42,7 +43,7 @@ REQUIREMENTS_FILES = (
 )
 
 
-def find_source_files(base_dir: Path) -> List[Path]:
+def find_source_files(base_dir: Path) -> list[Path]:
     """Recursively find all source files in the given directory.
 
     Args:
@@ -63,7 +64,7 @@ def find_source_files(base_dir: Path) -> List[Path]:
     return source_files
 
 
-def find_imports(py_source_path: Path) -> List[str]:
+def find_imports(py_source_path: Path) -> list[str]:
     """Find all imports in the given Python source file.
 
     Args:
@@ -110,7 +111,7 @@ def std_spec(fullname: str) -> str:
     return "site-packages" not in origin.parts and "dist-packages" not in origin.parts
 
 
-def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[str, str]]:
+def stems(node: ast.Import | ast.ImportFrom) -> list[tuple[str, str]]:
     """Return the stem of each alias in the given import node.
 
     Args:
@@ -162,9 +163,9 @@ def main():
 
 def find_bad_imports(
     root: Path,
-    source_files: List[Path],
+    source_files: list[Path],
     requirements_path: Path,
-) -> List[Tuple[Union[ast.Import, ast.ImportFrom], ast.alias]]:
+) -> list[tuple[ast.Import | ast.ImportFrom, ast.alias]]:
     """Find bad imports in the given requirements file.
 
     Args:
@@ -190,7 +191,7 @@ def find_bad_imports(
     for path in source_files:
         file_import_nodes = find_imports(path)
         # Mapping of import alias names and stems to nodes
-        stem_to_node_alias: Dict[Tuple[ast.alias, str], ast.Import] = {
+        stem_to_node_alias: dict[tuple[ast.alias, str], ast.Import] = {
             stem: (node, alias)
             for node in file_import_nodes
             for alias, stem in stems(node)
