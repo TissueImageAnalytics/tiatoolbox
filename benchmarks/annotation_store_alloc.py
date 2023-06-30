@@ -196,7 +196,7 @@ def cell_polygon(
 
     # Copy first coordinate to the end if required
     if repeat_first:
-        boundary_coords = [*boundary_coords, boundary_coords[0]]
+        boundary_coords = boundary_coords + [boundary_coords[0]]
 
     # Swap direction
     if direction.strip().lower() == "cw":
