@@ -529,7 +529,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         "resolution": 1.75,
         "units": "mpp",
     }
-    for key, _ in kwargs.items():
+    for key in kwargs:
         _kwargs = copy.deepcopy(kwargs)
         _kwargs.pop(key)
         with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):

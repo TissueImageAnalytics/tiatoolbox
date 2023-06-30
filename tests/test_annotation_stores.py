@@ -1202,7 +1202,7 @@ class TestStore:
     def test_serialise_deseialise_geometry(fill_store, store_cls):
         """Test that geometry can be serialised and deserialised."""
         _, store = fill_store(store_cls, ":memory:")
-        for _, annotation in store.items():
+        for annotation in store.values():
             geometry = annotation.geometry
             serialised = store.serialise_geometry(geometry)
             deserialised = store.deserialize_geometry(serialised)

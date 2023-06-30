@@ -572,8 +572,7 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of keys.
 
         """
-        for key, _ in self.items():
-            yield key
+        yield from self
 
     def values(self) -> Iterable[Annotation]:
         """Return an iterable of all annotation in the store.
@@ -583,8 +582,7 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of annotations.
 
         """
-        for _, annotation in self.items():
-            yield annotation
+        yield from self.values()
 
     def __iter__(self) -> Iterable[str]:
         """Return an iterable of keys in the store.
@@ -2945,8 +2943,7 @@ class SQLiteStore(AnnotationStore):
                 An iterable of annotations.
 
         """
-        for _, value in self.items():
-            yield value
+        yield from self.values()
 
     def items(self) -> Iterable[Tuple[int, Annotation]]:
         """Returns iterable (generator) over key and annotations."""
