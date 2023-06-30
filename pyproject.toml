@@ -70,7 +70,9 @@ select = [
   # "ANN",   # flake8-annotations
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
+  "DTZ",   # flake8-datetimez
   "ERA",   # eradicate
+  # "FBT",   # flake8-boolean-trap
   "FIX",   # flake8-fixme
   "PIE",   # flake8-pie
   "RET",   # flake8-return

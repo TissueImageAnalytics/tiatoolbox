@@ -3321,11 +3321,11 @@ class TIFFWSIReader(WSIReader):
 
             def us_date(string: str) -> datetime:
                 """Returns datetime parsed according to US date format."""
-                return datetime.strptime(string, r"%m/%d/%y")
+                return datetime.strptime(string, r"%m/%d/%y").astimezone()
 
             def time(string: str) -> datetime:
                 """Returns datetime parsed according to HMS format."""
-                return datetime.strptime(string, r"%H:%M:%S")
+                return datetime.strptime(string, r"%H:%M:%S").astimezone()
 
             casting_precedence = [us_date, time, int, float]
             value = value_string
