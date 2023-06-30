@@ -143,6 +143,7 @@ class Annotation:
         return json.dumps(self.to_feature())
 
     def __repr__(self) -> str:
+        """Returns a string representation of the object."""
         return f"Annotation({self.geometry}, {self.properties})"
 
 
@@ -196,6 +197,8 @@ class AnnotationStore(ABC, MutableMapping):
                 Third coordinate.
             d (Sequence[Number]):
                 Fourth coordinate.
+            args (list):
+                Non-Keyword arguments.
 
         Returns:
             True if the coordinates form a rectangle, False otherwise.
@@ -1416,6 +1419,7 @@ class AnnotationStore(ABC, MutableMapping):
         origin: Tuple[float, float] = (0, 0),
     ) -> None:
         """Add annotations from a .geojson file to an existing store.
+
         Make the best effort to create valid shapely geometries from provided contours.
 
         Args:
@@ -1425,7 +1429,7 @@ class AnnotationStore(ABC, MutableMapping):
                 The scale factor to use when loading the annotations. All coordinates
                 will be multiplied by this factor to allow import of annotations saved
                 at non-baseline resolution.
-            origin [float, float]:
+            origin (tuple(float, float)):
                 The x and y coordinates to use as the origin for the annotations.
 
         """
@@ -1641,6 +1645,12 @@ class AnnotationStore(ABC, MutableMapping):
         self.patch_many(transformed_geoms.keys(), transformed_geoms.values())
 
     def __del__(self) -> None:
+        """Implements destructor method.
+
+        This should be called when all references to the object have been deleted
+        i.e., when an object is garbage collected.
+
+        """
         self.close()
 
     def clear(self) -> None:
@@ -1682,6 +1692,7 @@ class SQLiteMetadata(MutableMapping):
         self.con.commit()
 
     def __contains__(self, key: str) -> bool:
+        """Tests whether the object contains the specified object or not."""
         cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
         return cursor.fetchone() is not None
 
@@ -2208,11 +2219,17 @@ class SQLiteStore(AnnotationStore):
                 The columns to select.
             geometry(tuple or Geometry):
                 The geometry being queried against.
-            select_callable(str):
-                The rows to select when a callable is given to `where`.
             callable_columns(str):
                 The columns to select when a callable is given to
                 `where`.
+            geometry_predicate(str):
+                A string which define which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                "intersects". For more information see the `shapely
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
             where (str or bytes or Callable):
                 The predicate to evaluate against candidate properties
                 during the query.
@@ -2226,6 +2243,8 @@ class SQLiteStore(AnnotationStore):
             index_warning(bool):
                 Whether to warn if the query is not using an index.
                 Defaults to False.
+            min_area (float):
+                Minimum area required for query.
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
@@ -2346,6 +2365,8 @@ class SQLiteStore(AnnotationStore):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+            min_area:
+                Minimum area required for query.
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
@@ -2460,6 +2481,8 @@ class SQLiteStore(AnnotationStore):
                 input should never be accepted to this argument as
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
+            min_area:
+                Minimum area required for query.
 
         Returns:
             list:
@@ -2801,17 +2824,20 @@ class SQLiteStore(AnnotationStore):
         return result
 
     def __len__(self) -> int:
+        """Returns the length of the instance attributes."""
         cur = self.con.cursor()
         cur.execute("SELECT COUNT(*) FROM annotations")
         (count,) = cur.fetchone()
         return count
 
     def __contains__(self, key: str) -> bool:
+        """Tests whether the object contains the specified object or not."""
         cur = self.con.cursor()
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
     def __getitem__(self, key: str) -> Annotation:
+        """Defines the behaviour when an item is accessed."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -2844,6 +2870,7 @@ class SQLiteStore(AnnotationStore):
         yield from self
 
     def __iter__(self) -> Iterable[int]:
+        """Returns an iterator for the given object."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -3026,6 +3053,7 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
+        """Implements a method to assign a value to and item."""
         if key in self:
             self.patch(key, annotation.geometry, annotation.properties)
             return
@@ -3307,14 +3335,17 @@ class DictionaryStore(AnnotationStore):
         del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
+        """Defines the behaviour when an item is accessed."""
         return self._rows[key]["annotation"]
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
+        """Implements a method to assign a value to and item."""
         if key in self._rows:
             self._rows[key]["annotation"] = annotation
         self._rows[key] = {"annotation": annotation}
 
     def __contains__(self, key: str) -> bool:
+        """Tests whether the object contains the specified object or not."""
         return key in self._rows
 
     def items(self) -> Generator[Tuple[str, Annotation], None, None]:
@@ -3323,6 +3354,7 @@ class DictionaryStore(AnnotationStore):
             yield key, row["annotation"]
 
     def __len__(self) -> int:
+        """Returns the length of the instance attributes."""
         return len(self._rows)
 
     @classmethod  # noqa: A003
