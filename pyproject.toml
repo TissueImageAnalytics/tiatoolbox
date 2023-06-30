@@ -63,6 +63,7 @@ select = [
   "N",     # pep8-naming
   # "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
+  "Q",     # flake8-quotes
   "C4",    # flake8-comprehensions
   "FA",    # flake8-future-annotations
   "EM",    # flake8-errmsg
@@ -82,7 +83,9 @@ select = [
   "INP",   # flake8-no-pep420
   "ISC",   # flake8-implicit-str-concat
   "PIE",   # flake8-pie
+  "PYI",   # flake8-pyi
   "RET",   # flake8-return
+  "RSE",   # flake8-raise
   "SIM",   # flake8-simplify
   "YTT",   # flake8-2020
   "ASYNC", # flake8-async
@@ -108,7 +111,7 @@ exclude = [
 ]
 
 # Ignore `F401` (import violations) in all `__init__.py` files.
-per-file-ignores = {"__init__.py" = ["F401"]}
+per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201"]}
 
 # Same as Black.
 line-length = 88
