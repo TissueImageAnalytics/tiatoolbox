@@ -16,6 +16,7 @@ def source_files(root_path):
     ignore = {"__pycache__"}
 
     def generator():
+        """Generates path to files."""
         for root, dirs, files in os.walk(root_path):
             files = [f for f in files if f.endswith(".py") and f[0] != "."]
             dirs[:] = [d for d in dirs if d not in ignore and d[0] != "."]

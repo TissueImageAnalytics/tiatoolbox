@@ -170,6 +170,7 @@ def fill_store(cell_grid, points_grid):
         store_class: AnnotationStore,
         path: Union[str, Path],
     ):
+        """Private function to fill stores with data."""
         store = store_class(path)
         annotations = [Annotation(cell) for cell in cell_grid] + [
             Annotation(point, properties={"class": random.randint(0, 4)})

@@ -172,7 +172,10 @@ def test_sub_tile_levels():
     wsi = wsireader.VirtualWSIReader(array)
 
     class MockTileGenerator(pyramid.TilePyramidGenerator):
+        """Mock Tile Generator class for tests."""
+
         def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
+            """Returns path to mock tile."""
             return Path(level, x, y)
 
         @property
