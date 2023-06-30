@@ -4465,7 +4465,7 @@ class NGFFWSIReader(WSIReader):
 
     """
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs) -> None:
         """Initializes :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs
@@ -5026,7 +5026,7 @@ class AnnotationStoreReader(WSIReader):
         base_wsi: WSIReader | str | None = None,
         alpha=1.0,
         **kwargs,
-    ):
+    ) -> None:
         """Initializes :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
         self.store = (

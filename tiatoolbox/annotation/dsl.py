@@ -81,7 +81,7 @@ class SQLExpression:
 
     __hash__ = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Returns a string representation of the object."""
         return str(self)  # pragma: no cover
 
@@ -165,7 +165,7 @@ class SQLExpression:
         """Defines how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.neg)
 
-    def __contains__(self, other):
+    def __contains__(self, other) -> bool:
         """Tests whether the object contains the specified object or not."""
         return SQLTriplet(self, "contains", other)
 
@@ -209,7 +209,7 @@ class SQLTriplet(SQLExpression):
         lhs: Union["SQLTriplet", str],
         op: Optional[Union[Callable, str]] = None,
         rhs: Optional[Union["SQLTriplet", str]] = None,
-    ):
+    ) -> None:
         """Initializes :class:`SQLTriplet`."""
         self.lhs = lhs
         self.op = op

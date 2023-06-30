@@ -28,7 +28,7 @@ class IOConfigABC(ABC):
 class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes Abstract class ModelABC."""
         super().__init__()
         self._postproc = self.postproc

@@ -113,7 +113,7 @@ class UnetEncoder(nn.Module):
         self,
         num_input_channels: int,
         layer_output_channels: List[int],
-    ):
+    ) -> None:
         """Initializes :class:`UnetEncoder`."""
         super().__init__()
 
@@ -283,7 +283,7 @@ class UNetModel(ModelABC):
         encoder_levels: Optional[List[int]] = None,
         decoder_block: Optional[Tuple[int]] = None,
         skip_type: str = "add",
-    ):
+    ) -> None:
         """Initializes :class:`UNetModel`."""
         super().__init__()
 

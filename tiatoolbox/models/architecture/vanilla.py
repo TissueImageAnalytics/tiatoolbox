@@ -90,7 +90,7 @@ class CNNModel(ModelABC):
 
     """
 
-    def __init__(self, backbone, num_classes=1):
+    def __init__(self, backbone, num_classes=1) -> None:
         """Initializes :class:`CNNModel`."""
         super().__init__()
         self.num_classes = num_classes
@@ -199,7 +199,7 @@ class CNNBackbone(ModelABC):
 
     """
 
-    def __init__(self, backbone):
+    def __init__(self, backbone) -> None:
         """Initializes :class:`CNNBackbone`."""
         super().__init__()
         self.feat_extract = _get_architecture(backbone)

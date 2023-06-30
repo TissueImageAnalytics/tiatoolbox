@@ -74,7 +74,7 @@ class KatherPatchDataset(DatasetInfoABC):
     def __init__(
         self,
         save_dir_path=None,
-    ):
+    ) -> None:
         """Initializes :class:`KatherPatchDataset`."""
         label_names = [
             "BACK",

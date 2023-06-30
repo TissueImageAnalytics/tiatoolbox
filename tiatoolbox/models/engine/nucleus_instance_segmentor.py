@@ -376,7 +376,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-    ):
+    ) -> None:
         """Initializes :class:`NucleusInstanceSegmentor`."""
         super().__init__(
             batch_size=batch_size,

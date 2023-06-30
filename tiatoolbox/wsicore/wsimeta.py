@@ -103,7 +103,7 @@ class WSIMeta:
         mpp: Optional[Sequence[float]] = None,
         file_path: Optional[Path] = None,
         raw: Optional[Mapping[str, str]] = None,
-    ):
+    ) -> None:
         """Initializas WSIMeta."""
         self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None

@@ -27,7 +27,7 @@ class _TorchPreprocCaller:
 
     """
 
-    def __init__(self, preprocs):
+    def __init__(self, preprocs) -> None:
         self.func = transforms.Compose(preprocs)
 
     def __call__(self, img):
@@ -93,7 +93,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
 
     """
 
-    def __init__(self, inputs, labels=None):
+    def __init__(self, inputs, labels=None) -> None:
         """Initializes :class:`PatchDataset`."""
         super().__init__()
 
@@ -163,7 +163,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         auto_get_mask=True,
         min_mask_ratio=0,
         preproc_func=None,
-    ):
+    ) -> None:
         """Create a WSI-level patch dataset.
 
         Args:

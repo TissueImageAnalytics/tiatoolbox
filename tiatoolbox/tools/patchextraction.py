@@ -121,7 +121,7 @@ class PatchExtractor(PatchExtractorABC):
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,
         min_mask_ratio: float = 0,
-    ):
+    ) -> None:
         """Initializes :class:`PatchExtractor`."""
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
@@ -165,7 +165,7 @@ class PatchExtractor(PatchExtractorABC):
         self.n = 0
         return self
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns the length of the instance attributes."""
         return self.locations_df.shape[0] if self.locations_df is not None else 0
 
@@ -531,7 +531,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,
         min_mask_ratio: float = 0,
-    ):
+    ) -> None:
         """Initializes :class:`SlidingWindowPatchExtractor`."""
         super().__init__(
             input_img=input_img,
@@ -610,7 +610,7 @@ class PointsPatchExtractor(PatchExtractor):
         pad_mode: str = "constant",
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,
-    ):
+    ) -> None:
         """Initializes :class:`PointsPatchExtractor`."""
         super().__init__(
             input_img=input_img,

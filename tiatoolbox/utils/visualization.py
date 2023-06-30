@@ -558,7 +558,7 @@ class AnnotationRenderer:
         secondary_cmap=None,
         blur_radius=0,
         score_prop_edge=None,
-    ):
+    ) -> None:
         """Initializes :class:`AnnotationRenderer`."""
         if mapper is None:
             mapper = colormaps["jet"]

@@ -312,7 +312,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
@@ -412,7 +412,7 @@ class DFBRegister:
 
     """
 
-    def __init__(self, patch_size: Tuple[int, int] = (224, 224)):
+    def __init__(self, patch_size: Tuple[int, int] = (224, 224)) -> None:
         """Initializes :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []

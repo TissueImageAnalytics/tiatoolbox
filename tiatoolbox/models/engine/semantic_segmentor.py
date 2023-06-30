@@ -162,7 +162,7 @@ class IOSegmentorConfig(IOConfigABC):
         patch_output_shape: Union[List[int], np.ndarray],
         save_resolution: Optional[dict] = None,
         **kwargs,
-    ):
+    ) -> None:
         """Initializes :class:`IOSegmentorConfig`."""
         self._kwargs = kwargs
         self.patch_input_shape = patch_input_shape
@@ -321,7 +321,7 @@ class WSIStreamDataset(torch_data.Dataset):
         mp_shared_space: Namespace,
         preproc: Optional[Callable[[np.ndarray], np.ndarray]] = None,
         mode="wsi",
-    ):
+    ) -> None:
         """Initializes :class:`WSIStreamDataset`."""
         super().__init__()
         self.mode = mode
@@ -363,7 +363,7 @@ class WSIStreamDataset(torch_data.Dataset):
             info=metadata,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns the length of the instance attributes."""
         return len(self.mp_shared_space.patch_inputs)
 
@@ -513,7 +513,7 @@ class SemanticSegmentor:
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-    ):
+    ) -> None:
         """Initializes :class:`SemanticSegmentor`."""
         super().__init__()
 
@@ -1455,7 +1455,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-    ):
+    ) -> None:
         """Initializes :class:`DeepFeatureExtractor`."""
         super().__init__(
             batch_size=batch_size,

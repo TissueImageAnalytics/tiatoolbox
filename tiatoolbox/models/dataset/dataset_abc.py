@@ -14,7 +14,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     def __init__(
         self,
-    ):
+    ) -> None:
         """Initializes :class:`PatchDatasetABC`."""
         super().__init__()
         self._preproc = self.preproc
@@ -147,7 +147,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         else:
             raise ValueError(f"{func} is not callable!")
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns the length of the instance attributes."""
         return len(self.inputs)
 

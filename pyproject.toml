@@ -66,12 +66,14 @@ select = [
   "PT",  # flake8-pytest-style
   "UP",  # pyupgrade
   "C90", # mccabe
+  # "ANN", # flake8-annotations
   "COM", # flake8-commas
   "ERA", # eradicate
   "FIX", # flake8-fixme
   "PIE", # flake8-pie
   "RET", # flake8-return
   "SIM", # flake8-simplify
+  "YTT", # flake8-2020
 ]
 ignore = []
 

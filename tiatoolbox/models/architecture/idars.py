@@ -60,7 +60,7 @@ class IDaRS(CNNModel):
 
     """
 
-    def __init__(self, backbone, num_classes=1):
+    def __init__(self, backbone, num_classes=1) -> None:
         """Initializes :class:`IDaRS`."""
         super().__init__(backbone, num_classes=num_classes)
 

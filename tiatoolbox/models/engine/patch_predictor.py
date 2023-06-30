@@ -28,7 +28,7 @@ class IOPatchPredictorConfig(IOSegmentorConfig):
         input_resolutions=None,
         stride_shape=None,
         **kwargs,
-    ):
+    ) -> None:
         """Initializes :class:`IOPatchPredictorConfig`."""
         stride_shape = patch_input_shape if stride_shape is None else stride_shape
         super().__init__(
@@ -227,7 +227,7 @@ class PatchPredictor:
         pretrained_model=None,
         pretrained_weights=None,
         verbose=True,
-    ):
+    ) -> None:
         """Initializes :class:`PatchPredictor`."""
         super().__init__()
 

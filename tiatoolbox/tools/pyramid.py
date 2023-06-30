@@ -491,7 +491,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         tile_size: int = 256,
         downsample: int = 2,
         overlap: int = 0,
-    ):
+    ) -> None:
         """Initializes :class:`AnnotationTileGenerator`."""
         super().__init__(None, tile_size, downsample, overlap)
         self.info = info

@@ -443,7 +443,7 @@ class MicroNet(ModelABC):
         num_input_channels=3,
         num_output_channels=2,
         out_activation="softmax",
-    ):
+    ) -> None:
         """Initializes :class:`MicroNet`."""
         super().__init__()
         if num_output_channels < 2:

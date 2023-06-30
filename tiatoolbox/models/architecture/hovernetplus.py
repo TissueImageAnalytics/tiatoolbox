@@ -83,7 +83,7 @@ class HoVerNetPlus(HoVerNet):
         num_input_channels: int = 3,
         num_types: Optional[int] = None,
         num_layers: Optional[int] = None,
-    ):
+    ) -> None:
         """Initializes :class:`HoVerNetPlus`."""
         super().__init__(mode="fast")
         self.num_input_channels = num_input_channels
