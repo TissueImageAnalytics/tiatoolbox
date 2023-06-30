@@ -364,6 +364,7 @@ class WSIStreamDataset(torch_data.Dataset):
         )
 
     def __len__(self):
+        """Returns the length of the instance attributes."""
         return len(self.mp_shared_space.patch_inputs)
 
     @staticmethod
@@ -380,6 +381,7 @@ class WSIStreamDataset(torch_data.Dataset):
         return torch.utils.data.dataloader.default_collate(batch)
 
     def __getitem__(self, idx: int):
+        """Defines the behaviour when an item is accessed."""
         # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
