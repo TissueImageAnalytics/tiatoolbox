@@ -93,16 +93,6 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                     # ndarray of mixed data types
                     msg = "Provided input array is non-numerical."
                     raise ValueError(msg)
-                # N H W C | N C H W
-                if len(self.inputs.shape) != 4:
-                    msg = (
-                        "Input must be an array of images of the form NHWC. "
-                        "This can be achieved by converting a list of images "
-                        "to a numpy array.  eg., np.array([img1, img2])."
-                    )
-                    raise ValueError(
-                        msg,
-                    )
                 self.data_is_npy_alike = True
 
         elif not isinstance(self.inputs, (list, np.ndarray)):
