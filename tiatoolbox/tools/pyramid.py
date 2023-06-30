@@ -167,6 +167,8 @@ class TilePyramidGenerator:
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
+            res (int):
+                Tile resolution to read.
             pad_mode (str):
                 Method for padding when reading areas outside the
                 input image. Default is constant (0 padding). This is
@@ -359,11 +361,13 @@ class TilePyramidGenerator:
             archive.close()
 
     def __len__(self) -> int:
+        """Returns length of instance attributes."""
         return sum(
             np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
         )
 
     def __iter__(self) -> Iterable:
+        """Returns an iterator for the given object."""
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
                 yield self.get_tile(level=level, x=x, y=y)
@@ -577,6 +581,17 @@ class AnnotationTileGenerator(ZoomifyGenerator):
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
+            res (int):
+                Resolution at which to read the image.
+            pad_mode (str):
+                Method for padding at edges of the WSI. Default to
+                'constant'. See :func:`numpy.pad` for more information.
+            interpolation (str):
+                Method to use when resampling the output image. Possible
+                values are "linear", "cubic", "lanczos", "area", and
+                "optimise". Defaults to 'optimise' which will use cubic
+                interpolation for upscaling and area interpolation for
+                downscaling to avoid moiré patterns.
 
         Returns:
             PIL.Image:
