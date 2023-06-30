@@ -501,7 +501,7 @@ def test_predictor_crash():
     # remove previously generated data
     if os.path.exists("output"):
         _rm_dir("output")
-    with pytest.raises(ValueError, match=r".*must be a list of file paths.*"):
+    with pytest.raises(TypeError, match=r".*must be a list of file paths.*"):
         predictor.predict("aaa", mode="wsi")
     # remove previously generated data
     _rm_dir("output")

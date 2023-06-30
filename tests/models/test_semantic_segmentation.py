@@ -276,7 +276,7 @@ def test_crash_segmentor(remote_sample):
 
     # * test basic crash
     _rm_dir("output")  # default output dir test
-    with pytest.raises(ValueError, match=r".*`mask_reader`.*"):
+    with pytest.raises(TypeError, match=r".*`mask_reader`.*"):
         semantic_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
         semantic_segmentor.filter_coordinates(
