@@ -619,8 +619,8 @@ def download_data(url, save_path, overwrite=False):
         overwrite: (bool): True to force overwriting of existing data, default=False
 
     """
-    logger.info(f"Download from {url}.")
-    logger.info(f"Saving to {save_path}.")
+    logger.info("Download from %s.", str(url))
+    logger.info("Saving to %s.", str(save_path))
     save_dir = pathlib.Path(save_path).parent
 
     if not os.path.exists(save_dir):
@@ -1080,5 +1080,5 @@ def add_from_dat(
     else:
         anns = anns_from_hoverdict(data, props, typedict, origin, scale_factor)
 
-    logger.info(f"Added {len(anns)} annotations.")
+    logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)

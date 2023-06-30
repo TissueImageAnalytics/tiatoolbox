@@ -1346,7 +1346,7 @@ def estimate_bspline_transform(
         image1=fixed_image_inv_sitk,
         transformDomainMeshSize=mesh_size,
     )
-    logger.info(f"Initial Number of B-spline Parameters: {tx.GetNumberOfParameters()}")
+    logger.info("Initial Number of B-spline Parameters: %d", tx.GetNumberOfParameters())
 
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetInitialTransformAsBSpline(

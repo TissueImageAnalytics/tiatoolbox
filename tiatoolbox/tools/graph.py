@@ -336,8 +336,8 @@ class SlideGraphConstructor:
 
         # Initialise an empty 1-D condensed distance matrix.
         # For information on condensed distance matrices see:
-        # - https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist
-        # - https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+        # - scipy.spatial.distance.pdist
+        # - scipy.cluster.hierarchy.linkage
         condensed_distance_matrix = np.zeros(int(len(points) * (len(points) - 1) / 2))
 
         # Find the similarity between pairs of patches
