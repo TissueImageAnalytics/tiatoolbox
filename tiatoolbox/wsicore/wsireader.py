@@ -114,6 +114,8 @@ def is_ngff(
             Path to the file to check.
         min_version (Tuple[int, ...]):
             Minimum version of the NGFF file to be considered valid.
+        max_version (Tuple[int, ...]):
+            Maximum version of the NGFF file to be considered valid.
 
     Returns:
         bool:
@@ -244,6 +246,8 @@ class WSIReader:
                 (x, y) tuple of the MPP in the units of the input image.
             power (float):
                 Objective power of the input image.
+            kwargs (dict):
+                Key-word arguments.
 
         Returns:
             WSIReader:
@@ -3171,12 +3175,14 @@ class ArrayView:
 
     @property
     def shape(self):
+        """Returns array shape."""
         try:
             return tuple(self._shape[c] for c in "YXC")
         except KeyError:
             return tuple(self._shape[c] for c in "YXS")
 
     def __getitem__(self, index):
+        """Defines the behaviour when an item is accessed."""
         # Normalize to a tuple of length = len(self.axes)
         if not isinstance(index, tuple):
             index = (index,)
