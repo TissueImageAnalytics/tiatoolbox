@@ -18,14 +18,17 @@ class PatchExtractorABC(ABC):
 
     @abstractmethod
     def __iter__(self):
+        """Returns an iterator for the given object."""
         raise NotImplementedError
 
     @abstractmethod
     def __next__(self):
+        """Returns the next item for the iteration."""
         raise NotImplementedError
 
     @abstractmethod
     def __getitem__(self, item: int):
+        """Defines the behaviour when an item is accessed."""
         raise NotImplementedError
 
 
@@ -158,13 +161,16 @@ class PatchExtractor(PatchExtractorABC):
         self.within_bound = within_bound
 
     def __iter__(self):
+        """Returns an iterator for the given object."""
         self.n = 0
         return self
 
     def __len__(self):
+        """Returns the length of the instance attributes."""
         return self.locations_df.shape[0] if self.locations_df is not None else 0
 
     def __next__(self):
+        """Returns the next item for the iteration."""
         n = self.n
 
         if n >= self.locations_df.shape[0]:
@@ -173,6 +179,7 @@ class PatchExtractor(PatchExtractorABC):
         return self[n]
 
     def __getitem__(self, item: int):
+        """Defines the behaviour when an item is accessed."""
         if not isinstance(item, int):
             raise TypeError("Index should be an integer.")
 
