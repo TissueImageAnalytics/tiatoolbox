@@ -454,7 +454,7 @@ def test_filter_coordinates():
 
     # Test for bad mask input
     with pytest.raises(
-        ValueError,
+        TypeError,
         match="`mask_reader` should be wsireader.VirtualWSIReader.",
     ):
         PatchExtractor.filter_coordinates(
