@@ -106,7 +106,7 @@ from typing import Generator, Tuple
 sys.path.append("../")
 
 try:
-    import memray  # noqa: E402
+    import memray
 except ImportError:
 
     class memray:  # noqa: N801 No CapWords convention
@@ -196,7 +196,7 @@ def cell_polygon(
 
     # Copy first coordinate to the end if required
     if repeat_first:
-        boundary_coords = boundary_coords + [boundary_coords[0]]
+        boundary_coords = [*boundary_coords, boundary_coords[0]]
 
     # Swap direction
     if direction.strip().lower() == "cw":
@@ -215,7 +215,7 @@ def cell_polygon(
     # Restore the random state
     np.random.set_state(rand_state)
 
-    return polygon  # noqa: R504
+    return polygon
 
 
 def cell_grid(

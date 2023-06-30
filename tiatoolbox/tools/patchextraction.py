@@ -1,7 +1,7 @@
 """This file defines patch extraction methods for deep learning models."""
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame
@@ -114,7 +114,7 @@ class PatchExtractor(PatchExtractorABC):
         self,
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
+        input_mask: Optional[Union[str, Path, np.ndarray, wsireader.WSIReader]] = None,
         resolution: Resolution = 0,
         units: Units = "level",
         pad_mode: str = "constant",
@@ -241,7 +241,7 @@ class PatchExtractor(PatchExtractorABC):
         coordinates_list: np.ndarray,
         wsi_shape: Tuple[int, int],
         min_mask_ratio: float = 0,
-        func: Callable = None,
+        func: Optional[Callable] = None,
     ):
         """Validate patch extraction coordinates based on the input mask.
 
@@ -337,10 +337,10 @@ class PatchExtractor(PatchExtractorABC):
 
     @staticmethod
     def get_coordinates(
-        image_shape: Union[Tuple[int, int], np.ndarray] = None,
-        patch_input_shape: Union[Tuple[int, int], np.ndarray] = None,
-        patch_output_shape: Union[Tuple[int, int], np.ndarray] = None,
-        stride_shape: Union[Tuple[int, int], np.ndarray] = None,
+        image_shape: Optional[Union[Tuple[int, int], np.ndarray]] = None,
+        patch_input_shape: Optional[Union[Tuple[int, int], np.ndarray]] = None,
+        patch_output_shape: Optional[Union[Tuple[int, int], np.ndarray]] = None,
+        stride_shape: Optional[Union[Tuple[int, int], np.ndarray]] = None,
         input_within_bound: bool = False,
         output_within_bound: bool = False,
     ):
@@ -523,10 +523,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         self,
         input_img: Union[str, Path, np.ndarray],
         patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
+        input_mask: Optional[Union[str, Path, np.ndarray, wsireader.WSIReader]] = None,
         resolution: Resolution = 0,
         units: Units = "level",
-        stride: Union[int, Tuple[int, int]] = None,
+        stride: Optional[Union[int, Tuple[int, int]]] = None,
         pad_mode: str = "constant",
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,

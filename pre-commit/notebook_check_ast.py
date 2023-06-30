@@ -23,7 +23,7 @@ def main(files: List[Path]) -> bool:
                 passed = False
                 print(f"{path.name}: {e.msg} (cell {n}, line {e.lineno})")
                 break
-    return passed  # noqa: R504
+    return passed
 
 
 if __name__ == "__main__":

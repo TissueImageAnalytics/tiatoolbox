@@ -92,7 +92,7 @@ def test_zoomify_tile_group_index_error():
         dz.tile_group(0, 100, 100)
 
 
-def test_zoomify_dump_options_combinations(tmp_path):  # noqa: CCR001
+def test_zoomify_dump_options_combinations(tmp_path):
     """Test for no fatal errors on all option combinations for dump."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)

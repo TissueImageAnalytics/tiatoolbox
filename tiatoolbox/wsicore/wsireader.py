@@ -95,7 +95,7 @@ def is_zarr(path: pathlib.Path) -> bool:
         _ = zarr.open(path, mode="r")
         return True
 
-    except Exception:  # noqa: PIE786  # skipcq: PYL-W0703
+    except Exception:  # skipcq: PYL-W0703
         return False
 
 
@@ -223,7 +223,7 @@ class WSIReader:
 
     """
 
-    @staticmethod  # noqa: A003
+    @staticmethod
     def open(  # noqa: A003
         input_img: str | pathlib.Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
@@ -661,10 +661,7 @@ class WSIReader:
             location_at_baseline,
         )
         output = tuple(np.ceil(v).astype(np.int64) for v in output)
-        return (
-            read_level,
-            read_level_to_resolution_scale_factor,
-        ) + output
+        return (read_level, read_level_to_resolution_scale_factor, *output)
 
     def _bounds_at_resolution_to_baseline(
         self,
@@ -736,7 +733,7 @@ class WSIReader:
             wsi_shape_at_resolution,
             _,
         ) = self._find_read_bounds_params(
-            [0, 0] + list(wsi_shape_at_baseline),
+            [0, 0, *list(wsi_shape_at_baseline)],
             resolution,
             units,
             precision,
@@ -2664,7 +2661,7 @@ class VirtualWSIReader(WSIReader):
         input_img: str | pathlib.Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
-        info: WSIMeta = None,
+        info: WSIMeta | None = None,
         mode="rgb",
     ) -> None:
         """Initializes :class:`VirtualWSIReader`."""
@@ -5025,8 +5022,8 @@ class AnnotationStoreReader(WSIReader):
         self,
         store: AnnotationStore | str | pathlib.Path,
         info: WSIMeta | None = None,
-        renderer: AnnotationRenderer = None,
-        base_wsi: WSIReader | str = None,
+        renderer: AnnotationRenderer | None = None,
+        base_wsi: WSIReader | str | None = None,
         alpha=1.0,
         **kwargs,
     ):

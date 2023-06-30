@@ -91,7 +91,7 @@ def sqlite_eval(query: Union[str, Number]):
     return result
 
 
-class TestSQLite:  # noqa: PIE798
+class TestSQLite:
     """Test converting from our DSL to an SQLite backend."""
 
     @staticmethod

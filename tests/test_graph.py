@@ -87,7 +87,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
         if np.random.rand() > 0.5:
             affinity_matrix = torch.tensor(affinity_matrix)
         edge_index = affinity_to_edge_index(affinity_matrix, threshold=threshold)
-        # noqa Check the output has shape (2, M)
+        # Check the output has shape (2, M)
         assert len(edge_index.shape) == 2
         n = len(affinity_matrix)
         two, m = edge_index.shape

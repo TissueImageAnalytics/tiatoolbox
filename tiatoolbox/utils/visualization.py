@@ -1,7 +1,7 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import matplotlib as mpl
@@ -65,7 +65,7 @@ def overlay_prediction_mask(
     img: np.ndarray,
     prediction: np.ndarray,
     alpha: float = 0.35,
-    label_info: dict = None,
+    label_info: Optional[dict] = None,
     min_val: float = 0.0,
     ax=None,
     return_ax: bool = True,
@@ -157,7 +157,7 @@ def overlay_prediction_mask(
 
     colorbar_params = {
         "mappable": mpl.cm.ScalarMappable(cmap=cmap),
-        "boundaries": uid_list + [uid_list[-1] + 1],
+        "boundaries": [*uid_list, uid_list[-1] + 1],
         "values": uid_list,
         "ticks": [b + 0.5 for b in uid_list],
         "spacing": "proportional",
@@ -363,7 +363,7 @@ def overlay_prediction_contours(
     canvas: np.ndarray,
     inst_dict: dict,
     draw_dot: bool = False,
-    type_colours: dict = None,
+    type_colours: Optional[dict] = None,
     inst_colours: Union[np.ndarray, Tuple[int]] = (255, 255, 0),
     line_thickness: int = 2,
 ):

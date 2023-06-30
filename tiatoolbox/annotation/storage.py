@@ -303,7 +303,7 @@ class AnnotationStore(ABC, MutableMapping):
         "centers_within_k",
     ]
 
-    @classmethod  # noqa: A003
+    @classmethod
     @abstractmethod
     def open(cls, fp: Union[Path, str, IO]) -> "AnnotationStore":  # noqa: A003
         """Load a store object from a path or file-like object.
@@ -522,7 +522,7 @@ class AnnotationStore(ABC, MutableMapping):
         for key in keys:
             self.remove(key)
 
-    def setdefault(self, key: str, default: Annotation = None) -> Annotation:
+    def setdefault(self, key: str, default: Optional[Annotation] = None) -> Annotation:
         """Return the value of the annotation with the given key.
 
         If the key does not exist, insert the default value and return
@@ -839,7 +839,7 @@ class AnnotationStore(ABC, MutableMapping):
     def bquery(
         self,
         geometry: Optional[QueryGeometry] = None,
-        where: Predicate = None,
+        where: Optional[Predicate] = None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
@@ -1045,7 +1045,7 @@ class AnnotationStore(ABC, MutableMapping):
                     True in addtion to there only being one set in the
                     results list, the result will be a single set.
 
-            """  # noqa Q440, Q441
+            """  # Q440, Q441
             if select == "*" and unique:
                 raise ValueError("unique=True cannot be used with select='*'")
 
@@ -1293,7 +1293,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A function to get the values to return from an
                 annotation via a select.
 
-        """  # noqa Q440, Q441
+        """  # Q440, Q441
         result = defaultdict(set) if unique else {}
         for key, annotation in items:
             values = get_values(select, annotation)
@@ -1310,7 +1310,7 @@ class AnnotationStore(ABC, MutableMapping):
             result = list(result.values())
         if unique and squeeze and len(result) == 1:
             result = result[0]
-        return result  # noqa CCR001
+        return result  # CCR001
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return annotations as a list of geoJSON features.
@@ -1744,7 +1744,7 @@ class SQLiteStore(AnnotationStore):
 
     """
 
-    @classmethod  # noqa: A003
+    @classmethod
     def open(cls, fp: Union[Path, str]) -> "SQLiteStore":  # noqa: A003
         """Opens :class:`SQLiteStore` from file pointer or path."""
         return SQLiteStore(fp)
@@ -2432,7 +2432,9 @@ class SQLiteStore(AnnotationStore):
     def bquery(
         self,
         geometry: Optional[QueryGeometry] = None,
-        where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
+        where: Optional[
+            Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]]
+        ] = None,
         min_area=None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
@@ -3357,7 +3359,7 @@ class DictionaryStore(AnnotationStore):
         """Returns the length of the instance attributes."""
         return len(self._rows)
 
-    @classmethod  # noqa: A003
+    @classmethod
     def open(cls, fp: Union[Path, str, IO]) -> "DictionaryStore":  # noqa: A003
         """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)

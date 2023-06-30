@@ -3,7 +3,7 @@
 import os
 import pathlib
 from pydoc import locate
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -34,8 +34,8 @@ def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = 
 
 
 def get_pretrained_model(
-    pretrained_model: str = None,
-    pretrained_weights: Union[str, pathlib.Path] = None,
+    pretrained_model: Optional[str] = None,
+    pretrained_weights: Optional[Union[str, pathlib.Path]] = None,
     overwrite: bool = False,
 ):
     """Load a predefined PyTorch model with the appropriate pretrained weights.

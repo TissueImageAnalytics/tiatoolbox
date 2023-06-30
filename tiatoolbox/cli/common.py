@@ -1,6 +1,7 @@
 """Defines common code required for cli."""
 import os
 import pathlib
+from typing import Optional
 
 import click
 
@@ -50,7 +51,7 @@ def cli_name(
 
 def cli_output_path(
     usage_help: str = "Path to output directory to save the output.",
-    default: str = None,
+    default: Optional[str] = None,
 ) -> callable:
     """Enables --output-path option for cli."""
     return click.option(
@@ -77,7 +78,7 @@ def cli_file_type(
 def cli_mode(
     usage_help: str = "Selected mode to show or save the required information.",
     default: str = "save",
-    input_type: click.Choice = None,
+    input_type: Optional[click.Choice] = None,
 ) -> callable:
     """Enables --mode option for cli."""
     if input_type is None:
@@ -106,7 +107,7 @@ def cli_region(
 def cli_units(
     usage_help: str = "Image resolution units to read the image.",
     default: str = "level",
-    input_type: click.Choice = None,
+    input_type: Optional[click.Choice] = None,
 ) -> callable:
     """Enables --units option for cli."""
     if input_type is None:
@@ -176,7 +177,7 @@ def cli_tile_format(
 def cli_method(
     usage_help: str = "Select method of for tissue masking.",
     default: str = "Otsu",
-    input_type: click.Choice = None,
+    input_type: Optional[click.Choice] = None,
 ) -> callable:
     """Enables --method option for cli."""
     if input_type is None:
@@ -212,7 +213,7 @@ def cli_pretrained_model(
 def cli_pretrained_weights(
     usage_help: str = "Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
-    default: str = None,
+    default: Optional[str] = None,
 ) -> callable:
     """Enables --pretrained-weights option for cli."""
     return click.option(
@@ -280,7 +281,7 @@ def cli_masks(
     "If masks are not provided, then a tissue mask will be "
     "automatically generated for whole-slide images or the entire image is "
     "processed for image tiles. Supported file types are jpg, png and npy.",
-    default: str = None,
+    default: Optional[str] = None,
 ) -> callable:
     """Enables --masks option for cli."""
     return click.option(
@@ -307,7 +308,7 @@ def cli_yaml_config_path(
     usage_help: str = "Path to ioconfig file. Sample yaml file can be viewed in "
     "tiatoolbox.data.pretrained_model.yaml. "
     "if pretrained_model is used the ioconfig is automatically set.",
-    default: str = None,
+    default: Optional[str] = None,
 ) -> callable:
     """Enables --yaml-config-path option for cli."""
     return click.option(
@@ -381,7 +382,7 @@ class TIAToolboxCLI(click.Group):
 
 
 def no_input_message(
-    input_file: str or pathlib.Path = None,
+    input_file: Optional[str or pathlib.Path] = None,
     message: str = "No image input provided.\n",
 ) -> None:
     """This function is called if no input is provided.

@@ -2,7 +2,7 @@
 
 import uuid
 from collections import deque
-from typing import Callable, List, Union
+from typing import Callable, List, Optional, Union
 
 # replace with the sql database once the PR in place
 import joblib
@@ -87,23 +87,23 @@ def _process_instance_predictions(
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
     boundary_lines = [
-        shapely_box(0, 0, w, 1),  # noqa top egde
-        shapely_box(0, h - 1, w, h),  # noqa bottom edge
-        shapely_box(0, 0, 1, h),  # noqa left
-        shapely_box(w - 1, 0, w, h),  # noqa right
+        shapely_box(0, 0, w, 1),  # top egde
+        shapely_box(0, h - 1, w, h),  # bottom edge
+        shapely_box(0, 0, 1, h),  # left
+        shapely_box(w - 1, 0, w, h),  # right
     ]
     margin_boxes = [
-        shapely_box(0, 0, w, m),  # noqa top egde
-        shapely_box(0, h - m, w, h),  # noqa bottom edge
-        shapely_box(0, 0, m, h),  # noqa left
-        shapely_box(w - m, 0, w, h),  # noqa right
+        shapely_box(0, 0, w, m),  # top egde
+        shapely_box(0, h - m, w, h),  # bottom edge
+        shapely_box(0, 0, m, h),  # left
+        shapely_box(w - m, 0, w, h),  # right
     ]
     # ! this is wrt to WSI coord space, not tile
     margin_lines = [
-        [[m, m], [w - m, m]],  # noqa top egde
-        [[m, h - m], [w - m, h - m]],  # noqa bottom edge
-        [[m, m], [m, h - m]],  # noqa left
-        [[w - m, m], [w - m, h - m]],  # noqa right
+        [[m, m], [w - m, m]],  # top egde
+        [[m, h - m], [w - m, h - m]],  # bottom edge
+        [[m, m], [m, h - m]],  # left
+        [[w - m, m], [w - m, h - m]],  # right
     ]
     margin_lines = np.array(margin_lines) + tile_tl[None, None]
     margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
@@ -370,9 +370,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: Optional[torch.nn.Module] = None,
+        pretrained_model: Optional[str] = None,
+        pretrained_weights: Optional[str] = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,

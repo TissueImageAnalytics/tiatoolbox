@@ -35,7 +35,6 @@ class ModelABC(ABC, nn.Module):
         self._preproc = self.preproc
 
     @abstractmethod
-    # noqa
     # This is generic abc, else pylint will complain
     def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""

@@ -8,7 +8,7 @@ import pathlib
 import shutil
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import Namespace
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import cv2
 import joblib
@@ -43,12 +43,12 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
     """
     if len(sample_prediction.shape) == 3:
         num_output_ch = sample_prediction.shape[-1]
-        canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
-        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        canvas_cum_shape_ = (*tuple(canvas_shape), num_output_ch)
+        canvas_count_shape_ = (*tuple(canvas_shape), 1)
         add_singleton_dim = num_output_ch == 1
     else:
-        canvas_cum_shape_ = tuple(canvas_shape) + (1,)
-        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        canvas_cum_shape_ = (*tuple(canvas_shape), 1)
+        canvas_count_shape_ = (*tuple(canvas_shape), 1)
         add_singleton_dim = True
 
     return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
@@ -160,7 +160,7 @@ class IOSegmentorConfig(IOConfigABC):
         output_resolutions: List[dict],
         patch_input_shape: Union[List[int], np.ndarray],
         patch_output_shape: Union[List[int], np.ndarray],
-        save_resolution: dict = None,
+        save_resolution: Optional[dict] = None,
         **kwargs,
     ):
         """Initializes :class:`IOSegmentorConfig`."""
@@ -319,7 +319,7 @@ class WSIStreamDataset(torch_data.Dataset):
         ioconfig: IOSegmentorConfig,
         wsi_paths: List[Union[str, pathlib.Path]],
         mp_shared_space: Namespace,
-        preproc: Callable[[np.ndarray], np.ndarray] = None,
+        preproc: Optional[Callable[[np.ndarray], np.ndarray]] = None,
         mode="wsi",
     ):
         """Initializes :class:`WSIStreamDataset`."""
@@ -507,9 +507,9 @@ class SemanticSegmentor:
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,  # skipcq: PYL-W0613
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: Optional[torch.nn.Module] = None,
+        pretrained_model: Optional[str] = None,
+        pretrained_weights: Optional[str] = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
@@ -614,8 +614,8 @@ class SemanticSegmentor:
     def filter_coordinates(
         mask_reader: VirtualWSIReader,
         bounds: np.ndarray,
-        resolution: Resolution = None,
-        units: Units = None,
+        resolution: Optional[Resolution] = None,
+        units: Optional[Units] = None,
     ):
         """Indicates which coordinate is valid basing on the mask.
 
@@ -889,8 +889,8 @@ class SemanticSegmentor:
         canvas_shape: Union[Tuple[int], List[int], np.ndarray],
         predictions: List[np.ndarray],
         locations: Union[List, np.ndarray],
-        save_path: Union[str, pathlib.Path] = None,
-        cache_count_path: Union[str, pathlib.Path] = None,
+        save_path: Optional[Union[str, pathlib.Path]] = None,
+        cache_count_path: Optional[Union[str, pathlib.Path]] = None,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
@@ -1211,7 +1211,7 @@ class SemanticSegmentor:
             logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
-        except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
+        except Exception as err:  # skipcq: PYL-W0703
             wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
                 raise err
@@ -1449,9 +1449,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: Optional[torch.nn.Module] = None,
+        pretrained_model: Optional[str] = None,
+        pretrained_weights: Optional[str] = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,

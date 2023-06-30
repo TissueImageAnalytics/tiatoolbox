@@ -57,20 +57,21 @@ select = [
   "A",   # flake8-builtins
   "B",   # flake8-bugbear
   "D",   # pydocstyle, need to enable for docstrings check.
-  "E",   # pycodestyle
+  "E",   # pycodestyle - Error
   "F",   # pyflakes
   "G",   # flake8-logging-format
   "N",   # pep8-naming
+  "W",   # pycodestyle - Warning
   "C4",  # flake8-comprehensions
+  "PT",  # flake8-pytest-style
+  "UP",  # pyupgrade
   "C90", # mccabe
   "COM", # flake8-commas
   "ERA", # eradicate
   "FIX", # flake8-fixme
   "PIE", # flake8-pie
-  "PT",  # flake8-pytest-style
   "RET", # flake8-return
   "SIM", # flake8-simplify
-  "UP",  # pyupgrade
 ]
 ignore = []
 

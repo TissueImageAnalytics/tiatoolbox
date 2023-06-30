@@ -1265,7 +1265,7 @@ def test_save_as_json(tmp_path):
         "a1": {"name": "John", "age": 23, "sex": "male"},
         "a2": {"name": "John", "age": 23, "sex": "male"},
     }
-    sample = {  # noqa: ECE001
+    sample = {
         "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
         "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
         "c": {
@@ -1307,7 +1307,7 @@ def test_save_as_json(tmp_path):
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
 
     # Allow parent directories
     misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
@@ -1315,7 +1315,7 @@ def test_save_as_json(tmp_path):
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
 
     # test complex list of data
     misc.save_as_json(
@@ -1327,7 +1327,7 @@ def test_save_as_json(tmp_path):
     with open(tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
 
     # test numpy generic
     misc.save_as_json(

@@ -1,6 +1,6 @@
 """Defines a set of UNet variants to be used within tiatoolbox."""
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -280,8 +280,8 @@ class UNetModel(ModelABC):
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
-        encoder_levels: List[int] = None,
-        decoder_block: Tuple[int] = None,
+        encoder_levels: Optional[List[int]] = None,
+        decoder_block: Optional[Tuple[int]] = None,
         skip_type: str = "add",
     ):
         """Initializes :class:`UNetModel`."""

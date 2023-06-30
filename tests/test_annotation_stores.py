@@ -75,7 +75,7 @@ def cell_polygon(
 
     # Copy first coordinate to the end if required
     if repeat_first:
-        boundary_coords = boundary_coords + [boundary_coords[0]]
+        boundary_coords = [*boundary_coords, boundary_coords[0]]
 
     # Swap direction
     if direction.strip().lower() == "cw":
@@ -1034,7 +1034,7 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            # (0, 0, 1024, 1024),  # noqa: E800, ERA001
+            # (0, 0, 1024, 1024),  # noqa: ERA001
             where=lambda props: props.get("class")
             == 123,
         )

@@ -1,4 +1,4 @@
-# skipcq: PTC-W6004  # noqa: E800, ERA001
+# skipcq: PTC-W6004  # noqa: ERA001
 """Package to define datasets available to download via TIAToolbox."""
 import pathlib
 import tempfile

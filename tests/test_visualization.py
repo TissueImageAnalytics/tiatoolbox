@@ -151,7 +151,7 @@ def test_overlay_instance_prediction():
             "contour": [[3, 3], [3, 4], [4, 4], [4, 3]],
         },
     }
-    canvas = np.zeros(inst_map.shape + (3,), dtype=np.uint8)
+    canvas = np.zeros((*inst_map.shape, 3), dtype=np.uint8)
     canvas = overlay_prediction_contours(
         canvas,
         inst_dict,

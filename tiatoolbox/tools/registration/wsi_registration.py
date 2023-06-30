@@ -1,6 +1,6 @@
 """Defines wsi_registration classes and methods."""
 import itertools
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -1005,10 +1005,10 @@ class DFBRegister:
                 block_quality,
             ) = self.feature_mapping(features)
             fixed_matched_points.append(
-                fixed_block_matched_points + [bounding_box[2], bounding_box[0]],
+                [*fixed_block_matched_points, bounding_box[2], bounding_box[0]],
             )
             moving_matched_points.append(
-                moving_block_matched_points + [bounding_box[2], bounding_box[0]],
+                [*moving_block_matched_points, bounding_box[2], bounding_box[0]],
             )
             quality.append(block_quality)
         fixed_matched_points, moving_matched_points, quality = (
@@ -1049,7 +1049,7 @@ class DFBRegister:
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
-        transform_initializer: np.ndarray = None,
+        transform_initializer: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Perform whole slide image registration.
 

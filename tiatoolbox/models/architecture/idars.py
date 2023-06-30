@@ -65,7 +65,6 @@ class IDaRS(CNNModel):
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
-    # noqa: E800
     def preproc(image: np.ndarray):
         """Defines preprocessing steps.
 

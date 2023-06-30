@@ -1,7 +1,7 @@
 """Defines HoVerNet architecture."""
 import math
 from collections import OrderedDict
-from typing import List
+from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -323,7 +323,7 @@ class HoVerNet(ModelABC):
     def __init__(
         self,
         num_input_channels: int = 3,
-        num_types: int = None,
+        num_types: Optional[int] = None,
         mode: str = "original",
     ):
         """Initializes :class:`HoVerNet`."""
@@ -698,7 +698,7 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221  # noqa: E800, ERA001
+    # skipcq: PYL-W0221  # noqa: ERA001
     def postproc(raw_maps: List[np.ndarray]):
         """Post-processing script for image tiles.
 

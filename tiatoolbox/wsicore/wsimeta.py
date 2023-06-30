@@ -177,7 +177,7 @@ class WSIMeta:
         if all(x is None for x in [self.objective_power, self.mpp]):
             logger.warning("Unknown scale (no objective_power or mpp)")
 
-        return passed  # noqa
+        return passed
 
     def level_downsample(
         self,

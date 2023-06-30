@@ -15,7 +15,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import defusedxml
 import numpy as np
@@ -251,7 +251,7 @@ class TilePyramidGenerator:
         """
         raise NotImplementedError
 
-    def dump(  # noqa: CCR001
+    def dump(
         self,
         path: Union[str, Path],
         container=None,
@@ -487,7 +487,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         self,
         info: WSIMeta,
         store: AnnotationStore,
-        renderer: AnnotationRenderer = None,
+        renderer: Optional[AnnotationRenderer] = None,
         tile_size: int = 256,
         downsample: int = 2,
         overlap: int = 0,
@@ -563,8 +563,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         x: int,
         y: int,
         res: int = 1,
-        pad_mode: str = None,
-        interpolation: str = None,
+        pad_mode: Optional[str] = None,
+        interpolation: Optional[str] = None,
     ) -> Image:
         """Render a tile at a given level and coordinate.
 

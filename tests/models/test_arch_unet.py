@@ -39,7 +39,6 @@ def test_functional_unet(remote_sample, tmp_path):
     read_kwargs = {"resolution": 2.0, "units": "mpp", "coord_space": "resolution"}
     batch = np.array(
         [
-            # noqa
             reader.read_bounds([0, 0, 1024, 1024], **read_kwargs),
             reader.read_bounds([1024, 1024, 2048, 2048], **read_kwargs),
         ],

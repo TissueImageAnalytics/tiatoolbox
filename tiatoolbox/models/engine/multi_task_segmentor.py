@@ -21,7 +21,7 @@
 """This module enables multi-task segmentors."""
 
 import shutil
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 # replace with the sql database once the PR in place
 import joblib
@@ -239,13 +239,13 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: Optional[torch.nn.Module] = None,
+        pretrained_model: Optional[str] = None,
+        pretrained_weights: Optional[str] = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-        output_types: List = None,
+        output_types: Optional[List] = None,
     ):
         """Initializes :class:`MultiTaskSegmentor`."""
         super().__init__(

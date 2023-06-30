@@ -2,7 +2,7 @@
 
 Raza, SEA et al., “Micro-Net: A unified model for segmentation of
 various objects in microscopy images,” Medical Image Analysis,
-Dec. 2018, vol. 52, p. 160–173.
+Dec. 2018, vol. 52, p. 160-173.
 
 """
 

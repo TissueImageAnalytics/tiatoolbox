@@ -207,8 +207,8 @@ class SQLTriplet(SQLExpression):
     def __init__(
         self,
         lhs: Union["SQLTriplet", str],
-        op: Union[Callable, str] = None,
-        rhs: Union["SQLTriplet", str] = None,
+        op: Optional[Union[Callable, str]] = None,
+        rhs: Optional[Union["SQLTriplet", str]] = None,
     ):
         """Initializes :class:`SQLTriplet`."""
         self.lhs = lhs
@@ -247,7 +247,7 @@ class SQLTriplet(SQLExpression):
         rhs = self.rhs
         if isinstance(rhs, str):
             # is this ok? fixes categorical where predicate
-            rhs = f'"{rhs}"'  # noqa: B028
+            rhs = f'"{rhs}"'
         if lhs and self.op:
             return self.formatters[self.op](lhs, rhs)
         raise ValueError("Invalid SQLTriplet.")
@@ -256,7 +256,7 @@ class SQLTriplet(SQLExpression):
 class SQLJSONDictionary(SQLExpression):
     """Representation of an SQL expression to access JSON properties."""
 
-    def __init__(self, acc: str = None) -> None:
+    def __init__(self, acc: Optional[str] = None) -> None:
         """Initializes :class:`SQLJSONDictionary`."""
         self.acc = acc or ""
 

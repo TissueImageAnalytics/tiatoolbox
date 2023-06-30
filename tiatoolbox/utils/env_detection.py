@@ -102,7 +102,7 @@ def is_notebook() -> bool:
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
             return True  # Jupyter notebook or qtconsole
-        if shell == "TerminalInteractiveShell":  # noqa: PIE801
+        if shell == "TerminalInteractiveShell":
             return False  # Terminal running IPython
         return False  # Other type (?)
     except (NameError, ImportError):
@@ -215,7 +215,7 @@ def colab_has_gpu() -> bool:
 def has_network(
     hostname="one.one.one.one",
     timeout: Number = 3,
-) -> bool:  # noqa: CCR001
+) -> bool:
     """Detect if the current environment has a network connection.
 
     Create a socket connection to the hostname and check if the connection
@@ -244,7 +244,7 @@ def has_network(
         return False
 
 
-def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
+def pixman_versions() -> List[Tuple[int, ...]]:
     """The version(s) of pixman that are installed.
 
     Some package managers (brew) may report multiple versions of pixman

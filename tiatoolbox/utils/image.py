@@ -247,7 +247,7 @@ def crop_and_pad_edges(
 
     # Add extra padding dimension for colour channels
     if len(region.shape) > 2:
-        padding = padding + ((0, 0),)
+        padding = (*padding, (0, 0))
 
     # Crop the region
     slices = bounds2slices(overlap)
@@ -645,7 +645,7 @@ def sub_pixel_read(  # noqa: C901
             ),
         ),
     )
-    region = region[trimming + (...,)]
+    region = region[(*trimming, ...)]
     region_size = region.shape[:2][::-1]
     # 4 Ensure output is the correct size
     if output_size is not None and interpolation != "none":
@@ -667,4 +667,4 @@ def sub_pixel_read(  # noqa: C901
         region = np.flipud(region)
     if flipud:
         region = np.fliplr(region)
-    return region  # noqa: R504
+    return region

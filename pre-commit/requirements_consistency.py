@@ -2,7 +2,7 @@
 import importlib
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from pkg_resources import Requirement
@@ -17,8 +17,8 @@ REQUIREMENTS_FILES = [
 
 
 def parse_pip(
-    file_path: Path = None,
-    lines: List[str] = None,
+    file_path: Optional[Path] = None,
+    lines: Optional[List[str]] = None,
 ) -> Dict[str, Requirement]:
     """Parse a pip requirements file.
 
@@ -145,8 +145,8 @@ def test_files_exist(root_dir: Path) -> None:
 
 
 def parse_requirements(
-    file_path: Path = None,
-    lines: List[str] = None,
+    file_path: Optional[Path] = None,
+    lines: Optional[List[str]] = None,
 ) -> Dict[str, Tuple[str, Tuple[str, ...], str]]:
     """Parse a requirements file (pip or conda).
 
@@ -222,7 +222,7 @@ def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -
         if any(x != versions[0] for x in versions):
             print(f"{key} has inconsistent versions:" f" {', '.join(formatted_reqs)}.")
             consistent = False
-    return consistent  # noqa: R504
+    return consistent
 
 
 def main():

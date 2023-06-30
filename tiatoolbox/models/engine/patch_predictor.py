@@ -4,7 +4,7 @@ import copy
 import os
 import pathlib
 from collections import OrderedDict
-from typing import Callable, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -217,7 +217,7 @@ class PatchPredictor:
         pathology." International Conference on Medical image computing and
         computer-assisted intervention. Springer, Cham, 2018.
 
-    """  # noqa: W605
+    """
 
     def __init__(
         self,
@@ -255,9 +255,9 @@ class PatchPredictor:
     def merge_predictions(
         img: Union[str, pathlib.Path, np.ndarray],
         output: dict,
-        resolution: Resolution = None,
-        units: Units = None,
-        postproc_func: Callable = None,
+        resolution: Optional[Resolution] = None,
+        units: Optional[Units] = None,
+        postproc_func: Optional[Callable] = None,
         return_raw: bool = False,
     ):
         """Merge patch level predictions to form a 2-dimensional prediction map.
@@ -342,7 +342,7 @@ class PatchPredictor:
             predictions = output["probabilities"]
             num_class = np.array(predictions[0]).shape[0]
             denominator = np.zeros(canvas_shape)
-            output = np.zeros(list(canvas_shape) + [num_class], dtype=np.float32)
+            output = np.zeros([*list(canvas_shape), num_class], dtype=np.float32)
 
         for idx, bound in enumerate(coordinates):
             prediction = predictions[idx]
@@ -760,9 +760,9 @@ class PatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        ioconfig: IOPatchPredictorConfig = None,
-        patch_input_shape: Tuple[int, int] = None,
-        stride_shape: Tuple[int, int] = None,
+        ioconfig: Optional[IOPatchPredictorConfig] = None,
+        patch_input_shape: Optional[Tuple[int, int]] = None,
+        stride_shape: Optional[Tuple[int, int]] = None,
         resolution=None,
         units=None,
         merge_predictions=False,

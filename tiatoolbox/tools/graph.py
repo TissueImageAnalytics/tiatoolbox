@@ -98,7 +98,7 @@ def triangle_signed_area(triangle: ArrayLike) -> int:
     if triangle.shape != (3, 2):
         raise ValueError("Input triangle must be a 3x2 array.")
     # Calculate the area of the triangle
-    return 0.5 * (  # noqa: ECE001
+    return 0.5 * (
         triangle[0, 0] * (triangle[1, 1] - triangle[2, 1])
         + triangle[1, 0] * (triangle[2, 1] - triangle[0, 1])
         + triangle[2, 0] * (triangle[0, 1] - triangle[1, 1])
@@ -185,7 +185,7 @@ def affinity_to_edge_index(
     )
 
 
-class SlideGraphConstructor:  # noqa: PIE798
+class SlideGraphConstructor:
     """Construct a graph using the SlideGraph+ (Liu et al. 2021) method.
 
     This uses a hybrid agglomerative clustering which uses a weighted
@@ -328,8 +328,8 @@ class SlideGraphConstructor:  # noqa: PIE798
 
         # Initialise an empty 1-D condensed distance matrix.
         # For information on condensed distance matrices see:
-        # noqa - https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist
-        # noqa - https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+        # - https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist
+        # - https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
         condensed_distance_matrix = np.zeros(int(len(points) * (len(points) - 1) / 2))
 
         # Find the similarity between pairs of patches
@@ -406,10 +406,10 @@ class SlideGraphConstructor:  # noqa: PIE798
     def visualise(
         cls,
         graph: dict[str, ArrayLike],
-        color: ArrayLike | str | Callable = None,
+        color: ArrayLike | str | Callable | None = None,
         node_size: Number | ArrayLike | Callable = 25,
         edge_color: str | ArrayLike = (0, 0, 0, 0.33),
-        ax: Axes = None,
+        ax: Axes | None = None,
     ) -> Axes:
         """Visualise a graph.
 

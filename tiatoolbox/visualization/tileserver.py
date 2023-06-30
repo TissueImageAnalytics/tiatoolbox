@@ -49,7 +49,7 @@ class TileServer(Flask):
         self,
         title: str,
         layers: dict[str, WSIReader | str] | list[WSIReader | str],
-        renderer: AnnotationRenderer = None,
+        renderer: AnnotationRenderer | None = None,
     ) -> None:
         """Initializes :class:`TileServer`."""
         super().__init__(
