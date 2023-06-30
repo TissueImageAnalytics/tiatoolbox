@@ -29,7 +29,7 @@ from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import Resolution, Units, WSIMeta
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no_cover
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()
