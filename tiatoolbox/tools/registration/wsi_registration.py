@@ -21,7 +21,7 @@ from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
 
-if TYPE_CHECKING:  # pragma: no_cover
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore.wsimeta import Resolution, Units
 
 
