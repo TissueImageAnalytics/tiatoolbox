@@ -13,7 +13,7 @@ from pathlib import Path
 from time import time
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
-from typing import Iterable
+from typing import ClassVar, Iterable
 
 import cv2
 import numpy as np
@@ -2323,7 +2323,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
 class TestReader:
     """TestReader class to run tests for multiple input formats."""
 
-    scenarios = [
+    scenarios: ClassVar[list[str, dict]] = [
         (
             "AnnotationReaderOverlaid",
             {

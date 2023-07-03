@@ -1,14 +1,15 @@
 """Tests for annotation store classes."""
+from __future__ import annotations
+
 import json
 import pickle
 import random
 import sqlite3
 import sys
 from itertools import repeat
-from numbers import Number
 from pathlib import Path
 from timeit import timeit
-from typing import Any, Dict, Generator, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Generator
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,9 @@ from tiatoolbox.annotation.storage import (
     SQLiteStore,
 )
 
+if TYPE_CHECKING:
+    from numbers import Number
+
 sqlite3.enable_callback_tracebacks(True)
 
 # Constants
@@ -36,11 +40,11 @@ FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
 
 
 def cell_polygon(
-    xy: Tuple[Number, Number],
+    xy: tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 10,
     noise: Number = 0.01,
-    eccentricity: Tuple[Number, Number] = (1, 3),
+    eccentricity: tuple[Number, Number] = (1, 3),
     repeat_first: bool = True,
     direction: str = "CCW",
 ) -> Polygon:
@@ -88,7 +92,7 @@ def cell_polygon(
     return affinity.rotate(polygon, angle, origin="centroid")
 
 
-def sample_where_1(props: Dict[str, Any]) -> bool:
+def sample_where_1(props: dict[str, Any]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 1.
@@ -97,7 +101,7 @@ def sample_where_1(props: Dict[str, Any]) -> bool:
     return props.get("class") == 1
 
 
-def sample_where_123(props: Dict[str, Any]) -> bool:
+def sample_where_123(props: dict[str, Any]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 123.
@@ -106,7 +110,7 @@ def sample_where_123(props: Dict[str, Any]) -> bool:
     return props.get("class") == 123
 
 
-def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
+def sample_select(props: dict[str, Any]) -> tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value.
@@ -115,7 +119,7 @@ def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
     return props.get("class")
 
 
-def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
+def sample_multi_select(props: dict[str, Any]) -> tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value and the class mod 2.
@@ -143,14 +147,14 @@ def test_annotation_repr():
 
 
 @pytest.fixture(scope="session")
-def cell_grid() -> List[Polygon]:
+def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
     np.random.seed(0)
     return [cell_polygon((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
 @pytest.fixture(scope="session")
-def points_grid() -> List[Polygon]:
+def points_grid() -> list[Polygon]:
     """Generate a grid of fake point annotations."""
     np.random.seed(0)
     return [Point((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
@@ -168,7 +172,7 @@ def fill_store(cell_grid, points_grid):
 
     def _fill_store(
         store_class: AnnotationStore,
-        path: Union[str, Path],
+        path: str | Path,
     ):
         """Private function to fill stores with data."""
         store = store_class(path)
@@ -542,7 +546,7 @@ def test_init_base_class_exception():
 class TestStore:
     """Defines TestStore to test AnnotationStore for multiple scenarios."""
 
-    scenarios = [
+    scenarios: ClassVar[list[tuple[dict]]] = [
         ("Dictionary", {"store_cls": DictionaryStore}),
         ("SQLite", {"store_cls": SQLiteStore}),
     ]

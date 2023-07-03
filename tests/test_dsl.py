@@ -2,7 +2,7 @@
 import json
 import sqlite3
 from numbers import Number
-from typing import Union
+from typing import ClassVar, Union
 
 import pytest
 
@@ -111,7 +111,7 @@ class TestSQLite:
 class TestPredicate:
     """Test predicate statments with various backends."""
 
-    scenarios = [
+    scenarios: ClassVar[list[str, dict]] = [
         (
             "Python",
             {

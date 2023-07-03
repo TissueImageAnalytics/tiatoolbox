@@ -44,6 +44,7 @@ from typing import (
     IO,
     Any,
     Callable,
+    ClassVar,
     DefaultDict,
     Dict,
     Generator,
@@ -292,7 +293,7 @@ class AnnotationStore(ABC, MutableMapping):
         return getattr(a, name)(b)
 
     # All valid shapely binary predicates
-    _geometry_predicate_names = [
+    _geometry_predicate_names: ClassVar[list[str]] = [
         "equals",
         "contains",
         "covers",
