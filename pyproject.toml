@@ -67,7 +67,7 @@ select = [
   "C4",    # flake8-comprehensions
   "FA",    # flake8-future-annotations
   "EM",    # flake8-errmsg
-  # "PD",    # pandas-vet
+  "PD",    # pandas-vet
   # "PL",  # Pylint
   "PT",    # flake8-pytest-style
   "TD",    # flake8-todos

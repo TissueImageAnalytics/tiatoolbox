@@ -1583,7 +1583,7 @@ class WSIReader:
             )
 
         # Save information on each slide to relate to the whole slide image
-        df = pd.DataFrame(
+        save_tiles_df = pd.DataFrame(
             data,
             columns=[
                 "iter",
@@ -1596,7 +1596,7 @@ class WSIReader:
                 "size_h",
             ],
         )
-        df.to_csv(output_dir / "Output.csv", index=False)
+        save_tiles_df.to_csv(output_dir / "Output.csv", index=False)
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()

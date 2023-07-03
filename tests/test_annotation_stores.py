@@ -787,7 +787,7 @@ class TestStore:
     @staticmethod
     def test_from_dataframe(cell_grid, store_cls):
         """Test loading from to a pandas dataframe."""
-        df = pd.DataFrame.from_records(
+        cell_grid_df = pd.DataFrame.from_records(
             [
                 {
                     "geometry": cell,
@@ -796,7 +796,7 @@ class TestStore:
                 for n, cell in enumerate(cell_grid)
             ],
         )
-        store = store_cls.from_dataframe(df)
+        store = store_cls.from_dataframe(cell_grid_df)
         keys = list(store.keys())
         annotation = store[keys[0]]
         assert "row_id" in annotation.properties
@@ -805,12 +805,12 @@ class TestStore:
     def test_to_dataframe(fill_store, tmp_path, store_cls):
         """Test converting to a pandas dataframe."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        df = store.to_dataframe()
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) == FILLED_LEN
-        assert "geometry" in df.columns
-        assert df.index.name == "key"
-        assert isinstance(df.geometry.iloc[0], Polygon)
+        store_as_df = store.to_dataframe()
+        assert isinstance(store_as_df, pd.DataFrame)
+        assert len(store_as_df) == FILLED_LEN
+        assert "geometry" in store_as_df.columns
+        assert store_as_df.index.name == "key"
+        assert isinstance(store_as_df.geometry.iloc[0], Polygon)
 
     @staticmethod
     def test_features(fill_store, tmp_path, store_cls):
