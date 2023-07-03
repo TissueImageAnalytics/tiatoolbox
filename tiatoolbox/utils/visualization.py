@@ -1,9 +1,6 @@
 """Visualisation and overlay functions used in tiatoolbox."""
 import colorsys
 import random
-import warnings
-import zlib
-from ctypes import c_char_p, c_size_t
 from typing import Dict, List, Tuple, Union
 
 import cv2
@@ -552,6 +549,14 @@ class AnnotationRenderer:
             will override the primary colormap.
         blur_radius (int):
             radius of gaussian blur to apply to rendered annotations.
+        score_prop_edge (str):
+            A key that is present in the properties of annotations
+            to be rendered that will be used to color rendered edges.
+        function_mapper (Callable):
+            a callable which will be given the properties of an annotation
+            and should return a color for the annotation.  If this is specified,
+            mapper and score_prop are ignored.
+
 
     """
 
@@ -568,7 +573,7 @@ class AnnotationRenderer:
         secondary_cmap=None,
         blur_radius=0,
         score_prop_edge=None,
-        function_mapper=False,
+        function_mapper=None,
     ):
         if mapper is None:
             mapper = colormaps["jet"]
@@ -600,7 +605,7 @@ class AnnotationRenderer:
             self.blur = None
 
     @staticmethod
-    def decode_geom(geom, type):
+    def decode_geom(geom, geom_type):
         """Decode a geometry from the raw wkb bytes representation
         to an array of coordinates.
         Args:
@@ -613,50 +618,51 @@ class AnnotationRenderer:
                 An array of coordinates.
 
         """
-        if type == 1:
+        if geom_type == 1:
             # point
             return np.frombuffer(geom, np.double, -1, 5)
-        elif type == 2:
+        if geom_type == 2:
             # line
             return np.frombuffer(geom, np.double, -1, 9)
-        elif type == 3:
+        if geom_type == 3:
             # polygon
             n_points = np.frombuffer(geom, np.int32, 1, 9)[0]
             return np.frombuffer(geom, np.double, n_points * 2, 13)  # do rings?
-        elif type == 4:
-            # multipoint - fix this
+        if geom_type == 4:
+            # multi-point
             n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
             return np.frombuffer(geom, np.double, -1, 9).reshape(n_points, 2)
-        elif type == 5:
-            # multiline
+        if geom_type == 5:
+            # multi-line
             n_lines = np.frombuffer(geom, np.int32, 1, 5)[0]
             lines = []
             offset = 9
-            for i in range(n_lines):
+            for _ in range(n_lines):
                 offset += 5
                 n_points = np.frombuffer(geom, np.int32, n_lines, offset)[0]
                 offset += 4
                 lines.append(np.frombuffer(geom, np.double, n_points * 2, offset))
                 offset += n_points * 16
             return np.concatenate(lines)
-        elif type == 6:
-            # multipolygon
+        if geom_type == 6:
+            # multi-polygon
             n_polygons = np.frombuffer(geom, np.int32, 1, 5)[0]
             polygons = []
             offset = 9
-            for i in range(n_polygons):
+            for _ in range(n_polygons):
                 offset += 5  # byte order and geom type at start of each polygon
                 n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
                 offset += 4
 
                 rings = []
-                for j in range(n_rings):
+                for _ in range(n_rings):
                     n_points = np.frombuffer(geom, np.int32, 1, offset)[0]
                     offset += 4
                     rings.append(np.frombuffer(geom, np.double, n_points * 2, offset))
                     offset += n_points * 16
                 polygons.append(rings)
             return polygons
+        raise ValueError("Unknown geometry type")
 
     @staticmethod
     def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: float):
@@ -673,7 +679,6 @@ class AnnotationRenderer:
                 Array of coordinates in tile space in the form [x, y].
 
         """
-        # return np.squeeze(((np.array(coords) - top_left) / scale).astype(np.int32))
         return ((np.reshape(coords, (-1, 2)) - top_left) / scale).astype(np.int32)
 
     def get_color(self, annotation: Annotation, edge=False):
@@ -723,8 +728,8 @@ class AnnotationRenderer:
                 stacklevel=2,
             )
         except TypeError:
-            warnings.warn(
-                "the property value type was incompatable with the cmap. Using default color.",
+            logger.warning(
+                "property value type incompatable with cmap. Using default color.",
                 stacklevel=2,
             )
 
@@ -736,13 +741,12 @@ class AnnotationRenderer:
         """get the color for an annotation"""
         if self.score_prop_edge == "color":
             # use colors directly specified in annotation properties
-            # print(ann)
-            # ann.properties['color'].append(1)
             try:
                 return (*[int(255 * c) for c in annotation.properties["color"]], 255)
             except KeyError:
-                warnings.warn(
-                    "score_prop not found in annotation properties. Using default color."
+                logger.warning(
+                    "score_prop not in annotation properties. Using default color.",
+                    stacklevel=2,
                 )
 
         elif self.score_prop_edge is not None:
@@ -754,8 +758,9 @@ class AnnotationRenderer:
                     )
                 )
             except KeyError:
-                warnings.warn(
-                    "score_prop not found in annotation properties. Using default color."
+                logger.warning(
+                    "score_prop not in annotation properties. Using default color.",
+                    stacklevel=2,
                 )
         return (0, 0, 0, 255)  # default color if no score_prop given
 
@@ -892,12 +897,18 @@ class AnnotationRenderer:
         annotation geometries are decimated if appropriate.
 
         Args:
-            rgb (np.ndarray):
-                The image to render the annotation on.
-            bound_geom (Polygon):
-                A polygon representing the bounding box of the tile.
+            store (AnnotationStore):
+                The annotation store to render from.
+            bounds (Polygon):
+                The bounding box of the tile to render.
             scale (float):
                 The scale at which we are rendering the tile.
+            res (int):
+                The resolution of the tile. Defaults to 1. Can be set to 2 for
+                higher resolution rendering.
+            border (int):
+                The border to add around the tile. Defaults to 0. Used for blurred
+                rendering to avoid edge effects.
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.
@@ -918,7 +929,7 @@ class AnnotationRenderer:
             if self.info["mpp"] is not None
             else 1
         )
-        min_area = 0.0003 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
+        min_area = 0.0005 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
 
         tile = np.zeros((output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8)
 
@@ -928,7 +939,7 @@ class AnnotationRenderer:
                 bound_geom,
                 self.where,
                 geometry_predicate="bbox_intersects",
-                as_raw=True,
+                as_wkb=True,
             )
 
             for ann in anns.values():
@@ -946,7 +957,7 @@ class AnnotationRenderer:
             for i, (key, box) in enumerate(bounding_boxes.items()):
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
-                    ann = store.__getitem__(key, as_raw=True)
+                    ann = store.__getitem__(key, as_wkb=True)
                     self.render_by_type(tile, ann, top_left, scale / res)
         else:
             # Get only annotations > min_area. Plot them all
@@ -955,7 +966,7 @@ class AnnotationRenderer:
                 self.where,
                 min_area=min_area,
                 geometry_predicate="bbox_intersects",
-                as_raw=True,
+                as_wkb=True,
             )
 
             for ann in anns.values():

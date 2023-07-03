@@ -162,6 +162,9 @@ class TilePyramidGenerator:
                 The tile index in the x direction.
             y (int):
                 The tile index in the y direction.
+            res (int):
+                The resolution of the tile. Defaults to 1, can be set to 2 for
+                double resolution.
             pad_mode (str):
                 Method for padding when reading areas outside the
                 input image. Default is constant (0 padding). This is
