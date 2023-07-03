@@ -1,4 +1,5 @@
 """Tests for reading whole-slide images."""
+from __future__ import annotations
 
 import copy
 import json

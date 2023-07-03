@@ -546,7 +546,7 @@ def test_init_base_class_exception():
 class TestStore:
     """Defines TestStore to test AnnotationStore for multiple scenarios."""
 
-    scenarios: ClassVar[list[tuple[dict]]] = [
+    scenarios: ClassVar[list[tuple[str, dict]]] = [
         ("Dictionary", {"store_cls": DictionaryStore}),
         ("SQLite", {"store_cls": SQLiteStore}),
     ]
