@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
 
-if TYPE_CHECKING:  # pragma: no_cover
+if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
