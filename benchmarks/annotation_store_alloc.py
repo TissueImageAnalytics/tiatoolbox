@@ -195,8 +195,9 @@ def cell_polygon(
     boundary_coords = np.stack([x, y], axis=1).astype(int).tolist()
 
     # Copy first coordinate to the end if required
+    boundary_coords_0 = [boundary_coords[0]]
     if repeat_first:
-        boundary_coords = boundary_coords + [boundary_coords[0]]
+        boundary_coords = boundary_coords + boundary_coords_0
 
     # Swap direction
     if direction.strip().lower() == "cw":

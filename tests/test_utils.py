@@ -715,11 +715,10 @@ def test_fuzz_bounds2locsize_lower():
     for _ in range(1000):
         loc = (np.random.rand(2) - 0.5) * 1000
         size = (np.random.rand(2) - 0.5) * 1000
-        bounds = np.tile(loc, 2) + [
-            0,
-            *size[::-1],
-            0,
-        ]  # L T R B
+
+        fuzz_bounds = [0, *size[::-1], 0]  # L T R B
+
+        bounds = np.tile(loc, 2) + fuzz_bounds  # L T R B
 
         _, s = utils.transforms.bounds2locsize(bounds, origin="lower")
 

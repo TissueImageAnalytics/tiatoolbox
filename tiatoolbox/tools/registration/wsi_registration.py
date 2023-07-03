@@ -1014,11 +1014,12 @@ class DFBRegister:
                 moving_block_matched_points,
                 block_quality,
             ) = self.feature_mapping(features)
+            bounding_box_2_0 = [bounding_box[2], bounding_box[0]]
             fixed_matched_points.append(
-                fixed_block_matched_points + [bounding_box[2], bounding_box[0]],
+                fixed_block_matched_points + bounding_box_2_0,
             )
             moving_matched_points.append(
-                moving_block_matched_points + [bounding_box[2], bounding_box[0]],
+                moving_block_matched_points + bounding_box_2_0,
             )
             quality.append(block_quality)
         fixed_matched_points, moving_matched_points, quality = (
