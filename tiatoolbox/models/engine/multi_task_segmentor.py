@@ -349,7 +349,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
 
         for _ in indices_inst:
-            self._wsi_inst_info.append({})
+            self._wsi_inst_info.append({})  # noqa: PERF401
 
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
             for tile_idx, tile_bounds in enumerate(set_bounds):
