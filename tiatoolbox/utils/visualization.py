@@ -499,7 +499,7 @@ def plot_graph(
 
 def to_int_rgb(rgb):
     """Helper to convert from float to int rgb(a) tuple"""
-    return tuple([int(255 * v) for v in rgb])
+    return tuple(int(255 * v) for v in rgb)
 
 
 class AnnotationRenderer:
@@ -724,7 +724,8 @@ class AnnotationRenderer:
                 )
         except KeyError:
             logger.warning(
-                f"property: {score_prop} not found in properties. Using default color.",
+                "property: %s not found in properties. Using default color.",
+                score_prop,
                 stacklevel=2,
             )
         except TypeError:
@@ -999,7 +1000,6 @@ class AnnotationRenderer:
                 The scale at which we are rendering the tile.
 
         """
-
         geom_type = GEOMTYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
         if geom_type == "Point":
             self.render_pt(tile, annotation, top_left, scale)
