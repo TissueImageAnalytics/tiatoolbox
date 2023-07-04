@@ -95,10 +95,10 @@ def is_zarr(path: pathlib.Path) -> bool:
     path = pathlib.Path(path)
     try:
         _ = zarr.open(path, mode="r")
-        return True
-
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
+    else:
+        return True
 
 
 def is_ngff(
@@ -988,7 +988,7 @@ class WSIReader:
         try:
             level = np.log2(rescale)
             if not level.is_integer():
-                raise ValueError
+                raise ValueError  # noqa: TRY301
             level = np.int_(level)
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
@@ -2081,10 +2081,11 @@ class OpenSlideWSIReader(WSIReader):
         try:
             mpp_x = float(props[openslide.PROPERTY_NAME_MPP_X])
             mpp_y = float(props[openslide.PROPERTY_NAME_MPP_Y])
-            return mpp_x, mpp_y
         # Fallback to TIFF resolution units and convert to mpp
         except KeyError:
             tiff_res_units = props.get("tiff.ResolutionUnit")
+        else:
+            return mpp_x, mpp_y
 
         try:
             x_res = float(props["tiff.XResolution"])
@@ -2096,9 +2097,10 @@ class OpenSlideWSIReader(WSIReader):
                 "Metadata: Falling back to TIFF resolution tag"
                 " for microns-per-pixel (MPP).",
             )
-            return mpp_x, mpp_y
         except KeyError:
             logger.warning("Metadata: Unable to determine microns-per-pixel (MPP).")
+        else:
+            return mpp_x, mpp_y
 
         # Return None value if metadata cannot be determined.
         return None
@@ -3257,7 +3259,7 @@ class TIFFWSIReader(WSIReader):
         self.series_n = series
         if self.tiff.series is None or len(self.tiff.series) == 0:  # pragma: no cover
             msg = "TIFF does not contain any valid series."
-            raise Exception(msg)
+            raise FileNotSupportedError(msg)
         # Find the largest series if series="auto"
         if self.series_n == "auto":
             all_series = self.tiff.series or []
@@ -3351,7 +3353,6 @@ class TIFFWSIReader(WSIReader):
             key, value_string = pair
             key = key.strip()
             value_string = value_string.strip()
-            value = value_string.strip()
 
             def us_date(string: str) -> datetime:
                 """Returns datetime parsed according to US date format."""
@@ -3366,9 +3367,10 @@ class TIFFWSIReader(WSIReader):
             for cast in casting_precedence:
                 try:
                     value = cast(value_string)
-                    return key, value
                 except ValueError:
                     continue
+                else:
+                    return key, value
 
             return key, value
 

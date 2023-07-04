@@ -100,7 +100,7 @@ select = [
   "SIM",   # flake8-simplify
   "TID",   # flake8-tidy-imports
   "TCH",   # flake8-type-checking
-  # "TRY",   # tryceratops
+  "TRY",   # tryceratops
   "YTT",   # flake8-2020
   "PERF",  # Perflint
   "SLOT",  # flake8-slots

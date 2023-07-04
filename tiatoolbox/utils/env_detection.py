@@ -104,9 +104,10 @@ def is_notebook() -> bool:
             return True  # Jupyter notebook or qtconsole
         if shell == "TerminalInteractiveShell":
             return False  # Terminal running IPython
-        return False  # Other type (?)
     except (NameError, ImportError):
         return False  # Probably standard Python interpreter
+    else:
+        return False  # Other type (?)
 
 
 def in_conda_env() -> bool:
@@ -239,9 +240,10 @@ def has_network(
         # Connect to host
         connection = socket.create_connection((host, 80), timeout=timeout)
         connection.close()
-        return True
     except (socket.gaierror, socket.timeout):
         return False
+    else:
+        return True
 
 
 def pixman_versions() -> List[Tuple[int, ...]]:

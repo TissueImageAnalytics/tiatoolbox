@@ -1229,7 +1229,7 @@ class SemanticSegmentor:
         except Exception as err:  # skipcq: PYL-W0703
             wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
-                raise err
+                raise err  # noqa: TRY201
             logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(
