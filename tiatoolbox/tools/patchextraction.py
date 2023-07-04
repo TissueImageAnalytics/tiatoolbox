@@ -334,9 +334,7 @@ class PatchExtractor(PatchExtractorABC):
             ) and (pos_area > 0 and patch_area > 0)
 
         func = default_sel_func if func is None else func
-        flag_list = []
-        for coord in scaled_coords:
-            flag_list.append(func(tissue_mask, coord))
+        flag_list = [func(tissue_mask, coord) for coord in scaled_coords]
 
         return np.array(flag_list)
 

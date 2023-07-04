@@ -268,9 +268,7 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
     assert np.all(img_patches[0] == patches[0])
 
-    img_patches_test = []
-    for patch in patches:
-        img_patches_test.append(patch)
+    img_patches_test = list(patches)
 
     img_patches_test = np.array(img_patches_test)
     assert np.all(img_patches == img_patches_test)

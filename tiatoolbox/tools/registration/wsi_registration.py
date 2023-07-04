@@ -330,14 +330,12 @@ class DFBRFeatureExtractor(torch.nn.Module):
         self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
             weights=VGG16_Weights.IMAGENET1K_V1,
         ).features
-        self.f_hooks = []
-
-        for i, layer in enumerate(output_layers_id):
-            self.f_hooks.append(
-                getattr(self.pretrained, layer).register_forward_hook(
-                    self.forward_hook(output_layers_key[i]),
-                ),
+        self.f_hooks = [
+            getattr(self.pretrained, layer).register_forward_hook(
+                self.forward_hook(output_layers_key[i]),
             )
+            for i, layer in enumerate(output_layers_id)
+        ]
 
     def forward_hook(self, layer_name: str) -> None:
         """Register a hook.
