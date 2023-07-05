@@ -59,7 +59,8 @@ class TileServer(Flask):
             ),
             static_url_path="",
             static_folder=data._local_sample_path(  # noqa: SLF001
-                Path("visualization") / "static"),
+                Path("visualization") / "static",
+            ),
         )
         self.tia_title = title
         self.tia_layers = {}
