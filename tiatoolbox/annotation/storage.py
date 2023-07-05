@@ -211,8 +211,7 @@ class AnnotationStore(ABC, MutableMapping):
             return False
         # Check that all angles are right angles
         return all(
-            self._is_right_angle(*xyz)
-            for xyz in ((a, b, c), (b, c, d), (c, d, a))
+            self._is_right_angle(*xyz) for xyz in ((a, b, c), (b, c, d), (c, d, a))
         )
 
     @staticmethod
