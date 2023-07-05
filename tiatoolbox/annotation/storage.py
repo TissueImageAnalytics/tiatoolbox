@@ -183,8 +183,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         return np.dot(np.subtract(a, b), np.subtract(b, c)) == 0
 
-    @staticmethod
-    def _is_rectangle(a, b, c, d, *args) -> bool:
+    def _is_rectangle(self, a, b, c, d, *args) -> bool:
         """Determine if a set of coordinates form a rectangle.
 
         Used for optimising queries. If more than five points are given,
@@ -212,7 +211,7 @@ class AnnotationStore(ABC, MutableMapping):
             return False
         # Check that all angles are right angles
         return all(
-            AnnotationStore._is_right_angle(*xyz)
+            self._is_right_angle(*xyz)
             for xyz in ((a, b, c), (b, c, d), (c, d, a))
         )
 
@@ -239,7 +238,7 @@ class AnnotationStore(ABC, MutableMapping):
                 Path,
                 io.IOBase,
                 io.TextIOBase,
-                tempfile._TemporaryFileWrapper,  # skipcq: PYL-W0212
+                tempfile._TemporaryFileWrapper,  # skipcq: PYL-W0212  # noqa: SLF001
             ),
         ):
             msg = (
@@ -254,7 +253,7 @@ class AnnotationStore(ABC, MutableMapping):
             (
                 io.IOBase,
                 io.TextIOBase,
-                tempfile._TemporaryFileWrapper,  # skipcq: PYL-W0212
+                tempfile._TemporaryFileWrapper,  # skipcq: PYL-W0212  # noqa: SLF001
             ),
         ):
             connection = connection.name

@@ -96,7 +96,7 @@ select = [
   "RET",   # flake8-return
   "RSE",   # flake8-raise
   "RUF",   # Ruff-specific rules
-  # "SLF",   # flake8-self
+  "SLF",   # flake8-self
   "SIM",   # flake8-simplify
   "TID",   # flake8-tidy-imports
   "TCH",   # flake8-type-checking
@@ -127,7 +127,7 @@ exclude = [
 ]
 
 # Ignore `F401` (import violations) in all `__init__.py` files.
-per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"]}
+per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"]}
 
 # Same as Black.
 line-length = 88

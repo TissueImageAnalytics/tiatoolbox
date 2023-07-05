@@ -96,19 +96,19 @@ class HoVerNetPlus(HoVerNet):
                 [
                     (
                         "tp",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=num_types),
+                        self._create_decoder_branch(ksize=ksize, out_ch=num_types),
                     ),
                     (
                         "np",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2),
+                        self._create_decoder_branch(ksize=ksize, out_ch=2),
                     ),
                     (
                         "hv",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2),
+                        self._create_decoder_branch(ksize=ksize, out_ch=2),
                     ),
                     (
                         "ls",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=num_layers),
+                        self._create_decoder_branch(ksize=ksize, out_ch=num_layers),
                     ),
                 ],
             ),
@@ -307,7 +307,7 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, scale_factor=0.5)
+        pred_inst = HoVerNetPlus._proc_np_hv(np_map, hv_map, scale_factor=0.5)
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
 
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
