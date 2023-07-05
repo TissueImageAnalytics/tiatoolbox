@@ -4565,7 +4565,7 @@ class NGFFWSIReader(WSIReader):
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
             ],
             slide_dimensions=self._zarr_group[0].shape[:2][::-1],
-            vendor=self.zattrs._creator.name,  # skipcq  # noqa: SLF001
+            vendor=self.zattrs._creator.name,  # skipcq: PYL-W0212  # noqa: SLF001
             raw=self._zarr_group.attrs,
             mpp=self._get_mpp(),
         )
