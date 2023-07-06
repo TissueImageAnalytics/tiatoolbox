@@ -631,7 +631,12 @@ class AnnotationRenderer:
         if geom_type == 4:
             # multi-point
             n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
-            return np.frombuffer(geom, np.double, -1, 9).reshape(n_points, 2)
+            pts = []
+            for i in range(n_points):
+                pts.append(
+                    np.frombuffer(geom, np.double, 2, 14 + i * 21)
+                )  # each point is 21 bytes
+            return np.concatenate(pts)
         if geom_type == 5:
             # multi-line
             n_lines = np.frombuffer(geom, np.int32, 1, 5)[0]
@@ -644,25 +649,31 @@ class AnnotationRenderer:
                 lines.append(np.frombuffer(geom, np.double, n_points * 2, offset))
                 offset += n_points * 16
             return np.concatenate(lines)
+
+        def decode_polygon(offset=0):
+            offset += 5  # byte order and geom type at start of each polygon
+            n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
+            offset += 4
+
+            rings = []
+            for _ in range(n_rings):
+                n_points = np.frombuffer(geom, np.int32, 1, offset)[0]
+                offset += 4
+                rings.append(np.frombuffer(geom, np.double, n_points * 2, offset))
+                offset += n_points * 16
+            return rings, offset
+
         if geom_type == 6:
             # multi-polygon
             n_polygons = np.frombuffer(geom, np.int32, 1, 5)[0]
             polygons = []
             offset = 9
             for _ in range(n_polygons):
-                offset += 5  # byte order and geom type at start of each polygon
-                n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
-                offset += 4
-
-                rings = []
-                for _ in range(n_rings):
-                    n_points = np.frombuffer(geom, np.int32, 1, offset)[0]
-                    offset += 4
-                    rings.append(np.frombuffer(geom, np.double, n_points * 2, offset))
-                    offset += n_points * 16
+                rings, offset = decode_polygon(offset)
                 polygons.append(rings)
-            return polygons
-        raise ValueError("Unknown geometry type")
+            return np.concatenate(polygons)
+
+        raise ValueError(f"Unknown geometry type: {geom_type}")
 
     @staticmethod
     def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: float):
