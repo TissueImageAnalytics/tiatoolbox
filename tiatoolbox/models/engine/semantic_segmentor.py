@@ -340,13 +340,13 @@ class SemanticSegmentor:
             raise ValueError("Must provide either of `model` or `pretrained_model`")
 
         if model is not None:
-            self.model = model
             # template ioconfig, usually coming from pretrained
-            self.ioconfig = None
+            ioconfig = None
         else:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
-            self.ioconfig = ioconfig
-            self.model = model
+
+        self.ioconfig = ioconfig
+        self.model = model
 
         # local variables for flagging mode within class,
         # subclass should have overwritten to alter some specific behavior

@@ -9,9 +9,9 @@ from typing import Callable, Tuple, Union
 import numpy as np
 import torch
 import tqdm
+from engine_abc import EngineABC
 
 from tiatoolbox import logger
-from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsimeta import Resolution, Units
@@ -20,8 +20,8 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 from .io_config import IOPatchPredictorConfig
 
 
-class PatchPredictor:
-    r"""Patch level predictor.
+class PatchPredictor(EngineABC):
+    r"""Patch level predictor for digital histology images.
 
     The models provided by tiatoolbox should give the following results:
 
@@ -137,7 +137,7 @@ class PatchPredictor:
             Whether to output logging information.
 
     Attributes:
-        img (:obj:`str` or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
+        images (str or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
             A HWC image or a path to WSI.
         mode (str):
             Type of input to process. Choose from either `patch`, `tile`
@@ -162,7 +162,7 @@ class PatchPredictor:
 
     Examples:
         >>> # list of 2 image patches as input
-        >>> data = [img1, img2]
+        >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
@@ -199,34 +199,57 @@ class PatchPredictor:
 
     def __init__(
         self,
-        batch_size=8,
-        num_loader_workers=0,
-        model=None,
-        pretrained_model=None,
-        pretrained_weights=None,
-        verbose=True,
+        batch_size: int = 8,
+        num_loader_workers: int = 0,
+        num_postproc_workers: int = 0,
+        model: torch.nn.Module = None,
+        pretrained_model: str = None,
+        pretrained_weights: str = None,
+        verbose: bool = False,
     ):
-        super().__init__()
+        super().__init__(
+            batch_size=batch_size,
+            num_loader_workers=num_loader_workers,
+            num_postproc_workers=num_postproc_workers,
+            model=model,
+            pretrained_model=pretrained_model,
+            pretrained_weights=pretrained_weights,
+            verbose=verbose,
+        )
 
-        self.imgs = None
-        self.mode = None
+    @property
+    def _ioconfig(self):  # runtime ioconfig
+        return self.ioconfig
 
-        if model is None and pretrained_model is None:
-            raise ValueError("Must provide either `model` or `pretrained_model`.")
+    def pre_process_patch(self):
+        pass
 
-        if model is not None:
-            self.model = model
-            ioconfig = None  # retrieve iostate from provided model ?
-        else:
-            model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
+    def pre_process_tile(self):
+        pass
 
-        self.ioconfig = ioconfig  # for storing original
-        self._ioconfig = None  # for storing runtime
-        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
-        self.pretrained_model = pretrained_model
-        self.batch_size = batch_size
-        self.num_loader_worker = num_loader_workers
-        self.verbose = verbose
+    def pre_process_wsi(self):
+        pass
+
+    def post_process_patch(self):
+        pass
+
+    def post_process_tile(self):
+        pass
+
+    def post_process_wsi(self):
+        pass
+
+    def infer_patch(self):
+        pass
+
+    def infer_tile(self):
+        pass
+
+    def infer_wsi(self):
+        pass
+
+    def run_pipeline(self):
+        pass
 
     @staticmethod
     def merge_predictions(
@@ -376,7 +399,7 @@ class PatchPredictor:
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
-            num_workers=self.num_loader_worker,
+            num_workers=self.num_loader_workers,
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
