@@ -9,7 +9,6 @@ from typing import Callable, Tuple, Union
 import numpy as np
 import torch
 import tqdm
-from engine_abc import EngineABC
 
 from tiatoolbox import logger
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
@@ -17,6 +16,7 @@ from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
+from .engine_abc import EngineABC
 from .io_config import IOPatchPredictorConfig
 
 
