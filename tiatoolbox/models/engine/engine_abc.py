@@ -123,7 +123,6 @@ class EngineABC(ABC):
         self.num_postproc_workers = num_postproc_workers
         self.verbose = verbose
 
-    @abstractmethod
     @property
     def _ioconfig(self):  # runtime ioconfig
         return self.ioconfig
