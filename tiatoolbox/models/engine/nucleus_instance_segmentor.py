@@ -12,10 +12,10 @@ import tqdm
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
+from tiatoolbox.models import WSIStreamDataset
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
-    WSIStreamDataset,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
 

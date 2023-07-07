@@ -30,14 +30,12 @@ import torch
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
+from tiatoolbox.models import WSIStreamDataset
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
     _process_instance_predictions,
 )
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-    WSIStreamDataset,
-)
+from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 
 
 # Python is yet to be able to natively pickle Object method/static method.
