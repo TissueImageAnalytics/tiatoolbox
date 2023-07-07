@@ -420,3 +420,28 @@ def test_multipolygon_render(cell_grid, tmp_path):
     tile = np.array(tg.get_tile(1, 0, 0))
     _, num = label(np.array(tile)[:, :, 0])
     assert num == 25  # expect 25 red objects
+
+
+def test_function_mapper(fill_store, tmp_path):
+    """Test function mapper."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+
+    def color_fn(props):
+        # simple test function that returns red for cells, otherwise green.
+        if props["type"] == "cell":
+            return (1, 0, 0)
+        return (0, 1, 0)
+
+    renderer = AnnotationRenderer(
+        score_prop="type", function_mapper=color_fn, edge_thickness=0
+    )
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    thumb = tg.get_thumb_tile()
+    _, num = label(np.array(thumb)[:, :, 0])
+    assert num == 25  # expect 25 red objects
+    _, num = label(np.array(thumb)[:, :, 1])
+    assert num == 50  # expect 50 green objects
+    _, num = label(np.array(thumb)[:, :, 2])
+    assert num == 0  # expect 0 blue objects

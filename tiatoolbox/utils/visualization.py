@@ -497,11 +497,6 @@ def plot_graph(
     return canvas
 
 
-def to_int_rgb(rgb):
-    """Helper to convert from float to int rgb(a) tuple"""
-    return tuple(int(255 * v) for v in rgb)
-
-
 class AnnotationRenderer:
     """Renderer containing information and methods to render annotations
     from an AnnotationStore to a tile.
@@ -697,6 +692,9 @@ class AnnotationRenderer:
         Args:
             annotation (Annotation):
                 Annotation to get color for.
+            edge (bool):
+                Whether to get the color for the edge of the annotation,
+                or the interior.
         Returns:
             tuple:
                 A color tuple (rgba).
@@ -748,33 +746,6 @@ class AnnotationRenderer:
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
-
-    def get_color_edge(self, annotation):
-        """get the color for an annotation"""
-        if self.score_prop_edge == "color":
-            # use colors directly specified in annotation properties
-            try:
-                return (*[int(255 * c) for c in annotation.properties["color"]], 255)
-            except KeyError:
-                logger.warning(
-                    "score_prop not in annotation properties. Using default color.",
-                    stacklevel=2,
-                )
-
-        elif self.score_prop_edge is not None:
-            try:
-                return tuple(
-                    int(c * 255)
-                    for c in self.mapper(
-                        self.score_fn(annotation.properties[self.score_prop_edge])
-                    )
-                )
-            except KeyError:
-                logger.warning(
-                    "score_prop not in annotation properties. Using default color.",
-                    stacklevel=2,
-                )
-        return (0, 0, 0, 255)  # default color if no score_prop given
 
     def render_poly(
         self,
