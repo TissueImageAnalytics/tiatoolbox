@@ -217,10 +217,6 @@ class PatchPredictor(EngineABC):
             verbose=verbose,
         )
 
-    @property
-    def _ioconfig(self):  # runtime ioconfig
-        return self.ioconfig
-
     def pre_process_patch(self):
         pass
 

@@ -116,16 +116,13 @@ class EngineABC(ABC):
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
 
         self.ioconfig = ioconfig  # for storing original
+        self._ioconfig = self.ioconfig  # runtime ioconfig
         self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
         self.num_postproc_workers = num_postproc_workers
         self.verbose = verbose
-
-    @property
-    def _ioconfig(self):  # runtime ioconfig
-        return self.ioconfig
 
     @abstractmethod
     def pre_process_patch(self):
