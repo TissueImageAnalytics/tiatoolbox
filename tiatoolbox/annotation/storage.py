@@ -1955,8 +1955,7 @@ class SQLiteStore(AnnotationStore):
             if data is None:
                 # make wkb point
                 return (
-                    np.uint8(0).tobytes()
-                    + np.uint32(1).tobytes()
+                    b"\x01\x01\x00\x00\x00"
                     + np.double(cx).tobytes()
                     + np.double(cy).tobytes()
                 )

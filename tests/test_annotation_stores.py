@@ -2140,8 +2140,8 @@ class TestStore:
         """Test that as_wkb returns annotations with wkb geometry."""
         _, store = fill_store(store_cls, ":memory:")
         wkb_results = store.query((0, 0, 25, 25), as_wkb=True)
-        results = store.query((0, 0, 25, 25))
+        results = store.query((0, 0, 30, 30))
         assert len(results) == 8
         assert len(wkb_results) == 8
-        for wkb_result, result in zip(wkb_results, results):
+        for wkb_result, result in zip(wkb_results.values(), results.values()):
             assert wkb_result.geometry == result.geometry.wkb

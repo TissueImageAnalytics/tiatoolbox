@@ -328,10 +328,10 @@ def test_categorical_mapper(fill_store, tmp_path):
             assert 0 <= val <= 1
 
 
-def test_colour_prop_warning(fill_store, tmp_path, caplog):
+def test_colour_prop_warnings(fill_store, tmp_path, caplog):
     """
     Test warning when rendering annotations in which the provided
-    score_prop does not exist.
+    score_prop does not exist, or its type doesnt match the mapper.
 
     """
     array = np.ones((1024, 1024))
@@ -341,6 +341,11 @@ def test_colour_prop_warning(fill_store, tmp_path, caplog):
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tg.get_tile(1, 0, 0)
     assert "not found in properties" in caplog.text
+
+    renderer = AnnotationRenderer(score_prop="type", mapper="jet")
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tg.get_tile(1, 0, 0)
+    assert "property value type incompatable" in caplog.text
 
 
 def test_blur(fill_store, tmp_path):
