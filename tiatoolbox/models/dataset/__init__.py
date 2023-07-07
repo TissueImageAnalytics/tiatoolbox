@@ -1,21 +1,9 @@
 """Contains dataset functionality for use with models in tiatoolbox."""
 
-from tiatoolbox.models.dataset.classification import predefined_preproc_func
-
-from .dataset_abc import (
+from tiatoolbox.models.dataset.classification import (
     PatchDataset,
-    PatchDatasetABC,
     WSIPatchDataset,
-    WSIStreamDataset,
+    predefined_preproc_func,
 )
-from .info import DatasetInfoABC, KatherPatchDataset
-
-__all__ = [
-    "predefined_preproc_func",
-    "PatchDatasetABC",
-    "WSIPatchDataset",
-    "PatchDataset",
-    "WSIStreamDataset",
-    "DatasetInfoABC",
-    "KatherPatchDataset",
-]
+from tiatoolbox.models.dataset.dataset_abc import PatchDatasetABC
+from tiatoolbox.models.dataset.info import DatasetInfoABC, KatherPatchDataset

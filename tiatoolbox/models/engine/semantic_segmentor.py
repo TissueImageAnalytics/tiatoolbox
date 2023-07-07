@@ -18,13 +18,13 @@ import torch.utils.data as torch_data
 import tqdm
 
 from tiatoolbox import logger
+from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread, misc
 from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
-from ..architecture import get_pretrained_model
-from ..dataset.dataset_abc import WSIStreamDataset
 from .io_config import IOSegmentorConfig
 
 
