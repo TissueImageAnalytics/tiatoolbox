@@ -165,5 +165,5 @@ class EngineABC(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def run_pipeline(self):
+    def run(self):
         raise NotImplementedError

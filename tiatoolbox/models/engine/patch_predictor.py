@@ -248,7 +248,7 @@ class PatchPredictor(EngineABC):
     def infer_wsi(self):
         pass
 
-    def run_pipeline(self):
+    def run(self):
         pass
 
     @staticmethod
