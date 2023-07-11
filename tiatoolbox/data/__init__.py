@@ -1,12 +1,17 @@
 # skipcq: PTC-W6004  # noqa: ERA001
 """Package to define datasets available to download via TIAToolbox."""
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
 from typing import Optional, Union
 from urllib.parse import urlparse
 
-import importlib_resources
+if sys.version_info >= (3, 9):
+    import importlib.resources as importlib_resources
+else:
+    import importlib_resources
+
 import numpy as np
 import requests
 

@@ -5,7 +5,11 @@ import importlib.util
 import sys
 from pathlib import Path
 
-import importlib_resources
+if sys.version_info >= (3, 9):
+    import importlib.resources as importlib_resources
+else:
+    import importlib_resources
+
 import yaml
 
 __author__ = """TIA Lab"""
