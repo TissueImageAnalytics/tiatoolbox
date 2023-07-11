@@ -609,15 +609,15 @@ def assert_dtype_int(input_var, message="Input must be integer."):
         raise AssertionError(message)
 
 
-def download_data(url, save_path, overwrite=False):
+def download_data(url: str | Path, save_path: str | Path, overwrite: bool = False):
     """Download data from a given URL to location.
 
     The function can overwrite data if demanded else no action is taken.
 
     Args:
-        url (path):
+        url (str | Path):
             URL from where to download the data.
-        save_path (str):
+        save_path (str | Path):
             Location to unzip the data.
         overwrite (bool):
             True to force overwriting of existing data, default=False

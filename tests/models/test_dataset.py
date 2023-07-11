@@ -1,7 +1,7 @@
 """Tests for predefined dataset within toolbox."""
 
-import os
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -88,16 +88,16 @@ def test_kather_dataset(tmp_path):
 
     # save to temporary location
     # remove previously generated data
-    if os.path.exists(save_dir_path):
+    if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     url = (
         "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
         "/kather100k-train-nonorm-subset-90.zip"
     )
-    save_zip_path = os.path.join(save_dir_path, "Kather.zip")
+    save_zip_path = save_dir_path / "Kather.zip"
     download_data(url, save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
-    extracted_dir = os.path.join(save_dir_path, "NCT-CRC-HE-100K-NONORM/")
+    extracted_dir = save_dir_path / "NCT-CRC-HE-100K-NONORM/"
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)
     assert dataset.inputs is not None
     assert dataset.labels is not None
