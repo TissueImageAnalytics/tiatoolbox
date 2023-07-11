@@ -150,7 +150,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
         # Write the file if it has changed
         if changed:
             print(f"Updating {path}")
-            with open(path, "w", encoding="utf-8") as fh:
+            with Path.open(path, "w", encoding="utf-8") as fh:
                 json.dump(notebook, fh, indent=1, ensure_ascii=False)
                 fh.write("\n")
         else:
@@ -185,7 +185,7 @@ def check_notebook(
         return changed, None
 
     # Load the notebook
-    with open(path, encoding="utf-8") as fh:
+    with Path.open(path, encoding="utf-8") as fh:
         notebook = json.load(fh)
         # Check each cell
     for cell_num, cell in enumerate(notebook["cells"]):
