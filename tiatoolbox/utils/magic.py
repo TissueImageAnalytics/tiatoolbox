@@ -38,7 +38,7 @@ def _normalize_binaryio(
                 msg = f"File {path} does not exist."
                 raise FileNotFoundError(msg)
             return BytesIO()
-        return open(file, "rb")  # noqa: SIM115 -- intentional
+        return Path.open(file, "rb")  # -- intentional
     if isinstance(file, (BinaryIO, BytesIO)):
         return file
     if isinstance(file, bytes):
