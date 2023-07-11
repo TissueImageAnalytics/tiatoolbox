@@ -1,5 +1,4 @@
 """Defines classes and methods for dataset information."""
-import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -89,9 +88,9 @@ class KatherPatchDataset(DatasetInfoABC):
         ]
 
         if save_dir_path is None:  # pragma: no cover
-            save_dir_path = Path(rcParam["TIATOOLBOX_HOME"], "dataset")
-            if not os.path.exists(save_dir_path):
-                save_zip_path = os.path.join(save_dir_path, "Kather.zip")
+            save_dir_path = rcParam["TIATOOLBOX_HOME"] / "dataset"
+            if not Path.exists(save_dir_path):
+                save_zip_path = save_dir_path / "Kather.zip"
                 url = (
                     "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
                     "/kather100k-train-nonorm-subset-20k.zip"
