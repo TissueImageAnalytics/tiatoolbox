@@ -116,8 +116,8 @@ def save_yaml(
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
     with Path.open(
-        str(Path(output_path)),
-        "w",
+        output_path,
+        "w+",
     ) as yaml_file:
         yaml.dump(input_dict, yaml_file)
 

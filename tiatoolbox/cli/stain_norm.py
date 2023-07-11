@@ -58,7 +58,7 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
     norm.fit(imread(target_input))
 
     for curr_file in files_all:
-        basename = Path.name(curr_file)
+        basename = Path(curr_file).name
         # transform source image
         transform = norm.transform(imread(curr_file))
         imwrite(output_path / basename, transform)
