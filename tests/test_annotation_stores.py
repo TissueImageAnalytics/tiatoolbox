@@ -849,7 +849,7 @@ class TestStore:
         """Test loading from geojson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
-        with open(tmp_path / "polygon.json") as file_handle:
+        with Path.open(tmp_path / "polygon.json") as file_handle:
             store2 = store_cls.from_geojson(file_handle)
         assert len(store) == len(store2)
 
@@ -909,10 +909,10 @@ class TestStore:
     def test_to_geojson_file(fill_store, tmp_path, store_cls):
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        with open(tmp_path / "polygon.json", "w") as fh:
+        with Path.open(tmp_path / "polygon.json", "w") as fh:
             geojson = store.to_geojson(fp=fh)
         assert geojson is None
-        with open(tmp_path / "polygon.json") as fh:
+        with Path.open(tmp_path / "polygon.json") as fh:
             geodict = json.load(fh)
         assert "features" in geodict
         assert "type" in geodict
@@ -925,7 +925,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         geojson = store.to_geojson(fp=tmp_path / "polygon.json")
         assert geojson is None
-        with open(tmp_path / "polygon.json") as fh:
+        with Path.open(tmp_path / "polygon.json") as fh:
             geodict = json.load(fh)
         assert "features" in geodict
         assert "type" in geodict
@@ -948,10 +948,10 @@ class TestStore:
     def test_to_ndjson_file(fill_store, tmp_path, store_cls):
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        with open(tmp_path / "polygon.ndjson", "w") as fh:
+        with Path.open(tmp_path / "polygon.ndjson", "w") as fh:
             ndjson = store.to_ndjson(fp=fh)
         assert ndjson is None
-        with open(tmp_path / "polygon.ndjson") as fh:
+        with Path.open(tmp_path / "polygon.ndjson") as fh:
             for line in fh.readlines():
                 assert isinstance(line, str)
                 feature = json.loads(line)
@@ -965,7 +965,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         ndjson = store.to_ndjson(fp=tmp_path / "polygon.ndjson")
         assert ndjson is None
-        with open(tmp_path / "polygon.ndjson") as fh:
+        with Path.open(tmp_path / "polygon.ndjson") as fh:
             for line in fh.readlines():
                 assert isinstance(line, str)
                 feature = json.loads(line)
@@ -984,7 +984,7 @@ class TestStore:
     def test_dump_file_handle(fill_store, tmp_path, store_cls):
         """Test dumping to a file handle."""
         _, store = fill_store(store_cls, ":memory:")
-        with open(tmp_path / "dump_test.db", "w") as fh:
+        with Path.open(tmp_path / "dump_test.db", "w") as fh:
             store.dump(fh)
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
@@ -1666,7 +1666,7 @@ class TestStore:
     def test_connection_to_path_io(store_cls, tmp_path):
         """Test converting a named file connection to a path."""
         path = tmp_path / "foo"
-        with open(path, "w") as fh:
+        with Path.open(path, "w") as fh:
             store_cls._connection_to_path(fh)
             assert path == Path(fh.name)
 
