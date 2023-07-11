@@ -623,13 +623,15 @@ def download_data(url: str | Path, save_path: str | Path, overwrite: bool = Fals
             True to force overwriting of existing data, default=False
 
     """
+    save_path = Path(save_path)
+
     logger.info("Download from %s.", str(url))
     logger.info("Saving to %s.", str(save_path))
-    save_dir = Path(save_path).parent
+    save_dir = save_path.parent
 
     if not Path.exists(save_dir):
         Path.mkdir(save_dir, parents=True)
-    if not overwrite and Path.exists(Path(save_path)):
+    if not overwrite and Path.exists(save_path):
         return
 
     r = requests.get(url, timeout=500)
