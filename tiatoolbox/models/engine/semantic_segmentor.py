@@ -23,7 +23,7 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread, misc
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from multiprocessing.managers import Namespace
 
     from tiatoolbox.wsicore.wsimeta import Resolution, Units
