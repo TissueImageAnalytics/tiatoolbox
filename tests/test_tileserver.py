@@ -148,7 +148,7 @@ def test_get_index(app) -> None:
 
 
 def test_create_with_dict(sample_svs):
-    """Test initialising with layers dict."""
+    """Test initializing with layers dict."""
     wsi = WSIReader.open(Path(sample_svs))
 
     app = TileServer(
