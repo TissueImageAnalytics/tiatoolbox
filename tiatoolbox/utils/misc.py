@@ -1,10 +1,11 @@
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+from __future__ import annotations
+
 import copy
 import json
-import os
-import pathlib
 import zipfile
-from typing import IO, Dict, Optional, Tuple, Union
+from pathlib import Path
+from typing import IO
 
 import cv2
 import joblib
@@ -26,13 +27,13 @@ def split_path_name_ext(full_path):
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (str or pathlib.Path):
+        full_path (str or Path):
             Path to a file.
 
     Returns:
         tuple:
             Three parts of the input file path:
-            - :py:obj:`pathlib.Path` - Parent directory path
+            - :py:obj:`Path` - Parent directory path
             - :py:obj:`str` - File name
             - :py:obj:`list(str)` - File extensions
 
@@ -41,7 +42,7 @@ def split_path_name_ext(full_path):
         >>> dir_path, file_name, extensions = split_path_name_ext(full_path)
 
     """
-    input_path = pathlib.Path(full_path)
+    input_path = Path(full_path)
     return input_path.parent.absolute(), input_path.name, input_path.suffixes
 
 
@@ -49,7 +50,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (str or pathlib.Path):
+        input_path (str or Path):
             Path to the directory where files
             need to be searched.
         file_types (str or tuple(str)):
@@ -67,7 +68,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
         ...     file_types=file_types)
 
     """
-    input_path = pathlib.Path(input_path)
+    input_path = Path(input_path)
 
     if isinstance(file_types, str):
         if len(file_types.split(",")) > 1:
@@ -94,7 +95,7 @@ def save_yaml(
     Args:
         input_dict (dict):
             A variable of type 'dict'.
-        output_path (str or pathlib.Path):
+        output_path (str or Path):
             Path to save the output file.
         parents (bool):
             Make parent directories if they do not exist. Default is
@@ -108,14 +109,14 @@ def save_yaml(
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
 
     """
-    path = pathlib.Path(output_path)
+    path = Path(output_path)
     if path.exists() and not exist_ok:
         msg = "File already exists."
         raise FileExistsError(msg)
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
-    with open(  # skipcq: PTC-W6004: PTC-W6004
-        str(pathlib.Path(output_path)),
+    with Path.open(  # skipcq: PTC-W6004: PTC-W6004
+        str(Path(output_path)),
         "w",
     ) as yaml_file:
         yaml.dump(input_dict, yaml_file)
@@ -125,7 +126,7 @@ def imwrite(image_path, img) -> None:
     """Write numpy array to an image.
 
     Args:
-        image_path (str or pathlib.Path):
+        image_path (str or Path):
             File path (including extension) to save image to.
         img (:class:`numpy.ndarray`):
             Image array of dtype uint8, MxNx3.
@@ -137,7 +138,7 @@ def imwrite(image_path, img) -> None:
         ...     np.ones([100, 100, 3]).astype('uint8')*255)
 
     """
-    if isinstance(image_path, pathlib.Path):
+    if isinstance(image_path, Path):
         image_path = str(image_path)
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
@@ -146,7 +147,7 @@ def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or pathlib.Path):
+        image_path (str or Path):
             File path (including extension) to read image.
         as_uint8 (bool):
             Read an image in uint8 format.
@@ -160,10 +161,10 @@ def imread(image_path, as_uint8=True):
         >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
-    if isinstance(image_path, pathlib.Path):
+    if isinstance(image_path, Path):
         image_path = str(image_path)
 
-    if pathlib.Path(image_path).suffix == ".npy":
+    if Path(image_path).suffix == ".npy":
         image = np.load(image_path)
     else:
         image = cv2.imread(image_path)
@@ -178,7 +179,7 @@ def load_stain_matrix(stain_matrix_input):
     """Load a stain matrix as a numpy array.
 
     Args:
-        stain_matrix_input (ndarray or str, pathlib.Path):
+        stain_matrix_input (ndarray or str, Path):
             Either a 2x3 or 3x3 numpy array or a path to a saved .npy /
             .csv file. If using a .csv file, there should be no column
             headers provided
@@ -192,7 +193,7 @@ def load_stain_matrix(stain_matrix_input):
         >>> sm = utils.misc.load_stain_matrix(stain_matrix_input)
 
     """
-    if isinstance(stain_matrix_input, (str, pathlib.Path)):
+    if isinstance(stain_matrix_input, (str, Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
             msg = (
@@ -445,7 +446,7 @@ def read_locations(input_table):
 
     Args:
         input_table :
-            (str or pathlib.Path or :class:`numpy.ndarray` or
+            (str or Path or :class:`numpy.ndarray` or
             :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
             :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             First column in the table represents x position, second
@@ -466,7 +467,7 @@ def read_locations(input_table):
         >>> labels = read_locations('./annotations.csv')
 
     """
-    if isinstance(input_table, (str, pathlib.Path)):
+    if isinstance(input_table, (str, Path)):
         _, _, suffixes = split_path_name_ext(input_table)
 
         if suffixes[-1] == ".npy":
@@ -543,7 +544,7 @@ def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
 
 
-def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
+def parse_cv2_interpolaton(interpolation: str | int) -> int:
     """Convert a string to a OpenCV (cv2) interpolation enum.
 
     Interpolation modes:
@@ -624,11 +625,11 @@ def download_data(url, save_path, overwrite=False):
     """
     logger.info("Download from %s.", str(url))
     logger.info("Saving to %s.", str(save_path))
-    save_dir = pathlib.Path(save_path).parent
+    save_dir = Path(save_path).parent
 
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    if not overwrite and os.path.exists(save_path):
+    if not Path.exists(save_dir):
+        Path.mkdir(save_dir, parents=True)
+    if not overwrite and Path.exists(Path(save_path)):
         return
 
     r = requests.get(url, timeout=500)
@@ -640,7 +641,7 @@ def download_data(url, save_path, overwrite=False):
         msg = f"Could not find URL at {url}"
         raise ConnectionError(msg)
 
-    with open(save_path, "wb") as f:
+    with Path.open(save_path, "wb") as f:
         f.write(r.content)
 
 
@@ -648,8 +649,8 @@ def unzip_data(zip_path, save_path, del_zip=True):
     """Extract data from zip file.
 
     Args:
-        zip_path (str): Path where the zip file is located.
-        save_path (str): Path where to save extracted files.
+        zip_path (str or Path): Path where the zip file is located.
+        save_path (str or Path): Path where to save extracted files.
         del_zip (bool): Whether to delete initial zip file after extraction.
 
     """
@@ -657,8 +658,9 @@ def unzip_data(zip_path, save_path, del_zip=True):
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
     if del_zip:
+        zip_path = Path(zip_path)
         # Remove zip file
-        os.remove(zip_path)
+        Path.unlink(zip_path)
 
 
 def __walk_list_dict(in_list_dict):
@@ -717,8 +719,8 @@ def __walk_dict(dct):
 
 
 def save_as_json(
-    data: Union[dict, list],
-    save_path: Union[str, pathlib.Path],
+    data: dict | list,
+    save_path: str | Path,
     parents: bool = False,
     exist_ok: bool = False,
 ):
@@ -751,13 +753,13 @@ def save_as_json(
     else:
         __walk_list(shadow_data)
 
-    save_path = pathlib.Path(save_path)
+    save_path = Path(save_path)
     if save_path.exists() and not exist_ok:
         msg = "File already exists."
         raise FileExistsError(msg)
     if parents:
         save_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(save_path, "w") as handle:  # skipcq: PTC-W6004
+    with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
         json.dump(shadow_data, handle)
 
 
@@ -839,7 +841,7 @@ def string_to_tuple(in_str):
     return tuple(substring.strip() for substring in in_str.split(","))
 
 
-def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
+def ppu2mpp(ppu: int, units: str | int) -> float:
     """Convert pixels per unit (ppu) to microns per pixel (mpp).
 
     Args:
@@ -887,12 +889,12 @@ def select_cv2_interpolation(scale_factor):
 
 
 def store_from_dat(
-    fp: Union[IO, str, pathlib.Path],
-    scale_factor: Tuple[float, float] = (1, 1),
-    typedict: Optional[Dict] = None,
-    origin: Tuple[float, float] = (0, 0),
+    fp: IO | str | Path,
+    scale_factor: tuple[float, float] = (1, 1),
+    typedict: dict | None = None,
+    origin: tuple[float, float] = (0, 0),
     cls: AnnotationStore = SQLiteStore,
-) -> "AnnotationStore":
+) -> AnnotationStore:
     """Load annotations from a hovernet-style .dat file.
 
     Args:
@@ -1023,10 +1025,10 @@ def make_default_dict(data, subcat):
 
 def add_from_dat(
     store,
-    fp: Union[IO, str],
-    scale_factor: Tuple[float, float] = (1, 1),
-    typedict: Optional[Dict] = None,
-    origin: Tuple[float, float] = (0, 0),
+    fp: IO | str,
+    scale_factor: tuple[float, float] = (1, 1),
+    typedict: dict | None = None,
+    origin: tuple[float, float] = (0, 0),
 ) -> None:
     """Add annotations from a .dat file to an existing store.
 
