@@ -614,11 +614,11 @@ def download_data(url, save_path, overwrite=False):
     The function can overwrite data if demanded else no action is taken.
 
     Args:
-        url (path): 
+        url (path):
             URL from where to download the data.
-        save_path (str): 
+        save_path (str):
             Location to unzip the data.
-        overwrite (bool): 
+        overwrite (bool):
             True to force overwriting of existing data, default=False
 
     """
