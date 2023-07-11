@@ -1,6 +1,5 @@
 """Defines common code required for cli."""
-import os
-import pathlib
+from pathlib import Path
 from typing import Optional
 
 import click
@@ -382,28 +381,34 @@ class TIAToolboxCLI(click.Group):
 
 
 def no_input_message(
-    input_file: Optional[str or pathlib.Path] = None,
+    input_file: Optional[str or Path] = None,
     message: str = "No image input provided.\n",
-) -> None:
+) -> Path:
     """This function is called if no input is provided.
 
     Args:
-        input_file (str or pathlib.Path): Path to input file.
+        input_file (str or Path): Path to input file.
         message (str): Error message to display.
+
+    Returns:
+        Path:
+            Returns input path as :class:`Path`.
 
     """
     if input_file is None:
         ctx = click.get_current_context()
         ctx.fail(message=message)
 
+    return Path(input_file)
+
 
 def prepare_file_dir_cli(
-    img_input: str or pathlib.Path,
-    output_path: str or pathlib.Path,
+    img_input: str or Path,
+    output_path: str or Path,
     file_types: str,
     mode: str,
     sub_dirname: str,
-) -> [list, pathlib.Path]:
+) -> [list, Path]:
     """Prepares CLI for running code on multiple files or a directory.
 
     Checks for existing directories to run tests.
@@ -411,8 +416,8 @@ def prepare_file_dir_cli(
     creates list of file paths if input is a directory.
 
     Args:
-        img_input (str or pathlib.Path): file path to images.
-        output_path (str or pathlib.Path): output directory path.
+        img_input (str or Path): file path to images.
+        output_path (str or Path): output directory path.
         file_types (str): file types to process using cli.
         mode (str): wsi or tile mode.
         sub_dirname (str): name of subdirectory to save output.
@@ -424,24 +429,24 @@ def prepare_file_dir_cli(
     """
     from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
-    no_input_message(input_file=img_input)
+    img_input = no_input_message(input_file=img_input)
     file_types = string_to_tuple(in_str=file_types)
 
     if isinstance(output_path, str):
-        output_path = pathlib.Path(output_path)
+        output_path = Path(output_path)
 
-    if not os.path.exists(img_input):
+    if not Path.exists(img_input):
         raise FileNotFoundError
 
     files_all = [
         img_input,
     ]
 
-    if os.path.isdir(img_input):
+    if Path.is_dir(img_input):
         files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
 
     if output_path is None and mode == "save":
-        input_dir = pathlib.Path(img_input).parent
+        input_dir = Path(img_input).parent
         output_path = input_dir / sub_dirname
 
     if mode == "save":
@@ -451,11 +456,11 @@ def prepare_file_dir_cli(
 
 
 def prepare_model_cli(
-    img_input: str or pathlib.Path,
-    output_path: str or pathlib.Path,
-    masks: str or pathlib.Path,
+    img_input: str or Path,
+    output_path: str or Path,
+    masks: str or Path,
     file_types: str,
-) -> [list, list, pathlib.Path]:
+) -> [list, list, Path]:
     """Prepares cli for running models.
 
     Checks for existing directories to run tests.
@@ -463,28 +468,35 @@ def prepare_model_cli(
     creates list of file paths if input is a directory.
 
     Args:
-        img_input (str or pathlib.Path): file path to images.
-        output_path (str or pathlib.Path): output directory path.
-        masks (str or pathlib.Path): file path to masks.
-        file_types (str): file types to process using cli.
+        img_input (str or Path):
+            File path to images.
+        output_path (str or Path):
+            Output directory path.
+        masks (str or Path):
+            File path to masks.
+        file_types (str):
+            File types to process using cli.
 
     Returns:
-        list: list of file paths to process.
-        list: list of masks corresponding to input files.
-        pathlib.Path: output path
+        list:
+            List of file paths to process.
+        list:
+            List of masks corresponding to input files.
+        Path:
+            Output path.
 
     """
     from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
-    no_input_message(input_file=img_input)
-    output_path = pathlib.Path(output_path)
+    img_input = no_input_message(input_file=img_input)
+    output_path = Path(output_path)
     file_types = string_to_tuple(in_str=file_types)
 
     if output_path.exists():
         msg = "Path already exists."
         raise FileExistsError(msg)
 
-    if not os.path.exists(img_input):
+    if not Path.exists(img_input):
         raise FileNotFoundError
 
     files_all = [
@@ -493,11 +505,16 @@ def prepare_model_cli(
 
     masks_all = None if masks is None else [masks]
 
-    if os.path.isdir(img_input):
-        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
+    if masks is not None:
+        masks = Path(masks)
+        if masks.is_dir():
+            masks_all = grab_files_from_dir(
+                input_path=masks,
+                file_types=("*.jpg", "*.png"),
+            )
 
-    if os.path.isdir(str(masks)):
-        masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
+    if Path.is_dir(img_input):
+        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
 
     return [files_all, masks_all, output_path]
 
@@ -510,7 +527,7 @@ def prepare_ioconfig_seg(segment_config_class, pretrained_weights, yaml_config_p
     import yaml
 
     if pretrained_weights is not None:
-        with open(yaml_config_path) as registry_handle:
+        with Path.open(yaml_config_path) as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
 
         return segment_config_class(**ioconfig)
