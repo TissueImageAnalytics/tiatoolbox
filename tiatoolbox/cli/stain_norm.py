@@ -1,5 +1,5 @@
 """Command line interface for stain_norm."""
-import os
+from pathlib import Path
 
 import click
 
@@ -58,7 +58,7 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
     norm.fit(imread(target_input))
 
     for curr_file in files_all:
-        basename = os.path.basename(curr_file)
+        basename = Path.name(curr_file)
         # transform source image
         transform = norm.transform(imread(curr_file))
-        imwrite(os.path.join(output_path, basename), transform)
+        imwrite(output_path / basename, transform)
