@@ -2,7 +2,6 @@
 
 import importlib
 import logging
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -20,18 +19,18 @@ def test_set_root_dir():
     from tiatoolbox import rcParam
 
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
-    test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
+    test_dir_path = Path.cwd() / "tmp_check"
     # clean up previous test
-    if os.path.exists(test_dir_path):
-        os.rmdir(test_dir_path)
+    if Path.exists(test_dir_path):
+        Path.rmdir(test_dir_path)
     rcParam["TIATOOLBOX_HOME"] = test_dir_path
     # reimport to see if it overwrites
     # silence Deep Source because this is an intentional check
     # skipcq
     from tiatoolbox import rcParam
 
-    os.makedirs(rcParam["TIATOOLBOX_HOME"])
-    if not os.path.exists(test_dir_path):
+    rcParam["TIATOOLBOX_HOME"].mkdir(parents=True)
+    if not Path.exists(test_dir_path):
         pytest.fail(f"`{rcParam['TIATOOLBOX_HOME']}` != `{test_dir_path}`")
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"], ignore_errors=True)
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
