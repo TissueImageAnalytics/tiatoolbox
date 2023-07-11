@@ -1,14 +1,12 @@
 """This module implements semantic segmentation."""
-
+from __future__ import annotations
 
 import copy
 import logging
-import os
-import pathlib
 import shutil
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing.managers import Namespace
-from typing import Callable, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import joblib
@@ -23,8 +21,12 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread, misc
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
+
+if TYPE_CHECKING:
+    from multiprocessing.managers import Namespace
+
+    from tiatoolbox.wsicore.wsimeta import Resolution, Units
 
 
 def _estimate_canvas_parameters(sample_prediction, canvas_shape):
@@ -62,9 +64,11 @@ def _prepare_save_output(
 ):
     """Prepares for saving the cached output."""
     if save_path is not None:
-        if os.path.exists(save_path) and os.path.exists(cache_count_path):
-            cum_canvas = np.load(save_path, mmap_mode="r+")
-            count_canvas = np.load(cache_count_path, mmap_mode="r+")
+        save_path = Path(save_path)
+        cache_count_path = Path(cache_count_path)
+        if Path.exists(save_path) and Path.exists(cache_count_path):
+            cum_canvas = np.load(str(save_path), mmap_mode="r+")
+            count_canvas = np.load(str(cache_count_path), mmap_mode="r+")
             if canvas_cum_shape_ != cum_canvas.shape:
                 msg = "Existing image shape in `save_path` does not match."
                 raise ValueError(msg)
@@ -158,11 +162,11 @@ class IOSegmentorConfig(IOConfigABC):
 
     def __init__(
         self,
-        input_resolutions: List[dict],
-        output_resolutions: List[dict],
-        patch_input_shape: Union[List[int], np.ndarray],
-        patch_output_shape: Union[List[int], np.ndarray],
-        save_resolution: Optional[dict] = None,
+        input_resolutions: list[dict],
+        output_resolutions: list[dict],
+        patch_input_shape: list[int] | np.ndarray,
+        patch_output_shape: list[int] | np.ndarray,
+        save_resolution: dict | None = None,
         **kwargs,
     ) -> None:
         """Initializes :class:`IOSegmentorConfig`."""
@@ -206,7 +210,7 @@ class IOSegmentorConfig(IOConfigABC):
             raise ValueError(msg)
 
     @staticmethod
-    def scale_to_highest(resolutions: List[dict], units: Units):
+    def scale_to_highest(resolutions: list[dict], units: Units):
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
@@ -323,9 +327,9 @@ class WSIStreamDataset(torch_data.Dataset):
     def __init__(
         self,
         ioconfig: IOSegmentorConfig,
-        wsi_paths: List[Union[str, pathlib.Path]],
+        wsi_paths: list[str | Path],
         mp_shared_space: Namespace,
-        preproc: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        preproc: Callable[[np.ndarray], np.ndarray] | None = None,
         mode="wsi",
     ) -> None:
         """Initializes :class:`WSIStreamDataset`."""
@@ -350,7 +354,7 @@ class WSIStreamDataset(torch_data.Dataset):
 
     def _get_reader(self, img_path):
         """Get appropriate reader for input path."""
-        img_path = pathlib.Path(img_path)
+        img_path = Path(img_path)
         if self.mode == "wsi":
             return WSIReader.open(img_path)
         img = imread(img_path)
@@ -513,9 +517,9 @@ class SemanticSegmentor:
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,  # skipcq: PYL-W0613
-        model: Optional[torch.nn.Module] = None,
-        pretrained_model: Optional[str] = None,
-        pretrained_weights: Optional[str] = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
@@ -563,7 +567,7 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_coordinates(
-        image_shape: Union[List[int], np.ndarray],
+        image_shape: list[int] | np.ndarray,
         ioconfig: IOSegmentorConfig,
     ):
         """Calculate patch tiling coordinates.
@@ -621,8 +625,8 @@ class SemanticSegmentor:
     def filter_coordinates(
         mask_reader: VirtualWSIReader,
         bounds: np.ndarray,
-        resolution: Optional[Resolution] = None,
-        units: Optional[Units] = None,
+        resolution: Resolution | None = None,
+        units: Units | None = None,
     ):
         """Indicates which coordinate is valid basing on the mask.
 
@@ -693,14 +697,20 @@ class SemanticSegmentor:
         return np.array(flags)
 
     @staticmethod
-    def get_reader(img_path: str, mask_path: str, mode: str, auto_get_mask: bool):
+    def get_reader(
+        img_path: str,
+        mask_path: str | Path,
+        mode: str,
+        auto_get_mask: bool,
+    ):
         """Define how to get reader for mask and source image."""
-        img_path = pathlib.Path(img_path)
+        img_path = Path(img_path)
         reader = WSIReader.open(img_path)
 
         mask_reader = None
         if mask_path is not None:
-            if not os.path.isfile(mask_path):
+            mask_path = Path(mask_path)
+            if not Path.is_file(mask_path):
                 msg = "`mask_path` must be a valid file path."
                 raise ValueError(msg)
             mask = imread(mask_path)  # assume to be gray
@@ -738,8 +748,8 @@ class SemanticSegmentor:
                 Either `"tile"` or `"wsi"` to indicate run mode.
 
         """
-        cache_dir = f"{self._cache_dir}/{wsi_idx}/"
-        os.makedirs(cache_dir)
+        cache_dir = self._cache_dir / wsi_idx
+        Path.mkdir(cache_dir, parents=True)
 
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
@@ -834,7 +844,7 @@ class SemanticSegmentor:
 
     def _process_predictions(
         self,
-        cum_batch_predictions: List,
+        cum_batch_predictions: list,
         wsi_reader: WSIReader,
         ioconfig: IOSegmentorConfig,
         save_path: str,
@@ -896,11 +906,11 @@ class SemanticSegmentor:
 
     @staticmethod
     def merge_prediction(
-        canvas_shape: Union[Tuple[int], List[int], np.ndarray],
-        predictions: List[np.ndarray],
-        locations: Union[List, np.ndarray],
-        save_path: Optional[Union[str, pathlib.Path]] = None,
-        cache_count_path: Optional[Union[str, pathlib.Path]] = None,
+        canvas_shape: tuple[int] | list[int] | np.ndarray,
+        predictions: list[np.ndarray],
+        locations: list | np.ndarray,
+        save_path: str | Path | None = None,
+        cache_count_path: str | Path | None = None,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
@@ -1041,16 +1051,15 @@ class SemanticSegmentor:
                 "location under folder 'output'. Overwriting may happen! ",
                 stacklevel=2,
             )
-            save_dir = os.path.join(os.getcwd(), "output")
+            save_dir = Path.cwd() / "output"
 
-        save_dir = os.path.abspath(save_dir)
-        save_dir = pathlib.Path(save_dir)
+        save_dir = Path(save_dir).resolve()
         if save_dir.is_dir():
             msg = f"`save_dir` already exists! {save_dir}"
             raise ValueError(msg)
         save_dir.mkdir(parents=True)
-        cache_dir = f"{save_dir}/cache"
-        os.makedirs(cache_dir)
+        cache_dir = Path(f"{save_dir}/cache")
+        Path.mkdir(cache_dir, parents=True)
 
         return save_dir, cache_dir
 
@@ -1204,7 +1213,7 @@ class SemanticSegmentor:
 
         """
         try:
-            wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
+            wsi_save_path = save_dir / f"{wsi_idx}"
             self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
 
             # Do not use dict with file name as key, because it can be
@@ -1213,10 +1222,10 @@ class SemanticSegmentor:
             self._outputs.append([str(img_path), str(wsi_save_path)])
 
             # ? will this corrupt old version if control + c midway?
-            map_file_path = os.path.join(save_dir, "file_map.dat")
+            map_file_path = save_dir / "file_map.dat"
             # backup old version first
-            if os.path.exists(map_file_path):
-                old_map_file_path = os.path.join(save_dir, "file_map_old.dat")
+            if Path.exists(map_file_path):
+                old_map_file_path = save_dir / "file_map_old.dat"
                 shutil.copy(map_file_path, old_map_file_path)
             joblib.dump(self._outputs, map_file_path)
 
@@ -1465,9 +1474,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: Optional[torch.nn.Module] = None,
-        pretrained_model: Optional[str] = None,
-        pretrained_weights: Optional[str] = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
@@ -1488,7 +1497,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
     def _process_predictions(
         self,
-        cum_batch_predictions: List,
+        cum_batch_predictions: list,
         wsi_reader: WSIReader,
         ioconfig: IOSegmentorConfig,
         save_path: str,
