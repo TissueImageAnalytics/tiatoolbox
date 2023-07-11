@@ -1,7 +1,6 @@
 """Defines dataset abstract classes."""
-import os
-import pathlib
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -54,7 +53,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """
         if mode == "patch":
             self.data_is_npy_alike = False
-            is_all_paths = all(isinstance(v, (pathlib.Path, str)) for v in self.inputs)
+            is_all_paths = all(isinstance(v, (Path, str)) for v in self.inputs)
             is_all_npy = all(isinstance(v, np.ndarray) for v in self.inputs)
 
             msg = (
@@ -70,7 +69,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             shapes = None
             # When a list of paths is provided
             if is_all_paths:
-                if any(not os.path.exists(v) for v in self.inputs):
+                if any(not Path.exists(v) for v in self.inputs):
                     # at least one of the paths are invalid
                     raise ValueError(
                         msg,
@@ -107,7 +106,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             path (str): Path to an image file.
 
         """
-        path = pathlib.Path(path)
+        path = Path(path)
 
         if path.suffix not in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
             msg = f"Cannot load image data from `{path.suffix}` files."
