@@ -542,7 +542,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
         "save_resolution": {"units": "mpp", "resolution": 8.0},
     }
 
-    with Path.open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+    with Path.open(tmp_path / "config.yaml", "w+") as fptr:
         yaml.dump(config, fptr)
 
     runner = CliRunner()
