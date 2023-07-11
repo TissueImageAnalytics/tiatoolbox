@@ -37,6 +37,7 @@ def test_functional():
     h = w = 512
     samples = torch.from_numpy(np.random.rand(b, h, w, 3))
 
+    # Dummy entry, will generate ValueError if "try" fails without running the loop.
     backbone = "empty"
     try:
         for backbone in backbones:
