@@ -145,6 +145,25 @@ def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
+def sample_svs_ndpi_wsis(sample_ndpi2, sample_svs, tmpdir_factory):
+    """Sample SVS and NDPI wsi(s).
+
+    Uses sample fluorescence ndpi image.
+
+    """
+    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(sample_ndpi2.name).symlink_to(sample_ndpi2)
+        dir_path.joinpath(sample_svs.name).symlink_to(sample_svs)
+    except OSError:
+        shutil.copy(sample_ndpi2, dir_path.joinpath(sample_ndpi2.name))
+        shutil.copy(sample_svs, dir_path.joinpath(sample_svs.name))
+
+    return dir_path
+
+
+@pytest.fixture(scope="session")
 def source_image(remote_sample) -> pathlib.Path:
     """Sample pytest fixture for source image.
     Download stain normalization source image for pytest.
