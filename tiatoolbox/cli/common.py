@@ -529,7 +529,7 @@ def prepare_ioconfig_seg(segment_config_class, pretrained_weights, yaml_config_p
     import yaml
 
     if pretrained_weights is not None:
-        with Path.open(yaml_config_path) as registry_handle:
+        with Path.open(Path(yaml_config_path)) as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
 
         return segment_config_class(**ioconfig)

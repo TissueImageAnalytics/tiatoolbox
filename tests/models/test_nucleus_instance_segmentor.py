@@ -510,7 +510,7 @@ def test_functionality_local(remote_sample, tmp_path):
 
 
 def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
-    """Test for nucleus segmentation with IOconfig."""
+    """Test for nucleus segmentation with IOConfig."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
 
@@ -542,7 +542,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
         "save_resolution": {"units": "mpp", "resolution": 8.0},
     }
 
-    with Path.open(tmp_path / "config.yaml", "w+") as fptr:
+    with Path.open(tmp_path / "config.yaml", "w") as fptr:
         yaml.dump(config, fptr)
 
     runner = CliRunner()
@@ -563,7 +563,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
             "--output-path",
             str(output_path),
             "--yaml-config-path",
-            tmp_path.joinpath("config.yaml"),
+            str(tmp_path.joinpath("config.yaml")),
         ],
     )
 
