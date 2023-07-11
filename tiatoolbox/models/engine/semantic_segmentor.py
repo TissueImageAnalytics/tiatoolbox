@@ -748,8 +748,8 @@ class SemanticSegmentor:
                 Either `"tile"` or `"wsi"` to indicate run mode.
 
         """
-        cache_dir = self._cache_dir / wsi_idx
-        Path.mkdir(cache_dir, parents=True)
+        cache_dir = self._cache_dir / str(wsi_idx)
+        cache_dir.mkdir(parents=True)
 
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
