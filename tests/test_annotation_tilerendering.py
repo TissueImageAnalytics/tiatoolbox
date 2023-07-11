@@ -345,7 +345,7 @@ def test_colour_prop_warnings(fill_store, tmp_path, caplog):
     renderer = AnnotationRenderer(score_prop="type", mapper="jet")
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tg.get_tile(1, 0, 0)
-    assert "property value type incompatable" in caplog.text
+    assert "property value type incompatible" in caplog.text
 
 
 def test_blur(fill_store, tmp_path):
