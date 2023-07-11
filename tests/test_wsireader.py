@@ -4,7 +4,6 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import os
 import pathlib
 import random
 import re
@@ -82,7 +81,7 @@ COLOR_DICT = {
 
 def _get_temp_folder_path(prefix="temp"):
     """Return unique temp folder path."""
-    return os.path.join(rcParam["TIATOOLBOX_HOME"], f"{prefix}-{int(time())}")
+    return rcParam["TIATOOLBOX_HOME"] / f"{prefix}-{int(time())}"
 
 
 def strictly_increasing(sequence: Iterable) -> bool:
@@ -1467,7 +1466,7 @@ def test_wsireader_open(
 
     # test loading .npy
     temp_dir = _get_temp_folder_path()
-    os.mkdir(temp_dir)
+    temp_dir.mkdir()
     temp_file = f"{temp_dir}/sample.npy"
     np.save(temp_file, np.random.randint(1, 255, [5, 5, 5]))
     wsi_out = WSIReader.open(temp_file)
@@ -1952,7 +1951,7 @@ def test_is_zarr_array(tmp_path):
         "filters": None,
         "zarr_format": 2,
     }
-    with open(_zarray_path, "w") as f:
+    with Path.open(_zarray_path, "w") as f:
         json.dump(minimal_zarray, f)
     assert is_zarr(zarr_dir)
 
@@ -1965,7 +1964,7 @@ def test_is_zarr_group(tmp_path):
     minimal_zgroup = {
         "zarr_format": 2,
     }
-    with open(_zgroup_path, "w") as f:
+    with Path.open(_zgroup_path, "w") as f:
         json.dump(minimal_zgroup, f)
     assert is_zarr(zarr_dir)
 
@@ -2093,10 +2092,10 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, caplog):
     # Create a copy of the sample with a non-micrometer scale
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["axes"][0]["unit"] = "foo"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
 
     wsi = wsireader.NGFFWSIReader(sample_copy)
@@ -2111,10 +2110,10 @@ def test_ngff_zattrs_missing_axes_mpp(tmp_path):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["axes"] = []
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
@@ -2126,10 +2125,10 @@ def test_ngff_empty_datasets_mpp(tmp_path):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["datasets"] = []
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
@@ -2141,12 +2140,12 @@ def test_ngff_no_scale_transforms_mpp(tmp_path):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     for i, _ in enumerate(zattrs["multiscales"][0]["datasets"]):
         datasets = zattrs["multiscales"][0]["datasets"][i]
         datasets["coordinateTransformations"][0]["type"] = "identity"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
@@ -2158,11 +2157,11 @@ def test_ngff_missing_omero_version(tmp_path):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Remove the omero version
     del zattrs["omero"]["version"]
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsireader.WSIReader.open(sample_copy)
 
@@ -2173,11 +2172,11 @@ def test_ngff_missing_multiscales_returns_false(tmp_path):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Remove the multiscales key
     del zattrs["multiscales"]
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     assert not wsireader.is_ngff(sample_copy)
 
@@ -2188,11 +2187,11 @@ def test_ngff_wrong_format_metadata(tmp_path, caplog):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"] = "foo"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with caplog.at_level(logging.WARNING):
         assert not wsireader.is_ngff(sample_copy)
@@ -2205,11 +2204,11 @@ def test_ngff_omero_below_min_version(tmp_path):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["omero"]["version"] = "0.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
@@ -2221,11 +2220,11 @@ def test_ngff_omero_above_max_version(tmp_path, caplog):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["omero"]["version"] = "10.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     # Check that the warning is logged
     with caplog.at_level(logging.WARNING):
@@ -2239,11 +2238,11 @@ def test_ngff_multiscales_below_min_version(tmp_path):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"][0]["version"] = "0.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
@@ -2255,11 +2254,11 @@ def test_ngff_multiscales_above_max_version(tmp_path, caplog):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"][0]["version"] = "10.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     # Check that the warning is logged
     with caplog.at_level(logging.WARNING):
@@ -2288,11 +2287,11 @@ def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Set the omero version to a non-numeric string
     zattrs["omero"]["version"] = "0.5-dev"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsireader.WSIReader.open(sample_copy)
 
@@ -2303,7 +2302,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Set the versions to be inconsistent
     multiscales = zattrs["multiscales"]
@@ -2313,7 +2312,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
     for i, _ in enumerate(multiscales):
         multiscales[i]["version"] = f"0.{i}-dev"
     zattrs["omero"]["multiscales"] = multiscales
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     # Capture logger output to check for warning
     with caplog.at_level(logging.WARNING), pytest.raises(FileNotSupportedError):
