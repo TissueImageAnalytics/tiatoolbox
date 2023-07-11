@@ -1,9 +1,8 @@
 """This module implements patch level prediction."""
 
 import copy
-import os
-import pathlib
 from collections import OrderedDict
+from pathlib import Path
 from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
@@ -254,7 +253,7 @@ class PatchPredictor:
 
     @staticmethod
     def merge_predictions(
-        img: Union[str, pathlib.Path, np.ndarray],
+        img: Union[str, Path, np.ndarray],
         output: dict,
         resolution: Optional[Resolution] = None,
         units: Optional[Units] = None,
@@ -555,7 +554,7 @@ class PatchPredictor:
                 "location under folder 'output'. Overwriting may happen!",
                 stacklevel=2,
             )
-            save_dir = pathlib.Path(os.getcwd()).joinpath("output")
+            save_dir = Path.cwd() / "output"
         elif save_dir is not None and len(imgs) > 1:
             logger.warning(
                 "When providing multiple whole-slide images / tiles, "
@@ -565,7 +564,7 @@ class PatchPredictor:
             )
 
         if save_dir is not None:
-            save_dir = pathlib.Path(save_dir)
+            save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=False)
 
         return save_dir
@@ -689,6 +688,7 @@ class PatchPredictor:
         """
         # return coordinates of patches processed within a tile / whole-slide image
         return_coordinates = True
+        save_dir = str(save_dir)
 
         # None if no output
         outputs = None
@@ -701,7 +701,7 @@ class PatchPredictor:
             save_output = True
 
         for idx, img_path in enumerate(imgs):
-            img_path = pathlib.Path(img_path)
+            img_path = Path(img_path)
             img_label = None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
@@ -744,7 +744,7 @@ class PatchPredictor:
                 img_code = f"{idx:0{len(str(len(imgs)))}d}"
 
                 save_info = {}
-                save_path = os.path.join(str(save_dir), img_code)
+                save_path = save_dir / img_code
                 raw_save_path = f"{save_path}.raw.json"
                 save_info["raw"] = raw_save_path
                 save_as_json(output_model, raw_save_path)
