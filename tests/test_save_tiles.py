@@ -1,6 +1,5 @@
 """Tests for code related to saving image tiles."""
 
-import os
 import pathlib
 
 from click.testing import CliRunner
@@ -26,7 +25,7 @@ def test_command_line_save_tiles(sample_svs_ndpi_wsis, tmp_path):
             "--tile-objective-value",
             "5",
             "--output-path",
-            os.path.join(tmp_path, "all_tiles"),
+            str(tmp_path / "all_tiles"),
         ],
     )
 
