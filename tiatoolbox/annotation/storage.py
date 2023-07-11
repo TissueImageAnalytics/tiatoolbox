@@ -150,7 +150,7 @@ class Annotation:
         Returns:
             Annotation:
                 The annotation with a WKB geometry.
-        
+
         """
         return Annotation(self.geometry.wkb, self.properties)
 

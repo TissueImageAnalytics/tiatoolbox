@@ -689,14 +689,14 @@ class AnnotationRenderer:
 
     def get_color(self, annotation: Annotation, edge=False):
         """Get the color for an annotation.
-        
+
         Args:
             annotation (Annotation):
                 Annotation to get color for.
             edge (bool):
                 Whether to get the color for the edge of the annotation,
                 or the interior.
-        
+
         Returns:
             tuple:
                 A color tuple (rgba).
@@ -894,7 +894,7 @@ class AnnotationRenderer:
             border (int):
                 The border to add around the tile. Defaults to 0. Used for blurred
                 rendering to avoid edge effects.
-        
+
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.
