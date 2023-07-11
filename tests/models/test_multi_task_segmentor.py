@@ -5,7 +5,6 @@ import copy
 # ! The garbage collector
 import gc
 import multiprocessing
-import os
 import pathlib
 import shutil
 
@@ -261,7 +260,7 @@ def test_empty_image(tmp_path):
     """Tests MultiTaskSegmentor for an empty image."""
     root_save_dir = pathlib.Path(tmp_path)
     sample_patch = np.ones((256, 256, 3), dtype="uint8") * 255
-    sample_patch_path = os.path.join(root_save_dir, "sample_tile.png")
+    sample_patch_path = root_save_dir / "sample_tile.png"
     imwrite(sample_patch_path, sample_patch)
 
     save_dir = root_save_dir / "hovernetplus"
