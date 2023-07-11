@@ -503,10 +503,12 @@ def prepare_model_cli(
         img_input,
     ]
 
-    masks_all = None if masks is None else [masks]
+    masks_all = None
 
     if masks is not None:
         masks = Path(masks)
+        if masks.is_file():
+            masks_all = [masks]
         if masks.is_dir():
             masks_all = grab_files_from_dir(
                 input_path=masks,
