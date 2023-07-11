@@ -4,7 +4,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-import pkg_resources
+import importlib_resources
 import yaml
 
 __author__ = """TIA Lab"""
@@ -67,12 +67,14 @@ rcParam = {  # noqa: N816
 }
 
 # Load a dictionary of sample files data (names and urls)
-PRETRAINED_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
-    "tiatoolbox",
-    "data/pretrained_model.yaml",
+PRETRAINED_FILES_REGISTRY_PATH = importlib_resources.as_file(
+    importlib_resources.files("tiatoolbox") / "data/pretrained_model.yaml",
 )
-with Path.open(PRETRAINED_FILES_REGISTRY_PATH) as registry_handle:
+
+with PRETRAINED_FILES_REGISTRY_PATH as registry_file_path:
+    registry_handle = Path.open(registry_file_path)
     PRETRAINED_INFO = yaml.safe_load(registry_handle)
+
 rcParam["pretrained_model_info"] = PRETRAINED_INFO
 
 
