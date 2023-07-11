@@ -115,7 +115,7 @@ def save_yaml(
         raise FileExistsError(msg)
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
-    with Path.open(  # skipcq: PTC-W6004: PTC-W6004
+    with Path.open(
         str(Path(output_path)),
         "w",
     ) as yaml_file:
@@ -161,13 +161,13 @@ def imread(image_path, as_uint8=True):
         >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
-    if isinstance(image_path, Path):
-        image_path = str(image_path)
+    if isinstance(image_path, str):
+        image_path = Path(image_path)
 
-    if Path(image_path).suffix == ".npy":
-        image = np.load(image_path)
+    if image_path.suffix == ".npy":
+        image = np.load(str(image_path))
     else:
-        image = cv2.imread(image_path)
+        image = cv2.imread(str(image_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
         return image.astype(np.uint8)

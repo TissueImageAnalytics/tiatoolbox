@@ -1,4 +1,5 @@
 """Top-level package for TIA Toolbox."""
+from __future__ import annotations
 
 import importlib.util
 import sys
@@ -66,16 +67,30 @@ rcParam = {  # noqa: N816
     "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
 }
 
+
+def read_registry_files(path_to_registry: str | Path):
+    """Reads registry files using importlib_resources.
+
+    Args:
+        path_to_registry (str or Path):
+            Path to registry files from tiatoolbox root.
+
+    Returns:
+        Contents of yaml file.
+
+
+    """
+    pretrained_files_registry_path = importlib_resources.as_file(
+        importlib_resources.files("tiatoolbox") / path_to_registry,
+    )
+
+    with pretrained_files_registry_path as registry_file_path:
+        registry_handle = Path.open(registry_file_path)
+        return yaml.safe_load(registry_handle)
+
+
 # Load a dictionary of sample files data (names and urls)
-PRETRAINED_FILES_REGISTRY_PATH = importlib_resources.as_file(
-    importlib_resources.files("tiatoolbox") / "data/pretrained_model.yaml",
-)
-
-with PRETRAINED_FILES_REGISTRY_PATH as registry_file_path:
-    registry_handle = Path.open(registry_file_path)
-    PRETRAINED_INFO = yaml.safe_load(registry_handle)
-
-rcParam["pretrained_model_info"] = PRETRAINED_INFO
+rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.yaml")
 
 
 def _lazy_import(name: str, module_location: Path):
