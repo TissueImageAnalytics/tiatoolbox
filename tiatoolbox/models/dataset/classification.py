@@ -1,6 +1,5 @@
 """Defines classes and methods for classification datasets."""
-import os
-import pathlib
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -172,10 +171,10 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 Can be either `wsi` or `tile` to denote the image to
                 read is either a whole-slide image or a large image
                 tile.
-            img_path (:obj:`str` or :obj:`pathlib.Path`):
+            img_path (str or Path):
                 Valid to pyramidal whole-slide image or large tile to
                 read.
-            mask_path (:obj:`str` or :obj:`pathlib.Path`):
+            mask_path (str or Path):
                 Valid mask image.
             patch_input_shape:
                 A tuple (int, int) or ndarray of shape (2,). Expected
@@ -225,7 +224,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         super().__init__()
 
         # Is there a generic func for path test in toolbox?
-        if not os.path.isfile(img_path):
+        if not Path.is_file(Path(img_path)):
             msg = "`img_path` must be a valid file path."
             raise ValueError(msg)
         if mode not in ["wsi", "tile"]:
@@ -250,7 +249,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             raise ValueError(msg)
 
         self.preproc_func = preproc_func
-        img_path = pathlib.Path(img_path)
+        img_path = Path(img_path)
         if mode == "wsi":
             self.reader = WSIReader.open(img_path)
         else:
@@ -259,8 +258,6 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 '`units="baseline"` and `resolution=1.0`.',
                 stacklevel=2,
             )
-            units = "baseline"
-            resolution = 1.0
             img = imread(img_path)
             axes = "YXS"[: len(img.shape)]
             # initialise metadata for VirtualWSIReader.
@@ -297,7 +294,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         mask_reader = None
         if mask_path is not None:
-            if not os.path.isfile(mask_path):
+            mask_path = Path(mask_path)
+            if not Path.is_file(mask_path):
                 msg = "`mask_path` must be a valid file path."
                 raise ValueError(msg)
             mask = imread(mask_path)  # assume to be gray
