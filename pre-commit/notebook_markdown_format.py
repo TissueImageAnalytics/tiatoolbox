@@ -61,7 +61,7 @@ def main(files: list[Path]) -> None:
         if not changed:
             continue
         print("Formatting notebook", path)
-        with open(path, "w") as fh:
+        with Path.open(path, "w") as fh:
             json.dump(formatted_notebook, fh, indent=1, ensure_ascii=False)
             fh.write("\n")
 
