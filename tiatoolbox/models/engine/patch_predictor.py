@@ -688,7 +688,12 @@ class PatchPredictor:
         """
         # return coordinates of patches processed within a tile / whole-slide image
         return_coordinates = True
-        save_dir = str(save_dir)
+        if save_dir is None:
+            save_dir = Path.cwd()
+            if isinstance(imgs[0], (str, Path)):
+                save_dir = imgs[0].parent / "output"
+        else:
+            save_dir = Path(save_dir)
 
         # None if no output
         outputs = None

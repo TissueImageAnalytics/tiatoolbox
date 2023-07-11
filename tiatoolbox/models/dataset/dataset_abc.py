@@ -69,7 +69,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             shapes = None
             # When a list of paths is provided
             if is_all_paths:
-                if any(not Path.exists(v) for v in self.inputs):
+                if any(not Path(v).exists() for v in self.inputs):
                     # at least one of the paths are invalid
                     raise ValueError(
                         msg,

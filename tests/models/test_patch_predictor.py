@@ -29,7 +29,7 @@ ON_GPU = toolbox_env.has_gpu()
 
 def _rm_dir(path):
     """Helper func to remove directory."""
-    if Path.exists(path):
+    if Path(path).exists():
         shutil.rmtree(path, ignore_errors=True)
 
 
@@ -778,7 +778,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
         **_kwargs,
     )
     for output_info in output.values():
-        assert Path.exists(output_info["raw"])
+        assert Path(output_info["raw"]).exists()
         assert "merged" not in output_info
     _rm_dir(_kwargs["save_dir"])
 
@@ -816,9 +816,9 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     )
     assert Path.exists(Path("output"))
     for output_info in output.values():
-        assert Path.exists(output_info["raw"])
+        assert Path(output_info["raw"]).exists()
         assert "merged" in output_info
-        assert Path.exists(output_info["merged"])
+        assert Path(output_info["merged"]).exists()
 
     # remove previously generated data
     _rm_dir("output")
