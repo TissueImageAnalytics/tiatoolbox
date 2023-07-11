@@ -904,7 +904,7 @@ def test_read_point_annotations(
 
     # Test if input npy does not have 2 or 3 columns
     labels = tmp_path.joinpath("test_gt_3col.npy")
-    with open(labels, "wb") as f:
+    with Path.open(labels, "wb") as f:
         np.save(f, np.zeros((3, 4)))
 
     with pytest.raises(ValueError, match="Numpy table should be of format"):
@@ -950,18 +950,18 @@ def test_grab_files_from_dir(sample_visual_fields):
 def test_download_unzip_data():
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
-    if os.path.exists(save_dir_path):
+    save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
+    if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.makedirs(save_dir_path)
-    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+    save_dir_path.mkdir(parents=True)
+    save_zip_path = save_dir_path / "test_directory.zip"
     misc.download_data(url, save_zip_path)
     misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
     misc.unzip_data(save_zip_path, save_dir_path, del_zip=False)  # not remove
-    assert os.path.exists(save_zip_path)
+    assert Path.exists(save_zip_path)
     misc.unzip_data(save_zip_path, save_dir_path)
 
-    extracted_path = os.path.join(save_dir_path, "test_directory")
+    extracted_path = save_dir_path / "test_directory"
     # to avoid hidden files in case of MAC-OS or Windows (?)
     extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith(".")]
     extracted_dirs.sort()  # ensure same ordering
@@ -973,45 +973,45 @@ def test_download_unzip_data():
 def test_download_data():
     """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
-    if os.path.exists(save_dir_path):
+    save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
+    if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+    save_zip_path = save_dir_path / "test_directory.zip"
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         old_hash = hashlib.md5(handle.read()).hexdigest()
     # modify the content
-    with open(save_zip_path, "wb") as fptr:
+    with Path.open(save_zip_path, "wb") as fptr:
         fptr.write(b"dataXXX")  # random data
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         bad_hash = hashlib.md5(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         new_hash = hashlib.md5(handle.read()).hexdigest()
     assert new_hash == old_hash
 
     # Test not overwriting
     # Modify the content
-    with open(save_zip_path, "wb") as handle:
+    with Path.open(save_zip_path, "wb") as handle:
         handle.write(b"dataXXX")  # random data
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         bad_hash = hashlib.md5(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         new_hash = hashlib.md5(handle.read()).hexdigest()
     assert new_hash == bad_hash
 
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
     misc.download_data(url, save_zip_path)  # to test skip download
-    assert os.path.exists(save_zip_path)
+    assert Path.exists(save_zip_path)
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # URL not valid
     # shouldn't use save_path if test runs correctly
-    save_path = os.path.join(save_dir_path, "temp")
+    save_path = save_dir_path / "temp"
     with pytest.raises(ConnectionError):
         misc.download_data(
             "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url",
@@ -1302,7 +1302,7 @@ def test_save_as_json(tmp_path):
     # test complex nested dict
     print(sample)
     misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
-    with open(tmp_path / "sample_json.json") as fptr:
+    with Path.open(tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
@@ -1310,7 +1310,7 @@ def test_save_as_json(tmp_path):
 
     # Allow parent directories
     misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
-    with open(tmp_path / "foo" / "sample_json.json") as fptr:
+    with Path.open(tmp_path / "foo" / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
@@ -1323,7 +1323,7 @@ def test_save_as_json(tmp_path):
         exist_ok=True,
     )
     # test read because == is useless when value is mutable
-    with open(tmp_path / "sample_json.json") as fptr:
+    with Path.open(tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
