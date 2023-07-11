@@ -575,7 +575,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
         model=model,
         auto_generate_mask=True,
     )
-    output_list = semantic_segmentor.predict(
+    _ = semantic_segmentor.predict(
         [mini_wsi_svs],
         masks=[mini_wsi_msk],
         mode="wsi",
@@ -819,13 +819,13 @@ def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
     imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+    sample_wsi_msk = tmp_path / "small_svs_tissue_mask.jpg"
 
     # Make multiple copies for test
-    dir_path = tmp_path.joinpath("new_copies")
+    dir_path = tmp_path / "new_copies"
     dir_path.mkdir()
 
-    dir_path_masks = tmp_path.joinpath("new_copies_masks")
+    dir_path_masks = tmp_path / "new_copies_masks"
     dir_path_masks.mkdir()
 
     try:
@@ -842,7 +842,7 @@ def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
         shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("1_" + sample_wsi_msk.name))
         shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("2_" + sample_wsi_msk.name))
 
-    tmp_path = tmp_path.joinpath("output")
+    tmp_path = tmp_path / "output"
 
     runner = CliRunner()
     semantic_segment_result = runner.invoke(
