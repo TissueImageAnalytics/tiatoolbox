@@ -161,6 +161,10 @@ def imread(image_path, as_uint8=True):
         >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
+    if not isinstance(image_path, (str, Path)):
+        msg = "Please provide path to an image."
+        raise TypeError(msg)
+
     if isinstance(image_path, str):
         image_path = Path(image_path)
 
