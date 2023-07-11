@@ -1,7 +1,6 @@
 """Top-level package for TIA Toolbox."""
 
 import importlib.util
-import os
 import sys
 from pathlib import Path
 
