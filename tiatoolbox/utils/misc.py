@@ -353,7 +353,7 @@ def mpp2objective_power(mpp):
 
 
 def contrast_enhancer(img, low_p=2, high_p=98):
-    """Enhances contrast of the input image using intensity adjustment.
+    """Enhance contrast of the input image using intensity adjustment.
 
     This method uses both image low and high percentiles.
 
