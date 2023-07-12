@@ -5,11 +5,15 @@ Borrowed from https://github.com/John-P/wsic
 Based on version 0.4 of the specification:
 https://ngff.openmicroscopy.org/0.4/
 """
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from numbers import Number
-from typing import List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 from tiatoolbox import __version__ as tiatoolbox_version
+
+if TYPE_CHECKING:
+    from numbers import Number
 
 SpaceUnits = Literal[
     "angstrom",
@@ -94,7 +98,7 @@ class CoordinateTransform:
     """
 
     type: str = "identity"  # noqa: A003
-    scale: Optional[List[float]] = None
+    scale: list[float] | None = None
 
 
 @dataclass
@@ -110,7 +114,7 @@ class Dataset:
     """
 
     path: str = "0"
-    coordinateTransformations: List[CoordinateTransform] = field(  # noqa: N815
+    coordinateTransformations: list[CoordinateTransform] = field(  # noqa: N815
         default_factory=lambda: [CoordinateTransform()],
     )
 
@@ -132,7 +136,7 @@ class Axis:
 
     name: TCZYX
     type: Literal["time", "space", "channel"]  # noqa: A003
-    unit: Optional[Union[SpaceUnits, TimeUnits]] = None
+    unit: SpaceUnits | TimeUnits | None = None
 
 
 @dataclass
@@ -148,14 +152,14 @@ class Multiscales:
             The version of the specification.
     """
 
-    axes: List[Axis] = field(
+    axes: list[Axis] = field(
         default_factory=lambda: [
             Axis("y", "space", "micrometer"),
             Axis("x", "space", "micrometer"),
             Axis("c", "channel", None),
         ],
     )
-    datasets: List[Dataset] = field(default_factory=lambda: [Dataset()])
+    datasets: list[Dataset] = field(default_factory=lambda: [Dataset()])
     version: str = "0.4"
 
 
@@ -242,7 +246,7 @@ class Omero:
             The version of the specification.
     """
 
-    name: Optional[str] = None
+    name: str | None = None
     id: int = 1  # noqa: A003
     channels: list = field(
         default_factory=lambda: [
@@ -271,8 +275,8 @@ class Zattrs:
     """
 
     _creator: Creator = field(default_factory=Creator)
-    multiscales: Union[Multiscales, List[Multiscales]] = field(
+    multiscales: Multiscales | list[Multiscales] = field(
         default_factory=lambda: [Multiscales()],
     )
-    _ARRAY_DIMENSIONS: List[TCZYX] = field(default_factory=lambda: ["y", "x", "c"])
+    _ARRAY_DIMENSIONS: list[TCZYX] = field(default_factory=lambda: ["y", "x", "c"])
     omero: Omero = field(default_factory=Omero)

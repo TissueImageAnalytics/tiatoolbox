@@ -1,4 +1,6 @@
 """Simple check to ensure each code cell in a notebook is valid Python."""
+from __future__ import annotations
+
 import argparse
 import json
 import re
@@ -6,7 +8,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Set, Tuple
 
 
 def git_branch_name() -> str:
@@ -18,7 +19,7 @@ def git_branch_name() -> str:
     )
 
 
-def git_branch_modified_paths(from_ref: str, to_ref: str) -> Set[Path]:
+def git_branch_modified_paths(from_ref: str, to_ref: str) -> set[Path]:
     """Get a set of file paths modified on this branch vs develop."""
     from_to = f"{from_ref}...{to_ref}"
     return {
@@ -37,7 +38,7 @@ def git_branch_modified_paths(from_ref: str, to_ref: str) -> Set[Path]:
     }
 
 
-def git_previous_commit_modified_paths() -> Set[Path]:
+def git_previous_commit_modified_paths() -> set[Path]:
     """Get a set of file paths modified in the previous commit."""
     return {
         Path(p)
@@ -72,7 +73,7 @@ class PatternReplacement:
 MAIN_BRANCHES = ("master", "main")
 
 
-def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
+def main(files: list[Path], from_ref: str, to_ref: str) -> bool:
     """Check that URLs in the notebook are relative to the current branch.
 
     Args:
@@ -161,8 +162,8 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
 def check_notebook(
     path: Path,
     to_ref: str,
-    replacements: List[PatternReplacement],
-) -> Tuple[bool, dict]:
+    replacements: list[PatternReplacement],
+) -> tuple[bool, dict]:
     """Check the notebook for URL replacements.
 
     Args:
@@ -199,7 +200,7 @@ def check_notebook(
     return changed, notebook
 
 
-def replace_line(line: str, to_ref: str, replacements: List[PatternReplacement]) -> str:
+def replace_line(line: str, to_ref: str, replacements: list[PatternReplacement]) -> str:
     """Perform pattern replacements in the line.
 
     Args:

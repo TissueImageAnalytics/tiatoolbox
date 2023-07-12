@@ -1,7 +1,8 @@
 """Stain augmentation."""
+from __future__ import annotations
+
 import copy
 import random
-from typing import Optional
 
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
@@ -102,7 +103,7 @@ class StainAugmentor(ImageOnlyTransform):
     def __init__(
         self,
         method: str = "vahadane",
-        stain_matrix: Optional[np.ndarray] = None,
+        stain_matrix: np.ndarray | None = None,
         sigma1: float = 0.4,
         sigma2: float = 0.2,
         augment_background: bool = False,

@@ -90,6 +90,7 @@ sqlite: #####################
 ```
 
 """
+from __future__ import annotations
 
 import argparse
 import copy
@@ -98,10 +99,9 @@ import re
 import subprocess
 import sys
 import warnings
-from numbers import Number
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Generator, Tuple
+from typing import TYPE_CHECKING, Generator
 
 sys.path.append("../")
 
@@ -145,13 +145,16 @@ from tiatoolbox.annotation.storage import (  # noqa: E402
     SQLiteStore,
 )
 
+if TYPE_CHECKING:
+    from numbers import Number
+
 
 def cell_polygon(
-    xy: Tuple[Number, Number],
+    xy: tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 8,
     noise: Number = 0.01,
-    eccentricity: Tuple[Number, Number] = (1, 3),
+    eccentricity: tuple[Number, Number] = (1, 3),
     repeat_first: bool = True,
     direction: str = "CCW",
     seed: int = 0,
@@ -220,7 +223,7 @@ def cell_polygon(
 
 
 def cell_grid(
-    size: Tuple[int, int] = (10, 10),
+    size: tuple[int, int] = (10, 10),
     spacing: Number = 25,
 ) -> Generator[Polygon, None, None]:
     """Generate a grid of cell boundaries."""
@@ -239,7 +242,7 @@ STORES = {
 def main(
     store: str,
     in_memory: bool,
-    size: Tuple[int, int],
+    size: tuple[int, int],
 ) -> None:
     """Run the benchmark.
 

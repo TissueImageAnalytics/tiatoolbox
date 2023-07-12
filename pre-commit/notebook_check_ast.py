@@ -1,13 +1,14 @@
 """Simple check to ensure each code cell in a notebook is valid Python."""
+from __future__ import annotations
+
 import argparse
 import ast
 import json
 import sys
 from pathlib import Path
-from typing import List
 
 
-def main(files: List[Path]) -> bool:
+def main(files: list[Path]) -> bool:
     """Check each file in the list of files for valid Python."""
     passed = True
     for path in files:

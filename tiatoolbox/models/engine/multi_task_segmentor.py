@@ -19,14 +19,14 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """This module enables multi-task segmentors."""
+from __future__ import annotations
 
 import shutil
-from typing import Callable, List, Optional
+from typing import TYPE_CHECKING, Callable
 
 # replace with the sql database once the PR in place
 import joblib
 import numpy as np
-import torch
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
@@ -38,6 +38,9 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     WSIStreamDataset,
 )
+
+if TYPE_CHECKING:
+    import torch
 
 
 # Python is yet to be able to natively pickle Object method/static method.
@@ -239,13 +242,13 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: Optional[torch.nn.Module] = None,
-        pretrained_model: Optional[str] = None,
-        pretrained_weights: Optional[str] = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-        output_types: Optional[List] = None,
+        output_types: list | None = None,
     ) -> None:
         """Initialize :class:`MultiTaskSegmentor`."""
         super().__init__(

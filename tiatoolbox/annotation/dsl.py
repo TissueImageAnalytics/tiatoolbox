@@ -55,12 +55,14 @@ Compile options:
     - `//` (floor division)
 
 """
+from __future__ import annotations
+
 import json
 import operator
 import re
 from dataclasses import dataclass
 from numbers import Number
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable
 
 
 @dataclass
@@ -206,9 +208,9 @@ class SQLTriplet(SQLExpression):
 
     def __init__(
         self,
-        lhs: Union["SQLTriplet", str],
-        op: Optional[Union[Callable, str]] = None,
-        rhs: Optional[Union["SQLTriplet", str]] = None,
+        lhs: SQLTriplet | str,
+        op: Callable | str | None = None,
+        rhs: SQLTriplet | str | None = None,
     ) -> None:
         """Initialize :class:`SQLTriplet`."""
         self.lhs = lhs
@@ -257,7 +259,7 @@ class SQLTriplet(SQLExpression):
 class SQLJSONDictionary(SQLExpression):
     """Representation of an SQL expression to access JSON properties."""
 
-    def __init__(self, acc: Optional[str] = None) -> None:
+    def __init__(self, acc: str | None = None) -> None:
         """Initialize :class:`SQLJSONDictionary`."""
         self.acc = acc or ""
 
@@ -265,7 +267,7 @@ class SQLJSONDictionary(SQLExpression):
         """Return a human-readable, or informal, string representation of an object."""
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
-    def __getitem__(self, key: str) -> "SQLJSONDictionary":
+    def __getitem__(self, key: str) -> SQLJSONDictionary:
         """Get an item from the dataset."""
         key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
 
@@ -300,7 +302,7 @@ class SQLRegex(SQLExpression):
         return f"({string} REGEXP {pattern})"
 
     @classmethod
-    def search(cls, pattern: str, string: str, flags: int = 0) -> "SQLRegex":
+    def search(cls, pattern: str, string: str, flags: int = 0) -> SQLRegex:
         """Return an SQL expression to match a string against a pattern."""
         return SQLRegex(pattern, string, int(flags))
 
@@ -315,7 +317,7 @@ def py_is_not_none(x: Any) -> bool:
     return x is not None
 
 
-def py_regexp(pattern: str, string: str, flags: int = 0) -> Optional[str]:
+def py_regexp(pattern: str, string: str, flags: int = 0) -> str | None:
     """Check if string matches pattern."""
     reg = re.compile(pattern, flags=flags)
     match = reg.search(string)
@@ -353,7 +355,7 @@ def json_contains(json_str: str, x: object) -> bool:
     return x in json.loads(json_str)
 
 
-def sql_is_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
+def sql_is_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:
     """Check if x is None.
 
     Returns:
@@ -364,7 +366,7 @@ def sql_is_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
     return SQLTriplet(x, "is_none")
 
 
-def sql_is_not_none(x: Union[SQLExpression, Number, str, bool]) -> SQLTriplet:
+def sql_is_not_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:
     """Check if x is not None.
 
     Returns:
@@ -390,7 +392,7 @@ def sql_list_sum(x: SQLJSONDictionary) -> SQLTriplet:
     return SQLTriplet(x, "list_sum")
 
 
-def sql_has_key(dictionary: SQLJSONDictionary, key: Union[str, int]) -> SQLTriplet:
+def sql_has_key(dictionary: SQLJSONDictionary, key: str | int) -> SQLTriplet:
     """Check if a dictionary has a key.
 
     Args:

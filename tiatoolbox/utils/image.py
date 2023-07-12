@@ -1,5 +1,5 @@
 """Miscellaneous utilities which operate on image data."""
-from typing import Tuple, Union
+from __future__ import annotations
 
 import numpy as np
 from PIL import Image
@@ -174,11 +174,11 @@ def make_bounds_size_positive(bounds):
 
 
 def crop_and_pad_edges(
-    bounds: Tuple[int, int, int, int],
-    max_dimensions: Tuple[int, int],
+    bounds: tuple[int, int, int, int],
+    max_dimensions: tuple[int, int],
     region: np.ndarray,
     pad_mode: str = "constant",
-    pad_constant_values: Union[int, Tuple] = 0,
+    pad_constant_values: int | tuple = 0,
 ) -> np.ndarray:
     """Apply padding to areas of a region which are outside max dimensions.
 

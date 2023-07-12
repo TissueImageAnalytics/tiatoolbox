@@ -1,5 +1,5 @@
 """Define Image transforms."""
-from typing import Tuple, Union
+from __future__ import annotations
 
 import cv2
 import numpy as np
@@ -279,9 +279,9 @@ def locsize2bounds(location, size):
 
 
 def bounds2slices(
-    bounds: Tuple[int, int, int, int],
-    stride: Union[int, Tuple[int, int, Tuple[int, int]]] = 1,
-) -> Tuple[slice]:
+    bounds: tuple[int, int, int, int],
+    stride: int | tuple[int, int, tuple[int, int]] = 1,
+) -> tuple[slice]:
     """Convert bounds to slices.
 
     Create a tuple of slices for each start/stop pair in bounds.
@@ -321,9 +321,9 @@ def bounds2slices(
 
 
 def pad_bounds(
-    bounds: Tuple[int, int, int, int],
-    padding: Union[int, Tuple[int, int], Tuple[int, int, int, int]],
-) -> Tuple[int, int, int, int]:
+    bounds: tuple[int, int, int, int],
+    padding: int | tuple[int, int] | tuple[int, int, int, int],
+) -> tuple[int, int, int, int]:
     """Add padding to bounds.
 
     Arguments:

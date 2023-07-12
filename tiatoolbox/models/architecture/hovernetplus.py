@@ -1,6 +1,7 @@
 """Define HoVerNetPlus architecture."""
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -81,8 +82,8 @@ class HoVerNetPlus(HoVerNet):
     def __init__(
         self,
         num_input_channels: int = 3,
-        num_types: Optional[int] = None,
-        num_layers: Optional[int] = None,
+        num_types: int | None = None,
+        num_layers: int | None = None,
     ) -> None:
         """Initialize :class:`HoVerNetPlus`."""
         super().__init__(mode="fast")
@@ -230,7 +231,7 @@ class HoVerNetPlus(HoVerNet):
 
     @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: List[np.ndarray]):
+    def postproc(raw_maps: list[np.ndarray]):
         """Post-processing script for image tiles.
 
         Args:

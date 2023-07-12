@@ -1,8 +1,9 @@
 """This module enables nucleus instance segmentation."""
+from __future__ import annotations
 
 import uuid
 from collections import deque
-from typing import Callable, List, Optional, Union
+from typing import Callable
 
 # replace with the sql database once the PR in place
 import joblib
@@ -371,9 +372,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: Optional[torch.nn.Module] = None,
-        pretrained_model: Optional[str] = None,
-        pretrained_weights: Optional[str] = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
@@ -402,7 +403,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
     @staticmethod
     def _get_tile_info(
-        image_shape: Union[List[int], np.ndarray],
+        image_shape: list[int] | np.ndarray,
         ioconfig: IOSegmentorConfig,
     ):
         """Generating tile information.

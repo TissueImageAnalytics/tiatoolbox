@@ -9,23 +9,26 @@ easily serialised via the use of an io.BytesIO object or saved directly
 to disk.
 
 """
+from __future__ import annotations
 
 import tarfile
 import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Iterable
 
 import defusedxml
 import numpy as np
 from PIL import Image
 
 from tiatoolbox import DuplicateFilter, logger
-from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
-from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
+
+if TYPE_CHECKING:
+    from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
 defusedxml.defuse_stdlib()
 
@@ -75,7 +78,7 @@ class TilePyramidGenerator:
         """Find the downsample factor for a level."""
         return 2 ** (self.level_count - level - 1)
 
-    def level_dimensions(self, level: int) -> Tuple[int, int]:
+    def level_dimensions(self, level: int) -> tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
         Args:
@@ -89,7 +92,7 @@ class TilePyramidGenerator:
         ).astype(int)
         return tuple(level_dims)
 
-    def tile_grid_size(self, level: int) -> Tuple[int, int]:
+    def tile_grid_size(self, level: int) -> tuple[int, int]:
         """Width and height of the minimal grid of tiles to cover the slide.
 
         Args:
@@ -255,7 +258,7 @@ class TilePyramidGenerator:
 
     def dump(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         container=None,
         compression=None,
     ):
@@ -493,7 +496,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         self,
         info: WSIMeta,
         store: AnnotationStore,
-        renderer: Optional[AnnotationRenderer] = None,
+        renderer: AnnotationRenderer | None = None,
         tile_size: int = 256,
         downsample: int = 2,
         overlap: int = 0,
@@ -535,7 +538,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         thumb = self.renderer.render_annotations(self.store, bounds, scale)
         return Image.fromarray(thumb)
 
-    def level_dimensions(self, level: int) -> Tuple[int, int]:
+    def level_dimensions(self, level: int) -> tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
         Args:
@@ -569,8 +572,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         x: int,
         y: int,
         res: int = 1,
-        pad_mode: Optional[str] = None,
-        interpolation: Optional[str] = None,
+        pad_mode: str | None = None,
+        interpolation: str | None = None,
     ) -> Image:
         """Render a tile at a given level and coordinate.
 

@@ -1,10 +1,12 @@
 # skipcq: PTC-W6004  # noqa: ERA001
 """Package to define datasets available to download via TIAToolbox."""
+from __future__ import annotations
+
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional, Union
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 if sys.version_info >= (3, 9):  # pragma: no cover
@@ -12,10 +14,12 @@ if sys.version_info >= (3, 9):  # pragma: no cover
 else:  # pragma: no cover
     import importlib_resources  # To support Python 3.8
 
-import numpy as np
 import requests
 
 from tiatoolbox import logger, read_registry_files
+
+if TYPE_CHECKING:
+    import numpy as np
 
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES = read_registry_files("data/remote_samples.yaml")["files"]
@@ -25,7 +29,7 @@ __all__ = ["stain_norm_target"]
 
 def _fetch_remote_sample(
     key: str,
-    tmp_path: Optional[Union[str, Path]] = None,
+    tmp_path: str | Path | None = None,
 ) -> Path:
     """Get the path to a sample file, after downloading from remote if required.
 
@@ -81,7 +85,7 @@ def _fetch_remote_sample(
     return file_path
 
 
-def _local_sample_path(path: Union[str, Path]) -> Path:
+def _local_sample_path(path: str | Path) -> Path:
     """Get the path to a data file bundled with the package.
 
     Args:

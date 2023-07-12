@@ -1,9 +1,9 @@
 """Define a set of models to be used within tiatoolbox."""
+from __future__ import annotations
 
 import os
-import pathlib
 from pydoc import locate
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import torch
 
@@ -11,6 +11,9 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, CNNModel
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
+
+if TYPE_CHECKING:
+    import pathlib
 
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
@@ -34,8 +37,8 @@ def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = 
 
 
 def get_pretrained_model(
-    pretrained_model: Optional[str] = None,
-    pretrained_weights: Optional[Union[str, pathlib.Path]] = None,
+    pretrained_model: str | None = None,
+    pretrained_weights: str | pathlib.Path | None = None,
     overwrite: bool = False,
 ):
     """Load a predefined PyTorch model with the appropriate pretrained weights.

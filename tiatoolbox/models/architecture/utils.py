@@ -1,7 +1,6 @@
 """Define utility layers and operators for models in tiatoolbox."""
 
-
-from typing import Union
+from __future__ import annotations
 
 import numpy as np
 import torch
@@ -9,8 +8,8 @@ from torch import nn
 
 
 def centre_crop(
-    img: Union[np.ndarray, torch.tensor],
-    crop_shape: Union[np.ndarray, torch.tensor],
+    img: np.ndarray | torch.tensor,
+    crop_shape: np.ndarray | torch.tensor,
     data_format: str = "NCHW",
 ):
     """A function to center crop image with given crop shape.
@@ -44,8 +43,8 @@ def centre_crop(
 
 
 def centre_crop_to_shape(
-    x: Union[np.ndarray, torch.tensor],
-    y: Union[np.ndarray, torch.tensor],
+    x: np.ndarray | torch.tensor,
+    y: np.ndarray | torch.tensor,
     data_format: str = "NCHW",
 ):
     """A function to center crop image to shape.

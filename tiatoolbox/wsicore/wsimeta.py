@@ -6,14 +6,18 @@ The raw metadata is also preserved and accessible via a dictionary. The
 format of this dictionary may vary between WSI formats.
 
 """
+from __future__ import annotations
+
 from numbers import Number
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Mapping, Sequence
 
 import numpy as np
 
 from tiatoolbox import logger
-from tiatoolbox.typing import Resolution, Units
+
+if TYPE_CHECKING:
+    from tiatoolbox.typing import Resolution, Units
 
 
 class WSIMeta:
@@ -91,16 +95,16 @@ class WSIMeta:
 
     def __init__(
         self,
-        slide_dimensions: Tuple[int, int],
+        slide_dimensions: tuple[int, int],
         axes: str,
-        level_dimensions: Optional[Sequence[Tuple[int, int]]] = None,
-        objective_power: Optional[float] = None,
-        level_count: Optional[int] = None,
-        level_downsamples: Optional[Sequence[float]] = (1,),
-        vendor: Optional[str] = None,
-        mpp: Optional[Sequence[float]] = None,
-        file_path: Optional[Path] = None,
-        raw: Optional[Mapping[str, str]] = None,
+        level_dimensions: Sequence[tuple[int, int]] | None = None,
+        objective_power: float | None = None,
+        level_count: int | None = None,
+        level_downsamples: Sequence[float] | None = (1,),
+        vendor: str | None = None,
+        mpp: Sequence[float] | None = None,
+        file_path: Path | None = None,
+        raw: Mapping[str, str] | None = None,
     ) -> None:
         """Initializas WSIMeta."""
         self.axes = axes
@@ -179,7 +183,7 @@ class WSIMeta:
 
     def level_downsample(
         self,
-        level: Union[int, float],
+        level: int | float,
     ) -> float:
         """Get the downsample factor for a level.
 
@@ -211,7 +215,7 @@ class WSIMeta:
         self,
         resolution: Resolution,
         units: Units,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         """Calculate scale of each level in the WSI relative to given resolution.
 
         Find the relative scale of each image pyramid / resolution level
@@ -259,7 +263,7 @@ class WSIMeta:
 
         level_downsamples = self.level_downsamples
 
-        def np_pair(x: Union[Number, np.array]) -> np.ndarray:
+        def np_pair(x: Number | np.array) -> np.ndarray:
             """Ensure input x is a numpy array of length 2."""
             # If one number is given, the same value is used for x and y
             if isinstance(x, Number):

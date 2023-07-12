@@ -14,6 +14,7 @@ as accurate as can be reasonably be expected depending on what is being
 detected.
 
 """
+from __future__ import annotations
 
 import os
 import platform
@@ -23,12 +24,14 @@ import socket
 import subprocess
 import sys
 import threading
-from numbers import Number
-from typing import List, Tuple
+from typing import TYPE_CHECKING
 
 import torch
 
 from tiatoolbox import logger
+
+if TYPE_CHECKING:
+    from numbers import Number
 
 
 def has_gpu() -> bool:
@@ -246,7 +249,7 @@ def has_network(
         return True
 
 
-def pixman_versions() -> List[Tuple[int, ...]]:
+def pixman_versions() -> list[tuple[int, ...]]:
     """The version(s) of pixman that are installed.
 
     Some package managers (brew) may report multiple versions of pixman
@@ -345,7 +348,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:
     raise OSError(msg)
 
 
-def version_to_tuple(match: str) -> Tuple[int, ...]:
+def version_to_tuple(match: str) -> tuple[int, ...]:
     """Convert a version string to a tuple of ints.
 
     Only supports versions containing integers and periods.

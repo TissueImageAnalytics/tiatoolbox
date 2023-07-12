@@ -1,7 +1,8 @@
 """Define HoVerNet architecture."""
+from __future__ import annotations
+
 import math
 from collections import OrderedDict
-from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -68,8 +69,8 @@ class DenseBlock(nn.Module):
     def __init__(
         self,
         in_ch: int,
-        unit_ksizes: List[int],
-        unit_chs: List[int],
+        unit_ksizes: list[int],
+        unit_chs: list[int],
         unit_count: int,
         split: int = 1,
     ) -> None:
@@ -157,8 +158,8 @@ class ResidualBlock(nn.Module):
     def __init__(
         self,
         in_ch: int,
-        unit_ksizes: List[int],
-        unit_chs: List[int],
+        unit_ksizes: list[int],
+        unit_chs: list[int],
         unit_count: int,
         stride: int = 1,
     ) -> None:
@@ -325,7 +326,7 @@ class HoVerNet(ModelABC):
     def __init__(
         self,
         num_input_channels: int = 3,
-        num_types: Optional[int] = None,
+        num_types: int | None = None,
         mode: str = "original",
     ) -> None:
         """Initialize :class:`HoVerNet`."""
@@ -704,7 +705,7 @@ class HoVerNet(ModelABC):
 
     @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: List[np.ndarray]):
+    def postproc(raw_maps: list[np.ndarray]):
         """Post-processing script for image tiles.
 
         Args:

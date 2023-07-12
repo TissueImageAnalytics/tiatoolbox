@@ -5,9 +5,9 @@ various objects in microscopy images,” Medical Image Analysis,
 Dec. 2018, vol. 52, p. 160-173.
 
 """
+from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Tuple
 
 import numpy as np
 import torch
@@ -297,8 +297,8 @@ def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
 def group4_arch_branch(
     in_ch: int,
     out_ch: int,
-    up_kernel: Tuple[int, int] = (2, 2),
-    up_strides: Tuple[int, int] = (2, 2),
+    up_kernel: tuple[int, int] = (2, 2),
+    up_strides: tuple[int, int] = (2, 2),
     activation: str = "tanh",
 ) -> nn.ModuleDict:
     """Group4 branch for MicroNet.

@@ -5,7 +5,7 @@ NuClick: a deep learning framework for interactive segmentation of microscopic i
 Medical Image Analysis, 65, 101771.
 
 """
-from typing import Tuple, Union
+from __future__ import annotations
 
 import numpy as np
 import torch
@@ -54,10 +54,10 @@ class ConvBnRelu(nn.Module):
         self,
         num_input_channels: int,
         num_output_channels: int,
-        kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
-        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        kernel_size: tuple[int, int] | np.ndarray = (3, 3),
+        strides: tuple[int, int] | np.ndarray = (1, 1),
         use_bias: bool = False,
-        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
         activation: str = "relu",
         do_batchnorm: bool = True,
     ) -> None:
@@ -183,10 +183,10 @@ class MultiscaleConvBlock(nn.Module):
     def __init__(
         self,
         num_input_channels: int,
-        kernel_sizes: Union[Tuple[int, int], np.ndarray],
-        dilation_rates: Union[Tuple[int, int], np.ndarray],
+        kernel_sizes: tuple[int, int] | np.ndarray,
+        dilation_rates: tuple[int, int] | np.ndarray,
         num_output_channels: int = 32,
-        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        strides: tuple[int, int] | np.ndarray = (1, 1),
         activation: str = "relu",
         use_bias: bool = False,
     ) -> None:
@@ -284,10 +284,10 @@ class ResidualConv(nn.Module):
         self,
         num_input_channels: int,
         num_output_channels: int = 32,
-        kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
-        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        kernel_size: tuple[int, int] | np.ndarray = (3, 3),
+        strides: tuple[int, int] | np.ndarray = (1, 1),
         use_bias: bool = False,
-        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
     ) -> None:
         """Initialize :class:`ResidualConv`."""
         super().__init__()

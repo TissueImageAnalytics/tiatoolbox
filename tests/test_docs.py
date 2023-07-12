@@ -1,11 +1,12 @@
 """Test docstring examples and imports are valid."""
+from __future__ import annotations
+
 import ast
 import doctest
 import importlib
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional, Union
 
 import pytest
 
@@ -104,8 +105,8 @@ def raise_source_exception(
     rel_path: Path,
     source_lineno: int,
     file_lineno: int,
-    source_offset: Optional[int] = None,
-    exception: Optional[Exception] = None,
+    source_offset: int | None = None,
+    exception: Exception | None = None,
 ) -> None:
     """Raise an exception with the source code and line number highlighted.
 
@@ -143,7 +144,7 @@ def raise_source_exception(
     ) from None
 
 
-def import_node_names(import_node: Union[ast.Import, ast.ImportFrom]) -> List[str]:
+def import_node_names(import_node: ast.Import | ast.ImportFrom) -> list[str]:
     """Get the names being imported by import nodes."""
     if isinstance(import_node, ast.ImportFrom):
         return [import_node.module]

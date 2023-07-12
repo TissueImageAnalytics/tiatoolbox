@@ -1,9 +1,10 @@
 """Test for tileserver."""
+from __future__ import annotations
+
 import json
 import pathlib
 import urllib
 from pathlib import Path, PureWindowsPath
-from typing import List, Union
 
 import joblib
 import numpy as np
@@ -34,7 +35,7 @@ def setup_app(client):
 
 
 @pytest.fixture(scope="session")
-def cell_grid() -> List[Polygon]:
+def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
     np.random.seed(0)
     return [
@@ -43,7 +44,7 @@ def cell_grid() -> List[Polygon]:
 
 
 @pytest.fixture(scope="session")
-def points_grid(spacing=60) -> List[Point]:
+def points_grid(spacing=60) -> list[Point]:
     """Generate a grid of fake point annotations."""
     np.random.seed(0)
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
@@ -55,7 +56,7 @@ def fill_store(cell_grid, points_grid):
 
     def _fill_store(
         store_class: AnnotationStore,
-        path: Union[str, pathlib.Path],
+        path: str | pathlib.Path,
     ):
         """Fills store with random variety of annotations."""
         store = store_class(path)

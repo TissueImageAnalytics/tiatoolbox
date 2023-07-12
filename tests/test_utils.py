@@ -1,11 +1,11 @@
 """Test for utils."""
+from __future__ import annotations
 
 import hashlib
 import os
 import random
 import shutil
 from pathlib import Path
-from typing import Tuple
 
 import cv2
 import joblib
@@ -1070,7 +1070,7 @@ def test_crop_and_pad_edges():
     """Test crop and pad util function."""
     slide_dimensions = (1024, 1024)
 
-    def edge_mask(bounds: Tuple[int, int, int, int]) -> np.ndarray:
+    def edge_mask(bounds: tuple[int, int, int, int]) -> np.ndarray:
         """Produce a mask of regions outside the slide dimensions."""
         left, top, right, bottom = bounds
         slide_width, slide_height = slide_dimensions

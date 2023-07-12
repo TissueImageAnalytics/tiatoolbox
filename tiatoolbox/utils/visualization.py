@@ -1,19 +1,24 @@
 """Visualisation and overlay functions used in tiatoolbox."""
+from __future__ import annotations
+
 import colorsys
 import random
-from typing import Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colormaps
-from numpy.typing import ArrayLike
 from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
 from tiatoolbox import logger
-from tiatoolbox.annotation import Annotation, AnnotationStore
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
+    from tiatoolbox.annotation import Annotation, AnnotationStore
 
 
 def random_colors(num_colors, bright=True):
@@ -65,7 +70,7 @@ def overlay_prediction_mask(
     img: np.ndarray,
     prediction: np.ndarray,
     alpha: float = 0.35,
-    label_info: Optional[dict] = None,
+    label_info: dict | None = None,
     min_val: float = 0.0,
     ax=None,
     return_ax: bool = True,
@@ -183,9 +188,9 @@ def overlay_prediction_mask(
 
 
 def _validate_label_info(
-    label_info: Dict[int, Tuple[str, ArrayLike]],
+    label_info: dict[int, tuple[str, ArrayLike]],
     predicted_classes,
-) -> List[int]:
+) -> list[int]:
     """Validate the label_info dictionary.
 
     Args:
@@ -390,8 +395,8 @@ def overlay_prediction_contours(
     canvas: np.ndarray,
     inst_dict: dict,
     draw_dot: bool = False,
-    type_colours: Optional[dict] = None,
-    inst_colours: Union[np.ndarray, Tuple[int]] = (255, 255, 0),
+    type_colours: dict | None = None,
+    inst_colours: np.ndarray | tuple[int] = (255, 255, 0),
     line_thickness: int = 2,
 ):
     """Overlaying instance contours on image.
@@ -465,9 +470,9 @@ def plot_graph(
     canvas: np.ndarray,
     nodes: np.ndarray,
     edges: np.ndarray,
-    node_colors: Union[Tuple[int], np.ndarray] = (255, 0, 0),
+    node_colors: tuple[int] | np.ndarray = (255, 0, 0),
     node_size: int = 5,
-    edge_colors: Union[Tuple[int], np.ndarray] = (0, 0, 0),
+    edge_colors: tuple[int] | np.ndarray = (0, 0, 0),
     edge_size: int = 5,
 ):
     """Drawing a graph onto a canvas.
@@ -619,7 +624,7 @@ class AnnotationRenderer:
             self.blur = None
 
     @staticmethod
-    def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: float):
+    def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):
         """Return coords relative to top left of tile, as array suitable for cv2.
 
         Args:
@@ -691,7 +696,7 @@ class AnnotationRenderer:
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render a polygon annotation onto a tile using cv2.
@@ -737,7 +742,7 @@ class AnnotationRenderer:
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render a point annotation onto a tile using cv2.
@@ -766,7 +771,7 @@ class AnnotationRenderer:
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render a line annotation onto a tile using cv2.
@@ -824,7 +829,7 @@ class AnnotationRenderer:
     def render_annotations(
         self,
         store: AnnotationStore,
-        bounds: Tuple[float, float, float, float],
+        bounds: tuple[float, float, float, float],
         scale: float,
         res: int = 1,
         border: int = 0,
@@ -915,7 +920,7 @@ class AnnotationRenderer:
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render annotation appropriately to its geometry type.

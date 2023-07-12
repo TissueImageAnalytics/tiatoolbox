@@ -1,9 +1,10 @@
 """This module implements patch level prediction."""
+from __future__ import annotations
 
 import copy
 from collections import OrderedDict
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
@@ -13,9 +14,11 @@ from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
-from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+
+if TYPE_CHECKING:
+    from tiatoolbox.typing import Resolution, Units
 
 
 class IOPatchPredictorConfig(IOSegmentorConfig):
@@ -253,11 +256,11 @@ class PatchPredictor:
 
     @staticmethod
     def merge_predictions(
-        img: Union[str, Path, np.ndarray],
+        img: str | Path | np.ndarray,
         output: dict,
-        resolution: Optional[Resolution] = None,
-        units: Optional[Units] = None,
-        postproc_func: Optional[Callable] = None,
+        resolution: Resolution | None = None,
+        units: Units | None = None,
+        postproc_func: Callable | None = None,
         return_raw: bool = False,
     ):
         """Merge patch level predictions to form a 2-dimensional prediction map.
@@ -770,9 +773,9 @@ class PatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        ioconfig: Optional[IOPatchPredictorConfig] = None,
-        patch_input_shape: Optional[Tuple[int, int]] = None,
-        stride_shape: Optional[Tuple[int, int]] = None,
+        ioconfig: IOPatchPredictorConfig | None = None,
+        patch_input_shape: tuple[int, int] | None = None,
+        stride_shape: tuple[int, int] | None = None,
         resolution=None,
         units=None,
         merge_predictions=False,
