@@ -22,7 +22,7 @@ import numpy as np
 from PIL import Image
 
 from tiatoolbox import DuplicateFilter, logger
-from tiatoolbox.annotation.storage import AnnotationStore
+from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader

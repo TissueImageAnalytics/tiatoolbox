@@ -15,7 +15,7 @@ from shapely.geometry.point import Point
 from skimage import data
 
 from tests.test_annotation_stores import cell_polygon
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator
 from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.utils.visualization import AnnotationRenderer

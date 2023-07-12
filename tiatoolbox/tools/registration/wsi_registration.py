@@ -14,9 +14,9 @@ from torchvision.models import VGG16_Weights
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
 
 

@@ -17,13 +17,13 @@ from shapely import affinity
 from shapely.geometry import MultiPoint, Polygon
 from shapely.geometry.point import Point
 
-from tiatoolbox.annotation.storage import (
+from tiatoolbox.annotation import (
     Annotation,
     AnnotationStore,
     DictionaryStore,
-    SQLiteMetadata,
     SQLiteStore,
 )
+from tiatoolbox.annotation.storage import SQLiteMetadata
 
 sqlite3.enable_callback_tracebacks(True)
 

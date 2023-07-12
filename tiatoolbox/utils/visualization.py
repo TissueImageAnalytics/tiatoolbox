@@ -13,7 +13,7 @@ from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
 from tiatoolbox import DuplicateFilter, logger
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore
+from tiatoolbox.annotation import Annotation, AnnotationStore
 
 GEOMTYPES = {
     1: "Point",
@@ -570,17 +570,8 @@ class AnnotationRenderer:
         score_prop_edge=None,
         function_mapper=None,
     ):
-        if mapper is None:
-            mapper = colormaps["jet"]
-        if isinstance(mapper, str) and mapper != "categorical":
-            mapper = colormaps[mapper]
-        if isinstance(mapper, list):
-            colors = random_colors(len(mapper))
-            mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
-        if isinstance(mapper, dict):
-            self.mapper = lambda x: mapper[x]
-        else:
-            self.mapper = mapper
+        self.raw_mapper = None
+        self.mapper = mapper
         self.score_prop = score_prop
         self.score_prop_edge = score_prop_edge
         self.where = where
@@ -854,6 +845,22 @@ class AnnotationRenderer:
         )
 
     def __setattr__(self, __name: str, __value) -> None:
+        """Set attribute value."""
+        if __name == "mapper":
+            # save a more readable version of the mapper too
+            if __value is None:
+                self.raw_mapper = "jet"
+                __value = colormaps["jet"]
+            if isinstance(__value, str) and __value != "categorical":
+                self.raw_mapper = __value
+                __value = colormaps[__value]
+            if isinstance(__value, list):
+                colors = random_colors(len(__value))
+                __value = {key: (*color, 1) for key, color in zip(__value, colors)}
+            if isinstance(__value, dict):
+                self.raw_mapper = __value
+                self.__dict__[__name] = lambda x: __value[x]
+                return
         if __name == "blur_radius":
             # need to change additional settings
             if __value > 0:
