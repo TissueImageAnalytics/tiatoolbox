@@ -5,10 +5,10 @@ import importlib.util
 import sys
 from pathlib import Path
 
-if sys.version_info >= (3, 9):
+try:
     import importlib.resources as importlib_resources
-else:
-    import importlib_resources
+except ImportError:
+    import importlib_resources  # To support Python 3.8
 
 import yaml
 
