@@ -1,4 +1,4 @@
-"""Defines dataset abstract classes."""
+"""Define dataset abstract classes."""
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -9,12 +9,12 @@ from tiatoolbox.utils import imread
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
-    """Defines abstract base class for patch dataset."""
+    """Define abstract base class for patch dataset."""
 
     def __init__(
         self,
     ) -> None:
-        """Initializes :class:`PatchDatasetABC`."""
+        """Initialize :class:`PatchDatasetABC`."""
         super().__init__()
         self._preproc = self.preproc
         self.data_is_npy_alike = False
@@ -154,5 +154,5 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     @abstractmethod
     def __getitem__(self, idx):
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         ...  # pragma: no cover

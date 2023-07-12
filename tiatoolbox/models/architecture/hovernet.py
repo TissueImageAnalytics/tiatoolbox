@@ -1,4 +1,4 @@
-"""Defines HoVerNet architecture."""
+"""Define HoVerNet architecture."""
 import math
 from collections import OrderedDict
 from typing import List, Optional
@@ -31,7 +31,7 @@ class TFSamepaddingLayer(nn.Module):
     """
 
     def __init__(self, ksize: int, stride: int) -> None:
-        """Initializes :class:`TFSamepaddingLayer`."""
+        """Initialize :class:`TFSamepaddingLayer`."""
         super().__init__()
         self.ksize = ksize
         self.stride = stride
@@ -73,7 +73,7 @@ class DenseBlock(nn.Module):
         unit_count: int,
         split: int = 1,
     ) -> None:
-        """Initializes :class:`DenseBlock`."""
+        """Initialize :class:`DenseBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
             msg = "Unbalance Unit Info."
@@ -162,7 +162,7 @@ class ResidualBlock(nn.Module):
         unit_count: int,
         stride: int = 1,
     ) -> None:
-        """Initializes :class:`ResidualBlock`."""
+        """Initialize :class:`ResidualBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
             msg = "Unbalance Unit Info."
@@ -328,7 +328,7 @@ class HoVerNet(ModelABC):
         num_types: Optional[int] = None,
         mode: str = "original",
     ) -> None:
-        """Initializes :class:`HoVerNet`."""
+        """Initialize :class:`HoVerNet`."""
         super().__init__()
         self.mode = mode
         self.num_types = num_types

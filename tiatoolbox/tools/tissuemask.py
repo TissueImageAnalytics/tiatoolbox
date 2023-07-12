@@ -17,7 +17,7 @@ class TissueMasker(ABC):
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`TissueMasker`."""
+        """Initialize :class:`TissueMasker`."""
         super().__init__()
         self.fitted = False
 
@@ -88,7 +88,7 @@ class OtsuTissueMasker(TissueMasker):
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`OtsuTissueMasker`."""
+        """Initialize :class:`OtsuTissueMasker`."""
         super().__init__()
         self.threshold = None
 

@@ -1,4 +1,4 @@
-"""Defines a set of UNet variants to be used within tiatoolbox."""
+"""Define a set of UNet variants to be used within tiatoolbox."""
 
 from typing import List, Optional, Tuple
 
@@ -114,7 +114,7 @@ class UnetEncoder(nn.Module):
         num_input_channels: int,
         layer_output_channels: List[int],
     ) -> None:
-        """Initializes :class:`UnetEncoder`."""
+        """Initialize :class:`UnetEncoder`."""
         super().__init__()
 
         self.blocks = nn.ModuleList()
@@ -284,7 +284,7 @@ class UNetModel(ModelABC):
         decoder_block: Optional[Tuple[int]] = None,
         skip_type: str = "add",
     ) -> None:
-        """Initializes :class:`UNetModel`."""
+        """Initialize :class:`UNetModel`."""
         super().__init__()
 
         if encoder.lower() not in {"resnet50", "unet"}:

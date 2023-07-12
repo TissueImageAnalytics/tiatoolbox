@@ -1711,7 +1711,7 @@ class SQLiteMetadata(MutableMapping):
     """
 
     def __init__(self, con: sqlite3.Connection) -> None:
-        """Initializes :class:`SQLiteMetadata`."""
+        """Initialize :class:`SQLiteMetadata`."""
         self.con = con
         self.con.execute(
             "CREATE TABLE IF NOT EXISTS metadata (key TEXT UNIQUE, value TEXT)",
@@ -1783,7 +1783,7 @@ class SQLiteStore(AnnotationStore):
         compression_level: int = 9,
         auto_commit: bool = True,
     ) -> None:
-        """Initializes :class:`SQLiteStore`."""
+        """Initialize :class:`SQLiteStore`."""
         super().__init__()
         # Check that JSON and RTree support is enabled
         compile_options = self.compile_options()
@@ -2886,7 +2886,7 @@ class SQLiteStore(AnnotationStore):
         return cur.fetchone()[0] == 1
 
     def __getitem__(self, key: str) -> Annotation:
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -3302,7 +3302,7 @@ class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
 
     def __init__(self, connection: Path | str | IO = ":memory:") -> None:
-        """Initializes :class:`DictionaryStore`."""
+        """Initialize :class:`DictionaryStore`."""
         super().__init__()
         self._rows = {}
         self.connection = connection
@@ -3391,7 +3391,7 @@ class DictionaryStore(AnnotationStore):
         del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         return self._rows[key]["annotation"]
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:

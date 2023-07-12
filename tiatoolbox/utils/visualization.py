@@ -587,7 +587,7 @@ class AnnotationRenderer:
         blur_radius=0,
         score_prop_edge=None,
     ) -> None:
-        """Initializes :class:`AnnotationRenderer`."""
+        """Initialize :class:`AnnotationRenderer`."""
         if mapper is None:
             mapper = colormaps["jet"]
         if isinstance(mapper, str) and mapper != "categorical":
@@ -828,7 +828,7 @@ class AnnotationRenderer:
             res (int):
                 Resolution at which annotations are to be rendered.
             border (int):
-                Defines borders around annotation rendering.
+                Define borders around annotation rendering.
 
         Returns:
             np.ndarray:

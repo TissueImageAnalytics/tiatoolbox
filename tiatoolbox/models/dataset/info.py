@@ -1,4 +1,4 @@
-"""Defines classes and methods for dataset information."""
+"""Define classes and methods for dataset information."""
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -74,7 +74,7 @@ class KatherPatchDataset(DatasetInfoABC):
         self,
         save_dir_path=None,
     ) -> None:
-        """Initializes :class:`KatherPatchDataset`."""
+        """Initialize :class:`KatherPatchDataset`."""
         label_names = [
             "BACK",
             "NORM",

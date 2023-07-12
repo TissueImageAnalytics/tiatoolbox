@@ -1,4 +1,4 @@
-"""Defines MicroNet architecture.
+"""Define MicroNet architecture.
 
 Raza, SEA et al., “Micro-Net: A unified model for segmentation of
 various objects in microscopy images,” Medical Image Analysis,
@@ -26,7 +26,7 @@ def group1_forward_branch(
     in_tensor: torch.Tensor,
     resized_feat: torch.Tensor,
 ) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -50,7 +50,7 @@ def group1_forward_branch(
 
 
 def group2_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -72,7 +72,7 @@ def group3_forward_branch(
     main_feat: torch.Tensor,
     skip: torch.Tensor,
 ) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -97,7 +97,7 @@ def group3_forward_branch(
 
 
 def group4_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -444,7 +444,7 @@ class MicroNet(ModelABC):
         num_output_channels=2,
         out_activation="softmax",
     ) -> None:
-        """Initializes :class:`MicroNet`."""
+        """Initialize :class:`MicroNet`."""
         super().__init__()
         if num_output_channels < 2:
             msg = "Number of classes should be >=2."

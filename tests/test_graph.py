@@ -201,7 +201,7 @@ def test_slidegraph_build_feature_range_thresh_none():
 
 
 class TestConstructor:
-    """Defines class to test constructors."""
+    """Define class to test constructors."""
 
     scenarios: ClassVar[tuple[str, dict]] = [
         ("SlideGraph", {"graph_constructor": SlideGraphConstructor}),

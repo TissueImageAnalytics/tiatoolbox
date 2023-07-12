@@ -1,4 +1,4 @@
-"""Defines Abstract Base Class for Models defined in tiatoolbox."""
+"""Define Abstract Base Class for Models defined in tiatoolbox."""
 from abc import ABC, abstractmethod
 
 from torch import nn
@@ -29,7 +29,7 @@ class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(self) -> None:
-        """Initializes Abstract class ModelABC."""
+        """Initialize Abstract class ModelABC."""
         super().__init__()
         self._postproc = self.postproc
         self._preproc = self.preproc

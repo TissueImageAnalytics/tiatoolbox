@@ -372,7 +372,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
-        """Initializes :class:`WSIReader`."""
+        """Initialize :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
         else:
@@ -1633,7 +1633,7 @@ class OpenSlideWSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
-        """Initializes :class:`OpenSlideWSIReader`."""
+        """Initialize :class:`OpenSlideWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
@@ -2171,7 +2171,7 @@ class OmnyxJP2WSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
-        """Initializes :class:`OmnyxJP2WSIReader`."""
+        """Initialize :class:`OmnyxJP2WSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         import glymur
 
@@ -2694,7 +2694,7 @@ class VirtualWSIReader(WSIReader):
         info: WSIMeta | None = None,
         mode="rgb",
     ) -> None:
-        """Initializes :class:`VirtualWSIReader`."""
+        """Initialize :class:`VirtualWSIReader`."""
         super().__init__(
             input_img=input_img,
             mpp=mpp,
@@ -3210,7 +3210,7 @@ class ArrayView:
             return tuple(self._shape[c] for c in "YXS")
 
     def __getitem__(self, index):
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         # Normalize to a tuple of length = len(self.axes)
         if not isinstance(index, tuple):
             index = (index,)
@@ -3238,7 +3238,7 @@ class TIFFWSIReader(WSIReader):
         series="auto",
         cache_size=2**28,
     ) -> None:
-        """Initializes :class:`TIFFWSIReader`."""
+        """Initialize :class:`TIFFWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.tiff = tifffile.TiffFile(self.input_path)
         self._axes = self.tiff.pages[0].axes
@@ -3991,7 +3991,7 @@ class TIFFWSIReader(WSIReader):
 
 
 class DICOMWSIReader(WSIReader):
-    """Defines DICOM WSI Reader."""
+    """Define DICOM WSI Reader."""
 
     wsidicom = None
 
@@ -4001,7 +4001,7 @@ class DICOMWSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
-        """Initializes :class:`DICOMWSIReader`."""
+        """Initialize :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom
 
         super().__init__(input_img, mpp, power)
@@ -4503,7 +4503,7 @@ class NGFFWSIReader(WSIReader):
     """
 
     def __init__(self, path, **kwargs) -> None:
-        """Initializes :class:`NGFFWSIReader`."""
+        """Initialize :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs
 
@@ -5064,7 +5064,7 @@ class AnnotationStoreReader(WSIReader):
         alpha=1.0,
         **kwargs,
     ) -> None:
-        """Initializes :class:`AnnotationStoreReader`."""
+        """Initialize :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
         self.store = (
             SQLiteStore(pathlib.Path(store))

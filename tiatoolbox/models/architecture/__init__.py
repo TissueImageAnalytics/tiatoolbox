@@ -1,4 +1,4 @@
-"""Defines a set of models to be used within tiatoolbox."""
+"""Define a set of models to be used within tiatoolbox."""
 
 import os
 import pathlib

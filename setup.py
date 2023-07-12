@@ -6,10 +6,10 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-with Path.open(Path("README.md")) as readme_file:
+with Path("README.md").open() as readme_file:
     readme = readme_file.read()
 
-with Path.open(Path("HISTORY.md")) as history_file:
+with Path("HISTORY.md").open() as history_file:
     history = history_file.read()
 
 install_requires = [

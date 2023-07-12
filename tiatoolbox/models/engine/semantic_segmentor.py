@@ -169,7 +169,7 @@ class IOSegmentorConfig(IOConfigABC):
         save_resolution: dict | None = None,
         **kwargs,
     ) -> None:
-        """Initializes :class:`IOSegmentorConfig`."""
+        """Initialize :class:`IOSegmentorConfig`."""
         self._kwargs = kwargs
         self.patch_input_shape = patch_input_shape
         self.patch_output_shape = patch_output_shape
@@ -332,7 +332,7 @@ class WSIStreamDataset(torch_data.Dataset):
         preproc: Callable[[np.ndarray], np.ndarray] | None = None,
         mode="wsi",
     ) -> None:
-        """Initializes :class:`WSIStreamDataset`."""
+        """Initialize :class:`WSIStreamDataset`."""
         super().__init__()
         self.mode = mode
         self.preproc = preproc
@@ -391,7 +391,7 @@ class WSIStreamDataset(torch_data.Dataset):
         return torch.utils.data.dataloader.default_collate(batch)
 
     def __getitem__(self, idx: int):
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
@@ -524,7 +524,7 @@ class SemanticSegmentor:
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
     ) -> None:
-        """Initializes :class:`SemanticSegmentor`."""
+        """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
 
         if model is None and pretrained_model is None:
@@ -1481,7 +1481,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
     ) -> None:
-        """Initializes :class:`DeepFeatureExtractor`."""
+        """Initialize :class:`DeepFeatureExtractor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,

@@ -1,4 +1,4 @@
-"""Defines vanilla CNNs with torch backbones, mainly for patch classification."""
+"""Define vanilla CNNs with torch backbones, mainly for patch classification."""
 
 import numpy as np
 import torch
@@ -92,7 +92,7 @@ class CNNModel(ModelABC):
     """
 
     def __init__(self, backbone, num_classes=1) -> None:
-        """Initializes :class:`CNNModel`."""
+        """Initialize :class:`CNNModel`."""
         super().__init__()
         self.num_classes = num_classes
 
@@ -201,7 +201,7 @@ class CNNBackbone(ModelABC):
     """
 
     def __init__(self, backbone) -> None:
-        """Initializes :class:`CNNBackbone`."""
+        """Initialize :class:`CNNBackbone`."""
         super().__init__()
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))

@@ -1,4 +1,4 @@
-"""Defines CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
+"""Define CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
 
 import numpy as np
 from torchvision import transforms
@@ -61,12 +61,12 @@ class IDaRS(CNNModel):
     """
 
     def __init__(self, backbone, num_classes=1) -> None:
-        """Initializes :class:`IDaRS`."""
+        """Initialize :class:`IDaRS`."""
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
     def preproc(image: np.ndarray):
-        """Defines preprocessing steps.
+        """Define preprocessing steps.
 
         Args:
             image (:class:`numpy.ndarray`):

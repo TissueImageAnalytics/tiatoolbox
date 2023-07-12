@@ -1,4 +1,4 @@
-"""Defines original NuClick architecture.
+"""Define original NuClick architecture.
 
 Koohbanani, N. A., Jahanifar, M., Tajadin, N. Z., & Rajpoot, N. (2020).
 NuClick: a deep learning framework for interactive segmentation of microscopic images.
@@ -61,7 +61,7 @@ class ConvBnRelu(nn.Module):
         activation: str = "relu",
         do_batchnorm: bool = True,
     ) -> None:
-        """Initializes :class:`ConvBnRelu`."""
+        """Initialize :class:`ConvBnRelu`."""
         super().__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -156,7 +156,7 @@ class ConvBnRelu(nn.Module):
 
 
 class MultiscaleConvBlock(nn.Module):
-    """Defines Multiscale convolution block.
+    """Define Multiscale convolution block.
 
     Args:
         num_input_channels (int):
@@ -190,7 +190,7 @@ class MultiscaleConvBlock(nn.Module):
         activation: str = "relu",
         use_bias: bool = False,
     ) -> None:
-        """Initializes :class:`MultiscaleConvBlock`."""
+        """Initialize :class:`MultiscaleConvBlock`."""
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
@@ -289,7 +289,7 @@ class ResidualConv(nn.Module):
         use_bias: bool = False,
         dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
     ) -> None:
-        """Initializes :class:`ResidualConv`."""
+        """Initialize :class:`ResidualConv`."""
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
@@ -358,7 +358,7 @@ class NuClick(ModelABC):
     """
 
     def __init__(self, num_input_channels: int, num_output_channels: int) -> None:
-        """Initializes :class:`NuClick`."""
+        """Initialize :class:`NuClick`."""
         super().__init__()
         self.net_name = "NuClick"
 

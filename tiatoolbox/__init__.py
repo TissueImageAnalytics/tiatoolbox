@@ -50,7 +50,7 @@ else:
 
 
 class DuplicateFilter(logging.Filter):
-    """Defines an object to filter duplicate logs.
+    """Define an object to filter duplicate logs.
 
     The DuplicateFilter filters logs to avoid printing them multiple times
     while running code in a loop.

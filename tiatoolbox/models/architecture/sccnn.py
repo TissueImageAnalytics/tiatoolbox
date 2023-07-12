@@ -1,4 +1,4 @@
-"""Defines SCCNN architecture.
+"""Define SCCNN architecture.
 
 Sirinukunwattana, Korsuk, et al.
 "Locality sensitive deep learning for detection and classification
@@ -94,7 +94,7 @@ class SCCNN(ModelABC):
         min_distance: int = 6,
         threshold_abs: float = 0.20,
     ) -> None:
-        """Initializes :class:`SCCNN`."""
+        """Initialize :class:`SCCNN`."""
         super().__init__()
         out_height = patch_output_shape[0]
         out_width = patch_output_shape[1]

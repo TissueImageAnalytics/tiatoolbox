@@ -56,7 +56,7 @@ class TilePyramidGenerator:
         downsample: int = 2,
         overlap: int = 0,
     ) -> None:
-        """Initializes :class:`TilePyramidGenerator`."""
+        """Initialize :class:`TilePyramidGenerator`."""
         self.wsi = wsi
         self.tile_size = tile_size
         self.overlap = overlap
@@ -462,7 +462,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
 
 class AnnotationTileGenerator(ZoomifyGenerator):
-    r"""Defines AnnotationTileGenerator for rendering AnnotationStore.
+    r"""Define AnnotationTileGenerator for rendering AnnotationStore.
 
     Tile generator using an AnnotationRenderer to render tiles
     showing annotations held in an AnnotationStore.
@@ -498,7 +498,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         downsample: int = 2,
         overlap: int = 0,
     ) -> None:
-        """Initializes :class:`AnnotationTileGenerator`."""
+        """Initialize :class:`AnnotationTileGenerator`."""
         super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store

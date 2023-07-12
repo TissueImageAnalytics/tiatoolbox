@@ -1,4 +1,4 @@
-"""Defines classes and methods for classification datasets."""
+"""Define classes and methods for classification datasets."""
 from pathlib import Path
 
 import cv2
@@ -67,9 +67,9 @@ def predefined_preproc_func(dataset_name):
 
 
 class PatchDataset(dataset_abc.PatchDatasetABC):
-    """Defines PatchDataset for torch inference.
+    """Define PatchDataset for torch inference.
 
-    Defines a simple patch dataset, which inherits from the
+    Define a simple patch dataset, which inherits from the
       `torch.utils.data.Dataset` class.
 
     Attributes:
@@ -94,7 +94,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
     """
 
     def __init__(self, inputs, labels=None) -> None:
-        """Initializes :class:`PatchDataset`."""
+        """Initialize :class:`PatchDataset`."""
         super().__init__()
 
         self.data_is_npy_alike = False
@@ -106,7 +106,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         patch = self.inputs[idx]
 
         # Mode 0 is list of paths
@@ -127,7 +127,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
 
 
 class WSIPatchDataset(dataset_abc.PatchDatasetABC):
-    """Defines a WSI-level patch dataset.
+    """Define a WSI-level patch dataset.
 
     Attributes:
         reader (:class:`.WSIReader`):
@@ -332,7 +332,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(

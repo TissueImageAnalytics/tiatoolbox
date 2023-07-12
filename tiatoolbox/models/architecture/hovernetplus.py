@@ -1,4 +1,4 @@
-"""Defines HoVerNetPlus architecture."""
+"""Define HoVerNetPlus architecture."""
 from collections import OrderedDict
 from typing import List, Optional
 
@@ -84,7 +84,7 @@ class HoVerNetPlus(HoVerNet):
         num_types: Optional[int] = None,
         num_layers: Optional[int] = None,
     ) -> None:
-        """Initializes :class:`HoVerNetPlus`."""
+        """Initialize :class:`HoVerNetPlus`."""
         super().__init__(mode="fast")
         self.num_input_channels = num_input_channels
         self.num_types = num_types

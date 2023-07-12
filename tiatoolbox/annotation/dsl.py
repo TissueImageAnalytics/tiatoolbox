@@ -154,15 +154,15 @@ class SQLExpression:
         return SQLTriplet(self, operator.abs)
 
     def __eq__(self, other):
-        """Defines how the object is compared for equality."""
+        """Define how the object is compared for equality."""
         return SQLTriplet(self, operator.eq, other)
 
     def __ne__(self, other: object):
-        """Defines how the object is compared for equality (not equal to)."""
+        """Define how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.ne, other)
 
     def __neg__(self):
-        """Defines how the object is compared for equality (not equal to)."""
+        """Define how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.neg)
 
     def __contains__(self, other) -> bool:
@@ -210,7 +210,7 @@ class SQLTriplet(SQLExpression):
         op: Optional[Union[Callable, str]] = None,
         rhs: Optional[Union["SQLTriplet", str]] = None,
     ) -> None:
-        """Initializes :class:`SQLTriplet`."""
+        """Initialize :class:`SQLTriplet`."""
         self.lhs = lhs
         self.op = op
         self.rhs = rhs
@@ -258,7 +258,7 @@ class SQLJSONDictionary(SQLExpression):
     """Representation of an SQL expression to access JSON properties."""
 
     def __init__(self, acc: Optional[str] = None) -> None:
-        """Initializes :class:`SQLJSONDictionary`."""
+        """Initialize :class:`SQLJSONDictionary`."""
         self.acc = acc or ""
 
     def __str__(self) -> str:
@@ -266,7 +266,7 @@ class SQLJSONDictionary(SQLExpression):
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
     def __getitem__(self, key: str) -> "SQLJSONDictionary":
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
 
         joiner = "." if self.acc and not isinstance(key, int) else ""
@@ -281,7 +281,7 @@ class SQLRegex(SQLExpression):
     """Representation of an SQL expression to match a string against a regex."""
 
     def __init__(self, pattern: str, string: str, flags: int = 0) -> None:
-        """Initializes :class:`SQLRegex`."""
+        """Initialize :class:`SQLRegex`."""
         self.pattern = pattern
         self.string = string
         self.flags = flags

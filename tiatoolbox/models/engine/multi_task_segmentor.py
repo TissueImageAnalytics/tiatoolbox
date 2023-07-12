@@ -247,7 +247,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         dataset_class: Callable = WSIStreamDataset,
         output_types: Optional[List] = None,
     ) -> None:
-        """Initializes :class:`MultiTaskSegmentor`."""
+        """Initialize :class:`MultiTaskSegmentor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,

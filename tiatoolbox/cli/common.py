@@ -1,4 +1,4 @@
-"""Defines common code required for cli."""
+"""Define common code required for cli."""
 from pathlib import Path
 from typing import Optional
 
@@ -371,10 +371,10 @@ def cli_verbose(
 
 
 class TIAToolboxCLI(click.Group):
-    """Defines TIAToolbox Commandline Interface Click group."""
+    """Define TIAToolbox Commandline Interface Click group."""
 
     def __init__(self, *args, **kwargs) -> None:
-        """Initializes TIAToolboxCLI."""
+        """Initialize TIAToolboxCLI."""
         super().__init__(*args, **kwargs)
         self.help = "Computational pathology toolbox by TIA Centre."
         self.add_help_option = {"help_option_names": ["-h", "--help"]}

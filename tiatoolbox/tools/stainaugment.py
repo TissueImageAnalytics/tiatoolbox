@@ -109,7 +109,7 @@ class StainAugmentor(ImageOnlyTransform):
         always_apply=False,
         p=0.5,
     ) -> None:
-        """Initializes :class:`StainAugmentor`."""
+        """Initialize :class:`StainAugmentor`."""
         super().__init__(always_apply=always_apply, p=p)
 
         self.augment_background = augment_background

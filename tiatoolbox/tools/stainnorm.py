@@ -34,7 +34,7 @@ class StainNormalizer:
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`StainNormalizer`."""
+        """Initialize :class:`StainNormalizer`."""
         self.extractor = None
         self.stain_matrix_target = None
         self.target_concentrations = None
@@ -127,7 +127,7 @@ class CustomNormalizer(StainNormalizer):
     """
 
     def __init__(self, stain_matrix) -> None:
-        """Initializes :class:`CustomNormalizer`."""
+        """Initialize :class:`CustomNormalizer`."""
         super().__init__()
 
         self.extractor = CustomExtractor(stain_matrix)
@@ -155,7 +155,7 @@ class RuifrokNormalizer(StainNormalizer):
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`RuifrokNormalizer`."""
+        """Initialize :class:`RuifrokNormalizer`."""
         super().__init__()
         self.extractor = RuifrokExtractor()
 
@@ -182,7 +182,7 @@ class MacenkoNormalizer(StainNormalizer):
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`MacenkoNormalizer`."""
+        """Initialize :class:`MacenkoNormalizer`."""
         super().__init__()
         self.extractor = MacenkoExtractor()
 
@@ -209,7 +209,7 @@ class VahadaneNormalizer(StainNormalizer):
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`VahadaneNormalizer`."""
+        """Initialize :class:`VahadaneNormalizer`."""
         super().__init__()
         self.extractor = VahadaneExtractor()
 
@@ -240,7 +240,7 @@ class ReinhardNormalizer:
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`ReinhardNormalizer`."""
+        """Initialize :class:`ReinhardNormalizer`."""
         self.target_means = None
         self.target_stds = None
 

@@ -1,4 +1,4 @@
-"""Defines utility layers and operators for models in tiatoolbox."""
+"""Define utility layers and operators for models in tiatoolbox."""
 
 
 from typing import Union
@@ -105,7 +105,7 @@ class UpSample2x(nn.Module):
     """
 
     def __init__(self) -> None:
-        """Initializes :class:`UpSample2x`."""
+        """Initialize :class:`UpSample2x`."""
         super().__init__()
         # correct way to create constant within module
         self.register_buffer(

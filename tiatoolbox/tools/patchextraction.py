@@ -28,7 +28,7 @@ class PatchExtractorABC(ABC):
 
     @abstractmethod
     def __getitem__(self, item: int):
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         raise NotImplementedError
 
 
@@ -122,7 +122,7 @@ class PatchExtractor(PatchExtractorABC):
         within_bound: bool = False,
         min_mask_ratio: float = 0,
     ) -> None:
-        """Initializes :class:`PatchExtractor`."""
+        """Initialize :class:`PatchExtractor`."""
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
         else:
@@ -179,7 +179,7 @@ class PatchExtractor(PatchExtractorABC):
         return self[n]
 
     def __getitem__(self, item: int):
-        """Defines the behaviour when an item is accessed."""
+        """Define the behaviour when an item is accessed."""
         if not isinstance(item, int):
             msg = "Index should be an integer."
             raise TypeError(msg)
@@ -543,7 +543,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         within_bound: bool = False,
         min_mask_ratio: float = 0,
     ) -> None:
-        """Initializes :class:`SlidingWindowPatchExtractor`."""
+        """Initialize :class:`SlidingWindowPatchExtractor`."""
         super().__init__(
             input_img=input_img,
             input_mask=input_mask,
@@ -622,7 +622,7 @@ class PointsPatchExtractor(PatchExtractor):
         pad_constant_values: Union[int, Tuple[int, int]] = 0,
         within_bound: bool = False,
     ) -> None:
-        """Initializes :class:`PointsPatchExtractor`."""
+        """Initialize :class:`PointsPatchExtractor`."""
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
