@@ -154,5 +154,5 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     @abstractmethod
     def __getitem__(self, idx):
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         ...  # pragma: no cover

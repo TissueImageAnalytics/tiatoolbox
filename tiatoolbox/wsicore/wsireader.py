@@ -3210,7 +3210,7 @@ class ArrayView:
             return tuple(self._shape[c] for c in "YXS")
 
     def __getitem__(self, index):
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         # Normalize to a tuple of length = len(self.axes)
         if not isinstance(index, tuple):
             index = (index,)

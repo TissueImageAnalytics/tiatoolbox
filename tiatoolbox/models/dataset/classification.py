@@ -106,7 +106,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         patch = self.inputs[idx]
 
         # Mode 0 is list of paths
@@ -332,7 +332,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(

@@ -391,7 +391,7 @@ class WSIStreamDataset(torch_data.Dataset):
         return torch.utils.data.dataloader.default_collate(batch)
 
     def __getitem__(self, idx: int):
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())

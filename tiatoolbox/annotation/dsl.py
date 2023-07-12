@@ -266,7 +266,7 @@ class SQLJSONDictionary(SQLExpression):
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
     def __getitem__(self, key: str) -> "SQLJSONDictionary":
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
 
         joiner = "." if self.acc and not isinstance(key, int) else ""

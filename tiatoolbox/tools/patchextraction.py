@@ -28,7 +28,7 @@ class PatchExtractorABC(ABC):
 
     @abstractmethod
     def __getitem__(self, item: int):
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         raise NotImplementedError
 
 
@@ -179,7 +179,7 @@ class PatchExtractor(PatchExtractorABC):
         return self[n]
 
     def __getitem__(self, item: int):
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         if not isinstance(item, int):
             msg = "Index should be an integer."
             raise TypeError(msg)

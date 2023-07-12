@@ -2886,7 +2886,7 @@ class SQLiteStore(AnnotationStore):
         return cur.fetchone()[0] == 1
 
     def __getitem__(self, key: str) -> Annotation:
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -3391,7 +3391,7 @@ class DictionaryStore(AnnotationStore):
         del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
-        """Define the behaviour when an item is accessed."""
+        """Get an item from the dataset."""
         return self._rows[key]["annotation"]
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:

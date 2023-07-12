@@ -245,7 +245,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
 
         # skipcq
         def __getitem__(self, idx):
-            pass
+            """Get an item from the dataset."""
 
     with pytest.raises(
         ValueError,
@@ -438,7 +438,7 @@ def test_patch_dataset_abc():
 
         # skipcq
         def __getitem__(self, idx):
-            pass
+            """Get an item from the dataset."""
 
     ds = Proto()  # skipcq
 
