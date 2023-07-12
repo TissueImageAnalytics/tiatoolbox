@@ -19,10 +19,10 @@ from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.typing import IntBounds, Resolution, Units
 
 
 def _check_dims(
