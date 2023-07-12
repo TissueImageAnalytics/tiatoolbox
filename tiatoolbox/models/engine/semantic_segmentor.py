@@ -21,8 +21,8 @@ import tqdm
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils import imread, misc
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 from .io_config import IOSegmentorConfig
