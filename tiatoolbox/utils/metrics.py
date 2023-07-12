@@ -69,7 +69,7 @@ def f1_detection(true, pred, radius):
 
 
 def dice(gt_mask, pred_mask):
-    r"""Computes Sørensen-Dice coefficient.
+    r"""Compute the Sørensen-Dice coefficient.
 
     This function computes `Sørensen-Dice coefficient
     <https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient>`_,
