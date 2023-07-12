@@ -593,17 +593,6 @@ class AnnotationRenderer:
         score_prop_edge=None,
     ) -> None:
         """Initialize :class:`AnnotationRenderer`."""
-        if mapper is None:
-            mapper = colormaps["jet"]
-        if isinstance(mapper, str) and mapper != "categorical":
-            mapper = colormaps[mapper]
-        if isinstance(mapper, list):
-            colors = random_colors(len(mapper))
-            mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
-        if isinstance(mapper, dict):
-            self.mapper = lambda x: mapper[x]
-        else:
-            self.mapper = mapper
         self.raw_mapper = None
         self.mapper = mapper
         self.score_prop = score_prop
