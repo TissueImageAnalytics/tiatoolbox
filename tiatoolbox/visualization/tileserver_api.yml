@@ -99,7 +99,7 @@ paths:
               properties:
                 prop:
                   type: string
-                  description: json encoded property name to color annotations by
+                  description: JSON encoded property name to color annotations by
       responses:
         '200':
           description: Successful response
@@ -115,7 +115,7 @@ paths:
 
   /tileserver/slide:
     put:
-      summary: change the base slide. All overlays will be removed.
+      summary: Change the base slide. All overlays will be removed.
       requestBody:
         required: true
         content:
@@ -151,7 +151,7 @@ paths:
               properties:
                 cmap:
                   type: string
-                  description: The colormap, should be a json encoded matplotlib colormap name or dict of possible property values as keys, and RGBA tuples as values
+                  description: The colormap, should be a JSON encoded matplotlib colormap name or dict of possible property values as keys, and RGBA tuples as values
       responses:
         '200':
           description: Successful response
@@ -180,10 +180,10 @@ paths:
                   description: Path to the annotation file in url safe form. Can be a .db, .dat or .geojson file
                 model_mpp:
                   type: float
-                  description: json enoced model microns per pixel, used if annotations are output of a model not at baseline
+                  description: JSON encoded model microns per pixel, used if annotations are output of a model not at baseline
       responses:
         '200':
-          description: jsonified list of types of loaded annotations
+          description: A jsonified list of types of loaded annotations
           content:
             application/json:
     get:
@@ -197,10 +197,10 @@ paths:
               properties:
                 bounds:
                   type: list
-                  description: a json encoded list of 4 numbers, [xmin, ymin, xmax, ymax] describing the bounds of the query
+                  description: A JSON encoded list of 4 numbers, [xmin, ymin, xmax, ymax] describing the bounds of the query
                 where:
                   type: string
-                  description: a valid AnnotationStore filter string, json encoded
+                  description: A valid AnnotationStore filter string, json encoded
       responses:
         '200':
           description: OK
@@ -229,10 +229,10 @@ paths:
               properties:
                 overlay_path:
                   type: string
-                  description: url safe path to the new overlay image file
+                  description: URL safe path to the new overlay image file
       responses:
         '200':
-          description: jsonified list of types present in the overlay, if any
+          description: A jsonified list of types present in the overlay, if any
           content:
             application/json:
     get:
@@ -257,7 +257,7 @@ paths:
               properties:
                 save_path:
                   type: string
-                  description: Url safe path to save the database changes
+                  description: URL safe path to save the database changes
       responses:
         '200':
           description: Successful response
@@ -280,7 +280,7 @@ paths:
               properties:
                 val:
                   type: string
-                  description: The json encoded value to set the property to
+                  description: The JSON encoded value to set the property to
       responses:
         '200':
           description: Successful response
@@ -312,13 +312,13 @@ paths:
               properties:
                 type_id:
                   type: string
-                  description: json encoded type for which you want to override the primary color map
+                  description: JSON encoded type for which you want to override the primary color map
                 prop:
                   type: string
                   description: Property to use to color annotations of the chosen type
                 cmap:
                   type: string
-                  description: json encoded matplotlib colormap name or dict, to use to generate colors from property values
+                  description: JSON encoded matplotlib colormap name or dict, to use to generate colors from property values
       responses:
         '200':
           description: Successful response
