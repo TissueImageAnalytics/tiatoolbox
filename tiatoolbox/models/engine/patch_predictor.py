@@ -13,8 +13,8 @@ import tqdm
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
+from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils import misc, save_as_json
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 from .io_config import IOPatchPredictorConfig

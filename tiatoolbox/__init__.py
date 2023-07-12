@@ -8,7 +8,7 @@ from pathlib import Path
 import pkg_resources
 import yaml
 
-__author__ = """TIA Lab"""
+__author__ = """TIA Centre"""
 __email__ = "tialab@dcs.warwick.ac.uk"
 __version__ = "1.4.0"
 
