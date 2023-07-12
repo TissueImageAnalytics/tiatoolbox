@@ -690,7 +690,9 @@ class PatchPredictor:
         return_coordinates = True
 
         input_is_path_like = isinstance(imgs[0], (str, Path))
-        default_save_dir = imgs[0].parent / "output" if input_is_path_like else Path.cwd()
+        default_save_dir = (
+            imgs[0].parent / "output" if input_is_path_like else Path.cwd()
+        )
         save_dir = default_save_dir if save_dir is None else Path(save_dir)
 
         # None if no output
