@@ -498,7 +498,7 @@ class TileServer(Flask):
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 layer.store = sq
-                logger.info(f"loaded {len(sq)} annotations")
+                logger.info("Loaded %d annotations.", len(sq))
                 types = self.update_types(sq)
                 return json.dumps(types)
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
@@ -508,7 +508,8 @@ class TileServer(Flask):
             overlap=self.overlaps[session_id],
         )
         logger.info(
-            f'loaded {len(self.pyramids[session_id]["overlay"].store)} annotations',
+            "Loaded %d annotations.",
+            len(self.pyramids[session_id]["overlay"].store),
         )
         self.layers[session_id]["overlay"] = self.pyramids[session_id]["overlay"]
         types = self.update_types(sq)
@@ -558,12 +559,12 @@ class TileServer(Flask):
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 if layer.store.path.suffix == ".db":
-                    logger.info("db committed")
+                    logger.info("%s*.db committed.", layer.store.path.stem)
                     layer.store.commit()
                 else:
                     layer.store.commit()
                     layer.store.dump(str(save_path))
-                    logger.info(f"db saved to {save_path}")
+                    logger.info("db saved to %s.", save_path)
                 return "done"
         return "nothing to save"
 
