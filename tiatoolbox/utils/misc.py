@@ -841,7 +841,7 @@ def string_to_tuple(in_str):
 
     Returns:
         tuple:
-            Returns a tuple of strings by splitting in_str at ','.
+            Return a tuple of strings by splitting in_str at ','.
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
@@ -878,7 +878,7 @@ def ppu2mpp(ppu: int, units: str | int) -> float:
 
 
 def select_cv2_interpolation(scale_factor):
-    """Returns appropriate interpolation method for opencv based image resize.
+    """Return appropriate interpolation method for opencv based image resize.
 
     Args:
         scale_factor (int or float):

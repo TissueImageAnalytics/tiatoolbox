@@ -374,7 +374,7 @@ class WSIStreamDataset(torch_data.Dataset):
         )
 
     def __len__(self) -> int:
-        """Returns the length of the instance attributes."""
+        """Return the length of the instance attributes."""
         return len(self.mp_shared_space.patch_inputs)
 
     @staticmethod

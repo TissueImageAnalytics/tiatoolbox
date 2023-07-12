@@ -392,7 +392,7 @@ def no_input_message(
 
     Returns:
         Path:
-            Returns input path as :class:`Path`.
+            Return input path as :class:`Path`.
 
     """
     if input_file is None:

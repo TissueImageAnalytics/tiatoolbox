@@ -220,7 +220,7 @@ class StainAugmentor(ImageOnlyTransform):
         return self.augment()
 
     def get_params(self):
-        """Returns randomly generated parameters based on input arguments."""
+        """Return randomly generated parameters based on input arguments."""
         self.alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
         self.beta = random.uniform(-self.sigma2, self.sigma2)
         return {}

@@ -18,12 +18,12 @@ class PatchExtractorABC(ABC):
 
     @abstractmethod
     def __iter__(self):
-        """Returns an iterator for the given object."""
+        """Return an iterator for the given object."""
         raise NotImplementedError
 
     @abstractmethod
     def __next__(self):
-        """Returns the next item for the iteration."""
+        """Return the next item for the iteration."""
         raise NotImplementedError
 
     @abstractmethod
@@ -161,16 +161,16 @@ class PatchExtractor(PatchExtractorABC):
         self.within_bound = within_bound
 
     def __iter__(self):
-        """Returns an iterator for the given object."""
+        """Return an iterator for the given object."""
         self.n = 0
         return self
 
     def __len__(self) -> int:
-        """Returns the length of the instance attributes."""
+        """Return the length of the instance attributes."""
         return self.locations_df.shape[0] if self.locations_df is not None else 0
 
     def __next__(self):
-        """Returns the next item for the iteration."""
+        """Return the next item for the iteration."""
         n = self.n
 
         if n >= self.locations_df.shape[0]:

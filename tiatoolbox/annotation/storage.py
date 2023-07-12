@@ -143,7 +143,7 @@ class Annotation:
         return json.dumps(self.to_feature())
 
     def __repr__(self) -> str:
-        """Returns a string representation of the object."""
+        """Return a string representation of the object."""
         return f"Annotation({self.geometry}, {self.properties})"
 
 
@@ -164,7 +164,7 @@ class AnnotationStore(ABC, MutableMapping):
 
     @staticmethod
     def _is_right_angle(a, b, c) -> bool:
-        """Returns True if three points make a right angle.
+        """Return True if three points make a right angle.
 
         Used for optimising queries.
 
@@ -613,7 +613,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         Returns:
             bool:
-                Returns True if the predicate holds.
+                Return True if the predicate holds.
 
         """
         if predicate is None:
@@ -2873,7 +2873,7 @@ class SQLiteStore(AnnotationStore):
         return result
 
     def __len__(self) -> int:
-        """Returns the length of the instance attributes."""
+        """Return the length of the instance attributes."""
         cur = self.con.cursor()
         cur.execute("SELECT COUNT(*) FROM annotations")
         (count,) = cur.fetchone()
@@ -2919,7 +2919,7 @@ class SQLiteStore(AnnotationStore):
         yield from self
 
     def __iter__(self) -> Iterable[int]:
-        """Returns an iterator for the given object."""
+        """Return an iterator for the given object."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -2945,7 +2945,7 @@ class SQLiteStore(AnnotationStore):
             yield value
 
     def items(self) -> Iterable[tuple[int, Annotation]]:
-        """Returns iterable (generator) over key and annotations."""
+        """Return iterable (generator) over key and annotations."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -3256,7 +3256,7 @@ class SQLiteStore(AnnotationStore):
             cur.execute(f"ANALYZE {name}")
 
     def indexes(self) -> list[str]:
-        """Returns a list of the names of all indexes in the store.
+        """Return a list of the names of all indexes in the store.
 
         Returns:
             List[str]:
@@ -3405,12 +3405,12 @@ class DictionaryStore(AnnotationStore):
         return key in self._rows
 
     def items(self) -> Generator[tuple[str, Annotation], None, None]:
-        """Returns iterable (generator) over key and annotations."""
+        """Return iterable (generator) over key and annotations."""
         for key, row in self._rows.items():
             yield key, row["annotation"]
 
     def __len__(self) -> int:
-        """Returns the length of the instance attributes."""
+        """Return the length of the instance attributes."""
         return len(self._rows)
 
     @classmethod

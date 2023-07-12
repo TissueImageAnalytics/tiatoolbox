@@ -232,7 +232,7 @@ class WSIReader:
         power: Number | None = None,
         **kwargs,
     ) -> WSIReader:
-        """Returns an appropriate :class:`.WSIReader` object.
+        """Return an appropriate :class:`.WSIReader` object.
 
         Args:
             input_img (str, pathlib.Path, :obj:`numpy.ndarray` or :obj:`.WSIReader`):
@@ -3203,7 +3203,7 @@ class ArrayView:
 
     @property
     def shape(self):
-        """Returns array shape."""
+        """Return array shape."""
         try:
             return tuple(self._shape[c] for c in "YXC")
         except KeyError:
@@ -3355,11 +3355,11 @@ class TIFFWSIReader(WSIReader):
             value_string = value_string.strip()
 
             def us_date(string: str) -> datetime:
-                """Returns datetime parsed according to US date format."""
+                """Return datetime parsed according to US date format."""
                 return datetime.strptime(string, r"%m/%d/%y").astimezone()
 
             def time(string: str) -> datetime:
-                """Returns datetime parsed according to HMS format."""
+                """Return datetime parsed according to HMS format."""
                 return datetime.strptime(string, r"%H:%M:%S").astimezone()
 
             casting_precedence = [us_date, time, int, float]

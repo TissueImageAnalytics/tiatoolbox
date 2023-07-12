@@ -68,11 +68,11 @@ class SQLNone:
     """Sentinel object for SQL NULL within expressions."""
 
     def __str__(self) -> str:
-        """Returns a human-readable, or informal, string representation of an object."""
+        """Return a human-readable, or informal, string representation of an object."""
         return "NULL"
 
     def __repr__(self) -> str:
-        """Returns a string representation of the object."""
+        """Return a string representation of the object."""
         return str(self)  # pragma: no cover
 
 
@@ -82,7 +82,7 @@ class SQLExpression:
     __hash__ = None
 
     def __repr__(self) -> str:
-        """Returns a string representation of the object."""
+        """Return a string representation of the object."""
         return str(self)  # pragma: no cover
 
     def __add__(self, other):
@@ -102,7 +102,7 @@ class SQLExpression:
         return SQLTriplet(other, operator.mul, self)
 
     def __sub__(self, other):
-        """Returns the difference of two objects."""
+        """Return the difference of two objects."""
         return SQLTriplet(other, operator.sub, self)
 
     def __rsub__(self, other):
@@ -134,23 +134,23 @@ class SQLExpression:
         return SQLTriplet(other, operator.mod, self)
 
     def __gt__(self, other):
-        """Returns a value when comparing two objects (x>y)."""
+        """Return a value when comparing two objects (x>y)."""
         return SQLTriplet(self, operator.gt, other)
 
     def __ge__(self, other):
-        """Returns a value when comparing two objects (x>=y)."""
+        """Return a value when comparing two objects (x>=y)."""
         return SQLTriplet(self, operator.ge, other)
 
     def __lt__(self, other):
-        """Returns a value when comparing two objects (x<y)."""
+        """Return a value when comparing two objects (x<y)."""
         return SQLTriplet(self, operator.lt, other)
 
     def __le__(self, other):
-        """Returns a value when comparing two objects (x<=y)."""
+        """Return a value when comparing two objects (x<=y)."""
         return SQLTriplet(self, operator.le, other)
 
     def __abs__(self):
-        """Returns the absolute value of the object."""
+        """Return the absolute value of the object."""
         return SQLTriplet(self, operator.abs)
 
     def __eq__(self, other):
@@ -242,7 +242,7 @@ class SQLTriplet(SQLExpression):
         }
 
     def __str__(self) -> str:
-        """Returns a human-readable, or informal, string representation of an object."""
+        """Return a human-readable, or informal, string representation of an object."""
         lhs = self.lhs
         rhs = self.rhs
         if isinstance(rhs, str):
@@ -262,7 +262,7 @@ class SQLJSONDictionary(SQLExpression):
         self.acc = acc or ""
 
     def __str__(self) -> str:
-        """Returns a human-readable, or informal, string representation of an object."""
+        """Return a human-readable, or informal, string representation of an object."""
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
     def __getitem__(self, key: str) -> "SQLJSONDictionary":
@@ -273,7 +273,7 @@ class SQLJSONDictionary(SQLExpression):
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
     def get(self, key, default=None):
-        """Returns SQLTriplet specified by key."""
+        """Return SQLTriplet specified by key."""
         return SQLTriplet(self[key], "if_null", default or SQLNone())
 
 
@@ -287,7 +287,7 @@ class SQLRegex(SQLExpression):
         self.flags = flags
 
     def __str__(self) -> str:
-        """Returns a human-readable, or informal, string representation of an object."""
+        """Return a human-readable, or informal, string representation of an object."""
         string = self.string
         pattern = self.pattern
         flags = self.flags
@@ -301,7 +301,7 @@ class SQLRegex(SQLExpression):
 
     @classmethod
     def search(cls, pattern: str, string: str, flags: int = 0) -> "SQLRegex":
-        """Returns an SQL expression to match a string against a pattern."""
+        """Return an SQL expression to match a string against a pattern."""
         return SQLRegex(pattern, string, int(flags))
 
 

@@ -149,7 +149,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             raise ValueError(msg)
 
     def __len__(self) -> int:
-        """Returns the length of the instance attributes."""
+        """Return the length of the instance attributes."""
         return len(self.inputs)
 
     @abstractmethod

@@ -367,13 +367,13 @@ class TilePyramidGenerator:
             archive.close()
 
     def __len__(self) -> int:
-        """Returns length of instance attributes."""
+        """Return length of instance attributes."""
         return sum(
             np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
         )
 
     def __iter__(self) -> Iterable:
-        """Returns an iterator for the given object."""
+        """Return an iterator for the given object."""
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
                 yield self.get_tile(level=level, x=x, y=y)
