@@ -2385,7 +2385,7 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: Optional[QueryGeometry] = None,
         where: Union[str, bytes, Callable[[Geometry, Dict[str, Any]], bool]] = None,
-        min_area=None,
+        min_area: Optional[float] = None,
     ) -> Dict[str, Tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
@@ -2433,7 +2433,9 @@ class SQLiteStore(AnnotationStore):
                 input should never be accepted to this argument as
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
-            min_area (?):
+            min_area (float or None):
+                Minimum area of the annotations to be returned.
+                Defaults to None.
 
 
         Returns:
