@@ -214,7 +214,7 @@ def test_masked_segmentor(remote_sample, tmp_path):
 
 
 def test_functionality_process_instance_predictions(remote_sample, tmp_path):
-    """Tests the functionality of instance predictions processing."""
+    """Test the functionality of instance predictions processing."""
     root_save_dir = pathlib.Path(tmp_path)
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
@@ -257,7 +257,7 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
 
 
 def test_empty_image(tmp_path):
-    """Tests MultiTaskSegmentor for an empty image."""
+    """Test MultiTaskSegmentor for an empty image."""
     root_save_dir = pathlib.Path(tmp_path)
     sample_patch = np.ones((256, 256, 3), dtype="uint8") * 255
     sample_patch_path = root_save_dir / "sample_tile.png"

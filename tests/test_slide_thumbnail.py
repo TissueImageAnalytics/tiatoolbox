@@ -1,4 +1,4 @@
-"""Tests for code related to obtaining slide thumbnails."""
+"""Test for code related to obtaining slide thumbnails."""
 
 import os
 import pathlib

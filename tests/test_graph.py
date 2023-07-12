@@ -1,4 +1,4 @@
-"""Tests for graph construction tools."""
+"""Test for graph construction tools."""
 from __future__ import annotations
 
 from typing import ClassVar

@@ -25,7 +25,7 @@ def _load_mapde(tmp_path, name):
 def test_functionality(remote_sample, tmp_path):
     """Functionality test for MapDe.
 
-    Tests the functionality of MapDe model for inference at the patch level.
+    Test the functionality of MapDe model for inference at the patch level.
 
     """
     tmp_path = str(tmp_path)

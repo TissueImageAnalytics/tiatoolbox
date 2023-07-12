@@ -1,4 +1,4 @@
-"""Tests for feature extractor."""
+"""Test for feature extractor."""
 
 import shutil
 from pathlib import Path

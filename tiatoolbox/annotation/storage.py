@@ -1719,7 +1719,7 @@ class SQLiteMetadata(MutableMapping):
         self.con.commit()
 
     def __contains__(self, key: str) -> bool:
-        """Tests whether the object contains the specified object or not."""
+        """Test whether the object contains the specified object or not."""
         cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
         return cursor.fetchone() is not None
 
@@ -2880,7 +2880,7 @@ class SQLiteStore(AnnotationStore):
         return count
 
     def __contains__(self, key: str) -> bool:
-        """Tests whether the object contains the specified object or not."""
+        """Test whether the object contains the specified object or not."""
         cur = self.con.cursor()
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
@@ -3401,7 +3401,7 @@ class DictionaryStore(AnnotationStore):
         self._rows[key] = {"annotation": annotation}
 
     def __contains__(self, key: str) -> bool:
-        """Tests whether the object contains the specified object or not."""
+        """Test whether the object contains the specified object or not."""
         return key in self._rows
 
     def items(self) -> Generator[tuple[str, Annotation], None, None]:

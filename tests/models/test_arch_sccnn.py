@@ -22,7 +22,7 @@ def _load_sccnn(tmp_path, name):
 def test_functionality(remote_sample, tmp_path):
     """Functionality test for SCCNN.
 
-    Tests the functionality of SCCNN model for inference at the patch level.
+    Test the functionality of SCCNN model for inference at the patch level.
 
     """
     tmp_path = str(tmp_path)

@@ -16,7 +16,7 @@ ON_GPU = False
 
 
 def test_functional_unet(remote_sample, tmp_path):
-    """Tests for unet."""
+    """Test for unet."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 

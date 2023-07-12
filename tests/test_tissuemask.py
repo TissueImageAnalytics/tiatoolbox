@@ -1,4 +1,4 @@
-"""Tests for code related to tissue mask generation."""
+"""Test for code related to tissue mask generation."""
 
 import os
 import pathlib

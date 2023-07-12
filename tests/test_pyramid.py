@@ -1,4 +1,4 @@
-"""Tests for tile pyramid generation."""
+"""Test for tile pyramid generation."""
 import re
 from pathlib import Path
 

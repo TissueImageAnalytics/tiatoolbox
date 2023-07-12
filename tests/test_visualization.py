@@ -1,4 +1,4 @@
-"""Tests for visualization."""
+"""Test for visualization."""
 
 import copy
 import pathlib

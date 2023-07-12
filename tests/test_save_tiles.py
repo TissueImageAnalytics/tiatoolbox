@@ -1,4 +1,4 @@
-"""Tests for code related to saving image tiles."""
+"""Test for code related to saving image tiles."""
 
 import pathlib
 

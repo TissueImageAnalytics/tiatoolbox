@@ -1,4 +1,4 @@
-"""Tests for annotation store classes."""
+"""Test for annotation store classes."""
 from __future__ import annotations
 
 import json
@@ -190,13 +190,13 @@ def fill_store(cell_grid, points_grid):
 
 
 def test_sqlite_store_compile_options():
-    """Tests SQLiteStore compile options."""
+    """Test SQLiteStore compile options."""
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
 
 def test_sqlite_store_compile_options_exception(monkeypatch):
-    """Tests SQLiteStore compile options for exceptions."""
+    """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 37, 0))
     monkeypatch.setattr(
         SQLiteStore,
@@ -211,7 +211,7 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
 
 
 def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
-    """Tests SQLiteStore compile options for exceptions."""
+    """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
     monkeypatch.setattr(
         SQLiteStore,
@@ -236,7 +236,7 @@ def test_sqlite_store_compile_options_missing_math(monkeypatch, caplog):
 
 
 def test_sqlite_store_multiple_connection(tmp_path):
-    """Tests SQLiteStore multiple connections."""
+    """Test SQLiteStore multiple connections."""
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
     assert len(store) == len(store2)
@@ -2116,7 +2116,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode_type(store_cls):
-        """Tests invalid mode type for AnnotationStore."""
+        """Test invalid mode type for AnnotationStore."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(TypeError, match="string or tuple of strings"):
@@ -2129,7 +2129,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode_format(store_cls):
-        """Tests invalid mode format for AnnotationStore."""
+        """Check invalid mode string format raises ValueError."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(ValueError, match="must be one of"):
@@ -2142,7 +2142,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode(store_cls):
-        """Tests invalid mode for AnnotationStore."""
+        """Check unsupported mode raises ValueError."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(ValueError, match="must be one of"):

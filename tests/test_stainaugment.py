@@ -1,4 +1,4 @@
-"""Tests for stain augmentation code."""
+"""Test for stain augmentation code."""
 
 import pathlib
 

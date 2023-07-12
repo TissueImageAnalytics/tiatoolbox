@@ -1,4 +1,4 @@
-"""Tests for predefined dataset within toolbox."""
+"""Test for predefined dataset within toolbox."""
 
 import shutil
 from pathlib import Path

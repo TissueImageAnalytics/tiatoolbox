@@ -1,4 +1,4 @@
-"""Tests for utils."""
+"""Test for utils."""
 
 import hashlib
 import os
@@ -1376,7 +1376,7 @@ def test_save_yaml_parents(tmp_path):
 
 
 def test_imread_none_args():
-    """Tests imread with wrong input type."""
+    """Test imread with wrong input type."""
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.imread(img)

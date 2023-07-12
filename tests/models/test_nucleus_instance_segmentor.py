@@ -1,4 +1,4 @@
-"""Tests for Nucleus Instance Segmentor."""
+"""Test for Nucleus Instance Segmentor."""
 
 import copy
 

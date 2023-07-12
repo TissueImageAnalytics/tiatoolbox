@@ -166,7 +166,7 @@ class SQLExpression:
         return SQLTriplet(self, operator.neg)
 
     def __contains__(self, other) -> bool:
-        """Tests whether the object contains the specified object or not."""
+        """Test whether the object contains the specified object or not."""
         return SQLTriplet(self, "contains", other)
 
     def __pow__(self, x):

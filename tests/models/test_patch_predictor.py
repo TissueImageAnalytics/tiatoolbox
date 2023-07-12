@@ -1,4 +1,4 @@
-"""Tests for Patch Predictor."""
+"""Test for Patch Predictor."""
 
 import copy
 import shutil
@@ -513,7 +513,7 @@ def test_predictor_crash():
 
 
 def test_io_config_delegation(remote_sample, tmp_path):
-    """Tests for delegating args to io config."""
+    """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
 
     # test not providing config / full input info for not pretrained models

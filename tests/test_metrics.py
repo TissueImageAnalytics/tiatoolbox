@@ -1,4 +1,4 @@
-"""Tests for metrics package in the toolbox."""
+"""Test for metrics package in the toolbox."""
 
 import numpy as np
 import pytest
@@ -55,7 +55,7 @@ def test_dice():
 
 
 def test_dice_shape_mismatch_error():
-    """Tests if the shape of inputs does not match."""
+    """Test if the shape of inputs does not match."""
     gt_mask = np.random.randint(2, size=(256, 256, 1))
     pred_mask = np.random.randint(2, size=(256, 256, 3))
     with pytest.raises(ValueError, match=r".*Shape mismatch between the two masks.*"):

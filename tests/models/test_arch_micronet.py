@@ -52,7 +52,7 @@ def test_value_error():
     reason="Local test on machine with GPU.",
 )
 def test_micronet_output(remote_sample, tmp_path):
-    """Tests the output of MicroNet."""
+    """Test the output of MicroNet."""
     svs_1_small = pathlib.Path(remote_sample("svs-1-small"))
     micronet_output = pathlib.Path(remote_sample("micronet-output"))
     pretrained_model = "micronet-consep"

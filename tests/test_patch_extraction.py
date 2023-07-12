@@ -1,4 +1,4 @@
-"""Tests for code related to patch extraction."""
+"""Test for code related to patch extraction."""
 
 import pathlib
 

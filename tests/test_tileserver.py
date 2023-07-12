@@ -1,4 +1,4 @@
-"""Tests for tileserver."""
+"""Test for tileserver."""
 import pathlib
 from pathlib import Path
 from typing import List, Union

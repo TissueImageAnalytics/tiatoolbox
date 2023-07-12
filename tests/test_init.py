@@ -1,4 +1,4 @@
-"""Tests for toolbox global workspace."""
+"""Test for toolbox global workspace."""
 
 import importlib
 import logging
@@ -90,7 +90,7 @@ def helper_logger_test(level: str):
 
 
 def test_logger_output():
-    """Tests if logger is writing output to correct value."""
+    """Test if logger is writing output to correct value."""
     # Test DEBUG is written to stdout
     helper_logger_test(level="debug")
 
@@ -108,7 +108,7 @@ def test_logger_output():
 
 
 def test_duplicate_filter(caplog):
-    """Tests DuplicateFilter for warnings."""
+    """Test DuplicateFilter for warnings."""
     for _ in range(2):
         logger.warning("Test duplicate filter warnings.")
     assert "Test duplicate filter warnings." in caplog.text
@@ -126,7 +126,7 @@ def test_duplicate_filter(caplog):
 
 
 def test_lazy_import():
-    """Tests lazy import for tiatoolbox."""
+    """Test lazy import for tiatoolbox."""
     import sys
 
     from tiatoolbox import _lazy_import

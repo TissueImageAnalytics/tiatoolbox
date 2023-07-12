@@ -1,4 +1,4 @@
-"""Tests for handling toolbox remote data."""
+"""Test for handling toolbox remote data."""
 
 from pathlib import Path
 

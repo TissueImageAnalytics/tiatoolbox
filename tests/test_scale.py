@@ -1,4 +1,4 @@
-"""Tests for scaling methods."""
+"""Test for scaling methods."""
 
 import numpy as np
 import pytest

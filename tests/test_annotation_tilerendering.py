@@ -1,6 +1,6 @@
-"""Tests for rendering tile annotations.
+"""Test for rendering tile annotations.
 
-Tests for annotation rendering using AnnotationRenderer and AnnotationTileGenerator.
+Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerator.
 
 """
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""Tests for reading whole-slide images."""
+"""Test for reading whole-slide images."""
 from __future__ import annotations
 
 import copy
@@ -668,7 +668,7 @@ def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff):
 
 
 def test_is_tiled_tiff(source_image):
-    """Tests if source_image is a tiled tiff."""
+    """Test if source_image is a tiled tiff."""
     source_image.replace(source_image.with_suffix(".tiff"))
     assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
@@ -2483,9 +2483,9 @@ class TestReader:
     def test_fuzz_read_region_baseline_size(sample_key, reader_class, kwargs):
         """Fuzz test for `read_bounds` output size at level 0 (baseline).
 
-        - Tests that the output image size matches the input bounds size.
+        - Test that the output image size matches the input bounds size.
         - 50 random seeded reads are performed.
-        - All test bounds are within the the slide dimensions.
+        - All test bounds are within the slide dimensions.
         - Bounds sizes are randomised between 1 and 512 in width and height.
 
         """

@@ -1,4 +1,4 @@
-"""Tests for Semantic Segmentor."""
+"""Test for Semantic Segmentor."""
 
 import copy
 
