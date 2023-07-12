@@ -1,4 +1,6 @@
 """This module defines classes which can read image data from WSI formats."""
+from __future__ import annotations
+
 import copy
 import json
 import logging
@@ -222,7 +224,7 @@ class WSIReader:
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         **kwargs,
-    ) -> "WSIReader":
+    ) -> WSIReader:
         """Returns an appropriate :class:`.WSIReader` object.
 
         Args:
