@@ -5,7 +5,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-if sys.version_info >= (3, 9):
+if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
 else:
     import importlib_resources  # To support Python 3.8
