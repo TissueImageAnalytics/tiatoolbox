@@ -103,7 +103,7 @@ class ConvBnRelu(nn.Module):
         kernel_size,
         strides,
         use_bias,
-        dilation_rate,
+        dilation_rates,
         activation,
         do_batchnorm,
     ):
@@ -120,7 +120,7 @@ class ConvBnRelu(nn.Module):
                 Size of stride in the convolution layer.
             use_bias (bool):
                 Whether to use bias in the convolution layer.
-            dilation_rate (list):
+            dilation_rates (list):
                 Dilation rate for each convolution layer.
             activation (str):
                 Name of the activation function to use.
@@ -136,7 +136,7 @@ class ConvBnRelu(nn.Module):
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=strides,
-            dilation=dilation_rate,
+            dilation=dilation_rates,
             bias=use_bias,
             padding="same",
             padding_mode="zeros",
