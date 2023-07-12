@@ -2268,7 +2268,7 @@ class SQLiteStore(AnnotationStore):
         geometry: Optional[QueryGeometry] = None,
         where: Optional[Predicate] = None,
         geometry_predicate="intersects",
-        min_area=None,
+        min_area: Optional[float] = None,
         distance: float = 0,
     ) -> List[str]:
         """Query the store for annotation keys.
@@ -2315,7 +2315,9 @@ class SQLiteStore(AnnotationStore):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
-            min_area (?):
+            min_area (float or None):
+                Minimum area of the annotations to be returned.
+                Defaults to None.
 
             distance (float):
                 Distance used when performing a distance based query.
