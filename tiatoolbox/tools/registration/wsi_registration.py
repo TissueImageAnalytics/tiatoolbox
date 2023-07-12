@@ -22,7 +22,7 @@ from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.wsicore.wsimeta import Resolution, Units
+    from tiatoolbox.typing import Resolution, Units
 
 
 def _check_dims(

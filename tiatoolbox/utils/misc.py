@@ -5,7 +5,7 @@ import copy
 import json
 import zipfile
 from pathlib import Path
-from typing import IO
+from typing import IO, TYPE_CHECKING
 
 import cv2
 import joblib
@@ -22,12 +22,20 @@ from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
+if TYPE_CHECKING:
+    import os
+    from os import PathLike
 
-def split_path_name_ext(full_path):
+    from shapely import geometry
+
+
+def split_path_name_ext(
+    full_path: os | PathLike,
+) -> tuple[Path, str, list[str]]:
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (str or Path):
+        full_path (os | PathLike):
             Path to a file.
 
     Returns:
@@ -46,11 +54,14 @@ def split_path_name_ext(full_path):
     return input_path.parent.absolute(), input_path.name, input_path.suffixes
 
 
-def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
+def grab_files_from_dir(
+    input_path: os | PathLike,
+    file_types: str | tuple[str] = ("*.jpg", "*.png", "*.tif"),
+) -> list[Path]:
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (str or Path):
+        input_path (os | PathLike):
             Path to the directory where files
             need to be searched.
         file_types (str or tuple(str)):
@@ -86,7 +97,7 @@ def grab_files_from_dir(input_path, file_types=("*.jpg", "*.png", "*.tif")):
 
 def save_yaml(
     input_dict: dict,
-    output_path="output.yaml",
+    output_path: os | PathLike = "output.yaml",
     parents: bool = False,
     exist_ok: bool = False,
 ):
@@ -95,7 +106,7 @@ def save_yaml(
     Args:
         input_dict (dict):
             A variable of type 'dict'.
-        output_path (str or Path):
+        output_path (os | PathLike):
             Path to save the output file.
         parents (bool):
             Make parent directories if they do not exist. Default is
@@ -122,11 +133,11 @@ def save_yaml(
         yaml.dump(input_dict, yaml_file)
 
 
-def imwrite(image_path, img) -> None:
+def imwrite(image_path: os | PathLike, img: np.ndarray) -> None:
     """Write numpy array to an image.
 
     Args:
-        image_path (str or Path):
+        image_path (os | PathLike):
             File path (including extension) to save image to.
         img (:class:`numpy.ndarray`):
             Image array of dtype uint8, MxNx3.
@@ -147,7 +158,7 @@ def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
-        image_path (str or Path):
+        image_path (os | PathLike):
             File path (including extension) to read image.
         as_uint8 (bool):
             Read an image in uint8 format.
@@ -179,11 +190,11 @@ def imread(image_path, as_uint8=True):
     return image
 
 
-def load_stain_matrix(stain_matrix_input):
+def load_stain_matrix(stain_matrix_input: np.ndarray | os | PathLike) -> np.ndarray:
     """Load a stain matrix as a numpy array.
 
     Args:
-        stain_matrix_input (ndarray or str, Path):
+        stain_matrix_input (ndarray or os | PathLike):
             Either a 2x3 or 3x3 numpy array or a path to a saved .npy /
             .csv file. If using a .csv file, there should be no column
             headers provided
@@ -223,7 +234,7 @@ def load_stain_matrix(stain_matrix_input):
     )
 
 
-def get_luminosity_tissue_mask(img, threshold):
+def get_luminosity_tissue_mask(img: np.ndarray, threshold: float) -> np.ndarray:
     """Get tissue mask based on the luminosity of the input image.
 
     Args:
@@ -256,9 +267,23 @@ def get_luminosity_tissue_mask(img, threshold):
 
 
 def mpp2common_objective_power(
-    mpp,
-    common_powers=(1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100),
-):
+    mpp: float | tuple[float, float],
+    common_powers: float
+    | tuple[float] = (
+        1,
+        1.25,
+        2,
+        2.5,
+        4,
+        5,
+        10,
+        20,
+        40,
+        60,
+        90,
+        100,
+    ),
+) -> float:
     """Approximate (commonly used value) of objective power from mpp.
 
     Uses :func:`mpp2objective_power` to estimate and then rounds to the
@@ -297,7 +322,7 @@ mpp2common_objective_power = np.vectorize(
 
 
 @np.vectorize
-def objective_power2mpp(objective_power):
+def objective_power2mpp(objective_power: float | tuple[float]) -> float | tuple[float]:
     r"""Approximate mpp from objective power.
 
     The formula used for estimation is :math:`power = \frac{10}{mpp}`.
@@ -310,7 +335,7 @@ def objective_power2mpp(objective_power):
         objective_power (float or tuple(float)): Objective power.
 
     Returns:
-        :class:`numpy.ndarray`:
+        float or tuple(float):
             Microns per-pixel (MPP) approximations.
 
     Examples:
@@ -325,7 +350,7 @@ def objective_power2mpp(objective_power):
 
 
 @np.vectorize
-def mpp2objective_power(mpp):
+def mpp2objective_power(mpp: float | tuple[float]) -> float | tuple[float]:
     """Approximate objective_power from mpp.
 
     Alias to :func:`objective_power2mpp` as it is a self-inverse
@@ -335,7 +360,7 @@ def mpp2objective_power(mpp):
         mpp (float or tuple(float)): Microns per-pixel.
 
     Returns:
-        :class:`numpy.ndarray`:
+        float or tuple(float):
             Objective power approximations.
 
     Examples:
@@ -352,7 +377,7 @@ def mpp2objective_power(mpp):
     return objective_power2mpp(mpp)
 
 
-def contrast_enhancer(img, low_p=2, high_p=98):
+def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.ndarray:
     """Enhance contrast of the input image using intensity adjustment.
 
     This method uses both image low and high percentiles.
@@ -393,8 +418,8 @@ def contrast_enhancer(img, low_p=2, high_p=98):
     return np.uint8(img_out)
 
 
-def __numpy_array_to_table(input_table):
-    """Checks numpy array to be 2 or 3 columns.
+def __numpy_array_to_table(input_table: np.ndarray) -> pd.DataFrame:
+    """Check numpy array to be 2 or 3 columns.
 
     If it has two columns then class should be assigned None.
 
@@ -420,7 +445,7 @@ def __numpy_array_to_table(input_table):
     raise ValueError(msg)
 
 
-def __assign_unknown_class(input_table):
+def __assign_unknown_class(input_table: np.ndarray | pd.DataFrame) -> pd.DataFrame:
     """Creates a column and assigns None if class is unknown.
 
     Args:
@@ -445,13 +470,14 @@ def __assign_unknown_class(input_table):
     return input_table
 
 
-def read_locations(input_table):
+def read_locations(
+    input_table: os | PathLike | np.ndarray | pd.DataFrame,
+) -> pd.DataFrame:
     """Read annotations as pandas DataFrame.
 
     Args:
-        input_table :
-            (str or Path or :class:`numpy.ndarray` or
-            :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+        input_table (os | PathLike | np.ndarray | pd.DataFrame`):
+            Path to csv, npy or json. Input can also be a
             :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             First column in the table represents x position, second
             column represents y position. The third column represents the class.
@@ -509,7 +535,12 @@ def read_locations(input_table):
 
 
 @np.vectorize
-def conv_out_size(in_size, kernel_size=1, padding=0, stride=1):
+def conv_out_size(
+    in_size: int,
+    kernel_size: int = 1,
+    padding: int = 0,
+    stride: int = 1,
+) -> int:
     r"""Calculate convolution output size.
 
     This is a numpy vectorised function.
@@ -595,7 +626,10 @@ def parse_cv2_interpolaton(interpolation: str | int) -> int:
     raise ValueError(msg)
 
 
-def assert_dtype_int(input_var, message="Input must be integer."):
+def assert_dtype_int(
+    input_var: np.ndarray,
+    message: str = "Input must be integer.",
+) -> AssertionError or None:
     """Generate error if dtype is not int.
 
     Args:
@@ -613,7 +647,7 @@ def assert_dtype_int(input_var, message="Input must be integer."):
         raise AssertionError(message)
 
 
-def download_data(url: str | Path, save_path: str | Path, overwrite: bool = False):
+def download_data(url: str, save_path: os | PathLike, overwrite: bool = False):
     """Download data from a given URL to location.
 
     The function can overwrite data if demanded else no action is taken.
@@ -651,12 +685,12 @@ def download_data(url: str | Path, save_path: str | Path, overwrite: bool = Fals
         f.write(r.content)
 
 
-def unzip_data(zip_path, save_path, del_zip=True):
+def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool = True):
     """Extract data from zip file.
 
     Args:
-        zip_path (str or Path): Path where the zip file is located.
-        save_path (str or Path): Path where to save extracted files.
+        zip_path (os | PathLike): Path where the zip file is located.
+        save_path (os | PathLike): Path where to save extracted files.
         del_zip (bool): Whether to delete initial zip file after extraction.
 
     """
@@ -699,7 +733,7 @@ def __walk_list_dict(in_list_dict):
     return in_list_dict
 
 
-def __walk_list(lst):
+def __walk_list(lst: list):
     """Recursive walk and jsonify a list in place.
 
     Args:
@@ -710,7 +744,7 @@ def __walk_list(lst):
         lst[i] = __walk_list_dict(v)
 
 
-def __walk_dict(dct):
+def __walk_dict(dct: dict):
     """Recursive walk and jsonify a dictionary in place.
 
     Args:
@@ -726,7 +760,7 @@ def __walk_dict(dct):
 
 def save_as_json(
     data: dict | list,
-    save_path: str | Path,
+    save_path: str | PathLike,
     parents: bool = False,
     exist_ok: bool = False,
 ):
@@ -739,7 +773,7 @@ def save_as_json(
     Args:
         data (dict or list):
             Input data to save.
-        save_path (str):
+        save_path (os | PathLike):
             Output to save the json of `input`.
         parents (bool):
             Make parent directories if they do not exist. Default is
@@ -786,7 +820,7 @@ def select_device(on_gpu: bool) -> str:
     return "cpu"
 
 
-def model_to(on_gpu, model):
+def model_to(on_gpu: bool, model: torch.nn.Module) -> torch.nn.Module:
     """Transfers model to cpu/gpu.
 
     Args:
@@ -805,7 +839,7 @@ def model_to(on_gpu, model):
     return model.to("cpu")
 
 
-def get_bounding_box(img):
+def get_bounding_box(img: np.ndarray) -> np.ndarray:
     """Get bounding box coordinate information.
 
     Given an image with zero and non-zero values. This function will
@@ -832,7 +866,7 @@ def get_bounding_box(img):
     return np.array([c_min, r_min, cmax, r_max])
 
 
-def string_to_tuple(in_str):
+def string_to_tuple(in_str: str) -> tuple[str]:
     """Splits input string to tuple at ','.
 
     Args:
@@ -877,7 +911,7 @@ def ppu2mpp(ppu: int, units: str | int) -> float:
     return 1 / ppu * microns_per_unit[units]
 
 
-def select_cv2_interpolation(scale_factor):
+def select_cv2_interpolation(scale_factor: int | float) -> str:
     """Return appropriate interpolation method for opencv based image resize.
 
     Args:
@@ -895,7 +929,7 @@ def select_cv2_interpolation(scale_factor):
 
 
 def store_from_dat(
-    fp: IO | str | Path,
+    fp: IO | os | PathLike,
     scale_factor: tuple[float, float] = (1, 1),
     typedict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
@@ -904,7 +938,7 @@ def store_from_dat(
     """Load annotations from a hovernet-style .dat file.
 
     Args:
-        fp (Union[IO, str, Path]):
+        fp (IO | os | PathLike):
             The file path or handle to load from.
         scale_factor (Tuple[float, float]):
             The scale factor in each dimension to use when loading the annotations.
@@ -934,7 +968,10 @@ def store_from_dat(
     return store
 
 
-def make_valid_poly(poly, origin=None):
+def make_valid_poly(
+    poly: geometry,
+    origin: tuple[float, float] | None = None,
+) -> geometry:
     """Helper function to make a valid polygon.
 
     Args:
@@ -944,7 +981,8 @@ def make_valid_poly(poly, origin=None):
             The x and y coordinates to use as the origin for the annotation.
 
     Returns:
-        A valid geometry.
+        geometry:
+            A valid geometry.
 
     """
     if origin != (0, 0):
@@ -956,7 +994,13 @@ def make_valid_poly(poly, origin=None):
     return poly.buffer(0.01)
 
 
-def anns_from_hoverdict(data, props, typedict, origin, scale_factor):
+def anns_from_hoverdict(
+    data: dict,
+    props: list,
+    typedict: dict,
+    origin: tuple,
+    scale_factor: float,
+) -> list[Annotation]:
     """Helper function to create list of Annotation objects.
 
     Creates annotations from a hovernet-style dict of segmentations, mapping types
@@ -976,7 +1020,8 @@ def anns_from_hoverdict(data, props, typedict, origin, scale_factor):
             will be multiplied by this factor.
 
     Returns:
-        A list of Annotation objects.
+        list(Annotation):
+            A list of Annotation objects.
 
     """
     return [
@@ -1002,7 +1047,7 @@ def anns_from_hoverdict(data, props, typedict, origin, scale_factor):
     ]
 
 
-def make_default_dict(data, subcat):
+def make_default_dict(data: dict, subcat: str) -> dict:
     """Helper function to create a default typedict if none is provided.
 
     The unique types in the data are given a prefix to differentiate
@@ -1013,7 +1058,7 @@ def make_default_dict(data, subcat):
     Args:
         data (dict):
             The data loaded from the .dat file.
-        subcat:
+        subcat (str):
             The subcategory of the data, eg 'Gland' or 'Nuclei'.
 
     Returns:
@@ -1030,8 +1075,8 @@ def make_default_dict(data, subcat):
 
 
 def add_from_dat(
-    store,
-    fp: IO | str,
+    store: list[AnnotationStore],
+    fp: IO | os | PathLike,
     scale_factor: tuple[float, float] = (1, 1),
     typedict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
@@ -1042,8 +1087,8 @@ def add_from_dat(
 
     Args:
         store (AnnotationStore):
-            AnnotationStore object.
-        fp (Union[IO, str, Path]):
+            An :class:`AnnotationStore` object.
+        fp (IO | os | PathLike):
             The file path or handle to load from.
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
@@ -1054,7 +1099,7 @@ def add_from_dat(
             with a type that is a key in the dictionary, will have their type
             replaced by the corresponding value. Useful for providing descriptive
             names to non-descriptive types,
-            eg {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
+            e.g., {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...}.
             For multi-head output, should be a dict of dicts, e.g.:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
             'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.

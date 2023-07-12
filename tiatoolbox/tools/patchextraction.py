@@ -7,10 +7,10 @@ import numpy as np
 from pandas import DataFrame
 
 from tiatoolbox import logger
+from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupportedError
 from tiatoolbox.wsicore import wsireader
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 
 
 class PatchExtractorABC(ABC):

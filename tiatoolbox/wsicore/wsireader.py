@@ -10,7 +10,7 @@ import pathlib
 import re
 from datetime import datetime
 from numbers import Number
-from typing import TYPE_CHECKING, Iterable, Tuple
+from typing import TYPE_CHECKING, Iterable
 
 import numpy as np
 import openslide
@@ -27,17 +27,14 @@ from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
-from tiatoolbox.wsicore.wsimeta import Resolution, Units, WSIMeta
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()
 
-NumPair = Tuple[Number, Number]
-IntPair = Tuple[int, int]
-Bounds = Tuple[Number, Number, Number, Number]
-IntBounds = Tuple[int, int, int, int]
 MIN_NGFF_VERSION = Version("0.4")
 MAX_NGFF_VERSION = Version("0.4")
 

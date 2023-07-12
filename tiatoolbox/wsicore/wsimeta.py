@@ -8,14 +8,12 @@ format of this dictionary may vary between WSI formats.
 """
 from numbers import Number
 from pathlib import Path
-from typing import List, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from tiatoolbox import logger
-
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
-Units = Literal["mpp", "power", "baseline", "level"]
+from tiatoolbox.typing import Resolution, Units
 
 
 class WSIMeta:
