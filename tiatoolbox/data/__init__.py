@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Optional, Union
 from urllib.parse import urlparse
 
-try:
+if sys.version_info >= (3, 9):
     import importlib.resources as importlib_resources
-except ImportError:
+else:
     import importlib_resources  # To support Python 3.8
 
 import numpy as np
