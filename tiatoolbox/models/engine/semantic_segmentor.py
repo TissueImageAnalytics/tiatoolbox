@@ -28,7 +28,6 @@ from ..dataset.dataset_abc import WSIStreamDataset
 from .io_config import IOSegmentorConfig
 
 
-
 def _estimate_canvas_parameters(sample_prediction, canvas_shape):
     """Estimates canvas parameters.
 
