@@ -19,13 +19,14 @@ import tqdm
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils import imread, misc
-from tiatoolbox.wsicore.wsimeta import Resolution, Units
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 from ..architecture import get_pretrained_model
 from ..dataset.dataset_abc import WSIStreamDataset
 from .io_config import IOSegmentorConfig
+
 
 
 def _estimate_canvas_parameters(sample_prediction, canvas_shape):
