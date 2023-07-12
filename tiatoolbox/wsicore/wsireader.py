@@ -22,7 +22,7 @@ from packaging.version import Version
 from PIL import Image
 
 from tiatoolbox import logger, utils
-from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
+from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
@@ -224,7 +224,7 @@ class WSIReader:
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         **kwargs,
-    ) -> "WSIReader":
+    ) -> WSIReader:
         """Returns an appropriate :class:`.WSIReader` object.
 
         Args:
