@@ -27,7 +27,7 @@ from skimage.morphology import binary_dilation, disk, remove_small_objects
 from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, rcParam, utils
-from tiatoolbox.annotation.storage import SQLiteStore
+from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import FileNotSupportedError

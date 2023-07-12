@@ -22,7 +22,7 @@ from packaging.version import Version
 from PIL import Image
 
 from tiatoolbox import logger, utils
-from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
+from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
