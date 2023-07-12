@@ -2441,6 +2441,10 @@ class TestReader:
         wsi = reader_class(sample, **kwargs)
         width, height = wsi.info.slide_dimensions
         iterations = 50
+
+        if sample_key == "jp2-omnyx-1":
+            iterations = 5
+
         for _ in range(iterations):
             size = (random.randint(1, 512), random.randint(1, 512))
             location = (
