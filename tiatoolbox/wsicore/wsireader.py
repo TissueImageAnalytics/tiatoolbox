@@ -1,6 +1,4 @@
 """This module defines classes which can read image data from WSI formats."""
-from __future__ import annotations
-
 import copy
 import json
 import logging
@@ -23,19 +21,16 @@ from PIL import Image
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
+from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
-from tiatoolbox.wsicore.wsimeta import Resolution, Units, WSIMeta
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 pixman_warning()
 
-NumPair = Tuple[Number, Number]
-IntPair = Tuple[int, int]
-Bounds = Tuple[Number, Number, Number, Number]
-IntBounds = Tuple[int, int, int, int]
 MIN_NGFF_VERSION = Version("0.4")
 MAX_NGFF_VERSION = Version("0.4")
 
