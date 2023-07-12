@@ -2158,7 +2158,7 @@ class SQLiteStore(AnnotationStore):
         unique: bool = False,
         no_constraints_ok: bool = False,
         index_warning: bool = False,
-        min_area=None,
+        min_area: Optional[float] = None,
         distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
@@ -2192,6 +2192,9 @@ class SQLiteStore(AnnotationStore):
             index_warning(bool):
                 Whether to warn if the query is not using an index.
                 Defaults to False.
+            min_area (float or None):
+                Minimum area of the annotations to be returned.
+                Defaults to None.
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
@@ -2231,12 +2234,13 @@ class SQLiteStore(AnnotationStore):
             distance=distance,
         )
 
+        # Add area column constraint to query if min_area is specified
         if min_area is not None and "area" in self.table_columns:
             query_string += f"\nAND area > {min_area}"
         elif min_area is not None:
             raise ValueError(
-                """Cannot use `min_area` without an area column.
-            SQLiteStore.add_area_column() can be used to add an area column."""
+                "Cannot use `min_area` without an area column. "
+                "SQLiteStore.add_area_column() can be used to add an area column."
             )
 
         if unique:
