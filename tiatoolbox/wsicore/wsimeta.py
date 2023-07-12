@@ -16,7 +16,7 @@ import numpy as np
 
 from tiatoolbox import logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import Resolution, Units
 
 

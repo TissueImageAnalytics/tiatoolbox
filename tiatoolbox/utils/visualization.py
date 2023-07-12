@@ -15,7 +15,7 @@ from shapely.geometry import Polygon
 
 from tiatoolbox import logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from numpy.typing import ArrayLike
 
     from tiatoolbox.annotation import Annotation, AnnotationStore

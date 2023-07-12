@@ -39,7 +39,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     WSIStreamDataset,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import torch
 
 

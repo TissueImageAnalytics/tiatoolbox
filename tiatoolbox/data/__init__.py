@@ -18,7 +18,7 @@ import requests
 
 from tiatoolbox import logger, read_registry_files
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
 # Load a dictionary of sample files data (names and urls)

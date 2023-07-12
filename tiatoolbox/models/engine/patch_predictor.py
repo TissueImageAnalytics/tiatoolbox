@@ -17,7 +17,7 @@ from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import Resolution, Units
 
 

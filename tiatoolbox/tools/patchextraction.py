@@ -11,7 +11,7 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupportedError
 from tiatoolbox.wsicore import wsireader
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
     from pandas import DataFrame

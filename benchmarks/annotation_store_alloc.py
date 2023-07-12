@@ -145,7 +145,7 @@ from tiatoolbox.annotation.storage import (  # noqa: E402
     SQLiteStore,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
 

@@ -26,7 +26,7 @@ from tiatoolbox.annotation import (
 )
 from tiatoolbox.annotation.storage import SQLiteMetadata
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
 sqlite3.enable_callback_tracebacks(True)

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Literal
 
 from tiatoolbox import __version__ as tiatoolbox_version
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
 SpaceUnits = Literal[

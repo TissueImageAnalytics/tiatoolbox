@@ -12,7 +12,7 @@ from tiatoolbox.models.architecture.vanilla import CNNBackbone, CNNModel
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import pathlib
 
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
