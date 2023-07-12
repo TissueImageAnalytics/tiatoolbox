@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
-else:
+else:  # pragma: no cover
     import importlib_resources  # To support Python 3.8
 
 import numpy as np

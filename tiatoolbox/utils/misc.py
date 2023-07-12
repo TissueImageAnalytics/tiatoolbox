@@ -22,7 +22,7 @@ from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import os
     from os import PathLike
 
