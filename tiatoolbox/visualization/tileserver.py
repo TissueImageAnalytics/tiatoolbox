@@ -378,8 +378,10 @@ class TileServer(Flask):
     def change_mapper(self):
         """Change the colour mapper for the overlay."""
         session_id = self._get_session_id()
-        cmap = request.form["cmap"]
-        self.renderers[session_id].mapper = json.loads(cmap)
+        cmap = json.loads(request.form["cmap"])
+        if isinstance(cmap, dict):
+            cmap = dict(zip(cmap["keys"], cmap["values"]))
+        self.renderers[session_id].mapper = cmap
         self.renderers[session_id].function_mapper = None
 
         return "done"

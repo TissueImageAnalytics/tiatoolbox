@@ -628,9 +628,16 @@ class AnnotationRenderer:
                 )
         except KeyError:
             logger.warning(
-                "'score_prop' not found in properties. Using default color.",
+                "property: %s not found in properties. Using default color.",
+                score_prop,
                 stacklevel=2,
             )
+        except TypeError:
+            logger.warning(
+                "property value type incompatable with cmap. Using default color.",
+                stacklevel=2,
+            )
+
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given

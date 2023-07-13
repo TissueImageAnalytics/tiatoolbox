@@ -1,9 +1,7 @@
 import json
-import operator
 import os
 import pickle
 import sys
-import tempfile
 import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
@@ -23,7 +21,6 @@ from bokeh.models import (
     BoxEditTool,
     Button,
     CheckboxButtonGroup,
-    CheckboxGroup,
     Circle,
     ColorBar,
     ColorPicker,
@@ -33,7 +30,6 @@ from bokeh.models import (
     FuncTickFormatter,
     GraphRenderer,
     HoverTool,
-    Line,
     LinearColorMapper,
     MultiChoice,
     PointDrawTool,
@@ -42,7 +38,6 @@ from bokeh.models import (
     Select,
     Slider,
     Spinner,
-    StaticLayoutProvider,
     TabPanel,
     Tabs,
     TapTool,
@@ -267,6 +262,9 @@ def update_renderer(prop, value):
                 cm.get_cmap(value)
             )
             UI["color_bar"].visible = True
+        if isinstance(value, dict):
+            # send keys and values separately so types are preserved
+            value = {"keys": list(value.keys()), "values": list(value.values())}
         return UI["s"].put(
             f"http://{host2}:5000/tileserver/cmap", data={"cmap": json.dumps(value)}
         )
