@@ -9,10 +9,12 @@ class FileNotSupportedError(Exception):
 
     """
 
-    def __init__(self, message: str = "File format is not supported") -> None:
+    def __init__(
+        self: Exception,
+        message: str = "File format is not supported",
+    ) -> None:
         """Initialize :class:`FileNotSupportedError`."""
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)
 
 
 class MethodNotSupportedError(Exception):
@@ -23,7 +25,6 @@ class MethodNotSupportedError(Exception):
 
     """
 
-    def __init__(self, message: str = "Method is not supported") -> None:
+    def __init__(self: Exception, message: str = "Method is not supported") -> None:
         """Initialize :class:`MethodNotSupportedError`."""
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)
