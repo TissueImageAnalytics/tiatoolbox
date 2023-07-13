@@ -26,7 +26,7 @@
 [tool.coverage.run]
   branch = true
   source = ['tiatoolbox']
-  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py', ]
+  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
 [tool.coverage.report]
   exclude_lines = [
@@ -36,7 +36,7 @@
     'if __name__ == .__main__.:',
   ]
   ignore_errors = true
-  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py']
+  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
 [tool.isort]
   profile = "black"
