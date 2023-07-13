@@ -1,5 +1,5 @@
 """Command line interface for stain_norm."""
-import os
+from pathlib import Path
 
 import click
 
@@ -12,19 +12,22 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
+input_type = click.Choice(
+    ["reinhard", "custom", "ruifrok", "macenko", "vahadane"],
+    case_sensitive=False,
+)
+
 
 @tiatoolbox_cli.command()
 @cli_img_input(
-    usage_help="Input path to the source image or a directory of source images."
+    usage_help="Input path to the source image or a directory of source images.",
 )
 @cli_output_path(default="stainnorm_output")
 @cli_file_type(default="*.png, *.jpg, *.tif, *.tiff")
 @cli_method(
     usage_help="Stain normalization method to use.",
     default="reinhard",
-    input_type=click.Choice(
-        ["reinhard", "custom", "ruifrok", "macenko", "vahadane"], case_sensitive=False
-    ),
+    input_type=input_type,
 )
 # inputs specific to this function
 @click.option("--target-input", help="Input path to the target image")
@@ -41,7 +44,11 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
     from tiatoolbox.utils import imread, imwrite
 
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, "save", "stainnorm_output"
+        img_input,
+        output_path,
+        file_types,
+        "save",
+        "stainnorm_output",
     )
 
     # init stain normalization method
@@ -51,7 +58,7 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
     norm.fit(imread(target_input))
 
     for curr_file in files_all:
-        basename = os.path.basename(curr_file)
+        basename = Path(curr_file).name
         # transform source image
         transform = norm.transform(imread(curr_file))
-        imwrite(os.path.join(output_path, basename), transform)
+        imwrite(output_path / basename, transform)

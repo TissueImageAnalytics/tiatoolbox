@@ -1,9 +1,9 @@
-"""Defines a set of models to be used within tiatoolbox."""
+"""Define a set of models to be used within tiatoolbox."""
+from __future__ import annotations
 
 import os
-import pathlib
 from pydoc import locate
-from typing import Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import torch
 
@@ -11,6 +11,9 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, CNNModel
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
+
+if TYPE_CHECKING:  # pragma: no cover
+    import pathlib
 
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
@@ -34,8 +37,8 @@ def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = 
 
 
 def get_pretrained_model(
-    pretrained_model: str = None,
-    pretrained_weights: Union[str, pathlib.Path] = None,
+    pretrained_model: str | None = None,
+    pretrained_weights: str | pathlib.Path | None = None,
     overwrite: bool = False,
 ):
     """Load a predefined PyTorch model with the appropriate pretrained weights.
@@ -92,18 +95,20 @@ def get_pretrained_model(
 
     """
     if not isinstance(pretrained_model, str):
-        raise ValueError("pretrained_model must be a string.")
+        msg = "pretrained_model must be a string."
+        raise TypeError(msg)
 
     if pretrained_model not in PRETRAINED_INFO:
-        raise ValueError(f"Pretrained model `{pretrained_model}` does not exist.")
+        msg = f"Pretrained model `{pretrained_model}` does not exist."
+        raise ValueError(msg)
 
     info = PRETRAINED_INFO[pretrained_model]
 
     arch_info = info["architecture"]
-    creator = locate((f"tiatoolbox.models.architecture" f'.{arch_info["class"]}'))
+    creator = locate(f"tiatoolbox.models.architecture.{arch_info['class']}")
 
     model = creator(**arch_info["kwargs"])
-    # TODO: a dictionary of dataset specific or transformation ?
+    # TODO(TBC): Dictionary of dataset specific or transformation?  # noqa: FIX002,TD003
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
         # ! associated pre-processing coming from dataset (Kumar, Kather, etc.)
@@ -111,9 +116,7 @@ def get_pretrained_model(
 
     if pretrained_weights is None:
         file_name = info["url"].split("/")[-1]
-        pretrained_weights = os.path.join(
-            rcParam["TIATOOLBOX_HOME"], "models/", file_name
-        )
+        pretrained_weights = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
         fetch_pretrained_weights(pretrained_model, pretrained_weights, overwrite)
 
     # ! assume to be saved in single GPU mode
@@ -123,7 +126,7 @@ def get_pretrained_model(
 
     # !
     io_info = info["ioconfig"]
-    creator = locate((f"tiatoolbox.models.engine" f'.{io_info["class"]}'))
+    creator = locate(f"tiatoolbox.models.engine.{io_info['class']}")
 
     iostate = creator(**io_info["kwargs"])
     return model, iostate
