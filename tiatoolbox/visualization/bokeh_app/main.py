@@ -2,6 +2,7 @@ import json
 import os
 import pickle
 import sys
+import tempfile
 import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
@@ -48,6 +49,7 @@ from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
 from flask_cors import CORS
+from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
 from tiatoolbox.annotation.dsl import SQL_GLOBALS, SQLTriplet
@@ -175,14 +177,6 @@ def name2type(name):
     return name
 
 
-def name2type_key(name):
-    # do we need this?
-    try:
-        return int(name)
-    except:
-        return f"{name}"
-
-
 def hex2rgb(hex_val):
     return tuple(int(hex_val[i : i + 2], 16) / 255 for i in (1, 3, 5))
 
@@ -307,10 +301,7 @@ def initialise_slide():
     slide_name = UI["vstate"].wsi.info.file_path.stem
     UI["vstate"].types = []
     UI["vstate"].props = []
-    pad = int(np.mean(UI["vstate"].dims) / 10)
     plot_size = np.array([UI["p"].width, UI["p"].height])
-    aspect_ratio = plot_size[0] / plot_size[1]
-    large_dim = np.argmax(np.array(UI["vstate"].dims) / plot_size)
 
     UI["vstate"].micron_formatter.args["mpp"] = UI["vstate"].mpp[0]
     if slide_name in config["initial_views"]:
@@ -329,36 +320,14 @@ def initialise_slide():
         # view should already be correct, pass
         pass
     else:
-        if large_dim == 1:
-            UI["p"].x_range.start = (
-                -0.5 * (UI["vstate"].dims[1] * aspect_ratio - UI["vstate"].dims[0])
-                - aspect_ratio * pad
-            )
-            UI["p"].x_range.end = (
-                UI["vstate"].dims[1] * aspect_ratio
-                - 0.5 * (UI["vstate"].dims[1] * aspect_ratio - UI["vstate"].dims[0])
-                + aspect_ratio * pad
-            )
-            UI["p"].y_range.start = -UI["vstate"].dims[1] - pad
-            UI["p"].y_range.end = pad
-            # UI["p"].x_range.min_interval = ?
-        else:
-            UI["p"].x_range.start = -aspect_ratio * pad
-            UI["p"].x_range.end = UI["vstate"].dims[0] + pad * aspect_ratio
-            UI["p"].y_range.start = (
-                -UI["vstate"].dims[0] / aspect_ratio
-                + 0.5 * (UI["vstate"].dims[0] / aspect_ratio - UI["vstate"].dims[1])
-                - pad
-            )
-            UI["p"].y_range.end = (
-                0.5 * (UI["vstate"].dims[0] / aspect_ratio - UI["vstate"].dims[1]) + pad
-            )
+        x_start, x_end, y_start, y_end = get_view_bounds(UI["vstate"].dims, plot_size)
+        UI["p"].x_range.start = x_start
+        UI["p"].x_range.end = x_end
+        UI["p"].y_range.start = y_start
+        UI["p"].y_range.end = y_end
         print(
             f"ranges are x: {UI['p'].x_range.start} - {UI['p'].x_range.end}, y: {UI['p'].y_range.start} - {UI['p'].y_range.end}"
         )
-    # UI["p"].x_range.bounds = (UI["p"].x_range.start - 2 * pad, UI["p"].x_range.end + 2 * pad)
-    # UI["p"].y_range.bounds = (UI["p"].y_range.start - 2 * pad, UI["p"].y_range.end + 2 * pad)
-    # UI["p"]._trigger_event()
 
     init_z = get_level_by_extent((0, UI["p"].y_range.start, UI["p"].x_range.end, 0))
     UI["vstate"].init_z = init_z
@@ -731,36 +700,6 @@ def cprop_input_cb(attr, old, new):
     UI["vstate"].to_update.update(["overlay"])
 
 
-def cmap_builder_cb(attr, old, new):
-    """add a property to the colormap and make a ColorPicker for it,
-    then add it to the UI["cmap_picker_column"]. if new < old, remove the
-    ColorPicker wit the deselected property from the cmap_picker_column"""
-    if len(new) > len(old):
-        new_prop = set(new).difference(set(old))
-        new_prop = new_prop.pop()
-
-        color_picker = ColorPicker(
-            title=new_prop,
-            color=color_cycler.get_next(),
-            width=100,
-            height=50,
-        )
-        color_picker.on_change("color", cmap_picker_cb)
-        UI["cmap_picker_column"].children.append(color_picker)
-    else:
-        old_prop = set(old).difference(set(new))
-        old_prop = old_prop.pop()
-        for i, cp in enumerate(UI["cmap_picker_column"].children):
-            if cp.title == old_prop:
-                UI["cmap_picker_column"].children.pop(i)
-                break
-
-
-def cmap_picker_cb(attr, old, new):
-    """update the colormap with the new color"""
-    pass  # anything needed here?
-
-
 def set_graph_alpha(g_renderer, value):
     # set all components of graph to given alpha value
     g_renderer.node_renderer.glyph.fill_alpha = value
@@ -1012,7 +951,6 @@ def layer_drop_cb(attr):
         #     set([UI["p"].split("_")[0] for p in UI["vstate"].props])
         # )
         UI["cprop_input"].options.append("None")
-        UI["cmap_builder_input"].options = UI["vstate"].props
         if not UI["vstate"].props == UI["vstate"].props_old:
             # if color by prop no longer exists, reset to type
             if (
@@ -1102,17 +1040,6 @@ def bind_cb_obj_tog(cb_obj, cb):
         cb(cb_obj, attr)
 
     return wrapped
-
-
-def swap_cb(attr):
-    val = UI["type_cmap_select"].value
-    if len(val) == 0:
-        return
-    if "_exp" in val[0]:
-        UI["type_cmap_select"].value = [val[0][:-4]]
-    else:
-        UI["type_cmap_select"].value = [val[0] + "_exp"]
-    type_cmap_cb(None, None, UI["type_cmap_select"].value)
 
 
 def model_drop_cb(attr):
@@ -1210,16 +1137,6 @@ def save_cb(attr):
     )
 
 
-def subcat_select_cb(attr, old, new):
-    if new == "All":
-        UI["cmap_builder_input"].options = UI["vstate"].props
-        return
-    new_opts = [p for p in UI["vstate"].props if new in p]
-    UI["cmap_builder_input"].options = new_opts + [
-        a for a in UI["cmap_builder_input"].value if a not in new_opts
-    ]
-
-
 # run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
 def segment_on_box(attr):
     print(UI["vstate"].types)
@@ -1241,7 +1158,7 @@ def segment_on_box(attr):
     print(x, y, width, height)
 
     # img_tile=wsi.read_rect((x,y),(width,height))
-    mask = np.zeros((thumb.shape[0], thumb.shape[1]))
+    mask = np.zeros((thumb.shape[0], thumb.shape[1]), dtype=np.uint8)
     mask[y : y + height, x : x + width] = 1
 
     inst_segmentor = NucleusInstanceSegmentor(
@@ -1250,12 +1167,15 @@ def segment_on_box(attr):
         num_postproc_workers=8,
         batch_size=24,
     )
+    tmp_save_dir = tempfile.mkdtemp()
+    tmp_mask_dir = tempfile.mkdtemp()
+    Image.fromarray(mask).save(f"{tmp_mask_dir}\\mask.png")
 
     UI["vstate"].model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
     tile_output = inst_segmentor.predict(
         [UI["vstate"].slide_path],
-        [mask],
-        save_dir="sample_tile_results/",
+        [f"{tmp_mask_dir}\\mask.png"],
+        save_dir=f"{tmp_save_dir}\\hover_out",
         mode="wsi",
         # resolution=UI["vstate"].mpp,
         # units='mpp',
@@ -1264,8 +1184,7 @@ def segment_on_box(attr):
     )
 
     # fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
-    fname = make_safe_name(".\\sample_tile_results\\0.dat")
-    print(fname)
+    fname = make_safe_name(f"{tmp_save_dir}\\hover_out\\0.dat")
     resp = UI["s"].put(
         f"http://{host2}:5000/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
@@ -1278,14 +1197,14 @@ def segment_on_box(attr):
     # UI["type_cmap_select"].options = UI["vstate"].props
     UI["cprop_input"].options = UI["vstate"].props
     # subcat_select.options = ["All"] + list(set([UI["p"].split("_")[0] for p in UI["vstate"].props]))
-    UI["cmap_builder_input"].options = UI["vstate"].props
     if not UI["vstate"].props == UI["vstate"].props_old:
         update_mapper()
         UI["vstate"].props_old = UI["vstate"].props
 
     # update_mapper()
     # type_drop.menu=[(str(t),str(t)) for t in UI["vstate"].types]
-    rmtree(r"./sample_tile_results")
+    rmtree(tmp_save_dir)
+    rmtree(tmp_mask_dir)
     initialise_overlay()
     change_tiles("overlay")
 
@@ -1658,13 +1577,6 @@ def make_window(vstate):
         ColorPicker(color=col[0:3], width=60, max_width=60, sizing_mode="stretch_width")
         for col in vstate.colors
     ]
-    layer_folder_input = TextInput(
-        value=str(config["overlay_folder"]),
-        title="Overlay Folder:",
-        # max_width=300,
-        sizing_mode="stretch_width",
-        name=f"layer_folder{win_num}",
-    )
     layer_drop = Dropdown(
         label="Add Overlay",
         button_type="warning",
@@ -1686,38 +1598,6 @@ def make_window(vstate):
         max_width=90,
         sizing_mode="stretch_width",
         name=f"save_button{win_num}",
-    )
-    cmap_builder_input = MultiChoice(
-        title="Choose props and colors:",
-        max_items=10,
-        options=["*"],
-        search_option_limit=5000,
-        sizing_mode="stretch_width",
-        # max_width=300,
-        name=f"cmap_builder_input{win_num}",
-    )
-    cmap_builder_button = Button(
-        label="Build Cmap",
-        button_type="success",
-        max_width=90,
-        sizing_mode="stretch_width",
-        name=f"cmap_builder_button{win_num}",
-    )
-    cmap_picker_column = column(children=[], name=f"cmap_picker_column{win_num}")
-    subcat_select = Select(
-        title="subcat", options=["All"], value="All", name=f"subcat_select{win_num}"
-    )
-    mixing_type_select = RadioButtonGroup(
-        labels=["lin", "max", "avg", "prod", "pow", "softm"],
-        active=4,
-        name=f"mixing_type_select{win_num}",
-    )
-    add_postproc_button = Button(
-        label="Add Postproc",
-        button_type="success",
-        max_width=90,
-        sizing_mode="stretch_width",
-        name=f"postproc_button{win_num}",
     )
 
     # associate callback functions to the widgets
@@ -1741,8 +1621,6 @@ def make_window(vstate):
     cprop_input.on_change("value", cprop_input_cb)
     node_source.selected.on_change("indices", node_select_cb)
     type_cmap_select.on_change("value", type_cmap_cb)
-    cmap_builder_input.on_change("value", cmap_builder_cb)
-    subcat_select.on_change("value", subcat_select_cb)
 
     vstate.cprop = config["default_cprop"]
 
@@ -1816,22 +1694,12 @@ def make_window(vstate):
                 "pt_size_spinner",
                 "edge_size_spinner",
                 "res_switch",
-                "mixing_type_select",
-                "cmap_builder_input",
-                "cmap_picker_column",
-                "cmap_builder_button",
-                "add_postproc_button",
             ],
             [
                 opt_buttons,
                 pt_size_spinner,
                 edge_size_spinner,
                 res_switch,
-                mixing_type_select,
-                cmap_builder_input,
-                cmap_picker_column,
-                cmap_builder_button,
-                add_postproc_button,
             ],
         )
     )
