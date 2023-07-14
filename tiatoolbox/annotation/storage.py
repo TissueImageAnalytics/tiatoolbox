@@ -2237,7 +2237,7 @@ class SQLiteStore(AnnotationStore):
         unique: bool = False,
         no_constraints_ok: bool = False,
         index_warning: bool = False,
-        min_area: Optional[float] = None,
+        min_area: float | None | None = None,
         distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
@@ -2355,7 +2355,7 @@ class SQLiteStore(AnnotationStore):
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate="intersects",
-        min_area: Optional[float] = None,
+        min_area: float | None = None,
         distance: float = 0,
     ) -> list[str]:
         """Query the store for annotation keys.
