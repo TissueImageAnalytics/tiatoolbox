@@ -251,7 +251,7 @@ class Annotation:
         if coords:
             self._coords = coords
             self._type = geom_type
-        elif geometry:
+        else:
             self.geometry = geometry
         self.properties = properties or {}
 
