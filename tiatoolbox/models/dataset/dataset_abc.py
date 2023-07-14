@@ -537,6 +537,8 @@ class PatchDataset(PatchDatasetABC):
         labels:
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
+
+    Properties:
         preproc_func:
             Preprocessing function used to transform the input data.
 
