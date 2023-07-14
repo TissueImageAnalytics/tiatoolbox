@@ -41,6 +41,16 @@ class ModelIOConfigABC:
             output resolutions. This helps to read the image at the optimal
             resolution and improves performance.
 
+    Examples:
+        >>> # Defining io for a base network and converting to baseline.
+        >>> ioconfig = ModelIOConfigABC(
+        ...     input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        ...     patch_input_shape=(224, 224),
+        ...     stride_shape=(224, 224),
+        ... )
+        >>> ioconfig = ioconfig.to_baseline()
+
     """
 
     input_resolutions: List[dict]
@@ -197,8 +207,6 @@ class IOSegmentorConfig(ModelIOConfigABC):
         ...     patch_output_shape=(1024, 1024),
         ...     stride_shape=(512, 512),
         ... )
-
-    Examples:
         >>> # Defining io for a network having 3 input and 2 output
         >>> # at the same resolution, the output is then merged at a
         >>> # different resolution.
@@ -290,6 +298,15 @@ class IOPatchPredictorConfig(ModelIOConfigABC):
             output resolutions. This helps to read the image at the optimal
             resolution and improves performance.
 
+    Examples:
+        >>> # Defining io for a patch predictor network
+        >>> ioconfig = IOPatchPredictorConfig(
+        ...     input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        ...     patch_input_shape=(224, 224),
+        ...     stride_shape=(224, 224),
+        ... )
+
     """
 
 
@@ -344,19 +361,19 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
         >>> # same resolution
-        >>> ioconfig = IOSegmentorConfig(
+        >>> ioconfig = IOInstanceSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     patch_input_shape=(2048, 2048),
         ...     patch_output_shape=(1024, 1024),
         ...     stride_shape=(512, 512),
+        ...     margin=128,
+        ...     tile_shape=(1024, 1024),
         ... )
-
-    Examples:
         >>> # Defining io for a network having 3 input and 2 output
         >>> # at the same resolution, the output is then merged at a
         >>> # different resolution.
-        >>> ioconfig = IOSegmentorConfig(
+        >>> ioconfig = IOInstanceSegmentorConfig(
         ...     input_resolutions=[
         ...         {"units": "mpp", "resolution": 0.25},
         ...         {"units": "mpp", "resolution": 0.50},
@@ -370,6 +387,8 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         ...     patch_output_shape=(1024, 1024),
         ...     stride_shape=(512, 512),
         ...     save_resolution={"units": "mpp", "resolution": 4.0},
+        ...     margin=128,
+        ...     tile_shape=(1024, 1024),
         ... )
 
     """
