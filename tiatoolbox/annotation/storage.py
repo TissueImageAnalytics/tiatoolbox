@@ -246,6 +246,8 @@ class Annotation:
             raise ValueError("Both coords and geometry cannot be specified.")
         if (coords and not geom_type) or (geom_type and not coords):
             raise ValueError("Both coords and geom_type must be specified, or neither.")
+        if not coords and not geometry:
+            raise ValueError("Either coords or geometry must be specified.")
         if coords:
             self._coords = coords
             self._type = geom_type
