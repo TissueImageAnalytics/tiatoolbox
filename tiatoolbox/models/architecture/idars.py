@@ -9,7 +9,7 @@ TRANSFORM = transforms.Compose(
     [
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
-    ]
+    ],
 )
 
 
@@ -62,7 +62,6 @@ class IDaRS(CNNModel):
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
-    # noqa: E800
     def preproc(image: np.ndarray):
         """Define preprocessing steps.
 

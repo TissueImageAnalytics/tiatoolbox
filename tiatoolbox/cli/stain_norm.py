@@ -15,7 +15,7 @@ from tiatoolbox.cli.common import (
 
 @tiatoolbox_cli.command()
 @cli_img_input(
-    usage_help="Input path to the source image or a directory of source images."
+    usage_help="Input path to the source image or a directory of source images.",
 )
 @cli_output_path(default="stainnorm_output")
 @cli_file_type(default="*.png, *.jpg, *.tif, *.tiff")
@@ -23,7 +23,8 @@ from tiatoolbox.cli.common import (
     usage_help="Stain normalization method to use.",
     default="reinhard",
     input_type=click.Choice(
-        ["reinhard", "custom", "ruifrok", "macenko", "vahadane"], case_sensitive=False
+        ["reinhard", "custom", "ruifrok", "macenko", "vahadane"],
+        case_sensitive=False,
     ),
 )
 # inputs specific to this function
@@ -41,7 +42,11 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
     from tiatoolbox.utils import imread, imwrite
 
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, "save", "stainnorm_output"
+        img_input,
+        output_path,
+        file_types,
+        "save",
+        "stainnorm_output",
     )
 
     # init stain normalization method
