@@ -285,15 +285,15 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         """Make a prediction on tile/wsi.
 
         Args:
-            wsi_idx (int): 
+            wsi_idx (int):
                 Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOInstanceSegmentorConfig): 
+            ioconfig (IOInstanceSegmentorConfig):
                 Object which defines I/O placement
                 during inference and when assembling back to full tile/wsi.
-            save_path (str): 
+            save_path (str):
                 Location to save output prediction as well as possible
                 intermediate results.
-            mode (str): 
+            mode (str):
                 `tile` or `wsi` to indicate run mode.
 
         """
