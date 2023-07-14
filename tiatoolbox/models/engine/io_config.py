@@ -147,14 +147,8 @@ class ModelIOConfigABC:
         input_resolutions = [
             {"units": "baseline", "resolution": v} for v in scale_factors[:end_idx]
         ]
-        if self.output_resolutions is None:
-            self.output_resolutions = [{"units": "baseline", "resolution": 1.0}]
 
-        return replace(
-            self,
-            input_resolutions=input_resolutions,
-            output_resolutions=self.output_resolutions,
-        )
+        return replace(self, input_resolutions=input_resolutions, output_resolutions=[])
 
 
 @dataclass
