@@ -144,7 +144,7 @@ class Annotation:
         """
         return json.dumps(self.to_feature())
 
-    def to_wkb_geometry(self):
+    def to_wkb(self):
         """Returns the annotation with a WKB geometry.
 
         Returns:
