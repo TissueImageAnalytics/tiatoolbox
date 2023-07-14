@@ -225,7 +225,7 @@ def test_decode_geom():
         polygon_contours == np.array([[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]])
     )
 
-    # do the same for multipoint, multiline and multipolygon
+    # do the same for multi-point, multi-line and multi-polygon
     multipoint = MultiPoint([(0, 0), (1, 1), (2, 0)])
     multiline = MultiLineString([((0, 0), (1, 1), (2, 0)), ((0, 0), (1, 1), (2, 0))])
     multipolygon = MultiPolygon(
