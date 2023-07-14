@@ -285,14 +285,16 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         """Make a prediction on tile/wsi.
 
         Args:
-            wsi_idx (int): Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOInstanceSegmentorConfig): Object which defines I/O placement
+            wsi_idx (int): 
+                Index of the tile/wsi to be processed within `self`.
+            ioconfig (IOInstanceSegmentorConfig): 
+                Object which defines I/O placement
                 during inference and when assembling back to full tile/wsi.
-            loader (torch.Dataloader): The loader object which return batch of data
-                to be input to model.
-            save_path (str): Location to save output prediction as well as possible
+            save_path (str): 
+                Location to save output prediction as well as possible
                 intermediate results.
-            mode (str): `tile` or `wsi` to indicate run mode.
+            mode (str): 
+                `tile` or `wsi` to indicate run mode.
 
         """
         cache_dir = f"{self._cache_dir}/"
