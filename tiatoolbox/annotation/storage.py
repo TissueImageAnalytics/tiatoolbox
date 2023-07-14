@@ -144,15 +144,15 @@ class Annotation:
         """
         return json.dumps(self.to_feature())
 
-    def to_wkb(self):
-        """Returns the annotation with a WKB geometry.
+    def to_wkb(self) -> bytes:
+        """Returns the geometry as WKB.
 
         Returns:
             Annotation:
-                The annotation with a WKB geometry.
+                The annotation as a WKB geometry.
 
         """
-        return Annotation(self.geometry.wkb, self.properties)
+        return self.geometry.wkb
 
     def __repr__(self) -> str:
         return f"Annotation({self.geometry}, {self.properties})"
