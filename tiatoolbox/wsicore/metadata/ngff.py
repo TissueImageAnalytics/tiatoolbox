@@ -4,6 +4,7 @@ Borrowed from https://github.com/John-P/wsic
 
 Based on version 0.4 of the specification:
 https://ngff.openmicroscopy.org/0.4/
+
 """
 from __future__ import annotations
 
@@ -80,6 +81,7 @@ class Creator:
             The name of the creator.
         version (str):
             The version of the creator.
+
     """
 
     name: str = "tiatoolbox"
@@ -95,6 +97,7 @@ class CoordinateTransform:
             The type of coordinate transform. E.g. "scale".
         scale (List[float]):
             The scale factors. Must be one for each axis.
+
     """
 
     type: str = "identity"  # noqa: A003
@@ -111,6 +114,7 @@ class Dataset:
             integer e.g. "0".
         coordinateTransformations (List[CoordinateTransform]):
             Transformations from the zarr to slide coordinate system.
+
     """
 
     path: str = "0"
@@ -132,6 +136,7 @@ class Axis:
             "channel".
         unit (str):
             The units of the axis.
+
     """
 
     name: TCZYX
@@ -150,6 +155,7 @@ class Multiscales:
             The datasets of the multiscales.
         version (str):
             The version of the specification.
+
     """
 
     axes: list[Axis] = field(
@@ -176,6 +182,7 @@ class Window:
             The minimum value in the window.
         start (int):
             The start of the window.
+
     """
 
     end: Number = 255
@@ -200,6 +207,7 @@ class Channel:
             Whether the channel is inverted.
         window (Window):
             The min and max values represented in the channel.
+
     """
 
     active: bool = True
@@ -217,11 +225,12 @@ class RDefs:
 
     Attributes:
         defaultT (int):
-            Default timepoint.
+            Default time point.
         defaultZ (int):
             Default z-plane.
         model (str):
             Colour model: "color" or "greyscale".
+
     """
 
     defaultT: int = 0  # noqa: N815
@@ -244,6 +253,7 @@ class Omero:
             The default values for axes and colour model.
         version (str):
             The version of the specification.
+
     """
 
     name: str | None = None
@@ -272,6 +282,7 @@ class Zattrs:
             The dimensions of the array, for xarray compatibility.
         omero (Omero):
             Information about the display of image data.
+
     """
 
     _creator: Creator = field(default_factory=Creator)

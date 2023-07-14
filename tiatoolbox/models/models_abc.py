@@ -85,6 +85,7 @@ class ModelABC(ABC, nn.Module):
             >>> # expected usage
             >>> # model is a subclass object of this ModelABC
             >>> # `func` is a user defined function
+            >>> model = ModelABC()
             >>> model.preproc_func = func
             >>> transformed_img = model.preproc_func(img)
 
@@ -115,6 +116,7 @@ class ModelABC(ABC, nn.Module):
             >>> # expected usage
             >>> # model is a subclass object of this ModelABC
             >>> # `func` is a user defined function
+            >>> model = ModelABC()
             >>> model.postproc_func = func
             >>> transformed_img = model.postproc_func(img)
 

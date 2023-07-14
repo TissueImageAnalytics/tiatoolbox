@@ -822,7 +822,7 @@ class AnnotationRenderer:
         scale: float,
         res: int = 1,
         border: int = 0,
-    ):
+    ) -> np.ndarray:
         """Render annotations within given bounds.
 
         This gets annotations as bounding boxes or geometries according to
@@ -831,15 +831,17 @@ class AnnotationRenderer:
 
         Args:
             store (AnnotationStore):
-                AnnotationStore object for rendering.
-            bounds (tuple(float, float, float, float)):
-                Bounds to render annotations.
+                The annotation store to render from.
+            bounds (Polygon):
+                The bounding box of the tile to render.
             scale (float):
-                Scale at which annotations are to be rendered.
+                The scale at which we are rendering the tile.
             res (int):
-                Resolution at which annotations are to be rendered.
+                The resolution of the tile. Defaults to 1. Can be set to 2 for
+                higher resolution rendering.
             border (int):
-                Define borders around annotation rendering.
+                The border to add around the tile. Defaults to 0. Used for blurred
+                rendering to avoid edge effects.
 
         Returns:
             np.ndarray:
