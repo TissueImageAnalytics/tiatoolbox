@@ -163,7 +163,8 @@ class TilePyramidGenerator:
             y (int):
                 The tile index in the y direction.
             res (int):
-
+                The resolution of the tile. Defaults to 1, can be set to 2 for
+                double resolution.
             pad_mode (str):
                 Method for padding when reading areas outside the
                 input image. Default is constant (0 padding). This is
@@ -567,11 +568,14 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             y (int):
                 The tile index in the y direction.
             res (int):
-
+                The resolution of the tile. Defaults to 1, can be set to 2 for
+                double resolution.
             pad_mode (str):
-
+                Method for padding at edges of the WSI. Default to
+                'constant'. See :func:`numpy.pad` for more information.
             interpolation (str):
-
+                Method of interpolation. Possible values are: nearest,
+                linear, cubic, lanczos, area. Defaults to nearest.
 
         Returns:
             PIL.Image:

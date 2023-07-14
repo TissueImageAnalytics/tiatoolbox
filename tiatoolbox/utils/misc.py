@@ -1005,7 +1005,7 @@ def make_default_dict(data: dict, subcat: str) -> dict:
 
     The unique types in the data are given a prefix to differentiate
     types from different heads of a multi-head model.
-    For example, types 1,2, etc in the 'Gland' head will become
+    For example, types 1,2, etc. in the 'Gland' head will become
     'Gla: 1', 'Gla: 2', etc.
 
     Args:
