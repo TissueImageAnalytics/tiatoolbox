@@ -7,7 +7,7 @@ Dec. 2018, vol. 52, p. 160–173.
 """
 
 from collections import OrderedDict
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -588,7 +588,7 @@ class MicroNet(ModelABC):
     @staticmethod
     def infer_batch(
         model: torch.nn.Module, batch_data: np.ndarray, on_gpu: bool
-    ) -> np.ndarray:
+    ) -> List[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -604,7 +604,7 @@ class MicroNet(ModelABC):
                 Whether to run inference on a GPU.
 
         Returns:
-            np.ndarray:
+            list(np.ndarray):
                 Probability map as a numpy array.
 
         """

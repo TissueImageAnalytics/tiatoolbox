@@ -67,10 +67,8 @@ class SCCNN(ModelABC):
     Args:
         num_input_channels (int):
             Number of channels in input. default=3.
-        out_height (int):
-            Output height. default=13.
-        out_width (int):
-            Output width. default=13.
+        patch_output_shape tuple(int):
+            Defines output height and output width. default=(13, 13).
         radius (int):
             Radius for nucleus detection, default = 12.
         min_distance (int):
