@@ -62,11 +62,11 @@ from shapely import wkb, wkt
 from shapely.affinity import scale, translate
 from shapely.geometry import (
     LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
     Point,
     Polygon,
-    MultiPoint,
-    MultiLineString,
-    MultiPolygon,
 )
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
@@ -229,7 +229,7 @@ class Annotation:
 
         Must be initialized with a geometry object or both coords and a
         geometry type.
-        
+
         Args:
             geometry (Geometry):
                 The geometry of the annotation.
