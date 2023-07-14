@@ -111,6 +111,8 @@ def is_ngff(
             Path to the file to check.
         min_version (Tuple[int, ...]):
             Minimum version of the NGFF file to be considered valid.
+        max_version (Tuple[int, ...]):
+            Maximum version of the NGFF file to be considered valid.
 
     Returns:
         bool:
@@ -504,10 +506,10 @@ class WSIReader:
         and baseline coordinates.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 Location in terms of the baseline image (level 0)
                 resolution.
-            size (tuple(int)):
+            size (IntPair):
                 Desired output size in pixels (width, height) tuple.
             resolution (Resolution):
                 Desired output resolution.
@@ -572,9 +574,9 @@ class WSIReader:
         This function assumes location to be at requested resolution.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 Location in the requested resolution system.
-            size (tuple(int)):
+            size (IntPair):
                 Desired output size in pixels (width, height) tuple and
                 in the requested resolution system.
             resolution (Resolution):
@@ -688,6 +690,8 @@ class WSIReader:
                 (objective power).
             units (Units):
                 resolution units, default="power".
+            precisions (int):
+
 
         Returns:
             :py:obj:`tuple`:
@@ -717,7 +721,7 @@ class WSIReader:
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 Tuple of (start_x, start_y, end_x, end_y) i.e. (left,
                 top, right, bottom) of the region in baseline reference
                 frame.
@@ -999,10 +1003,10 @@ class WSIReader:
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -1194,7 +1198,7 @@ class WSIReader:
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
@@ -1280,7 +1284,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def read_region(self, location: NumPair, level: int, size: IntPair) -> np.ndarray:
+    def read_region(self, location: IntPair, level: int, size: IntPair) -> np.ndarray:
         """Read a region of the whole slide image (OpenSlide format args).
 
         This function is to help with writing code which is backwards
@@ -1292,12 +1296,12 @@ class WSIReader:
         JP2 files, may also be readable with the same syntax.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the level 0
                 reference frame.
             level (int):
                 The level number.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the region size.
 
         Returns:
@@ -1582,10 +1586,10 @@ class OpenSlideWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -1825,7 +1829,7 @@ class OpenSlideWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
@@ -2113,10 +2117,10 @@ class OmnyxJP2WSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -2353,7 +2357,7 @@ class OmnyxJP2WSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
@@ -2646,10 +2650,10 @@ class VirtualWSIReader(WSIReader):
         """Convert read parameters from (virtual) baseline coordinates.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 Location of the location to read in (virtual) baseline
                 coordinates.
-            baseline_read_size (tuple(int)):
+            baseline_read_size (IntPair):
                 Size of the region to read in (virtual) baseline
                 coordinates.
 
@@ -2688,10 +2692,10 @@ class VirtualWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -2930,7 +2934,7 @@ class VirtualWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
@@ -3491,10 +3495,10 @@ class TIFFWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -3729,7 +3733,7 @@ class TIFFWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
@@ -3945,10 +3949,10 @@ class DICOMWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -4201,7 +4205,7 @@ class DICOMWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
@@ -4502,10 +4506,10 @@ class NGFFWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -4740,7 +4744,7 @@ class NGFFWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
@@ -4989,10 +4993,10 @@ class AnnotationStoreReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
             resolution (Resolution):
@@ -5276,7 +5280,7 @@ class AnnotationStoreReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with

@@ -1005,7 +1005,7 @@ def make_default_dict(data: dict, subcat: str) -> dict:
 
     The unique types in the data are given a prefix to differentiate
     types from different heads of a multi-head model.
-    For example, types 1,2, etc in the 'Gland' head will become
+    For example, types 1,2, etc. in the 'Gland' head will become
     'Gla: 1', 'Gla: 2', etc.
 
     Args:
@@ -1055,7 +1055,7 @@ def add_from_dat(
             For multi-head output, should be a dict of dicts, e.g.:
             {'head1': {1: 'Epithelial Cell', 2: 'Lymphocyte', 3: ...},
             'head2': {1: 'Gland', 2: 'Lumen', 3: ...}, ...}.
-        origin (Tuple [float, float]):
+        origin (tuple(float, float)):
             The x and y coordinates to use as the origin for the annotations.
 
     """
