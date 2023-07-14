@@ -881,7 +881,7 @@ class AnnotationRenderer:
         scale: float,
         res: int = 1,
         border: int = 0,
-    ):
+    ) -> np.ndarray:
         """Render annotations within given bounds.
 
         This gets annotations as bounding boxes or geometries according to
