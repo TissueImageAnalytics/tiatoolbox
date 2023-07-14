@@ -119,7 +119,7 @@ class ConvBnRelu(nn.Module):
                 Size of stride in the convolution layer.
             use_bias (bool):
                 Whether to use bias in the convolution layer.
-            dilation_rates (list):
+            dilation_rate (list):
                 Dilation rate for each convolution layer.
             activation (str):
                 Name of the activation function to use.
