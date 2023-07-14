@@ -6,6 +6,8 @@ Imaging (ISBI 2019). IEEE, 2019.
 
 """
 
+from typing import List
+
 import numpy as np
 import torch
 import torch.nn.functional as F  # noqa: N812
@@ -254,7 +256,7 @@ class MapDe(MicroNet):
     @staticmethod
     def infer_batch(
         model: torch.nn.Module, batch_data: np.ndarray, on_gpu: bool
-    ) -> np.ndarray:
+    ) -> List[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -270,7 +272,7 @@ class MapDe(MicroNet):
                 Whether to run inference on a GPU.
 
         Returns:
-            np.ndarray:
+            list(np.ndarray):
                 Probability map as numpy array.
 
         """

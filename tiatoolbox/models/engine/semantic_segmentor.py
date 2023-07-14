@@ -1140,7 +1140,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also
-        saving afterwards.
+        saving afterward.
 
         Args:
             cum_batch_predictions (list):
