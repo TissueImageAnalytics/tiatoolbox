@@ -58,7 +58,7 @@ class ConvBnRelu(nn.Module):
         strides: tuple[int, int] | np.ndarray = (1, 1),
         use_bias: bool = False,
         dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
-        activation: str = "relu",
+        activation: str | None = "relu",
         do_batchnorm: bool = True,
     ) -> None:
         """Initialize :class:`ConvBnRelu`."""
@@ -103,7 +103,7 @@ class ConvBnRelu(nn.Module):
         kernel_size,
         strides,
         use_bias,
-        dilation_rates,
+        dilation_rate,
         activation,
         do_batchnorm,
     ):
@@ -114,13 +114,13 @@ class ConvBnRelu(nn.Module):
                 Number of channels in input.
             out_channels (int):
                 Number of channels in output.
-            kernel_size (list):
+            kernel_size (int or tuple(int, int)):
                 Size of the kernel in the acquired convolution block.
             strides (int):
                 Size of stride in the convolution layer.
             use_bias (bool):
                 Whether to use bias in the convolution layer.
-            dilation_rate (list):
+            dilation_rate (int or tuple(int, int)):
                 Dilation rate for each convolution layer.
             activation (str):
                 Name of the activation function to use.
@@ -136,7 +136,7 @@ class ConvBnRelu(nn.Module):
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=strides,
-            dilation=dilation_rates,
+            dilation=dilation_rate,
             bias=use_bias,
             padding="same",
             padding_mode="zeros",
