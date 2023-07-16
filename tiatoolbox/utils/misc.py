@@ -670,16 +670,17 @@ def download_data(
 
     with FileLock(lock_path):
         if not overwrite and os.path.exists(save_path):
-            return save_path
-
-        # Start the connection with a 5-second timeout to avoid hanging indefinitely.
-        response = requests.get(url, stream=True, timeout=5)
-        # Raise an exception for status codes != 200
-        response.raise_for_status()
-        # Write the file in blocks of 1024 bytes to avoid running out of memory
-        with open(save_path, "wb") as handle:
-            for block in response.iter_content(1024):
-                handle.write(block)
+            pass  # file was downloaded by another process
+        else:
+            # Start the connection with a 5-second timeout
+            # to avoid hanging indefinitely.
+            response = requests.get(url, stream=True, timeout=5)
+            # Raise an exception for status codes != 200
+            response.raise_for_status()
+            # Write the file in blocks of 1024 bytes to avoid running out of memory
+            with open(save_path, "wb") as handle:
+                for block in response.iter_content(1024):
+                    handle.write(block)
 
         if unzip:
             unzip_path = save_dir / save_path.stem
