@@ -663,7 +663,7 @@ def download_data(
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    if not overwrite and os.path.exists(save_path):
+    if not overwrite and os.path.exists(save_path) and not unzip:
         return save_path
 
     lock_path = save_path.with_suffix(".lock")
