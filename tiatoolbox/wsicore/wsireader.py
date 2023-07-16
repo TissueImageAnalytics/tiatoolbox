@@ -22,20 +22,17 @@ from packaging.version import Version
 from PIL import Image
 
 from tiatoolbox import logger, utils
-from tiatoolbox.annotation.storage import AnnotationStore, SQLiteStore
+from tiatoolbox.annotation import AnnotationStore, SQLiteStore
+from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 pixman_warning()
 
-NumPair = Tuple[Number, Number]
-IntPair = Tuple[int, int]
-Bounds = Tuple[Number, Number, Number, Number]
-IntBounds = Tuple[int, int, int, int]
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
 MIN_NGFF_VERSION = Version("0.4")
 MAX_NGFF_VERSION = Version("0.4")
 
@@ -104,25 +101,33 @@ def is_ngff(
     min_version: Version = MIN_NGFF_VERSION,
     max_version: Version = MAX_NGFF_VERSION,
 ) -> bool:
-    """Check if the input is a NGFF file.
+    """Check if the input is an NGFF file.
+
+    This should return True for a zarr groups stored in a directory, zip
+    file, or SQLite database.
 
     Args:
         path (pathlib.Path):
             Path to the file to check.
         min_version (Tuple[int, ...]):
             Minimum version of the NGFF file to be considered valid.
+        max_version (Tuple[int, ...]):
+            Maximum version of the NGFF file to be considered valid.
 
     Returns:
         bool:
-            True if the file is a NGFF file.
+            True if the file is an NGFF file.
 
     """
     path = pathlib.Path(path)
-    zattrs_path = path / ".zattrs"
-    if not zattrs_path.is_file():
+    store = zarr.SQLiteStore(path) if path.is_file() and is_sqlite3(path) else path
+    try:
+        zarr_group = zarr.open(store, mode="r")
+    except (zarr.errors.FSPathExistNotDir, zarr.errors.PathNotFoundError):
         return False
-    with open(zattrs_path, "rb") as fh:
-        group_attrs = json.load(fh)
+    if not isinstance(zarr_group, zarr.hierarchy.Group):
+        return False
+    group_attrs = zarr_group.attrs.asdict()
     try:
         multiscales: Multiscales = group_attrs["multiscales"]
         omero = group_attrs["omero"]
@@ -221,7 +226,7 @@ class WSIReader:
         mpp: Optional[Tuple[Number, Number]] = None,
         power: Optional[Number] = None,
         **kwargs,
-    ) -> "WSIReader":
+    ) -> WSIReader:
         """Returns an appropriate :class:`.WSIReader` object.
 
         Args:
@@ -422,7 +427,7 @@ class WSIReader:
         raise NotImplementedError
 
     def _find_optimal_level_and_downsample(
-        self, resolution: Resolution, units: str, precision: int = 3
+        self, resolution: Resolution, units: Units, precision: int = 3
     ) -> Tuple[int, np.ndarray]:
         """Find the optimal level to read at for a desired resolution and units.
 
@@ -432,11 +437,10 @@ class WSIReader:
         factor required, post read, to achieve the desired resolution.
 
         Args:
-            resolution (float or tuple(float)):
+            resolution (Resolution):
                 Resolution to find optimal read parameters for
-            units (str):
-                Units of the scale. Allowed values are the same as for
-                `WSIReader._relative_level_scales`
+            units (Units):
+                Units of the scale.
             precision (int or optional):
                 Decimal places to use when finding optimal scale. This
                 can be adjusted to avoid errors when an unnecessary
@@ -484,7 +488,7 @@ class WSIReader:
         location: IntPair,
         size: IntPair,
         resolution: Resolution,
-        units: str,
+        units: Units,
         precision: int = 3,
     ) -> Tuple[int, IntPair, IntPair, NumPair, IntPair]:
         """Find optimal parameters for reading a rect at a given resolution.
@@ -502,14 +506,14 @@ class WSIReader:
         and baseline coordinates.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 Location in terms of the baseline image (level 0)
                 resolution.
-            size (tuple(int)):
+            size (IntPair):
                 Desired output size in pixels (width, height) tuple.
-            resolution (float):
+            resolution (Resolution):
                 Desired output resolution.
-            units (str):
+            units (Units):
                 Units of scale, default = "level". Supported units are:
                 - microns per pixel ('mpp')
                 - objective power ('power')
@@ -561,7 +565,7 @@ class WSIReader:
         )
 
     def _find_read_params_at_resolution(
-        self, location: IntPair, size: IntPair, resolution: Resolution, units: str
+        self, location: IntPair, size: IntPair, resolution: Resolution, units: Units
     ) -> Tuple[int, NumPair, IntPair, IntPair, IntPair, IntPair]:
         """Works similarly to `_find_read_rect_params`.
 
@@ -570,14 +574,14 @@ class WSIReader:
         This function assumes location to be at requested resolution.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 Location in the requested resolution system.
-            size (tuple(int)):
+            size (IntPair):
                 Desired output size in pixels (width, height) tuple and
                 in the requested resolution system.
-            resolution (float):
+            resolution (Resolution):
                 Desired output resolution.
-            units (str):
+            units (Units):
                 Units of scale, default = "level". Supported units are:
                 - microns per pixel ('mpp') - objective power ('power')
                 - pyramid / resolution level ('level') - pixels per
@@ -648,7 +652,7 @@ class WSIReader:
         ) + output
 
     def _bounds_at_resolution_to_baseline(
-        self, bounds: Bounds, resolution: Resolution, units: str
+        self, bounds: Bounds, resolution: Resolution, units: Units
     ) -> Bounds:
         """Find corresponding bounds in baseline.
 
@@ -676,16 +680,18 @@ class WSIReader:
         return np.concatenate([tl_at_baseline, br_at_baseline])  # bounds at baseline
 
     def slide_dimensions(
-        self, resolution: Resolution, units: str, precisions: int = 3
+        self, resolution: Resolution, units: Units, precisions: int = 3
     ) -> IntPair:
         """Return the size of WSI at requested resolution.
 
         Args:
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution to read thumbnail at, default = 1.25
                 (objective power).
-            units (str):
+            units (Units):
                 resolution units, default="power".
+            precisions (int):
+
 
         Returns:
             :py:obj:`tuple`:
@@ -710,18 +716,18 @@ class WSIReader:
         return wsi_shape_at_resolution
 
     def _find_read_bounds_params(
-        self, bounds: Bounds, resolution: Resolution, units: str, precision: int = 3
+        self, bounds: Bounds, resolution: Resolution, units: Units, precision: int = 3
     ) -> Tuple[int, IntBounds, IntPair, IntPair, np.ndarray]:
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 Tuple of (start_x, start_y, end_x, end_y) i.e. (left,
                 top, right, bottom) of the region in baseline reference
                 frame.
-            resolution (float):
+            resolution (Resolution):
                 desired output resolution
-            units (str):
+            units (Units):
                 units of scale, default = "level". Supported units are:
                 microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -943,7 +949,7 @@ class WSIReader:
         location: NumPair,
         size: NumPair,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -975,7 +981,7 @@ class WSIReader:
         location: IntPair,
         size: IntPair,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -997,13 +1003,13 @@ class WSIReader:
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1011,7 +1017,7 @@ class WSIReader:
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -1169,7 +1175,7 @@ class WSIReader:
         self,
         bounds: Bounds,
         resolution: Resolution = 0,
-        units: str = "level",
+        units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
@@ -1192,13 +1198,13 @@ class WSIReader:
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1206,7 +1212,7 @@ class WSIReader:
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -1278,7 +1284,7 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def read_region(self, location: NumPair, level: int, size: IntPair) -> np.ndarray:
+    def read_region(self, location: IntPair, level: int, size: IntPair) -> np.ndarray:
         """Read a region of the whole slide image (OpenSlide format args).
 
         This function is to help with writing code which is backwards
@@ -1290,12 +1296,12 @@ class WSIReader:
         JP2 files, may also be readable with the same syntax.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the level 0
                 reference frame.
             level (int):
                 The level number.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the region size.
 
         Returns:
@@ -1307,17 +1313,17 @@ class WSIReader:
             location=location, size=size, resolution=level, units="level"
         )
 
-    def slide_thumbnail(self, resolution: Resolution = 1.25, units: str = "power"):
+    def slide_thumbnail(self, resolution: Resolution = 1.25, units: Units = "power"):
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see
         :func:`read_rect`
 
         Args:
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution to read thumbnail at, default = 1.25
                 (objective power)
-            units (str):
+            units (Units):
                 Resolution units, default="power".
 
         Returns:
@@ -1338,7 +1344,7 @@ class WSIReader:
         self,
         method: str = "otsu",
         resolution: Resolution = 1.25,
-        units: str = "power",
+        units: Units = "power",
         **masker_kwargs,
     ) -> "VirtualWSIReader":
         """Create a tissue mask and wrap it in a VirtualWSIReader.
@@ -1358,7 +1364,7 @@ class WSIReader:
             resolution (float):
                 Resolution to produce the mask at.
                 Defaults to 1.25.
-            units (str):
+            units (Units):
                 Units of resolution. Defaults to "power".
             **masker_kwargs:
                 Extra kwargs passed to the masker class.
@@ -1580,13 +1586,13 @@ class OpenSlideWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1594,7 +1600,7 @@ class OpenSlideWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -1823,13 +1829,13 @@ class OpenSlideWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -1837,7 +1843,7 @@ class OpenSlideWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -2111,13 +2117,13 @@ class OmnyxJP2WSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2125,7 +2131,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -2351,13 +2357,13 @@ class OmnyxJP2WSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2365,7 +2371,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -2644,10 +2650,10 @@ class VirtualWSIReader(WSIReader):
         """Convert read parameters from (virtual) baseline coordinates.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 Location of the location to read in (virtual) baseline
                 coordinates.
-            baseline_read_size (tuple(int)):
+            baseline_read_size (IntPair):
                 Size of the region to read in (virtual) baseline
                 coordinates.
 
@@ -2686,13 +2692,13 @@ class VirtualWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2700,7 +2706,7 @@ class VirtualWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -2928,13 +2934,13 @@ class VirtualWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -2942,7 +2948,7 @@ class VirtualWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -3489,13 +3495,13 @@ class TIFFWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -3503,7 +3509,7 @@ class TIFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -3727,13 +3733,13 @@ class TIFFWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -3741,7 +3747,7 @@ class TIFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -3943,13 +3949,13 @@ class DICOMWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -3957,7 +3963,7 @@ class DICOMWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -4199,13 +4205,13 @@ class DICOMWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -4213,7 +4219,7 @@ class DICOMWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -4373,7 +4379,8 @@ class NGFFWSIReader(WSIReader):
         from tiatoolbox.wsicore.metadata import ngff
 
         numcodecs.register_codecs()
-        self._zarr_group: zarr.hierarchy.Group = zarr.open(path, mode="r")
+        store = zarr.SQLiteStore(path) if is_sqlite3(path) else path
+        self._zarr_group: zarr.hierarchy.Group = zarr.open(store, mode="r")
         attrs = self._zarr_group.attrs
         multiscales = attrs["multiscales"][0]
         axes = multiscales["axes"]
@@ -4499,13 +4506,13 @@ class NGFFWSIReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -4513,7 +4520,7 @@ class NGFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -4737,13 +4744,13 @@ class NGFFWSIReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -4751,7 +4758,7 @@ class NGFFWSIReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline
@@ -4986,13 +4993,13 @@ class AnnotationStoreReader(WSIReader):
         view see :func:`read_bounds`.
 
         Args:
-            location (tuple(int)):
+            location (IntPair):
                 (x, y) tuple giving the top left pixel in the baseline
                 (level 0) reference frame.
-            size (tuple(int)):
+            size (IntPair):
                 (width, height) tuple giving the desired output image
                 size.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -5000,7 +5007,7 @@ class AnnotationStoreReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 The units of resolution, default = "level". Supported
                 units are: microns per pixel (mpp), objective power
                 (power), pyramid / resolution level (level), pixels per
@@ -5248,8 +5255,8 @@ class AnnotationStoreReader(WSIReader):
     def read_bounds(
         self,
         bounds,
-        resolution=0,
-        units="level",
+        resolution: Resolution = 0,
+        units: Units = "level",
         interpolation="optimise",
         pad_mode="constant",
         pad_constant_values=0,
@@ -5273,13 +5280,13 @@ class AnnotationStoreReader(WSIReader):
         region with a fixed output image size see :func:`read_rect`.
 
         Args:
-            bounds (tuple(int)):
+            bounds (IntBounds):
                 By default, this is a tuple of (start_x, start_y, end_x,
                 end_y) i.e. (left, top, right, bottom) of the region in
                 baseline reference frame. However, with
                 `coord_space="resolution"`, the bound is expected to be
                 at the requested resolution system.
-            resolution (int or float or tuple(float)):
+            resolution (Resolution):
                 Resolution at which to read the image, default = 0.
                 Either a single number or a sequence of two numbers for
                 x and y are valid. This value is in terms of the
@@ -5287,7 +5294,7 @@ class AnnotationStoreReader(WSIReader):
                 units="mpp" will read the slide at 0.5 microns
                 per-pixel, and resolution=3, units="level" will read at
                 level at pyramid level / resolution layer 3.
-            units (str):
+            units (Units):
                 Units of resolution, default="level". Supported units
                 are: microns per pixel (mpp), objective power (power),
                 pyramid / resolution level (level), pixels per baseline

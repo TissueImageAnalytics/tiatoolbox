@@ -13,8 +13,7 @@ from typing import List, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from tiatoolbox import logger
-
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+from tiatoolbox.typing import Resolution, Units
 
 
 class WSIMeta:
@@ -208,7 +207,7 @@ class WSIMeta:
         return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
 
     def relative_level_scales(
-        self, resolution: Resolution, units: str
+        self, resolution: Resolution, units: Units
     ) -> List[np.ndarray]:
         """Calculate scale of each level in the WSI relative to given resolution.
 
@@ -219,9 +218,9 @@ class WSIMeta:
         target and < 1 indicates that it is smaller.
 
         Args:
-            resolution (float or tuple(float)):
+            resolution (Resolution):
                 Scale to calculate relative to units.
-            units (str):
+            units (Units):
                 Units of the scale. Allowed values are: `"mpp"`,
                 `"power"`, `"level"`, `"baseline"`. Baseline refers to
                 the largest resolution in the WSI (level 0).
@@ -298,7 +297,7 @@ class WSIMeta:
 
         Returns:
             dict:
-                Whole slide image meta data as dictionary.
+                Whole slide image metadata as dictionary.
 
         """
         if self.mpp is None:
