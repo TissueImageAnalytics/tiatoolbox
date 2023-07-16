@@ -682,8 +682,7 @@ def download_data(
                 handle.write(block)
 
         if unzip:
-            # unzip under folder {filename} (without zip extension)
-            unzip_path = save_dir / pathlib.Path(url).name.split(".")[0]
+            unzip_path = save_dir / save_path.stem
             unzip_data(str(save_path), str(unzip_path), del_zip=False)
             return unzip_path
 
