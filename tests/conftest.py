@@ -49,12 +49,18 @@ def root_path(request) -> Path:
 
 
 @pytest.fixture(scope="session")
-def remote_sample(tmp_path_factory: TempPathFactory) -> Callable:
+def tmp_samples_path(tmp_path_factory: TempPathFactory):
+    """Return a temporary path."""
+    return tmp_path_factory.mktemp("data")
+
+
+@pytest.fixture(scope="session")
+def remote_sample(tmp_samples_path) -> Callable:
     """Factory fixture for fetching sample files."""
 
     def __remote_sample(key: str) -> pathlib.Path:
         """Wrapper around tiatoolbox.data._fetch_remote_sample for tests."""
-        return _fetch_remote_sample(key, tmp_path_factory.mktemp("data"))
+        return _fetch_remote_sample(key, tmp_samples_path)
 
     return __remote_sample
 

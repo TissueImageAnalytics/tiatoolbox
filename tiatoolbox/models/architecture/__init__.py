@@ -30,7 +30,7 @@ def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = 
             Overwrite existing downloaded weights.
     """
     info = PRETRAINED_INFO[model_name]
-    download_data(info["url"], save_path, overwrite)
+    download_data(info["url"], save_path=save_path, overwrite=overwrite)
 
 
 def get_pretrained_model(

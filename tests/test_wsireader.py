@@ -2007,9 +2007,9 @@ def test_store_reader_info_from_base(tmp_path, remote_sample):
     assert store_reader.info.mpp[0] == wsi_reader.info.mpp[0]
 
 
-def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, caplog):
+def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, remote_sample, caplog):
     """Test that mpp is None if scale is not in micrometers."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample with a non-micrometer scale
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
@@ -2025,9 +2025,9 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, caplog):
     assert wsi.info.mpp is None
 
 
-def test_ngff_zattrs_missing_axes_mpp(tmp_path):
+def test_ngff_zattrs_missing_axes_mpp(tmp_path, remote_sample):
     """Test that mpp is None if axes are missing."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
@@ -2040,9 +2040,9 @@ def test_ngff_zattrs_missing_axes_mpp(tmp_path):
     assert wsi.info.mpp is None
 
 
-def test_ngff_empty_datasets_mpp(tmp_path):
+def test_ngff_empty_datasets_mpp(tmp_path, remote_sample):
     """Test that mpp is None if there are no datasets."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
@@ -2055,9 +2055,9 @@ def test_ngff_empty_datasets_mpp(tmp_path):
     assert wsi.info.mpp is None
 
 
-def test_ngff_no_scale_transforms_mpp(tmp_path):
+def test_ngff_no_scale_transforms_mpp(tmp_path, remote_sample):
     """Test that mpp is None if no scale transforms are present."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2072,9 +2072,9 @@ def test_ngff_no_scale_transforms_mpp(tmp_path):
     assert wsi.info.mpp is None
 
 
-def test_ngff_missing_omero_version(tmp_path):
+def test_ngff_missing_omero_version(tmp_path, remote_sample):
     """Test that the reader can handle missing omero version."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2087,9 +2087,9 @@ def test_ngff_missing_omero_version(tmp_path):
     wsireader.WSIReader.open(sample_copy)
 
 
-def test_ngff_missing_multiscales_returns_false(tmp_path):
+def test_ngff_missing_multiscales_returns_false(tmp_path, remote_sample):
     """Test that missing multiscales key returns False for is_ngff."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2102,9 +2102,9 @@ def test_ngff_missing_multiscales_returns_false(tmp_path):
     assert not wsireader.is_ngff(sample_copy)
 
 
-def test_ngff_wrong_format_metadata(tmp_path, caplog):
+def test_ngff_wrong_format_metadata(tmp_path, caplog, remote_sample):
     """Test that is_ngff is False and logs a warning if metadata is wrong."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2119,9 +2119,9 @@ def test_ngff_wrong_format_metadata(tmp_path, caplog):
     assert "must be present and of the correct type" in caplog.text
 
 
-def test_ngff_omero_below_min_version(tmp_path):
+def test_ngff_omero_below_min_version(tmp_path, remote_sample):
     """Test for FileNotSupported when omero version is below minimum."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2135,9 +2135,9 @@ def test_ngff_omero_below_min_version(tmp_path):
         wsireader.WSIReader.open(sample_copy)
 
 
-def test_ngff_omero_above_max_version(tmp_path, caplog):
+def test_ngff_omero_above_max_version(tmp_path, caplog, remote_sample):
     """Test for FileNotSupported when omero version is above maximum."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2153,9 +2153,9 @@ def test_ngff_omero_above_max_version(tmp_path, caplog):
     assert "maximum supported version" in caplog.text
 
 
-def test_ngff_multiscales_below_min_version(tmp_path):
+def test_ngff_multiscales_below_min_version(tmp_path, remote_sample):
     """Test for FileNotSupported when multiscales version is below minimum."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2169,9 +2169,9 @@ def test_ngff_multiscales_below_min_version(tmp_path):
         wsireader.WSIReader.open(sample_copy)
 
 
-def test_ngff_multiscales_above_max_version(tmp_path, caplog):
+def test_ngff_multiscales_above_max_version(tmp_path, caplog, remote_sample):
     """Test for FileNotSupported when multiscales version is above maximum."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2187,7 +2187,7 @@ def test_ngff_multiscales_above_max_version(tmp_path, caplog):
     assert "maximum supported version" in caplog.text
 
 
-def test_ngff_non_numeric_version(tmp_path, monkeypatch):
+def test_ngff_non_numeric_version(tmp_path, monkeypatch, remote_sample):
     """Test that the reader can handle non-numeric omero versions."""
     # Patch the is_ngff function to change the min/max version
     if_ngff = wsireader.is_ngff  # noqa: F841
@@ -2204,7 +2204,7 @@ def test_ngff_non_numeric_version(tmp_path, monkeypatch):
 
     monkeypatch.setattr(wsireader, "is_ngff", patched_is_ngff)
 
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2217,9 +2217,9 @@ def test_ngff_non_numeric_version(tmp_path, monkeypatch):
     wsireader.WSIReader.open(sample_copy)
 
 
-def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog):
+def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample):
     """Test that the reader logs a warning inconsistent multiscales versions."""
-    sample = _fetch_remote_sample("ngff-1")
+    sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
@@ -2253,7 +2253,9 @@ class TestReader:
                         "type",
                         COLOR_DICT,
                     ),
-                    "base_wsi": WSIReader.open(_fetch_remote_sample("svs-1-small")),
+                    "base_wsi": WSIReader.open(
+                        _fetch_remote_sample("svs-1-small")
+                    ),  # todo
                     "alpha": 0.5,
                 },
             },
@@ -2315,20 +2317,20 @@ class TestReader:
     ]
 
     @staticmethod
-    def test_base_open(sample_key, reader_class, kwargs):
+    def test_base_open(sample_key, reader_class, remote_sample, kwargs):
         """Checks that WSIReader.open detects the type correctly."""
-        sample = _fetch_remote_sample(sample_key)
+        sample = remote_sample(sample_key)
         wsi = WSIReader.open(sample)
         assert isinstance(wsi, reader_class)
 
     @staticmethod
-    def test_wsimeta_attrs(sample_key, reader_class, kwargs):
+    def test_wsimeta_attrs(sample_key, reader_class, remote_sample, kwargs):
         """Check for expected attrs in .info / WSIMeta.
 
         Checks for existence of expected attrs but not their contents.
 
         """
-        sample = _fetch_remote_sample(sample_key)
+        sample = remote_sample(sample_key)
         wsi = reader_class(sample, **kwargs)
         info = wsi.info
         expected_attrs = [
@@ -2346,7 +2348,9 @@ class TestReader:
             assert hasattr(info, attr)
 
     @staticmethod
-    def test_read_rect_level_consistency(sample_key, reader_class, kwargs):
+    def test_read_rect_level_consistency(
+        sample_key, reader_class, remote_sample, kwargs
+    ):
         """Compare the same region at each stored resolution level.
 
         Read the same region at each stored resolution level and compare
@@ -2354,7 +2358,7 @@ class TestReader:
         they are aligned.
 
         """
-        sample = _fetch_remote_sample(sample_key)
+        sample = remote_sample(sample_key)
         wsi = reader_class(sample, **kwargs)
         location = (0, 0)
         size = np.array([1024, 1024])
@@ -2383,7 +2387,9 @@ class TestReader:
                 assert error < 0.125
 
     @staticmethod
-    def test_read_bounds_level_consistency(sample_key, reader_class, kwargs):
+    def test_read_bounds_level_consistency(
+        sample_key, reader_class, remote_sample, kwargs
+    ):
         """Compare the same region at each stored resolution level.
 
         Read the same region at each stored resolution level and compare
@@ -2391,7 +2397,7 @@ class TestReader:
         they are aligned.
 
         """
-        sample = _fetch_remote_sample(sample_key)
+        sample = remote_sample(sample_key)
         wsi = reader_class(sample, **kwargs)
         bounds = (0, 0, 1024, 1024)
         # This logic can be moved from the helper to here when other
@@ -2399,7 +2405,9 @@ class TestReader:
         read_bounds_level_consistency(wsi, bounds)
 
     @staticmethod
-    def test_fuzz_read_region_baseline_size(sample_key, reader_class, kwargs):
+    def test_fuzz_read_region_baseline_size(
+        sample_key, reader_class, remote_sample, kwargs
+    ):
         """Fuzz test for `read_bounds` output size at level 0 (baseline).
 
         - Tests that the output image size matches the input bounds size.
@@ -2409,7 +2417,7 @@ class TestReader:
 
         """
         random.seed(123)
-        sample = _fetch_remote_sample(sample_key)
+        sample = remote_sample(sample_key)
         wsi = reader_class(sample, **kwargs)
         width, height = wsi.info.slide_dimensions
         iterations = 50
@@ -2424,7 +2432,9 @@ class TestReader:
             assert region.shape[:2][::-1] == size
 
     @staticmethod
-    def test_read_rect_coord_space_consistency(sample_key, reader_class, kwargs):
+    def test_read_rect_coord_space_consistency(
+        sample_key, reader_class, remote_sample, kwargs
+    ):
         """Test that read_rect coord_space modes are consistent.
 
         Using `read_rect` with `coord_space="baseline"` and
@@ -2436,7 +2446,7 @@ class TestReader:
         will not be of the same size, but the field of view will match.
 
         """
-        sample = _fetch_remote_sample(sample_key)
+        sample = remote_sample(sample_key)
         reader = reader_class(sample, **kwargs)
         roi1 = reader.read_rect(
             np.array([500, 500]),
@@ -2475,8 +2485,8 @@ class TestReader:
             _ = reader_class("./foo.bar")
 
     @staticmethod
-    def test_read_mpp(sample_key, reader_class, kwargs):
+    def test_read_mpp(sample_key, reader_class, remote_sample, kwargs):
         """Test that the mpp is read correctly."""
-        sample = _fetch_remote_sample(sample_key)
+        sample = remote_sample(sample_key)
         wsi = reader_class(sample, **kwargs)
         assert wsi.info.mpp == pytest.approx(0.25, 1)
