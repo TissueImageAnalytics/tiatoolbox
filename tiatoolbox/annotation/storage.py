@@ -693,7 +693,7 @@ class AnnotationStore(ABC, MutableMapping):
             raise ValueError(msg)
         if geometry_predicate not in self._geometry_predicate_names:
             msg = (
-                f"Invalid geometry predicate.Allowed values are: "
+                "Invalid geometry predicate. Allowed values are: "
                 f"{', '.join(self._geometry_predicate_names)}."
             )
             raise ValueError(
@@ -833,7 +833,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         if geometry_predicate not in self._geometry_predicate_names:
             msg = (
-                f"Invalid geometry predicate.Allowed values are: "
+                "Invalid geometry predicate. Allowed values are: "
                 f"{', '.join(self._geometry_predicate_names)}."
             )
             raise ValueError(
@@ -1491,7 +1491,7 @@ class AnnotationStore(ABC, MutableMapping):
             for feature in geojson["features"]
         ]
 
-        logger.info("Added %d annotations.", len(annotations))
+        logger.info("Adding %d annotations.", len(annotations))
         self.append_many(annotations)
 
     def to_geojson(self, fp: IO | str | Path | None = None) -> str | None:
@@ -2237,7 +2237,7 @@ class SQLiteStore(AnnotationStore):
         unique: bool = False,
         no_constraints_ok: bool = False,
         index_warning: bool = False,
-        min_area: float | None | None = None,
+        min_area: float | None = None,
         distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
@@ -2291,7 +2291,7 @@ class SQLiteStore(AnnotationStore):
             callable_columns = columns
         if geometry_predicate not in self._geometry_predicate_names:
             msg = (
-                f"Invalid geometry predicate.Allowed values are: "
+                "Invalid geometry predicate. Allowed values are: "
                 f"{', '.join(self._geometry_predicate_names)}."
             )
             raise ValueError(
@@ -2470,7 +2470,7 @@ class SQLiteStore(AnnotationStore):
     def bquery(
         self,
         geometry: QueryGeometry | None = None,
-        where: str | bytes | Callable[[Geometry, dict[str, Any]], bool] | None = None,
+        where: Predicate | None = None,
         min_area: float | None = None,
     ) -> dict[str, tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
@@ -2671,8 +2671,8 @@ class SQLiteStore(AnnotationStore):
 
     @staticmethod
     def _kind_of_pquery(
-        select: str | bytes | Callable,
-        where: str | bytes | Callable,
+        select: Select,
+        where: Predicate,
     ) -> tuple[bool, bool, bool]:
         """Determine boolean flags for the kind of pquery this is.
 
@@ -2696,8 +2696,8 @@ class SQLiteStore(AnnotationStore):
 
     @staticmethod
     def _validate_select_where_type(
-        select: str | bytes | Callable,
-        where: str | bytes | Callable,
+        select: Select,
+        where: Predicate,
     ) -> None:
         """Validate that select and where are valid types.
 
@@ -2868,7 +2868,7 @@ class SQLiteStore(AnnotationStore):
         return result
 
     def __len__(self) -> int:
-        """Return the length of the instance attributes."""
+        """Return number of annotations in the store."""
         cur = self.con.cursor()
         cur.execute("SELECT COUNT(*) FROM annotations")
         (count,) = cur.fetchone()
@@ -3099,7 +3099,7 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
-        """Implements a method to assign a value to and item."""
+        """Implements a method to assign a value to an item."""
         if key in self:
             self.patch(key, annotation.geometry, annotation.properties)
             return
@@ -3387,11 +3387,11 @@ class DictionaryStore(AnnotationStore):
         del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
-        """Get an item from the dataset."""
+        """Get an item from the store."""
         return self._rows[key]["annotation"]
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
-        """Implements a method to assign a value to and item."""
+        """Implements a method to assign a value to an item."""
         if key in self._rows:
             self._rows[key]["annotation"] = annotation
         self._rows[key] = {"annotation": annotation}

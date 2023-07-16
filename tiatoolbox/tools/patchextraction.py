@@ -172,7 +172,7 @@ class PatchExtractor(PatchExtractorABC):
         return self
 
     def __len__(self) -> int:
-        """Return the length of the instance attributes."""
+        """Return the number of patches in the extractor."""
         return self.locations_df.shape[0] if self.locations_df is not None else 0
 
     def __next__(self):
