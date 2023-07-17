@@ -34,6 +34,7 @@ def fetch_pretrained_weights(
     Returns:
         pathlib.Path:
             The local path to the cached pretrained weights after downloading.
+
     """
     info = PRETRAINED_INFO[model_name]
 

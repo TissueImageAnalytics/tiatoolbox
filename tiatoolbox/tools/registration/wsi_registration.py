@@ -1,6 +1,5 @@
 import itertools
-from numbers import Number
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple
 
 import cv2
 import numpy as np
@@ -11,15 +10,14 @@ from numpy.linalg import inv
 from skimage import exposure, filters
 from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
+from torchvision.models import VGG16_Weights
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
-
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
-IntBounds = Tuple[int, int, int, int]
+from tiatoolbox.wsicore.wsireader import IntBounds, VirtualWSIReader, WSIReader
 
 
 def _check_dims(
@@ -309,7 +307,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
         self.features: dict = dict.fromkeys(output_layers_key, None)
         self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
-            pretrained=True
+            weights=VGG16_Weights.IMAGENET1K_V1
         ).features
         self.f_hooks = []
 
@@ -1491,7 +1489,7 @@ class AffineWSITransformer:
         location: Tuple[int, int],
         size: Tuple[int, int],
         resolution: Resolution,
-        units: str,
+        units: Units,
     ) -> np.ndarray:
         """Read a transformed region of the transformed whole slide image.
 
@@ -1504,10 +1502,10 @@ class AffineWSITransformer:
                 reference frame.
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
-            resolution (float or tuple(float)):
-                Pyramid level/resolution layer.
-            units (str):
-                Units of the scale.
+            resolution (Resolution):
+                Resolution used for reading the image.
+            units (Units):
+                Units of resolution used for reading the image.
 
         Returns:
             :class:`numpy.ndarray`:

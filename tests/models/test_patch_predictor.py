@@ -12,16 +12,13 @@ import torch
 from click.testing import CliRunner
 
 from tiatoolbox import cli
+from tiatoolbox.models import IOPatchPredictorConfig, PatchPredictor
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import (
     PatchDataset,
     PatchDatasetABC,
     WSIPatchDataset,
     predefined_preproc_func,
-)
-from tiatoolbox.models.engine.patch_predictor import (
-    IOPatchPredictorConfig,
-    PatchPredictor,
 )
 from tiatoolbox.utils import download_data
 from tiatoolbox.utils import env_detection as toolbox_env

@@ -10,14 +10,10 @@ import numpy as np
 from matplotlib import colormaps
 from numpy.typing import ArrayLike
 from PIL import Image, ImageFilter, ImageOps
-from shapely import speedups
 from shapely.geometry import Polygon
 
 from tiatoolbox import logger
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore
-
-if speedups.available:  # pragma: no branch
-    speedups.enable()
+from tiatoolbox.annotation import Annotation, AnnotationStore
 
 
 def random_colors(num_colors, bright=True):
@@ -555,17 +551,8 @@ class AnnotationRenderer:
         blur_radius=0,
         score_prop_edge=None,
     ):
-        if mapper is None:
-            mapper = colormaps["jet"]
-        if isinstance(mapper, str) and mapper != "categorical":
-            mapper = colormaps[mapper]
-        if isinstance(mapper, list):
-            colors = random_colors(len(mapper))
-            mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
-        if isinstance(mapper, dict):
-            self.mapper = lambda x: mapper[x]
-        else:
-            self.mapper = mapper
+        self.raw_mapper = None
+        self.mapper = mapper
         self.score_prop = score_prop
         self.score_prop_edge = score_prop_edge
         self.where = where
@@ -745,6 +732,22 @@ class AnnotationRenderer:
         )
 
     def __setattr__(self, __name: str, __value) -> None:
+        """Set attribute value."""
+        if __name == "mapper":
+            # save a more readable version of the mapper too
+            if __value is None:
+                self.raw_mapper = "jet"
+                __value = colormaps["jet"]
+            if isinstance(__value, str) and __value != "categorical":
+                self.raw_mapper = __value
+                __value = colormaps[__value]
+            if isinstance(__value, list):
+                colors = random_colors(len(__value))
+                __value = {key: (*color, 1) for key, color in zip(__value, colors)}
+            if isinstance(__value, dict):
+                self.raw_mapper = __value
+                self.__dict__[__name] = lambda x: __value[x]
+                return
         if __name == "blur_radius":
             # need to change additional settings
             if __value > 0:
@@ -765,7 +768,7 @@ class AnnotationRenderer:
         scale: float,
         res: int = 1,
         border: int = 0,
-    ):
+    ) -> np.ndarray:
         """Render annotations within given bounds.
 
         This gets annotations as bounding boxes or geometries according to
@@ -773,12 +776,19 @@ class AnnotationRenderer:
         annotation geometries are decimated if appropriate.
 
         Args:
-            rgb (np.ndarray):
-                The image to render the annotation on.
-            bound_geom (Polygon):
-                A polygon representing the bounding box of the tile.
+            store (AnnotationStore):
+                The annotation store to render from.
+            bounds (Polygon):
+                The bounding box of the tile to render.
             scale (float):
                 The scale at which we are rendering the tile.
+            res (int):
+                The resolution of the tile. Defaults to 1. Can be set to 2 for
+                higher resolution rendering.
+            border (int):
+                The border to add around the tile. Defaults to 0. Used for blurred
+                rendering to avoid edge effects.
+
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.

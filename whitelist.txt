@@ -15,6 +15,7 @@ Byfield
 CHW
 CUDA
 DICOM
+DICOMDIR
 DNS
 Dataloader
 Dataset
@@ -73,6 +74,7 @@ W0221
 W0612
 W0613
 W0703
+W6003
 W6004
 WRT
 XY
@@ -155,6 +157,7 @@ pyright
 qtconsole
 quickstart
 reimport
+renderer
 resampling
 rescale
 rtree
@@ -164,6 +167,7 @@ sigma1
 sigma2
 skipcq
 skipcq
+sqlite3
 superset
 svs
 tiatoolbox
