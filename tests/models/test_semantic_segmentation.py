@@ -765,9 +765,7 @@ def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
     imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
     sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
-    fetch_pretrained_weights(
-        "fcn-tissue_mask", str(tmp_path.joinpath("fcn-tissue_mask.pth"))
-    )
+    pretrained_weights = fetch_pretrained_weights("fcn-tissue_mask")
 
     config = {
         "input_resolutions": [{"units": "mpp", "resolution": 2.0}],
@@ -789,7 +787,7 @@ def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
             "--img-input",
             str(mini_wsi_svs),
             "--pretrained-weights",
-            str(tmp_path.joinpath("fcn-tissue_mask.pth")),
+            str(pretrained_weights),
             "--mode",
             "wsi",
             "--masks",

@@ -16,7 +16,9 @@ __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 
-def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = True):
+def fetch_pretrained_weights(
+    model_name: str, save_path: str = None, overwrite: bool = False
+) -> pathlib.Path:
     """Get the pretrained model information from yml file.
 
     Args:
@@ -28,9 +30,19 @@ def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = 
           corresponding `model_name`.
         overwrite (bool):
             Overwrite existing downloaded weights.
+
+    Returns:
+        pathlib.Path:
+            The local path to the cached pretrained weights after downloading.
     """
     info = PRETRAINED_INFO[model_name]
+
+    if save_path is None:
+        file_name = info["url"].split("/")[-1]
+        save_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "models/", file_name)
+
     download_data(info["url"], save_path, overwrite)
+    return pathlib.Path(save_path)
 
 
 def get_pretrained_model(
@@ -110,11 +122,9 @@ def get_pretrained_model(
         model.preproc_func = predefined_preproc_func(info["dataset"])
 
     if pretrained_weights is None:
-        file_name = info["url"].split("/")[-1]
-        pretrained_weights = os.path.join(
-            rcParam["TIATOOLBOX_HOME"], "models/", file_name
+        pretrained_weights = fetch_pretrained_weights(
+            pretrained_model, overwrite=overwrite
         )
-        fetch_pretrained_weights(pretrained_model, pretrained_weights, overwrite)
 
     # ! assume to be saved in single GPU mode
     # always load on to the CPU

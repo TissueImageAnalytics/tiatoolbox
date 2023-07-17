@@ -8,24 +8,23 @@ from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def _load_mapde(tmp_path, name):
+def _load_mapde(name):
     """Loads MapDe model with specified weights."""
     model = MapDe()
-    fetch_pretrained_weights(name, f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights(name)
     map_location = utils.misc.select_device(utils.env_detection.has_gpu())
-    pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
+    pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
 
     return model
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(remote_sample):
     """Functionality test for MapDe.
 
     Tests the functionality of MapDe model for inference at the patch level.
 
     """
-    tmp_path = str(tmp_path)
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)
 
@@ -34,14 +33,14 @@ def test_functionality(remote_sample, tmp_path):
         (0, 0, 252, 252), resolution=0.50, units="mpp", coord_space="resolution"
     )
 
-    model = _load_mapde(tmp_path=tmp_path, name="mapde-crchisto")
+    model = _load_mapde(name="mapde-crchisto")
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[99, 178], [64, 218]])
 
-    model = _load_mapde(tmp_path=tmp_path, name="mapde-conic")
+    model = _load_mapde(name="mapde-conic")
     output = model.infer_batch(model, batch, on_gpu=False)
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[19, 171], [53, 89]])
