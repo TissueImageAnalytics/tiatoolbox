@@ -36,6 +36,9 @@ def fetch_pretrained_weights(
             The local path to the cached pretrained weights after downloading.
 
     """
+    if model_name not in PRETRAINED_INFO:
+        raise ValueError(f"Pretrained model `{model_name}` does not exist")
+
     info = PRETRAINED_INFO[model_name]
 
     if save_path is None:
