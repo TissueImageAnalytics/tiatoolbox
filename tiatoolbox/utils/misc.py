@@ -646,7 +646,7 @@ def download_data(
 
     if save_path is not None:
         if save_dir is not None:
-            raise ValueError("save_path and save_directory can't both be specified")
+            raise ValueError("save_path and save_dir can't both be specified")
 
         save_dir = pathlib.Path(save_path).parent
         save_path = pathlib.Path(save_path)
@@ -656,7 +656,7 @@ def download_data(
         save_path = save_dir / pathlib.Path(url).name
 
     else:
-        raise ValueError("save_path or save_directory must be specified")
+        raise ValueError("save_path or save_dir must be specified")
 
     logger.debug("Download from %s to %s", url, save_path)
 

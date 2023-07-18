@@ -934,12 +934,16 @@ def test_download_unzip_data():
     if os.path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     os.makedirs(save_dir_path)
-    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
-    misc.download_data(url, save_zip_path)
-    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
-    misc.unzip_data(save_zip_path, save_dir_path, del_zip=False)  # not remove
-    assert os.path.exists(save_zip_path)
-    misc.unzip_data(save_zip_path, save_dir_path)
+
+    save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
+    save_zip_path2 = misc.download_data(
+        url, save_dir=save_dir_path, overwrite=True
+    )  # do overwrite
+    assert save_zip_path1 == save_zip_path2
+
+    misc.unzip_data(save_zip_path1, save_dir_path, del_zip=False)  # not remove
+    assert os.path.exists(save_zip_path1)
+    misc.unzip_data(save_zip_path1, save_dir_path)
 
     extracted_path = os.path.join(save_dir_path, "test_directory")
     # to avoid hidden files in case of MAC-OS or Windows (?)
@@ -996,6 +1000,14 @@ def test_download_data():
         misc.download_data(
             "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url", save_path
         )
+
+    # Both save_dir and save_path are specified
+    with pytest.raises(ValueError, match="save_path and save_dir"):
+        misc.download_data(url, save_dir=save_dir_path, save_path=save_path)
+
+    # None of save_dir and save_path are specified
+    with pytest.raises(ValueError, match="save_path or save_dir"):
+        misc.download_data(url)
 
 
 def test_parse_cv2_interpolaton():
