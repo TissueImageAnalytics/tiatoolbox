@@ -624,7 +624,7 @@ def assert_dtype_int(
 
 
 def download_data(
-    url,
+    url: str,
     save_path: os | PathLike = None,
     save_dir: os | PathLike = None,
     overwrite: bool = False,
@@ -634,20 +634,24 @@ def download_data(
     else no action is taken
 
     Args:
-        url (path): URL from where to download the data.
+        url (str):
+            URL from where to download the data.
         save_path (os | PathLike):
-            Location to download the data. Can't be used with save_dir.
+            Location to download the data (including filename).
+            Can't be used with save_dir.
         save_dir (os | PathLike):
             Directory to save the data. Can't be used with save_path.
-        overwrite (bool): True to force overwriting of existing data, default=False
-        unzip (bool): True to unzip the data, default=False
+        overwrite (bool):
+            True to force overwriting of existing data, default=False
+        unzip (bool):
+            True to unzip the data, default=False
 
     """
 
-    if save_path is not None:
-        if save_dir is not None:
-            raise ValueError("save_path and save_dir can't both be specified")
+    if save_path is not None and save_dir is not None:
+        raise ValueError("save_path and save_dir can't both be specified")
 
+    if save_path is not None:
         save_dir = pathlib.Path(save_path).parent
         save_path = pathlib.Path(save_path)
 
