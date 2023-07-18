@@ -9,6 +9,12 @@ on:
     tags: v*
   pull_request:
     branches: [ develop, pre-release, master, main ]
+  workflow_dispatch:
+    inputs:
+      test_notebooks:
+        type: boolean
+        description: Run tests for notebooks
+        default: false
 
 jobs:
   build:
@@ -30,7 +36,7 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest pytest-cov pytest-runner
+        python -m pip install flake8 pytest pytest-cov pytest-runner testbook
         pip install -r requirements/requirements.txt
     - name: Print Version Information
       run: |
@@ -52,6 +58,13 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test notebooks with pytest
+      if: ${{ github.event.inputs.test_notebooks == 'true' }}
+      run: |
+          pytest tests/test_notebooks.py --basetemp={envtmpdir} \
+             --capture=sys \
+             --maxfail=1 \
+             --notebooks
     - name: Test with pytest
       run: |
         pytest --basetemp={envtmpdir} \
