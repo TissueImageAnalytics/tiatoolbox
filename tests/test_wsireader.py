@@ -28,7 +28,6 @@ from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, rcParam, utils
 from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import FileNotSupported
 from tiatoolbox.utils.magic import is_sqlite3
@@ -2269,256 +2268,239 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
     assert "multiple versions" in caplog.text
 
 
-class TestReader:
-    scenarios = [
-        (
-            "AnnotationReaderOverlaid",
-            {
-                "reader_class": AnnotationStoreReader,
-                "sample_key": "annotation_store_svs_1",
-                "kwargs": {
-                    "renderer": AnnotationRenderer(
-                        "type",
-                        COLOR_DICT,
-                    ),
-                    "base_wsi": WSIReader.open(
-                        _fetch_remote_sample("svs-1-small")
-                    ),  # todo
-                    "alpha": 0.5,
-                },
+@pytest.fixture(
+    params=[
+        {
+            "reader_class": AnnotationStoreReader,
+            "sample_key": "annotation_store_svs_1",
+            "kwargs": {
+                "base_wsi_key": "svs-1-small",
+                "renderer": AnnotationRenderer(
+                    "type",
+                    COLOR_DICT,
+                ),
+                "alpha": 0.5,
             },
-        ),
-        (
-            "AnnotationReaderMaskOnly",
-            {
-                "reader_class": AnnotationStoreReader,
-                "sample_key": "annotation_store_svs_1",
-                "kwargs": {
-                    "renderer": AnnotationRenderer(
-                        "type",
-                        COLOR_DICT,
-                        blur_radius=3,
-                    ),
-                },
+        },
+        {
+            "reader_class": AnnotationStoreReader,
+            "sample_key": "annotation_store_svs_1",
+            "kwargs": {
+                "renderer": AnnotationRenderer(
+                    "type",
+                    COLOR_DICT,
+                    blur_radius=3,
+                ),
             },
-        ),
-        (
-            "TIFFReader",
-            {
-                "reader_class": TIFFWSIReader,
-                "sample_key": "ome-brightfield-pyramid-1-small",
-                "kwargs": {},
-            },
-        ),
-        (
-            "DICOMReader",
-            {
-                "reader_class": DICOMWSIReader,
-                "sample_key": "dicom-1",
-                "kwargs": {},
-            },
-        ),
-        (
-            "NGFFWSIReader",
-            {
-                "reader_class": NGFFWSIReader,
-                "sample_key": "ngff-1",
-                "kwargs": {},
-            },
-        ),
-        (
-            "OpenSlideWSIReader (Small SVS)",
-            {
-                "reader_class": OpenSlideWSIReader,
-                "sample_key": "svs-1-small",
-                "kwargs": {},
-            },
-        ),
-        (
-            "OmnyxJP2WSIReader",
-            {
-                "reader_class": OmnyxJP2WSIReader,
-                "sample_key": "jp2-omnyx-1",
-                "kwargs": {},
-            },
-        ),
+        },
+        {
+            "reader_class": TIFFWSIReader,
+            "sample_key": "ome-brightfield-pyramid-1-small",
+            "kwargs": {},
+        },
+        {
+            "reader_class": DICOMWSIReader,
+            "sample_key": "dicom-1",
+            "kwargs": {},
+        },
+        {
+            "reader_class": NGFFWSIReader,
+            "sample_key": "ngff-1",
+            "kwargs": {},
+        },
+        {
+            "reader_class": OpenSlideWSIReader,
+            "sample_key": "svs-1-small",
+            "kwargs": {},
+        },
+        {
+            "reader_class": OmnyxJP2WSIReader,
+            "sample_key": "jp2-omnyx-1",
+            "kwargs": {},
+        },
+    ],
+    ids=[
+        "AnnotationReaderOverlaid",
+        "AnnotationReaderMaskOnly",
+        "TIFFReader",
+        "DICOMReader",
+        "NGFFWSIReader",
+        "OpenSlideWSIReader (Small SVS)",
+        "OmnyxJP2WSIReader",
+    ],
+)
+def wsi(request, remote_sample):
+    reader_class = request.param.pop("reader_class")
+    sample = remote_sample(request.param.pop("sample_key"))
+
+    kwargs = request.param.pop("kwargs")
+    new_kwargs = {}
+
+    for key, value in kwargs.items():
+        if key.endswith("_key") and isinstance(value, str):
+            new_kwargs[key[:-4]] = remote_sample(value)
+        else:
+            new_kwargs[key] = value
+
+    return reader_class(
+        sample,
+        **new_kwargs,
+    )
+
+
+def test_base_open(wsi):
+    """Checks that WSIReader.open detects the type correctly."""
+    new_wsi = WSIReader.open(wsi)
+    assert isinstance(new_wsi, wsi.__class__)
+
+
+def test_wsimeta_attrs(wsi):
+    """Check for expected attrs in .info / WSIMeta.
+
+    Checks for existence of expected attrs but not their contents.
+
+    """
+    info = wsi.info
+    expected_attrs = [
+        "slide_dimensions",
+        "axes",
+        "level_dimensions",
+        "level_count",
+        "level_downsamples",
+        "vendor",
+        "mpp",
+        "objective_power",
+        "file_path",
     ]
+    for attr in expected_attrs:
+        assert hasattr(info, attr)
 
-    @staticmethod
-    def test_base_open(sample_key, reader_class, remote_sample, kwargs):
-        """Checks that WSIReader.open detects the type correctly."""
-        sample = remote_sample(sample_key)
-        wsi = WSIReader.open(sample)
-        assert isinstance(wsi, reader_class)
 
-    @staticmethod
-    def test_wsimeta_attrs(sample_key, reader_class, remote_sample, kwargs):
-        """Check for expected attrs in .info / WSIMeta.
+def test_read_rect_level_consistency(wsi):
+    """Compare the same region at each stored resolution level.
 
-        Checks for existence of expected attrs but not their contents.
+    Read the same region at each stored resolution level and compare
+    the resulting image using phase cross correlation to check that
+    they are aligned.
 
-        """
-        sample = remote_sample(sample_key)
-        wsi = reader_class(sample, **kwargs)
-        info = wsi.info
-        expected_attrs = [
-            "slide_dimensions",
-            "axes",
-            "level_dimensions",
-            "level_count",
-            "level_downsamples",
-            "vendor",
-            "mpp",
-            "objective_power",
-            "file_path",
-        ]
-        for attr in expected_attrs:
-            assert hasattr(info, attr)
+    """
+    location = (0, 0)
+    size = np.array([1024, 1024])
+    # Avoid testing very small levels (e.g. as in Omnyx JP2) because
+    # MSE for very small levels is noisy.
+    level_downsamples = [
+        downsample for downsample in wsi.info.level_downsamples if downsample <= 32
+    ]
+    imgs = [
+        wsi.read_rect(location, size // downsample, level, "level")
+        for level, downsample in enumerate(level_downsamples)
+    ]
+    smallest_size = imgs[-1].shape[:2][::-1]
+    resized = [imresize(img, output_size=smallest_size) for img in imgs]
+    # Some blurring applied to account for changes in sharpness arising
+    # from interpolation when calculating the downsampled levels. This
+    # adds some tolerance for the comparison.
+    blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
+    as_float = [img.astype(np.float_) for img in blurred]
 
-    @staticmethod
-    def test_read_rect_level_consistency(
-        sample_key, reader_class, remote_sample, kwargs
-    ):
-        """Compare the same region at each stored resolution level.
+    # Pair-wise check resolutions for mean squared error
+    for i, a in enumerate(as_float):
+        for b in as_float[i + 1 :]:
+            _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
+            assert phase_diff < 0.125
+            assert error < 0.125
 
-        Read the same region at each stored resolution level and compare
-        the resulting image using phase cross correlation to check that
-        they are aligned.
 
-        """
-        sample = remote_sample(sample_key)
-        wsi = reader_class(sample, **kwargs)
-        location = (0, 0)
-        size = np.array([1024, 1024])
-        # Avoid testing very small levels (e.g. as in Omnyx JP2) because
-        # MSE for very small levels is noisy.
-        level_downsamples = [
-            downsample for downsample in wsi.info.level_downsamples if downsample <= 32
-        ]
-        imgs = [
-            wsi.read_rect(location, size // downsample, level, "level")
-            for level, downsample in enumerate(level_downsamples)
-        ]
-        smallest_size = imgs[-1].shape[:2][::-1]
-        resized = [imresize(img, output_size=smallest_size) for img in imgs]
-        # Some blurring applied to account for changes in sharpness arising
-        # from interpolation when calculating the downsampled levels. This
-        # adds some tolerance for the comparison.
-        blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-        as_float = [img.astype(np.float_) for img in blurred]
+def test_read_bounds_level_consistency(wsi):
+    """Compare the same region at each stored resolution level.
 
-        # Pair-wise check resolutions for mean squared error
-        for i, a in enumerate(as_float):
-            for b in as_float[i + 1 :]:
-                _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
-                assert phase_diff < 0.125
-                assert error < 0.125
+    Read the same region at each stored resolution level and compare
+    the resulting image using phase cross correlation to check that
+    they are aligned.
 
-    @staticmethod
-    def test_read_bounds_level_consistency(
-        sample_key, reader_class, remote_sample, kwargs
-    ):
-        """Compare the same region at each stored resolution level.
+    """
+    bounds = (0, 0, 1024, 1024)
+    # This logic can be moved from the helper to here when other
+    # reader classes have been parameterised into scenarios also.
+    read_bounds_level_consistency(wsi, bounds)
 
-        Read the same region at each stored resolution level and compare
-        the resulting image using phase cross correlation to check that
-        they are aligned.
 
-        """
-        sample = remote_sample(sample_key)
-        wsi = reader_class(sample, **kwargs)
-        bounds = (0, 0, 1024, 1024)
-        # This logic can be moved from the helper to here when other
-        # reader classes have been parameterised into scenarios also.
-        read_bounds_level_consistency(wsi, bounds)
+def test_fuzz_read_region_baseline_size(wsi):
+    """Fuzz test for `read_bounds` output size at level 0 (baseline).
 
-    @staticmethod
-    def test_fuzz_read_region_baseline_size(
-        sample_key, reader_class, remote_sample, kwargs
-    ):
-        """Fuzz test for `read_bounds` output size at level 0 (baseline).
+    - Tests that the output image size matches the input bounds size.
+    - 50 random seeded reads are performed.
+    - All test bounds are within the slide dimensions.
+    - Bounds sizes are randomised between 1 and 512 in width and height.
 
-        - Tests that the output image size matches the input bounds size.
-        - 50 random seeded reads are performed.
-        - All test bounds are within the the slide dimensions.
-        - Bounds sizes are randomised between 1 and 512 in width and height.
+    """
+    random.seed(123)
+    width, height = wsi.info.slide_dimensions
+    iterations = 50
 
-        """
-        random.seed(123)
-        sample = remote_sample(sample_key)
-        wsi = reader_class(sample, **kwargs)
-        width, height = wsi.info.slide_dimensions
-        iterations = 50
+    if wsi.input_path.stem == "test1":
+        iterations = 5
 
-        if sample_key == "jp2-omnyx-1":
-            iterations = 5
-
-        for _ in range(iterations):
-            size = (random.randint(1, 512), random.randint(1, 512))
-            location = (
-                random.randint(0, width - size[0]),
-                random.randint(0, height - size[1]),
-            )
-            bounds = locsize2bounds(location, size)
-            region = wsi.read_bounds(bounds, resolution=0, units="level")
-            assert region.shape[:2][::-1] == size
-
-    @staticmethod
-    def test_read_rect_coord_space_consistency(
-        sample_key, reader_class, remote_sample, kwargs
-    ):
-        """Test that read_rect coord_space modes are consistent.
-
-        Using `read_rect` with `coord_space="baseline"` and
-        `coord_space="resolution"` should produce the same output when
-        the bounds are a multiple of the scale difference between the two
-        modes. I.E. reading at baseline with a set of coordinates should
-        yield the same region as reading at half the resolution and
-        with coordinates which are half the size. Note that the output
-        will not be of the same size, but the field of view will match.
-
-        """
-        sample = remote_sample(sample_key)
-        reader = reader_class(sample, **kwargs)
-        roi1 = reader.read_rect(
-            np.array([500, 500]),
-            np.array([2000, 2000]),
-            coord_space="baseline",
-            resolution=1.00,
-            units="baseline",
+    for _ in range(iterations):
+        size = (random.randint(1, 512), random.randint(1, 512))
+        location = (
+            random.randint(0, width - size[0]),
+            random.randint(0, height - size[1]),
         )
-        roi2 = reader.read_rect(
-            np.array([250, 250]),
-            np.array([1000, 1000]),
-            coord_space="resolution",
-            resolution=0.5,
-            units="baseline",
-        )
-        # Make the regions the same size for comparison of content
-        roi2 = imresize(roi2, output_size=[2000, 2000])
+        bounds = locsize2bounds(location, size)
+        region = wsi.read_bounds(bounds, resolution=0, units="level")
+        assert region.shape[:2][::-1] == size
 
-        # Check MSE
-        mse = np.mean((roi1 - roi2) ** 2)
-        assert mse < 100
 
-        # Check PSNR
-        psnr = peak_signal_noise_ratio(roi1, roi2)
-        assert psnr > 25
+def test_read_rect_coord_space_consistency(wsi):
+    """Test that read_rect coord_space modes are consistent.
 
-        # Check SSIM (skip very small roi regions)
-        if np.greater(roi1.shape[2], 16).all():
-            ssim = structural_similarity(roi1, roi2, multichannel=True)
-            assert ssim > 0.9
+    Using `read_rect` with `coord_space="baseline"` and
+    `coord_space="resolution"` should produce the same output when
+    the bounds are a multiple of the scale difference between the two
+    modes. I.E. reading at baseline with a set of coordinates should
+    yield the same region as reading at half the resolution and
+    with coordinates which are half the size. Note that the output
+    will not be of the same size, but the field of view will match.
 
-    @staticmethod
-    def test_file_path_does_not_exist(sample_key, reader_class, kwargs):
-        """Test that FileNotFoundError is raised when file does not exist."""
+    """
+    roi1 = wsi.read_rect(
+        np.array([500, 500]),
+        np.array([2000, 2000]),
+        coord_space="baseline",
+        resolution=1.00,
+        units="baseline",
+    )
+    roi2 = wsi.read_rect(
+        np.array([250, 250]),
+        np.array([1000, 1000]),
+        coord_space="resolution",
+        resolution=0.5,
+        units="baseline",
+    )
+    # Make the regions the same size for comparison of content
+    roi2 = imresize(roi2, output_size=[2000, 2000])
+
+    # Check MSE
+    mse = np.mean((roi1 - roi2) ** 2)
+    assert mse < 100
+
+    # Check PSNR
+    psnr = peak_signal_noise_ratio(roi1, roi2)
+    assert psnr > 25
+
+    # Check SSIM (skip very small roi regions)
+    if np.greater(roi1.shape[2], 16).all():
+        ssim = structural_similarity(roi1, roi2, multichannel=True)
+        assert ssim > 0.9
+
+
+def test_file_path_does_not_exist():
+    for reader_class in [OmnyxJP2WSIReader, OpenSlideWSIReader, NGFFWSIReader]:
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
 
-    @staticmethod
-    def test_read_mpp(sample_key, reader_class, remote_sample, kwargs):
-        """Test that the mpp is read correctly."""
-        sample = remote_sample(sample_key)
-        wsi = reader_class(sample, **kwargs)
-        assert wsi.info.mpp == pytest.approx(0.25, 1)
+
+def test_read_mpp(wsi):
+    """Test that the mpp is read correctly."""
+    assert wsi.info.mpp == pytest.approx(0.25, 1)

@@ -682,7 +682,7 @@ def download_data(
             # Raise an exception for status codes != 200
             response.raise_for_status()
             # Write the file in blocks of 1024 bytes to avoid running out of memory
-            with open(save_path, "wb") as handle:
+            with save_path.open("wb") as handle:
                 for block in response.iter_content(1024):
                     handle.write(block)
 
