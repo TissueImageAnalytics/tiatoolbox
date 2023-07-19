@@ -10,7 +10,7 @@ import pytest
 import torch
 from click.testing import CliRunner
 
-from tiatoolbox import cli, rcParam
+from tiatoolbox import cli
 from tiatoolbox.models import IOPatchPredictorConfig, PatchPredictor
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import (
@@ -209,7 +209,6 @@ def test_patch_dataset_crash(tmp_path):
         match="Cannot load image data from",
     ):
         _ = PatchDataset(imgs)
-    _rm_dir(rcParam["TIATOOLBOX_HOME"])
 
     # preproc func for not defined dataset
     with pytest.raises(
@@ -679,9 +678,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     _rm_dir(save_dir_path)
     Path.mkdir(save_dir_path, parents=True)
     pretrained_weights = (
-        rcParam["TIATOOLBOX_HOME"]
-        / "tmp_pretrained_weigths"
-        / "resnet18-kather100k.pth"
+        save_dir_path / "tmp_pretrained_weigths" / "resnet18-kather100k.pth"
     )
 
     download_data(pretrained_weights_url, pretrained_weights)

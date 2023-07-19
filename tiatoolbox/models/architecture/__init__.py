@@ -8,32 +8,51 @@ from typing import TYPE_CHECKING, Optional, Union
 import torch
 
 from tiatoolbox import rcParam
-from tiatoolbox.models.architecture.vanilla import CNNBackbone, CNNModel
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
 
 if TYPE_CHECKING:  # pragma: no cover
     import pathlib
 
+
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 
-def fetch_pretrained_weights(model_name: str, save_path: str, overwrite: bool = True):
+def fetch_pretrained_weights(
+    model_name: str,
+    save_path: str | pathlib.Path | None = None,
+    overwrite: bool = False,
+) -> pathlib.Path:
     """Get the pretrained model information from yml file.
 
     Args:
         model_name (str):
             Refer to `::py::meth:get_pretrained_model` for all supported
             model names.
-        save_path (str):
+        save_path (str | Path):
             Path to save the weight of the
           corresponding `model_name`.
         overwrite (bool):
             Overwrite existing downloaded weights.
+
+    Returns:
+        pathlib.Path:
+            The local path to the cached pretrained weights after downloading.
+
     """
+    if model_name not in PRETRAINED_INFO:
+        msg = f"Pretrained model `{model_name}` does not exist"
+        raise ValueError(msg)
+
     info = PRETRAINED_INFO[model_name]
+
+    if save_path is None:
+        file_name = info["url"].split("/")[-1]
+        save_path = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
+
     download_data(info["url"], save_path, overwrite)
+    return save_path
 
 
 def get_pretrained_model(
@@ -115,9 +134,10 @@ def get_pretrained_model(
         model.preproc_func = predefined_preproc_func(info["dataset"])
 
     if pretrained_weights is None:
-        file_name = info["url"].split("/")[-1]
-        pretrained_weights = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
-        fetch_pretrained_weights(pretrained_model, pretrained_weights, overwrite)
+        pretrained_weights = fetch_pretrained_weights(
+            pretrained_model,
+            overwrite=overwrite,
+        )
 
     # ! assume to be saved in single GPU mode
     # always load on to the CPU

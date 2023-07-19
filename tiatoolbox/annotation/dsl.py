@@ -164,7 +164,7 @@ class SQLExpression:
         return SQLTriplet(self, operator.ne, other)
 
     def __neg__(self):
-        """Define how the object is compared for equality (not equal to)."""
+        """Define how the object is compared for negation (not equal to)."""
         return SQLTriplet(self, operator.neg)
 
     def __contains__(self, other) -> bool:

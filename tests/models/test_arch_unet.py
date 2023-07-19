@@ -20,8 +20,7 @@ def test_functional_unet(remote_sample, tmp_path):
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
 
-    _pretrained_path = f"{tmp_path}/weights.pth"
-    fetch_pretrained_weights("fcn-tissue_mask", _pretrained_path)
+    pretrained_weights = fetch_pretrained_weights("fcn-tissue_mask")
 
     reader = WSIReader.open(mini_wsi_svs)
     with pytest.raises(ValueError, match=r".*Unknown encoder*"):
@@ -46,7 +45,7 @@ def test_functional_unet(remote_sample, tmp_path):
     batch = torch.from_numpy(batch)
 
     model = UNetModel(3, 2, encoder="resnet50", decoder_block=[3])
-    pretrained = torch.load(_pretrained_path, map_location="cpu")
+    pretrained = torch.load(pretrained_weights, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     output = output[0]

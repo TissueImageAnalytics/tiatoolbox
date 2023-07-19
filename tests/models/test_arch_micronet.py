@@ -15,9 +15,10 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(
+    remote_sample,
+):
     """Functionality test."""
-    tmp_path = str(tmp_path)
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)
 
@@ -32,10 +33,10 @@ def test_functionality(remote_sample, tmp_path):
     model = MicroNet()
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
-    fetch_pretrained_weights("micronet-consep", f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights("micronet-consep")
     map_location = select_device(ON_GPU)
     model = model.to(map_location)
-    pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
+    pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     output, _ = model.postproc(output[0])

@@ -521,10 +521,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
-    fetch_pretrained_weights(
-        "hovernet_fast-pannuke",
-        str(tmp_path.joinpath("hovernet_fast-pannuke.pth")),
-    )
+    pretrained_weights = fetch_pretrained_weights("hovernet_fast-pannuke")
 
     # resolution for travis testing, not the correct ones
     config = {
@@ -553,7 +550,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
             "--img-input",
             str(mini_wsi_jpg),
             "--pretrained-weights",
-            str(tmp_path.joinpath("hovernet_fast-pannuke.pth")),
+            str(pretrained_weights),
             "--num-loader-workers",
             str(0),
             "--num-postproc-workers",

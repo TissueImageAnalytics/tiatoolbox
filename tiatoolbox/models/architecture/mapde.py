@@ -5,6 +5,7 @@ for cell detection." 2019 IEEE 16th International Symposium on Biomedical
 Imaging (ISBI 2019). IEEE, 2019.
 
 """
+from __future__ import annotations
 
 import numpy as np
 import torch
@@ -257,7 +258,7 @@ class MapDe(MicroNet):
         model: torch.nn.Module,
         batch_data: np.ndarray,
         on_gpu: bool,
-    ) -> np.ndarray:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -273,7 +274,7 @@ class MapDe(MicroNet):
                 Whether to run inference on a GPU.
 
         Returns:
-            np.ndarray:
+            list(np.ndarray):
                 Probability map as numpy array.
 
         """

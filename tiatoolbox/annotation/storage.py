@@ -489,6 +489,7 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of properties to update.
             keys (iter(str)):
                 An iterable of keys for each annotation to be updated.
+
         """
         # Validate inputs
         if not any([geometries, properties_iter]):
@@ -692,7 +693,7 @@ class AnnotationStore(ABC, MutableMapping):
             raise ValueError(msg)
         if geometry_predicate not in self._geometry_predicate_names:
             msg = (
-                f"Invalid geometry predicate.Allowed values are: "
+                "Invalid geometry predicate. Allowed values are: "
                 f"{', '.join(self._geometry_predicate_names)}."
             )
             raise ValueError(
@@ -832,7 +833,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         if geometry_predicate not in self._geometry_predicate_names:
             msg = (
-                f"Invalid geometry predicate.Allowed values are: "
+                "Invalid geometry predicate. Allowed values are: "
                 f"{', '.join(self._geometry_predicate_names)}."
             )
             raise ValueError(
@@ -923,7 +924,6 @@ class AnnotationStore(ABC, MutableMapping):
                 ... )
                 >>> store.bquery(where="props['class'] == 42")
                 {'foo': (0.0, 0.0, 1.0, 1.0)}
-
 
         """
         query_geometry = geometry
@@ -1456,7 +1456,7 @@ class AnnotationStore(ABC, MutableMapping):
                 The scale factor to use when loading the annotations. All coordinates
                 will be multiplied by this factor to allow import of annotations saved
                 at non-baseline resolution.
-            origin (tuple(float, float)):
+            origin (Tuple[float, float]):
                 The x and y coordinates to use as the origin for the annotations.
 
         """
@@ -1491,7 +1491,7 @@ class AnnotationStore(ABC, MutableMapping):
             for feature in geojson["features"]
         ]
 
-        logger.info("Added %d annotations.", len(annotations))
+        logger.info("Adding %d annotations.", len(annotations))
         self.append_many(annotations)
 
     def to_geojson(self, fp: IO | str | Path | None = None) -> str | None:
@@ -1696,15 +1696,6 @@ class SQLiteMetadata(MutableMapping):
     """Metadata storage for an SQLiteStore.
 
     Attributes:
-        connection (Union[str, Path, IO]):
-            A reference to where the data is stored. It maybe a string (
-            e.g. ":memory:" or "./data.db"), a pathlib Path, or a file
-            handle.
-        path (Path):
-            The path to the annotation store data. This will be
-            ":memory:" if the annotation store is in-memory. This is
-            derived from `connection` and normalised to be a pathlib
-            Path object.
         con (sqlite3.Connection):
             The sqlite3 database connection.
 
@@ -2246,7 +2237,7 @@ class SQLiteStore(AnnotationStore):
         unique: bool = False,
         no_constraints_ok: bool = False,
         index_warning: bool = False,
-        min_area=None,
+        min_area: float | None = None,
         distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
@@ -2280,8 +2271,9 @@ class SQLiteStore(AnnotationStore):
             index_warning(bool):
                 Whether to warn if the query is not using an index.
                 Defaults to False.
-            min_area (float):
-                Minimum area required for query.
+            min_area (float or None):
+                Minimum area of the annotations to be returned.
+                Defaults to None.
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
@@ -2299,7 +2291,7 @@ class SQLiteStore(AnnotationStore):
             callable_columns = columns
         if geometry_predicate not in self._geometry_predicate_names:
             msg = (
-                f"Invalid geometry predicate.Allowed values are: "
+                "Invalid geometry predicate. Allowed values are: "
                 f"{', '.join(self._geometry_predicate_names)}."
             )
             raise ValueError(
@@ -2325,6 +2317,7 @@ class SQLiteStore(AnnotationStore):
             distance=distance,
         )
 
+        # Add area column constraint to query if min_area is specified
         if min_area is not None and "area" in self.table_columns:
             query_string += f"\nAND area > {min_area}"
         elif min_area is not None:
@@ -2362,7 +2355,7 @@ class SQLiteStore(AnnotationStore):
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate="intersects",
-        min_area=None,
+        min_area: float | None = None,
         distance: float = 0,
     ) -> list[str]:
         """Query the store for annotation keys.
@@ -2401,7 +2394,7 @@ class SQLiteStore(AnnotationStore):
                 input should never be accepted to this argument as
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
-            geometry_predicate:
+            geometry_predicate (str):
                 A string which define which binary geometry predicate to
                 use when comparing the query geometry and a geometry in
                 the store. Only annotations for which this binary
@@ -2409,8 +2402,9 @@ class SQLiteStore(AnnotationStore):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
-            min_area:
-                Minimum area required for query.
+            min_area (float or None):
+                Minimum area of the annotations to be returned.
+                Defaults to None.
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
@@ -2476,8 +2470,8 @@ class SQLiteStore(AnnotationStore):
     def bquery(
         self,
         geometry: QueryGeometry | None = None,
-        where: str | bytes | Callable[[Geometry, dict[str, Any]], bool] | None = None,
-        min_area=None,
+        where: Predicate | None = None,
+        min_area: float | None = None,
     ) -> dict[str, tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
@@ -2525,8 +2519,9 @@ class SQLiteStore(AnnotationStore):
                 input should never be accepted to this argument as
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
-            min_area:
-                Minimum area required for query.
+            min_area (float or None):
+                Minimum area of the annotations to be returned.
+                Defaults to None.
 
         Returns:
             list:
@@ -2676,8 +2671,8 @@ class SQLiteStore(AnnotationStore):
 
     @staticmethod
     def _kind_of_pquery(
-        select: str | bytes | Callable,
-        where: str | bytes | Callable,
+        select: Select,
+        where: Predicate,
     ) -> tuple[bool, bool, bool]:
         """Determine boolean flags for the kind of pquery this is.
 
@@ -2701,8 +2696,8 @@ class SQLiteStore(AnnotationStore):
 
     @staticmethod
     def _validate_select_where_type(
-        select: str | bytes | Callable,
-        where: str | bytes | Callable,
+        select: Select,
+        where: Predicate,
     ) -> None:
         """Validate that select and where are valid types.
 
@@ -2873,7 +2868,7 @@ class SQLiteStore(AnnotationStore):
         return result
 
     def __len__(self) -> int:
-        """Return the length of the instance attributes."""
+        """Return number of annotations in the store."""
         cur = self.con.cursor()
         cur.execute("SELECT COUNT(*) FROM annotations")
         (count,) = cur.fetchone()
@@ -2983,6 +2978,7 @@ class SQLiteStore(AnnotationStore):
                 An iterable of properties to update.
             keys (iter(str)):
                 An iterable of keys for each annotation to be updated.
+
         """
         # Validate inputs
         if not any([geometries, properties_iter]):
@@ -3036,9 +3032,9 @@ class SQLiteStore(AnnotationStore):
         leave the properties untouched.
 
         Args:
-            key: The key of the annotation to patch.
-            geometry: The new geometry.
-            cur: The cursor to use.
+            key (str): The key of the annotation to patch.
+            geometry (Geometry): The new geometry.
+            cur (sqlite3.Cursor): The cursor to use.
 
         """
         bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
@@ -3103,7 +3099,7 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
-        """Implements a method to assign a value to and item."""
+        """Implements a method to assign a value to an item."""
         if key in self:
             self.patch(key, annotation.geometry, annotation.properties)
             return
@@ -3391,11 +3387,11 @@ class DictionaryStore(AnnotationStore):
         del self._rows[key]
 
     def __getitem__(self, key: str) -> Annotation:
-        """Get an item from the dataset."""
+        """Get an item from the store."""
         return self._rows[key]["annotation"]
 
     def __setitem__(self, key: str, annotation: Annotation) -> None:
-        """Implements a method to assign a value to and item."""
+        """Implements a method to assign a value to an item."""
         if key in self._rows:
             self._rows[key]["annotation"] = annotation
         self._rows[key] = {"annotation": annotation}

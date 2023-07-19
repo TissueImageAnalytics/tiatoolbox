@@ -64,13 +64,16 @@ def test_dataset_abc():
 @pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
 def test_kather_dataset_default(tmp_path):
     """Test for kather patch dataset with default parameters."""
-    # test kather with default init
+    # test Kather with default init
+    dataset_path = rcParam["TIATOOLBOX_HOME"] / "dataset" / "kather100k-validation"
+    shutil.rmtree(dataset_path, ignore_errors=True)
+
     _ = KatherPatchDataset()
     # kather with default data path skip download
     _ = KatherPatchDataset()
 
     # remove generated data
-    shutil.rmtree(rcParam["TIATOOLBOX_HOME"])
+    shutil.rmtree(dataset_path, ignore_errors=False)
 
 
 def test_kather_nonexisting_dir():

@@ -8,11 +8,23 @@ from typing import Callable
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
+import tiatoolbox
+from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
+from tiatoolbox.utils.env_detection import running_on_ci
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
 # -------------------------------------------------------------------------------------
+
+
+def pytest_configure(config):
+    """Perform initial configuration for TIAToolbox tests."""
+    logger.info(
+        "🏁 Starting tests. TIAToolbox Version: %s. CI: %s",
+        tiatoolbox.__version__,
+        running_on_ci(),
+    )
 
 
 def pytest_generate_tests(metafunc):

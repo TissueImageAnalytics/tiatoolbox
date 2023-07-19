@@ -10,7 +10,7 @@ def pair_coordinates(set_a, set_b, radius):
 
     This function uses the Munkres or Kuhn-Munkres algorithm behind the
     scene to find the most optimal unique pairing when pairing points in
-    set B against points in set A, using euclidean distance as the cost
+    set B against points in set A, using Euclidean distance as the cost
     function.
 
     Args:
