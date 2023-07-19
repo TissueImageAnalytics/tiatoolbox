@@ -11,24 +11,23 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 
 
-def _load_mapde(tmp_path, name):
+def _load_mapde(name):
     """Loads MapDe model with specified weights."""
     model = MapDe()
-    fetch_pretrained_weights(name, f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights(name)
     map_location = select_device(ON_GPU)
-    pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
+    pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
 
     return model
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(remote_sample):
     """Functionality test for MapDe.
 
     Tests the functionality of MapDe model for inference at the patch level.
 
     """
-    tmp_path = str(tmp_path)
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)
 
@@ -37,7 +36,7 @@ def test_functionality(remote_sample, tmp_path):
         (0, 0, 252, 252), resolution=0.50, units="mpp", coord_space="resolution"
     )
 
-    model = _load_mapde(tmp_path=tmp_path, name="mapde-conic")
+    model = _load_mapde(name="mapde-conic")
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
     model = model.to(select_device(ON_GPU))
