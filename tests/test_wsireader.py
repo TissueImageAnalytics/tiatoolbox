@@ -2269,6 +2269,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
 
 
 @pytest.fixture(
+    scope="module",
     params=[
         {
             "reader_class": AnnotationStoreReader,
