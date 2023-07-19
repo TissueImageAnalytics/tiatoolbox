@@ -2497,7 +2497,14 @@ def test_read_rect_coord_space_consistency(wsi):
 
 
 def test_file_path_does_not_exist():
-    for reader_class in [OmnyxJP2WSIReader, OpenSlideWSIReader, NGFFWSIReader]:
+    for reader_class in [
+        AnnotationStoreReader,
+        TIFFWSIReader,
+        DICOMWSIReader,
+        NGFFWSIReader,
+        OpenSlideWSIReader,
+        OmnyxJP2WSIReader,
+    ]:
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
 
