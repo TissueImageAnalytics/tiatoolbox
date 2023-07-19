@@ -54,11 +54,10 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest --basetemp={envtmpdir} \
+        pytest -n auto --basetemp={envtmpdir} \
            --cov=tiatoolbox --cov-report=term --cov-report=xml \
            --capture=sys \
            --durations=10 --durations-min=1.0 \
-           --n auto \
            --maxfail=1
     - name: Report test coverage to Codecov
       uses: codecov/codecov-action@v2
