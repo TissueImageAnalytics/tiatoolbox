@@ -85,7 +85,7 @@ class KatherPatchDataset(DatasetInfoABC):
 
         if save_dir_path is None:  # pragma: no cover
             save_dir_path = Path(rcParam["TIATOOLBOX_HOME"], "dataset")
-            if not os.path.exists(save_dir_path):
+            if not os.path.exists(os.path.join(save_dir_path, "kather100k-validation")):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
                 url = (
                     "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
