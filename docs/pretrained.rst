@@ -326,7 +326,7 @@ The input output configuration is as follows:
         ioconfig = IOPatchPredictorConfig(
             patch_input_shape=(31, 31),
             stride_shape=(8, 8),
-            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+            input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
         )
 
 
@@ -342,7 +342,7 @@ The input output configuration is as follows:
         ioconfig = IOPatchPredictorConfig(
             patch_input_shape=(252, 252),
             stride_shape=(150, 150),
-            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+            input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
         )
 
 
@@ -366,7 +366,7 @@ The input output configuration is as follows:
         ioconfig = IOPatchPredictorConfig(
             patch_input_shape=(31, 31),
             stride_shape=(8, 8),
-            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+            input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
         )
 
 
@@ -382,7 +382,7 @@ The input output configuration is as follows:
         ioconfig = IOPatchPredictorConfig(
             patch_input_shape=(252, 252),
             stride_shape=(150, 150),
-            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
+            input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
         )
 
 

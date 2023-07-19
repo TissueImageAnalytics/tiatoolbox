@@ -1537,7 +1537,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Resolution used for reading the image.
             units (Units):
                 Units of resolution used for reading the image.
-            save_dir (str):
+            save_dir (str or pathlib.Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
