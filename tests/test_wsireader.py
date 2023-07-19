@@ -2331,6 +2331,10 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
     ],
 )
 def wsi(request, remote_sample):
+    """WSIReader instance fixture.
+    Reader type varies as fixture is parametrized.
+
+    """
     reader_class = request.param.pop("reader_class")
     sample = remote_sample(request.param.pop("sample_key"))
 
@@ -2352,7 +2356,7 @@ def wsi(request, remote_sample):
 def test_base_open(wsi):
     """Checks that WSIReader.open detects the type correctly."""
     new_wsi = WSIReader.open(wsi.input_path)
-    assert type(new_wsi) == type(wsi)
+    assert type(new_wsi) is type(wsi)
 
 
 def test_wsimeta_attrs(wsi):
