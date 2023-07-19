@@ -24,8 +24,8 @@ def test_functionality(remote_sample, tmp_path):
     assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
     assert len(model.decoder["tp"]) > 0, "Decoder must contain tp branch."
     assert len(model.decoder["ls"]) > 0, "Decoder must contain ls branch."
-    fetch_pretrained_weights("hovernetplus-oed", f"{tmp_path}/weigths.pth")
-    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    weights_path = fetch_pretrained_weights("hovernetplus-oed")
+    pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     assert len(output) == 4, "Must contain predictions for: np, hv, tp and ls branches."
