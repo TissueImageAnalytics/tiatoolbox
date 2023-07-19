@@ -66,7 +66,7 @@ def test_kather_dataset_default(tmp_path):
     """Test for kather patch dataset with default parameters."""
     # test kather with default init
     dataset_path = os.path.join(
-        rcParam["TIATOOLBOX_HOME"], "dataset", "kather100k-validation"
+        rcParam["TIATOOLBOX_HOME"], "dataset", "kather100k-validation",
     )
     shutil.rmtree(dataset_path, ignore_errors=True)
 

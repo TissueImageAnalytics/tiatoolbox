@@ -10,16 +10,15 @@ import torch
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
+import pathlib
 
-if TYPE_CHECKING:  # pragma: no cover
-    import pathlib
 
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 
 def fetch_pretrained_weights(
-    model_name: str, save_path: str = None, overwrite: bool = False
+    model_name: str, save_path: str | None = None, overwrite: bool = False,
 ) -> pathlib.Path:
     """Get the pretrained model information from yml file.
 
@@ -39,7 +38,8 @@ def fetch_pretrained_weights(
 
     """
     if model_name not in PRETRAINED_INFO:
-        raise ValueError(f"Pretrained model `{model_name}` does not exist")
+        msg = f"Pretrained model `{model_name}` does not exist"
+        raise ValueError(msg)
 
     info = PRETRAINED_INFO[model_name]
 
@@ -131,7 +131,7 @@ def get_pretrained_model(
 
     if pretrained_weights is None:
         pretrained_weights = fetch_pretrained_weights(
-            pretrained_model, overwrite=overwrite
+            pretrained_model, overwrite=overwrite,
         )
 
     # ! assume to be saved in single GPU mode

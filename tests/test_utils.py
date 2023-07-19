@@ -1517,7 +1517,6 @@ def test_from_multi_head_dat_type_dict(tmp_path):
 
 def test_fetch_pretrained_weights(tmp_path):
     """Test fetching pretrained weights for a model."""
-
     file_path = os.path.join(tmp_path, "test_fetch_pretrained_weights.pth")
     if os.path.exists(file_path):
         os.remove(file_path)
