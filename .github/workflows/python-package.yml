@@ -35,7 +35,7 @@ jobs:
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v3
       with:
-        key: tiatoolbox-static
+        key: tiatoolbox-home-static
         path: ~/.tiatoolbox
     - name: Print Version Information
       run: |
