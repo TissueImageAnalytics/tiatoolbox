@@ -10,7 +10,9 @@ import torch
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
-import pathlib
+
+if TYPE_CHECKING:  # pragma: no cover
+    import pathlib
 
 
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
@@ -18,7 +20,9 @@ PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 
 def fetch_pretrained_weights(
-    model_name: str, save_path: str | None = None, overwrite: bool = False,
+    model_name: str,
+    save_path: str | pathlib.Path | None = None,
+    overwrite: bool = False,
 ) -> pathlib.Path:
     """Get the pretrained model information from yml file.
 
@@ -26,7 +30,7 @@ def fetch_pretrained_weights(
         model_name (str):
             Refer to `::py::meth:get_pretrained_model` for all supported
             model names.
-        save_path (str):
+        save_path (str | Path):
             Path to save the weight of the
           corresponding `model_name`.
         overwrite (bool):
@@ -45,10 +49,10 @@ def fetch_pretrained_weights(
 
     if save_path is None:
         file_name = info["url"].split("/")[-1]
-        save_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "models/", file_name)
+        save_path = rcParam["TIATOOLBOX_HOME"] / "models/", file_name
 
     download_data(info["url"], save_path, overwrite)
-    return pathlib.Path(save_path)
+    return save_path
 
 
 def get_pretrained_model(
@@ -131,7 +135,8 @@ def get_pretrained_model(
 
     if pretrained_weights is None:
         pretrained_weights = fetch_pretrained_weights(
-            pretrained_model, overwrite=overwrite,
+            pretrained_model,
+            overwrite=overwrite,
         )
 
     # ! assume to be saved in single GPU mode
