@@ -2351,8 +2351,8 @@ def wsi(request, remote_sample):
 
 def test_base_open(wsi):
     """Checks that WSIReader.open detects the type correctly."""
-    new_wsi = WSIReader.open(wsi)
-    assert isinstance(new_wsi, wsi.__class__)
+    new_wsi = WSIReader.open(wsi.input_path)
+    assert type(new_wsi) == type(wsi)
 
 
 def test_wsimeta_attrs(wsi):
