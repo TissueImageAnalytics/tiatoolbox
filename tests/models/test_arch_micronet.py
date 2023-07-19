@@ -32,9 +32,9 @@ def test_functionality(remote_sample, tmp_path):
     model = MicroNet()
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
-    fetch_pretrained_weights("micronet-consep", f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights("micronet-consep")
     map_location = select_device(ON_GPU)
-    pretrained = torch.load(f"{tmp_path}/weights.pth", map_location=map_location)
+    pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     output, _ = model.postproc(output[0])

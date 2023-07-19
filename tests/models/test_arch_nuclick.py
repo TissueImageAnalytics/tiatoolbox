@@ -20,8 +20,7 @@ def test_functional_nuclick(remote_sample, tmp_path, caplog):
     tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
     img = imread(tile_path)
 
-    _pretrained_path = f"{tmp_path}/weights.pth"
-    fetch_pretrained_weights("nuclick_original-pannuke", _pretrained_path)
+    weights_path = fetch_pretrained_weights("nuclick_original-pannuke")
 
     # test creation
     _ = NuClick(num_input_channels=5, num_output_channels=1)
@@ -47,7 +46,7 @@ def test_functional_nuclick(remote_sample, tmp_path, caplog):
     batch = torch.from_numpy(batch[np.newaxis, ...])
 
     model = NuClick(num_input_channels=5, num_output_channels=1)
-    pretrained = torch.load(_pretrained_path, map_location="cpu")
+    pretrained = torch.load(weights_path, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     postproc_masks = model.postproc(

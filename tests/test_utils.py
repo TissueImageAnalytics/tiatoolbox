@@ -17,6 +17,7 @@ from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
@@ -1245,7 +1246,7 @@ def test_model_to():
     # no GPU on Travis so this will crash
     if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
-        with pytest.raises(RuntimeError):
+        with pytest.raises((AssertionError, RuntimeError)):
             _ = misc.model_to(on_gpu=True, model=model)
 
     # Test on CPU
@@ -1512,3 +1513,18 @@ def test_from_multi_head_dat_type_dict(tmp_path):
     assert len(result) == 1
     result = store.query(where=lambda x: x["type"][0:4] == "cell")
     assert len(result) == 2
+
+
+def test_fetch_pretrained_weights(tmp_path):
+    """Test fetching pretrained weights for a model."""
+
+    file_path = os.path.join(tmp_path, "test_fetch_pretrained_weights.pth")
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path)
+    assert os.path.exists(file_path)
+    assert os.path.getsize(file_path) > 0
+
+    with pytest.raises(ValueError, match="does not exist"):
+        fetch_pretrained_weights("abc", file_path)
