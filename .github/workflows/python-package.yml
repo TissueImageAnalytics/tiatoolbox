@@ -25,6 +25,7 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
     - name: Install dependencies
       run: |
         sudo apt update
@@ -32,7 +33,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
-    - name: Cache static assets
+    - name: Cache tiatoolbox static assets
       uses: actions/cache@v3
       with:
         key: tiatoolbox-static
