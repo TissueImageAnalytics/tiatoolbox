@@ -30,7 +30,7 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest pytest-cov pytest-runner
+        python -m pip install flake8 pytest pytest-cov pytest-runner pytest-xdist[psutil] pytest-sugar
         pip install -r requirements/requirements.txt
     - name: Print Version Information
       run: |
@@ -58,6 +58,7 @@ jobs:
            --cov=tiatoolbox --cov-report=term --cov-report=xml \
            --capture=sys \
            --durations=10 --durations-min=1.0 \
+           --n auto \
            --maxfail=1
     - name: Report test coverage to Codecov
       uses: codecov/codecov-action@v2
