@@ -1107,7 +1107,9 @@ class DFBRegister:
             fixed_tissue_img, moving_tissue_img
         )
         translation_offset = np.array([[1, 0, shift[1]], [0, 1, shift[0]], [0, 0, 1]])
-        transform_tissue_mask = apply_affine_transformation(fixed_tissue_mask, moving_tissue_mask, translation_offset)
+        transform_tissue_mask = apply_affine_transformation(
+            fixed_tissue_mask, moving_tissue_mask, translation_offset
+        )
 
         # Use the estimated phase cross correlation transform only if it improves DICE overlap
         after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
