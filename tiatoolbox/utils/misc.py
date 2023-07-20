@@ -14,7 +14,6 @@ import pandas as pd
 import requests
 import torch
 import yaml
-
 from filelock import FileLock
 from shapely import geometry
 from shapely.affinity import translate
@@ -24,9 +23,9 @@ from skimage import exposure
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
+import os
 
 if TYPE_CHECKING:  # pragma: no cover
-    import os
     from os import PathLike
 
     from shapely import geometry
@@ -649,10 +648,11 @@ def assert_dtype_int(
     if not np.issubdtype(np.array(input_var).dtype, np.integer):
         raise AssertionError(message)
 
+
 def download_data(
     url: str,
-    save_path: os | PathLike = None,
-    save_dir: os | PathLike = None,
+    save_path: os | PathLike | None = None,
+    save_dir: os | PathLike | None = None,
     overwrite: bool = False,
     unzip: bool = False,
 ) -> pathlib.Path:
@@ -662,7 +662,7 @@ def download_data(
 
     Args:
         url (str | Path):
-            URL from where to download the data.            
+            URL from where to download the data.
         save_path (os | PathLike):
             Location to download the data (including filename).
             Can't be used with save_dir.
@@ -674,9 +674,9 @@ def download_data(
             True to unzip the data, default=False
 
     """
-
     if save_path is not None and save_dir is not None:
-        raise ValueError("save_path and save_dir can't both be specified")
+        msg = "save_path and save_dir can't both be specified"
+        raise ValueError(msg)
 
     if save_path is not None:
         save_dir = pathlib.Path(save_path).parent
@@ -687,7 +687,8 @@ def download_data(
         save_path = save_dir / pathlib.Path(url).name
 
     else:
-        raise ValueError("save_path or save_dir must be specified")
+        msg = "save_path or save_dir must be specified"
+        raise ValueError(msg)
 
     logger.debug("Download from %s to %s", url, save_path)
 
@@ -719,6 +720,7 @@ def download_data(
             return unzip_path
 
     return save_path
+
 
 def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool = True):
     """Extract data from zip file.

@@ -63,6 +63,7 @@ def _fetch_remote_sample(
     # Download the file if it doesn't exist
     return download_data(url, save_path=file_path, unzip=sample.get("extract", False))
 
+
 def _local_sample_path(path: str | Path) -> Path:
     """Get the path to a data file bundled with the package.
 

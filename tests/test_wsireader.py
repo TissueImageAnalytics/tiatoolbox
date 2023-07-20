@@ -13,7 +13,7 @@ from pathlib import Path
 from time import time
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
-from typing import ClassVar, Iterable
+from typing import Iterable
 
 import cv2
 import numpy as np
@@ -2430,6 +2430,7 @@ def test_wsimeta_attrs(wsi):
     ]
     for attr in expected_attrs:
         assert hasattr(info, attr)
+
 
 def test_read_rect_level_consistency(wsi):
     """Compare the same region at each stored resolution level.
