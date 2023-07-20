@@ -2383,6 +2383,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
 )
 def wsi(request, remote_sample):
     """WSIReader instance fixture.
+
     Reader type varies as fixture is parametrized.
 
     """
@@ -2552,6 +2553,7 @@ def test_read_rect_coord_space_consistency(wsi):
 
 
 def test_file_path_does_not_exist():
+    """Test that FileNotFoundError is raised when file does not exist."""
     for reader_class in [
         AnnotationStoreReader,
         TIFFWSIReader,

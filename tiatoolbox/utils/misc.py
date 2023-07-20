@@ -15,7 +15,6 @@ import requests
 import torch
 import yaml
 from filelock import FileLock
-from shapely import geometry
 from shapely.affinity import translate
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
@@ -23,9 +22,9 @@ from skimage import exposure
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-import os
 
 if TYPE_CHECKING:  # pragma: no cover
+    import os
     from os import PathLike
 
     from shapely import geometry
@@ -655,7 +654,7 @@ def download_data(
     save_dir: os | PathLike | None = None,
     overwrite: bool = False,
     unzip: bool = False,
-) -> pathlib.Path:
+) -> Path:
     """Download data from a given URL to location.
 
     The function can overwrite data if demanded else no action is taken.
@@ -679,12 +678,12 @@ def download_data(
         raise ValueError(msg)
 
     if save_path is not None:
-        save_dir = pathlib.Path(save_path).parent
-        save_path = pathlib.Path(save_path)
+        save_dir = Path(save_path).parent
+        save_path = Path(save_path)
 
     elif save_dir is not None:
-        save_dir = pathlib.Path(save_dir)
-        save_path = save_dir / pathlib.Path(url).name
+        save_dir = Path(save_dir)
+        save_path = save_dir / Path(url).name
 
     else:
         msg = "save_path or save_dir must be specified"
@@ -692,16 +691,16 @@ def download_data(
 
     logger.debug("Download from %s to %s", url, save_path)
 
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
+    if not save_dir.exists():
+        save_dir.mkdir(parents=True)
 
-    if not overwrite and os.path.exists(save_path) and not unzip:
+    if not overwrite and save_path.exists() and not unzip:
         return save_path
 
     lock_path = save_path.with_suffix(".lock")
 
     with FileLock(lock_path):
-        if not overwrite and os.path.exists(save_path):
+        if not overwrite and save_path.exists():
             pass  # file was downloaded by another process
         else:
             # Start the connection with a 5-second timeout
