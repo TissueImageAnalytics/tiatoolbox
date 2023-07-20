@@ -499,6 +499,3 @@ def test_affine_wsi_transformer(sample_ome_tiff):
         expected = cv2.rotate(expected, cv2.ROTATE_90_CLOCKWISE)
 
         assert np.sum(expected - output) == 0
-
-
-
