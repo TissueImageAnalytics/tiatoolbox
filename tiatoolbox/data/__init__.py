@@ -14,12 +14,12 @@ if sys.version_info >= (3, 9):  # pragma: no cover
 else:  # pragma: no cover
     import importlib_resources  # To support Python 3.8
 
-import requests
-
 from tiatoolbox import logger, read_registry_files
 
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
+
+from tiatoolbox.utils import download_data
 
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES = read_registry_files("data/remote_samples.yaml")["files"]
@@ -61,29 +61,7 @@ def _fetch_remote_sample(
     filename = SAMPLE_FILES[key].get("filename", url_filename)
     file_path = tmp_path / filename
     # Download the file if it doesn't exist
-    if not file_path.is_file():
-        logger.info(f"Downloading sample file {filename}")
-        # Start the connection with a 5s timeout to avoid hanging forever
-        response = requests.get(url, stream=True, timeout=5)
-        # Raise an exception for status codes != 200
-        response.raise_for_status()
-        # Write the file in blocks of 1024 bytes to avoid running out of memory
-        with Path.open(file_path, "wb") as handle:
-            for block in response.iter_content(1024):
-                handle.write(block)
-        # Extract the (zip) archive contents if required
-        if sample.get("extract"):
-            logger.info(f"Extracting sample file {filename}")
-            extract_path = tmp_path / filename.replace(".zip", "")
-            with zipfile.ZipFile(file_path, "r") as zip_handle:
-                zip_handle.extractall(path=extract_path)
-            file_path = extract_path
-        return file_path
-    logger.info(f"Skipping download of sample file {filename}.")
-    if sample.get("extract"):
-        file_path = tmp_path / filename.replace(".zip", "")
-    return file_path
-
+    return download_data(url, save_path=file_path, unzip=sample.get("extract", False))
 
 def _local_sample_path(path: str | Path) -> Path:
     """Get the path to a data file bundled with the package.

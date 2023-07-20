@@ -98,7 +98,7 @@ def test_kather_dataset(tmp_path):
         "/kather100k-train-nonorm-subset-90.zip"
     )
     save_zip_path = save_dir_path / "Kather.zip"
-    download_data(url, save_zip_path)
+    download_data(url, save_path=save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
     extracted_dir = save_dir_path / "NCT-CRC-HE-100K-NONORM/"
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)

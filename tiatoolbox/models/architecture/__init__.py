@@ -51,7 +51,7 @@ def fetch_pretrained_weights(
         file_name = info["url"].split("/")[-1]
         save_path = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
 
-    download_data(info["url"], save_path, overwrite)
+    download_data(info["url"], save_path=save_path, overwrite=overwrite)
     return save_path
 
 

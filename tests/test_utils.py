@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
+from requests import HTTPError
 from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
@@ -1013,11 +1014,19 @@ def test_download_data():
     # URL not valid
     # shouldn't use save_path if test runs correctly
     save_path = save_dir_path / "temp"
-    with pytest.raises(ConnectionError):
+    with pytest.raises(HTTPError):
         misc.download_data(
             "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url",
             save_path,
         )
+
+    # Both save_dir and save_path are specified
+    with pytest.raises(ValueError, match="save_path and save_dir"):
+        misc.download_data(url, save_dir=save_dir_path, save_path=save_path)
+
+    # None of save_dir and save_path are specified
+    with pytest.raises(ValueError, match="save_path or save_dir"):
+        misc.download_data(url)
 
 
 def test_parse_cv2_interpolaton():
