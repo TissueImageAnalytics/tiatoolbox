@@ -956,12 +956,17 @@ def test_download_unzip_data():
     if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     save_dir_path.mkdir(parents=True)
-    save_zip_path = save_dir_path / "test_directory.zip"
-    misc.download_data(url, save_zip_path)
-    misc.download_data(url, save_zip_path, overwrite=True)  # do overwrite
-    misc.unzip_data(save_zip_path, save_dir_path, del_zip=False)  # not remove
-    assert Path.exists(save_zip_path)
-    misc.unzip_data(save_zip_path, save_dir_path)
+    save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
+    save_zip_path2 = misc.download_data(
+        url,
+        save_dir=save_dir_path,
+        overwrite=True,
+    )  # do overwrite
+    assert save_zip_path1 == save_zip_path2
+
+    misc.unzip_data(save_zip_path1, save_dir_path, del_zip=False)  # not remove
+    assert save_zip_path1.exists()
+    misc.unzip_data(save_zip_path1, save_dir_path)
 
     extracted_path = save_dir_path / "test_directory"
     # to avoid hidden files in case of MAC-OS or Windows (?)
