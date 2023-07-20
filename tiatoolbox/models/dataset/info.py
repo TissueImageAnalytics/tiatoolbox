@@ -91,7 +91,7 @@ class KatherPatchDataset(DatasetInfoABC):
                     "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
                     "/kather100k-train-nonorm-subset-20k.zip"
                 )
-                download_data(url, save_zip_path)
+                download_data(url, save_path=save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             save_dir_path = Path(save_dir_path, "kather100k-validation")
         # bring outside to prevent case where download fail

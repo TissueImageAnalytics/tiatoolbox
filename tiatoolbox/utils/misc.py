@@ -16,6 +16,7 @@ import pandas as pd
 import requests
 import torch
 import yaml
+from filelock import FileLock
 from shapely import geometry
 from shapely.affinity import translate
 from shapely.geometry import shape as feature2geometry
@@ -622,35 +623,75 @@ def assert_dtype_int(
         raise AssertionError(message)
 
 
-def download_data(url: str, save_path: os | PathLike, overwrite: bool = False):
+def download_data(
+    url: str,
+    save_path: os | PathLike = None,
+    save_dir: os | PathLike = None,
+    overwrite: bool = False,
+    unzip: bool = False,
+) -> pathlib.Path:
     """Download data from a given URL to location. Can overwrite data if demanded
     else no action is taken
 
     Args:
-        url (path): URL from where to download the data.
-        save_path (os | PathLike): Location to unzip the data.
-        overwrite (bool): True to force overwriting of existing data, default=False
+        url (str):
+            URL from where to download the data.
+        save_path (os | PathLike):
+            Location to download the data (including filename).
+            Can't be used with save_dir.
+        save_dir (os | PathLike):
+            Directory to save the data. Can't be used with save_path.
+        overwrite (bool):
+            True to force overwriting of existing data, default=False
+        unzip (bool):
+            True to unzip the data, default=False
 
     """
-    print(f"Download from {url}")
-    print(f"Save to {save_path}")
-    save_dir = pathlib.Path(save_path).parent
+
+    if save_path is not None and save_dir is not None:
+        raise ValueError("save_path and save_dir can't both be specified")
+
+    if save_path is not None:
+        save_dir = pathlib.Path(save_path).parent
+        save_path = pathlib.Path(save_path)
+
+    elif save_dir is not None:
+        save_dir = pathlib.Path(save_dir)
+        save_path = save_dir / pathlib.Path(url).name
+
+    else:
+        raise ValueError("save_path or save_dir must be specified")
+
+    logger.debug("Download from %s to %s", url, save_path)
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    if not overwrite and os.path.exists(save_path):
-        return
 
-    r = requests.get(url)
-    request_response = requests.head(url)
-    status_code = request_response.status_code
-    url_exists = status_code == 200
+    if not overwrite and os.path.exists(save_path) and not unzip:
+        return save_path
 
-    if not url_exists:
-        raise ConnectionError(f"Could not find URL at {url}")
+    lock_path = save_path.with_suffix(".lock")
 
-    with open(save_path, "wb") as f:
-        f.write(r.content)
+    with FileLock(lock_path):
+        if not overwrite and os.path.exists(save_path):
+            pass  # file was downloaded by another process
+        else:
+            # Start the connection with a 5-second timeout
+            # to avoid hanging indefinitely.
+            response = requests.get(url, stream=True, timeout=5)
+            # Raise an exception for status codes != 200
+            response.raise_for_status()
+            # Write the file in blocks of 1024 bytes to avoid running out of memory
+            with save_path.open("wb") as handle:
+                for block in response.iter_content(1024):
+                    handle.write(block)
+
+        if unzip:
+            unzip_path = save_dir / save_path.stem
+            unzip_data(str(save_path), str(unzip_path), del_zip=False)
+            return unzip_path
+
+    return save_path
 
 
 def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool = True):
