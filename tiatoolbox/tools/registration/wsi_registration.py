@@ -1111,7 +1111,8 @@ class DFBRegister:
             fixed_tissue_mask, moving_tissue_mask, translation_offset
         )
 
-        # Use the estimated phase cross correlation transform only if it improves DICE overlap
+        # Use the estimated phase cross correlation transform 
+        # only if it improves DICE overlap
         after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
         if after_dice < before_dice:
             translation_offset = np.eye(3, 3)
