@@ -19,7 +19,7 @@ def test_functionality(
     remote_sample,
 ):
     """Functionality test."""
-    sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
+    sample_wsi = remote_sample("wsi1_2k_2k_svs")
     reader = WSIReader.open(sample_wsi)
 
     # * test fast mode (architecture used in PanNuke paper)
