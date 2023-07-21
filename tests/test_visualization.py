@@ -200,7 +200,8 @@ def test_plot_graph():
     plot_graph(canvas, nodes, edges, node_colors=node_colors, edge_colors=edge_colors)
 
 
-def test_decode_geom():
+def test_decode_wkb():
+    """Test decoding of WKB geometries."""
     renderer = AnnotationRenderer()
 
     # Create some Shapely geometries of supported types
@@ -214,9 +215,9 @@ def test_decode_geom():
     polygon_wkb = polygon.wkb
 
     # Decode the WKB geometries
-    point_contours = renderer.decode_geom(point_wkb, 1).reshape(-1, 2)
-    line_contours = renderer.decode_geom(line_wkb, 2).reshape(-1, 2)
-    polygon_contours = renderer.decode_geom(polygon_wkb, 3).reshape(-1, 2)
+    point_contours = renderer.decode_wkb(point_wkb, 1).reshape(-1, 2)
+    line_contours = renderer.decode_wkb(line_wkb, 2).reshape(-1, 2)
+    polygon_contours = renderer.decode_wkb(polygon_wkb, 3).reshape(-1, 2)
 
     # Check that the decoded contours are as expected
     assert np.all(point_contours == np.array([[0, 0]]))
@@ -239,9 +240,9 @@ def test_decode_geom():
     multiline_wkb = multiline.wkb
     multipolygon_wkb = multipolygon.wkb
 
-    multipoint_contours = renderer.decode_geom(multipoint_wkb, 4).reshape(3, -1, 2)
-    multiline_contours = renderer.decode_geom(multiline_wkb, 5).reshape(2, -1, 2)
-    multipolygon_contours = renderer.decode_geom(multipolygon_wkb, 6).reshape(2, -1, 2)
+    multipoint_contours = renderer.decode_wkb(multipoint_wkb, 4).reshape(3, -1, 2)
+    multiline_contours = renderer.decode_wkb(multiline_wkb, 5).reshape(2, -1, 2)
+    multipolygon_contours = renderer.decode_wkb(multipolygon_wkb, 6).reshape(2, -1, 2)
 
     assert np.all(multipoint_contours == np.array([[[0, 0]], [[1, 1]], [[2, 0]]]))
     assert np.all(
@@ -260,4 +261,4 @@ def test_decode_geom():
 
     # test unknown geometry type
     with pytest.raises(ValueError, match=r"Unknown geometry type"):
-        renderer.decode_geom(multipolygon_wkb, 7)
+        renderer.decode_wkb(multipolygon_wkb, 7)

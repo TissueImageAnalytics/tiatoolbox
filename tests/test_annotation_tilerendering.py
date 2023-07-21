@@ -329,9 +329,10 @@ def test_categorical_mapper(fill_store, tmp_path):
 
 
 def test_colour_prop_warnings(fill_store, tmp_path, caplog):
-    """
-    Test warning when rendering annotations in which the provided
-    score_prop does not exist, or its type doesnt match the mapper.
+    """Test warning with inappropriate property.
+
+    Test warning is correctly shown when rendering annotations when the provided
+    score_prop does not exist, or its type does not match the mapper.
 
     """
     array = np.ones((1024, 1024))
@@ -345,7 +346,7 @@ def test_colour_prop_warnings(fill_store, tmp_path, caplog):
     renderer = AnnotationRenderer(score_prop="type", mapper="jet")
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tg.get_tile(1, 0, 0)
-    assert "property value type incompatible" in caplog.text
+    assert "property value type incompatable" in caplog.text
 
 
 def test_blur(fill_store, tmp_path):
@@ -436,8 +437,8 @@ def test_function_mapper(fill_store, tmp_path):
     def color_fn(props):
         # simple test function that returns red for cells, otherwise green.
         if props["type"] == "cell":
-            return (1, 0, 0)
-        return (0, 1, 0)
+            return 1, 0, 0
+        return 0, 1, 0
 
     renderer = AnnotationRenderer(
         score_prop="type", function_mapper=color_fn, edge_thickness=0
