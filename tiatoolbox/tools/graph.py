@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from numbers import Number
 from typing import TYPE_CHECKING, Callable
+from typing import SupportsFloat as Numeric
 
 import numpy as np
 import torch
@@ -18,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from numpy.typing import ArrayLike
 
 
-def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
+def delaunay_adjacency(points: ArrayLike, dthresh: Numeric) -> list:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
 
     Points which are further apart than dthresh will not be connected.
@@ -42,7 +42,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
 
     """
     # Validate inputs
-    if not isinstance(dthresh, Number):
+    if not isinstance(dthresh, Numeric):
         msg = "dthresh must be a number."
         raise TypeError(msg)
     if len(points) < 4:
@@ -155,7 +155,7 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
 
 def affinity_to_edge_index(
     affinity_matrix: torch.Tensor | ArrayLike,
-    threshold: Number = 0.5,
+    threshold: Numeric = 0.5,
 ) -> torch.tensor | ArrayLike:
     """Convert an affinity matrix (similarity matrix) to an edge index.
 
@@ -166,7 +166,7 @@ def affinity_to_edge_index(
     Args:
         affinity_matrix:
             An NxN matrix of affinities between nodes.
-        threshold (Number):
+        threshold (Numeric):
             Threshold above which to be considered connected. Defaults
             to 0.5.
 
@@ -230,12 +230,12 @@ class SlideGraphConstructor:
     def build(
         points: ArrayLike,
         features: ArrayLike,
-        lambda_d: Number = 3.0e-3,
-        lambda_f: Number = 1.0e-3,
-        lambda_h: Number = 0.8,
-        connectivity_distance: Number = 4000,
-        neighbour_search_radius: Number = 2000,
-        feature_range_thresh: Number | None = 1e-4,
+        lambda_d: Numeric = 3.0e-3,
+        lambda_f: Numeric = 1.0e-3,
+        lambda_h: Numeric = 0.8,
+        connectivity_distance: Numeric = 4000,
+        neighbour_search_radius: Numeric = 2000,
+        feature_range_thresh: Numeric | None = 1e-4,
     ) -> dict[str, ArrayLike]:
         """Build a graph via hybrid clustering in spatial and feature space.
 
@@ -268,24 +268,24 @@ class SlideGraphConstructor:
             features (ArrayLike):
                 A list of features associated with each coordinate in
                 `points`. Must be the same length as `points`.
-            lambda_d (Number):
+            lambda_d (Numeric):
                 Spatial distance (d) weighting.
-            lambda_f (Number):
+            lambda_f (Numeric):
                 Feature distance (f) weighting.
-            lambda_h (Number):
+            lambda_h (Numeric):
                 Clustering distance threshold. Applied to the similarity
                 kernel (1-fd). Ranges between 0 and 1. Defaults to 0.8.
                 A good value for this parameter will depend on the
                 intra-cluster variance.
-            connectivity_distance (Number):
+            connectivity_distance (Numeric):
                 Spatial distance threshold to consider points as
                 connected during the Delaunay triangulation step.
-            neighbour_search_radius (Number):
+            neighbour_search_radius (Numeric):
                 Search radius (L2 norm) threshold for points to be
                 considered as similar for clustering. Points with a
                 spatial distance above this are not compared and have a
                 similarity set to 1 (most dissimilar).
-            feature_range_thresh (Number):
+            feature_range_thresh (float):
                 Minimal range for which a feature is considered
                 significant. Features which have a range less than this
                 are ignored. Defaults to 1e-4. If falsy (None, False, 0,
@@ -415,7 +415,7 @@ class SlideGraphConstructor:
         cls,
         graph: dict[str, ArrayLike],
         color: ArrayLike | str | Callable | None = None,
-        node_size: Number | ArrayLike | Callable = 25,
+        node_size: Numeric | ArrayLike | Callable = 25,
         edge_color: str | ArrayLike = (0, 0, 0, 0.33),
         ax: Axes | None = None,
     ) -> Axes:
@@ -446,7 +446,7 @@ class SlideGraphConstructor:
                 it should take a graph as input and return a numpy array
                 of matplotlib colours. If `None` then a default function
                 is used (UMAP on `graph["x"]`).
-            node_size (int or np.ndarray or callable):
+            node_size (Numeric or np.ndarray or callable):
                 Size of the nodes in the plot. If it is a function then
                 it is called with the graph as an argument.
             edge_color (str):

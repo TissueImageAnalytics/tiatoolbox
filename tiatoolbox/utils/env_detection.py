@@ -24,14 +24,10 @@ import socket
 import subprocess
 import sys
 import threading
-from typing import TYPE_CHECKING
 
 import torch
 
 from tiatoolbox import logger
-
-if TYPE_CHECKING:  # pragma: no cover
-    from numbers import Number
 
 
 def has_gpu() -> bool:
@@ -218,7 +214,7 @@ def colab_has_gpu() -> bool:
 
 def has_network(
     hostname: str = "one.one.one.one",
-    timeout: Number = 3,
+    timeout: int = 3,
 ) -> bool:
     """Detect if the current environment has a network connection.
 
@@ -228,7 +224,7 @@ def has_network(
     Args:
         hostname (str):
             The hostname to ping. Defaults to "one.one.one.one".
-        timeout (Number):
+        timeout (int):
             Timeout in seconds for the fallback GET request.
 
     Returns:

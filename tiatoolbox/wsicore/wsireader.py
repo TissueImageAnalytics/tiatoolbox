@@ -9,8 +9,8 @@ import os
 import pathlib
 import re
 from datetime import datetime
-from numbers import Number
 from typing import TYPE_CHECKING, Iterable
+from typing import SupportsFloat as Numeric
 
 import numpy as np
 import openslide
@@ -225,8 +225,8 @@ class WSIReader:
     @staticmethod
     def open(  # noqa: A003
         input_img: str | pathlib.Path | np.ndarray | WSIReader,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[Numeric, Numeric] | None = None,
+        power: Numeric | None = None,
         **kwargs,
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
@@ -366,8 +366,8 @@ class WSIReader:
     def __init__(
         self,
         input_img: str | pathlib.Path | np.ndarray | AnnotationStore,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[Numeric, Numeric] | None = None,
+        power: Numeric | None = None,
     ) -> None:
         """Initialize :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
@@ -380,7 +380,7 @@ class WSIReader:
         self._m_info = None
 
         # Set a manual mpp value
-        if mpp and isinstance(mpp, Number):
+        if mpp and isinstance(mpp, Numeric):
             mpp = (mpp, mpp)
         if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
             msg = "`mpp` must be a number or iterable of length 2."
@@ -388,7 +388,7 @@ class WSIReader:
         self._manual_mpp = tuple(mpp) if mpp else None
 
         # Set a manual power value
-        if power and not isinstance(power, Number):
+        if power and not isinstance(power, Numeric):
             msg = "`power` must be a number."
             raise TypeError(msg)
         self._manual_power = power
@@ -970,8 +970,8 @@ class WSIReader:
 
     def _find_tile_params(
         self,
-        tile_objective_value: Number,
-    ) -> tuple[int, IntPair, int, Number]:
+        tile_objective_value: Numeric,
+    ) -> tuple[int, IntPair, int, Numeric]:
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
         if not rescale.is_integer():
@@ -1021,7 +1021,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Number | Iterable[NumPair] = 0,
+        pad_constant_values: Numeric | Iterable[NumPair] = 0,
         **kwargs,
     ) -> np.ndarray:
         """Internal helper to perform `read_rect` at resolution.
@@ -1053,7 +1053,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Number | Iterable[NumPair] = 0,
+        pad_constant_values: Numeric | Iterable[NumPair] = 0,
         coord_space: str = "baseline",
         **kwargs,
     ) -> np.ndarray:
@@ -1246,7 +1246,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Number | Iterable[NumPair] = 0,
+        pad_constant_values: Numeric | Iterable[NumPair] = 0,
         coord_space: str = "baseline",
         **kwargs,
     ) -> np.ndarray:
@@ -1627,8 +1627,8 @@ class OpenSlideWSIReader(WSIReader):
     def __init__(
         self,
         input_img: str | pathlib.Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[Numeric, Numeric] | None = None,
+        power: Numeric | None = None,
     ) -> None:
         """Initialize :class:`OpenSlideWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
@@ -2165,8 +2165,8 @@ class OmnyxJP2WSIReader(WSIReader):
     def __init__(
         self,
         input_img: str | pathlib.Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[Numeric, Numeric] | None = None,
+        power: Numeric | None = None,
     ) -> None:
         """Initialize :class:`OmnyxJP2WSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
@@ -2686,8 +2686,8 @@ class VirtualWSIReader(WSIReader):
     def __init__(
         self,
         input_img: str | pathlib.Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[Numeric, Numeric] | None = None,
+        power: Numeric | None = None,
         info: WSIMeta | None = None,
         mode="rgb",
     ) -> None:
@@ -3230,8 +3230,8 @@ class TIFFWSIReader(WSIReader):
     def __init__(
         self,
         input_img: str | pathlib.Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[Numeric, Numeric] | None = None,
+        power: Numeric | None = None,
         series="auto",
         cache_size=2**28,
     ) -> None:
@@ -3326,7 +3326,7 @@ class TIFFWSIReader(WSIReader):
         raw["Software"] = software
         raw["Photometric Info"] = photometric_info
 
-        def parse_svs_tag(string: str) -> tuple[str, Number | str]:
+        def parse_svs_tag(string: str) -> tuple[str, Numeric | str]:
             """Parse SVS key-value string.
 
             Infers type(s) of data by trial and error with a fallback to
@@ -3995,8 +3995,8 @@ class DICOMWSIReader(WSIReader):
     def __init__(
         self,
         input_img: str | pathlib.Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[Numeric, Numeric] | None = None,
+        power: Numeric | None = None,
     ) -> None:
         """Initialize :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom

@@ -1,12 +1,13 @@
 """Define Variable types for TIAToolbox."""
-from numbers import Number
-from typing import Literal, Tuple, Union
+from typing import Literal
+from typing import SupportsFloat as Numeric
+from typing import Tuple, Union
 
 import numpy as np
 
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+Resolution = Union[Numeric, Tuple[Numeric, Numeric], np.ndarray]
 Units = Literal["mpp", "power", "baseline", "level"]
-NumPair = Tuple[Number, Number]
+NumPair = Tuple[Numeric, Numeric]
 IntPair = Tuple[int, int]
-Bounds = Tuple[Number, Number, Number, Number]
+Bounds = Tuple[Numeric, Numeric, Numeric, Numeric]
 IntBounds = Tuple[int, int, int, int]
