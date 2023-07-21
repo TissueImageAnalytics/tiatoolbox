@@ -85,13 +85,13 @@ class KatherPatchDataset(DatasetInfoABC):
 
         if save_dir_path is None:  # pragma: no cover
             save_dir_path = Path(rcParam["TIATOOLBOX_HOME"], "dataset")
-            if not os.path.exists(save_dir_path):
+            if not os.path.exists(os.path.join(save_dir_path, "kather100k-validation")):
                 save_zip_path = os.path.join(save_dir_path, "Kather.zip")
                 url = (
                     "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
                     "/kather100k-train-nonorm-subset-20k.zip"
                 )
-                download_data(url, save_zip_path)
+                download_data(url, save_path=save_zip_path)
                 unzip_data(save_zip_path, save_dir_path)
             save_dir_path = Path(save_dir_path, "kather100k-validation")
         # bring outside to prevent case where download fail
