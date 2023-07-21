@@ -8,9 +8,9 @@ format of this dictionary may vary between WSI formats.
 """
 from __future__ import annotations
 
+from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING, Mapping, Sequence
-from typing import SupportsFloat as Numeric
 
 import numpy as np
 
@@ -106,7 +106,7 @@ class WSIMeta:
         file_path: Path | None = None,
         raw: Mapping[str, str] | None = None,
     ) -> None:
-        """Initialize WSIMeta."""
+        """Initializas WSIMeta."""
         self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = tuple(int(x) for x in slide_dimensions)
@@ -261,14 +261,12 @@ class WSIMeta:
             msg = "Invalid units"
             raise ValueError(msg)
 
-        base_scale = None
-
         level_downsamples = self.level_downsamples
 
-        def np_pair(x: Numeric | np.array) -> np.ndarray:
+        def np_pair(x: Number | np.array) -> np.ndarray:
             """Ensure input x is a numpy array of length 2."""
             # If one number is given, the same value is used for x and y
-            if isinstance(x, Numeric):
+            if isinstance(x, Number):
                 return np.array([x] * 2)
             return np.array(x)
 

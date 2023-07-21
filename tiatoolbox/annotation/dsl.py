@@ -61,8 +61,8 @@ import json
 import operator
 import re
 from dataclasses import dataclass
+from numbers import Number
 from typing import Any, Callable
-from typing import SupportsFloat as Numeric
 
 
 @dataclass
@@ -293,9 +293,9 @@ class SQLRegex(SQLExpression):
         string = self.string
         pattern = self.pattern
         flags = self.flags
-        if isinstance(string, (str, Numeric)):
+        if isinstance(string, (str, Number)):
             string = json.dumps(string)
-        if isinstance(pattern, (str, Numeric)):
+        if isinstance(pattern, (str, Number)):
             pattern = json.dumps(pattern)
         if flags != 0:
             return f"REGEXP({pattern}, {string}, {flags})"
@@ -326,14 +326,14 @@ def py_regexp(pattern: str, string: str, flags: int = 0) -> str | None:
     return None
 
 
-def json_list_sum(json_list: str) -> Numeric:
+def json_list_sum(json_list: str) -> Number:
     """Return the sum of a list of numbers in a JSON string.
 
     Args:
         json_list: JSON string containing a list of numbers.
 
     Returns:
-        Numeric:
+        Number:
             The sum of the numbers in the list.
 
     """
@@ -355,7 +355,7 @@ def json_contains(json_str: str, x: object) -> bool:
     return x in json.loads(json_str)
 
 
-def sql_is_none(x: SQLExpression | Numeric | str | bool) -> SQLTriplet:
+def sql_is_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:
     """Check if x is None.
 
     Returns:
@@ -366,7 +366,7 @@ def sql_is_none(x: SQLExpression | Numeric | str | bool) -> SQLTriplet:
     return SQLTriplet(x, "is_none")
 
 
-def sql_is_not_none(x: SQLExpression | Numeric | str | bool) -> SQLTriplet:
+def sql_is_not_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:
     """Check if x is not None.
 
     Returns:

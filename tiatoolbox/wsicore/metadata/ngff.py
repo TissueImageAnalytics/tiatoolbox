@@ -9,9 +9,12 @@ https://ngff.openmicroscopy.org/0.4/
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from tiatoolbox import __version__ as tiatoolbox_version
+
+if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
 
 SpaceUnits = Literal[
     "angstrom",
@@ -182,10 +185,10 @@ class Window:
 
     """
 
-    end: int = 255
-    max: int = 255  # noqa: A003
-    min: int = 0  # noqa: A003
-    start: int = 0
+    end: Number = 255
+    max: Number = 255  # noqa: A003
+    min: Number = 0  # noqa: A003
+    start: Number = 0
 
 
 @dataclass

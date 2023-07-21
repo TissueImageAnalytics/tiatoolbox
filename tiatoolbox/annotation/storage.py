@@ -40,6 +40,7 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from functools import lru_cache
+from numbers import Number
 from pathlib import Path
 from typing import (
     IO,
@@ -51,9 +52,9 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    Tuple,
+    Union,
 )
-from typing import SupportsFloat as Numeric
-from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -76,8 +77,8 @@ from tiatoolbox.annotation.dsl import (
 sqlite3.enable_callback_tracebacks(True)
 
 Geometry = Union[Point, Polygon, LineString]
-Properties = Dict[str, Union[Dict, List, Numeric, str]]
-BBox = Tuple[Numeric, Numeric, Numeric, Numeric]
+Properties = Dict[str, Union[Dict, List, Number, str]]
+BBox = Tuple[Number, Number, Number, Number]
 QueryGeometry = Union[BBox, Geometry]
 CallablePredicate = Callable[[Properties], bool]
 CallableSelect = Callable[[Properties], Properties]
@@ -1060,7 +1061,7 @@ class AnnotationStore(ABC, MutableMapping):
                     The value(s) to return from the annotation. This
                     will be a dictionary if unique is False. Otherwise,
                     it will be a list of sets. If squeeze and unique are
-                    True in addition to there only being one set in the
+                    True in addtion to there only being one set in the
                     results list, the result will be a single set.
 
             """  # Q440, Q441
