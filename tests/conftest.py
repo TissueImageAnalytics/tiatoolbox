@@ -8,11 +8,22 @@ from typing import Callable
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
+import tiatoolbox
+from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
+from tiatoolbox.utils.env_detection import running_on_ci
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
 # -------------------------------------------------------------------------------------
+
+
+def pytest_configure(config):
+    logger.info(
+        "🏁 Starting tests. TIAToolbox Version: %s. CI: %s",
+        tiatoolbox.__version__,
+        running_on_ci(),
+    )
 
 
 def pytest_generate_tests(metafunc):
@@ -49,12 +60,18 @@ def root_path(request) -> Path:
 
 
 @pytest.fixture(scope="session")
-def remote_sample(tmp_path_factory: TempPathFactory) -> Callable:
+def tmp_samples_path(tmp_path_factory: TempPathFactory):
+    """Return a temporary path."""
+    return tmp_path_factory.mktemp("data")
+
+
+@pytest.fixture(scope="session")
+def remote_sample(tmp_samples_path) -> Callable:
     """Factory fixture for fetching sample files."""
 
     def __remote_sample(key: str) -> pathlib.Path:
         """Wrapper around tiatoolbox.data._fetch_remote_sample for tests."""
-        return _fetch_remote_sample(key, tmp_path_factory.mktemp("data"))
+        return _fetch_remote_sample(key, tmp_samples_path)
 
     return __remote_sample
 

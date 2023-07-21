@@ -168,7 +168,7 @@ def running_on_ci() -> bool:
     """
     return any(
         (
-            os.environ.get("CI") == "true",
+            os.environ.get("CI", "").lower() == "true",
             running_on_travis(),
             running_on_github(),
             running_on_circleci(),
