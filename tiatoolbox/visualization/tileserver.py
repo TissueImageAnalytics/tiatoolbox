@@ -262,7 +262,8 @@ class TileServer(Flask):
             y (int):
                 The y coordinate.
             res (int):
-                Resolution to save the tiles at. Helps to specify high resolution tiles. Valid options are 1 and 2.
+                Resolution to save the tiles at.
+                Helps to specify high resolution tiles. Valid options are 1 and 2.
 
         Returns:
             flask.Response:
