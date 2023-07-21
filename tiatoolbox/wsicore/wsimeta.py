@@ -106,7 +106,7 @@ class WSIMeta:
         file_path: Path | None = None,
         raw: Mapping[str, str] | None = None,
     ) -> None:
-        """Initializas WSIMeta."""
+        """Initialize WSIMeta."""
         self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = tuple(int(x) for x in slide_dimensions)

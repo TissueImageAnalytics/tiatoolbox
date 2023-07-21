@@ -1061,7 +1061,7 @@ class AnnotationStore(ABC, MutableMapping):
                     The value(s) to return from the annotation. This
                     will be a dictionary if unique is False. Otherwise,
                     it will be a list of sets. If squeeze and unique are
-                    True in addtion to there only being one set in the
+                    True in addition to there only being one set in the
                     results list, the result will be a single set.
 
             """  # Q440, Q441
