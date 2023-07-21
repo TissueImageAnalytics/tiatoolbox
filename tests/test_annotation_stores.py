@@ -707,11 +707,11 @@ class TestStore:
 
     @staticmethod
     def test_keys(fill_store, tmp_path, store_cls):
-        """Test getting an keys iterator."""
+        """Test getting a keys iterator."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         keys = list(keys)
         assert len(list(store.keys())) == len(keys)
-        assert isinstance(list(store.keys())[0], type(keys[0]))
+        assert isinstance(next(iter(store.keys())), type(keys[0]))
 
     @staticmethod
     def test_remove(fill_store, tmp_path, store_cls):

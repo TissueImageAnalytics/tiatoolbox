@@ -1537,7 +1537,7 @@ def test_fetch_pretrained_weights(tmp_path):
 
     fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path)
     assert file_path.exists()
-    assert os.path.getsize(file_path) > 0
+    assert file_path.stat().st_size > 0
 
     with pytest.raises(ValueError, match="does not exist"):
         fetch_pretrained_weights("abc", file_path)

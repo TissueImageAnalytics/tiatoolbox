@@ -1144,7 +1144,7 @@ def add_from_dat(
 
     """
     data = joblib.load(fp)
-    props = list(data[list(data.keys())[0]].keys())
+    props = list(data[next(iter(data.keys()))].keys())
     if "contour" not in props:
         # assume cerberus format with objects subdivided into categories
         anns = []
