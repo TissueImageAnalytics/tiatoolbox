@@ -252,7 +252,7 @@ class TileServer(Flask):
             layer (str):
                 The layer name.
             session_id (str):
-                Session ID.
+                Session ID. Unique ID to disambiguate requests from different sessions.
             tile_group (int):
                 The tile group. Currently unused.
             z (int):
@@ -262,7 +262,7 @@ class TileServer(Flask):
             y (int):
                 The y coordinate.
             res (int):
-                Display Resolution.
+                Resolution to save the tiles at. Helps to specify high resolution tiles. Valid options are 1 and 2.
 
         Returns:
             flask.Response:
