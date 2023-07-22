@@ -15,13 +15,12 @@ ON_GPU = False
 
 
 def test_functional_nuclick(remote_sample, tmp_path, caplog):
-    """Tests for NuClick."""
+    """Test for NuClick."""
     # convert to pathlib Path to prevent wsireader complaint
     tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
     img = imread(tile_path)
 
-    _pretrained_path = f"{tmp_path}/weights.pth"
-    fetch_pretrained_weights("nuclick_original-pannuke", _pretrained_path)
+    weights_path = fetch_pretrained_weights("nuclick_original-pannuke")
 
     # test creation
     _ = NuClick(num_input_channels=5, num_output_channels=1)
@@ -40,17 +39,20 @@ def test_functional_nuclick(remote_sample, tmp_path, caplog):
     patch = np.float32(patch) / 255.0
     patch = np.moveaxis(patch, -1, 0)
     batch = np.concatenate(
-        (patch, inclusion_map[np.newaxis, ...], exclusion_map[np.newaxis, ...]), axis=0
+        (patch, inclusion_map[np.newaxis, ...], exclusion_map[np.newaxis, ...]),
+        axis=0,
     )
 
     batch = torch.from_numpy(batch[np.newaxis, ...])
 
     model = NuClick(num_input_channels=5, num_output_channels=1)
-    pretrained = torch.load(_pretrained_path, map_location="cpu")
+    pretrained = torch.load(weights_path, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     postproc_masks = model.postproc(
-        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+        output,
+        do_reconstruction=True,
+        nuc_points=inclusion_map[np.newaxis, ...],
     )
 
     gt_path = pathlib.Path(remote_sample("nuclick-output"))
@@ -67,6 +69,8 @@ def test_functional_nuclick(remote_sample, tmp_path, caplog):
     inclusion_map = np.zeros((128, 128))
     inclusion_map[0, 0] = 1
     _ = model.postproc(
-        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+        output,
+        do_reconstruction=True,
+        nuc_points=inclusion_map[np.newaxis, ...],
     )
     assert "Nuclei reconstruction was not done" in caplog.text

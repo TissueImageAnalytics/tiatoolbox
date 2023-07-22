@@ -54,7 +54,10 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
 
 
 def _prepare_save_output(
-    save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+    save_path,
+    cache_count_path,
+    canvas_cum_shape_,
+    canvas_count_shape_,
 ):
     """Prepares for saving the cached output."""
     if save_path is not None:
@@ -65,7 +68,7 @@ def _prepare_save_output(
                 raise ValueError("Existing image shape in `save_path` does not match.")
             if canvas_count_shape_ != count_canvas.shape:
                 raise ValueError(
-                    "Existing image shape in `cache_count_path` does not match."
+                    "Existing image shape in `cache_count_path` does not match.",
                 )
         else:
             cum_canvas = np.lib.format.open_memmap(
@@ -176,11 +179,13 @@ class IOSegmentorConfig(IOConfigABC):
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions,
+                key=lambda x: x["resolution"],
             )
         else:
             self.highest_input_resolution = max(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions,
+                key=lambda x: x["resolution"],
             )
 
     def _validate(self):
@@ -219,7 +224,7 @@ class IOSegmentorConfig(IOConfigABC):
         if units not in ["baseline", "mpp", "power"]:
             raise ValueError(
                 f"Unknown units `{units}`. "
-                "Units should be one of 'baseline', 'mpp' or 'power'."
+                "Units should be one of 'baseline', 'mpp' or 'power'.",
             )
         if units == "baseline":
             return old_val
@@ -385,7 +390,8 @@ class WSIStreamDataset(torch_data.Dataset):
         # be the same as bounds br-tl, unless bounds are of float
         patch_data_ = []
         scale_factors = self.ioconfig.scale_to_highest(
-            self.ioconfig.input_resolutions, self.ioconfig.resolution_unit
+            self.ioconfig.input_resolutions,
+            self.ioconfig.resolution_unit,
         )
         for idy, resolution in enumerate(self.ioconfig.input_resolutions):
             resolution_bounds = np.round(bounds * scale_factors[idy])
@@ -545,7 +551,8 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_coordinates(
-        image_shape: Union[List[int], np.ndarray], ioconfig: IOSegmentorConfig
+        image_shape: Union[List[int], np.ndarray],
+        ioconfig: IOSegmentorConfig,
     ):
         """Calculate patch tiling coordinates.
 
@@ -644,15 +651,20 @@ class SemanticSegmentor:
 
         """
         if not isinstance(mask_reader, VirtualWSIReader):
-            raise ValueError("`mask_reader` should be VirtualWSIReader.")
+            msg = "`mask_reader` should be VirtualWSIReader."
+            raise TypeError(msg)
+
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
-            bounds.dtype, np.integer
+            bounds.dtype,
+            np.integer,
         ):
-            raise ValueError("`coordinates` should be ndarray of integer type.")
+            msg = "`coordinates` should be ndarray of integer type."
+            raise ValueError(msg)
 
         mask_real_shape = mask_reader.img.shape[:2]
         mask_resolution_shape = mask_reader.slide_dimensions(
-            resolution=resolution, units=units
+            resolution=resolution,
+            units=units,
         )[::-1]
         mask_real_shape = np.array(mask_real_shape)
         mask_resolution_shape = np.array(mask_resolution_shape)
@@ -720,7 +732,10 @@ class SemanticSegmentor:
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
-            wsi_path, mask_path, mode, self.auto_generate_mask
+            wsi_path,
+            mask_path,
+            mode,
+            self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -783,7 +798,11 @@ class SemanticSegmentor:
             sample_outputs = list(zip(sample_infos, sample_outputs))
             if self.process_prediction_per_batch:
                 self._process_predictions(
-                    sample_outputs, wsi_reader, ioconfig, save_path, cache_dir
+                    sample_outputs,
+                    wsi_reader,
+                    ioconfig,
+                    save_path,
+                    cache_dir,
                 )
             else:
                 cum_output.extend(sample_outputs)
@@ -791,7 +810,11 @@ class SemanticSegmentor:
         pbar.close()
 
         self._process_predictions(
-            cum_output, wsi_reader, ioconfig, save_path, cache_dir
+            cum_output,
+            wsi_reader,
+            ioconfig,
+            save_path,
+            cache_dir,
         )
 
         # clean up the cache directories
@@ -930,7 +953,10 @@ class SemanticSegmentor:
         ) = _estimate_canvas_parameters(sample_prediction, canvas_shape)
 
         is_on_drive, count_canvas, cum_canvas = _prepare_save_output(
-            save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+            save_path,
+            cache_count_path,
+            canvas_cum_shape_,
+            canvas_count_shape_,
         )
 
         def index(arr, tl, br):
@@ -971,7 +997,8 @@ class SemanticSegmentor:
 
             # now cropping the prediction region
             patch_pred = prediction[
-                tl_in_patch[0] : br_in_patch[0], tl_in_patch[1] : br_in_patch[1]
+                tl_in_patch[0] : br_in_patch[0],
+                tl_in_patch[1] : br_in_patch[1],
             ]
 
             patch_count = np.ones(patch_pred.shape[:2])[..., None]
@@ -1067,7 +1094,7 @@ class SemanticSegmentor:
             if self.ioconfig is None:
                 raise ValueError(
                     "Must provide either `ioconfig` or "
-                    "`patch_input_shape` and `patch_output_shape`"
+                    "`patch_input_shape` and `patch_output_shape`",
                 )
             ioconfig = copy.deepcopy(self.ioconfig)
         elif ioconfig is None:
@@ -1094,7 +1121,7 @@ class SemanticSegmentor:
         self._postproc_workers = None
         if self.num_postproc_workers is not None:
             self._postproc_workers = ProcessPoolExecutor(
-                max_workers=self.num_postproc_workers
+                max_workers=self.num_postproc_workers,
             )
 
     def _memory_cleanup(self):
@@ -1112,7 +1139,14 @@ class SemanticSegmentor:
         self._postproc_workers = None
 
     def _predict_wsi_handle_exception(
-        self, imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+        self,
+        imgs,
+        wsi_idx,
+        img_path,
+        mode,
+        ioconfig,
+        save_dir,
+        crash_on_exception,
     ):
         """Predict on multiple WSIs.
 
@@ -1176,11 +1210,11 @@ class SemanticSegmentor:
             logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
-        except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
+        except Exception as err:  # skipcq: PYL-W0703  # noqa: BLE001
             wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
-                raise err
-            logging.error("Crashed on %s", wsi_save_path)
+                raise err  # noqa: TRY201
+        logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(
         self,
@@ -1328,7 +1362,13 @@ class SemanticSegmentor:
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
             self._predict_wsi_handle_exception(
-                imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+                imgs,
+                wsi_idx,
+                img_path,
+                mode,
+                ioconfig,
+                save_dir,
+                crash_on_exception,
             )
 
         # clean up the cache directories
@@ -1439,7 +1479,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also
-        saving afterwards.
+        saving afterward.
 
         Args:
             cum_batch_predictions (list):

@@ -1,6 +1,6 @@
 """Console script for tiatoolbox."""
-import platform
 import sys
+from platform import platform, python_version
 
 import click
 
@@ -21,7 +21,7 @@ from tiatoolbox.cli.visualize import visualize
 
 def version_msg():
     """Return a string with tiatoolbox package version and python version."""
-    return f"tiatoolbox {__version__} (Python {platform.python_version()}) on {platform.platform()}."
+    return f"tiatoolbox {__version__} (Python {python_version()}) on {platform()}."
 
 
 @tiatoolbox_cli.group(context_settings={"help_option_names": ["-h", "--help"]})

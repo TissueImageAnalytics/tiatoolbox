@@ -57,7 +57,7 @@ def predefined_preproc_func(dataset_name):
 
     if dataset_name not in preproc_dict:
         raise ValueError(
-            f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
+            f"Predefined preprocessing for dataset `{dataset_name}` does not exist.",
         )
 
     preprocs = preproc_dict[dataset_name]
@@ -76,8 +76,6 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         labels:
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
-        preproc_func:
-            Preprocessing function used to transform the input data.
 
     Examples:
         >>> # A user defined preproc func and expected behavior
@@ -265,7 +263,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
             )
-            # hack value such that read if mask is provided is through
+            # infer value such that read if mask provided is through
             # 'mpp' or 'power' as varying 'baseline' is locked atm
             units = "mpp"
             resolution = 1.0

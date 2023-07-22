@@ -1,4 +1,6 @@
 """Simple Flask WSGI apps to display tiles as slippery maps."""
+from __future__ import annotations
+
 import copy
 import io
 import json
@@ -6,7 +8,6 @@ import os
 import secrets
 import urllib
 from pathlib import Path
-from typing import Dict, List, Union
 
 import numpy as np
 from flask import Flask, Response, jsonify, make_response, request, send_file
@@ -14,7 +15,7 @@ from flask.templating import render_template
 from matplotlib import colormaps
 from PIL import Image
 
-from tiatoolbox import data
+from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.misc import add_from_dat, store_from_dat
@@ -55,16 +56,19 @@ class TileServer(Flask):
     def __init__(
         self,
         title: str,
-        layers: Union[Dict[str, Union[WSIReader, str]], List[Union[WSIReader, str]]],
-        renderer: AnnotationRenderer = None,
+        layers: dict[str, WSIReader | str] | list[WSIReader | str],
+        renderer: AnnotationRenderer | None = None,
     ) -> None:
+        """Initialize :class:`TileServer`."""
         super().__init__(
             __name__,
-            template_folder=data._local_sample_path(
-                Path("visualization") / "templates"
+            template_folder=data._local_sample_path(  # noqa: SLF001
+                Path("visualization") / "templates",
             ),
             static_url_path="",
-            static_folder=data._local_sample_path(Path("visualization") / "static"),
+            static_folder=data._local_sample_path(  # noqa: SLF001
+                Path("visualization") / "static",
+            ),
         )
         self.title = title
         self.layers = {}
@@ -115,7 +119,7 @@ class TileServer(Flask):
 
         self.route(
             "/tileserver/layer/<layer>/<session_id>/zoomify/TileGroup<int:tile_group>/"
-            "<int:z>-<int:x>-<int:y>@<int:res>x.jpg"
+            "<int:z>-<int:x>-<int:y>@<int:res>x.jpg",
         )(
             self.zoomify,
         )
@@ -133,11 +137,11 @@ class TileServer(Flask):
         self.route("/tileserver/renderer/<prop>", methods=["PUT"])(self.update_renderer)
         self.route("/tileserver/reset/<session_id>", methods=["PUT"])(self.reset)
         self.route("/tileserver/secondary_cmap", methods=["PUT"])(
-            self.change_secondary_cmap
+            self.change_secondary_cmap,
         )
         self.route("/tileserver/prop_names/<ann_type>")(self.get_properties)
         self.route("/tileserver/prop_values/<prop>/<ann_type>")(
-            self.get_property_values
+            self.get_property_values,
         )
         self.route("/tileserver/color_prop", methods=["GET"])(self.get_color_prop)
         self.route("/tileserver/slide", methods=["GET"])(self.get_slide)
@@ -146,7 +150,7 @@ class TileServer(Flask):
         self.route("/tileserver/overlay", methods=["GET"])(self.get_overlay)
         self.route("/tileserver/renderer/<prop>", methods=["GET"])(self.get_renderer)
         self.route("/tileserver/secondary_cmap", methods=["GET"])(
-            self.get_secondary_cmap
+            self.get_secondary_cmap,
         )
 
     def _get_session_id(self):
@@ -163,7 +167,6 @@ class TileServer(Flask):
     @staticmethod
     def _get_cmap(cmap):
         """Get the colourmap from the string sent."""
-
         if cmap == "None":
             return colormaps["jet"]
         if isinstance(cmap, str):
@@ -248,6 +251,8 @@ class TileServer(Flask):
         Args:
             layer (str):
                 The layer name.
+            session_id (str):
+                Session ID. Unique ID to disambiguate requests from different sessions.
             tile_group (int):
                 The tile group. Currently unused.
             z (int):
@@ -256,6 +261,9 @@ class TileServer(Flask):
                 The x coordinate.
             y (int):
                 The y coordinate.
+            res (int):
+                Resolution to save the tiles at.
+                Helps to specify high resolution tiles. Valid options are 1 and 2.
 
         Returns:
             flask.Response:
@@ -275,7 +283,11 @@ class TileServer(Flask):
             return Response("Layer not found", status=404)
         try:
             tile_image = pyramid.get_tile(
-                level=z, x=x, y=y, res=res, interpolation=interpolation
+                level=z,
+                x=x,
+                y=y,
+                res=res,
+                interpolation=interpolation,
             )
         except IndexError:
             return Response("Tile not found", status=404)
@@ -301,9 +313,10 @@ class TileServer(Flask):
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 return layer
-        raise ValueError("No annotation layer found.")
+        msg = "No annotation layer found."
+        raise ValueError(msg)
 
-    def index(self) -> Response:
+    def index(self) -> str:
         """Serve the index page.
 
         Returns:
@@ -316,7 +329,7 @@ class TileServer(Flask):
             {
                 "name": name,
                 "url": f"/tileserver/layer/{name}/default/zoomify/"
-                + "{TileGroup}/{z}-{x}-{y}@1x.jpg",
+                "{TileGroup}/{z}-{x}-{y}@1x.jpg",
                 "size": [int(x) for x in layer.info.slide_dimensions],
                 "mpp": float(np.mean(layer.info.mpp)),
             }
@@ -324,10 +337,12 @@ class TileServer(Flask):
         ]
 
         return render_template(
-            "index.html", title=self.title, layers=json.dumps(layers)
+            "index.html",
+            title=self.title,
+            layers=json.dumps(layers),
         )
 
-    def change_prop(self):
+    def change_prop(self) -> str:
         """Change the property to colour annotations by."""
         prop = request.form["prop"]
         session_id = self._get_session_id()
@@ -336,13 +351,10 @@ class TileServer(Flask):
         return "done"
 
     def session_id(self):
-        """Setup a new session."""
+        """Set up a new session."""
         # respond with a random cookie to disambiguate sessions
         resp = make_response("done")
-        if self.default_session_id:
-            session_id = "default"
-        else:
-            session_id = secrets.token_urlsafe(16)
+        session_id = "default" if self.default_session_id else secrets.token_urlsafe(16)
         resp.set_cookie("session_id", session_id, httponly=True)  # skipcq: PTC-W6003
         self.renderers[session_id] = copy.deepcopy(self.renderer)
         self.overlaps[session_id] = 0
@@ -367,7 +379,7 @@ class TileServer(Flask):
 
         self.layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
         self.pyramids[session_id] = {
-            "slide": ZoomifyGenerator(self.layers[session_id]["slide"], tile_size=256)
+            "slide": ZoomifyGenerator(self.layers[session_id]["slide"], tile_size=256),
         }
         if self.layers[session_id]["slide"].info.mpp is None:
             self.layers[session_id]["slide"].info.mpp = [1, 1]
@@ -436,7 +448,8 @@ class TileServer(Flask):
                 return json.dumps(types)
 
         sq = store_from_dat(
-            file_path, np.array(model_mpp) / np.array(self.slide_mpps[session_id])
+            file_path,
+            np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
         )
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
@@ -464,16 +477,18 @@ class TileServer(Flask):
             layer = f"layer{len(self.pyramids[session_id])}"
             if overlay_path.suffix == ".tiff":
                 self.layers[session_id][layer] = OpenSlideWSIReader(
-                    overlay_path, mpp=self.layers[session_id]["slide"].info.mpp[0]
+                    overlay_path,
+                    mpp=self.layers[session_id]["slide"].info.mpp[0],
                 )
             elif overlay_path.suffix in [".jpg", ".png"]:
                 self.layers[session_id][layer] = VirtualWSIReader(
-                    Path(overlay_path), info=self.layers[session_id]["slide"].info
+                    Path(overlay_path),
+                    info=self.layers[session_id]["slide"].info,
                 )
             else:
                 self.layers[session_id][layer] = WSIReader.open(overlay_path)
             self.pyramids[session_id][layer] = ZoomifyGenerator(
-                self.layers[session_id][layer]
+                self.layers[session_id][layer],
             )
             return json.dumps(layer)
         if overlay_path.suffix == ".geojson":
@@ -486,7 +501,7 @@ class TileServer(Flask):
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 layer.store = sq
-                print(f"loaded {len(sq)} annotations")
+                logger.info("Loaded %d annotations.", len(sq))
                 types = self.update_types(sq)
                 return json.dumps(types)
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
@@ -495,7 +510,10 @@ class TileServer(Flask):
             self.renderers[session_id],
             overlap=self.overlaps[session_id],
         )
-        print(f'loaded {len(self.pyramids[session_id]["overlay"].store)} annotations')
+        logger.info(
+            "Loaded %d annotations.",
+            len(self.pyramids[session_id]["overlay"].store),
+        )
         self.layers[session_id]["overlay"] = self.pyramids[session_id]["overlay"]
         types = self.update_types(sq)
         return json.dumps(types)
@@ -544,12 +562,12 @@ class TileServer(Flask):
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 if layer.store.path.suffix == ".db":
-                    print("db committed")
+                    logger.info("%s*.db committed.", layer.store.path.stem)
                     layer.store.commit()
                 else:
                     layer.store.commit()
                     layer.store.dump(str(save_path))
-                    print(f"db saved to {save_path}")
+                    logger.info("db saved to %s.", save_path)
                 return "done"
         return "nothing to save"
 

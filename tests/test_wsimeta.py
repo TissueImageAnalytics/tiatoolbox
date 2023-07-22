@@ -1,4 +1,4 @@
-"""Tests for obtaining whole-slide image metadata."""
+"""Test for obtaining whole-slide image metadata."""
 
 import numpy as np
 import pytest

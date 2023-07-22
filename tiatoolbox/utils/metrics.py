@@ -10,7 +10,7 @@ def pair_coordinates(set_a, set_b, radius):
 
     This function uses the Munkres or Kuhn-Munkres algorithm behind the
     scene to find the most optimal unique pairing when pairing points in
-    set B against points in set A, using euclidean distance as the cost
+    set B against points in set A, using Euclidean distance as the cost
     function.
 
     Args:
@@ -69,7 +69,9 @@ def f1_detection(true, pred, radius):
 
 
 def dice(gt_mask, pred_mask):
-    r"""This function computes `Sørensen–Dice coefficient
+    r"""Compute the Sørensen-Dice coefficient.
+
+    This function computes `Sørensen-Dice coefficient
     <https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient>`_,
     between the two masks.
 
@@ -88,7 +90,8 @@ def dice(gt_mask, pred_mask):
 
     """
     if gt_mask.shape != pred_mask.shape:
-        raise ValueError(f'{"Shape mismatch between the two masks."}')
+        msg = f"{'Shape mismatch between the two masks.'}"
+        raise ValueError(msg)
 
     gt_mask = gt_mask.astype(np.bool_)
     pred_mask = pred_mask.astype(np.bool_)
