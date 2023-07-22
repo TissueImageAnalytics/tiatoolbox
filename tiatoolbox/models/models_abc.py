@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from torch import nn
 
 
-
 class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
