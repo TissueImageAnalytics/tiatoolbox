@@ -1922,7 +1922,7 @@ class DocConfig:
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder
         config["overlay_folder"] = overlay_folder
-        config["demo_name"] = "demo_name"
+        config["demo_name"] = self.config["demo_name"]
 
         # get any extra info from query url
         if "slide" in req_args:
@@ -1935,8 +1935,6 @@ class DocConfig:
                 ]
         self.config = config
         self.config["auto_load"] = get_from_config(["auto_load"], 0) == 1
-        # UI["vstate"].slide_path = r"E:\\TTB_vis_folder\\slides\\TCGA-SC-A6LN-01Z-00-DX1.svs"
-        # UI["vstate"].slide_path=Path(r'/tiatoolbox/app_data/slides/TCGA-SC-A6LN-01Z-00-DX1.svs')
 
         # start tile server
         if not is_deployed:
