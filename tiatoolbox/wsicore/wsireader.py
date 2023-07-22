@@ -90,10 +90,10 @@ def is_zarr(path: pathlib.Path) -> bool:
     path = pathlib.Path(path)
     try:
         _ = zarr.open(path, mode="r")
-        return True
-
-    except Exception:  # noqa: PIE786  # skipcq: PYL-W0703
+    except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
+    else:
+        return True
 
 
 def is_ngff(
@@ -1552,7 +1552,7 @@ class WSIReader:
             )
 
         # Save information on each slide to relate to the whole slide image
-        df = pd.DataFrame(
+        save_tiles_df = pd.DataFrame(
             data,
             columns=[
                 "iter",
@@ -1565,7 +1565,7 @@ class WSIReader:
                 "size_h",
             ],
         )
-        df.to_csv(output_dir / "Output.csv", index=False)
+        save_tiles_df.to_csv(output_dir / "Output.csv", index=False)
 
         # Save slide thumbnail
         slide_thumb = self.slide_thumbnail()
@@ -3315,11 +3315,11 @@ class TIFFWSIReader(WSIReader):
 
             def us_date(string: str) -> datetime:
                 """Returns datetime parsed according to US date format."""
-                return datetime.strptime(string, r"%m/%d/%y")
+                return datetime.strptime(string, r"%m/%d/%y").astimezone()
 
             def time(string: str) -> datetime:
                 """Returns datetime parsed according to HMS format."""
-                return datetime.strptime(string, r"%H:%M:%S")
+                return datetime.strptime(string, r"%H:%M:%S").astimezone()
 
             casting_precedence = [us_date, time, int, float]
             value = value_string
@@ -3327,7 +3327,7 @@ class TIFFWSIReader(WSIReader):
                 try:
                     value = cast(value_string)
                     return key, value
-                except ValueError:
+                except ValueError:  # noqa: PERF203
                     continue
 
             return key, value

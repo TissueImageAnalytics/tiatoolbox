@@ -1,7 +1,7 @@
-"""Tests for predefined dataset within toolbox."""
+"""Test for predefined dataset within toolbox."""
 
-import os
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -17,6 +17,7 @@ class Proto1(DatasetInfoABC):
     """Intentionally created to check error with new attribute a."""
 
     def __init__(self):
+        """Proto1 initialization."""
         self.a = "a"
 
 
@@ -24,6 +25,7 @@ class Proto2(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs."""
 
     def __init__(self):
+        """Proto2 initialization."""
         self.inputs = "a"
 
 
@@ -31,6 +33,7 @@ class Proto3(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and labels."""
 
     def __init__(self):
+        """Proto3 initialization."""
         self.inputs = "a"
         self.labels = "a"
 
@@ -39,6 +42,7 @@ class Proto4(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and label names."""
 
     def __init__(self):
+        """Proto4 initialization."""
         self.inputs = "a"
         self.label_names = "a"
 
@@ -60,12 +64,8 @@ def test_dataset_abc():
 @pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
 def test_kather_dataset_default(tmp_path):
     """Test for kather patch dataset with default parameters."""
-    # test kather with default init
-    dataset_path = os.path.join(
-        rcParam["TIATOOLBOX_HOME"],
-        "dataset",
-        "kather100k-validation",
-    )
+    # test Kather with default init
+    dataset_path = rcParam["TIATOOLBOX_HOME"] / "dataset" / "kather100k-validation"
     shutil.rmtree(dataset_path, ignore_errors=True)
 
     _ = KatherPatchDataset()
@@ -77,7 +77,7 @@ def test_kather_dataset_default(tmp_path):
 
 
 def test_kather_nonexisting_dir():
-    """pytest for not exist dir."""
+    """Pytest for not exist dir."""
     with pytest.raises(
         ValueError,
         match=r".*not exist.*",
@@ -91,16 +91,16 @@ def test_kather_dataset(tmp_path):
 
     # save to temporary location
     # remove previously generated data
-    if os.path.exists(save_dir_path):
+    if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
     url = (
         "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
         "/kather100k-train-nonorm-subset-90.zip"
     )
-    save_zip_path = os.path.join(save_dir_path, "Kather.zip")
+    save_zip_path = save_dir_path / "Kather.zip"
     download_data(url, save_path=save_zip_path)
     unzip_data(save_zip_path, save_dir_path)
-    extracted_dir = os.path.join(save_dir_path, "NCT-CRC-HE-100K-NONORM/")
+    extracted_dir = save_dir_path / "NCT-CRC-HE-100K-NONORM/"
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)
     assert dataset.inputs is not None
     assert dataset.labels is not None

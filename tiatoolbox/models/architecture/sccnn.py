@@ -1,4 +1,4 @@
-"""Defines SCCNN architecture.
+"""Define SCCNN architecture.
 
 Sirinukunwattana, Korsuk, et al.
 "Locality sensitive deep learning for detection and classification
@@ -12,8 +12,8 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
-import torch.nn as nn
 from skimage.feature import peak_local_max
+from torch import nn
 
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
@@ -92,6 +92,7 @@ class SCCNN(ModelABC):
         min_distance: int = 6,
         threshold_abs: float = 0.20,
     ) -> None:
+        """Initialize :class:`SCCNN`."""
         super().__init__()
         out_height = patch_output_shape[0]
         out_width = patch_output_shape[1]
@@ -321,7 +322,7 @@ class SCCNN(ModelABC):
         )
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
-    #  skipcq: PYL-W0221  # noqa: E800
+    #  skipcq: PYL-W0221  # noqa: ERA001
     def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 

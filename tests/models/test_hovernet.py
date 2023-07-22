@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from tiatoolbox.models import HoVerNet
 from tiatoolbox.models.architecture import fetch_pretrained_weights
@@ -94,7 +94,7 @@ def test_functionality(remote_sample):
 
 
 def test_unit_blocks():
-    """Tests for blocks within HoVerNet."""
+    """Test for blocks within HoVerNet."""
     # padding
     model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))
     sample = torch.rand((1, 3, 14, 14), dtype=torch.float32)

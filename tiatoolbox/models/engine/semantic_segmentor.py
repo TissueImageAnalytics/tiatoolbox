@@ -651,12 +651,15 @@ class SemanticSegmentor:
 
         """
         if not isinstance(mask_reader, VirtualWSIReader):
-            raise ValueError("`mask_reader` should be VirtualWSIReader.")
+            msg = "`mask_reader` should be VirtualWSIReader."
+            raise TypeError(msg)
+
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
             bounds.dtype,
             np.integer,
         ):
-            raise ValueError("`coordinates` should be ndarray of integer type.")
+            msg = "`coordinates` should be ndarray of integer type."
+            raise ValueError(msg)
 
         mask_real_shape = mask_reader.img.shape[:2]
         mask_resolution_shape = mask_reader.slide_dimensions(
@@ -1207,11 +1210,11 @@ class SemanticSegmentor:
             logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
-        except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
+        except Exception as err:  # skipcq: PYL-W0703  # noqa: BLE001
             wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
-                raise err
-            logging.error("Crashed on %s", wsi_save_path)
+                raise err  # noqa: TRY201
+        logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(
         self,

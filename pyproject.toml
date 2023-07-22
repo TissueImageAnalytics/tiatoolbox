@@ -93,42 +93,42 @@ select = [
   "C4",    # flake8-comprehensions
   # "FA",    # flake8-future-annotations
   # "EM",    # flake8-errmsg
-  # "PD",    # pandas-vet
+  "PD",    # pandas-vet
   # "PL",  # Pylint
   "PT",    # flake8-pytest-style
-  # "TD",    # flake8-todos
+  "TD",    # flake8-todos
   "UP",    # pyupgrade
   "C90",   # mccabe
   "T10",   # flake8-debugger
   "T20",   # flake8-print
   # "ANN",   # flake8-annotations
   # "ARG",   # flake8-unused-arguments
-  # "BLE",   # flake8-blind-except
+  "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
-  # "DTZ",   # flake8-datetimez
-  # "ERA",   # eradicate
+  "DTZ",   # flake8-datetimez
+  "ERA",   # eradicate
   # "FBT",   # flake8-boolean-trap
-  # "FIX",   # flake8-fixme
+  "FIX",   # flake8-fixme
   "FLY",   # flynt
   "ICN",   # flake8-import-conventions
   "INP",   # flake8-no-pep420
   "INT",   # flake8-gettext
-  # "ISC",   # flake8-implicit-str-concat
+  "ISC",   # flake8-implicit-str-concat
   # "NPY",   # NumPy-specific rules
   # "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
   # "PTH",   # flake8-use-pathlib
   "PYI",   # flake8-pyi
   "RET",   # flake8-return
-  # "RSE",   # flake8-raise
+  "RSE",   # flake8-raise
   # "RUF",   # Ruff-specific rules
   # "SLF",   # flake8-self
-  # "SIM",   # flake8-simplify
+  "SIM",   # flake8-simplify
   "TID",   # flake8-tidy-imports
   # "TCH",   # flake8-type-checking
   # "TRY",   # tryceratops
   "YTT",   # flake8-2020
-  # "PERF",  # Perflint
+  "PERF",  # Perflint
   "SLOT",  # flake8-slots
   "ASYNC", # flake8-async
 ]

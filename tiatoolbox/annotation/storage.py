@@ -573,7 +573,7 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of keys.
 
         """
-        for key, _ in self.items():
+        for key, _ in self.items():  # noqa: PERF102
             yield key
 
     def values(self) -> Iterable[Annotation]:
@@ -584,7 +584,7 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of annotations.
 
         """
-        for _, annotation in self.items():
+        for _, annotation in self.items():  # noqa: PERF102
             yield annotation
 
     def __iter__(self) -> Iterable[str]:
@@ -2907,7 +2907,7 @@ class SQLiteStore(AnnotationStore):
                 An iterable of annotations.
 
         """
-        for _, value in self.items():
+        for _, value in self.items():  # noqa: PERF102
             yield value
 
     def items(self) -> Iterable[Tuple[int, Annotation]]:
@@ -3115,7 +3115,7 @@ class SQLiteStore(AnnotationStore):
 
     def to_dataframe(self) -> pd.DataFrame:
         """Converts AnnotationStore to :class:`pandas.DataFrame`."""
-        df = pd.DataFrame()
+        store_to_df = pd.DataFrame()
         df_rows = (
             {
                 "key": key,
@@ -3124,8 +3124,8 @@ class SQLiteStore(AnnotationStore):
             }
             for key, annotation in self.items()
         )
-        df = pd.concat([df, pd.json_normalize(df_rows)])
-        return df.set_index("key")
+        store_to_df = pd.concat([store_to_df, pd.json_normalize(df_rows)])
+        return store_to_df.set_index("key")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return annotations as a list of geoJSON features.

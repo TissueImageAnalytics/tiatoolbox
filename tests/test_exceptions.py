@@ -1,4 +1,4 @@
-"""Tests for exceptions used in the toolbox."""
+"""Test for exceptions used in the toolbox."""
 
 import pytest
 

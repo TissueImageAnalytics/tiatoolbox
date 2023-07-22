@@ -1,15 +1,17 @@
+"""Define HoVerNet architecture."""
+from __future__ import annotations
+
 import math
 from collections import OrderedDict
-from typing import List
 
 import cv2
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 from scipy import ndimage
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
+from torch import nn
 
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
@@ -29,7 +31,8 @@ class TFSamepaddingLayer(nn.Module):
 
     """
 
-    def __init__(self, ksize: int, stride: int):
+    def __init__(self, ksize: int, stride: int) -> None:
+        """Initialize :class:`TFSamepaddingLayer`."""
         super().__init__()
         self.ksize = ksize
         self.stride = stride
@@ -66,14 +69,16 @@ class DenseBlock(nn.Module):
     def __init__(
         self,
         in_ch: int,
-        unit_ksizes: List[int],
-        unit_chs: List[int],
+        unit_ksizes: list[int],
+        unit_chs: list[int],
         unit_count: int,
         split: int = 1,
-    ):
+    ) -> None:
+        """Initialize :class:`DenseBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info.")
+            msg = "Unbalance Unit Info."
+            raise ValueError(msg)
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -153,14 +158,16 @@ class ResidualBlock(nn.Module):
     def __init__(
         self,
         in_ch: int,
-        unit_ksizes: List[int],
-        unit_chs: List[int],
+        unit_ksizes: list[int],
+        unit_chs: list[int],
         unit_count: int,
         stride: int = 1,
-    ):
+    ) -> None:
+        """Initialize :class:`ResidualBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info.")
+            msg = "Unbalance Unit Info."
+            raise ValueError(msg)
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -240,10 +247,7 @@ class ResidualBlock(nn.Module):
 
     def forward(self, prev_feat: torch.Tensor):
         """Logic for using layers defined in init."""
-        if self.shortcut is None:
-            shortcut = prev_feat
-        else:
-            shortcut = self.shortcut(prev_feat)
+        shortcut = prev_feat if self.shortcut is None else self.shortcut(prev_feat)
 
         for _, unit in enumerate(self.units):
             new_feat = prev_feat
@@ -322,17 +326,21 @@ class HoVerNet(ModelABC):
     def __init__(
         self,
         num_input_channels: int = 3,
-        num_types: int = None,
+        num_types: int | None = None,
         mode: str = "original",
-    ):
+    ) -> None:
+        """Initialize :class:`HoVerNet`."""
         super().__init__()
         self.mode = mode
         self.num_types = num_types
 
         if mode not in ["original", "fast"]:
-            raise ValueError(
+            msg = (
                 f"Invalid mode {mode} for HoVerNet. "
-                "Only support `original` or `fast`.",
+                f"Only support `original` or `fast`."
+            )
+            raise ValueError(
+                msg,
             )
 
         modules = [
@@ -696,8 +704,8 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221  # noqa: E800
-    def postproc(raw_maps: List[np.ndarray]):
+    # skipcq: PYL-W0221  # noqa: ERA001
+    def postproc(raw_maps: list[np.ndarray]):
         """Post-processing script for image tiles.
 
         Args:
