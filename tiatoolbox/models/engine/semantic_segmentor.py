@@ -658,7 +658,6 @@ class SemanticSegmentor:
             bounds.dtype,
             np.integer,
         ):
-            raise ValueError("`coordinates` should be ndarray of integer type.")
             msg = "`coordinates` should be ndarray of integer type."
             raise ValueError(msg)
 
