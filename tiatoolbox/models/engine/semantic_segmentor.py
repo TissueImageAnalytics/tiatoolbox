@@ -669,6 +669,7 @@ class SemanticSegmentor:
         if not isinstance(mask_reader, VirtualWSIReader):
             msg = "`mask_reader` should be VirtualWSIReader."
             raise TypeError(msg)
+
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
             bounds.dtype,
             np.integer,
