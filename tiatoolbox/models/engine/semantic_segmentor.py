@@ -55,7 +55,10 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
 
 
 def _prepare_save_output(
-    save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+    save_path,
+    cache_count_path,
+    canvas_cum_shape_,
+    canvas_count_shape_,
 ):
     """Prepares for saving the cached output."""
     if save_path is not None:
@@ -66,7 +69,7 @@ def _prepare_save_output(
                 raise ValueError("Existing image shape in `save_path` does not match.")
             if canvas_count_shape_ != count_canvas.shape:
                 raise ValueError(
-                    "Existing image shape in `cache_count_path` does not match."
+                    "Existing image shape in `cache_count_path` does not match.",
                 )
         else:
             cum_canvas = np.lib.format.open_memmap(
@@ -215,7 +218,8 @@ class WSIStreamDataset(torch_data.Dataset):
         # be the same as bounds br-tl, unless bounds are of float
         patch_data_ = []
         scale_factors = self.ioconfig.scale_to_highest(
-            self.ioconfig.input_resolutions, self.ioconfig.resolution_unit
+            self.ioconfig.input_resolutions,
+            self.ioconfig.resolution_unit,
         )
         for idy, resolution in enumerate(self.ioconfig.input_resolutions):
             resolution_bounds = np.round(bounds * scale_factors[idy])
@@ -375,7 +379,8 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_coordinates(
-        image_shape: Union[List[int], np.ndarray], ioconfig: IOSegmentorConfig
+        image_shape: Union[List[int], np.ndarray],
+        ioconfig: IOSegmentorConfig,
     ):
         """Calculate patch tiling coordinates.
 
@@ -476,13 +481,15 @@ class SemanticSegmentor:
         if not isinstance(mask_reader, VirtualWSIReader):
             raise ValueError("`mask_reader` should be VirtualWSIReader.")
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
-            bounds.dtype, np.integer
+            bounds.dtype,
+            np.integer,
         ):
             raise ValueError("`coordinates` should be ndarray of integer type.")
 
         mask_real_shape = mask_reader.img.shape[:2]
         mask_resolution_shape = mask_reader.slide_dimensions(
-            resolution=resolution, units=units
+            resolution=resolution,
+            units=units,
         )[::-1]
         mask_real_shape = np.array(mask_real_shape)
         mask_resolution_shape = np.array(mask_resolution_shape)
@@ -550,7 +557,10 @@ class SemanticSegmentor:
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
-            wsi_path, mask_path, mode, self.auto_generate_mask
+            wsi_path,
+            mask_path,
+            mode,
+            self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -613,7 +623,11 @@ class SemanticSegmentor:
             sample_outputs = list(zip(sample_infos, sample_outputs))
             if self.process_prediction_per_batch:
                 self._process_predictions(
-                    sample_outputs, wsi_reader, ioconfig, save_path, cache_dir
+                    sample_outputs,
+                    wsi_reader,
+                    ioconfig,
+                    save_path,
+                    cache_dir,
                 )
             else:
                 cum_output.extend(sample_outputs)
@@ -621,7 +635,11 @@ class SemanticSegmentor:
         pbar.close()
 
         self._process_predictions(
-            cum_output, wsi_reader, ioconfig, save_path, cache_dir
+            cum_output,
+            wsi_reader,
+            ioconfig,
+            save_path,
+            cache_dir,
         )
 
         # clean up the cache directories
@@ -760,7 +778,10 @@ class SemanticSegmentor:
         ) = _estimate_canvas_parameters(sample_prediction, canvas_shape)
 
         is_on_drive, count_canvas, cum_canvas = _prepare_save_output(
-            save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+            save_path,
+            cache_count_path,
+            canvas_cum_shape_,
+            canvas_count_shape_,
         )
 
         def index(arr, tl, br):
@@ -801,7 +822,8 @@ class SemanticSegmentor:
 
             # now cropping the prediction region
             patch_pred = prediction[
-                tl_in_patch[0] : br_in_patch[0], tl_in_patch[1] : br_in_patch[1]
+                tl_in_patch[0] : br_in_patch[0],
+                tl_in_patch[1] : br_in_patch[1],
             ]
 
             patch_count = np.ones(patch_pred.shape[:2])[..., None]
@@ -917,7 +939,7 @@ class SemanticSegmentor:
         self._postproc_workers = None
         if self.num_postproc_workers is not None:
             self._postproc_workers = ProcessPoolExecutor(
-                max_workers=self.num_postproc_workers
+                max_workers=self.num_postproc_workers,
             )
 
     def _memory_cleanup(self):
@@ -935,7 +957,14 @@ class SemanticSegmentor:
         self._postproc_workers = None
 
     def _predict_wsi_handle_exception(
-        self, imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+        self,
+        imgs,
+        wsi_idx,
+        img_path,
+        mode,
+        ioconfig,
+        save_dir,
+        crash_on_exception,
     ):
         """Predict on multiple WSIs.
 
@@ -1169,7 +1198,13 @@ class SemanticSegmentor:
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
             self._predict_wsi_handle_exception(
-                imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+                imgs,
+                wsi_idx,
+                img_path,
+                mode,
+                ioconfig,
+                save_dir,
+                crash_on_exception,
             )
 
         # clean up the cache directories

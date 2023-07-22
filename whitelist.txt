@@ -182,6 +182,7 @@ uint8
 uncallable
 v4
 viridis
+wkb
 wsi
 wsireader
 zarr

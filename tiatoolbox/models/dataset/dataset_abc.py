@@ -56,7 +56,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             if not (is_all_paths or is_all_npy or isinstance(self.inputs, np.ndarray)):
                 raise ValueError(
                     "Input must be either a list/array of images "
-                    "or a list of valid image paths."
+                    "or a list of valid image paths.",
                 )
 
             shapes = None
@@ -66,7 +66,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                     # at least one of the paths are invalid
                     raise ValueError(
                         "Input must be either a list/array of images "
-                        "or a list of valid image paths."
+                        "or a list of valid image paths.",
                     )
                 # Preload test for sanity check
                 shapes = [self.load_img(v).shape for v in self.inputs]
@@ -90,7 +90,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                     raise ValueError(
                         "Input must be an array of images of the form NHWC. This can "
                         "be achieved by converting a list of images to a numpy array. "
-                        " eg., np.array([img1, img2])."
+                        " eg., np.array([img1, img2]).",
                     )
                 self.data_is_npy_alike = True
 

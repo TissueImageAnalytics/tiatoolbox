@@ -1,15 +1,17 @@
-"""Defines CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
+"""Define CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
 
 import numpy as np
 from torchvision import transforms
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
 
+Transforms = [
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
+]
+
 TRANSFORM = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.1, 0.1, 0.1]),
-    ],
+    Transforms,
 )
 
 
@@ -58,7 +60,8 @@ class IDaRS(CNNModel):
 
     """
 
-    def __init__(self, backbone, num_classes=1):
+    def __init__(self, backbone, num_classes=1) -> None:
+        """Initialize :class:`IDaRS`."""
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
@@ -66,11 +69,11 @@ class IDaRS(CNNModel):
         """Define preprocessing steps.
 
         Args:
-            img (:class:`numpy.ndarray`):
+            image (:class:`numpy.ndarray`):
                 An image of shape HWC.
 
         Return:
-            img (:class:`torch.Tensor`):
+            image (:class:`torch.Tensor`):
                 An image of shape HWC.
 
         """

@@ -252,7 +252,7 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     multi_segmentor.wsi_layers = [np.zeros_like(raw_maps[0][..., 0])]
     multi_segmentor._wsi_inst_info = copy.deepcopy(dummy_reference)
     multi_segmentor._futures = [
-        [dummy_reference, [dummy_reference[0].keys()], dummy_tiles, dummy_bounds]
+        [dummy_reference, [dummy_reference[0].keys()], dummy_tiles, dummy_bounds],
     ]
     multi_segmentor._merge_post_process_results()
     assert len(multi_segmentor._wsi_inst_info[0]) == 0

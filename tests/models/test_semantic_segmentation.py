@@ -195,16 +195,16 @@ def test_functional_wsi_stream_dataset(remote_sample):
             [
                 [0, 0, 256, 256],
                 [256, 256, 512, 512],
-            ]
-        )
+            ],
+        ),
     )
     mp_shared_space.patch_outputs = torch.from_numpy(
         np.array(
             [
                 [0, 0, 256, 256],
                 [256, 256, 512, 512],
-            ]
-        )
+            ],
+        ),
     )
     # test read
     for _, sample in enumerate(sds):
@@ -240,7 +240,8 @@ def test_crash_segmentor(remote_sample):
         semantic_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
         semantic_segmentor.filter_coordinates(
-            WSIReader.open(mini_wsi_msk), np.array([1.0, 2.0])
+            WSIReader.open(mini_wsi_msk),
+            np.array([1.0, 2.0]),
         )
     semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", True)
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
@@ -330,7 +331,7 @@ def test_functional_segmentor_merging(tmp_path):
             [1, 1, 0, 0],
             [0, 0, 2, 2],
             [0, 0, 2, 2],
-        ]
+        ],
     )
     canvas = semantic_segmentor.merge_prediction(
         [4, 4],
@@ -547,7 +548,9 @@ def test_functional_segmentor(remote_sample, tmp_path):
 
     # check normal run with auto get mask
     semantic_segmentor = SemanticSegmentor(
-        batch_size=BATCH_SIZE, model=model, auto_generate_mask=True
+        batch_size=BATCH_SIZE,
+        model=model,
+        auto_generate_mask=True,
     )
     output_list = semantic_segmentor.predict(
         [mini_wsi_svs],
@@ -602,7 +605,8 @@ def test_functional_pretrained(remote_sample, tmp_path):
     imwrite(mini_wsi_jpg, thumb)
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=BATCH_SIZE, pretrained_model="fcn-tissue_mask"
+        batch_size=BATCH_SIZE,
+        pretrained_model="fcn-tissue_mask",
     )
 
     _rm_dir(save_dir)
@@ -642,7 +646,8 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     mini_wsi_jpg = pathlib.Path(remote_sample("wsi2_4k_4k_jpg"))
 
     semantic_segmentor = SemanticSegmentor(
-        batch_size=BATCH_SIZE, pretrained_model="fcn-tissue_mask"
+        batch_size=BATCH_SIZE,
+        pretrained_model="fcn-tissue_mask",
     )
     _rm_dir(save_dir)
     semantic_segmentor.predict(

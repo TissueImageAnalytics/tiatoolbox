@@ -22,7 +22,9 @@ from tiatoolbox.utils import misc
 
 
 def group1_forward_branch(
-    layer: nn.Module, in_tensor: torch.Tensor, resized_feat: torch.Tensor
+    layer: nn.Module,
+    in_tensor: torch.Tensor,
+    resized_feat: torch.Tensor,
 ) -> torch.Tensor:
     """Defines group 1 connections.
 
@@ -66,7 +68,9 @@ def group2_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Te
 
 
 def group3_forward_branch(
-    layer: nn.Module, main_feat: torch.Tensor, skip: torch.Tensor
+    layer: nn.Module,
+    main_feat: torch.Tensor,
+    skip: torch.Tensor,
 ) -> torch.Tensor:
     """Defines group 1 connections.
 
@@ -235,7 +239,10 @@ def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
     """
     module_dict = OrderedDict()
     module_dict["up1"] = nn.ConvTranspose2d(
-        in_ch, out_ch, kernel_size=(2, 2), stride=(2, 2)
+        in_ch,
+        out_ch,
+        kernel_size=(2, 2),
+        stride=(2, 2),
     )
     module_dict["conv1"] = nn.Sequential(
         nn.Conv2d(
@@ -260,11 +267,17 @@ def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
         nn.Tanh(),
     )
     module_dict["up2"] = nn.ConvTranspose2d(
-        out_ch, out_ch, kernel_size=(5, 5), stride=(1, 1)
+        out_ch,
+        out_ch,
+        kernel_size=(5, 5),
+        stride=(1, 1),
     )
 
     module_dict["up3"] = nn.ConvTranspose2d(
-        skip, out_ch, kernel_size=(5, 5), stride=(1, 1)
+        skip,
+        out_ch,
+        kernel_size=(5, 5),
+        stride=(1, 1),
     )
 
     module_dict["conv3"] = nn.Sequential(
@@ -319,7 +332,10 @@ def group4_arch_branch(
 
     module_dict = OrderedDict()
     module_dict["up1"] = nn.ConvTranspose2d(
-        in_ch, out_ch, kernel_size=up_kernel, stride=up_strides
+        in_ch,
+        out_ch,
+        kernel_size=up_kernel,
+        stride=up_strides,
     )
     module_dict["conv1"] = nn.Sequential(
         nn.Conv2d(
@@ -336,7 +352,9 @@ def group4_arch_branch(
 
 
 def out_arch_branch(
-    in_ch: int, num_output_channels: int = 2, activation: str = "softmax"
+    in_ch: int,
+    num_output_channels: int = 2,
+    activation: str = "softmax",
 ):
     """Group5 branch for MicroNet.
 
@@ -426,7 +444,10 @@ class MicroNet(ModelABC):
     """
 
     def __init__(
-        self, num_input_channels=3, num_output_channels=2, out_activation="softmax"
+        self,
+        num_input_channels=3,
+        num_output_channels=2,
+        out_activation="softmax",
     ):
         super().__init__()
         if num_output_channels < 2:
@@ -436,7 +457,9 @@ class MicroNet(ModelABC):
 
         module_dict = OrderedDict()
         module_dict["b1"] = group1_arch_branch(
-            num_input_channels, num_input_channels, 64
+            num_input_channels,
+            num_input_channels,
+            64,
         )
         module_dict["b2"] = group1_arch_branch(128, num_input_channels, 128)
         module_dict["b3"] = group1_arch_branch(256, num_input_channels, 256)
@@ -450,23 +473,38 @@ class MicroNet(ModelABC):
         module_dict["b9"] = group3_arch_branch(256, 128, 128)
 
         module_dict["fm1"] = group4_arch_branch(
-            128, 64, (2, 2), (2, 2), activation=out_activation
+            128,
+            64,
+            (2, 2),
+            (2, 2),
+            activation=out_activation,
         )
         module_dict["fm2"] = group4_arch_branch(
-            256, 128, (4, 4), (4, 4), activation=out_activation
+            256,
+            128,
+            (4, 4),
+            (4, 4),
+            activation=out_activation,
         )
         module_dict["fm3"] = group4_arch_branch(
-            512, 256, (8, 8), (8, 8), activation=out_activation
+            512,
+            256,
+            (8, 8),
+            (8, 8),
+            activation=out_activation,
         )
 
         module_dict["aux_out1"] = out_arch_branch(
-            64, num_output_channels=self.__num_output_channels
+            64,
+            num_output_channels=self.__num_output_channels,
         )
         module_dict["aux_out2"] = out_arch_branch(
-            128, num_output_channels=self.__num_output_channels
+            128,
+            num_output_channels=self.__num_output_channels,
         )
         module_dict["aux_out3"] = out_arch_branch(
-            256, num_output_channels=self.__num_output_channels
+            256,
+            num_output_channels=self.__num_output_channels,
         )
 
         module_dict["out"] = out_arch_branch(
@@ -587,7 +625,9 @@ class MicroNet(ModelABC):
 
     @staticmethod
     def infer_batch(
-        model: torch.nn.Module, batch_data: np.ndarray, on_gpu: bool
+        model: torch.nn.Module,
+        batch_data: np.ndarray,
+        on_gpu: bool,
     ) -> List[np.ndarray]:
         """Run inference on an input batch.
 
