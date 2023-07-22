@@ -9,23 +9,26 @@ easily serialised via the use of an io.BytesIO object or saved directly
 to disk.
 
 """
+from __future__ import annotations
 
 import tarfile
 import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Tuple, Union
+from typing import TYPE_CHECKING, Iterable
 
 import defusedxml
 import numpy as np
 from PIL import Image
 
 from tiatoolbox import DuplicateFilter, logger
-from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
-from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
 defusedxml.defuse_stdlib()
 
@@ -56,6 +59,7 @@ class TilePyramidGenerator:
         downsample: int = 2,
         overlap: int = 0,
     ) -> None:
+        """Initialize :class:`TilePyramidGenerator`."""
         self.wsi = wsi
         self.tile_size = tile_size
         self.overlap = overlap
@@ -74,7 +78,7 @@ class TilePyramidGenerator:
         """Find the downsample factor for a level."""
         return 2 ** (self.level_count - level - 1)
 
-    def level_dimensions(self, level: int) -> Tuple[int, int]:
+    def level_dimensions(self, level: int) -> tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
         Args:
@@ -84,11 +88,11 @@ class TilePyramidGenerator:
         """
         baseline_dims = self.wsi.info.slide_dimensions
         level_dims = np.ceil(
-            np.divide(baseline_dims, self.level_downsample(level))
+            np.divide(baseline_dims, self.level_downsample(level)),
         ).astype(int)
         return tuple(level_dims)
 
-    def tile_grid_size(self, level: int) -> Tuple[int, int]:
+    def tile_grid_size(self, level: int) -> tuple[int, int]:
         """Width and height of the minimal grid of tiles to cover the slide.
 
         Args:
@@ -97,9 +101,12 @@ class TilePyramidGenerator:
 
         """
         if level < 0 or level >= self.level_count:
-            raise IndexError("Invalid level.")
+            msg = "Invalid level."
+            raise IndexError(msg)
         return tuple(
-            np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(int)
+            np.ceil(np.divide(self.level_dimensions(level), self.tile_size)).astype(
+                int,
+            ),
         )
 
     @property
@@ -133,7 +140,9 @@ class TilePyramidGenerator:
         out_dims = np.round(slide_dims / slide_dims.max() * tile_dim).astype(int)
         bounds = (0, 0, *slide_dims)
         thumb = self.wsi.read_bounds(
-            bounds, resolution=self.wsi.info.level_count - 1, units="level"
+            bounds,
+            resolution=self.wsi.info.level_count - 1,
+            units="level",
         )
         thumb = imresize(thumb, output_size=out_dims)
         return Image.fromarray(thumb)
@@ -195,7 +204,8 @@ class TilePyramidGenerator:
         if level < 0:
             raise IndexError
         if level > self.level_count:
-            raise IndexError("Invalid level.")
+            msg = "Invalid level."
+            raise IndexError(msg)
 
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
@@ -247,8 +257,11 @@ class TilePyramidGenerator:
         """
         raise NotImplementedError
 
-    def dump(  # noqa: CCR001
-        self, path: Union[str, Path], container=None, compression=None
+    def dump(
+        self,
+        path: str | Path,
+        container=None,
+        compression=None,
     ):
         """Write all tiles to disk.
 
@@ -281,12 +294,14 @@ class TilePyramidGenerator:
         """
         path = Path(path)
         if container not in [None, "zip", "tar"]:
-            raise ValueError("Unsupported container.")
+            msg = "Unsupported container."
+            raise ValueError(msg)
 
         if container is None:
             path.mkdir(parents=False)
             if compression is not None:
-                raise ValueError("Unsupported compression for container None.")
+                msg = "Unsupported compression for container None."
+                raise ValueError(msg)
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output directory."""
@@ -302,10 +317,13 @@ class TilePyramidGenerator:
                 "lzma": zipfile.ZIP_LZMA,
             }
             if compression not in compression2enum:
-                raise ValueError("Unsupported compression for zip.")
+                msg = "Unsupported compression for zip."
+                raise ValueError(msg)
 
             archive = zipfile.ZipFile(
-                path, mode="w", compression=compression2enum[compression]
+                path,
+                mode="w",
+                compression=compression2enum[compression],
             )
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
@@ -328,7 +346,8 @@ class TilePyramidGenerator:
                 "lzma": "w:xz",
             }
             if compression not in compression2mode:
-                raise ValueError("Unsupported compression for tar.")
+                msg = "Unsupported compression for tar."
+                raise ValueError(msg)
 
             archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
 
@@ -352,11 +371,13 @@ class TilePyramidGenerator:
             archive.close()
 
     def __len__(self) -> int:
+        """Return length of instance attributes."""
         return sum(
             np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
         )
 
     def __iter__(self) -> Iterable:
+        """Return an iterator for the given object."""
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
                 yield self.get_tile(level=level, x=x, y=y)
@@ -445,8 +466,10 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
 
 class AnnotationTileGenerator(ZoomifyGenerator):
-    r"""Tile generator using an AnnotationRenderer to render tiles
-    showing annotations held in an AnnotationStore
+    r"""Define AnnotationTileGenerator for rendering AnnotationStore.
+
+    Tile generator using an AnnotationRenderer to render tiles
+    showing annotations held in an AnnotationStore.
 
     Args:
         info (WSIMeta):
@@ -474,11 +497,12 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         self,
         info: WSIMeta,
         store: AnnotationStore,
-        renderer: AnnotationRenderer = None,
+        renderer: AnnotationRenderer | None = None,
         tile_size: int = 256,
         downsample: int = 2,
         overlap: int = 0,
-    ):
+    ) -> None:
+        """Initialize :class:`AnnotationTileGenerator`."""
         super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store
@@ -492,7 +516,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         output_size = [self.output_tile_size] * 2
         self.empty_img = Image.fromarray(
-            np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8)
+            np.zeros((output_size[0], output_size[1], 4), dtype=np.uint8),
         )
         if self.renderer.mapper == "categorical":
             # get the possible categories for given score_prop from store
@@ -515,7 +539,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         thumb = self.renderer.render_annotations(self.store, bounds, scale)
         return Image.fromarray(thumb)
 
-    def level_dimensions(self, level: int) -> Tuple[int, int]:
+    def level_dimensions(self, level: int) -> tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
         Args:
@@ -525,7 +549,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         """
         baseline_dims = self.info.slide_dimensions
         level_dims = np.ceil(
-            np.divide(baseline_dims, self.level_downsample(level))
+            np.divide(baseline_dims, self.level_downsample(level)),
         ).astype(int)
         return tuple(level_dims)
 
@@ -549,8 +573,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         x: int,
         y: int,
         res: int = 1,
-        pad_mode: str = None,
-        interpolation: str = None,
+        pad_mode: str | None = None,
+        interpolation: str | None = None,
     ) -> Image:
         """Render a tile at a given level and coordinate.
 
@@ -602,7 +626,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         if level < 0:
             raise IndexError
         if level > self.level_count:
-            raise IndexError("Invalid level.")
+            msg = "Invalid level."
+            raise IndexError(msg)
 
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
@@ -622,7 +647,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
         bounds = locsize2bounds(coord, [self.output_tile_size * scale] * 2)
         tile = self.renderer.render_annotations(
-            self.store, bounds, scale, res, self.overlap
+            self.store,
+            bounds,
+            scale,
+            res,
+            self.overlap,
         )
 
         return Image.fromarray(tile)
