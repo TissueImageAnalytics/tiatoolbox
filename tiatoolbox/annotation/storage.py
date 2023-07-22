@@ -3115,7 +3115,7 @@ class SQLiteStore(AnnotationStore):
 
     def to_dataframe(self) -> pd.DataFrame:
         """Converts AnnotationStore to :class:`pandas.DataFrame`."""
-        df = pd.DataFrame()
+        store_to_df = pd.DataFrame()
         df_rows = (
             {
                 "key": key,
@@ -3124,8 +3124,8 @@ class SQLiteStore(AnnotationStore):
             }
             for key, annotation in self.items()
         )
-        df = pd.concat([df, pd.json_normalize(df_rows)])
-        return df.set_index("key")
+        store_to_df = pd.concat([store_to_df, pd.json_normalize(df_rows)])
+        return store_to_df.set_index("key")
 
     def features(self) -> Generator[Dict[str, Any], None, None]:
         """Return annotations as a list of geoJSON features.
