@@ -1,3 +1,4 @@
+"""Test WSI Registration."""
 import pathlib
 
 import cv2
@@ -20,7 +21,8 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 def test_extract_features(dfbr_features):
     """Test for CNN based feature extraction function."""
-    df = DFBRegister()
+    # dfbr (deep feature based registration).
+    dfbr = DFBRegister()
     fixed_img = np.repeat(
         np.expand_dims(
             np.repeat(
@@ -33,7 +35,7 @@ def test_extract_features(dfbr_features):
         3,
         axis=2,
     )
-    output = df.extract_features(fixed_img, fixed_img)
+    output = dfbr.extract_features(fixed_img, fixed_img)
     pool3_feat = output["block3_pool"][0, :].detach().numpy()
     pool4_feat = output["block4_pool"][0, :].detach().numpy()
     pool5_feat = output["block5_pool"][0, :].detach().numpy()
@@ -58,10 +60,10 @@ def test_feature_mapping(fixed_image, moving_image):
         fixed_img.shape[:2][::-1],
     )
 
-    df = DFBRegister()
-    features = df.extract_features(fixed_img, moving_img)
-    fixed_matched_points, moving_matched_points, _ = df.feature_mapping(features)
-    output = df.estimate_affine_transform(fixed_matched_points, moving_matched_points)
+    dfbr = DFBRegister()
+    features = dfbr.extract_features(fixed_img, moving_img)
+    fixed_matched_points, moving_matched_points, _ = dfbr.feature_mapping(features)
+    output = dfbr.estimate_affine_transform(fixed_matched_points, moving_matched_points)
     expected = np.array(
         [[0.98843, 0.00184, 1.75437], [-0.00472, 0.96973, 5.38854], [0, 0, 1]],
     )
@@ -70,7 +72,7 @@ def test_feature_mapping(fixed_image, moving_image):
 
 def test_dfbr_features():
     """Test for feature input to feature_mapping function."""
-    df = DFBRegister()
+    dfbr = DFBRegister()
     fixed_img = np.repeat(
         np.expand_dims(
             np.repeat(
@@ -83,14 +85,14 @@ def test_dfbr_features():
         3,
         axis=2,
     )
-    features = df.extract_features(fixed_img, fixed_img)
+    features = dfbr.extract_features(fixed_img, fixed_img)
 
     del features["block5_pool"]
     with pytest.raises(
         ValueError,
         match=r".*The feature mapping step expects 3 blocks of features.*",
     ):
-        _, _, _ = df.feature_mapping(features)
+        _, _, _ = dfbr.feature_mapping(features)
 
 
 def test_prealignment_mask():
@@ -150,7 +152,7 @@ def test_prealignment_rotation_step():
 
 
 def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask):
-    """Test for prealignment of an image pair"""
+    """Test for prealignment of an image pair."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
     fixed_mask = imread(fixed_mask)
@@ -301,8 +303,8 @@ def test_filtering_duplicate_matching_points():
     )
     quality = np.ones((7, 1))
 
-    df = DFBRegister()
-    _ = df.filtering_matching_points(
+    dfbr = DFBRegister()
+    _ = dfbr.filtering_matching_points(
         fixed_mask,
         moving_mask,
         fixed_points,
@@ -326,8 +328,8 @@ def test_filtering_no_duplicate_matching_points():
     )
     quality = np.ones((7, 1))
 
-    df = DFBRegister()
-    _ = df.filtering_matching_points(
+    dfbr = DFBRegister()
+    _ = dfbr.filtering_matching_points(
         fixed_mask,
         moving_mask,
         fixed_points,
@@ -343,12 +345,12 @@ def test_register_input():
     fixed_mask = np.random.choice([0, 1], size=(32, 32))
     moving_mask = np.random.choice([0, 1], size=(32, 32))
 
-    df = DFBRegister()
+    dfbr = DFBRegister()
     with pytest.raises(
         ValueError,
         match=r".*The required shape for fixed and moving images is n x m x 3.*",
     ):
-        _ = df.register(fixed_img, moving_img, fixed_mask, moving_mask)
+        _ = dfbr.register(fixed_img, moving_img, fixed_mask, moving_mask)
 
 
 def test_register_input_channels():
@@ -358,12 +360,12 @@ def test_register_input_channels():
     fixed_mask = np.random.choice([0, 1], size=(32, 32))
     moving_mask = np.random.choice([0, 1], size=(32, 32))
 
-    df = DFBRegister()
+    dfbr = DFBRegister()
     with pytest.raises(
         ValueError,
         match=r".*The input images are expected to have 3 channels.*",
     ):
-        _ = df.register(
+        _ = dfbr.register(
             fixed_img[:, :, :1],
             moving_img[:, :, :1],
             fixed_mask,
@@ -383,14 +385,14 @@ def test_register_output_with_initializer(
     fixed_msk = imread(fixed_mask)
     moving_msk = imread(moving_mask)
 
-    df = DFBRegister()
+    dfbr = DFBRegister()
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
 
     expected = np.array(
         [[-0.98454, -0.00708, 336.9562], [-0.01024, -0.99751, 769.81131], [0, 0, 1]],
     )
 
-    output = df.register(
+    output = dfbr.register(
         fixed_img,
         moving_img,
         fixed_msk,
@@ -413,12 +415,12 @@ def test_register_output_without_initializer(
     fixed_msk = imread(fixed_mask)
     moving_msk = imread(moving_mask)
 
-    df = DFBRegister()
+    dfbr = DFBRegister()
     expected = np.array(
         [[-0.99863, 0.00189, 336.79039], [0.00691, -0.99810, 765.98081], [0, 0, 1]],
     )
 
-    output = df.register(
+    output = dfbr.register(
         fixed_img,
         moving_img,
         fixed_msk,
@@ -427,7 +429,7 @@ def test_register_output_without_initializer(
     assert np.linalg.norm(expected[:2, :2] - output[:2, :2]) < 0.1
     assert np.linalg.norm(expected[:2, 2] - output[:2, 2]) < 10
 
-    _ = df.register(
+    _ = dfbr.register(
         fixed_img,
         moving_img,
         fixed_msk[:, :, 0],
@@ -442,10 +444,10 @@ def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving
     fixed_msk = imread(fixed_mask)
     moving_msk = imread(moving_mask)
 
-    df = DFBRegister()
+    dfbr = DFBRegister()
     pre_transform = np.eye(3)
 
-    _ = df.register(
+    _ = dfbr.register(
         fixed_img,
         moving_img,
         fixed_msk,
@@ -529,6 +531,7 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
 
 
 def test_affine_wsi_transformer(sample_ome_tiff):
+    """Test Affine WSI transformer."""
     test_locations = [(1001, 600), (1000, 500), (800, 701)]  # at base level 0
     resolution = 0
     size = (100, 100)

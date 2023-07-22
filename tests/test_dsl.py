@@ -1,8 +1,10 @@
-"""Tests for predicate module."""
+"""Test for predicate module."""
+from __future__ import annotations
+
 import json
 import sqlite3
 from numbers import Number
-from typing import Union
+from typing import ClassVar
 
 import pytest
 
@@ -61,7 +63,7 @@ def test_json_contains():
     assert not json_contains(properties, "foo")
 
 
-def sqlite_eval(query: Union[str, Number]):
+def sqlite_eval(query: str | Number):
     """Evaluate an SQL predicate on dummy data and return the result.
 
     Args:
@@ -91,7 +93,7 @@ def sqlite_eval(query: Union[str, Number]):
     return result
 
 
-class TestSQLite:  # noqa: PIE798
+class TestSQLite:
     """Test converting from our DSL to an SQLite backend."""
 
     @staticmethod
@@ -111,7 +113,7 @@ class TestSQLite:  # noqa: PIE798
 class TestPredicate:
     """Test predicate statments with various backends."""
 
-    scenarios = [
+    scenarios: ClassVar[list[str, dict]] = [
         (
             "Python",
             {

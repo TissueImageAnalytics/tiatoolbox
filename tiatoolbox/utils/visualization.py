@@ -663,11 +663,11 @@ class AnnotationRenderer:
         if geom_type == 4:
             # multi-point
             n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
-            pts = []
-            for i in range(n_points):
-                pts.append(
-                    np.frombuffer(geom, np.double, 2, 14 + i * 21),
-                )  # each point is 21 bytes
+
+            pts = [
+                np.frombuffer(geom, np.double, 2, 14 + i * 21) for i in range(n_points)
+            ]  # each point is 21 bytes
+
             return np.concatenate(pts)
         if geom_type == 5:
             # multi-line
@@ -705,7 +705,8 @@ class AnnotationRenderer:
                 polygons.append(rings)
             return np.concatenate(polygons)
 
-        raise ValueError(f"Unknown geometry type: {geom_type}")
+        msg = f"Unknown geometry type: {geom_type}"
+        raise ValueError(msg)
 
     @staticmethod
     def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):

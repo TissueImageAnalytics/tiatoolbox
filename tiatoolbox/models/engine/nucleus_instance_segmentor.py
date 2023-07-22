@@ -1,8 +1,9 @@
 """This module enables nucleus instance segmentation."""
+from __future__ import annotations
 
 import uuid
 from collections import deque
-from typing import Callable, List, Union
+from typing import Callable
 
 # replace with the sql database once the PR in place
 import joblib
@@ -87,23 +88,23 @@ def _process_instance_predictions(
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
     boundary_lines = [
-        shapely_box(0, 0, w, 1),  # noqa top egde
-        shapely_box(0, h - 1, w, h),  # noqa bottom edge
-        shapely_box(0, 0, 1, h),  # noqa left
-        shapely_box(w - 1, 0, w, h),  # noqa right
+        shapely_box(0, 0, w, 1),  # top egde
+        shapely_box(0, h - 1, w, h),  # bottom edge
+        shapely_box(0, 0, 1, h),  # left
+        shapely_box(w - 1, 0, w, h),  # right
     ]
     margin_boxes = [
-        shapely_box(0, 0, w, m),  # noqa top egde
-        shapely_box(0, h - m, w, h),  # noqa bottom edge
-        shapely_box(0, 0, m, h),  # noqa left
-        shapely_box(w - m, 0, w, h),  # noqa right
+        shapely_box(0, 0, w, m),  # top egde
+        shapely_box(0, h - m, w, h),  # bottom edge
+        shapely_box(0, 0, m, h),  # left
+        shapely_box(w - m, 0, w, h),  # right
     ]
     # ! this is wrt to WSI coord space, not tile
     margin_lines = [
-        [[m, m], [w - m, m]],  # noqa top egde
-        [[m, h - m], [w - m, h - m]],  # noqa bottom edge
-        [[m, m], [m, h - m]],  # noqa left
-        [[w - m, m], [w - m, h - m]],  # noqa right
+        [[m, m], [w - m, m]],  # top egde
+        [[m, h - m], [w - m, h - m]],  # bottom edge
+        [[m, m], [m, h - m]],  # left
+        [[w - m, m], [w - m, h - m]],  # right
     ]
     margin_lines = np.array(margin_lines) + tile_tl[None, None]
     margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
@@ -140,7 +141,8 @@ def _process_instance_predictions(
 
         sel_indices = [geo for bounds in sel_boxes for geo in tile_rtree.query(bounds)]
     else:
-        raise ValueError(f"Unknown tile mode {tile_mode}.")
+        msg = f"Unknown tile mode {tile_mode}."
+        raise ValueError(msg)
 
     def retrieve_sel_uids(sel_indices, inst_dict):
         """Helper to retrieved selected instance uids."""
@@ -370,13 +372,14 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-    ):
+    ) -> None:
+        """Initialize :class:`NucleusInstanceSegmentor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,
@@ -400,7 +403,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
     @staticmethod
     def _get_tile_info(
-        image_shape: Union[List[int], np.ndarray],
+        image_shape: list[int] | np.ndarray,
         ioconfig: IOSegmentorConfig,
     ):
         """Generating tile information.
@@ -793,7 +796,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             # ! this will lead to discard a bunch of
             # ! inferred tiles within this current WSI
             if future.exception() is not None:
-                raise future.exception()
+                raise future.exception()  # noqa: RSE102
 
             # aggregate the result via callback
             result = future.result()

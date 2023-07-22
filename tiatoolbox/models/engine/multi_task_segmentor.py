@@ -19,14 +19,14 @@
 # ***** END GPL LICENSE BLOCK *****
 
 """This module enables multi-task segmentors."""
+from __future__ import annotations
 
 import shutil
-from typing import Callable, List
+from typing import TYPE_CHECKING, Callable
 
 # replace with the sql database once the PR in place
 import joblib
 import numpy as np
-import torch
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
@@ -38,6 +38,9 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     WSIStreamDataset,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    import torch
 
 
 # Python is yet to be able to natively pickle Object method/static method.
@@ -56,7 +59,9 @@ def _process_tile_predictions(
     merge_predictions,
     model_name,
 ):
-    """Function to merge new tile prediction with existing prediction,
+    """Process Tile Predictions.
+
+    Function to merge new tile prediction with existing prediction,
     using the output from each task.
 
     Args:
@@ -237,14 +242,15 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-        output_types: List = None,
-    ):
+        output_types: list | None = None,
+    ) -> None:
+        """Initialize :class:`MultiTaskSegmentor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,
@@ -272,8 +278,9 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             if "instance" in self.output_types:
                 self._wsi_inst_info = []
         else:
+            msg = "Output type must be specified for instance or semantic segmentation."
             raise ValueError(
-                "Output type must be specified for instance or semantic segmentation.",
+                msg,
             )
 
     def _predict_one_wsi(
@@ -342,8 +349,9 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
         indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
 
-        for _ in indices_inst:
-            self._wsi_inst_info.append({})
+        if not self._wsi_inst_info:
+            self._wsi_inst_info = []
+        self._wsi_inst_info.extend({} for _ in indices_inst)
 
         for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
             for tile_idx, tile_bounds in enumerate(set_bounds):
@@ -433,7 +441,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             # ! this will lead to discard a whole bunch of
             # ! inferred tiles within this current WSI
             if future.exception() is not None:
-                raise future.exception()
+                raise future.exception()  # noqa: RSE102
 
             # aggregate the result via callback
             # manually call the callback rather than
