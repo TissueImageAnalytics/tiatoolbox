@@ -3327,7 +3327,7 @@ class TIFFWSIReader(WSIReader):
                 try:
                     value = cast(value_string)
                     return key, value
-                except ValueError:
+                except ValueError:  # noqa: PERF203
                     continue
 
             return key, value

@@ -263,7 +263,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
             )
-            # hack value such that read if mask is provided is through
+            # infer value such that read if mask provided is through
             # 'mpp' or 'power' as varying 'baseline' is locked atm
             units = "mpp"
             resolution = 1.0

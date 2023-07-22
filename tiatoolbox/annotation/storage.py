@@ -573,7 +573,7 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of keys.
 
         """
-        for key, _ in self.items():
+        for key, _ in self.items():  # noqa: PERF102
             yield key
 
     def values(self) -> Iterable[Annotation]:
@@ -584,7 +584,7 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of annotations.
 
         """
-        for _, annotation in self.items():
+        for _, annotation in self.items():  # noqa: PERF102
             yield annotation
 
     def __iter__(self) -> Iterable[str]:
@@ -2907,7 +2907,7 @@ class SQLiteStore(AnnotationStore):
                 An iterable of annotations.
 
         """
-        for _, value in self.items():
+        for _, value in self.items():  # noqa: PERF102
             yield value
 
     def items(self) -> Iterable[Tuple[int, Annotation]]:

@@ -927,8 +927,8 @@ def test_read_bounds_interpolated(sample_svs):
         units="mpp",
     )
 
-    assert 0.1 < wsi.info.mpp[0]
-    assert 0.1 < wsi.info.mpp[1]
+    assert wsi.info.mpp[0] > 0.1
+    assert wsi.info.mpp[1] > 0.1
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape[2] == 3
