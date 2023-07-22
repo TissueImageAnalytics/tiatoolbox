@@ -977,7 +977,7 @@ class WSIReader:
         if not rescale.is_integer():
             msg = (
                 "Tile objective value must be an integer multiple of the "
-                "objective power of the slide."
+                "objective power of the slide.",
             )
             raise ValueError(
                 msg,

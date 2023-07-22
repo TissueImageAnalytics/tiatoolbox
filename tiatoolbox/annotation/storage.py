@@ -142,6 +142,16 @@ class Annotation:
         """
         return json.dumps(self.to_feature())
 
+    def to_wkb(self) -> bytes:
+        """Returns the geometry as WKB.
+
+        Returns:
+            Annotation:
+                The annotation as a WKB geometry.
+
+        """
+        return self.geometry.wkb
+
     def __repr__(self) -> str:
         """Return a string representation of the object."""
         return f"Annotation({self.geometry}, {self.properties})"
@@ -636,7 +646,9 @@ class AnnotationStore(ABC, MutableMapping):
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
         distance: float = 0,
+        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Query the store for annotations.
 
@@ -679,9 +691,16 @@ class AnnotationStore(ABC, MutableMapping):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+            min_area (float):
+                Minimum area of the annotation geometry. Only
+                annotations with an area greater than or equal to this
+                value will be returned. Defaults to None (no min).
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
+            as_wkb (bool):
+                If True, return geometries as raw wkb bytes instead of
+                shapely geometries. Defaults to False.
 
         Returns:
                 list:
@@ -740,6 +759,8 @@ class AnnotationStore(ABC, MutableMapping):
                     query result.
 
             """
+            if min_area is not None and annotation.geometry.area < min_area:
+                return False
             return (  # Geometry is None or the geometry predicate matches
                 query_geometry is None
                 or any(
@@ -770,7 +791,9 @@ class AnnotationStore(ABC, MutableMapping):
             ) and self._eval_where(where, annotation.properties)
 
         return {
-            key: annotation
+            key: Annotation(annotation.to_wkb(), annotation.properties)
+            if as_wkb
+            else annotation
             for key, annotation in self.items()
             if filter_function(annotation)
         }
@@ -1100,6 +1123,7 @@ class AnnotationStore(ABC, MutableMapping):
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
         mode: str = "poly-poly",
+        as_wkb: bool = False,
     ) -> dict[str, dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
@@ -1154,6 +1178,9 @@ class AnnotationStore(ABC, MutableMapping):
                 of two strings. The first string is the mode for the
                 query geometry and the second string is the mode for
                 the nearest annotation geometry.
+            as_wkb (bool):
+                If True, return geometries as raw wkb bytes instead of
+                shapely geometries. Defaults to False.
 
         Returns:
             Dict[str, Dict[str, Annotation]]:
@@ -1278,6 +1305,7 @@ class AnnotationStore(ABC, MutableMapping):
                 where=n_where,
                 geometry_predicate=geometry_predicate,
                 distance=distance,
+                as_wkb=as_wkb,
             )
             if subquery_result:
                 result[key] = subquery_result
@@ -1969,6 +1997,7 @@ class SQLiteStore(AnnotationStore):
         data: str | bytes,
         cx: float,
         cy: float,
+        as_wkb: bool = False,
     ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
@@ -1978,18 +2007,30 @@ class SQLiteStore(AnnotationStore):
         points where the data is null.
 
         Args:
-            data(bytes or str):
+            data (bytes or str):
                 The WKB/WKT data to be unpacked.
-            cx(int):
+            cx (int):
                 The X coordinate of the centroid/representative point.
-            cy(float):
+            cy (float):
                 The Y coordinate of the centroid/representative point.
+            as_wkb (bool):
+                If True, return geometries as raw wkb bytes instead of
+                shapely geometries. Defaults to False.
 
         Returns:
             Geometry:
                 The Shapely geometry.
 
         """
+        if as_wkb:
+            if data is None:
+                # make wkb point
+                return (
+                    b"\x01\x01\x00\x00\x00"
+                    + np.double(cx).tobytes()
+                    + np.double(cy).tobytes()
+                )
+            return data if self.compression is None else zlib.decompress(data)
         return Point(cx, cy) if data is None else self.deserialize_geometry(data)
 
     def deserialize_geometry(  # skipcq: PYL-W0221
@@ -2297,6 +2338,7 @@ class SQLiteStore(AnnotationStore):
             raise ValueError(
                 msg,
             )
+
         cur = self.con.cursor()
 
         # Normalise query geometry and determine if it is a rectangle
@@ -2355,7 +2397,6 @@ class SQLiteStore(AnnotationStore):
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate="intersects",
-        min_area: float | None = None,
         distance: float = 0,
     ) -> list[str]:
         """Query the store for annotation keys.
@@ -2402,9 +2443,6 @@ class SQLiteStore(AnnotationStore):
                 "intersects". For more information see the `shapely
                 documentation on binary predicates <https://shapely.
                 readthedocs.io/en/stable/manual.html#binary-predicates>`_.
-            min_area (float or None):
-                Minimum area of the annotations to be returned.
-                Defaults to None.
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
@@ -2421,7 +2459,6 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate=geometry_predicate,
             where=where,
             callable_columns="[key], properties",
-            min_area=min_area,
             distance=distance,
         )
         if isinstance(where, Callable):
@@ -2439,6 +2476,7 @@ class SQLiteStore(AnnotationStore):
         geometry_predicate: str = "intersects",
         min_area=None,
         distance: float = 0,
+        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Runs Query."""
         query_geometry = geometry
@@ -2453,7 +2491,7 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, Callable):
             return {
                 key: Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy),
+                    geometry=self._unpack_geometry(blob, cx, cy, as_wkb=as_wkb),
                     properties=json.loads(properties),
                 )
                 for key, properties, cx, cy, blob in cur.fetchall()
@@ -2461,7 +2499,7 @@ class SQLiteStore(AnnotationStore):
             }
         return {
             key: Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy),
+                geometry=self._unpack_geometry(blob, cx, cy, as_wkb=as_wkb),
                 properties=json.loads(properties),
             )
             for key, properties, cx, cy, blob in cur.fetchall()
@@ -2471,7 +2509,6 @@ class SQLiteStore(AnnotationStore):
         self,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
-        min_area: float | None = None,
     ) -> dict[str, tuple[float, float, float, float]]:
         """Query the store for annotation bounding boxes.
 
@@ -2519,9 +2556,6 @@ class SQLiteStore(AnnotationStore):
                 input should never be accepted to this argument as
                 arbitrary code can be run via pickle or the parsing of
                 the string statement.
-            min_area (float or None):
-                Minimum area of the annotations to be returned.
-                Defaults to None.
 
         Returns:
             list:
@@ -2548,7 +2582,6 @@ class SQLiteStore(AnnotationStore):
             geometry_predicate="bbox_intersects",
             where=where,
             callable_columns="[key], properties, min_x, min_y, max_x, max_y",
-            min_area=min_area,
         )
         if isinstance(where, Callable):
             return {
@@ -2880,8 +2913,8 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str) -> Annotation:
-        """Get an item from the dataset."""
+    def __getitem__(self, key: str, as_wkb=False) -> Annotation:
+        """Get an item from the store."""
         cur = self.con.cursor()
         cur.execute(
             """
@@ -2900,6 +2933,7 @@ class SQLiteStore(AnnotationStore):
             serialised_geometry,
             cx,
             cy,
+            as_wkb=as_wkb,
         )
         return Annotation(geometry, properties)
 

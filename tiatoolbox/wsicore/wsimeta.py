@@ -293,7 +293,7 @@ class WSIMeta:
             if self.objective_power is None:
                 msg = (
                     "Objective power is None. "
-                    "Cannot determine scale in terms of objective power."
+                    "Cannot determine scale in terms of objective power.",
                 )
                 raise ValueError(
                     msg,
