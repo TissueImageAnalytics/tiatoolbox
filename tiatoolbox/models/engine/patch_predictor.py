@@ -1,10 +1,10 @@
 """This module implements patch level prediction."""
+from __future__ import annotations
 
 import copy
-import os
-import pathlib
 from collections import OrderedDict
-from typing import Callable, Tuple, Union
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
@@ -13,11 +13,13 @@ import tqdm
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
-from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 from .io_config import IOPatchPredictorConfig
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import Resolution, Units
 
 
 class PatchPredictor:
@@ -195,7 +197,7 @@ class PatchPredictor:
         pathology." International Conference on Medical image computing and
         computer-assisted intervention. Springer, Cham, 2018.
 
-    """  # noqa: W605
+    """
 
     def __init__(
         self,
@@ -205,14 +207,16 @@ class PatchPredictor:
         pretrained_model=None,
         pretrained_weights=None,
         verbose=True,
-    ):
+    ) -> None:
+        """Initialize :class:`PatchPredictor`."""
         super().__init__()
 
         self.imgs = None
         self.mode = None
 
         if model is None and pretrained_model is None:
-            raise ValueError("Must provide either `model` or `pretrained_model`.")
+            msg = "Must provide either `model` or `pretrained_model`."
+            raise ValueError(msg)
 
         if model is not None:
             self.model = model
@@ -230,11 +234,11 @@ class PatchPredictor:
 
     @staticmethod
     def merge_predictions(
-        img: Union[str, pathlib.Path, np.ndarray],
+        img: str | Path | np.ndarray,
         output: dict,
-        resolution: Resolution = None,
-        units: Units = None,
-        postproc_func: Callable = None,
+        resolution: Resolution | None = None,
+        units: Units | None = None,
+        postproc_func: Callable | None = None,
         return_raw: bool = False,
     ):
         """Merge patch level predictions to form a 2-dimensional prediction map.
@@ -261,6 +265,7 @@ class PatchPredictor:
             return_raw (bool):
                 Return raw result without applying the `postproc_func`
                 on the assembled image.
+
         Returns:
             :class:`numpy.ndarray`:
                 Merged predictions as a 2D array.
@@ -318,7 +323,7 @@ class PatchPredictor:
             predictions = output["probabilities"]
             num_class = np.array(predictions[0]).shape[0]
             denominator = np.zeros(canvas_shape)
-            output = np.zeros(list(canvas_shape) + [num_class], dtype=np.float32)
+            output = np.zeros([*list(canvas_shape), num_class], dtype=np.float32)
 
         for idx, bound in enumerate(coordinates):
             prediction = predictions[idx]
@@ -444,24 +449,25 @@ class PatchPredictor:
         resolution,
         units,
     ):
-        """
+        """Update the ioconfig.
 
         Args:
             ioconfig (:class:`IOPatchPredictorConfig`):
-        patch_input_shape (tuple):
-            Size of patches input to the model. Patches are at
-            requested read resolution, not with respect to level 0,
-            and must be positive.
-        stride_shape (tuple):
-            Stride using during tile and WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
-            :obj:`WSIReader` for details.
-        units (Units):
-            Units of resolution used for reading the image.
+                Input ioconfig for PatchPredictor.
+            patch_input_shape (tuple):
+                Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to level 0,
+                and must be positive.
+            stride_shape (tuple):
+                Stride using during tile and WSI processing. Stride is
+                at requested read resolution, not with respect to
+                level 0, and must be positive. If not provided,
+                `stride_shape=patch_input_shape`.
+            resolution (Resolution):
+                Resolution used for reading the image. Please see
+                :obj:`WSIReader` for details.
+            units (Units):
+                Units of resolution used for reading the image.
 
         Returns:
             Updated Patch Predictor IO configuration.
@@ -476,9 +482,12 @@ class PatchPredictor:
             return ioconfig
 
         if self.ioconfig is None and any(config_flag):
+            msg = (
+                "Must provide either "
+                "`ioconfig` or `patch_input_shape`, `resolution`, and `units`."
+            )
             raise ValueError(
-                "Must provide either `ioconfig` or "
-                "`patch_input_shape`, `resolution`, and `units`.",
+                msg,
             )
 
         if stride_shape is None:
@@ -527,7 +536,7 @@ class PatchPredictor:
                 "location under folder 'output'. Overwriting may happen!",
                 stacklevel=2,
             )
-            save_dir = pathlib.Path(os.getcwd()).joinpath("output")
+            save_dir = Path.cwd() / "output"
         elif save_dir is not None and len(imgs) > 1:
             logger.warning(
                 "When providing multiple whole-slide images / tiles, "
@@ -537,7 +546,7 @@ class PatchPredictor:
             )
 
         if save_dir is not None:
-            save_dir = pathlib.Path(save_dir)
+            save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=False)
 
         return save_dir
@@ -573,8 +582,9 @@ class PatchPredictor:
             return_labels = bool(labels)
 
         if labels and len(labels) != len(imgs):
+            msg = f"len(labels) != len(imgs) : {len(labels)} != {len(imgs)}"
             raise ValueError(
-                f"len(labels) != len(imgs) : " f"{len(labels)} != {len(imgs)}",
+                msg,
             )
 
         # don't return coordinates if patches are already extracted
@@ -641,7 +651,8 @@ class PatchPredictor:
                 where the running script is invoked.
             save_output (bool):
                 Whether to save output for a single file. default=False
-            highest_input_resolution:
+            highest_input_resolution (list(dict)):
+                Highest available input resolution.
 
 
         Returns:
@@ -660,6 +671,12 @@ class PatchPredictor:
         # return coordinates of patches processed within a tile / whole-slide image
         return_coordinates = True
 
+        input_is_path_like = isinstance(imgs[0], (str, Path))
+        default_save_dir = (
+            imgs[0].parent / "output" if input_is_path_like else Path.cwd()
+        )
+        save_dir = default_save_dir if save_dir is None else Path(save_dir)
+
         # None if no output
         outputs = None
 
@@ -671,7 +688,7 @@ class PatchPredictor:
             save_output = True
 
         for idx, img_path in enumerate(imgs):
-            img_path = pathlib.Path(img_path)
+            img_path = Path(img_path)
             img_label = None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
@@ -714,7 +731,7 @@ class PatchPredictor:
                 img_code = f"{idx:0{len(str(len(imgs)))}d}"
 
                 save_info = {}
-                save_path = os.path.join(str(save_dir), img_code)
+                save_path = save_dir / img_code
                 raw_save_path = f"{save_path}.raw.json"
                 save_info["raw"] = raw_save_path
                 save_as_json(output_model, raw_save_path)
@@ -735,9 +752,9 @@ class PatchPredictor:
         return_probabilities=False,
         return_labels=False,
         on_gpu=True,
-        ioconfig: IOPatchPredictorConfig = None,
-        patch_input_shape: Tuple[int, int] = None,
-        stride_shape: Tuple[int, int] = None,
+        ioconfig: IOPatchPredictorConfig | None = None,
+        patch_input_shape: tuple[int, int] | None = None,
+        stride_shape: tuple[int, int] | None = None,
         resolution=None,
         units=None,
         merge_predictions=False,
@@ -832,8 +849,9 @@ class PatchPredictor:
 
         """
         if mode not in ["patch", "wsi", "tile"]:
+            msg = f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`"
             raise ValueError(
-                f"{mode} is not a valid mode. Use either `patch`, `tile` or `wsi`",
+                msg,
             )
         if mode == "patch":
             return self._predict_patch(
@@ -845,13 +863,15 @@ class PatchPredictor:
             )
 
         if not isinstance(imgs, list):
-            raise ValueError(
-                "Input to `tile` and `wsi` mode must be a list of file paths.",
+            msg = "Input to `tile` and `wsi` mode must be a list of file paths."
+            raise TypeError(
+                msg,
             )
 
         if mode == "wsi" and masks is not None and len(masks) != len(imgs):
+            msg = f"len(masks) != len(imgs) : {len(masks)} != {len(imgs)}"
             raise ValueError(
-                f"len(masks) != len(imgs) : " f"{len(masks)} != {len(imgs)}",
+                msg,
             )
 
         ioconfig = self._update_ioconfig(

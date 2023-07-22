@@ -1,9 +1,13 @@
+"""Defines IOConfig for Model Engines."""
+from __future__ import annotations
+
 from dataclasses import dataclass, field, replace
-from typing import List, Tuple, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tiatoolbox.wsicore.wsimeta import Units
+if TYPE_CHECKING:
+    from tiatoolbox.wsicore.wsimeta import Units
 
 
 @dataclass
@@ -53,12 +57,13 @@ class ModelIOConfigABC:
 
     """
 
-    input_resolutions: List[dict]
-    patch_input_shape: Union[List[int], np.ndarray, Tuple[int, int]]
-    stride_shape: Union[List[int], np.ndarray, Tuple[int, int]] = None
-    output_resolutions: List[dict] = field(default_factory=list)
+    input_resolutions: list[dict]
+    patch_input_shape: list[int] | np.ndarray | tuple[int, int]
+    stride_shape: list[int] | np.ndarray | tuple[int, int] = None
+    output_resolutions: list[dict] = field(default_factory=list)
 
     def __post_init__(self):
+        """Perform post initialization tasks."""
         if self.stride_shape is None:
             self.stride_shape = self.patch_input_shape
 
@@ -66,11 +71,13 @@ class ModelIOConfigABC:
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
-                self.input_resolutions, key=lambda x: x["resolution"],
+                self.input_resolutions,
+                key=lambda x: x["resolution"],
             )
         else:
             self.highest_input_resolution = max(
-                self.input_resolutions, key=lambda x: x["resolution"],
+                self.input_resolutions,
+                key=lambda x: x["resolution"],
             )
 
         self._validate()
@@ -82,9 +89,12 @@ class ModelIOConfigABC:
         units = np.unique(units)
 
         if len(units) != 1:
-            raise ValueError(
+            msg = (
                 f"Multiple resolution units found: `{units}`. "
-                f"Mixing resolution units is not allowed.",
+                f"Mixing resolution units is not allowed."
+            )
+            raise ValueError(
+                msg,
             )
 
         if units[0] not in [
@@ -92,10 +102,11 @@ class ModelIOConfigABC:
             "baseline",
             "mpp",
         ]:
-            raise ValueError(f"Invalid resolution units `{units[0]}`.")
+            msg = f"Invalid resolution units `{units[0]}`."
+            raise ValueError(msg)
 
     @staticmethod
-    def scale_to_highest(resolutions: List[dict], units: Units):
+    def scale_to_highest(resolutions: list[dict], units: Units):
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
@@ -116,9 +127,12 @@ class ModelIOConfigABC:
         """
         old_val = [v["resolution"] for v in resolutions]
         if units not in ["baseline", "mpp", "power"]:
-            raise ValueError(
+            msg = (
                 f"Unknown units `{units}`. "
-                "Units should be one of 'baseline', 'mpp' or 'power'.",
+                f"Units should be one of 'baseline', 'mpp' or 'power'."
+            )
+            raise ValueError(
+                msg,
             )
         if units == "baseline":
             return old_val
@@ -222,7 +236,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
 
     """
 
-    patch_output_shape: Union[List[int], np.ndarray, Tuple[int, int]] = None
+    patch_output_shape: list[int] | np.ndarray | tuple[int, int] = None
     save_resolution: dict = None
 
     def to_baseline(self):
@@ -388,7 +402,7 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
     """
 
     margin: int = None
-    tile_shape: Tuple[int, int] = None
+    tile_shape: tuple[int, int] = None
 
     def to_baseline(self):
         """Returns a new config object converted to baseline form.

@@ -6,6 +6,7 @@ from tiatoolbox.models import ModelIOConfigABC
 
 
 def test_validation_error_io_config():
+    """Test Validation Error for ModelIOConfigABC."""
     with pytest.raises(ValueError, match=r".*Multiple resolution units found.*"):
         ModelIOConfigABC(
             input_resolutions=[

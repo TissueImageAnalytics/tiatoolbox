@@ -1,4 +1,4 @@
-import os
+"""Define classes and methods for dataset information."""
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -13,10 +13,10 @@ class DatasetInfoABC(ABC):
     Enforcing such that following attributes must always be defined by
     the subclass.
 
-    Attributes:
+    Property:
         inputs (list):
             A list of paths where each path points to a sample image.
-            labels (list): A list of `int` where each is the label of
+        labels (list): A list of `int` where each is the label of
             the sample at the same index.
         label_names (dict):
             A dict indicates the possible associate name of each label
@@ -27,16 +27,19 @@ class DatasetInfoABC(ABC):
     @property
     @abstractmethod
     def inputs(self):
+        """A list of paths where each path points to a sample image."""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def labels(self):
+        """A list of labels where each is the label of the sample at the same index."""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def label_names(self):
+        """A dict indicates the possible associate name of each label value."""
         raise NotImplementedError
 
 
@@ -70,7 +73,8 @@ class KatherPatchDataset(DatasetInfoABC):
     def __init__(
         self,
         save_dir_path=None,
-    ):
+    ) -> None:
+        """Initialize :class:`KatherPatchDataset`."""
         label_names = [
             "BACK",
             "NORM",
@@ -84,9 +88,9 @@ class KatherPatchDataset(DatasetInfoABC):
         ]
 
         if save_dir_path is None:  # pragma: no cover
-            save_dir_path = Path(rcParam["TIATOOLBOX_HOME"], "dataset")
-            if not os.path.exists(os.path.join(save_dir_path, "kather100k-validation")):
-                save_zip_path = os.path.join(save_dir_path, "Kather.zip")
+            save_dir_path = rcParam["TIATOOLBOX_HOME"] / "dataset"
+            if not Path.exists(save_dir_path / "kather100k-validation"):
+                save_zip_path = save_dir_path / "Kather.zip"
                 url = (
                     "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
                     "/kather100k-train-nonorm-subset-20k.zip"
@@ -97,7 +101,8 @@ class KatherPatchDataset(DatasetInfoABC):
         # bring outside to prevent case where download fail
         save_dir_path = Path(save_dir_path)
         if not save_dir_path.exists():
-            raise ValueError(f"Dataset does not exist at `{save_dir_path}`")
+            msg = f"Dataset does not exist at `{save_dir_path}`"
+            raise ValueError(msg)
 
         # What will happen if downloaded data get corrupted?
         uid_name_map = {}

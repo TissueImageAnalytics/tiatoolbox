@@ -1,20 +1,20 @@
-"""Defines MicroNet architecture.
+"""Define MicroNet architecture.
 
 Raza, SEA et al., “Micro-Net: A unified model for segmentation of
 various objects in microscopy images,” Medical Image Analysis,
-Dec. 2018, vol. 52, p. 160–173.
+Dec. 2018, vol. 52, p. 160-173.
 
 """
+from __future__ import annotations
 
 from collections import OrderedDict
-from typing import List, Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as functional
 from scipy import ndimage
 from skimage import morphology
+from torch import nn
+from torch.nn import functional
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.models_abc import ModelABC
@@ -26,7 +26,7 @@ def group1_forward_branch(
     in_tensor: torch.Tensor,
     resized_feat: torch.Tensor,
 ) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -50,7 +50,7 @@ def group1_forward_branch(
 
 
 def group2_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -72,7 +72,7 @@ def group3_forward_branch(
     main_feat: torch.Tensor,
     skip: torch.Tensor,
 ) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -97,7 +97,7 @@ def group3_forward_branch(
 
 
 def group4_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -297,8 +297,8 @@ def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
 def group4_arch_branch(
     in_ch: int,
     out_ch: int,
-    up_kernel: Tuple[int, int] = (2, 2),
-    up_strides: Tuple[int, int] = (2, 2),
+    up_kernel: tuple[int, int] = (2, 2),
+    up_strides: tuple[int, int] = (2, 2),
     activation: str = "tanh",
 ) -> nn.ModuleDict:
     """Group4 branch for MicroNet.
@@ -325,10 +325,7 @@ def group4_arch_branch(
             An output of type :class:`torch.nn.ModuleDict`
 
     """
-    if activation == "relu":
-        activation = nn.ReLU()
-    else:
-        activation = nn.Tanh()
+    activation = nn.ReLU() if activation == "relu" else nn.Tanh()
 
     module_dict = OrderedDict()
     module_dict["up1"] = nn.ConvTranspose2d(
@@ -373,10 +370,8 @@ def out_arch_branch(
             An output of type :class:`torch.nn.Sequential`
 
     """
-    if activation == "relu":
-        activation = nn.ReLU()
-    else:
-        activation = nn.Softmax()
+    activation = nn.ReLU() if activation == "relu" else nn.Softmax()
+
     return nn.Sequential(
         nn.Dropout2d(p=0.5),
         nn.Conv2d(
@@ -448,10 +443,12 @@ class MicroNet(ModelABC):
         num_input_channels=3,
         num_output_channels=2,
         out_activation="softmax",
-    ):
+    ) -> None:
+        """Initialize :class:`MicroNet`."""
         super().__init__()
         if num_output_channels < 2:
-            raise ValueError("Number of classes should be >=2.")
+            msg = "Number of classes should be >=2."
+            raise ValueError(msg)
         self.__num_output_channels = num_output_channels
         self.in_ch = num_input_channels
 
@@ -628,7 +625,7 @@ class MicroNet(ModelABC):
         model: torch.nn.Module,
         batch_data: np.ndarray,
         on_gpu: bool,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O

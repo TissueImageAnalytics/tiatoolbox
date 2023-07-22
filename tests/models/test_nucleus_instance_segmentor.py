@@ -1,11 +1,11 @@
-"""Tests for Nucleus Instance Segmentor."""
+"""Test for Nucleus Instance Segmentor."""
 
 import copy
 
 # ! The garbage collector
 import gc
-import pathlib
 import shutil
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -42,7 +42,8 @@ def _rm_dir(path):
 
 def _crash_func(x):
     """Helper to induce crash."""
-    raise ValueError("Propataion Crash.")
+    msg = "Propataion Crash."
+    raise ValueError(msg)
 
 
 def helper_tile_info():
@@ -235,8 +236,8 @@ def test_cross_section_boundary_boxes():
 
 def test_crash_segmentor(remote_sample, tmp_path):
     """Test engine crash when given malformed input."""
-    root_save_dir = pathlib.Path(tmp_path)
-    sample_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    root_save_dir = Path(tmp_path)
+    sample_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
     imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
@@ -281,11 +282,11 @@ def test_crash_segmentor(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_travis(remote_sample, tmp_path):
+def test_functionality_ci(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     gc.collect()
-    root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    root_save_dir = Path(tmp_path)
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 2.0
 
@@ -332,11 +333,11 @@ def test_functionality_travis(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
+def test_functionality_merge_tile_predictions_ci(remote_sample, tmp_path):
     """Functional tests for merging tile predictions."""
     gc.collect()  # Force clean up everything on hold
-    save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    save_dir = Path(f"{tmp_path}/output")
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 0.5
     ioconfig = IOInstanceSegmentorConfig(
@@ -437,9 +438,9 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
 )
 def test_functionality_local(remote_sample, tmp_path):
     """Local functionality test for nuclei instance segmentor."""
-    root_save_dir = pathlib.Path(tmp_path)
-    save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    root_save_dir = Path(tmp_path)
+    save_dir = Path(f"{tmp_path}/output")
+    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
 
     # * generate full output w/o parallel post processing worker first
     _rm_dir(save_dir)
@@ -509,8 +510,8 @@ def test_functionality_local(remote_sample, tmp_path):
 
 
 def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
-    """Test for nucleus segmentation with IOconfig."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    """Test for nucleus segmentation with IOConfig."""
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
 
     resolution = 2.0
@@ -538,7 +539,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
         "save_resolution": {"units": "mpp", "resolution": 8.0},
     }
 
-    with open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+    with Path.open(tmp_path / "config.yaml", "w") as fptr:
         yaml.dump(config, fptr)
 
     runner = CliRunner()
@@ -559,7 +560,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
             "--output-path",
             str(output_path),
             "--yaml-config-path",
-            tmp_path.joinpath("config.yaml"),
+            str(tmp_path.joinpath("config.yaml")),
         ],
     )
 
@@ -572,7 +573,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
 
 def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     """Test for nucleus segmentation."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
 
     runner = CliRunner()
