@@ -251,7 +251,6 @@ def has_network(
 
 
 def pixman_versions() -> list[tuple[int, ...]]:
-=======
     """The version(s) of pixman that are installed.
 
     Some package managers (brew) may report multiple versions of pixman
