@@ -1,5 +1,5 @@
 """Command line interface for stain_norm."""
-import os
+from pathlib import Path
 
 import click
 
@@ -12,6 +12,11 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
+input_type = click.Choice(
+    ["reinhard", "custom", "ruifrok", "macenko", "vahadane"],
+    case_sensitive=False,
+)
+
 
 @tiatoolbox_cli.command()
 @cli_img_input(
@@ -22,10 +27,7 @@ from tiatoolbox.cli.common import (
 @cli_method(
     usage_help="Stain normalization method to use.",
     default="reinhard",
-    input_type=click.Choice(
-        ["reinhard", "custom", "ruifrok", "macenko", "vahadane"],
-        case_sensitive=False,
-    ),
+    input_type=input_type,
 )
 # inputs specific to this function
 @click.option("--target-input", help="Input path to the target image")
@@ -56,7 +58,7 @@ def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_
     norm.fit(imread(target_input))
 
     for curr_file in files_all:
-        basename = os.path.basename(curr_file)
+        basename = Path(curr_file).name
         # transform source image
         transform = norm.transform(imread(curr_file))
-        imwrite(os.path.join(output_path, basename), transform)
+        imwrite(output_path / basename, transform)
