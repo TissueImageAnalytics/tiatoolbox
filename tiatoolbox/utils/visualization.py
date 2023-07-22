@@ -705,7 +705,8 @@ class AnnotationRenderer:
                 polygons.append(rings)
             return np.concatenate(polygons)
 
-        raise ValueError(f"Unknown geometry type: {geom_type}")
+        msg = f"Unknown geometry type: {geom_type}"
+        raise ValueError(msg)
 
     @staticmethod
     def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):
