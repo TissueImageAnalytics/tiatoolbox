@@ -10,7 +10,7 @@ import pathlib
 import re
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import openslide
@@ -30,6 +30,9 @@ from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.metadata.ngff import Multiscales
 from tiatoolbox.wsicore.wsimeta import WSIMeta
+
+if TYPE_CHECKING:
+    import glymur
 
 pixman_warning()
 
@@ -2088,7 +2091,7 @@ class OmnyxJP2WSIReader(WSIReader):
         import glymur
 
         glymur.set_option("lib.num_threads", os.cpu_count() or 1)
-        self.glymur_wsi = glymur.Jp2k(filename=str(self.input_path))
+        self.glymur_jp2 = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(
         self,
@@ -2309,7 +2312,7 @@ class OmnyxJP2WSIReader(WSIReader):
         )
 
         stride = 2**read_level
-        glymur_wsi = self.glymur_wsi
+        glymur_wsi = self.glymur_jp2
         bounds = utils.transforms.locsize2bounds(
             location=location, size=baseline_read_size
         )
@@ -2469,7 +2472,7 @@ class OmnyxJP2WSIReader(WSIReader):
             ) = self._find_read_bounds_params(
                 bounds_at_baseline, resolution=resolution, units=units
             )
-        glymur_wsi = self.glymur_wsi
+        glymur_wsi = self.glymur_jp2
 
         stride = 2**read_level
 
@@ -2498,6 +2501,67 @@ class OmnyxJP2WSIReader(WSIReader):
 
         return utils.transforms.background_composite(image=im_region)
 
+    @staticmethod
+    def _get_jp2_boxes(
+        jp2: "glymur.jp2.Jp2k",
+    ) -> dict[str, "glymur.jp2box.Jp2kBox"]:
+        """Get JP2 boxes.
+
+        Args:
+            jp2 (glymur.jp2.Jp2k):
+                Glymur JP2 image object.
+
+        Raises:
+            ValueError:
+                If the JP2 image header is missing.
+
+        Returns:
+            dict[str, glymur.jp2box.Jp2kBox]:
+                Dictionary of JP2 boxes. Should contain the keys
+                "xml" and "cres" for Omnyx JP2 images. For other JP2
+                images this may contain only the "cres" key or none
+                at all.
+
+        """
+
+        def find_box(
+            box: Optional["glymur.jp2box.Jp2kBox"],
+            box_id: str,
+        ) -> Optional["glymur.jp2box.Jp2kBox"]:
+            """Find a box by its ID.
+
+            Args:
+                box (glymur.jp2box.Jp2kBox):
+                    A box to search within. If None, returns None.
+                box_id (str):
+                    Box ID to search for.
+
+            Returns:
+                Optional[glymur.jp2box.Jp2kBox]:
+                    JP2 box with the given ID. If no box is found, returns
+
+            """
+            if not box or not box.box:
+                return None
+            for sub_box in box.box:
+                if sub_box.box_id == box_id:
+                    return sub_box
+            return None
+
+        header_box = find_box(jp2, "jp2h")
+        image_header = find_box(header_box, "ihdr")
+        resolution_box = find_box(header_box, "res ")
+        capture_resolution_box = find_box(resolution_box, "resc")
+        xml_box = find_box(jp2, "xml ")
+        if image_header is None:
+            raise ValueError("Metadata: JP2 image header missing!")
+        result = {}
+        if xml_box is not None:
+            result["xml"] = xml_box
+        if capture_resolution_box is not None:
+            result["cres"] = capture_resolution_box
+        return result
+
     def _info(self):
         """JP2 metadata reader.
 
@@ -2508,20 +2572,40 @@ class OmnyxJP2WSIReader(WSIReader):
         """
         import glymur
 
-        glymur_wsi = self.glymur_wsi
-        box = glymur_wsi.box
-        description = box[3].xml.find("description")
-        matches = re.search(r"(?<=AppMag = )\d\d", description.text)
-        objective_power = np.int_(matches[0])
-        image_header = box[2].box[0]
+        jp2 = self.glymur_jp2
+        boxes = self._get_jp2_boxes(jp2)
+        objective_power = None
+        vendor = None
+        mpp = None
+        # Check capture resolution box
+        if boxes.get("cres"):
+            # Get the resolution in pixels per meter
+            ppm_x = boxes.get("cres").horizontal_resolution
+            ppm_y = boxes.get("cres").vertical_resolution
+            mpp_x = utils.misc.ppu2mpp(ppm_x, "meter")
+            mpp_y = utils.misc.ppu2mpp(ppm_y, "meter")
+            mpp = [mpp_x, mpp_y]
+        # Check for Omnyx XML (overwrites capture resolution)
+        if boxes.get("xml"):
+            description = boxes.get("xml").xml.find("description")
+            if description and "Omnyx" in description.text:
+                matches = re.search(r"(?<=AppMag = )\d\d", description.text)
+                objective_power = np.int_(matches[0])
+                vendor = "Omnyx JP2"
+                matches = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
+                mpp_x = float(matches[0])
+                mpp_y = float(matches[0])
+                mpp = [mpp_x, mpp_y]
+
+        # Get image dimensions
+        image_header = boxes[2].box[0]
         slide_dimensions = (image_header.width, image_header.height)
 
         # Determine level_count
         cod = None
-        for segment in glymur_wsi.codestream.segment:
+        for segment in jp2.codestream.segment:
             if isinstance(segment, glymur.codestream.CODsegment):
                 cod = segment
-
         if cod is None:
             logger.warning(
                 "Metadata: JP2 codestream missing COD segment! "
@@ -2532,17 +2616,10 @@ class OmnyxJP2WSIReader(WSIReader):
             level_count = cod.num_res
 
         level_downsamples = [2**n for n in range(level_count)]
-
         level_dimensions = [
             (int(slide_dimensions[0] / 2**n), int(slide_dimensions[1] / 2**n))
             for n in range(level_count)
         ]
-
-        vendor = "Omnyx JP2"
-        matches = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
-        mpp_x = float(matches[0])
-        mpp_y = float(matches[0])
-        mpp = [mpp_x, mpp_y]
 
         return WSIMeta(
             file_path=self.input_path,
@@ -2554,7 +2631,7 @@ class OmnyxJP2WSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            raw=self.glymur_wsi.box,
+            raw=self.glymur_jp2.box,
         )
 
 

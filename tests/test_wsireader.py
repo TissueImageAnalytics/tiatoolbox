@@ -1432,7 +1432,7 @@ def test_wsireader_open(
 def test_jp2_missing_cod(sample_jp2, caplog):
     """Test for warning if JP2 is missing COD segment."""
     wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
-    wsi.glymur_wsi.codestream.segment = []
+    wsi.glymur_jp2.codestream.segment = []
     _ = wsi.info
     assert "missing COD" in caplog.text
 
