@@ -1,15 +1,24 @@
-"""Tests for visualization."""
+"""Test for visualization."""
 
 import copy
 import pathlib
 
 import joblib
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from shapely.geometry import (
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 
 from tiatoolbox.utils.visualization import (
+    AnnotationRenderer,
     overlay_prediction_contours,
     overlay_prediction_mask,
     overlay_probability_map,
@@ -53,17 +62,17 @@ def test_overlay_prediction_mask(sample_wsi_dict):
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail[1] = (1, (255, 255, 255))
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+    with pytest.raises(TypeError, match=r".*Wrong `label_info` format.*"):
         _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail["ABC"] = ("ABC", (255, 255, 255))
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+    with pytest.raises(TypeError, match=r".*Wrong `label_info` format.*"):
         _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail[1] = ("ABC", "ABC")
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+    with pytest.raises(TypeError, match=r".*Wrong `label_info` format.*"):
         _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
@@ -97,9 +106,9 @@ def test_overlay_probability_map(sample_wsi_dict):
     output = overlay_probability_map(thumb, thumb_float, return_ax=False)
     assert isinstance(output, np.ndarray)
     output = overlay_probability_map(thumb, thumb_float, return_ax=True)
-    assert isinstance(output, matplotlib.axes.Axes)
+    assert isinstance(output, mpl.axes.Axes)
     output = overlay_probability_map(thumb, thumb_float, ax=output)
-    assert isinstance(output, matplotlib.axes.Axes)
+    assert isinstance(output, mpl.axes.Axes)
 
     # * Test crash mode
     with pytest.raises(ValueError, match=r".*min_val.*0, 1*"):
@@ -151,15 +160,23 @@ def test_overlay_instance_prediction():
             "contour": [[3, 3], [3, 4], [4, 4], [4, 3]],
         },
     }
-    canvas = np.zeros(inst_map.shape + (3,), dtype=np.uint8)
+    canvas = np.zeros((*inst_map.shape, 3), dtype=np.uint8)
     canvas = overlay_prediction_contours(
-        canvas, inst_dict, draw_dot=False, type_colours=type_colours, line_thickness=1
+        canvas,
+        inst_dict,
+        draw_dot=False,
+        type_colours=type_colours,
+        line_thickness=1,
     )
     assert np.sum(canvas[..., 0].astype(np.int32) - inst_map) == 0
     assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == -12
     assert np.sum(canvas[..., 2].astype(np.int32) - inst_map) == 0
     canvas = overlay_prediction_contours(
-        canvas, inst_dict, draw_dot=True, type_colours=None, line_thickness=1
+        canvas,
+        inst_dict,
+        draw_dot=True,
+        type_colours=None,
+        line_thickness=1,
     )
 
     # test run with randomized colours
@@ -169,10 +186,12 @@ def test_overlay_instance_prediction():
     # test run with custom colour for each instance
     inst_colours = [[0, 155, 155] for v in range(len(inst_dict))]
     canvas = overlay_prediction_contours(
-        canvas, inst_dict, inst_colours=np.array(inst_colours)
+        canvas,
+        inst_dict,
+        inst_colours=np.array(inst_colours),
     )
     # test crash
-    with pytest.raises(ValueError, match=r"`.*inst_colours`.*tuple.*"):
+    with pytest.raises(TypeError, match=r"`.*inst_colours`.*tuple.*"):
         overlay_prediction_contours(canvas, inst_dict, inst_colours=inst_colours)
 
 
@@ -189,3 +208,67 @@ def test_plot_graph():
         edges,
     )
     plot_graph(canvas, nodes, edges, node_colors=node_colors, edge_colors=edge_colors)
+
+
+def test_decode_wkb():
+    """Test decoding of WKB geometries."""
+    renderer = AnnotationRenderer()
+
+    # Create some Shapely geometries of supported types
+    point = Point(0, 0)
+    line = LineString([(0, 0), (1, 1), (2, 0)])
+    polygon = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
+
+    # Convert the geometries to WKB format
+    point_wkb = point.wkb
+    line_wkb = line.wkb
+    polygon_wkb = polygon.wkb
+
+    # Decode the WKB geometries
+    point_contours = renderer.decode_wkb(point_wkb, 1).reshape(-1, 2)
+    line_contours = renderer.decode_wkb(line_wkb, 2).reshape(-1, 2)
+    polygon_contours = renderer.decode_wkb(polygon_wkb, 3).reshape(-1, 2)
+
+    # Check that the decoded contours are as expected
+    assert np.all(point_contours == np.array([[0, 0]]))
+    assert np.all(line_contours == np.array([[0, 0], [1, 1], [2, 0]]))
+    assert np.all(
+        polygon_contours == np.array([[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]),
+    )
+
+    # do the same for multi-point, multi-line and multi-polygon
+    multipoint = MultiPoint([(0, 0), (1, 1), (2, 0)])
+    multiline = MultiLineString([((0, 0), (1, 1), (2, 0)), ((0, 0), (1, 1), (2, 0))])
+    multipolygon = MultiPolygon(
+        [
+            Polygon([(0, 0), (0, 1), (1, 1), (1, 0)]),
+            Polygon([(0, 0), (0, 1), (1, 1), (1, 0)]),
+        ],
+    )
+
+    multipoint_wkb = multipoint.wkb
+    multiline_wkb = multiline.wkb
+    multipolygon_wkb = multipolygon.wkb
+
+    multipoint_contours = renderer.decode_wkb(multipoint_wkb, 4).reshape(3, -1, 2)
+    multiline_contours = renderer.decode_wkb(multiline_wkb, 5).reshape(2, -1, 2)
+    multipolygon_contours = renderer.decode_wkb(multipolygon_wkb, 6).reshape(2, -1, 2)
+
+    assert np.all(multipoint_contours == np.array([[[0, 0]], [[1, 1]], [[2, 0]]]))
+    assert np.all(
+        multiline_contours
+        == np.array([[[0, 0], [1, 1], [2, 0]], [[0, 0], [1, 1], [2, 0]]]),
+    )
+    assert np.all(
+        multipolygon_contours
+        == np.array(
+            [
+                [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]],
+                [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]],
+            ],
+        ),
+    )
+
+    # test unknown geometry type
+    with pytest.raises(ValueError, match=r"Unknown geometry type"):
+        renderer.decode_wkb(multipolygon_wkb, 7)

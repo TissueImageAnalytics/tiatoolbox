@@ -1,11 +1,11 @@
-"""Tests for utils."""
+"""Test for utils."""
+from __future__ import annotations
 
 import hashlib
 import os
 import random
 import shutil
 from pathlib import Path
-from typing import Tuple
 
 import cv2
 import joblib
@@ -20,7 +20,7 @@ from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
 
 
@@ -30,7 +30,10 @@ def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
     output = utils.image.sub_pixel_read(
-        pillow_test_image, bounds, (ow, oh), stride=[1, 1]
+        pillow_test_image,
+        bounds,
+        (ow, oh),
+        stride=[1, 1],
     )
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
@@ -158,7 +161,8 @@ def test_mpp2common_objective_power(sample_svs):
     for mpp, result in mapping:
         assert utils.misc.mpp2common_objective_power(mpp) == result
         assert np.array_equal(
-            utils.misc.mpp2common_objective_power([mpp] * 2), [result] * 2
+            utils.misc.mpp2common_objective_power([mpp] * 2),
+            [result] * 2,
         )
 
 
@@ -185,7 +189,8 @@ def test_assert_dtype_int():
     utils.misc.assert_dtype_int(input_var=np.array([1, 2]))
     with pytest.raises(AssertionError):
         utils.misc.assert_dtype_int(
-            input_var=np.array([1.0, 2]), message="Bounds must be integers."
+            input_var=np.array([1.0, 2]),
+            message="Bounds must be integers.",
         )
 
 
@@ -194,7 +199,7 @@ def test_safe_padded_read_non_int_bounds():
     data = np.zeros((16, 16))
 
     bounds = (1.5, 1, 5, 5)
-    with pytest.raises(ValueError, match="integer"):
+    with pytest.raises(TypeError, match="integer"):
         utils.image.safe_padded_read(data, bounds)
 
 
@@ -429,7 +434,10 @@ def test_non_aligned_padded_sub_pixel_read(source_image):
         ow = 4
         oh = 4
         output = utils.image.sub_pixel_read(
-            test_image, bounds, (ow, oh), padding=padding
+            test_image,
+            bounds,
+            (ow, oh),
+            padding=padding,
         )
 
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
@@ -450,10 +458,14 @@ def test_non_baseline_padded_sub_pixel_read(source_image):
         ow = 8
         oh = 8
         output = utils.image.sub_pixel_read(
-            test_image, bounds, (ow, oh), padding=padding, pad_at_baseline=True
+            test_image,
+            bounds,
+            (ow, oh),
+            padding=padding,
+            pad_at_baseline=True,
         )
         assert (ow + 2 * 2 * padding, oh + 2 * 2 * padding) == tuple(
-            output.shape[:2][::-1]
+            output.shape[:2][::-1],
         )
 
 
@@ -497,7 +509,11 @@ def test_sub_pixel_read_pad_at_baseline():
     bounds = (0, 0, 8, 8)
     for padding in range(3):
         region = utils.image.sub_pixel_read(
-            data, bounds, output_size=out_size, padding=padding, pad_at_baseline=True
+            data,
+            bounds,
+            output_size=out_size,
+            padding=padding,
+            pad_at_baseline=True,
         )
         assert region.shape == (16 + 4 * padding, 16 + 4 * padding)
 
@@ -536,7 +552,11 @@ def test_sub_pixel_read_padding_formats():
     bounds = (0, 0, 8, 8)
     for padding in [1, [1], (1,), [1, 1], (1, 1), [1] * 4]:
         region = utils.image.sub_pixel_read(
-            data, bounds, out_size, padding=padding, pad_at_baseline=True
+            data,
+            bounds,
+            out_size,
+            padding=padding,
+            pad_at_baseline=True,
         )
         assert region.shape == (16 + 4, 16 + 4)
         region = utils.image.sub_pixel_read(data, bounds, out_size, padding=padding)
@@ -697,11 +717,10 @@ def test_fuzz_bounds2locsize_lower():
     for _ in range(1000):
         loc = (np.random.rand(2) - 0.5) * 1000
         size = (np.random.rand(2) - 0.5) * 1000
-        bounds = np.tile(loc, 2) + [
-            0,
-            *size[::-1],
-            0,
-        ]  # L T R B
+
+        fuzz_bounds = [0, *size[::-1], 0]  # L T R B
+
+        bounds = np.tile(loc, 2) + fuzz_bounds  # L T R B
 
         _, s = utils.transforms.bounds2locsize(bounds, origin="lower")
 
@@ -715,7 +734,7 @@ def test_fuzz_roundtrip_bounds2size():
         loc = (np.random.rand(2) - 0.5) * 1000
         size = (np.random.rand(2) - 0.5) * 1000
         assert utils.transforms.bounds2locsize(
-            utils.transforms.locsize2bounds(loc, size)
+            utils.transforms.locsize2bounds(loc, size),
         )
 
 
@@ -787,7 +806,7 @@ def test_contrast_enhancer():
 
 def test_load_stain_matrix(tmp_path):
     """Test to load stain matrix."""
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
 
     with pytest.raises(TypeError):
@@ -887,7 +906,7 @@ def test_read_point_annotations(
 
     # Test if input npy does not have 2 or 3 columns
     labels = tmp_path.joinpath("test_gt_3col.npy")
-    with open(labels, "wb") as f:
+    with Path.open(labels, "wb") as f:
         np.save(f, np.zeros((3, 4)))
 
     with pytest.raises(ValueError, match="Numpy table should be of format"):
@@ -898,7 +917,7 @@ def test_read_point_annotations(
         _ = utils.misc.read_locations(labels_table.drop(["y", "class"], axis=1))
 
     labels = Path("./samplepatch_extraction.test")
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         _ = utils.misc.read_locations(labels)
 
     with pytest.raises(TypeError):
@@ -913,12 +932,14 @@ def test_grab_files_from_dir(sample_visual_fields):
     file_types = "*.tif, *.png, *.jpg"
 
     out = utils.misc.grab_files_from_dir(
-        input_path=sample_visual_fields, file_types=file_types
+        input_path=sample_visual_fields,
+        file_types=file_types,
     )
     assert len(out) == 5
 
     out = utils.misc.grab_files_from_dir(
-        input_path=input_path.parent, file_types="test_utils*"
+        input_path=input_path.parent,
+        file_types="test_utils*",
     )
 
     assert len(out) == 1
@@ -931,22 +952,23 @@ def test_grab_files_from_dir(sample_visual_fields):
 def test_download_unzip_data():
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
-    if os.path.exists(save_dir_path):
+    save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
+    if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    os.makedirs(save_dir_path)
-
+    save_dir_path.mkdir(parents=True)
     save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
     save_zip_path2 = misc.download_data(
-        url, save_dir=save_dir_path, overwrite=True
+        url,
+        save_dir=save_dir_path,
+        overwrite=True,
     )  # do overwrite
     assert save_zip_path1 == save_zip_path2
 
     misc.unzip_data(save_zip_path1, save_dir_path, del_zip=False)  # not remove
-    assert os.path.exists(save_zip_path1)
+    assert save_zip_path1.exists()
     misc.unzip_data(save_zip_path1, save_dir_path)
 
-    extracted_path = os.path.join(save_dir_path, "test_directory")
+    extracted_path = save_dir_path / "test_directory"
     # to avoid hidden files in case of MAC-OS or Windows (?)
     extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith(".")]
     extracted_dirs.sort()  # ensure same ordering
@@ -958,48 +980,49 @@ def test_download_unzip_data():
 def test_download_data():
     """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = os.path.join(rcParam["TIATOOLBOX_HOME"], "tmp/")
-    if os.path.exists(save_dir_path):
+    save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
+    if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    save_zip_path = os.path.join(save_dir_path, "test_directory.zip")
+    save_zip_path = save_dir_path / "test_directory.zip"
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         old_hash = hashlib.md5(handle.read()).hexdigest()
     # modify the content
-    with open(save_zip_path, "wb") as fptr:
+    with Path.open(save_zip_path, "wb") as fptr:
         fptr.write(b"dataXXX")  # random data
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         bad_hash = hashlib.md5(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         new_hash = hashlib.md5(handle.read()).hexdigest()
     assert new_hash == old_hash
 
     # Test not overwriting
     # Modify the content
-    with open(save_zip_path, "wb") as handle:
+    with Path.open(save_zip_path, "wb") as handle:
         handle.write(b"dataXXX")  # random data
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         bad_hash = hashlib.md5(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
-    with open(save_zip_path, "rb") as handle:
+    with Path.open(save_zip_path, "rb") as handle:
         new_hash = hashlib.md5(handle.read()).hexdigest()
     assert new_hash == bad_hash
 
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
     misc.download_data(url, save_zip_path)  # to test skip download
-    assert os.path.exists(save_zip_path)
+    assert Path.exists(save_zip_path)
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # URL not valid
     # shouldn't use save_path if test runs correctly
-    save_path = os.path.join(save_dir_path, "temp")
+    save_path = save_dir_path / "temp"
     with pytest.raises(HTTPError):
         misc.download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url", save_path
+            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url",
+            save_path,
         )
 
     # Both save_dir and save_path are specified
@@ -1062,11 +1085,15 @@ def test_crop_and_pad_edges():
     """Test crop and pad util function."""
     slide_dimensions = (1024, 1024)
 
-    def edge_mask(bounds: Tuple[int, int, int, int]) -> np.ndarray:
-        """Produce a mask of regions outside of the slide dimensions."""
-        l, t, r, b = bounds
+    def edge_mask(bounds: tuple[int, int, int, int]) -> np.ndarray:
+        """Produce a mask of regions outside the slide dimensions."""
+        left, top, right, bottom = bounds
         slide_width, slide_height = slide_dimensions
-        x, y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
+        x, y = np.meshgrid(
+            np.arange(left, right),
+            np.arange(top, bottom),
+            indexing="ij",
+        )
         under = np.logical_or(x < 0, y < 0).astype(np.int_)
         over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int_)
         return under, over
@@ -1148,7 +1175,7 @@ def test_fuzz_crop_and_pad_edges_output_size_no_padding():
         slide_dimensions = np.array([random.randint(5, 50) for _ in range(2)])
 
         loc = np.array(
-            [random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2)]
+            [random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2)],
         )
         size = np.array([10, 10])
         expected = np.maximum(
@@ -1226,8 +1253,8 @@ def test_select_device():
 
 def test_model_to():
     """Test for placing model on device."""
-    import torch.nn as nn
     import torchvision.models as torch_models
+    from torch import nn
 
     # Test on GPU
     # no GPU on Travis so this will crash
@@ -1252,7 +1279,7 @@ def test_save_as_json(tmp_path):
         "a1": {"name": "John", "age": 23, "sex": "male"},
         "a2": {"name": "John", "age": 23, "sex": "male"},
     }
-    sample = {  # noqa: ECE001
+    sample = {
         "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
         "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
         "c": {
@@ -1267,50 +1294,60 @@ def test_save_as_json(tmp_path):
     not_jsonable = {"x86": lambda x: x}
     not_jsonable.update(sample)
     # should fail because key is not of primitive type [str, int, float, bool]
-    with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
+    with pytest.raises(TypeError, match=r".*Key.*.*not jsonified.*"):
         misc.save_as_json(
-            {frozenset(key_dict): sample}, tmp_path / "sample_json.json", exist_ok=True
+            {frozenset(key_dict): sample},
+            tmp_path / "sample_json.json",
+            exist_ok=True,
         )
-    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+    with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
-    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+    with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(
-            list(not_jsonable.values()), tmp_path / "sample_json.json", exist_ok=True
+            list(not_jsonable.values()),
+            tmp_path / "sample_json.json",
+            exist_ok=True,
         )
-    with pytest.raises(ValueError, match=r"Type.*`data`.*.*must.*dict, list.*"):
+    with pytest.raises(TypeError, match=r"Type.*`data`.*.*must.*dict, list.*"):
         misc.save_as_json(
-            np.random.rand(2, 2), tmp_path / "sample_json.json", exist_ok=True
+            np.random.rand(2, 2),
+            tmp_path / "sample_json.json",
+            exist_ok=True,
         )
     # test complex nested dict
     print(sample)
     misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
-    with open(tmp_path / "sample_json.json", "r") as fptr:
+    with Path.open(tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
 
     # Allow parent directories
     misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
-    with open(tmp_path / "foo" / "sample_json.json", "r") as fptr:
+    with Path.open(tmp_path / "foo" / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+    assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
 
     # test complex list of data
     misc.save_as_json(
-        list(sample.values()), tmp_path / "sample_json.json", exist_ok=True
+        list(sample.values()),
+        tmp_path / "sample_json.json",
+        exist_ok=True,
     )
     # test read because == is useless when value is mutable
-    with open(tmp_path / "sample_json.json", "r") as fptr:
+    with Path.open(tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
-    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6  # noqa: ECE001
+    assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
 
     # test numpy generic
     misc.save_as_json(
-        [np.int32(1), np.float32(2)], tmp_path / "sample_json.json", exist_ok=True
+        [np.int32(1), np.float32(2)],
+        tmp_path / "sample_json.json",
+        exist_ok=True,
     )
     misc.save_as_json(
         {"a": np.int32(1), "b": np.float32(2)},
@@ -1354,6 +1391,7 @@ def test_save_yaml_parents(tmp_path):
 
 
 def test_imread_none_args():
+    """Test imread with wrong input type."""
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.imread(img)
@@ -1372,7 +1410,7 @@ def test_detect_pixman():
         assert isinstance(using, str)
         assert isinstance(versions, list)
         assert len(versions) > 0
-    except EnvironmentError:
+    except OSError:
         pass
 
 
@@ -1412,7 +1450,8 @@ def test_from_dat_type_dict(tmp_path):
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat", typedict={0: "cell0", 1: "cell1"}
+        tmp_path / "test.dat",
+        typedict={0: "cell0", 1: "cell1"},
     )
     result = store.query(where="props['type'] == 'cell1'")
     assert len(result) == 1
@@ -1423,7 +1462,9 @@ def test_from_dat_transformed(tmp_path):
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat", scale_factor=2, origin=(50, 50)
+        tmp_path / "test.dat",
+        scale_factor=2,
+        origin=(50, 50),
     )
     result = store.query(where="props['type'] == 1")
     # check centroid is at 150,150
@@ -1490,14 +1531,13 @@ def test_from_multi_head_dat_type_dict(tmp_path):
 
 def test_fetch_pretrained_weights(tmp_path):
     """Test fetching pretrained weights for a model."""
-
-    file_path = os.path.join(tmp_path, "test_fetch_pretrained_weights.pth")
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    file_path = tmp_path / "test_fetch_pretrained_weights.pth"
+    if file_path.exists():
+        file_path.unlink()
 
     fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path)
-    assert os.path.exists(file_path)
-    assert os.path.getsize(file_path) > 0
+    assert file_path.exists()
+    assert file_path.stat().st_size > 0
 
     with pytest.raises(ValueError, match="does not exist"):
         fetch_pretrained_weights("abc", file_path)

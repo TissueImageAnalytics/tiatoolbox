@@ -79,10 +79,12 @@ class CustomExtractor:
 
     """
 
-    def __init__(self, stain_matrix):
+    def __init__(self, stain_matrix) -> None:
+        """Initialize :class:`CustomExtractor`."""
         self.stain_matrix = stain_matrix
         if self.stain_matrix.shape not in [(2, 3), (3, 3)]:
-            raise ValueError("Stain matrix must have shape (2, 3) or (3, 3).")
+            msg = "Stain matrix must have shape (2, 3) or (3, 3)."
+            raise ValueError(msg)
 
     def get_stain_matrix(self, _):
         """Get the user defined stain matrix.
@@ -116,7 +118,8 @@ class RuifrokExtractor:
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize :class:`RuifrokExtractor`."""
         self.__stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
 
     def get_stain_matrix(self, _):
@@ -158,7 +161,8 @@ class MacenkoExtractor:
 
     """
 
-    def __init__(self, luminosity_threshold=0.8, angular_percentile=99):
+    def __init__(self, luminosity_threshold=0.8, angular_percentile=99) -> None:
+        """Initialize :class:`MacenkoExtractor`."""
         self.__luminosity_threshold = luminosity_threshold
         self.__angular_percentile = angular_percentile
 
@@ -180,7 +184,8 @@ class MacenkoExtractor:
 
         # convert to OD and ignore background
         tissue_mask = get_luminosity_tissue_mask(
-            img, threshold=luminosity_threshold
+            img,
+            threshold=luminosity_threshold,
         ).reshape((-1,))
         img_od = rgb2od(img).reshape((-1, 3))
         img_od = img_od[tissue_mask]
@@ -241,7 +246,8 @@ class VahadaneExtractor:
 
     """
 
-    def __init__(self, luminosity_threshold=0.8, regularizer=0.1):
+    def __init__(self, luminosity_threshold=0.8, regularizer=0.1) -> None:
+        """Initialize :class:`VahadaneExtractor`."""
         self.__luminosity_threshold = luminosity_threshold
         self.__regularizer = regularizer
 
@@ -262,7 +268,8 @@ class VahadaneExtractor:
         regularizer = self.__regularizer
         # convert to OD and ignore background
         tissue_mask = get_luminosity_tissue_mask(
-            img, threshold=luminosity_threshold
+            img,
+            threshold=luminosity_threshold,
         ).reshape((-1,))
         img_od = rgb2od(img).reshape((-1, 3))
         img_od = img_od[tissue_mask]

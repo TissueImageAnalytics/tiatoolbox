@@ -1,4 +1,7 @@
-"""Tests for graph construction tools."""
+"""Test for graph construction tools."""
+from __future__ import annotations
+
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -48,7 +51,7 @@ def test_delaunay_adjacency_nothing_connected():
             [1, 1],
             [1, 3],
             [1, 6],
-        ]
+        ],
     )
     adjacency_matrix = delaunay_adjacency(points=points, dthresh=0.5)
     assert np.sum(adjacency_matrix) == 0
@@ -63,7 +66,7 @@ def test_delaunay_adjacency_connected():
             [1, 1],
             [1, 3],
             [1, 6],
-        ]
+        ],
     )
     adjacency_matrix = delaunay_adjacency(points=points, dthresh=1.5)
     # Expect 1 connection, symmetrical so dividing by 2
@@ -87,7 +90,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
         if np.random.rand() > 0.5:
             affinity_matrix = torch.tensor(affinity_matrix)
         edge_index = affinity_to_edge_index(affinity_matrix, threshold=threshold)
-        # noqa Check the output has shape (2, M)
+        # Check the output has shape (2, M)
         assert len(edge_index.shape) == 2
         n = len(affinity_matrix)
         two, m = edge_index.shape
@@ -190,13 +193,17 @@ def test_slidegraph_build_feature_range_thresh_none():
     features = np.random.rand(100, 100) / 1e-5
     # Build the graph
     graph = SlideGraphConstructor.build(
-        points=points, features=features, feature_range_thresh=None
+        points=points,
+        features=features,
+        feature_range_thresh=None,
     )
     assert graph["x"].shape[1] == 100
 
 
 class TestConstructor:
-    scenarios = [
+    """Define class to test constructors."""
+
+    scenarios: ClassVar[tuple[str, dict]] = [
         ("SlideGraph", {"graph_constructor": SlideGraphConstructor}),
     ]
 
@@ -209,10 +216,10 @@ class TestConstructor:
         """
         np.random.seed(123)
         points = np.concatenate(
-            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)],
         )
         features = np.concatenate(
-            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)],
         )
         graph = graph_constructor.build(points, features)
         x = graph["x"]
@@ -230,10 +237,10 @@ class TestConstructor:
         """Test visualising a graph."""
         np.random.seed(123)
         points = np.concatenate(
-            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)],
         )
         features = np.concatenate(
-            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)],
         )
         graph = graph_constructor.build(points, features)
         graph_constructor.visualise(graph)
@@ -244,10 +251,10 @@ class TestConstructor:
         """Test visualising a graph on a given axis."""
         np.random.seed(123)
         points = np.concatenate(
-            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)],
         )
         features = np.concatenate(
-            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)],
         )
         _, ax = plt.subplots()
         graph = graph_constructor.build(points, features)
@@ -259,15 +266,16 @@ class TestConstructor:
         """Test visualising a graph with a custom color function."""
         np.random.seed(123)
         points = np.concatenate(
-            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)],
         )
         features = np.concatenate(
-            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)],
         )
         graph = graph_constructor.build(points, features)
         cmap = plt.get_cmap("viridis")
         graph_constructor.visualise(
-            graph, color=lambda g: cmap(np.mean(g["x"], axis=1))
+            graph,
+            color=lambda g: cmap(np.mean(g["x"], axis=1)),
         )
         plt.close()
 
@@ -276,10 +284,10 @@ class TestConstructor:
         """Test visualising a graph with a custom color function."""
         np.random.seed(123)
         points = np.concatenate(
-            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 2) * 100 + (offset * 1000) for offset in range(10)],
         )
         features = np.concatenate(
-            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)]
+            [np.random.rand(25, 100) * 100 + (offset * 1000) for offset in range(10)],
         )
         graph = graph_constructor.build(points, features)
         graph_constructor.visualise(graph, color="orange")

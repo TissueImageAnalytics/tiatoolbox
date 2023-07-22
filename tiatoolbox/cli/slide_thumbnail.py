@@ -15,7 +15,7 @@ from tiatoolbox.cli.common import (
 @cli_img_input()
 @cli_output_path(
     usage_help="Path to output directory to save the output. "
-    "default=img_input/../slide-thumbnail"
+    "default=img_input/../slide-thumbnail",
 )
 @cli_file_type(default="*.ndpi, *.svs, *.mrxs, *.jp2")
 @cli_mode(default="save")
@@ -34,7 +34,11 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
     from tiatoolbox.wsicore.wsireader import WSIReader
 
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, mode, "slide-thumbnail"
+        img_input,
+        output_path,
+        file_types,
+        mode,
+        "slide-thumbnail",
     )
 
     for curr_file in files_all:
