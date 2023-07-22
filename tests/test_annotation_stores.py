@@ -480,13 +480,6 @@ def test_add_area_column(fill_store):
     assert "area" not in store.indexes()
 
 
-def test_query_min_area(fill_store):
-    """Test querying with a minimum area."""
-    _, store = fill_store(SQLiteStore, ":memory:")
-    result = store.query((0, 0, 1000, 1000), min_area=1)
-    assert len(result) == 100  # should only get cells, pts are too small
-
-
 def test_query_min_area_no_area_column(fill_store):
     """Test querying with a minimum area when there is no area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
@@ -2134,3 +2127,21 @@ class TestStore:
         """
         store = store_cls()
         assert store.bquery(where="props['foo'] == 'bar'") == {}
+
+    @staticmethod
+    def test_query_min_area(fill_store, store_cls):
+        """Test querying with a minimum area."""
+        _, store = fill_store(store_cls, ":memory:")
+        result = store.query((0, 0, 1000, 1000), min_area=1)
+        assert len(result) == 100  # should only get cells, pts are too small
+
+    @staticmethod
+    def test_as_wkb(fill_store, store_cls):
+        """Test that as_wkb returns annotations with wkb geometry."""
+        _, store = fill_store(store_cls, ":memory:")
+        wkb_results = store.query((0, 0, 25, 25), as_wkb=True)
+        results = store.query((0, 0, 30, 30))
+        assert len(results) == 8
+        assert len(wkb_results) == 8
+        for wkb_result, result in zip(wkb_results.values(), results.values()):
+            assert wkb_result.geometry == result.geometry.wkb

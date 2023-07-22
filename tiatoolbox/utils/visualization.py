@@ -13,12 +13,22 @@ from matplotlib import colormaps
 from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 
 if TYPE_CHECKING:  # pragma: no cover
     from numpy.typing import ArrayLike
 
     from tiatoolbox.annotation import Annotation, AnnotationStore
+
+GEOMTYPES = {
+    1: "Point",
+    2: "LineString",
+    3: "Polygon",
+    4: "MultiPoint",
+    5: "MultiLineString",
+    6: "MultiPolygon",
+    7: "GeometryCollection",
+}
 
 
 def random_colors(num_colors, bright=True):
@@ -575,6 +585,14 @@ class AnnotationRenderer:
             will override the primary colormap.
         blur_radius (int):
             radius of gaussian blur to apply to rendered annotations.
+        score_prop_edge (str):
+            A key that is present in the properties of annotations
+            to be rendered that will be used to color rendered edges.
+        function_mapper (Callable):
+            A callable which will be given the properties of an annotation
+            and should return a color for the annotation.  If this is specified,
+            mapper and score_prop are ignored.
+
 
     """
 
@@ -591,6 +609,7 @@ class AnnotationRenderer:
         secondary_cmap=None,
         blur_radius=0,
         score_prop_edge=None,
+        function_mapper=None,
     ) -> None:
         """Initialize :class:`AnnotationRenderer`."""
         self.raw_mapper = None
@@ -606,11 +625,87 @@ class AnnotationRenderer:
         self.zoomed_out_strat = zoomed_out_strat
         self.secondary_cmap = secondary_cmap
         self.blur_radius = blur_radius
+        self.function_mapper = function_mapper
         if blur_radius > 0:
             self.blur = ImageFilter.GaussianBlur(blur_radius)
             self.edge_thickness = 0
         else:
             self.blur = None
+
+    @staticmethod
+    def decode_wkb(geom: bytes, geom_type: int) -> np.array:
+        """Decode a geometry.
+
+        Decodes a geometry represented as raw wkb bytes
+        to an array of coordinates.
+
+        Args:
+            geom (bytes):
+                The raw wkb bytes representation of a geometry.
+            geom_type (GEOMTYPES):
+                The type of geometry.
+
+        Returns:
+            np.array:
+                An array of coordinates.
+
+        """
+        if geom_type == 1:
+            # point
+            return np.frombuffer(geom, np.double, -1, 5)
+        if geom_type == 2:
+            # line
+            return np.frombuffer(geom, np.double, -1, 9)
+        if geom_type == 3:
+            # polygon
+            n_points = np.frombuffer(geom, np.int32, 1, 9)[0]
+            return np.frombuffer(geom, np.double, n_points * 2, 13)  # do rings?
+        if geom_type == 4:
+            # multi-point
+            n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
+            pts = []
+            for i in range(n_points):
+                pts.append(
+                    np.frombuffer(geom, np.double, 2, 14 + i * 21)
+                )  # each point is 21 bytes
+            return np.concatenate(pts)
+        if geom_type == 5:
+            # multi-line
+            n_lines = np.frombuffer(geom, np.int32, 1, 5)[0]
+            lines = []
+            offset = 9
+            for _ in range(n_lines):
+                offset += 5
+                n_points = np.frombuffer(geom, np.int32, n_lines, offset)[0]
+                offset += 4
+                lines.append(np.frombuffer(geom, np.double, n_points * 2, offset))
+                offset += n_points * 16
+            return np.concatenate(lines)
+
+        def decode_polygon(offset=0):
+            offset += 5  # byte order and geom type at start of each polygon
+            n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
+            offset += 4
+
+            rings = []
+            for _ in range(n_rings):
+                n_points = np.frombuffer(geom, np.int32, 1, offset)[0]
+                offset += 4
+                rings.append(np.frombuffer(geom, np.double, n_points * 2, offset))
+                offset += n_points * 16
+            return rings, offset
+
+        if geom_type == 6:
+            # multi-polygon
+            n_polygons = np.frombuffer(geom, np.int32, 1, 5)[0]
+            polygons = []
+            offset = 9
+            for _ in range(n_polygons):
+                rings, offset = decode_polygon(offset)
+                polygons.append(rings)
+            return np.concatenate(polygons)
+
+        raise ValueError(f"Unknown geometry type: {geom_type}")
 
     @staticmethod
     def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):
@@ -629,7 +724,7 @@ class AnnotationRenderer:
                 Array of coordinates in tile space in the form [x, y].
 
         """
-        return np.squeeze(((np.array(coords) - top_left) / scale).astype(np.int32))
+        return ((np.reshape(coords, (-1, 2)) - top_left) / scale).astype(np.int32)
 
     def get_color(self, annotation: Annotation, edge=False):
         """Get the color for an annotation.
@@ -638,7 +733,8 @@ class AnnotationRenderer:
             annotation (Annotation):
                 Annotation to get color for.
             edge (bool):
-                If annotation has an edge.
+                Whether to get the color for the edge of the annotation,
+                or the interior.
 
         Returns:
             tuple:
@@ -662,6 +758,8 @@ class AnnotationRenderer:
                         ),
                     )
                 )
+            if self.function_mapper:
+                return self.function_mapper(annotation.properties)
             if score_prop == "color":
                 # use colors directly specified in annotation properties
                 return (*[int(255 * c) for c in annotation.properties["color"]], 255)
@@ -674,9 +772,16 @@ class AnnotationRenderer:
                 )
         except KeyError:
             logger.warning(
-                "'score_prop' not found in properties. Using default color.",
+                "property: %s not found in properties. Using default color.",
+                score_prop,
                 stacklevel=2,
             )
+        except TypeError:
+            logger.warning(
+                "property value type incompatable with cmap. Using default color.",
+                stacklevel=2,
+            )
+
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
@@ -703,7 +808,9 @@ class AnnotationRenderer:
         """
         col = self.get_color(annotation)
 
-        cnt = self.to_tile_coords(annotation.geometry.exterior.coords, top_left, scale)
+        cnt = self.to_tile_coords(
+            self.decode_wkb(annotation.geometry, 3), top_left, scale
+        )
         if self.thickness > -1:
             cv2.drawContours(
                 tile,
@@ -722,9 +829,9 @@ class AnnotationRenderer:
     def render_multipoly(self, tile, annotation, top_left, scale):
         """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation)
-
-        for poly in annotation.geometry.geoms:
-            cnt = self.to_tile_coords(poly.exterior.coords, top_left, scale)
+        geoms = self.decode_wkb(annotation.geometry, 6)
+        for poly in geoms:
+            cnt = self.to_tile_coords(poly, top_left, scale)
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
 
     def render_pt(
@@ -750,7 +857,9 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
         cv2.circle(
             tile,
-            self.to_tile_coords(list(annotation.geometry.coords), top_left, scale),
+            self.to_tile_coords(
+                self.decode_wkb(annotation.geometry, 1), top_left, scale
+            )[0],
             np.maximum(self.edge_thickness, 1),
             col,
             thickness=self.thickness,
@@ -779,7 +888,11 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
         cv2.polylines(
             tile,
-            [self.to_tile_coords(list(annotation.geometry.coords), top_left, scale)],
+            [
+                self.to_tile_coords(
+                    list(self.decode_wkb(annotation.geometry, 2)), top_left, scale
+                )
+            ],
             False,
             col,
             thickness=3,
@@ -848,6 +961,9 @@ class AnnotationRenderer:
                 The tile with the annotations rendered.
 
         """
+        # Don't print out multiple warnings.
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         bound_geom = Polygon.from_bounds(*bounds)
         top_left = np.array(bounds[:2])
         output_size = [
@@ -870,6 +986,7 @@ class AnnotationRenderer:
                 bound_geom,
                 self.where,
                 geometry_predicate="bbox_intersects",
+                as_wkb=True,
             )
 
             for ann in anns.values():
@@ -887,7 +1004,7 @@ class AnnotationRenderer:
             for i, (key, box) in enumerate(bounding_boxes.items()):
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
-                    ann = store[key]
+                    ann = store.__getitem__(key, True)
                     self.render_by_type(tile, ann, top_left, scale / res)
         else:
             # Get only annotations > min_area. Plot them all
@@ -896,11 +1013,13 @@ class AnnotationRenderer:
                 self.where,
                 min_area=min_area,
                 geometry_predicate="bbox_intersects",
+                as_wkb=True,
             )
 
             for ann in anns.values():
                 self.render_by_type(tile, ann, top_left, scale / res)
 
+        logger.removeFilter(duplicate_filter)
         if self.blur is None:
             return tile
         return np.array(
@@ -927,7 +1046,7 @@ class AnnotationRenderer:
                 The scale at which we are rendering the tile.
 
         """
-        geom_type = annotation.geometry.geom_type
+        geom_type = GEOMTYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
         if geom_type == "Point":
             self.render_pt(tile, annotation, top_left, scale)
         elif geom_type == "Polygon":

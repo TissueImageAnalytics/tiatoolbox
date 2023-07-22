@@ -8,8 +8,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from shapely.geometry import (
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 
 from tiatoolbox.utils.visualization import (
+    AnnotationRenderer,
     overlay_prediction_contours,
     overlay_prediction_mask,
     overlay_probability_map,
@@ -189,3 +198,67 @@ def test_plot_graph():
         edges,
     )
     plot_graph(canvas, nodes, edges, node_colors=node_colors, edge_colors=edge_colors)
+
+
+def test_decode_wkb():
+    """Test decoding of WKB geometries."""
+    renderer = AnnotationRenderer()
+
+    # Create some Shapely geometries of supported types
+    point = Point(0, 0)
+    line = LineString([(0, 0), (1, 1), (2, 0)])
+    polygon = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
+
+    # Convert the geometries to WKB format
+    point_wkb = point.wkb
+    line_wkb = line.wkb
+    polygon_wkb = polygon.wkb
+
+    # Decode the WKB geometries
+    point_contours = renderer.decode_wkb(point_wkb, 1).reshape(-1, 2)
+    line_contours = renderer.decode_wkb(line_wkb, 2).reshape(-1, 2)
+    polygon_contours = renderer.decode_wkb(polygon_wkb, 3).reshape(-1, 2)
+
+    # Check that the decoded contours are as expected
+    assert np.all(point_contours == np.array([[0, 0]]))
+    assert np.all(line_contours == np.array([[0, 0], [1, 1], [2, 0]]))
+    assert np.all(
+        polygon_contours == np.array([[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]])
+    )
+
+    # do the same for multi-point, multi-line and multi-polygon
+    multipoint = MultiPoint([(0, 0), (1, 1), (2, 0)])
+    multiline = MultiLineString([((0, 0), (1, 1), (2, 0)), ((0, 0), (1, 1), (2, 0))])
+    multipolygon = MultiPolygon(
+        [
+            Polygon([(0, 0), (0, 1), (1, 1), (1, 0)]),
+            Polygon([(0, 0), (0, 1), (1, 1), (1, 0)]),
+        ]
+    )
+
+    multipoint_wkb = multipoint.wkb
+    multiline_wkb = multiline.wkb
+    multipolygon_wkb = multipolygon.wkb
+
+    multipoint_contours = renderer.decode_wkb(multipoint_wkb, 4).reshape(3, -1, 2)
+    multiline_contours = renderer.decode_wkb(multiline_wkb, 5).reshape(2, -1, 2)
+    multipolygon_contours = renderer.decode_wkb(multipolygon_wkb, 6).reshape(2, -1, 2)
+
+    assert np.all(multipoint_contours == np.array([[[0, 0]], [[1, 1]], [[2, 0]]]))
+    assert np.all(
+        multiline_contours
+        == np.array([[[0, 0], [1, 1], [2, 0]], [[0, 0], [1, 1], [2, 0]]])
+    )
+    assert np.all(
+        multipolygon_contours
+        == np.array(
+            [
+                [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]],
+                [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]],
+            ]
+        )
+    )
+
+    # test unknown geometry type
+    with pytest.raises(ValueError, match=r"Unknown geometry type"):
+        renderer.decode_wkb(multipolygon_wkb, 7)
