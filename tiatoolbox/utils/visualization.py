@@ -591,14 +591,18 @@ class AnnotationRenderer:
             self.blur = None
 
     @staticmethod
-    def decode_geom(geom, geom_type):
-        """Decode a geometry from the raw wkb bytes representation
+    def decode_wkb(geom: bytes, geom_type: int) -> np.array:
+        """Decode a geometry.
+
+        Decodes a geometry represented as raw wkb bytes
         to an array of coordinates.
+
         Args:
             geom (bytes):
                 The raw wkb bytes representation of a geometry.
-            type (str):
+            geom_type (GEOMTYPES):
                 The type of geometry.
+
         Returns:
             np.array:
                 An array of coordinates.
@@ -664,6 +668,7 @@ class AnnotationRenderer:
     @staticmethod
     def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: float):
         """Return coords relative to top left of tile, as array suitable for cv2.
+
         Args:
             coords (List):
                 List of coordinates in the form [x, y].
@@ -748,6 +753,7 @@ class AnnotationRenderer:
         scale: float,
     ):
         """Render a polygon annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -762,7 +768,7 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
 
         cnt = self.to_tile_coords(
-            self.decode_geom(annotation.geometry, 3), top_left, scale
+            self.decode_wkb(annotation.geometry, 3), top_left, scale
         )
         if self.thickness > -1:
             cv2.drawContours(
@@ -777,7 +783,7 @@ class AnnotationRenderer:
     def render_multipoly(self, tile, annotation, top_left, scale):
         """render a multipolygon annotation onto a tile using cv2"""
         col = self.get_color(annotation)
-        geoms = self.decode_geom(annotation.geometry, 6)
+        geoms = self.decode_wkb(annotation.geometry, 6)
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
@@ -790,6 +796,7 @@ class AnnotationRenderer:
         scale: float,
     ):
         """Render a point annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -805,7 +812,7 @@ class AnnotationRenderer:
         cv2.circle(
             tile,
             self.to_tile_coords(
-                self.decode_geom(annotation.geometry, 1), top_left, scale
+                self.decode_wkb(annotation.geometry, 1), top_left, scale
             )[0],
             np.maximum(self.edge_thickness, 1),
             col,
@@ -820,6 +827,7 @@ class AnnotationRenderer:
         scale: float,
     ):
         """Render a line annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -836,7 +844,7 @@ class AnnotationRenderer:
             tile,
             [
                 self.to_tile_coords(
-                    list(self.decode_geom(annotation.geometry, 2)), top_left, scale
+                    list(self.decode_wkb(annotation.geometry, 2)), top_left, scale
                 )
             ],
             False,
@@ -903,7 +911,7 @@ class AnnotationRenderer:
                 rendering to avoid edge effects.
 
         Returns:
-            np.ndarray:
+            :class:`np.ndarray`:
                 The tile with the annotations rendered.
 
         """
@@ -950,7 +958,7 @@ class AnnotationRenderer:
             for i, (key, box) in enumerate(bounding_boxes.items()):
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
-                    ann = store.__getitem__(key, as_wkb=True)
+                    ann = store.__getitem__(key, True)
                     self.render_by_type(tile, ann, top_left, scale / res)
         else:
             # Get only annotations > min_area. Plot them all

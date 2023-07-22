@@ -983,7 +983,9 @@ class AnnotationStore(ABC, MutableMapping):
             ) and self._eval_where(where, annotation.properties)
 
         return {
-            key: annotation.to_wkb_geometry() if as_wkb else annotation
+            key: Annotation(annotation.to_wkb(), annotation.properties)
+            if as_wkb
+            else annotation
             for key, annotation in self.items()
             if filter_function(annotation)
         }
