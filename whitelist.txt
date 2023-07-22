@@ -145,6 +145,7 @@ numpy
 openslide
 otsu
 pathlib
+pdist
 pixman
 postproc
 pred
