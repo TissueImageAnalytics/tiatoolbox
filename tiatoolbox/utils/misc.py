@@ -979,7 +979,8 @@ def store_from_dat(
         scale_factor (Tuple[float, float]):
             The scale factor in each dimension to use when loading the annotations.
             All coordinates will be multiplied by this factor to allow import of
-            annotations saved at non-baseline resolution.
+            annotations saved at non-baseline resolution. Should be model_mpp/slide_mpp,
+            where model_mpp is the resolution at which the annotations were saved.
         typedict (Dict[str, str]):
             A dictionary mapping annotation types to annotation keys. Annotations
             with a type that is a key in the dictionary, will have their type
