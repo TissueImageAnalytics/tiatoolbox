@@ -43,7 +43,7 @@ def cli_name(
     usage_help: str = "User defined name to be used as an identifier.",
     multiple: bool = False,
 ) -> callable:
-    """Enables --name option for cli."""
+    """Enable --name option for cli."""
     if multiple:
         usage_help = usage_help + " Multiple instances may be provided."
     return click.option("--name", help=usage_help, type=str, multiple=multiple)
@@ -417,11 +417,16 @@ def prepare_file_dir_cli(
     creates list of file paths if input is a directory.
 
     Args:
-        img_input (str or Path): file path to images.
-        output_path (str or Path): output directory path.
-        file_types (str): file types to process using cli.
-        mode (str): wsi or tile mode.
-        sub_dirname (str): name of subdirectory to save output.
+        img_input (str or Path):
+            File path to images.
+        output_path (str or Path):
+            Output directory path.
+        file_types (str):
+            File types to process using cli.
+        mode (str):
+            wsi or tile mode.
+        sub_dirname (str):
+            Name of subdirectory to save output.
 
     Returns:
         list: list of file paths to process.
@@ -530,7 +535,7 @@ def prepare_ioconfig_seg(segment_config_class, pretrained_weights, yaml_config_p
     import yaml
 
     if pretrained_weights is not None:
-        with Path.open(Path(yaml_config_path)) as registry_handle:
+        with Path(yaml_config_path).open() as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
 
         return segment_config_class(**ioconfig)
