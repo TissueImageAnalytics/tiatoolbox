@@ -1,5 +1,5 @@
 """Define Image transforms."""
-from typing import Tuple, Union
+from __future__ import annotations
 
 import cv2
 import numpy as np
@@ -43,7 +43,7 @@ def background_composite(image, fill=255, alpha=False):
     image = image.convert("RGBA")
 
     composite = Image.fromarray(
-        np.full(list(image.size[::-1]) + [4], fill, dtype=np.uint8)
+        np.full([*list(image.size[::-1]), 4], fill, dtype=np.uint8),
     )
     composite.alpha_composite(image)
     if not alpha:
@@ -83,7 +83,8 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
     """
     if scale_factor is None and output_size is None:
-        raise TypeError("One of scale_factor and output_size must be not None.")
+        msg = "One of scale_factor and output_size must be not None."
+        raise TypeError(msg)
     if scale_factor is not None:
         scale_factor = np.array(scale_factor)
         if scale_factor.size == 1:
@@ -128,8 +129,9 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     source_dtypes = [v[0] for v in dtype_mapping]
     original_dtype = img.dtype
     if original_dtype not in source_dtypes:
+        msg = f"Does not support resizing for array of dtype: {original_dtype}"
         raise ValueError(
-            f"Does not support resizing for array of dtype: {original_dtype}"
+            msg,
         )
 
     converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
@@ -145,7 +147,8 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     if len(img.shape) == 3 and img.shape[-1] > 4:
         img_channels = [
             cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
-                ..., None
+                ...,
+                None,
             ]
             for ch in range(img.shape[-1])
         ]
@@ -245,7 +248,8 @@ def bounds2locsize(bounds, origin="upper"):
         return np.array([left, top]), np.array([right - left, bottom - top])
     if origin == "lower":
         return np.array([left, bottom]), np.array([right - left, top - bottom])
-    raise ValueError("Invalid origin. Only 'upper' or 'lower' are valid.")
+    msg = "Invalid origin. Only 'upper' or 'lower' are valid."
+    raise ValueError(msg)
 
 
 def locsize2bounds(location, size):
@@ -275,9 +279,9 @@ def locsize2bounds(location, size):
 
 
 def bounds2slices(
-    bounds: Tuple[int, int, int, int],
-    stride: Union[int, Tuple[int, int, Tuple[int, int]]] = 1,
-) -> Tuple[slice]:
+    bounds: tuple[int, int, int, int],
+    stride: int | tuple[int, int, tuple[int, int]] = 1,
+) -> tuple[slice]:
     """Convert bounds to slices.
 
     Create a tuple of slices for each start/stop pair in bounds.
@@ -304,7 +308,8 @@ def bounds2slices(
 
     """
     if np.size(stride) not in [1, 2]:
-        raise ValueError("Invalid stride shape.")
+        msg = "Invalid stride shape."
+        raise ValueError(msg)
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
     elif np.size(stride) == 2:  # pragma: no cover
@@ -316,9 +321,9 @@ def bounds2slices(
 
 
 def pad_bounds(
-    bounds: Tuple[int, int, int, int],
-    padding: Union[int, Tuple[int, int], Tuple[int, int, int, int]],
-) -> Tuple[int, int, int, int]:
+    bounds: tuple[int, int, int, int],
+    padding: int | tuple[int, int] | tuple[int, int, int, int],
+) -> tuple[int, int, int, int]:
     """Add padding to bounds.
 
     Arguments:
@@ -338,11 +343,13 @@ def pad_bounds(
 
     """
     if np.size(bounds) % 2 != 0:
-        raise ValueError("Bounds must have an even number of elements.")
+        msg = "Bounds must have an even number of elements."
+        raise ValueError(msg)
     ndims = np.size(bounds) // 2
 
     if np.size(padding) not in [1, 2, np.size(bounds)]:
-        raise ValueError("Invalid number of padding elements.")
+        msg = "Invalid number of padding elements."
+        raise ValueError(msg)
 
     if np.size(padding) == 1 or np.size(padding) == np.size(bounds):
         pass
