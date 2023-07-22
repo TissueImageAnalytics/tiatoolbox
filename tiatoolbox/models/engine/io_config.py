@@ -66,11 +66,11 @@ class ModelIOConfigABC:
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions, key=lambda x: x["resolution"],
             )
         else:
             self.highest_input_resolution = max(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions, key=lambda x: x["resolution"],
             )
 
         self._validate()
@@ -84,7 +84,7 @@ class ModelIOConfigABC:
         if len(units) != 1:
             raise ValueError(
                 f"Multiple resolution units found: `{units}`. "
-                f"Mixing resolution units is not allowed."
+                f"Mixing resolution units is not allowed.",
             )
 
         if units[0] not in [
@@ -118,7 +118,7 @@ class ModelIOConfigABC:
         if units not in ["baseline", "mpp", "power"]:
             raise ValueError(
                 f"Unknown units `{units}`. "
-                "Units should be one of 'baseline', 'mpp' or 'power'."
+                "Units should be one of 'baseline', 'mpp' or 'power'.",
             )
         if units == "baseline":
             return old_val
