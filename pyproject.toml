@@ -81,12 +81,12 @@ replace = 'TOOLBOX_VER: {new_version}'
 [tool.ruff]
 select = [
   "A",     # flake8-builtins
-  # "B",     # flake8-bugbear
+  "B",     # flake8-bugbear
   # "D",     # pydocstyle, need to enable for docstrings check.
-  # "E",     # pycodestyle - Error
+  "E",     # pycodestyle - Error
   "F",     # pyflakes
   "G",     # flake8-logging-format
-  # "N",     # pep8-naming
+  "N",     # pep8-naming
   # "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "Q",     # flake8-quotes
@@ -97,20 +97,20 @@ select = [
   # "PL",  # Pylint
   "PT",    # flake8-pytest-style
   # "TD",    # flake8-todos
-  # "UP",    # pyupgrade
-  # "C90",   # mccabe
+  "UP",    # pyupgrade
+  "C90",   # mccabe
   "T10",   # flake8-debugger
-  # "T20",   # flake8-print
+  "T20",   # flake8-print
   # "ANN",   # flake8-annotations
   # "ARG",   # flake8-unused-arguments
   # "BLE",   # flake8-blind-except
-  # "COM",   # flake8-commas
+  "COM",   # flake8-commas
   # "DTZ",   # flake8-datetimez
   # "ERA",   # eradicate
   # "FBT",   # flake8-boolean-trap
   # "FIX",   # flake8-fixme
   "FLY",   # flynt
-  # "ICN",   # flake8-import-conventions
+  "ICN",   # flake8-import-conventions
   "INP",   # flake8-no-pep420
   "INT",   # flake8-gettext
   # "ISC",   # flake8-implicit-str-concat
@@ -118,7 +118,7 @@ select = [
   # "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
   # "PTH",   # flake8-use-pathlib
-  # "PYI",   # flake8-pyi
+  "PYI",   # flake8-pyi
   "RET",   # flake8-return
   # "RSE",   # flake8-raise
   # "RUF",   # Ruff-specific rules

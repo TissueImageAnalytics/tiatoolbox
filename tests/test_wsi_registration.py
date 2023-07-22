@@ -24,7 +24,9 @@ def test_extract_features(dfbr_features):
     fixed_img = np.repeat(
         np.expand_dims(
             np.repeat(
-                np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1), 64, axis=1
+                np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1),
+                64,
+                axis=1,
             ),
             axis=2,
         ),
@@ -37,7 +39,8 @@ def test_extract_features(dfbr_features):
     pool5_feat = output["block5_pool"][0, :].detach().numpy()
 
     _pool3_feat, _pool4_feat, _pool5_feat = np.load(
-        str(dfbr_features), allow_pickle=True
+        str(dfbr_features),
+        allow_pickle=True,
     )
     assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
     assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
@@ -50,7 +53,9 @@ def test_feature_mapping(fixed_image, moving_image):
     moving_img = imread(moving_image)
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
     moving_img = cv2.warpAffine(
-        moving_img, pre_transform[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_img,
+        pre_transform[0:-1][:],
+        fixed_img.shape[:2][::-1],
     )
 
     df = DFBRegister()
@@ -58,7 +63,7 @@ def test_feature_mapping(fixed_image, moving_image):
     fixed_matched_points, moving_matched_points, _ = df.feature_mapping(features)
     output = df.estimate_affine_transform(fixed_matched_points, moving_matched_points)
     expected = np.array(
-        [[0.98843, 0.00184, 1.75437], [-0.00472, 0.96973, 5.38854], [0, 0, 1]]
+        [[0.98843, 0.00184, 1.75437], [-0.00472, 0.96973, 5.38854], [0, 0, 1]],
     )
     assert np.mean(output - expected) < 1.0e-6
 
@@ -69,7 +74,9 @@ def test_dfbr_features():
     fixed_img = np.repeat(
         np.expand_dims(
             np.repeat(
-                np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1), 64, axis=1
+                np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1),
+                64,
+                axis=1,
             ),
             axis=2,
         ),
@@ -118,17 +125,27 @@ def test_prealignment_rotation_step():
     moving_mask = np.random.choice([0, 1], size=(10, 10))
 
     with pytest.raises(
-        ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
+        ValueError,
+        match=r".*Please select the rotation step in between 10 and 20.*",
     ):
         _ = prealignment(
-            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=9
+            fixed_img,
+            moving_img,
+            fixed_mask,
+            moving_mask,
+            rotation_step=9,
         )
 
     with pytest.raises(
-        ValueError, match=r".*Please select the rotation step in between 10 and 20.*"
+        ValueError,
+        match=r".*Please select the rotation step in between 10 and 20.*",
     ):
         _ = prealignment(
-            fixed_img, moving_img, fixed_mask, moving_mask, rotation_step=21
+            fixed_img,
+            moving_img,
+            fixed_mask,
+            moving_mask,
+            rotation_step=21,
         )
 
 
@@ -171,15 +188,21 @@ def test_dice_overlap_range():
     moving_mask = np.random.randint(2, size=(256, 256))
 
     with pytest.raises(
-        ValueError, match=r".*The dice_overlap should be in between 0 and 1.0.*"
+        ValueError,
+        match=r".*The dice_overlap should be in between 0 and 1.0.*",
     ):
         _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=2)
 
     with pytest.raises(
-        ValueError, match=r".*The dice_overlap should be in between 0 and 1.0.*"
+        ValueError,
+        match=r".*The dice_overlap should be in between 0 and 1.0.*",
     ):
         _ = prealignment(
-            fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=-1
+            fixed_img,
+            moving_img,
+            fixed_mask,
+            moving_mask,
+            dice_overlap=-1,
         )
 
 
@@ -207,7 +230,8 @@ def test_match_histogram_inputs():
     image_a = np.random.randint(256, size=(256, 256, 3))
     image_b = np.random.randint(256, size=(256, 256, 3))
     with pytest.raises(
-        ValueError, match=r".*The input images should be grayscale images.*"
+        ValueError,
+        match=r".*The input images should be grayscale images.*",
     ):
         _, _ = match_histograms(image_a, image_b)
 
@@ -255,7 +279,7 @@ def test_match_histograms():
             [13, 17, 177, 76, 31],
             [111, 62, 31, 83, 16],
             [127, 86, 149, 212, 58],
-        ]
+        ],
     )
     norm_image_a, norm_image_b = match_histograms(image_a, image_b)
     assert np.all(norm_image_a == expected_output)
@@ -270,16 +294,20 @@ def test_filtering_duplicate_matching_points():
     moving_mask[20:40, 20:40] = 255
 
     fixed_points = np.array(
-        [[25, 25], [25, 25], [25, 25], [30, 25], [25, 30], [30, 35], [21, 37]]
+        [[25, 25], [25, 25], [25, 25], [30, 25], [25, 30], [30, 35], [21, 37]],
     )
     moving_points = np.array(
-        [[30, 25], [32, 36], [31, 20], [30, 35], [30, 35], [30, 35], [26, 27]]
+        [[30, 25], [32, 36], [31, 20], [30, 35], [30, 35], [30, 35], [26, 27]],
     )
     quality = np.ones((7, 1))
 
     df = DFBRegister()
     _ = df.filtering_matching_points(
-        fixed_mask, moving_mask, fixed_points, moving_points, quality
+        fixed_mask,
+        moving_mask,
+        fixed_points,
+        moving_points,
+        quality,
     )
 
 
@@ -291,16 +319,20 @@ def test_filtering_no_duplicate_matching_points():
     moving_mask[20:40, 20:40] = 255
 
     fixed_points = np.array(
-        [[25, 25], [25, 28], [15, 25], [30, 25], [25, 30], [30, 35], [21, 37]]
+        [[25, 25], [25, 28], [15, 25], [30, 25], [25, 30], [30, 35], [21, 37]],
     )
     moving_points = np.array(
-        [[30, 25], [32, 36], [31, 20], [20, 35], [30, 15], [34, 35], [26, 27]]
+        [[30, 25], [32, 36], [31, 20], [20, 35], [30, 15], [34, 35], [26, 27]],
     )
     quality = np.ones((7, 1))
 
     df = DFBRegister()
     _ = df.filtering_matching_points(
-        fixed_mask, moving_mask, fixed_points, moving_points, quality
+        fixed_mask,
+        moving_mask,
+        fixed_points,
+        moving_points,
+        quality,
     )
 
 
@@ -328,15 +360,22 @@ def test_register_input_channels():
 
     df = DFBRegister()
     with pytest.raises(
-        ValueError, match=r".*The input images are expected to have 3 channels.*"
+        ValueError,
+        match=r".*The input images are expected to have 3 channels.*",
     ):
         _ = df.register(
-            fixed_img[:, :, :1], moving_img[:, :, :1], fixed_mask, moving_mask
+            fixed_img[:, :, :1],
+            moving_img[:, :, :1],
+            fixed_mask,
+            moving_mask,
         )
 
 
 def test_register_output_with_initializer(
-    fixed_image, moving_image, fixed_mask, moving_mask
+    fixed_image,
+    moving_image,
+    fixed_mask,
+    moving_mask,
 ):
     """Test for register function with initializer."""
     fixed_img = imread(fixed_image)
@@ -348,7 +387,7 @@ def test_register_output_with_initializer(
     pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
 
     expected = np.array(
-        [[-0.98454, -0.00708, 336.9562], [-0.01024, -0.99751, 769.81131], [0, 0, 1]]
+        [[-0.98454, -0.00708, 336.9562], [-0.01024, -0.99751, 769.81131], [0, 0, 1]],
     )
 
     output = df.register(
@@ -363,7 +402,10 @@ def test_register_output_with_initializer(
 
 
 def test_register_output_without_initializer(
-    fixed_image, moving_image, fixed_mask, moving_mask
+    fixed_image,
+    moving_image,
+    fixed_mask,
+    moving_mask,
 ):
     """Test for register function without initializer."""
     fixed_img = imread(fixed_image)
@@ -373,7 +415,7 @@ def test_register_output_without_initializer(
 
     df = DFBRegister()
     expected = np.array(
-        [[-0.99863, 0.00189, 336.79039], [0.00691, -0.99810, 765.98081], [0, 0, 1]]
+        [[-0.99863, 0.00189, 336.79039], [0.00691, -0.99810, 765.98081], [0, 0, 1]],
     )
 
     output = df.register(
@@ -420,10 +462,14 @@ def test_estimate_bspline_transform_inputs():
     moving_mask = np.random.choice([0, 1], size=(32, 32))
 
     with pytest.raises(
-        ValueError, match=r".*The input images can only be grayscale or RGB images.*"
+        ValueError,
+        match=r".*The input images can only be grayscale or RGB images.*",
     ):
         _, _ = estimate_bspline_transform(
-            fixed_img, moving_img, fixed_mask, moving_mask
+            fixed_img,
+            moving_img,
+            fixed_mask,
+            moving_mask,
         )
 
 
@@ -435,10 +481,14 @@ def test_estimate_bspline_transform_rgb_input():
     moving_mask = np.random.choice([0, 1], size=(32, 32))
 
     with pytest.raises(
-        ValueError, match=r".*The input images can only have 3 channels.*"
+        ValueError,
+        match=r".*The input images can only have 3 channels.*",
     ):
         _, _ = estimate_bspline_transform(
-            fixed_img, moving_img, fixed_mask, moving_mask
+            fixed_img,
+            moving_img,
+            fixed_mask,
+            moving_mask,
         )
 
 
@@ -450,7 +500,7 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     moving_mask_ = imread(moving_mask)
 
     rigid_transform = np.array(
-        [[-0.99683, -0.00333, 338.69983], [-0.03201, -0.98420, 770.22941], [0, 0, 1]]
+        [[-0.99683, -0.00333, 338.69983], [-0.03201, -0.98420, 770.22941], [0, 0, 1]],
     )
     moving_img = apply_affine_transformation(fixed_img, moving_img, rigid_transform)
     moving_mask_ = apply_affine_transformation(fixed_img, moving_mask_, rigid_transform)
@@ -466,7 +516,10 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
 
     # RGB images as input
     transform = estimate_bspline_transform(
-        fixed_img, moving_img, fixed_mask_, moving_mask_
+        fixed_img,
+        moving_img,
+        fixed_mask_,
+        moving_mask_,
     )
 
     _ = apply_bspline_transform(fixed_img, moving_img, transform)
@@ -483,7 +536,10 @@ def test_affine_wsi_transformer(sample_ome_tiff):
     for location in test_locations:
         wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
         expected = wsi_reader.read_rect(
-            location, size, resolution=resolution, units="level"
+            location,
+            size,
+            resolution=resolution,
+            units="level",
         )
 
         transform_level0 = np.array(
@@ -491,7 +547,7 @@ def test_affine_wsi_transformer(sample_ome_tiff):
                 [0, -1, location[0] + location[1] + size[1]],
                 [1, 0, location[1] - location[0]],
                 [0, 0, 1],
-            ]
+            ],
         )
         tfm = AffineWSITransformer(wsi_reader, transform_level0)
         output = tfm.read_rect(location, size, resolution=resolution, units="level")

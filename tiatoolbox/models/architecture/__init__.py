@@ -16,7 +16,9 @@ PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 
 def fetch_pretrained_weights(
-    model_name: str, save_path: str = None, overwrite: bool = False
+    model_name: str,
+    save_path: str = None,
+    overwrite: bool = False,
 ) -> pathlib.Path:
     """Get the pretrained model information from yml file.
 
@@ -115,7 +117,7 @@ def get_pretrained_model(
     info = PRETRAINED_INFO[pretrained_model]
 
     arch_info = info["architecture"]
-    creator = locate((f"tiatoolbox.models.architecture" f'.{arch_info["class"]}'))
+    creator = locate(f"tiatoolbox.models.architecture" f'.{arch_info["class"]}')
 
     model = creator(**arch_info["kwargs"])
     # TODO: a dictionary of dataset specific or transformation ?
@@ -126,7 +128,8 @@ def get_pretrained_model(
 
     if pretrained_weights is None:
         pretrained_weights = fetch_pretrained_weights(
-            pretrained_model, overwrite=overwrite
+            pretrained_model,
+            overwrite=overwrite,
         )
 
     # ! assume to be saved in single GPU mode
@@ -136,7 +139,7 @@ def get_pretrained_model(
 
     # !
     io_info = info["ioconfig"]
-    creator = locate((f"tiatoolbox.models.engine" f'.{io_info["class"]}'))
+    creator = locate(f"tiatoolbox.models.engine" f'.{io_info["class"]}')
 
     iostate = creator(**io_info["kwargs"])
     return model, iostate
