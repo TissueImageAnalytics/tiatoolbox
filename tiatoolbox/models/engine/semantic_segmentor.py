@@ -1207,11 +1207,11 @@ class SemanticSegmentor:
             logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
-        except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
+        except Exception as err:  # skipcq: PYL-W0703  # noqa: BLE001
             wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
-                raise err
-            logging.error("Crashed on %s", wsi_save_path)
+                raise err  # noqa: TRY201
+        logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(
         self,

@@ -103,7 +103,7 @@ select = [
   "T20",   # flake8-print
   # "ANN",   # flake8-annotations
   # "ARG",   # flake8-unused-arguments
-  # "BLE",   # flake8-blind-except
+  "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
   # "DTZ",   # flake8-datetimez
   # "ERA",   # eradicate

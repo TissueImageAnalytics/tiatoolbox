@@ -90,10 +90,10 @@ def is_zarr(path: pathlib.Path) -> bool:
     path = pathlib.Path(path)
     try:
         _ = zarr.open(path, mode="r")
-        return True
-
-    except Exception:  # noqa: PIE786  # skipcq: PYL-W0703
+    except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
+    else:
+        return True
 
 
 def is_ngff(
