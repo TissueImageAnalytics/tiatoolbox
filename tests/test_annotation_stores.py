@@ -206,7 +206,10 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
 def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
     monkeypatch.setattr(
-        SQLiteStore, "compile_options", lambda x: ["OMIT_JSON"], raising=True
+        SQLiteStore,
+        "compile_options",
+        lambda x: ["OMIT_JSON"],
+        raising=True,
     )
     with pytest.raises(EnvironmentError, match="JSON must not"):
         SQLiteStore()
@@ -637,7 +640,9 @@ class TestStore:
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         store.patch_many(
-            keys, repeat(new_geometry, len(keys)), repeat({"abc": 123}, len(keys))
+            keys,
+            repeat(new_geometry, len(keys)),
+            repeat({"abc": 123}, len(keys)),
         )
 
         for _, key in enumerate(keys[:10]):
@@ -778,7 +783,7 @@ class TestStore:
                     "row_id": n,
                 }
                 for n, cell in enumerate(cell_grid)
-            ]
+            ],
         )
         store = store_cls.from_dataframe(df)
         keys = list(store.keys())
@@ -853,7 +858,9 @@ class TestStore:
         store.to_geojson(tmp_path / "polygon.json")
         # load the store translated so that origin is (100,100) and scaled by 2
         store2 = store_cls.from_geojson(
-            tmp_path / "polygon.json", scale_factor=(2, 2), origin=(100, 100)
+            tmp_path / "polygon.json",
+            scale_factor=(2, 2),
+            origin=(100, 100),
         )
         assert len(store) == len(store2)
         com2 = annotations_center_of_mass(list(store2.values()))
@@ -1256,7 +1263,8 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         dictionary = store.bquery(
-            (0, 0, 1e10, 1e10), where=lambda props: props.get("class") == 123
+            (0, 0, 1e10, 1e10),
+            where=lambda props: props.get("class") == 123,
         )
         assert isinstance(dictionary, dict)
         assert len(dictionary) == 1
@@ -1465,7 +1473,7 @@ class TestStore:
                 (0, 0),
                 (0, 1),
                 (1, 1),
-            ]
+            ],
         )
 
         # Counter-clockwise
@@ -1475,7 +1483,7 @@ class TestStore:
                 (0, 1),
                 (0, 0),
                 (1, 0),
-            ]
+            ],
         )
 
         # From shapely
@@ -1494,7 +1502,7 @@ class TestStore:
                 (0, 1),
                 (0, 0),
                 (1, 0),
-            ]
+            ],
         )
 
     @staticmethod
@@ -1521,7 +1529,7 @@ class TestStore:
                 (1, 0),
                 (0, 0),
                 (0, 1),
-            ]
+            ],
         )
 
         # skipcq
@@ -1536,7 +1544,7 @@ class TestStore:
                 (0, 1),
                 (0, 0),
                 (1, 0),
-            ]
+            ],
         )
 
         # skipcq
@@ -1551,7 +1559,7 @@ class TestStore:
                 (0, 0),
                 (1, 0),
                 (0, 1),
-            ]
+            ],
         )
 
         assert not store._is_right_angle(
@@ -1559,7 +1567,7 @@ class TestStore:
                 (1, 0.2),
                 (0, 0),
                 (0.2, 1),
-            ]
+            ],
         )
 
     @staticmethod
@@ -1931,7 +1939,7 @@ class TestStore:
                     (3.5, 4.5),
                     (3.5, 0.5),
                     (1, 0.5),
-                ]
+                ],
             ),
             {"class": "B"},
         )
@@ -1946,7 +1954,7 @@ class TestStore:
         print(
             centroid.buffer(distance)
             .intersection(ann_a.geometry.centroid.buffer(distance))
-            .area
+            .area,
         )
 
         result = store.nquery(
@@ -1980,11 +1988,13 @@ class TestStore:
 
         for x, y in grid:
             cell_a = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_a = Annotation(cell_a, {"class": "A"})
             cell_b = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_b = Annotation(cell_b, {"class": "B"})
 
@@ -2024,11 +2034,13 @@ class TestStore:
 
         for x, y in grid:
             cell_a = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_a = Annotation(cell_a, {"class": "A"})
             cell_b = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_b = Annotation(cell_b, {"class": "B"})
 
@@ -2067,11 +2079,13 @@ class TestStore:
 
         for x, y in grid:
             cell_a = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_a = Annotation(cell_a, {"class": "A"})
             cell_b = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_b = Annotation(cell_b, {"class": "B"})
 

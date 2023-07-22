@@ -104,7 +104,7 @@ select = [
   # "ANN",   # flake8-annotations
   # "ARG",   # flake8-unused-arguments
   # "BLE",   # flake8-blind-except
-  # "COM",   # flake8-commas
+  "COM",   # flake8-commas
   # "DTZ",   # flake8-datetimez
   # "ERA",   # eradicate
   # "FBT",   # flake8-boolean-trap

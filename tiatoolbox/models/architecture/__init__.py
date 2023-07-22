@@ -16,7 +16,9 @@ PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 
 def fetch_pretrained_weights(
-    model_name: str, save_path: str = None, overwrite: bool = False
+    model_name: str,
+    save_path: str = None,
+    overwrite: bool = False,
 ) -> pathlib.Path:
     """Get the pretrained model information from yml file.
 
@@ -126,7 +128,8 @@ def get_pretrained_model(
 
     if pretrained_weights is None:
         pretrained_weights = fetch_pretrained_weights(
-            pretrained_model, overwrite=overwrite
+            pretrained_model,
+            overwrite=overwrite,
         )
 
     # ! assume to be saved in single GPU mode

@@ -273,7 +273,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 self._wsi_inst_info = []
         else:
             raise ValueError(
-                "Output type must be specified for instance or semantic segmentation."
+                "Output type must be specified for instance or semantic segmentation.",
             )
 
     def _predict_one_wsi(
@@ -298,7 +298,10 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
-            wsi_path, mask_path, mode, self.auto_generate_mask
+            wsi_path,
+            mask_path,
+            mode,
+            self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -333,7 +336,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                     mode="w+",
                     shape=tuple(np.fliplr([wsi_proc_shape])[0]),
                     dtype=np.uint8,
-                )
+                ),
             )
             self.wsi_layers[s_id][:] = 0
 
@@ -358,7 +361,11 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 tile_infer_output = self._infer_once()
 
                 self._process_tile_predictions(
-                    ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
+                    ioconfig,
+                    tile_bounds,
+                    tile_flag,
+                    set_idx,
+                    tile_infer_output,
                 )
             self._merge_post_process_results()
 
@@ -372,7 +379,12 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             # may need to chain it with parents
 
     def _process_tile_predictions(
-        self, ioconfig, tile_bounds, tile_flag, tile_mode, tile_output
+        self,
+        ioconfig,
+        tile_bounds,
+        tile_flag,
+        tile_mode,
+        tile_output,
     ):
         """Function to dispatch parallel post processing."""
         args = [

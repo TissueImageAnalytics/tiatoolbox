@@ -51,13 +51,15 @@ def fill_store(cell_grid, points_grid):
 
         cells = [
             Annotation(
-                cell, {"type": "cell", "prob": np.random.rand(1)[0], "color": (0, 1, 0)}
+                cell,
+                {"type": "cell", "prob": np.random.rand(1)[0], "color": (0, 1, 0)},
             )
             for cell in cell_grid
         ]
         points = [
             Annotation(
-                point, {"type": "pt", "prob": np.random.rand(1)[0], "color": (1, 0, 0)}
+                point,
+                {"type": "pt", "prob": np.random.rand(1)[0], "color": (1, 0, 0)},
             )
             for point in points_grid
         ]
@@ -65,7 +67,7 @@ def fill_store(cell_grid, points_grid):
             Annotation(
                 LineString((x, x + 500) for x in range(100, 400, 10)),
                 {"type": "line", "prob": 0.75, "color": (0, 0, 1)},
-            )
+            ),
         ]
 
         annotations = cells + points + lines
@@ -169,7 +171,9 @@ def test_zoomed_out_rendering(fill_store, tmp_path):
     )
     store.append(small_annotation)
     renderer = AnnotationRenderer(
-        max_scale=1, edge_thickness=0, zoomed_out_strat="scale"
+        max_scale=1,
+        edge_thickness=0,
+        zoomed_out_strat="scale",
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
@@ -259,7 +263,7 @@ def test_unknown_geometry(fill_store, tmp_path, caplog):
     wsi = wsireader.VirtualWSIReader(array)
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     store.append(
-        Annotation(geometry=MultiPoint([(5.0, 5.0), (10.0, 10.0)]), properties={})
+        Annotation(geometry=MultiPoint([(5.0, 5.0), (10.0, 10.0)]), properties={}),
     )
     store.commit()
     renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
@@ -295,7 +299,7 @@ def test_user_provided_cm(fill_store, tmp_path):
     color = color[0, :]
     viridis_mapper = colormaps["viridis"]
     assert np.all(
-        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
+        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8)),
     )  # expect rendered color to be viridis(0.75)
 
 
@@ -382,7 +386,9 @@ def test_secondary_cmap(fill_store, tmp_path):
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     cmap_dict = {"type": "line", "score_prop": "prob", "mapper": colormaps["viridis"]}
     renderer = AnnotationRenderer(
-        score_prop="type", secondary_cmap=cmap_dict, edge_thickness=0
+        score_prop="type",
+        secondary_cmap=cmap_dict,
+        edge_thickness=0,
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tile = np.array(tg.get_tile(1, 0, 1))  # line here with prob=0.75
@@ -390,7 +396,7 @@ def test_secondary_cmap(fill_store, tmp_path):
     color = color[0, :]
     viridis_mapper = colormaps["viridis"]
     assert np.all(
-        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
+        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8)),
     )  # expect rendered color to be viridis(0.75)
 
 
