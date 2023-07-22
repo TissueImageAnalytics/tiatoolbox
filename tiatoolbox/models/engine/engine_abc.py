@@ -28,11 +28,11 @@ class IOConfigABC(ABC):
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions, key=lambda x: x["resolution"],
             )
         else:
             self.highest_input_resolution = max(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions, key=lambda x: x["resolution"],
             )
 
     def _validate(self):
