@@ -110,7 +110,7 @@ select = [
   # "FBT",   # flake8-boolean-trap
   # "FIX",   # flake8-fixme
   "FLY",   # flynt
-  # "ICN",   # flake8-import-conventions
+  "ICN",   # flake8-import-conventions
   "INP",   # flake8-no-pep420
   "INT",   # flake8-gettext
   # "ISC",   # flake8-implicit-str-concat
@@ -118,7 +118,7 @@ select = [
   # "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
   # "PTH",   # flake8-use-pathlib
-  # "PYI",   # flake8-pyi
+  "PYI",   # flake8-pyi
   "RET",   # flake8-return
   # "RSE",   # flake8-raise
   # "RUF",   # Ruff-specific rules

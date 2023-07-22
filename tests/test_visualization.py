@@ -1,10 +1,10 @@
-"""Tests for visualization."""
+"""Test for visualization."""
 
 import copy
 import pathlib
 
 import joblib
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -97,9 +97,9 @@ def test_overlay_probability_map(sample_wsi_dict):
     output = overlay_probability_map(thumb, thumb_float, return_ax=False)
     assert isinstance(output, np.ndarray)
     output = overlay_probability_map(thumb, thumb_float, return_ax=True)
-    assert isinstance(output, matplotlib.axes.Axes)
+    assert isinstance(output, mpl.axes.Axes)
     output = overlay_probability_map(thumb, thumb_float, ax=output)
-    assert isinstance(output, matplotlib.axes.Axes)
+    assert isinstance(output, mpl.axes.Axes)
 
     # * Test crash mode
     with pytest.raises(ValueError, match=r".*min_val.*0, 1*"):
@@ -151,7 +151,7 @@ def test_overlay_instance_prediction():
             "contour": [[3, 3], [3, 4], [4, 4], [4, 3]],
         },
     }
-    canvas = np.zeros(inst_map.shape + (3,), dtype=np.uint8)
+    canvas = np.zeros((*inst_map.shape, 3), dtype=np.uint8)
     canvas = overlay_prediction_contours(
         canvas,
         inst_dict,
