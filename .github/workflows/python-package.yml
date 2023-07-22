@@ -30,7 +30,7 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest pytest-cov pytest-runner
+        python -m pip install ruff pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
     - name: Print Version Information
       run: |
@@ -46,12 +46,10 @@ jobs:
         python -c "import sqlite3; print('SQLite %s' % sqlite3.sqlite_version)"
         python -c "import numpy; print('Numpy %s' % numpy.__version__)"
         python -c "import openslide; print('OpenSlide %s' % openslide.__version__)"
-    - name: Lint with flake8
+    - name: Lint with ruff
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        ruff check .
     - name: Test with pytest
       run: |
         pytest --basetemp={envtmpdir} \
