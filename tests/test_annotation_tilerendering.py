@@ -1,8 +1,11 @@
-"""tests for annotation rendering using
-AnnotationRenderer and AnnotationTileGenerator
+"""Test for rendering tile annotations.
+
+Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerator.
+
 """
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +26,7 @@ from tiatoolbox.wsicore import wsireader
 
 
 @pytest.fixture(scope="session")
-def cell_grid() -> List[Polygon]:
+def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
     np.random.seed(0)
     return [
@@ -32,7 +35,7 @@ def cell_grid() -> List[Polygon]:
 
 
 @pytest.fixture(scope="session")
-def points_grid(spacing=60) -> List[Point]:
+def points_grid(spacing=60) -> list[Point]:
     """Generate a grid of fake point annotations."""
     np.random.seed(0)
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
@@ -44,7 +47,7 @@ def fill_store(cell_grid, points_grid):
 
     def _fill_store(
         store_class: AnnotationStore,
-        path: Union[str, Path],
+        path: str | Path,
     ):
         """Fills store with random variety of annotations."""
         store = store_class(path)
@@ -254,11 +257,7 @@ def test_sub_tile_levels(fill_store, tmp_path):
 
 
 def test_unknown_geometry(fill_store, tmp_path, caplog):
-    """
-    Test warning when unknown geometries are present that cannot
-    be rendered.
-
-    """
+    """Test warning when unknown geometries cannot be rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")

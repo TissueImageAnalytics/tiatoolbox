@@ -1,4 +1,7 @@
-"""Tests for graph construction tools."""
+"""Test for graph construction tools."""
+from __future__ import annotations
+
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -87,7 +90,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
         if np.random.rand() > 0.5:
             affinity_matrix = torch.tensor(affinity_matrix)
         edge_index = affinity_to_edge_index(affinity_matrix, threshold=threshold)
-        # noqa Check the output has shape (2, M)
+        # Check the output has shape (2, M)
         assert len(edge_index.shape) == 2
         n = len(affinity_matrix)
         two, m = edge_index.shape
@@ -198,7 +201,9 @@ def test_slidegraph_build_feature_range_thresh_none():
 
 
 class TestConstructor:
-    scenarios = [
+    """Define class to test constructors."""
+
+    scenarios: ClassVar[tuple[str, dict]] = [
         ("SlideGraph", {"graph_constructor": SlideGraphConstructor}),
     ]
 
