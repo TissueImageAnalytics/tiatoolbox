@@ -86,7 +86,7 @@ select = [
   "E",     # pycodestyle - Error
   "F",     # pyflakes
   "G",     # flake8-logging-format
-  # "N",     # pep8-naming
+  "N",     # pep8-naming
   # "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "Q",     # flake8-quotes
