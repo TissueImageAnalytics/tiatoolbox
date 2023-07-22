@@ -678,7 +678,10 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
-            wsi_path, mask_path, mode, self.auto_generate_mask
+            wsi_path,
+            mask_path,
+            mode,
+            self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -731,7 +734,11 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 tile_infer_output = self._infer_once()
 
                 self._process_tile_predictions(
-                    ioconfig, tile_bounds, tile_flag, set_idx, tile_infer_output
+                    ioconfig,
+                    tile_bounds,
+                    tile_flag,
+                    set_idx,
+                    tile_infer_output,
                 )
 
             self._merge_post_process_results()
@@ -740,7 +747,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._wsi_inst_info = None  # clean up
 
     def _process_tile_predictions(
-        self, ioconfig, tile_bounds, tile_flag, tile_mode, tile_output
+        self,
+        ioconfig,
+        tile_bounds,
+        tile_flag,
+        tile_mode,
+        tile_output,
     ):
         """Function to dispatch parallel post processing."""
         args = [

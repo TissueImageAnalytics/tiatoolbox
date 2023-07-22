@@ -81,7 +81,7 @@ def centre_crop_to_shape(
             (
                 "Height or width of `x` is smaller than `y` ",
                 f"{[h1, w1]} vs {[h2, w2]}",
-            )
+            ),
         )
 
     x_shape = x.shape
@@ -106,7 +106,8 @@ class UpSample2x(nn.Module):
         super().__init__()
         # correct way to create constant within module
         self.register_buffer(
-            "unpool_mat", torch.from_numpy(np.ones((2, 2), dtype="float32"))
+            "unpool_mat",
+            torch.from_numpy(np.ones((2, 2), dtype="float32")),
         )
         self.unpool_mat.unsqueeze(0)
 

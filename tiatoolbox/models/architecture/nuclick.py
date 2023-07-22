@@ -394,11 +394,13 @@ class NuClick(ModelABC):
         )
 
         self.residual_block_2 = ResidualConv(
-            num_input_channels=64, num_output_channels=128
+            num_input_channels=64,
+            num_output_channels=128,
         )
 
         self.residual_block_3 = ResidualConv(
-            num_input_channels=128, num_output_channels=128
+            num_input_channels=128,
+            num_output_channels=128,
         )
 
         self.residual_block_4 = nn.Sequential(
@@ -424,11 +426,13 @@ class NuClick(ModelABC):
         )
 
         self.residual_block_8 = ResidualConv(
-            num_input_channels=512, num_output_channels=256
+            num_input_channels=512,
+            num_output_channels=256,
         )
 
         self.residual_block_9 = ResidualConv(
-            num_input_channels=256, num_output_channels=256
+            num_input_channels=256,
+            num_output_channels=256,
         )
 
         self.residual_block_10 = nn.Sequential(
@@ -437,11 +441,13 @@ class NuClick(ModelABC):
         )
 
         self.residual_block_11 = ResidualConv(
-            num_input_channels=128, num_output_channels=64
+            num_input_channels=128,
+            num_output_channels=64,
         )
 
         self.residual_block_12 = ResidualConv(
-            num_input_channels=64, num_output_channels=64
+            num_input_channels=64,
+            num_output_channels=64,
         )
 
         # -------------Multi-scale Convolution blocks------------
@@ -603,7 +609,9 @@ class NuClick(ModelABC):
 
                 if np.any(this_mask[this_marker > 0]):
                     this_mask = reconstruction(
-                        this_marker, this_mask, footprint=disk(1)
+                        this_marker,
+                        this_mask,
+                        footprint=disk(1),
                     )
                     masks[i] = np.array([this_mask])
                 else:
