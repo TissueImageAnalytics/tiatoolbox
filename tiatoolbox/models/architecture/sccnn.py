@@ -9,7 +9,6 @@ IEEE transactions on medical imaging 35.5 (2016): 1196-1206.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -88,7 +87,7 @@ class SCCNN(ModelABC):
     def __init__(
         self,
         num_input_channels: int = 3,
-        patch_output_shape: Tuple[int, int] = (13, 13),
+        patch_output_shape: tuple[int, int] = (13, 13),
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
@@ -269,7 +268,7 @@ class SCCNN(ModelABC):
             in_tensor: torch.Tensor,
             out_height: int = 13,
             out_width: int = 13,
-        ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
             """Spatially constrained layer 1.
 
             Estimates row, column and height for
@@ -342,7 +341,7 @@ class SCCNN(ModelABC):
     @staticmethod
     def infer_batch(
         model: nn.Module, batch_data: np.ndarray | torch.Tensor, on_gpu: bool
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O

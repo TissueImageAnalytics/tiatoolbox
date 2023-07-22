@@ -1366,7 +1366,7 @@ class AnnotationStore(ABC, MutableMapping):
             return string_fn(fp)
         if hasattr(fp, "read"):
             return file_fn(fp)
-        raise IOError("Invalid file handle or path.")
+        raise OSError("Invalid file handle or path.")
 
     @classmethod
     def from_geojson(
@@ -1728,7 +1728,7 @@ class SQLiteStore(AnnotationStore):
             if not all(
                 ["OMIT_JSON" not in compile_options, "ENABLE_RTREE" in compile_options]
             ):
-                raise EnvironmentError(
+                raise OSError(
                     """RTREE sqlite3 compile option is required, and
                     JSON must not be disabled with OMIT_JSON compile option"""
                 )
@@ -1736,9 +1736,7 @@ class SQLiteStore(AnnotationStore):
             if not all(
                 ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options]
             ):
-                raise EnvironmentError(
-                    "RTREE and JSON1 sqlite3 compile options are required."
-                )
+                raise OSError("RTREE and JSON1 sqlite3 compile options are required.")
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:
@@ -3130,7 +3128,7 @@ class SQLiteStore(AnnotationStore):
         """
         _, minor, _ = sqlite3.sqlite_version_info
         if minor < 9:
-            raise EnvironmentError("Requires sqlite version 3.9.0 or higher.")
+            raise OSError("Requires sqlite version 3.9.0 or higher.")
         cur = self.con.cursor()
         if not isinstance(where, str):
             raise TypeError(f"Invalid type for `where` ({type(where)}).")

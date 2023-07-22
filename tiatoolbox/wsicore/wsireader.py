@@ -10,7 +10,7 @@ import pathlib
 import re
 from datetime import datetime
 from numbers import Number
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable
 
 import numpy as np
 import openslide
@@ -151,7 +151,7 @@ def is_ngff(
     multiscales_versions = {
         Version(scale["version"]) for scale in multiscales if "version" in scale
     }
-    omero_version: Optional[str] = omero.get("version")
+    omero_version: str | None = omero.get("version")
     if omero_version:
         omero_version: Version = Version(omero_version)
         if omero_version < min_version:
@@ -222,9 +222,9 @@ class WSIReader:
 
     @staticmethod  # noqa: A003
     def open(  # noqa: A003
-        input_img: Union[str, pathlib.Path, np.ndarray, WSIReader],
-        mpp: Optional[Tuple[Number, Number]] = None,
-        power: Optional[Number] = None,
+        input_img: str | pathlib.Path | np.ndarray | WSIReader,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
         **kwargs,
     ) -> WSIReader:
         """Returns an appropriate :class:`.WSIReader` object.
@@ -297,9 +297,7 @@ class WSIReader:
 
         # Handle homogeneous cases (based on final suffix)
 
-        def np_virtual_wsi(
-            input_path: np.ndarray, *args, **kwargs
-        ) -> "VirtualWSIReader":
+        def np_virtual_wsi(input_path: np.ndarray, *args, **kwargs) -> VirtualWSIReader:
             """Create a virtual WSI from a numpy array."""
             return VirtualWSIReader(input_path, *args, **kwargs)
 
@@ -357,9 +355,9 @@ class WSIReader:
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray, AnnotationStore],
-        mpp: Optional[Tuple[Number, Number]] = None,
-        power: Optional[Number] = None,
+        input_img: str | pathlib.Path | np.ndarray | AnnotationStore,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
     ) -> None:
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
@@ -430,7 +428,7 @@ class WSIReader:
 
     def _find_optimal_level_and_downsample(
         self, resolution: Resolution, units: Units, precision: int = 3
-    ) -> Tuple[int, np.ndarray]:
+    ) -> tuple[int, np.ndarray]:
         """Find the optimal level to read at for a desired resolution and units.
 
         The optimal level is the most downscaled level of the image
@@ -492,7 +490,7 @@ class WSIReader:
         resolution: Resolution,
         units: Units,
         precision: int = 3,
-    ) -> Tuple[int, IntPair, IntPair, NumPair, IntPair]:
+    ) -> tuple[int, IntPair, IntPair, NumPair, IntPair]:
         """Find optimal parameters for reading a rect at a given resolution.
 
         Reading the image at full baseline resolution and re-sampling to
@@ -568,7 +566,7 @@ class WSIReader:
 
     def _find_read_params_at_resolution(
         self, location: IntPair, size: IntPair, resolution: Resolution, units: Units
-    ) -> Tuple[int, NumPair, IntPair, IntPair, IntPair, IntPair]:
+    ) -> tuple[int, NumPair, IntPair, IntPair, IntPair, IntPair]:
         """Works similarly to `_find_read_rect_params`.
 
         Return the information necessary for scaling. While
@@ -719,7 +717,7 @@ class WSIReader:
 
     def _find_read_bounds_params(
         self, bounds: Bounds, resolution: Resolution, units: Units, precision: int = 3
-    ) -> Tuple[int, IntBounds, IntPair, IntPair, np.ndarray]:
+    ) -> tuple[int, IntBounds, IntPair, IntPair, np.ndarray]:
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
@@ -907,7 +905,7 @@ class WSIReader:
 
     def _find_tile_params(
         self, tile_objective_value: Number
-    ) -> Tuple[int, IntPair, int, Number]:
+    ) -> tuple[int, IntPair, int, Number]:
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
         if not rescale.is_integer():
@@ -954,7 +952,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
+        pad_constant_values: Number | Iterable[NumPair] = 0,
         **kwargs,
     ) -> np.ndarray:
         """Internal helper to perform `read_rect` at resolution.
@@ -986,7 +984,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
+        pad_constant_values: Number | Iterable[NumPair] = 0,
         coord_space: str = "baseline",
         **kwargs,
     ) -> np.ndarray:
@@ -1180,7 +1178,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Union[Number, Iterable[NumPair]] = 0,
+        pad_constant_values: Number | Iterable[NumPair] = 0,
         coord_space: str = "baseline",
         **kwargs,
     ) -> np.ndarray:
@@ -1348,7 +1346,7 @@ class WSIReader:
         resolution: Resolution = 1.25,
         units: Units = "power",
         **masker_kwargs,
-    ) -> "VirtualWSIReader":
+    ) -> VirtualWSIReader:
         """Create a tissue mask and wrap it in a VirtualWSIReader.
 
         For the morphological method, mpp is used for calculating the
@@ -1394,9 +1392,9 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: Union[str, pathlib.Path] = "tiles",
+        output_dir: str | pathlib.Path = "tiles",
         tile_objective_value: int = 20,
-        tile_read_size: Tuple[int, int] = (5000, 5000),
+        tile_read_size: tuple[int, int] = (5000, 5000),
         tile_format: str = ".jpg",
         verbose: bool = False,
     ) -> None:
@@ -1554,9 +1552,9 @@ class OpenSlideWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
-        mpp: Optional[Tuple[Number, Number]] = None,
-        power: Optional[Number] = None,
+        input_img: str | pathlib.Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
     ) -> None:
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
@@ -2082,9 +2080,9 @@ class OmnyxJP2WSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
-        mpp: Optional[Tuple[Number, Number]] = None,
-        power: Optional[Number] = None,
+        input_img: str | pathlib.Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
     ) -> None:
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         import glymur
@@ -2596,9 +2594,9 @@ class VirtualWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
-        mpp: Optional[Tuple[Number, Number]] = None,
-        power: Optional[Number] = None,
+        input_img: str | pathlib.Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
         info: WSIMeta = None,
         mode="rgb",
     ) -> None:
@@ -3132,9 +3130,9 @@ class TIFFWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
-        mpp: Optional[Tuple[Number, Number]] = None,
-        power: Optional[Number] = None,
+        input_img: str | pathlib.Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
         series="auto",
         cache_size=2**28,
     ) -> None:
@@ -3223,7 +3221,7 @@ class TIFFWSIReader(WSIReader):
         raw["Software"] = software
         raw["Photometric Info"] = photometric_info
 
-        def parse_svs_tag(string: str) -> Tuple[str, Union[Number, str]]:
+        def parse_svs_tag(string: str) -> tuple[str, Number | str]:
             """Parse SVS key-value string.
 
             Infers type(s) of data by trial and error with a fallback to
@@ -3318,8 +3316,8 @@ class TIFFWSIReader(WSIReader):
         }
 
     def _get_ome_objective_power(
-        self, xml: Optional[ElementTree.Element] = None
-    ) -> Optional[float]:
+        self, xml: ElementTree.Element | None = None
+    ) -> float | None:
         """Get the objective power from the OME-XML.
 
         Args:
@@ -3361,8 +3359,8 @@ class TIFFWSIReader(WSIReader):
             ) from e
 
     def _get_ome_mpp(
-        self, xml: Optional[ElementTree.Element] = None
-    ) -> Optional[List[float]]:
+        self, xml: ElementTree.Element | None = None
+    ) -> list[float] | None:
         """Get the microns per pixel from the OME-XML.
 
         Args:
@@ -3880,9 +3878,9 @@ class DICOMWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: Union[str, pathlib.Path, np.ndarray],
-        mpp: Optional[Tuple[Number, Number]] = None,
-        power: Optional[Number] = None,
+        input_img: str | pathlib.Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
     ) -> None:
         from wsidicom import WsiDicom
 
@@ -4441,7 +4439,7 @@ class NGFFWSIReader(WSIReader):
             mpp=self._get_mpp(),
         )
 
-    def _get_mpp(self) -> Optional[Tuple[float, float]]:
+    def _get_mpp(self) -> tuple[float, float] | None:
         """Get the microns-per-pixel (MPP) of the slide.
 
         Returns:
@@ -4919,10 +4917,10 @@ class AnnotationStoreReader(WSIReader):
 
     def __init__(
         self,
-        store: Union[AnnotationStore, str, pathlib.Path],
-        info: Optional[WSIMeta] = None,
+        store: AnnotationStore | str | pathlib.Path,
+        info: WSIMeta | None = None,
         renderer: AnnotationRenderer = None,
-        base_wsi: Union[WSIReader, str] = None,
+        base_wsi: WSIReader | str = None,
         alpha=1.0,
         **kwargs,
     ):

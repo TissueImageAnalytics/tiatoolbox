@@ -2040,7 +2040,7 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, remote_sample, caplog):
     # Create a copy of the sample with a non-micrometer scale
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["axes"][0]["unit"] = "foo"
     with open(sample_copy / ".zattrs", "w") as fh:
@@ -2058,7 +2058,7 @@ def test_ngff_zattrs_missing_axes_mpp(tmp_path, remote_sample):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["axes"] = []
     with open(sample_copy / ".zattrs", "w") as fh:
@@ -2073,7 +2073,7 @@ def test_ngff_empty_datasets_mpp(tmp_path, remote_sample):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["datasets"] = []
     with open(sample_copy / ".zattrs", "w") as fh:
@@ -2088,7 +2088,7 @@ def test_ngff_no_scale_transforms_mpp(tmp_path, remote_sample):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     for i, _ in enumerate(zattrs["multiscales"][0]["datasets"]):
         datasets = zattrs["multiscales"][0]["datasets"][i]
@@ -2105,7 +2105,7 @@ def test_ngff_missing_omero_version(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Remove the omero version
     del zattrs["omero"]["version"]
@@ -2120,7 +2120,7 @@ def test_ngff_missing_multiscales_returns_false(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Remove the multiscales key
     del zattrs["multiscales"]
@@ -2135,7 +2135,7 @@ def test_ngff_wrong_format_metadata(tmp_path, caplog, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"] = "foo"
@@ -2152,7 +2152,7 @@ def test_ngff_omero_below_min_version(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["omero"]["version"] = "0.0"
@@ -2168,7 +2168,7 @@ def test_ngff_omero_above_max_version(tmp_path, caplog, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["omero"]["version"] = "10.0"
@@ -2186,7 +2186,7 @@ def test_ngff_multiscales_below_min_version(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"][0]["version"] = "0.0"
@@ -2202,7 +2202,7 @@ def test_ngff_multiscales_above_max_version(tmp_path, caplog, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"][0]["version"] = "10.0"
@@ -2235,7 +2235,7 @@ def test_ngff_non_numeric_version(tmp_path, monkeypatch, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Set the omero version to a non-numeric string
     zattrs["omero"]["version"] = "0.5-dev"
@@ -2250,7 +2250,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs", "r") as fh:
+    with open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Set the versions to be inconsistent
     multiscales = zattrs["multiscales"]

@@ -97,7 +97,7 @@ select = [
   # "PL",  # Pylint
   "PT",    # flake8-pytest-style
   # "TD",    # flake8-todos
-  # "UP",    # pyupgrade
+  "UP",    # pyupgrade
   # "C90",   # mccabe
   "T10",   # flake8-debugger
   # "T20",   # flake8-print
