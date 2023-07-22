@@ -27,7 +27,7 @@ from tiatoolbox.cli.common import (
     default="semantic_segmentation",
 )
 @cli_file_type(
-    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs"
+    default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
 @cli_mode(
     usage_help="Type of input file to process.",
@@ -68,7 +68,9 @@ def semantic_segment(
     )
 
     ioconfig = prepare_ioconfig_seg(
-        IOSegmentorConfig, pretrained_weights, yaml_config_path
+        IOSegmentorConfig,
+        pretrained_weights,
+        yaml_config_path,
     )
 
     predictor = SemanticSegmentor(

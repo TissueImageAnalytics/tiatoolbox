@@ -25,7 +25,7 @@ def _load_mapde(name):
 def test_functionality(remote_sample):
     """Functionality test for MapDe.
 
-    Tests the functionality of MapDe model for inference at the patch level.
+    Test the functionality of MapDe model for inference at the patch level.
 
     """
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
@@ -33,7 +33,10 @@ def test_functionality(remote_sample):
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (0, 0, 252, 252), resolution=0.50, units="mpp", coord_space="resolution"
+        (0, 0, 252, 252),
+        resolution=0.50,
+        units="mpp",
+        coord_space="resolution",
     )
 
     model = _load_mapde(name="mapde-conic")
