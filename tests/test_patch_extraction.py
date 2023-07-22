@@ -8,7 +8,7 @@ import pytest
 from tiatoolbox.tools import patchextraction
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
 from tiatoolbox.wsicore.wsireader import (
     OmnyxJP2WSIReader,
     OpenSlideWSIReader,
@@ -93,7 +93,7 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
 
     assert isinstance(sliding_window, patchextraction.SlidingWindowPatchExtractor)
 
-    with pytest.raises(MethodNotSupported):
+    with pytest.raises(MethodNotSupportedError):
         patchextraction.get_patch_extractor("unknown")
 
 
@@ -132,7 +132,7 @@ def test_points_patch_extractor_image_format(
     assert isinstance(points.wsi, OmnyxJP2WSIReader)
 
     false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         _ = patchextraction.get_patch_extractor(
             input_img=false_image,
             locations_list=locations_list,

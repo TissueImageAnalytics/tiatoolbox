@@ -20,7 +20,7 @@ from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
 
 
@@ -787,7 +787,7 @@ def test_contrast_enhancer():
 
 def test_load_stain_matrix(tmp_path):
     """Test to load stain matrix."""
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
 
     with pytest.raises(TypeError):
@@ -898,7 +898,7 @@ def test_read_point_annotations(
         _ = utils.misc.read_locations(labels_table.drop(["y", "class"], axis=1))
 
     labels = Path("./samplepatch_extraction.test")
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         _ = utils.misc.read_locations(labels)
 
     with pytest.raises(TypeError):
