@@ -490,7 +490,7 @@ def read_locations(
             DataFrame with x, y location and class type.
 
     Raises:
-        FileNotSupported:
+        FileNotSupportedError:
             If the path to input table is not of supported type.
 
     Examples:

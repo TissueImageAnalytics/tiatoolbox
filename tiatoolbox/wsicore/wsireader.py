@@ -335,7 +335,7 @@ class WSIReader:
                 Input path to WSI.
 
         Raises:
-            FileNotSupported:
+            FileNotSupportedError:
                 If the input image is not supported.
 
         """

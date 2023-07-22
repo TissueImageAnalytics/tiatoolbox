@@ -2198,7 +2198,7 @@ def test_ngff_wrong_format_metadata(tmp_path, caplog, remote_sample):
 
 
 def test_ngff_omero_below_min_version(tmp_path, remote_sample):
-    """Test for FileNotSupported when omero version is below minimum."""
+    """Test for FileNotSupportedError when omero version is below minimum."""
     sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
@@ -2214,7 +2214,7 @@ def test_ngff_omero_below_min_version(tmp_path, remote_sample):
 
 
 def test_ngff_omero_above_max_version(tmp_path, caplog, remote_sample):
-    """Test for FileNotSupported when omero version is above maximum."""
+    """Test for FileNotSupportedError when omero version is above maximum."""
     sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
@@ -2232,7 +2232,7 @@ def test_ngff_omero_above_max_version(tmp_path, caplog, remote_sample):
 
 
 def test_ngff_multiscales_below_min_version(tmp_path, remote_sample):
-    """Test for FileNotSupported when multiscales version is below minimum."""
+    """Test for FileNotSupportedError when multiscales version is below minimum."""
     sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
@@ -2248,7 +2248,7 @@ def test_ngff_multiscales_below_min_version(tmp_path, remote_sample):
 
 
 def test_ngff_multiscales_above_max_version(tmp_path, caplog, remote_sample):
-    """Test for FileNotSupported when multiscales version is above maximum."""
+    """Test for FileNotSupportedError when multiscales version is above maximum."""
     sample = remote_sample("ngff-1")
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
