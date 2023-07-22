@@ -1267,17 +1267,17 @@ def test_save_as_json(tmp_path):
     not_jsonable = {"x86": lambda x: x}
     not_jsonable.update(sample)
     # should fail because key is not of primitive type [str, int, float, bool]
-    with pytest.raises(ValueError, match=r".*Key.*.*not jsonified.*"):
+    with pytest.raises(TypeError, match=r".*Key.*.*not jsonified.*"):
         misc.save_as_json(
             {frozenset(key_dict): sample}, tmp_path / "sample_json.json", exist_ok=True
         )
-    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+    with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
-    with pytest.raises(ValueError, match=r".*Value.*.*not jsonified.*"):
+    with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(
             list(not_jsonable.values()), tmp_path / "sample_json.json", exist_ok=True
         )
-    with pytest.raises(ValueError, match=r"Type.*`data`.*.*must.*dict, list.*"):
+    with pytest.raises(TypeError, match=r"Type.*`data`.*.*must.*dict, list.*"):
         misc.save_as_json(
             np.random.rand(2, 2), tmp_path / "sample_json.json", exist_ok=True
         )
