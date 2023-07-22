@@ -809,7 +809,9 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
 
         cnt = self.to_tile_coords(
-            self.decode_wkb(annotation.geometry, 3), top_left, scale,
+            self.decode_wkb(annotation.geometry, 3),
+            top_left,
+            scale,
         )
         if self.thickness > -1:
             cv2.drawContours(
@@ -858,7 +860,9 @@ class AnnotationRenderer:
         cv2.circle(
             tile,
             self.to_tile_coords(
-                self.decode_wkb(annotation.geometry, 1), top_left, scale,
+                self.decode_wkb(annotation.geometry, 1),
+                top_left,
+                scale,
             )[0],
             np.maximum(self.edge_thickness, 1),
             col,
@@ -890,7 +894,9 @@ class AnnotationRenderer:
             tile,
             [
                 self.to_tile_coords(
-                    list(self.decode_wkb(annotation.geometry, 2)), top_left, scale,
+                    list(self.decode_wkb(annotation.geometry, 2)),
+                    top_left,
+                    scale,
                 ),
             ],
             False,
