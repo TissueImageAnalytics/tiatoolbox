@@ -98,9 +98,9 @@ select = [
   "PT",    # flake8-pytest-style
   # "TD",    # flake8-todos
   "UP",    # pyupgrade
-  # "C90",   # mccabe
+  "C90",   # mccabe
   "T10",   # flake8-debugger
-  # "T20",   # flake8-print
+  "T20",   # flake8-print
   # "ANN",   # flake8-annotations
   # "ARG",   # flake8-unused-arguments
   # "BLE",   # flake8-blind-except

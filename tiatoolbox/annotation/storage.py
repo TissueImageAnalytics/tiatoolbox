@@ -1447,7 +1447,7 @@ class AnnotationStore(ABC, MutableMapping):
             for feature in geojson["features"]
         ]
 
-        print(f"added {len(annotations)} annotations")
+        logger.info("Adding %d annotations.", len(annotations))
         self.append_many(annotations)
 
     def to_geojson(self, fp: Optional[Union[IO, str, Path]] = None) -> Optional[str]:
