@@ -249,7 +249,6 @@ def has_network(
         return True
 
 
-
 def pixman_versions() -> list[tuple[int, ...]]:
     """The version(s) of pixman that are installed.
 
