@@ -82,7 +82,7 @@ replace = 'TOOLBOX_VER: {new_version}'
 select = [
   "A",     # flake8-builtins
   "B",     # flake8-bugbear
-  # "D",     # pydocstyle, need to enable for docstrings check.
+  "D",     # pydocstyle, need to enable for docstrings check.
   "E",     # pycodestyle - Error
   "F",     # pyflakes
   "G",     # flake8-logging-format
@@ -91,8 +91,8 @@ select = [
   "W",     # pycodestyle - Warning
   "Q",     # flake8-quotes
   "C4",    # flake8-comprehensions
-  # "FA",    # flake8-future-annotations
-  # "EM",    # flake8-errmsg
+  "FA",    # flake8-future-annotations
+  "EM",    # flake8-errmsg
   "PD",    # pandas-vet
   # "PL",  # Pylint
   "PT",    # flake8-pytest-style
@@ -115,18 +115,18 @@ select = [
   "INT",   # flake8-gettext
   "ISC",   # flake8-implicit-str-concat
   # "NPY",   # NumPy-specific rules
-  # "PGH",   # pygrep-hooks
+  "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
-  # "PTH",   # flake8-use-pathlib
+  "PTH",   # flake8-use-pathlib
   "PYI",   # flake8-pyi
   "RET",   # flake8-return
   "RSE",   # flake8-raise
-  # "RUF",   # Ruff-specific rules
-  # "SLF",   # flake8-self
+  "RUF",   # Ruff-specific rules
+  "SLF",   # flake8-self
   "SIM",   # flake8-simplify
   "TID",   # flake8-tidy-imports
-  # "TCH",   # flake8-type-checking
-  # "TRY",   # tryceratops
+  "TCH",   # flake8-type-checking
+  "TRY",   # tryceratops
   "YTT",   # flake8-2020
   "PERF",  # Perflint
   "SLOT",  # flake8-slots

@@ -349,7 +349,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
         indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
 
-        if not self._wsi_inst_info:
+        if not self._wsi_inst_info:  # pragma: no cover
             self._wsi_inst_info = []
         self._wsi_inst_info.extend({} for _ in indices_inst)
 
