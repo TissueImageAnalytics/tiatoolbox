@@ -96,7 +96,7 @@ select = [
   "PD",    # pandas-vet
   # "PL",  # Pylint
   "PT",    # flake8-pytest-style
-  # "TD",    # flake8-todos
+  "TD",    # flake8-todos
   "UP",    # pyupgrade
   "C90",   # mccabe
   "T10",   # flake8-debugger
@@ -105,7 +105,7 @@ select = [
   # "ARG",   # flake8-unused-arguments
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
-  # "DTZ",   # flake8-datetimez
+  "DTZ",   # flake8-datetimez
   # "ERA",   # eradicate
   # "FBT",   # flake8-boolean-trap
   # "FIX",   # flake8-fixme
