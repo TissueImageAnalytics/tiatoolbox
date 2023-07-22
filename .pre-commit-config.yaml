@@ -52,7 +52,6 @@ repos:
       - id: mixed-line-ending       # Replaces or checks mixed line endings.
       - id: requirements-txt-fixer  # Sorts entries in requirements.txt.
       - id: trailing-whitespace     # Trims trailing whitespace.
-        exclude: 'setup.cfg'
       - id: file-contents-sorter    # Sorts the lines in specified files (defaults to alphabetical).
         files: whitelist.txt
       - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source.
