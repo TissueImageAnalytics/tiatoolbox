@@ -81,9 +81,9 @@ replace = 'TOOLBOX_VER: {new_version}'
 [tool.ruff]
 select = [
   "A",     # flake8-builtins
-  # "B",     # flake8-bugbear
+  "B",     # flake8-bugbear
   # "D",     # pydocstyle, need to enable for docstrings check.
-  # "E",     # pycodestyle - Error
+  "E",     # pycodestyle - Error
   "F",     # pyflakes
   "G",     # flake8-logging-format
   # "N",     # pep8-naming

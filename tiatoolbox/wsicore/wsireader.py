@@ -4939,17 +4939,20 @@ class AnnotationStoreReader(WSIReader):
             # try to get metadata from store
             try:
                 info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
-            except KeyError:
+            except KeyError as exc:
                 if self.base_wsi is not None:
                     # get the metadata from the base reader.
                     # assumes annotations saved at WSI baseline res
                     info = self.base_wsi.info
                 else:
                     # we cant find any metadata
-                    raise ValueError(
-                        """No metadata found in store. Please provide either
-                        info or base slide."""
+                    msg = (
+                        "No metadata found in store. "
+                        "Please provide either info or base slide."
                     )
+                    raise ValueError(
+                        msg,
+                    ) from exc
         self.info = info
         if renderer is None:
             types = self.store.pquery("props['type']")
