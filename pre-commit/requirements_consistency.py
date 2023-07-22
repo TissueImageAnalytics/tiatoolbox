@@ -1,8 +1,9 @@
 """Test for ensuring that requirements files are valid and consistent."""
+from __future__ import annotations
+
 import importlib
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import yaml
 from pkg_resources import Requirement
@@ -17,8 +18,9 @@ REQUIREMENTS_FILES = [
 
 
 def parse_pip(
-    file_path: Path = None, lines: List[str] = None
-) -> Dict[str, Requirement]:
+    file_path: Path | None = None,
+    lines: list[str] | None = None,
+) -> dict[str, Requirement]:
     """Parse a pip requirements file.
 
     Note that package names are case insensitive and underscores and
@@ -37,7 +39,8 @@ def parse_pip(
 
     """
     if lines and file_path:
-        raise ValueError("Only one of file_path or lines may be specified")
+        msg = "Only one of file_path or lines may be specified"
+        raise ValueError(msg)
     if not lines:
         with file_path.open("r") as fh:
             lines = fh.readlines()
@@ -54,14 +57,15 @@ def parse_pip(
         requirement = Requirement.parse(line)
         # Check for duplicate packages
         if requirement.key in packages:
+            msg = f"Duplicate dependency: {requirement.name} in {file_path.name}"
             raise ValueError(
-                f"Duplicate dependency: {requirement.name} in {file_path.name}"
+                msg,
             )
         packages[requirement.key] = requirement
     return packages
 
 
-def parse_conda(file_path: Path) -> Dict[str, Requirement]:
+def parse_conda(file_path: Path) -> dict[str, Requirement]:
     """Parse a conda requirements file.
 
     Args:
@@ -76,7 +80,7 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
     """
     with file_path.open("r") as fh:
         config = yaml.safe_load(fh)
-    dependencies: List[str] = config["dependencies"]
+    dependencies: list[str] = config["dependencies"]
     packages = {}
     for dependency in dependencies:
         # pip-style dependency
@@ -88,14 +92,15 @@ def parse_conda(file_path: Path) -> Dict[str, Requirement]:
         requirement = Requirement.parse(dependency)
         # Check for duplicate packages
         if requirement.key in packages:
+            msg = f"Duplicate dependency: {requirement.key} in {file_path.name}"
             raise ValueError(
-                f"Duplicate dependency: {requirement.key} in {file_path.name}"
+                msg,
             )
         packages[requirement.key] = requirement
     return packages
 
 
-def parse_setup_py(file_path) -> Dict[str, Requirement]:
+def parse_setup_py(file_path) -> dict[str, Requirement]:
     """Parse a setup.py file.
 
     Args:
@@ -136,16 +141,19 @@ def test_files_exist(root_dir: Path) -> None:
     for sub_name, super_name in REQUIREMENTS_FILES:
         sub_path = root_dir / sub_name
         if not sub_path.exists():
-            raise FileNotFoundError(f"Missing file: {sub_path}")
+            msg = f"Missing file: {sub_path}"
+            raise FileNotFoundError(msg)
         if super_name:
             super_path = root_dir / super_name
             if not super_path.exists():
-                raise FileNotFoundError(f"Missing file: {super_path}")
+                msg = f"Missing file: {super_path}"
+                raise FileNotFoundError(msg)
 
 
 def parse_requirements(
-    file_path: Path = None, lines: List[str] = None
-) -> Dict[str, Tuple[str, Tuple[str, ...], str]]:
+    file_path: Path | None = None,
+    lines: list[str] | None = None,
+) -> dict[str, tuple[str, tuple[str, ...], str]]:
     """Parse a requirements file (pip or conda).
 
     Args:
@@ -160,7 +168,8 @@ def parse_requirements(
             pkg_resources.Requirement.
     """
     if lines and file_path:
-        raise ValueError("Only one of file_path or lines may be specified")
+        msg = "Only one of file_path or lines may be specified"
+        raise ValueError(msg)
     if file_path.name == "setup.py":
         return parse_setup_py(file_path)
     if file_path.suffix == ".yml":
@@ -168,10 +177,11 @@ def parse_requirements(
     if file_path.suffix == ".txt":
         return parse_pip(file_path, lines)
 
-    raise ValueError(f"Unsupported file type: {file_path.suffix}")
+    msg = f"Unsupported file type: {file_path.suffix}"
+    raise ValueError(msg)
 
 
-def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -> bool:
+def in_common_consistent(all_requirements: dict[Path, dict[str, Requirement]]) -> bool:
     """Test that in-common requirements are consistent.
 
     Args:
@@ -214,13 +224,13 @@ def in_common_consistent(all_requirements: Dict[Path, Dict[str, Requirement]]) -
         formatted_reqs = [f"{c}{v} ({p.name})" for p, c, v in zipped_file_specs]
         if any(x != constraints[0] for x in constraints):
             print(
-                f"{key} has inconsistent constraints:" f" {', '.join(formatted_reqs)}."
+                f"{key} has inconsistent constraints: {', '.join(formatted_reqs)}.",
             )
             consistent = False
         if any(x != versions[0] for x in versions):
-            print(f"{key} has inconsistent versions:" f" {', '.join(formatted_reqs)}.")
+            print(f"{key} has inconsistent versions: {', '.join(formatted_reqs)}.")
             consistent = False
-    return consistent  # noqa: R504
+    return consistent
 
 
 def main():
@@ -231,7 +241,7 @@ def main():
     passed = True
 
     # Keep track of all parsed files
-    all_requirements: Dict[Path, Dict[str, Requirement]] = {}
+    all_requirements: dict[Path, dict[str, Requirement]] = {}
 
     # Check that packages in main are also in super (dev)
     for sub_name, super_name in REQUIREMENTS_FILES:

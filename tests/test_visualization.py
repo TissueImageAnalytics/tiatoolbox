@@ -53,17 +53,17 @@ def test_overlay_prediction_mask(sample_wsi_dict):
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail[1] = (1, (255, 255, 255))
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+    with pytest.raises(TypeError, match=r".*Wrong `label_info` format.*"):
         _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail["ABC"] = ("ABC", (255, 255, 255))
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+    with pytest.raises(TypeError, match=r".*Wrong `label_info` format.*"):
         _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
     label_info_fail[1] = ("ABC", "ABC")
-    with pytest.raises(ValueError, match=r".*Wrong `label_info` format.*"):
+    with pytest.raises(TypeError, match=r".*Wrong `label_info` format.*"):
         _ = overlay_prediction_mask(thumb, merged, label_info=label_info_fail)
 
     label_info_fail = copy.deepcopy(label_info_full)
@@ -172,7 +172,7 @@ def test_overlay_instance_prediction():
         canvas, inst_dict, inst_colours=np.array(inst_colours)
     )
     # test crash
-    with pytest.raises(ValueError, match=r"`.*inst_colours`.*tuple.*"):
+    with pytest.raises(TypeError, match=r"`.*inst_colours`.*tuple.*"):
         overlay_prediction_contours(canvas, inst_dict, inst_colours=inst_colours)
 
 
