@@ -2608,9 +2608,9 @@ class OmnyxJP2WSIReader(WSIReader):
         Returns:
             dict[str, glymur.jp2box.Jp2kBox]:
                 Dictionary of JP2 boxes. Should contain the keys
-                "xml" and "cres" for Omnyx JP2 images. For other JP2
-                images this may contain only the "cres" key or none
-                at all.
+                "xml " and "cres" for Omnyx JP2 images. For other JP2
+                images this may contain only the "cres" key or neither.
+                The image header "ihdr" box is always present.
 
         """
 
@@ -2646,9 +2646,11 @@ class OmnyxJP2WSIReader(WSIReader):
         if image_header is None:
             msg = "Metadata: JP2 image header missing!"
             raise ValueError(msg)
-        result = {}
+        result = {
+            "ihdr": image_header,
+        }
         if xml_box is not None:
-            result["xml"] = xml_box
+            result["xml "] = xml_box
         if capture_resolution_box is not None:
             result["cres"] = capture_resolution_box
         return result
@@ -2689,7 +2691,7 @@ class OmnyxJP2WSIReader(WSIReader):
                 mpp = [mpp_x, mpp_y]
 
         # Get image dimensions
-        image_header = boxes[2].box[0]
+        image_header = boxes["ihdr"]
         slide_dimensions = (image_header.width, image_header.height)
 
         # Determine level_count
