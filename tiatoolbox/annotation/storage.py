@@ -174,7 +174,7 @@ class Annotation:
         self._type = None
 
     @property
-    def type(self) -> int:
+    def geometry_type(self) -> int:
         """Return the geometry type of the annotation."""
         if not hasattr(self, "_type"):
             self._type = self.geometry.type
@@ -273,7 +273,10 @@ def decode_wkb(wkb: bytes, geom_type: int) -> np.ndarray:
     Examples:
         >>> from tiatoolbox.annotation.storage import decode_wkb
         >>> # Point(1, 2).wkb
-        >>> wkb = b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@"
+        >>> wkb = (
+        ...     b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        ...     b"\xf0?\x00\x00\x00\x00\x00\x00\x00@"
+        ... )
         >>> decode_wkb(wkb, 1)
         array([0., 0.])
 
