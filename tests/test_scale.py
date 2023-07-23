@@ -1,4 +1,4 @@
-"""Tests for scaling methods."""
+"""Test for scaling methods."""
 
 import numpy as np
 import pytest
@@ -12,7 +12,7 @@ def test_platt_scaler():
     logit = np.random.rand(sample_size)
     # binary class
     label = np.concatenate(
-        [np.full(int(0.9 * sample_size), -1), np.full(int(0.1 * sample_size), 1)]
+        [np.full(int(0.9 * sample_size), -1), np.full(int(0.1 * sample_size), 1)],
     )
     scaler = PlattScaling(max_iter=1)
     scaler._fixer_a = 0.0

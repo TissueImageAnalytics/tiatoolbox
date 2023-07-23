@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from tiatoolbox.models import HoVerNet
 from tiatoolbox.models.architecture import fetch_pretrained_weights
@@ -22,7 +22,10 @@ def test_functionality(remote_sample):
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (0, 0, 256, 256), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 256, 256),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=6, mode="fast")
@@ -36,7 +39,10 @@ def test_functionality(remote_sample):
 
     # * test fast mode (architecture used for MoNuSAC data)
     patch = reader.read_bounds(
-        (0, 0, 256, 256), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 256, 256),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=5, mode="fast")
@@ -50,7 +56,10 @@ def test_functionality(remote_sample):
 
     # * test original mode on CoNSeP dataset (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
-        (0, 0, 270, 270), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 270, 270),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=5, mode="original")
@@ -64,7 +73,10 @@ def test_functionality(remote_sample):
 
     # * test original mode on Kumar dataset (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
-        (0, 0, 270, 270), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 270, 270),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=None, mode="original")
@@ -82,7 +94,7 @@ def test_functionality(remote_sample):
 
 
 def test_unit_blocks():
-    """Tests for blocks within HoVerNet."""
+    """Test for blocks within HoVerNet."""
     # padding
     model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))
     sample = torch.rand((1, 3, 14, 14), dtype=torch.float32)

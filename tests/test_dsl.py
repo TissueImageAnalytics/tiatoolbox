@@ -1,8 +1,10 @@
-"""Tests for predicate module."""
+"""Test for predicate module."""
+from __future__ import annotations
+
 import json
 import sqlite3
 from numbers import Number
-from typing import Union
+from typing import ClassVar
 
 import pytest
 
@@ -61,7 +63,7 @@ def test_json_contains():
     assert not json_contains(properties, "foo")
 
 
-def sqlite_eval(query: Union[str, Number]):
+def sqlite_eval(query: str | Number):
     """Evaluate an SQL predicate on dummy data and return the result.
 
     Args:
@@ -91,14 +93,16 @@ def sqlite_eval(query: Union[str, Number]):
     return result
 
 
-class TestSQLite:  # noqa: PIE798
+class TestSQLite:
     """Test converting from our DSL to an SQLite backend."""
 
     @staticmethod
     def test_prop_or_prop():
         """Test OR operator between two prop accesses."""
         query = eval(  # skipcq: PYL-W0123
-            "(props['int'] == 2) | (props['int'] == 3)", SQL_GLOBALS, {}
+            "(props['int'] == 2) | (props['int'] == 3)",
+            SQL_GLOBALS,
+            {},
         )
         assert str(query) == (
             '((json_extract(properties, "$.int") == 2) OR '
@@ -109,7 +113,7 @@ class TestSQLite:  # noqa: PIE798
 class TestPredicate:
     """Test predicate statments with various backends."""
 
-    scenarios = [
+    scenarios: ClassVar[list[str, dict]] = [
         (
             "Python",
             {

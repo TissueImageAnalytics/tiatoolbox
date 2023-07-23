@@ -1,10 +1,9 @@
-"""Defines a set of UNet variants to be used within tiatoolbox."""
-
-from typing import List, Tuple
+"""Define a set of UNet variants to be used within tiatoolbox."""
+from __future__ import annotations
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
+from torch import nn
 from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet
 
@@ -54,7 +53,7 @@ class ResNetEncoder(ResNet):
     @staticmethod
     def resnet(
         num_input_channels: int,
-        downsampling_levels: List[int],
+        downsampling_levels: list[int],
     ):
         """Shortcut method to create customised ResNet.
 
@@ -80,7 +79,11 @@ class ResNetEncoder(ResNet):
         model = ResNetEncoder(ResNetBottleneck, downsampling_levels)
         if num_input_channels != 3:
             model.conv1 = nn.Conv2d(  # skipcq: PYL-W0201
-                num_input_channels, 64, 7, stride=2, padding=3
+                num_input_channels,
+                64,
+                7,
+                stride=2,
+                padding=3,
             )
         return model
 
@@ -108,8 +111,9 @@ class UnetEncoder(nn.Module):
     def __init__(
         self,
         num_input_channels: int,
-        layer_output_channels: List[int],
-    ):
+        layer_output_channels: list[int],
+    ) -> None:
+        """Initialize :class:`UnetEncoder`."""
         super().__init__()
 
         self.blocks = nn.ModuleList()
@@ -141,8 +145,8 @@ class UnetEncoder(nn.Module):
                             nn.ReLU(),
                         ),
                         nn.AvgPool2d(2, stride=2),
-                    ]
-                )
+                    ],
+                ),
             )
             input_channels = output_channels
 
@@ -201,7 +205,7 @@ def create_block(pre_activation, kernels, input_ch, output_ch):
                         padding=int((ksize - 1) // 2),  # same padding
                         bias=False,
                     ),
-                ]
+                ],
             )
         else:
             layers.extend(
@@ -215,7 +219,7 @@ def create_block(pre_activation, kernels, input_ch, output_ch):
                     ),
                     nn.BatchNorm2d(output_ch),
                     nn.ReLU(),
-                ]
+                ],
             )
         input_ch = output_ch
     return layers
@@ -275,14 +279,16 @@ class UNetModel(ModelABC):
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
-        encoder_levels: List[int] = None,
-        decoder_block: Tuple[int] = None,
+        encoder_levels: list[int] | None = None,
+        decoder_block: tuple[int] | None = None,
         skip_type: str = "add",
-    ):
+    ) -> None:
+        """Initialize :class:`UNetModel`."""
         super().__init__()
 
         if encoder.lower() not in {"resnet50", "unet"}:
-            raise ValueError(f"Unknown encoder `{encoder}`")
+            msg = f"Unknown encoder `{encoder}`"
+            raise ValueError(msg)
 
         if encoder_levels is None:
             encoder_levels = [64, 128, 256, 512, 1024]
@@ -298,7 +304,8 @@ class UNetModel(ModelABC):
             self.backbone = UnetEncoder(num_input_channels, encoder_levels)
 
         if skip_type.lower() not in {"add", "concat"}:
-            raise ValueError(f"Unknown type of skip connection: `{skip_type}`")
+            msg = f"Unknown type of skip connection: `{skip_type}`"
+            raise ValueError(msg)
         self.skip_type = skip_type.lower()
 
         img_list = torch.rand([1, num_input_channels, 256, 256])
@@ -349,6 +356,10 @@ class UNetModel(ModelABC):
         Args:
             imgs (:class:`torch.Tensor`):
                 Input images, the tensor is of the shape NCHW.
+            args (list):
+                List of input arguments.
+            kwargs (dict):
+                Key-word arguments.
 
         Returns:
             :class:`torch.Tensor`:
@@ -372,10 +383,7 @@ class UNetModel(ModelABC):
             # block
             y = en_list[-idx]
             x_ = self.upsample2x(x)
-            if self.skip_type == "add":
-                x = x_ + y
-            else:
-                x = torch.cat([x_, y], dim=1)
+            x = x_ + y if self.skip_type == "add" else torch.cat([x_, y], dim=1)
             x = self.uplist[idx - 1](x)
         return self.clf(x)
 
@@ -416,7 +424,10 @@ class UNetModel(ModelABC):
             logits = model(imgs)
             probs = F.softmax(logits, 1)
             probs = F.interpolate(
-                probs, scale_factor=2, mode="bilinear", align_corners=False
+                probs,
+                scale_factor=2,
+                mode="bilinear",
+                align_corners=False,
             )
             probs = centre_crop(probs, crop_shape)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC

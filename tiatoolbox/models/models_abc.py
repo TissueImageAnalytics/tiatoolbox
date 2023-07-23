@@ -1,7 +1,7 @@
-"""Defines Abstract Base Class for Models defined in tiatoolbox."""
+"""Define Abstract Base Class for Models defined in tiatoolbox."""
 from abc import ABC, abstractmethod
 
-import torch.nn as nn
+from torch import nn
 
 
 class IOConfigABC(ABC):
@@ -15,24 +15,26 @@ class IOConfigABC(ABC):
     @property
     @abstractmethod
     def input_resolutions(self):
+        """Abstract method to update input_resolution."""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def output_resolutions(self):
+        """Abstract method to update output_resolutions."""
         raise NotImplementedError
 
 
 class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize Abstract class ModelABC."""
         super().__init__()
         self._postproc = self.postproc
         self._preproc = self.preproc
 
     @abstractmethod
-    # noqa
     # This is generic abc, else pylint will complain
     def forward(self, *args, **kwargs):
         """Torch method, this contains logic for using layers defined in init."""
@@ -89,7 +91,8 @@ class ModelABC(ABC, nn.Module):
 
         """
         if func is not None and not callable(func):
-            raise ValueError(f"{func} is not callable!")
+            msg = f"{func} is not callable!"
+            raise ValueError(msg)
 
         if func is None:
             self._preproc = self.preproc
@@ -119,7 +122,8 @@ class ModelABC(ABC, nn.Module):
 
         """
         if func is not None and not callable(func):
-            raise ValueError(f"{func} is not callable!")
+            msg = f"{func} is not callable!"
+            raise ValueError(msg)
 
         if func is None:
             self._postproc = self.postproc
