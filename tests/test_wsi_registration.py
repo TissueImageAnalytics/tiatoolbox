@@ -111,8 +111,8 @@ def test_prealignment_input_shape():
     """Test for inputs to prealignment function."""
     fixed_img = RNG.random((10, 10))
     moving_img = RNG.random((15, 10))
-    fixed_mask = np.random.choice([0, 1], size=(15, 10))
-    moving_mask = np.random.choice([0, 1], size=(10, 10))
+    fixed_mask = RNG.choice([0, 1], size=(15, 10))
+    moving_mask = RNG.choice([0, 1], size=(10, 10))
 
     with pytest.raises(
         ValueError,
@@ -125,8 +125,8 @@ def test_prealignment_rotation_step():
     """Test for rotation step input to prealignment function."""
     fixed_img = RNG.random((10, 10))
     moving_img = RNG.random((10, 10))
-    fixed_mask = np.random.choice([0, 1], size=(10, 10))
-    moving_mask = np.random.choice([0, 1], size=(10, 10))
+    fixed_mask = RNG.choice([0, 1], size=(10, 10))
+    moving_mask = RNG.choice([0, 1], size=(10, 10))
 
     with pytest.raises(
         ValueError,
@@ -344,8 +344,8 @@ def test_register_input():
     """Test for inputs to register function."""
     fixed_img = RNG.random((32, 32))
     moving_img = RNG.random((32, 32))
-    fixed_mask = np.random.choice([0, 1], size=(32, 32))
-    moving_mask = np.random.choice([0, 1], size=(32, 32))
+    fixed_mask = RNG.choice([0, 1], size=(32, 32))
+    moving_mask = RNG.choice([0, 1], size=(32, 32))
 
     dfbr = DFBRegister()
     with pytest.raises(
@@ -359,8 +359,8 @@ def test_register_input_channels():
     """Test for checking inputs' number of channels for register function."""
     fixed_img = RNG.random((32, 32, 1))
     moving_img = RNG.random((32, 32, 1))
-    fixed_mask = np.random.choice([0, 1], size=(32, 32))
-    moving_mask = np.random.choice([0, 1], size=(32, 32))
+    fixed_mask = RNG.choice([0, 1], size=(32, 32))
+    moving_mask = RNG.choice([0, 1], size=(32, 32))
 
     dfbr = DFBRegister()
     with pytest.raises(
@@ -462,8 +462,8 @@ def test_estimate_bspline_transform_inputs():
     """Test input dimensions for estimate_bspline_transform function."""
     fixed_img = RNG.random((32, 32, 32, 3))
     moving_img = RNG.random((32, 32, 32, 3))
-    fixed_mask = np.random.choice([0, 1], size=(32, 32))
-    moving_mask = np.random.choice([0, 1], size=(32, 32))
+    fixed_mask = RNG.choice([0, 1], size=(32, 32))
+    moving_mask = RNG.choice([0, 1], size=(32, 32))
 
     with pytest.raises(
         ValueError,
@@ -481,8 +481,8 @@ def test_estimate_bspline_transform_rgb_input():
     """Test inputs' number of channels for estimate_bspline_transform function."""
     fixed_img = RNG.random((32, 32, 32))
     moving_img = RNG.random((32, 32, 32))
-    fixed_mask = np.random.choice([0, 1], size=(32, 32))
-    moving_mask = np.random.choice([0, 1], size=(32, 32))
+    fixed_mask = RNG.choice([0, 1], size=(32, 32))
+    moving_mask = RNG.choice([0, 1], size=(32, 32))
 
     with pytest.raises(
         ValueError,
