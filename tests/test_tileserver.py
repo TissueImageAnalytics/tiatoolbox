@@ -21,7 +21,7 @@ from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
-RNG = np.random.default_rng()  # Numpy Random Generator
+RNG = np.random.default_rng(0)  # Numpy Random Generator
 
 
 def safe_str(name):
@@ -30,7 +30,7 @@ def safe_str(name):
 
 
 def setup_app(client):
-    """Setup the app for testing."""
+    """Set up the app for testing."""
     client.get("/tileserver/session_id")
     # get the "session_id" cookie
     return client.get_cookie("session_id").value
@@ -39,7 +39,6 @@ def setup_app(client):
 @pytest.fixture(scope="session")
 def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
     return [
         cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
     ]
@@ -48,7 +47,6 @@ def cell_grid() -> list[Polygon]:
 @pytest.fixture(scope="session")
 def points_grid(spacing=60) -> list[Point]:
     """Generate a grid of fake point annotations."""
-    np.random.seed(0)
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
 
 

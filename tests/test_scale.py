@@ -4,12 +4,11 @@ import numpy as np
 import pytest
 from sklearn.linear_model import LogisticRegression as PlattScaling
 
-RNG = np.random.default_rng()  # Numpy Random Generator
+RNG = np.random.default_rng(5)  # Numpy Random Generator
 
 
 def test_platt_scaler():
     """Test for Platt scaler."""
-    np.random.seed(5)
     sample_size = 1000
     logit = RNG.random(sample_size)
     # binary class
