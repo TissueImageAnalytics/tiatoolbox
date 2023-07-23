@@ -717,8 +717,8 @@ def test_fuzz_bounds2locsize_lower():
     """Fuzz test for bounds2size with origin lower."""
     random.seed(0)
     for _ in range(1000):
-        loc = (np.random.rand(2) - 0.5) * 1000
-        size = (np.random.rand(2) - 0.5) * 1000
+        loc = (RNG.random(2) - 0.5) * 1000
+        size = (RNG.random(2) - 0.5) * 1000
 
         fuzz_bounds = [0, *size[::-1], 0]  # L T R B
 
@@ -733,8 +733,8 @@ def test_fuzz_roundtrip_bounds2size():
     """Fuzz roundtrip bounds2locsize and locsize2bounds."""
     random.seed(0)
     for _ in range(1000):
-        loc = (np.random.rand(2) - 0.5) * 1000
-        size = (np.random.rand(2) - 0.5) * 1000
+        loc = (RNG.random(2) - 0.5) * 1000
+        size = (RNG.random(2) - 0.5) * 1000
         assert utils.transforms.bounds2locsize(
             utils.transforms.locsize2bounds(loc, size),
         )
@@ -1282,16 +1282,16 @@ def test_save_as_json(tmp_path):
         "a2": {"name": "John", "age": 23, "sex": "male"},
     }
     sample = {
-        "a": [1, 1, 3, np.random.rand(2, 2, 2, 2), key_dict],
-        "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, np.random.rand(2, 2, 2, 2)]}],
+        "a": [1, 1, 3, RNG.random((2, 2, 2, 2)), key_dict],
+        "b": ["a1", "b1", "c1", {"a3": [1.0, 1, 3, RNG.random((2, 2, 2, 2))]}],
         "c": {
             "a4": {"a5": {"a6": "a7", "c": [1, 1, 3, np.array([4, 5, 6.0])]}},
             "b1": {},
             "c1": [],
             True: [False, None],
         },
-        "d": [key_dict, np.random.rand(2, 2)],
-        "e": np.random.rand(16, 2),
+        "d": [key_dict, RNG.random((2, 2))],
+        "e": RNG.random((16, 2)),
     }
     not_jsonable = {"x86": lambda x: x}
     not_jsonable.update(sample)
@@ -1312,7 +1312,7 @@ def test_save_as_json(tmp_path):
         )
     with pytest.raises(TypeError, match=r"Type.*`data`.*.*must.*dict, list.*"):
         misc.save_as_json(
-            np.random.rand(2, 2),
+            RNG.random((2, 2)),
             tmp_path / "sample_json.json",
             exist_ok=True,
         )
