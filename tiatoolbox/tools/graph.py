@@ -37,8 +37,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
             and 0 indicates unconnected.
 
     Example:
-        >>> rng = np.random.default_rng()
-        >>> points = rng.random((100, 2))
+        >>> points = np.random.rand(100, 2)
         >>> adjacency = delaunay_adjacency(points)
 
     """
@@ -124,8 +123,7 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
             An Nx3 array of triangles.
 
     Example:
-        >>> rng = np.random.default_rng()
-        >>> points = rng.random((100, 2))
+        >>> points = np.random.rand(100, 2)
         >>> adjacency = delaunay_adjacency(points)
         >>> edge_index = affinity_to_edge_index(adjacency)
         >>> triangles = edge_index_to_triangles(edge_index)
@@ -177,8 +175,7 @@ def affinity_to_edge_index(
             The edge index of shape (2, M).
 
     Example:
-        >>> rng = np.random.default_rng()
-        >>> points = rng.random((100, 2))
+        >>> points = np.random.rand(100, 2)
         >>> adjacency = delaunay_adjacency(points)
         >>> edge_index = affinity_to_edge_index(adjacency)
 
@@ -315,10 +312,9 @@ class SlideGraphConstructor:
                     the WSI.
 
         Example:
-            >>> rng = np.random.default_rng()
-            >>> points = rng.random((99, 2)) * 1000
+            >>> points = np.random.rand(99, 2) * 1000
             >>> features = np.array([
-            ...     rng.random(11) * n
+            ...     np.random.rand(11) * n
             ...     for n, _ in enumerate(points)
             ... ])
             >>> graph_dict = SlideGraphConstructor.build(points, features)
@@ -464,10 +460,9 @@ class SlideGraphConstructor:
                 The axes object to plot the graph on.
 
         Example:
-            >>> rng = np.random.default_rng()
-            >>> points = rng.random((99, 2)) * 1000
+            >>> points = np.random.rand(99, 2) * 1000
             >>> features = np.array([
-            ...     rng.random(11) * n
+            ...     np.random.rand(11) * n
             ...     for n, _ in enumerate(points)
             ... ])
             >>> graph_dict = SlideGraphConstructor.build(points, features)

@@ -99,8 +99,8 @@ def test_dfbr_features():
 
 def test_prealignment_mask():
     """Test for mask inputs to prealignment function."""
-    fixed_img = RNG.random((10, 10))
-    moving_img = RNG.random((10, 10))
+    fixed_img = np.random.rand(10, 10)
+    moving_img = np.random.rand(10, 10)
     no_fixed_mask = np.zeros(shape=fixed_img.shape, dtype=int)
     no_moving_mask = np.zeros(shape=moving_img.shape, dtype=int)
     with pytest.raises(ValueError, match=r".*The foreground is missing in the mask.*"):
@@ -109,8 +109,8 @@ def test_prealignment_mask():
 
 def test_prealignment_input_shape():
     """Test for inputs to prealignment function."""
-    fixed_img = RNG.random((10, 10))
-    moving_img = RNG.random((15, 10))
+    fixed_img = np.random.rand(10, 10)
+    moving_img = np.random.rand(15, 10)
     fixed_mask = RNG.choice([0, 1], size=(15, 10))
     moving_mask = RNG.choice([0, 1], size=(10, 10))
 
@@ -123,8 +123,8 @@ def test_prealignment_input_shape():
 
 def test_prealignment_rotation_step():
     """Test for rotation step input to prealignment function."""
-    fixed_img = RNG.random((10, 10))
-    moving_img = RNG.random((10, 10))
+    fixed_img = np.random.rand(10, 10)
+    moving_img = np.random.rand(10, 10)
     fixed_mask = RNG.choice([0, 1], size=(10, 10))
     moving_mask = RNG.choice([0, 1], size=(10, 10))
 
@@ -342,8 +342,8 @@ def test_filtering_no_duplicate_matching_points():
 
 def test_register_input():
     """Test for inputs to register function."""
-    fixed_img = RNG.random((32, 32))
-    moving_img = RNG.random((32, 32))
+    fixed_img = np.random.rand(32, 32)
+    moving_img = np.random.rand(32, 32)
     fixed_mask = RNG.choice([0, 1], size=(32, 32))
     moving_mask = RNG.choice([0, 1], size=(32, 32))
 
@@ -357,8 +357,8 @@ def test_register_input():
 
 def test_register_input_channels():
     """Test for checking inputs' number of channels for register function."""
-    fixed_img = RNG.random((32, 32, 1))
-    moving_img = RNG.random((32, 32, 1))
+    fixed_img = np.random.rand(32, 32, 1)
+    moving_img = np.random.rand(32, 32, 1)
     fixed_mask = RNG.choice([0, 1], size=(32, 32))
     moving_mask = RNG.choice([0, 1], size=(32, 32))
 
@@ -460,8 +460,8 @@ def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving
 
 def test_estimate_bspline_transform_inputs():
     """Test input dimensions for estimate_bspline_transform function."""
-    fixed_img = RNG.random((32, 32, 32, 3))
-    moving_img = RNG.random((32, 32, 32, 3))
+    fixed_img = np.random.rand(32, 32, 32, 3)
+    moving_img = np.random.rand(32, 32, 32, 3)
     fixed_mask = RNG.choice([0, 1], size=(32, 32))
     moving_mask = RNG.choice([0, 1], size=(32, 32))
 
@@ -479,8 +479,8 @@ def test_estimate_bspline_transform_inputs():
 
 def test_estimate_bspline_transform_rgb_input():
     """Test inputs' number of channels for estimate_bspline_transform function."""
-    fixed_img = RNG.random((32, 32, 32))
-    moving_img = RNG.random((32, 32, 32))
+    fixed_img = np.random.rand(32, 32, 32)
+    moving_img = np.random.rand(32, 32, 32)
     fixed_mask = RNG.choice([0, 1], size=(32, 32))
     moving_mask = RNG.choice([0, 1], size=(32, 32))
 

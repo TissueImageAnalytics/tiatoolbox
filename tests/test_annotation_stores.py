@@ -72,10 +72,10 @@ def cell_polygon(
     # Generate points about an ellipse with random eccentricity
     x, y = xy
     alpha = np.linspace(0, 2 * np.pi - (2 * np.pi / n_points), n_points)
-    rx = radius * (RNG.random() + 0.5)
+    rx = radius * (np.random.rand() + 0.5)
     ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
-    x = rx * np.cos(alpha) + x + (RNG.random(n_points) - 0.5) * noise
-    y = ry * np.sin(alpha) + y + (RNG.random(n_points) - 0.5) * noise
+    x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
+    y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
     boundary_coords = np.stack([x, y], axis=1).tolist()
 
     # Copy first coordinate to the end if required
@@ -89,7 +89,7 @@ def cell_polygon(
     polygon = Polygon(boundary_coords)
 
     # Add random rotation
-    angle = RNG.random() * 360
+    angle = np.random.rand() * 360
     return affinity.rotate(polygon, angle, origin="centroid")
 
 

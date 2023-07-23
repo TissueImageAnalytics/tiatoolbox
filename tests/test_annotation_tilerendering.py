@@ -24,8 +24,6 @@ from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 
-RNG = np.random.default_rng()  # Numpy Random Generator
-
 
 @pytest.fixture(scope="session")
 def cell_grid() -> list[Polygon]:
@@ -57,14 +55,14 @@ def fill_store(cell_grid, points_grid):
         cells = [
             Annotation(
                 cell,
-                {"type": "cell", "prob": RNG.random(1)[0], "color": (0, 1, 0)},
+                {"type": "cell", "prob": np.random.rand(1)[0], "color": (0, 1, 0)},
             )
             for cell in cell_grid
         ]
         points = [
             Annotation(
                 point,
-                {"type": "pt", "prob": RNG.random(1)[0], "color": (1, 0, 0)},
+                {"type": "pt", "prob": np.random.rand(1)[0], "color": (1, 0, 0)},
             )
             for point in points_grid
         ]

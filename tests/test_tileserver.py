@@ -21,8 +21,6 @@ from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
-RNG = np.random.default_rng()  # Numpy Random Generator
-
 
 def safe_str(name):
     """Make a name safe for use in a URL."""
@@ -64,11 +62,11 @@ def fill_store(cell_grid, points_grid):
         store = store_class(path)
 
         cells = [
-            Annotation(cell, {"type": "cell", "prob": RNG.random(1)[0]})
+            Annotation(cell, {"type": "cell", "prob": np.random.rand(1)[0]})
             for cell in cell_grid
         ]
         points = [
-            Annotation(point, {"type": "pt", "prob": RNG.random(1)[0]})
+            Annotation(point, {"type": "pt", "prob": np.random.rand(1)[0]})
             for point in points_grid
         ]
         lines = [
