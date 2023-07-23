@@ -2624,13 +2624,19 @@ class OmnyxJP2WSIReader(WSIReader):
                 box (glymur.jp2box.Jp2kBox):
                     A box to search within. If None, returns None.
                 box_id (str):
-                    Box ID to search for.
+                    Box ID to search for. Must be 4 characters or less.
+
+            Raises:
+                ValueError:
+                    If the box ID is not 4 characters long.
 
             Returns:
                 Optional[glymur.jp2box.Jp2kBox]:
                     JP2 box with the given ID. If no box is found, returns
 
             """
+            if len(box_id) != 4:
+                raise ValueError
             if not box or not box.box:
                 return None
             for sub_box in box.box:
@@ -2671,7 +2677,7 @@ class OmnyxJP2WSIReader(WSIReader):
         vendor = None
         mpp = None
         # Check capture resolution box
-        if boxes.get("cres"):
+        if "cres" in boxes:
             # Get the resolution in pixels per meter
             ppm_x = boxes.get("cres").horizontal_resolution
             ppm_y = boxes.get("cres").vertical_resolution
@@ -2679,9 +2685,9 @@ class OmnyxJP2WSIReader(WSIReader):
             mpp_y = utils.misc.ppu2mpp(ppm_y, "meter")
             mpp = [mpp_x, mpp_y]
         # Check for Omnyx XML (overwrites capture resolution)
-        if boxes.get("xml"):
-            description = boxes.get("xml").xml.find("description")
-            if description and "Omnyx" in description.text:
+        if "xml " in boxes:
+            description = boxes.get("xml ").xml.find("description")
+            if description is not None and "Omnyx" in description.text:
                 matches = re.search(r"(?<=AppMag = )\d\d", description.text)
                 objective_power = np.int_(matches[0])
                 vendor = "Omnyx JP2"
