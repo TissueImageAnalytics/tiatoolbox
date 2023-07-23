@@ -160,14 +160,14 @@ def make_bounds_size_positive(bounds):
     _, (width, height) = bounds2locsize(bounds)
     if width >= 0 and height >= 0:
         return bounds, fliplr, flipud
-    l, t, r, b = bounds
+    left, top, right, bottom = bounds
     if width < 0:
-        l, r = r, l
+        left, right = right, left
         fliplr = True
     if height < 0:
-        t, b = b, t
+        top, bottom = bottom, top
         flipud = True
-    bounds = np.array([l, t, r, b])
+    bounds = np.array([left, top, right, bottom])
     return (bounds, fliplr, flipud)
 
 
@@ -367,14 +367,14 @@ def safe_padded_read(
     padded_under = padded_bounds < zeros
     # If all padded coords are within the image then read normally
     if not any(padded_over | padded_under):
-        l, t, r, b = padded_bounds
-        return image[t:b:y_stride, l:r:x_stride, ...]
+        left, top, right, bottom = padded_bounds
+        return image[top:bottom:y_stride, left:right:x_stride, ...]
     # Else find the closest coordinates which are inside the image
     clamped_bounds = np.max([np.min([padded_bounds, hw_limits], axis=0), zeros], axis=0)
     clamped_bounds = np.round(clamped_bounds).astype(int)
     # Read the area within the image
-    l, t, r, b = clamped_bounds
-    region = image[t:b:y_stride, l:r:x_stride, ...]
+    left, top, right, bottom = clamped_bounds
+    region = image[top:bottom:y_stride, left:right:x_stride, ...]
     # Reduce bounds an img_size for the stride
     if not np.all(np.isin(stride, [None, 1])):
         # This if is not required but avoids unnecessary calculations
@@ -393,8 +393,8 @@ def safe_padded_read(
     edge_padding[:2] = np.min([edge_padding[:2], [0, 0]], axis=0)
     edge_padding[2:] = np.max([edge_padding[2:], [0, 0]], axis=0)
     edge_padding = np.abs(edge_padding)
-    l, t, r, b = edge_padding
-    pad_width = [(t, b), (l, r)]
+    left, top, right, bottom = edge_padding
+    pad_width = [(top, bottom), (left, right)]
     if len(region.shape) == 3:
         pad_width += [(0, 0)]
     # Pad the image region at the edges

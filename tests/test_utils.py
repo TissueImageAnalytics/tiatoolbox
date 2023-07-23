@@ -1064,9 +1064,11 @@ def test_crop_and_pad_edges():
 
     def edge_mask(bounds: Tuple[int, int, int, int]) -> np.ndarray:
         """Produce a mask of regions outside of the slide dimensions."""
-        l, t, r, b = bounds
+        left, top, right, bottom = bounds
         slide_width, slide_height = slide_dimensions
-        x, y = np.meshgrid(np.arange(l, r), np.arange(t, b), indexing="ij")
+        x, y = np.meshgrid(
+            np.arange(left, right), np.arange(top, bottom), indexing="ij"
+        )
         under = np.logical_or(x < 0, y < 0).astype(np.int_)
         over = np.logical_or(x >= slide_width, y >= slide_height).astype(np.int_)
         return under, over
