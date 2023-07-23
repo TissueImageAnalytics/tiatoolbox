@@ -219,7 +219,7 @@ def cell_polygon(
     # Restore the random state
     np.random.set_state(rand_state)
 
-    return polygon  # noqa: R504
+    return polygon
 
 
 def cell_grid(

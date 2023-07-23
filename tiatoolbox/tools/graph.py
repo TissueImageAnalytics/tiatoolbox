@@ -193,7 +193,7 @@ def affinity_to_edge_index(
     )
 
 
-class SlideGraphConstructor:  # noqa: PIE798
+class SlideGraphConstructor:
     """Construct a graph using the SlideGraph+ (Liu et al. 2021) method.
 
     This uses a hybrid agglomerative clustering which uses a weighted
