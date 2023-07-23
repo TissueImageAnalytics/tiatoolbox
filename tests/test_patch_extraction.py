@@ -212,7 +212,7 @@ def test_points_patch_extractor_jp2(
     patch_extr_jp2_csv,
     patch_extr_jp2_read,
 ):
-    """Test PointsPatchExtractor for jp2 image."""
+    """Test PointsPatchExtractor for JP2 image."""
     locations_list = pathlib.Path(patch_extr_jp2_csv)
     saved_data = np.load(str(pathlib.Path(patch_extr_jp2_read)))
 
