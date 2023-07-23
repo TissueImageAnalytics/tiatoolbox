@@ -137,13 +137,13 @@ def overlay_prediction_mask(
 
     predicted_classes = sorted(np.unique(prediction).tolist())
     # Generate random colours if None are given
-    rand_state = np.random.get_state()
+    rand_state = np.random.default_rng().__getstate__()
     rng = np.random.default_rng(123)
     label_info = label_info or {  # Use label_info if provided OR generate
         label_uid: (str(label_uid), rng.integers(0, 255, 3))
         for label_uid in predicted_classes
     }
-    np.random.set_state(rand_state)
+    np.random.default_rng().__setstate__(rand_state)
 
     # Validate label_info
     missing_label_uids = _validate_label_info(label_info, predicted_classes)

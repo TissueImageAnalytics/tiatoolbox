@@ -183,7 +183,7 @@ def cell_polygon(
     """
     from shapely import affinity
 
-    rand_state = np.random.get_state()
+    rand_state = np.random.default_rng().__getstate__()
     rng = np.random.default_rng(seed)
     if repeat_first:
         n_points -= 1
@@ -217,7 +217,7 @@ def cell_polygon(
         polygon = Polygon(np.array(polygon.exterior.coords).round())
 
     # Restore the random state
-    np.random.set_state(rand_state)
+    np.random.default_rng().__setstate__(rand_state)
 
     return polygon
 
