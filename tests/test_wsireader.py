@@ -71,7 +71,7 @@ COLOR_DICT = {
     4: (155, 0, 155, 255),
     5: (0, 155, 155, 255),
 }
-
+RNG = np.random.default_rng()  # Numpy Random Generator
 
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
@@ -1467,7 +1467,7 @@ def test_wsireader_open(
     temp_dir = _get_temp_folder_path()
     temp_dir.mkdir()
     temp_file = f"{temp_dir}/sample.npy"
-    np.save(temp_file, np.random.randint(1, 255, [5, 5, 5]))
+    np.save(temp_file, RNG.integers(1, 255, [5, 5, 5]))
     wsi_out = WSIReader.open(temp_file)
     assert isinstance(wsi_out, VirtualWSIReader)
     shutil.rmtree(temp_dir)

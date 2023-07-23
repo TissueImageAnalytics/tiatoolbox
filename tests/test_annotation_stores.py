@@ -35,6 +35,7 @@ sqlite3.enable_callback_tracebacks(True)
 
 GRID_SIZE = (10, 10)
 FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
+RNG = np.random.default_rng()  # Numpy Random Generator
 
 # Helper Functions
 
@@ -1496,7 +1497,7 @@ class TestStore:
 
         # Fuzz
         for _ in range(100):
-            box = Polygon.from_bounds(*np.random.randint(0, 100, 4))
+            box = Polygon.from_bounds(*RNG.integers(0, 100, 4))
             assert store._is_rectangle(*box.exterior.coords)
 
         # Failure case

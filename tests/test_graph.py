@@ -16,6 +16,8 @@ from tiatoolbox.tools.graph import (
     triangle_signed_area,
 )
 
+RNG = np.random.default_rng()  # Numpy Random Generator
+
 
 def test_delaunay_adjacency_dthresh_type():
     """Test empty input raises a TypeError if dthresh is not a Number."""
@@ -83,7 +85,7 @@ def test_affinity_to_edge_index_fuzz_output_shape():
     np.random.seed(123)
     for _ in range(1000):
         # Generate some random square inputs
-        input_shape = [np.random.randint(2, 10)] * 2
+        input_shape = [RNG.integers(2, 10)] * 2
         affinity_matrix = np.random.sample(input_shape)
         threshold = np.random.rand()
         # Convert to torch randomly
@@ -103,7 +105,7 @@ def test_affinity_to_edge_index_invalid_fuzz_input_shape():
     # Generate some random square inputs
     np.random.seed(123)
     for _ in range(100):
-        input_shape = [np.random.randint(2, 10)] * 2
+        input_shape = [RNG.integers(2, 10)] * 2
         input_shape[1] -= 1
         affinity_matrix = np.random.sample(input_shape)
         threshold = np.random.rand()

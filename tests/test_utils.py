@@ -23,6 +23,8 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
 
+RNG = np.random.default_rng()  # Numpy Random Generator
+
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
     """sub_pixel_read test helper function."""
@@ -81,7 +83,7 @@ def test_imresize():
         assert resized_img.dtype == converted_dtype
 
     # test resizing multiple channels
-    img = np.random.randint(0, 256, (4, 4, 16))
+    img = RNG.integers(0, 256, (4, 4, 16))
     resized_img = utils.transforms.imresize(
         img,
         scale_factor=4,
@@ -90,7 +92,7 @@ def test_imresize():
     assert resized_img.shape == (16, 16, 16)
 
     # test for not supporting dtype
-    img = np.random.randint(0, 256, (4, 4, 16))
+    img = RNG.integers(0, 256, (4, 4, 16))
     with pytest.raises((AttributeError, ValueError), match=r".*float128.*"):
         resized_img = utils.transforms.imresize(
             img.astype(np.float128),
@@ -305,7 +307,7 @@ def test_fuzz_safe_padded_read_edge_padding():
 
         # Create bounds to fit the image and shift off by one
         # randomly in x or y
-        sign = (-1) ** np.random.randint(0, 1)
+        sign = (-1) ** RNG.integers(0, 1)
         axis = random.randint(0, 1)
         shift = np.tile([1 - axis, axis], 2)
         shift_magnitude = random.randint(1, 16)
@@ -320,12 +322,12 @@ def test_fuzz_safe_padded_read():
     """Fuzz test for safe_padded_read."""
     random.seed(0)
     for _ in range(1000):
-        data = np.random.randint(0, 255, (16, 16))
+        data = RNG.integers(0, 255, (16, 16))
 
-        loc = np.random.randint(0, 16, 2)
+        loc = RNG.integers(0, 16, 2)
         size = (16, 16)
         bounds = locsize2bounds(loc, size)
-        padding = np.random.randint(0, 16)
+        padding = RNG.integers(0, 16)
         region = utils.image.safe_padded_read(data, bounds, padding=padding)
         assert all(np.array(region.shape) == 16 + 2 * padding)
 

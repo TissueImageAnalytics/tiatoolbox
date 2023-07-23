@@ -114,7 +114,7 @@ select = [
   "INP",   # flake8-no-pep420
   "INT",   # flake8-gettext
   "ISC",   # flake8-implicit-str-concat
-  "NPY",   # NumPy-specific rules
+  # "NPY",   # NumPy-specific rules
   "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
   "PTH",   # flake8-use-pathlib

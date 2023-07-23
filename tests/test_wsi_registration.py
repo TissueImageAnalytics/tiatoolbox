@@ -18,6 +18,8 @@ from tiatoolbox.utils import imread
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.wsicore.wsireader import WSIReader
 
+RNG = np.random.default_rng()  # Numpy Random Generator
+
 
 def test_extract_features(dfbr_features):
     """Test for CNN based feature extraction function."""
@@ -184,10 +186,10 @@ def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask)
 
 def test_dice_overlap_range():
     """Test if the value of dice_overlap is within the range."""
-    fixed_img = np.random.randint(20, size=(256, 256))
-    moving_img = np.random.randint(20, size=(256, 256))
-    fixed_mask = np.random.randint(2, size=(256, 256))
-    moving_mask = np.random.randint(2, size=(256, 256))
+    fixed_img = RNG.integers(20, size=(256, 256))
+    moving_img = RNG.integers(20, size=(256, 256))
+    fixed_mask = RNG.integers(2, size=(256, 256))
+    moving_mask = RNG.integers(2, size=(256, 256))
 
     with pytest.raises(
         ValueError,
@@ -229,8 +231,8 @@ def test_warning(
 
 def test_match_histogram_inputs():
     """Test for inputs to match_histogram function."""
-    image_a = np.random.randint(256, size=(256, 256, 3))
-    image_b = np.random.randint(256, size=(256, 256, 3))
+    image_a = RNG.integers(256, size=(256, 256, 3))
+    image_b = RNG.integers(256, size=(256, 256, 3))
     with pytest.raises(
         ValueError,
         match=r".*The input images should be grayscale images.*",
@@ -240,7 +242,7 @@ def test_match_histogram_inputs():
 
 def test_match_histograms():
     """Test for preprocessing/normalization of an image pair."""
-    image_a = np.random.randint(256, size=(256, 256))
+    image_a = RNG.integers(256, size=(256, 256))
     image_b = np.zeros(shape=(256, 256), dtype=int)
     out_a, out_b = match_histograms(image_a, image_b, 3)
     assert np.all(out_a == image_a)
@@ -250,8 +252,8 @@ def test_match_histograms():
     assert np.all(out_a == 255)
     assert np.all(out_b == image_a)
 
-    image_a = np.random.randint(256, size=(256, 256, 1))
-    image_b = np.random.randint(256, size=(256, 256, 1))
+    image_a = RNG.integers(256, size=(256, 256, 1))
+    image_b = RNG.integers(256, size=(256, 256, 1))
     _, _ = match_histograms(image_a, image_b)
 
     image_a = np.array(
