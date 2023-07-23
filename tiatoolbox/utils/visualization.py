@@ -30,8 +30,6 @@ GEOMTYPES = {
     7: "GeometryCollection",
 }
 
-RNG = np.random.default_rng()  # Numpy Random Generator
-
 
 def random_colors(num_colors, bright=True):
     """Generate a number of random colors.
@@ -140,9 +138,9 @@ def overlay_prediction_mask(
     predicted_classes = sorted(np.unique(prediction).tolist())
     # Generate random colours if None are given
     rand_state = np.random.get_state()
-    np.random.seed(123)
+    rng = np.random.default_rng(123)
     label_info = label_info or {  # Use label_info if provided OR generate
-        label_uid: (str(label_uid), RNG.integers(0, 255, 3))
+        label_uid: (str(label_uid), rng.integers(0, 255, 3))
         for label_uid in predicted_classes
     }
     np.random.set_state(rand_state)

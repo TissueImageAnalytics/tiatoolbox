@@ -148,8 +148,6 @@ from tiatoolbox.annotation.storage import (  # noqa: E402
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
-RNG = np.random.default_rng()  # Numpy Random Generator
-
 
 def cell_polygon(
     xy: tuple[Number, Number],
@@ -186,17 +184,17 @@ def cell_polygon(
     from shapely import affinity
 
     rand_state = np.random.get_state()
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
     if repeat_first:
         n_points -= 1
 
     # Generate points about an ellipse with random eccentricity
     x, y = xy
     alpha = np.linspace(0, 2 * np.pi - (2 * np.pi / n_points), n_points)
-    rx = radius * (RNG.random() + 0.5)
-    ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
-    x = rx * np.cos(alpha) + x + (RNG.random(n_points) - 0.5) * noise
-    y = ry * np.sin(alpha) + y + (RNG.random(n_points) - 0.5) * noise
+    rx = radius * (rng.random() + 0.5)
+    ry = rng.uniform(*eccentricity) * radius - 0.5 * rx
+    x = rx * np.cos(alpha) + x + (rng.random(n_points) - 0.5) * noise
+    y = ry * np.sin(alpha) + y + (rng.random(n_points) - 0.5) * noise
     boundary_coords = np.stack([x, y], axis=1).astype(int).tolist()
 
     # Copy first coordinate to the end if required
@@ -211,7 +209,7 @@ def cell_polygon(
     polygon = Polygon(boundary_coords)
 
     # Add random rotation
-    angle = RNG.random() * 360
+    angle = rng.random() * 360
     polygon = affinity.rotate(polygon, angle, origin="centroid")
 
     # Round coordinates to integers
