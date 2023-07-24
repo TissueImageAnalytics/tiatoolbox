@@ -2350,7 +2350,7 @@ def test_jp2_empty_xml(tmp_path):
 
 
 def test_jp2_empty_xml_empty_description(tmp_path):
-    """Test WSIReader init for a JP2 with an empty Jp2 XML description tag."""
+    """Test WSIReader init for a JP2 with an empty JP2 XML description tag."""
     path = tmp_path / "test.jp2"
     jp2 = glymur.Jp2k(
         path,
