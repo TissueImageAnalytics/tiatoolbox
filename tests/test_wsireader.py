@@ -1734,7 +1734,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
     utils.env_detection.running_on_ci(),
     reason="No need to display image on travis.",
 )
-def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
+def test_command_line_jp2_read_bounds_show(sample_jp2):
     """Test JP2 read_bounds with mode as 'show'."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
@@ -1755,7 +1755,7 @@ def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
     assert read_bounds_result.exit_code == 0
 
 
-def test_command_line_unsupported_file_read_bounds(sample_svs, tmp_path):
+def test_command_line_unsupported_file_read_bounds(sample_svs):
     """Test unsupported file read bounds."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
@@ -2018,14 +2018,14 @@ def test_store_reader_explicit_info(remote_sample, tmp_path):
     assert reader._info().as_dict() == wsi_reader.info.as_dict()
 
 
-def test_store_reader_from_store(remote_sample, tmp_path):
+def test_store_reader_from_store(remote_sample):
     """Test AnnotationStoreReader from an AnnotationStore object."""
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store)
     assert isinstance(reader.store, SQLiteStore)
 
 
-def test_store_reader_base_wsi_str(remote_sample, tmp_path):
+def test_store_reader_base_wsi_str(remote_sample):
     """Test AnnotationStoreReader with base_wsi as a string."""
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store, base_wsi=remote_sample("svs-1-small"))

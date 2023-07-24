@@ -16,7 +16,7 @@ from tiatoolbox.utils import unzip_data
 class Proto1(DatasetInfoABC):
     """Intentionally created to check error with new attribute a."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Proto1 initialization."""
         self.a = "a"
 
@@ -24,7 +24,7 @@ class Proto1(DatasetInfoABC):
 class Proto2(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Proto2 initialization."""
         self.inputs = "a"
 
@@ -32,7 +32,7 @@ class Proto2(DatasetInfoABC):
 class Proto3(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and labels."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Proto3 initialization."""
         self.inputs = "a"
         self.labels = "a"
@@ -41,7 +41,7 @@ class Proto3(DatasetInfoABC):
 class Proto4(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and label names."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Proto4 initialization."""
         self.inputs = "a"
         self.label_names = "a"
@@ -62,7 +62,7 @@ def test_dataset_abc():
 
 
 @pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
-def test_kather_dataset_default(tmp_path):
+def test_kather_dataset_default():
     """Test for kather patch dataset with default parameters."""
     # test Kather with default init
     dataset_path = rcParam["TIATOOLBOX_HOME"] / "dataset" / "kather100k-validation"

@@ -55,7 +55,7 @@ def test_command_line_slide_thumbnail(sample_ndpi, tmp_path):
     command_line_slide_thumbnail(runner, sample=sample_ndpi, tmp_path=tmp_path)
 
 
-def test_command_line_slide_thumbnail_output_none(sample_svs, tmp_path):
+def test_command_line_slide_thumbnail_output_none(sample_svs):
     """Test cli slide thumbnail with output dir None."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(
