@@ -149,21 +149,26 @@ class Annotation:
     def geometry(self) -> Geometry:
         """Return the shapely geometry of the annotation."""
         if self._coords and self._type and not self._geometry:
+            # Lazy creation of Shapely object when first requested. This
+            # is memoized under _geometry. object.__setattr__ must be
+            # used becuase the class is frozen and will disallow normal
+            # assignment.
             if self._type == 1:
-                self._geometry = Point(self._coords)
+                object.__setattr__(self, "_geometry", Point(self._coords))
             elif self._type == 2:
-                self._geometry = LineString(self._coords)
+                object.__setattr__(self, "_geometry", LineString(self._coords))
             elif self._type == 3:
-                self._geometry = Polygon(self._coords)
+                object.__setattr__(self, "_geometry", Polygon(self._coords))
             elif self._type == 4:
-                self._geometry = MultiPoint(self._coords)
+                object.__setattr__(self, "_geometry", MultiPoint(self._coords))
             elif self._type == 5:
-                self._geometry = MultiLineString(self._coords)
+                object.__setattr__(self, "_geometry", MultiLineString(self._coords))
             elif self._type == 6:
-                self._geometry = MultiPolygon(self._coords)
+                object.__setattr__(self, "_geometry", MultiPolygon(self._coords))
             else:
                 msg = f"Unknown geometry type: {self._type}"
                 raise ValueError(msg)
+        # Return memoized geometry
         return self._geometry
 
     @geometry.setter
@@ -251,133 +256,136 @@ class Annotation:
             msg = "Either coords or geometry must be specified."
             raise ValueError(msg)
         if coords:
-            self._coords = coords
-            self._type = geom_type
+            object.__setattr__(self, "_coords", coords)
+            object.__setattr__(self, "_type", geom_type)
+            object.__setattr__(self, "_geometry", None)
         else:
-            self.geometry = geometry
-        self.properties = properties or {}
+            object.__setattr__(self, "_coords", None)
+            object.__setattr__(self, "_type", None)
+            object.__setattr__(self, "_geometry", geometry)
+        object.__setattr__(self, "properties", properties or {})
 
     def __repr__(self) -> str:
         """Return a string representation of the object."""
         return f"Annotation({self.geometry}, {self.properties})"
 
-
-def decode_wkb(wkb: bytes, geom_type: int) -> np.ndarray:
-    r"""Decode WKB to a NumPy array of coordinates.
-
-    Args:
-        wkb (bytes):
-            The WKB representation of a geometry.
-        geom_type (int):
-            The type of geometry to decode. Where 1 = point, 2 =
-            line, 3 = polygon, 4 = multi-point, 5 = multi-line, 6 =
-            multi-polygon.
-
-    Examples:
-        >>> from tiatoolbox.annotation.storage import decode_wkb
-        >>> # Point(1, 2).wkb
-        >>> wkb = (
-        ...     b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        ...     b"\xf0?\x00\x00\x00\x00\x00\x00\x00@"
-        ... )
-        >>> decode_wkb(wkb, 1)
-        array([0., 0.])
-
-        >>> from tiatoolbox.annotation.storage import decode_wkb
-        >>> # Polygon([[0, 0], [1, 1], [1, 0]]).wkb
-        >>> wkb = (
-        ...     b"\x01\x03\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00"
-        ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00"
-        ...     b"\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\xf0?\x00"
-        ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        ... )
-        >>> decode_wkb(wkb, 3)
-        array([[0., 0.],
-               [1., 1.],
-               [1., 0.],
-               [0., 0.]])
-
-    Raises:
-        ValueError:
-            If the geometry type is not supported.
-
-    Returns:
-        np.ndarray:
-            An array of coordinates.
-
-    """
-    if geom_type == 1:
-        # Point
-        return np.frombuffer(wkb, np.double, -1, 5)
-    if geom_type == 2:
-        # Line
-        return np.frombuffer(wkb, np.double, -1, 9)
-    if geom_type == 3:
-        # Polygon
-        n_points = np.frombuffer(wkb, np.int32, 1, 9)[0]
-        return np.frombuffer(wkb, np.double, n_points * 2, 13)  # do rings?
-    if geom_type == 4:
-        # Multi-point
-        n_points = np.frombuffer(wkb, np.int32, 1, 5)[0]
-        pts = [
-            np.frombuffer(wkb, np.double, 2, 14 + i * 21)
-            # each point is 21 bytes
-            for i in range(n_points)
-        ]
-        return np.concatenate(pts)
-    if geom_type == 5:
-        # Multi-line
-        n_lines = np.frombuffer(wkb, np.int32, 1, 5)[0]
-        lines = []
-        offset = 9
-        for _ in range(n_lines):
-            offset += 5
-            n_points = np.frombuffer(wkb, np.int32, n_lines, offset)[0]
-            offset += 4
-            lines.append(np.frombuffer(wkb, np.double, n_points * 2, offset))
-            offset += n_points * 16
-        return np.concatenate(lines)
-
-    def decode_polygon(offset: int = 0) -> tuple[np.ndarray, int]:
-        """Decode a polygon from WKB.
+    @staticmethod
+    def decode_wkb(wkb: bytes, geom_type: int) -> np.ndarray:
+        r"""Decode WKB to a NumPy array of coordinates.
 
         Args:
-            offset (int, optional):
-                The starting offset in the WKB representation.
-                Defaults to 0.
+            wkb (bytes):
+                The WKB representation of a geometry.
+            geom_type (int):
+                The type of geometry to decode. Where 1 = point, 2 =
+                line, 3 = polygon, 4 = multi-point, 5 = multi-line, 6 =
+                multi-polygon.
+
+        Examples:
+            >>> from tiatoolbox.annotation.storage import decode_wkb
+            >>> # Point(1, 2).wkb
+            >>> wkb = (
+            ...     b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            ...     b"\xf0?\x00\x00\x00\x00\x00\x00\x00@"
+            ... )
+            >>> decode_wkb(wkb, 1)
+            array([0., 0.])
+
+            >>> from tiatoolbox.annotation.storage import decode_wkb
+            >>> # Polygon([[0, 0], [1, 1], [1, 0]]).wkb
+            >>> wkb = (
+            ...     b"\x01\x03\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00"
+            ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00"
+            ...     b"\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\xf0?\x00"
+            ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            ... )
+            >>> decode_wkb(wkb, 3)
+            array([[0., 0.],
+                [1., 1.],
+                [1., 0.],
+                [0., 0.]])
+
+        Raises:
+            ValueError:
+                If the geometry type is not supported.
 
         Returns:
-            Tuple[np.ndarray, int]: A tuple containing the decoded
-            polygon rings as numpy arrays and the new offset in the
-            WKB representation.
+            np.ndarray:
+                An array of coordinates.
 
         """
-        offset += 5  # byte order and geom type at start of each polygon
-        n_rings = np.frombuffer(wkb, np.int32, 1, offset)[0]
-        offset += 4
+        if geom_type == 1:
+            # Point
+            return np.frombuffer(wkb, np.double, -1, 5)
+        if geom_type == 2:
+            # Line
+            return np.frombuffer(wkb, np.double, -1, 9)
+        if geom_type == 3:
+            # Polygon
+            n_points = np.frombuffer(wkb, np.int32, 1, 9)[0]
+            return np.frombuffer(wkb, np.double, n_points * 2, 13)  # do rings?
+        if geom_type == 4:
+            # Multi-point
+            n_points = np.frombuffer(wkb, np.int32, 1, 5)[0]
+            pts = [
+                np.frombuffer(wkb, np.double, 2, 14 + i * 21)
+                # each point is 21 bytes
+                for i in range(n_points)
+            ]
+            return np.concatenate(pts)
+        if geom_type == 5:
+            # Multi-line
+            n_lines = np.frombuffer(wkb, np.int32, 1, 5)[0]
+            lines = []
+            offset = 9
+            for _ in range(n_lines):
+                offset += 5
+                n_points = np.frombuffer(wkb, np.int32, n_lines, offset)[0]
+                offset += 4
+                lines.append(np.frombuffer(wkb, np.double, n_points * 2, offset))
+                offset += n_points * 16
+            return np.concatenate(lines)
 
-        rings = []
-        for _ in range(n_rings):
-            n_points = np.frombuffer(wkb, np.int32, 1, offset)[0]
+        def decode_polygon(offset: int = 0) -> tuple[np.ndarray, int]:
+            """Decode a polygon from WKB.
+
+            Args:
+                offset (int, optional):
+                    The starting offset in the WKB representation.
+                    Defaults to 0.
+
+            Returns:
+                Tuple[np.ndarray, int]: A tuple containing the decoded
+                polygon rings as numpy arrays and the new offset in the
+                WKB representation.
+
+            """
+            offset += 5  # byte order and geom type at start of each polygon
+            n_rings = np.frombuffer(wkb, np.int32, 1, offset)[0]
             offset += 4
-            rings.append(np.frombuffer(wkb, np.double, n_points * 2, offset))
-            offset += n_points * 16
-        return rings, offset
 
-    if geom_type == 6:
-        # multi-polygon
-        n_polygons = np.frombuffer(wkb, np.int32, 1, 5)[0]
-        polygons = []
-        offset = 9
-        for _ in range(n_polygons):
-            rings, offset = decode_polygon(offset)
-            polygons.append(rings)
-        return np.concatenate(polygons)
+            rings = []
+            for _ in range(n_rings):
+                n_points = np.frombuffer(wkb, np.int32, 1, offset)[0]
+                offset += 4
+                rings.append(np.frombuffer(wkb, np.double, n_points * 2, offset))
+                offset += n_points * 16
+            return rings, offset
 
-    msg = f"Unknown geometry type: {geom_type}"
-    raise ValueError(msg)
+        if geom_type == 6:
+            # multi-polygon
+            n_polygons = np.frombuffer(wkb, np.int32, 1, 5)[0]
+            polygons = []
+            offset = 9
+            for _ in range(n_polygons):
+                rings, offset = decode_polygon(offset)
+                polygons.append(rings)
+            return np.concatenate(polygons)
+
+        msg = f"Unknown geometry type: {geom_type}"
+        raise ValueError(msg)
 
 
 class AnnotationStore(ABC, MutableMapping):

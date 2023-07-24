@@ -14,11 +14,12 @@ from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
 from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox.annotation import Annotation
 
 if TYPE_CHECKING:  # pragma: no cover
     from numpy.typing import ArrayLike
 
-    from tiatoolbox.annotation import Annotation, AnnotationStore
+    from tiatoolbox.annotation import AnnotationStore
 
 GEOMTYPES = {
     1: "Point",
@@ -633,82 +634,6 @@ class AnnotationRenderer:
             self.blur = None
 
     @staticmethod
-    def decode_wkb(geom: bytes, geom_type: int) -> np.array:
-        """Decode a geometry.
-
-        Decodes a geometry represented as raw wkb bytes
-        to an array of coordinates.
-
-        Args:
-            geom (bytes):
-                The raw wkb bytes representation of a geometry.
-            geom_type (GEOMTYPES):
-                The type of geometry.
-
-        Returns:
-            np.array:
-                An array of coordinates.
-
-        """
-        if geom_type == 1:
-            # point
-            return np.frombuffer(geom, np.double, -1, 5)
-        if geom_type == 2:
-            # line
-            return np.frombuffer(geom, np.double, -1, 9)
-        if geom_type == 3:
-            # polygon
-            n_points = np.frombuffer(geom, np.int32, 1, 9)[0]
-            return np.frombuffer(geom, np.double, n_points * 2, 13)  # do rings?
-        if geom_type == 4:
-            # multi-point
-            n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
-
-            pts = [
-                np.frombuffer(geom, np.double, 2, 14 + i * 21) for i in range(n_points)
-            ]  # each point is 21 bytes
-
-            return np.concatenate(pts)
-        if geom_type == 5:
-            # multi-line
-            n_lines = np.frombuffer(geom, np.int32, 1, 5)[0]
-            lines = []
-            offset = 9
-            for _ in range(n_lines):
-                offset += 5
-                n_points = np.frombuffer(geom, np.int32, n_lines, offset)[0]
-                offset += 4
-                lines.append(np.frombuffer(geom, np.double, n_points * 2, offset))
-                offset += n_points * 16
-            return np.concatenate(lines)
-
-        def decode_polygon(offset=0):
-            offset += 5  # byte order and geom type at start of each polygon
-            n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
-            offset += 4
-
-            rings = []
-            for _ in range(n_rings):
-                n_points = np.frombuffer(geom, np.int32, 1, offset)[0]
-                offset += 4
-                rings.append(np.frombuffer(geom, np.double, n_points * 2, offset))
-                offset += n_points * 16
-            return rings, offset
-
-        if geom_type == 6:
-            # multi-polygon
-            n_polygons = np.frombuffer(geom, np.int32, 1, 5)[0]
-            polygons = []
-            offset = 9
-            for _ in range(n_polygons):
-                rings, offset = decode_polygon(offset)
-                polygons.append(rings)
-            return np.concatenate(polygons)
-
-        msg = f"Unknown geometry type: {geom_type}"
-        raise ValueError(msg)
-
-    @staticmethod
     def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):
         """Return coords relative to top left of tile, as array suitable for cv2.
 
@@ -810,7 +735,7 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
 
         cnt = self.to_tile_coords(
-            self.decode_wkb(annotation.geometry, 3),
+            Annotation.decode_wkb(annotation.geometry, 3),
             top_left,
             scale,
         )
@@ -832,7 +757,7 @@ class AnnotationRenderer:
     def render_multipoly(self, tile, annotation, top_left, scale):
         """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation)
-        geoms = self.decode_wkb(annotation.geometry, 6)
+        geoms = Annotation.decode_wkb(annotation.geometry, 6)
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
@@ -861,7 +786,7 @@ class AnnotationRenderer:
         cv2.circle(
             tile,
             self.to_tile_coords(
-                self.decode_wkb(annotation.geometry, 1),
+                Annotation.decode_wkb(annotation.geometry, 1),
                 top_left,
                 scale,
             )[0],
@@ -895,7 +820,7 @@ class AnnotationRenderer:
             tile,
             [
                 self.to_tile_coords(
-                    list(self.decode_wkb(annotation.geometry, 2)),
+                    list(Annotation.decode_wkb(annotation.geometry, 2)),
                     top_left,
                     scale,
                 ),
