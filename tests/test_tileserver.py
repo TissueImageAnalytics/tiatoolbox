@@ -21,6 +21,8 @@ from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
+RNG = np.random.default_rng(0)  # Numpy Random Generator
+
 
 def safe_str(name):
     """Make a name safe for use in a URL."""
@@ -28,7 +30,7 @@ def safe_str(name):
 
 
 def setup_app(client):
-    """Setup the app for testing."""
+    """Set up the app for testing."""
     client.get("/tileserver/session_id")
     # get the "session_id" cookie
     return client.get_cookie("session_id").value
@@ -37,7 +39,6 @@ def setup_app(client):
 @pytest.fixture(scope="session")
 def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
     return [
         cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
     ]
@@ -46,7 +47,6 @@ def cell_grid() -> list[Polygon]:
 @pytest.fixture(scope="session")
 def points_grid(spacing=60) -> list[Point]:
     """Generate a grid of fake point annotations."""
-    np.random.seed(0)
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
 
 
@@ -62,11 +62,11 @@ def fill_store(cell_grid, points_grid):
         store = store_class(path)
 
         cells = [
-            Annotation(cell, {"type": "cell", "prob": np.random.rand(1)[0]})
+            Annotation(cell, {"type": "cell", "prob": RNG.random(1)[0]})
             for cell in cell_grid
         ]
         points = [
-            Annotation(point, {"type": "pt", "prob": np.random.rand(1)[0]})
+            Annotation(point, {"type": "pt", "prob": RNG.random(1)[0]})
             for point in points_grid
         ]
         lines = [
