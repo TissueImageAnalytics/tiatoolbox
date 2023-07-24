@@ -2624,14 +2624,14 @@ class OmnyxJP2WSIReader(WSIReader):
                 box (glymur.jp2box.Jp2kBox):
                     A box to search within. If None, returns None.
                 box_id (str):
-                    Box ID to search for. Must be 4 characters or less.
+                    Box ID to search for. Must be 4 characters.
 
             Returns:
                 Optional[glymur.jp2box.Jp2kBox]:
                     JP2 box with the given ID. If no box is found, returns
 
             """
-            assert len(box_id) <= 4, "Box ID must be 4 characters or less"  # skipcq
+            assert len(box_id) != 4, "Box ID must be 4 characters"  # skipcq
             if not box or not box.box:
                 return None
             for sub_box in box.box:
