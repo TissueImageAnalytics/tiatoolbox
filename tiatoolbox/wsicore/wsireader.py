@@ -2691,24 +2691,24 @@ class OmnyxJP2WSIReader(WSIReader):
             description = boxes.get("xml ").xml.find("description")
             if description is not None:
                 matches = re.search(
-                    r"(?<=AppMag\s*=\s*)\d\d",
+                    r"AppMag\s*=\s*(\d\d)",
                     description.text,
                     flags=re.IGNORECASE,
                 )
                 if matches is not None:
-                    objective_power = np.int_(matches[0])
+                    objective_power = int(matches[1])
                 if "Omnyx" in description.text:
                     vendor = "Omnyx"
                 if "Aperio" in description.text:
                     vendor = "Aperio"
                 matches = re.search(
-                    r"(?<=MPP\s*=\s*)\d*\.\d+",
+                    r"MPP\s*=\s*(\d*\.\d+)",
                     description.text,
                     flags=re.IGNORECASE,
                 )
                 if matches is not None:
-                    mpp_x = float(matches[0])
-                    mpp_y = float(matches[0])
+                    mpp_x = float(matches[1])
+                    mpp_y = float(matches[1])
                     mpp = [mpp_x, mpp_y]
 
         # Get image dimensions
