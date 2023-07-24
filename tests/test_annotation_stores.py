@@ -1,14 +1,15 @@
-"""Tests for annotation store classes."""
+"""Test for annotation store classes."""
+from __future__ import annotations
+
 import json
 import pickle
 import random
 import sqlite3
 import sys
 from itertools import repeat
-from numbers import Number
 from pathlib import Path
 from timeit import timeit
-from typing import Any, Dict, Generator, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Generator
 
 import numpy as np
 import pandas as pd
@@ -17,13 +18,16 @@ from shapely import affinity
 from shapely.geometry import MultiPoint, Polygon
 from shapely.geometry.point import Point
 
-from tiatoolbox.annotation.storage import (
+from tiatoolbox.annotation import (
     Annotation,
     AnnotationStore,
     DictionaryStore,
-    SQLiteMetadata,
     SQLiteStore,
 )
+from tiatoolbox.annotation.storage import SQLiteMetadata
+
+if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
 
 sqlite3.enable_callback_tracebacks(True)
 
@@ -31,16 +35,17 @@ sqlite3.enable_callback_tracebacks(True)
 
 GRID_SIZE = (10, 10)
 FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
+RNG = np.random.default_rng(0)  # Numpy Random Generator
 
 # Helper Functions
 
 
 def cell_polygon(
-    xy: Tuple[Number, Number],
+    xy: tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 10,
     noise: Number = 0.01,
-    eccentricity: Tuple[Number, Number] = (1, 3),
+    eccentricity: tuple[Number, Number] = (1, 3),
     repeat_first: bool = True,
     direction: str = "CCW",
 ) -> Polygon:
@@ -67,15 +72,15 @@ def cell_polygon(
     # Generate points about an ellipse with random eccentricity
     x, y = xy
     alpha = np.linspace(0, 2 * np.pi - (2 * np.pi / n_points), n_points)
-    rx = radius * (np.random.rand() + 0.5)
-    ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
-    x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
-    y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
+    rx = radius * (RNG.random() + 0.5)
+    ry = RNG.uniform(*eccentricity) * radius - 0.5 * rx
+    x = rx * np.cos(alpha) + x + (RNG.random(n_points) - 0.5) * noise
+    y = ry * np.sin(alpha) + y + (RNG.random(n_points) - 0.5) * noise
     boundary_coords = np.stack([x, y], axis=1).tolist()
 
     # Copy first coordinate to the end if required
     if repeat_first:
-        boundary_coords = boundary_coords + [boundary_coords[0]]
+        boundary_coords = [*boundary_coords, boundary_coords[0]]
 
     # Swap direction
     if direction.strip().lower() == "cw":
@@ -84,11 +89,11 @@ def cell_polygon(
     polygon = Polygon(boundary_coords)
 
     # Add random rotation
-    angle = np.random.rand() * 360
+    angle = RNG.random() * 360
     return affinity.rotate(polygon, angle, origin="centroid")
 
 
-def sample_where_1(props: Dict[str, Any]) -> bool:
+def sample_where_1(props: dict[str, Any]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 1.
@@ -97,7 +102,7 @@ def sample_where_1(props: Dict[str, Any]) -> bool:
     return props.get("class") == 1
 
 
-def sample_where_123(props: Dict[str, Any]) -> bool:
+def sample_where_123(props: dict[str, Any]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 123.
@@ -106,7 +111,7 @@ def sample_where_123(props: Dict[str, Any]) -> bool:
     return props.get("class") == 123
 
 
-def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
+def sample_select(props: dict[str, Any]) -> tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value.
@@ -115,7 +120,7 @@ def sample_select(props: Dict[str, Any]) -> Tuple[Any]:
     return props.get("class")
 
 
-def sample_multi_select(props: Dict[str, Any]) -> Tuple[Any]:
+def sample_multi_select(props: dict[str, Any]) -> tuple[Any]:
     """Simple example select expression for tests.
 
     Gets the class value and the class mod 2.
@@ -143,16 +148,14 @@ def test_annotation_repr():
 
 
 @pytest.fixture(scope="session")
-def cell_grid() -> List[Polygon]:
+def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
     return [cell_polygon((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
 @pytest.fixture(scope="session")
-def points_grid() -> List[Polygon]:
+def points_grid() -> list[Polygon]:
     """Generate a grid of fake point annotations."""
-    np.random.seed(0)
     return [Point((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
@@ -168,8 +171,9 @@ def fill_store(cell_grid, points_grid):
 
     def _fill_store(
         store_class: AnnotationStore,
-        path: Union[str, Path],
+        path: str | Path,
     ):
+        """Private function to fill stores with data."""
         store = store_class(path)
         annotations = [Annotation(cell) for cell in cell_grid] + [
             Annotation(point, properties={"class": random.randint(0, 4)})
@@ -185,11 +189,13 @@ def fill_store(cell_grid, points_grid):
 
 
 def test_sqlite_store_compile_options():
+    """Test SQLiteStore compile options."""
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
 
 
 def test_sqlite_store_compile_options_exception(monkeypatch):
+    """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 37, 0))
     monkeypatch.setattr(
         SQLiteStore,
@@ -204,9 +210,13 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
 
 
 def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
+    """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
     monkeypatch.setattr(
-        SQLiteStore, "compile_options", lambda x: ["OMIT_JSON"], raising=True
+        SQLiteStore,
+        "compile_options",
+        lambda x: ["OMIT_JSON"],
+        raising=True,
     )
     with pytest.raises(EnvironmentError, match="JSON must not"):
         SQLiteStore()
@@ -225,6 +235,7 @@ def test_sqlite_store_compile_options_missing_math(monkeypatch, caplog):
 
 
 def test_sqlite_store_multiple_connection(tmp_path):
+    """Test SQLiteStore multiple connections."""
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
     assert len(store) == len(store2)
@@ -331,7 +342,7 @@ def test_sqlite_store_unsupported_decompression():
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
     with pytest.raises(ValueError, match="Unsupported"):
-        _ = store.deserialize_geometry(bytes())
+        _ = store.deserialize_geometry(b"")
 
 
 def test_sqlite_store_wkt_deserialisation(sample_triangle):
@@ -480,13 +491,6 @@ def test_add_area_column(fill_store):
     assert "area" not in store.indexes()
 
 
-def test_query_min_area(fill_store):
-    """Test querying with a minimum area."""
-    _, store = fill_store(SQLiteStore, ":memory:")
-    result = store.query((0, 0, 1000, 1000), min_area=1)
-    assert len(result) == 100  # should only get cells, pts are too small
-
-
 def test_query_min_area_no_area_column(fill_store):
     """Test querying with a minimum area when there is no area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
@@ -532,7 +536,9 @@ def test_init_base_class_exception():
 
 
 class TestStore:
-    scenarios = [
+    """Define TestStore to test AnnotationStore for multiple scenarios."""
+
+    scenarios: ClassVar[list[tuple[str, dict]]] = [
         ("Dictionary", {"store_cls": DictionaryStore}),
         ("SQLite", {"store_cls": SQLiteStore}),
     ]
@@ -637,7 +643,9 @@ class TestStore:
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
         store.patch_many(
-            keys, repeat(new_geometry, len(keys)), repeat({"abc": 123}, len(keys))
+            keys,
+            repeat(new_geometry, len(keys)),
+            repeat({"abc": 123}, len(keys)),
         )
 
         for _, key in enumerate(keys[:10]):
@@ -691,11 +699,11 @@ class TestStore:
 
     @staticmethod
     def test_keys(fill_store, tmp_path, store_cls):
-        """Test getting an keys iterator."""
+        """Test getting a keys iterator."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         keys = list(keys)
         assert len(list(store.keys())) == len(keys)
-        assert isinstance(list(store.keys())[0], type(keys[0]))
+        assert isinstance(next(iter(store.keys())), type(keys[0]))
 
     @staticmethod
     def test_remove(fill_store, tmp_path, store_cls):
@@ -771,16 +779,16 @@ class TestStore:
     @staticmethod
     def test_from_dataframe(cell_grid, store_cls):
         """Test loading from to a pandas dataframe."""
-        df = pd.DataFrame.from_records(
+        cell_grid_df = pd.DataFrame.from_records(
             [
                 {
                     "geometry": cell,
                     "row_id": n,
                 }
                 for n, cell in enumerate(cell_grid)
-            ]
+            ],
         )
-        store = store_cls.from_dataframe(df)
+        store = store_cls.from_dataframe(cell_grid_df)
         keys = list(store.keys())
         annotation = store[keys[0]]
         assert "row_id" in annotation.properties
@@ -789,12 +797,12 @@ class TestStore:
     def test_to_dataframe(fill_store, tmp_path, store_cls):
         """Test converting to a pandas dataframe."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        df = store.to_dataframe()
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) == FILLED_LEN
-        assert "geometry" in df.columns
-        assert df.index.name == "key"
-        assert isinstance(df.geometry.iloc[0], Polygon)
+        store_as_df = store.to_dataframe()
+        assert isinstance(store_as_df, pd.DataFrame)
+        assert len(store_as_df) == FILLED_LEN
+        assert "geometry" in store_as_df.columns
+        assert store_as_df.index.name == "key"
+        assert isinstance(store_as_df.geometry.iloc[0], Polygon)
 
     @staticmethod
     def test_features(fill_store, tmp_path, store_cls):
@@ -833,7 +841,7 @@ class TestStore:
         """Test loading from geojson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
-        with open(tmp_path / "polygon.json", "r") as file_handle:
+        with Path.open(tmp_path / "polygon.json") as file_handle:
             store2 = store_cls.from_geojson(file_handle)
         assert len(store) == len(store2)
 
@@ -853,7 +861,9 @@ class TestStore:
         store.to_geojson(tmp_path / "polygon.json")
         # load the store translated so that origin is (100,100) and scaled by 2
         store2 = store_cls.from_geojson(
-            tmp_path / "polygon.json", scale_factor=(2, 2), origin=(100, 100)
+            tmp_path / "polygon.json",
+            scale_factor=(2, 2),
+            origin=(100, 100),
         )
         assert len(store) == len(store2)
         com2 = annotations_center_of_mass(list(store2.values()))
@@ -891,10 +901,10 @@ class TestStore:
     def test_to_geojson_file(fill_store, tmp_path, store_cls):
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        with open(tmp_path / "polygon.json", "w") as fh:
+        with Path.open(tmp_path / "polygon.json", "w") as fh:
             geojson = store.to_geojson(fp=fh)
         assert geojson is None
-        with open(tmp_path / "polygon.json", "r") as fh:
+        with Path.open(tmp_path / "polygon.json") as fh:
             geodict = json.load(fh)
         assert "features" in geodict
         assert "type" in geodict
@@ -907,7 +917,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         geojson = store.to_geojson(fp=tmp_path / "polygon.json")
         assert geojson is None
-        with open(tmp_path / "polygon.json", "r") as fh:
+        with Path.open(tmp_path / "polygon.json") as fh:
             geodict = json.load(fh)
         assert "features" in geodict
         assert "type" in geodict
@@ -930,10 +940,10 @@ class TestStore:
     def test_to_ndjson_file(fill_store, tmp_path, store_cls):
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
-        with open(tmp_path / "polygon.ndjson", "w") as fh:
+        with Path.open(tmp_path / "polygon.ndjson", "w") as fh:
             ndjson = store.to_ndjson(fp=fh)
         assert ndjson is None
-        with open(tmp_path / "polygon.ndjson", "r") as fh:
+        with Path.open(tmp_path / "polygon.ndjson") as fh:
             for line in fh.readlines():
                 assert isinstance(line, str)
                 feature = json.loads(line)
@@ -947,7 +957,7 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         ndjson = store.to_ndjson(fp=tmp_path / "polygon.ndjson")
         assert ndjson is None
-        with open(tmp_path / "polygon.ndjson", "r") as fh:
+        with Path.open(tmp_path / "polygon.ndjson") as fh:
             for line in fh.readlines():
                 assert isinstance(line, str)
                 feature = json.loads(line)
@@ -966,7 +976,7 @@ class TestStore:
     def test_dump_file_handle(fill_store, tmp_path, store_cls):
         """Test dumping to a file handle."""
         _, store = fill_store(store_cls, ":memory:")
-        with open(tmp_path / "dump_test.db", "w") as fh:
+        with Path.open(tmp_path / "dump_test.db", "w") as fh:
             store.dump(fh)
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
@@ -1021,7 +1031,7 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
-            # (0, 0, 1024, 1024),  # noqa: E800
+            # (0, 0, 1024, 1024),  # noqa: ERA001
             where=lambda props: props.get("class")
             == 123,
         )
@@ -1189,7 +1199,7 @@ class TestStore:
     def test_serialise_deseialise_geometry(fill_store, store_cls):
         """Test that geometry can be serialised and deserialised."""
         _, store = fill_store(store_cls, ":memory:")
-        for _, annotation in store.items():
+        for annotation in store.values():
             geometry = annotation.geometry
             serialised = store.serialise_geometry(geometry)
             deserialised = store.deserialize_geometry(serialised)
@@ -1256,7 +1266,8 @@ class TestStore:
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         dictionary = store.bquery(
-            (0, 0, 1e10, 1e10), where=lambda props: props.get("class") == 123
+            (0, 0, 1e10, 1e10),
+            where=lambda props: props.get("class") == 123,
         )
         assert isinstance(dictionary, dict)
         assert len(dictionary) == 1
@@ -1465,7 +1476,7 @@ class TestStore:
                 (0, 0),
                 (0, 1),
                 (1, 1),
-            ]
+            ],
         )
 
         # Counter-clockwise
@@ -1475,7 +1486,7 @@ class TestStore:
                 (0, 1),
                 (0, 0),
                 (1, 0),
-            ]
+            ],
         )
 
         # From shapely
@@ -1484,7 +1495,7 @@ class TestStore:
 
         # Fuzz
         for _ in range(100):
-            box = Polygon.from_bounds(*np.random.randint(0, 100, 4))
+            box = Polygon.from_bounds(*RNG.integers(0, 100, 4))
             assert store._is_rectangle(*box.exterior.coords)
 
         # Failure case
@@ -1494,7 +1505,7 @@ class TestStore:
                 (0, 1),
                 (0, 0),
                 (1, 0),
-            ]
+            ],
         )
 
     @staticmethod
@@ -1521,7 +1532,7 @@ class TestStore:
                 (1, 0),
                 (0, 0),
                 (0, 1),
-            ]
+            ],
         )
 
         # skipcq
@@ -1536,7 +1547,7 @@ class TestStore:
                 (0, 1),
                 (0, 0),
                 (1, 0),
-            ]
+            ],
         )
 
         # skipcq
@@ -1551,7 +1562,7 @@ class TestStore:
                 (0, 0),
                 (1, 0),
                 (0, 1),
-            ]
+            ],
         )
 
         assert not store._is_right_angle(
@@ -1559,7 +1570,7 @@ class TestStore:
                 (1, 0.2),
                 (0, 0),
                 (0.2, 1),
-            ]
+            ],
         )
 
     @staticmethod
@@ -1647,7 +1658,7 @@ class TestStore:
     def test_connection_to_path_io(store_cls, tmp_path):
         """Test converting a named file connection to a path."""
         path = tmp_path / "foo"
-        with open(path, "w") as fh:
+        with Path.open(path, "w") as fh:
             store_cls._connection_to_path(fh)
             assert path == Path(fh.name)
 
@@ -1931,7 +1942,7 @@ class TestStore:
                     (3.5, 4.5),
                     (3.5, 0.5),
                     (1, 0.5),
-                ]
+                ],
             ),
             {"class": "B"},
         )
@@ -1946,7 +1957,7 @@ class TestStore:
         print(
             centroid.buffer(distance)
             .intersection(ann_a.geometry.centroid.buffer(distance))
-            .area
+            .area,
         )
 
         result = store.nquery(
@@ -1960,7 +1971,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_box_box(store_cls):
-        """Find duplicate (overlapping) cell boundaries via bounding boxes.
+        r"""Find duplicate (overlapping) cell boundaries via bounding boxes.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
         of overlapping fake cell boundary polygons, where each polygon
@@ -1980,11 +1991,13 @@ class TestStore:
 
         for x, y in grid:
             cell_a = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_a = Annotation(cell_a, {"class": "A"})
             cell_b = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_b = Annotation(cell_b, {"class": "B"})
 
@@ -2004,7 +2017,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_boxpoint_boxpoint(store_cls):
-        """Find duplicate (overlapping) cell boundaries via bbox centroid distance.
+        r"""Find duplicate (overlapping) cell boundaries via bbox centroid distance.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
         of overlapping fake cell boundary polygons, where each polygon
@@ -2024,11 +2037,13 @@ class TestStore:
 
         for x, y in grid:
             cell_a = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_a = Annotation(cell_a, {"class": "A"})
             cell_b = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_b = Annotation(cell_b, {"class": "B"})
 
@@ -2048,7 +2063,7 @@ class TestStore:
 
     @staticmethod
     def test_nquery_overlapping_grid_poly_poly(store_cls):
-        """Find duplicate (overlapping) cell boundaries via polygon intersection.
+        r"""Find duplicate (overlapping) cell boundaries via polygon intersection.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
         of overlapping fake cell boundary polygons, where each polygon
@@ -2067,11 +2082,13 @@ class TestStore:
 
         for x, y in grid:
             cell_a = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_a = Annotation(cell_a, {"class": "A"})
             cell_b = cell_polygon(
-                (x * spacing + radius, y * spacing + radius), radius=radius
+                (x * spacing + radius, y * spacing + radius),
+                radius=radius,
             )
             ann_b = Annotation(cell_b, {"class": "B"})
 
@@ -2091,6 +2108,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode_type(store_cls):
+        """Test invalid mode type for AnnotationStore."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(TypeError, match="string or tuple of strings"):
@@ -2103,6 +2121,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode_format(store_cls):
+        """Check invalid mode string format raises ValueError."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(ValueError, match="must be one of"):
@@ -2115,6 +2134,7 @@ class TestStore:
 
     @staticmethod
     def test_invalid_mode(store_cls):
+        """Check unsupported mode raises ValueError."""
         store: AnnotationStore = store_cls()
 
         with pytest.raises(ValueError, match="must be one of"):
@@ -2134,3 +2154,21 @@ class TestStore:
         """
         store = store_cls()
         assert store.bquery(where="props['foo'] == 'bar'") == {}
+
+    @staticmethod
+    def test_query_min_area(fill_store, store_cls):
+        """Test querying with a minimum area."""
+        _, store = fill_store(store_cls, ":memory:")
+        result = store.query((0, 0, 1000, 1000), min_area=1)
+        assert len(result) == 100  # should only get cells, pts are too small
+
+    @staticmethod
+    def test_as_wkb(fill_store, store_cls):
+        """Test that as_wkb returns annotations with wkb geometry."""
+        _, store = fill_store(store_cls, ":memory:")
+        wkb_results = store.query((0, 0, 25, 25), as_wkb=True)
+        results = store.query((0, 0, 30, 30))
+        assert len(results) == 8
+        assert len(wkb_results) == 8
+        for wkb_result, result in zip(wkb_results.values(), results.values()):
+            assert wkb_result.geometry == result.geometry.wkb

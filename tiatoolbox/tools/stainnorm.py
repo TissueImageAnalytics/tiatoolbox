@@ -8,7 +8,7 @@ from tiatoolbox.tools.stainextract import (
     RuifrokExtractor,
     VahadaneExtractor,
 )
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupportedError
 from tiatoolbox.utils.misc import load_stain_matrix
 from tiatoolbox.utils.transforms import od2rgb, rgb2od
 
@@ -33,7 +33,8 @@ class StainNormalizer:
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize :class:`StainNormalizer`."""
         self.extractor = None
         self.stain_matrix_target = None
         self.target_concentrations = None
@@ -69,10 +70,13 @@ class StainNormalizer:
         """
         self.stain_matrix_target = self.extractor.get_stain_matrix(target)
         self.target_concentrations = self.get_concentrations(
-            target, self.stain_matrix_target
+            target,
+            self.stain_matrix_target,
         )
         self.maxC_target = np.percentile(
-            self.target_concentrations, 99, axis=0
+            self.target_concentrations,
+            99,
+            axis=0,
         ).reshape((1, 2))
         # useful to visualize.
         self.stain_matrix_target_RGB = od2rgb(self.stain_matrix_target)
@@ -94,7 +98,7 @@ class StainNormalizer:
         max_c_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
         source_concentrations *= self.maxC_target / max_c_source
         trans = 255 * np.exp(
-            -1 * np.dot(source_concentrations, self.stain_matrix_target)
+            -1 * np.dot(source_concentrations, self.stain_matrix_target),
         )
 
         # ensure between 0 and 255
@@ -122,7 +126,8 @@ class CustomNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self, stain_matrix):
+    def __init__(self, stain_matrix) -> None:
+        """Initialize :class:`CustomNormalizer`."""
         super().__init__()
 
         self.extractor = CustomExtractor(stain_matrix)
@@ -149,7 +154,8 @@ class RuifrokNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize :class:`RuifrokNormalizer`."""
         super().__init__()
         self.extractor = RuifrokExtractor()
 
@@ -175,7 +181,8 @@ class MacenkoNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize :class:`MacenkoNormalizer`."""
         super().__init__()
         self.extractor = MacenkoExtractor()
 
@@ -201,7 +208,8 @@ class VahadaneNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize :class:`VahadaneNormalizer`."""
         super().__init__()
         self.extractor = VahadaneExtractor()
 
@@ -231,7 +239,8 @@ class ReinhardNormalizer:
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize :class:`ReinhardNormalizer`."""
         self.target_means = None
         self.target_stds = None
 
@@ -377,11 +386,12 @@ def get_normalizer(method_name, stain_matrix=None):
         "vahadane",
         "custom",
     ]:
-        raise MethodNotSupported
+        raise MethodNotSupportedError
 
     if stain_matrix is not None and method_name.lower() != "custom":
+        msg = '`stain_matrix` is only defined when using `method_name`="custom".'
         raise ValueError(
-            '`stain_matrix` is only defined when using `method_name`="custom".'
+            msg,
         )
 
     if method_name.lower() == "reinhard":

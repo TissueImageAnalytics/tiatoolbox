@@ -74,6 +74,7 @@ W0221
 W0612
 W0613
 W0703
+W6003
 W6004
 WRT
 XY
@@ -144,6 +145,7 @@ numpy
 openslide
 otsu
 pathlib
+pdist
 pixman
 postproc
 pred
@@ -156,6 +158,7 @@ pyright
 qtconsole
 quickstart
 reimport
+renderer
 resampling
 rescale
 rtree
@@ -178,6 +181,7 @@ uint8
 uncallable
 v4
 viridis
+wkb
 wsi
 wsireader
 zarr

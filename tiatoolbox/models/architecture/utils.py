@@ -1,16 +1,15 @@
-"""Defines utility layers and operators for models in tiatoolbox."""
+"""Define utility layers and operators for models in tiatoolbox."""
 
-
-from typing import Union
+from __future__ import annotations
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 def centre_crop(
-    img: Union[np.ndarray, torch.tensor],
-    crop_shape: Union[np.ndarray, torch.tensor],
+    img: np.ndarray | torch.tensor,
+    crop_shape: np.ndarray | torch.tensor,
     data_format: str = "NCHW",
 ):
     """A function to center crop image with given crop shape.
@@ -30,7 +29,8 @@ def centre_crop(
 
     """
     if data_format not in ["NCHW", "NHWC"]:
-        raise ValueError(f"Unknown input format `{data_format}`.")
+        msg = f"Unknown input format `{data_format}`."
+        raise ValueError(msg)
 
     crop_t = crop_shape[0] // 2
     crop_b = crop_shape[0] - crop_t
@@ -43,8 +43,8 @@ def centre_crop(
 
 
 def centre_crop_to_shape(
-    x: Union[np.ndarray, torch.tensor],
-    y: Union[np.ndarray, torch.tensor],
+    x: np.ndarray | torch.tensor,
+    y: np.ndarray | torch.tensor,
     data_format: str = "NCHW",
 ):
     """A function to center crop image to shape.
@@ -67,7 +67,8 @@ def centre_crop_to_shape(
 
     """
     if data_format not in ["NCHW", "NHWC"]:
-        raise ValueError(f"Unknown input format `{data_format}`.")
+        msg = f"Unknown input format `{data_format}`."
+        raise ValueError(msg)
 
     if data_format == "NCHW":
         _, _, h1, w1 = x.shape
@@ -81,7 +82,7 @@ def centre_crop_to_shape(
             (
                 "Height or width of `x` is smaller than `y` ",
                 f"{[h1, w1]} vs {[h2, w2]}",
-            )
+            ),
         )
 
     x_shape = x.shape
@@ -102,11 +103,13 @@ class UpSample2x(nn.Module):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize :class:`UpSample2x`."""
         super().__init__()
         # correct way to create constant within module
         self.register_buffer(
-            "unpool_mat", torch.from_numpy(np.ones((2, 2), dtype="float32"))
+            "unpool_mat",
+            torch.from_numpy(np.ones((2, 2), dtype="float32")),
         )
         self.unpool_mat.unsqueeze(0)
 

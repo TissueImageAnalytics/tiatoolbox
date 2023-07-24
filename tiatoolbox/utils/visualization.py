@@ -1,19 +1,34 @@
 """Visualisation and overlay functions used in tiatoolbox."""
+from __future__ import annotations
+
 import colorsys
 import random
-from typing import Dict, List, Tuple, Union
+from typing import TYPE_CHECKING
 
 import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colormaps
-from numpy.typing import ArrayLike
 from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
-from tiatoolbox import logger
-from tiatoolbox.annotation.storage import Annotation, AnnotationStore
+from tiatoolbox import DuplicateFilter, logger
+
+if TYPE_CHECKING:  # pragma: no cover
+    from numpy.typing import ArrayLike
+
+    from tiatoolbox.annotation import Annotation, AnnotationStore
+
+GEOMTYPES = {
+    1: "Point",
+    2: "LineString",
+    3: "Polygon",
+    4: "MultiPoint",
+    5: "MultiLineString",
+    6: "MultiPolygon",
+    7: "GeometryCollection",
+}
 
 
 def random_colors(num_colors, bright=True):
@@ -65,7 +80,7 @@ def overlay_prediction_mask(
     img: np.ndarray,
     prediction: np.ndarray,
     alpha: float = 0.35,
-    label_info: dict = None,
+    label_info: dict | None = None,
     min_val: float = 0.0,
     ax=None,
     return_ax: bool = True,
@@ -102,13 +117,17 @@ def overlay_prediction_mask(
     """
     # Validate inputs
     if img.shape[:2] != prediction.shape[:2]:
+        msg = (
+            f"Mismatch shape `img` {img.shape[:2]} "
+            f"vs `prediction` {prediction.shape[:2]}."
+        )
         raise ValueError(
-            f"Mismatch shape "
-            f"`img` {img.shape[:2]} vs `prediction` {prediction.shape[:2]}."
+            msg,
         )
     if np.issubdtype(img.dtype, np.floating):
         if not (img.max() <= 1.0 and img.min() >= 0):
-            raise ValueError("Not support float `img` outside [0, 1].")
+            msg = "Not support float `img` outside [0, 1]."
+            raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
     # If `min_val` is defined, only display the overlay for areas with pred > min_val
     if min_val > 0:
@@ -118,21 +137,23 @@ def overlay_prediction_mask(
 
     predicted_classes = sorted(np.unique(prediction).tolist())
     # Generate random colours if None are given
-    rand_state = np.random.get_state()
-    np.random.seed(123)
+    rand_state = np.random.default_rng().__getstate__()
+    rng = np.random.default_rng(123)
     label_info = label_info or {  # Use label_info if provided OR generate
-        label_uid: (str(label_uid), np.random.randint(0, 255, 3))
+        label_uid: (str(label_uid), rng.integers(0, 255, 3))
         for label_uid in predicted_classes
     }
-    np.random.set_state(rand_state)
+    np.random.default_rng().__setstate__(rand_state)
 
     # Validate label_info
     missing_label_uids = _validate_label_info(label_info, predicted_classes)
     if len(missing_label_uids) != 0:
-        raise ValueError(f"Missing label for: {missing_label_uids}.")
+        msg = f"Missing label for: {missing_label_uids}."
+        raise ValueError(msg)
 
     rgb_prediction = np.zeros(
-        [prediction.shape[0], prediction.shape[1], 3], dtype=np.uint8
+        [prediction.shape[0], prediction.shape[1], 3],
+        dtype=np.uint8,
     )
     for label_uid, (_, overlay_rgb) in label_info.items():
         sel = prediction == label_uid
@@ -156,7 +177,7 @@ def overlay_prediction_mask(
 
     colorbar_params = {
         "mappable": mpl.cm.ScalarMappable(cmap=cmap),
-        "boundaries": uid_list + [uid_list[-1] + 1],
+        "boundaries": [*uid_list, uid_list[-1] + 1],
         "values": uid_list,
         "ticks": [b + 0.5 for b in uid_list],
         "spacing": "proportional",
@@ -177,8 +198,9 @@ def overlay_prediction_mask(
 
 
 def _validate_label_info(
-    label_info: Dict[int, Tuple[str, ArrayLike]], predicted_classes
-) -> List[int]:
+    label_info: dict[int, tuple[str, ArrayLike]],
+    predicted_classes,
+) -> list[int]:
     """Validate the label_info dictionary.
 
     Args:
@@ -204,24 +226,36 @@ def _validate_label_info(
         if label_uid in check_uid_list:
             check_uid_list.remove(label_uid)
         if not isinstance(label_uid, int):
-            raise ValueError(
-                "Wrong `label_info` format: label_uid "
+            msg = (
+                f"Wrong `label_info` format: label_uid "
                 f"{[label_uid, (label_name, label_colour)]}"
+            )
+            raise TypeError(
+                msg,
             )
         if not isinstance(label_name, str):
-            raise ValueError(
-                "Wrong `label_info` format: label_name "
+            msg = (
+                f"Wrong `label_info` format: label_name "
                 f"{[label_uid, (label_name, label_colour)]}"
+            )
+            raise TypeError(
+                msg,
             )
         if not isinstance(label_colour, (tuple, list, np.ndarray)):
-            raise ValueError(
-                "Wrong `label_info` format: label_colour "
+            msg = (
+                f"Wrong `label_info` format: label_colour "
                 f"{[label_uid, (label_name, label_colour)]}"
             )
+            raise TypeError(
+                msg,
+            )
         if len(label_colour) != 3:
-            raise ValueError(
-                "Wrong `label_info` format: label_colour "
+            msg = (
+                f"Wrong `label_info` format: label_colour "
                 f"{[label_uid, (label_name, label_colour)]}"
+            )
+            raise ValueError(
+                msg,
             )
 
     return check_uid_list
@@ -329,30 +363,40 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
 
     """
     if prediction.ndim != 2:
-        raise ValueError("The input prediction must be 2-dimensional of the form HW.")
+        msg = "The input prediction must be 2-dimensional of the form HW."
+        raise ValueError(msg)
 
     if img.shape[:2] != prediction.shape[:2]:
+        msg = (
+            f"Mismatch shape `img` {img.shape[:2]} "
+            f"vs `prediction` {prediction.shape[:2]}."
+        )
         raise ValueError(
-            f"Mismatch shape `img` {img.shape[:2]}"
-            f" vs `prediction` {prediction.shape[:2]}."
+            msg,
         )
 
     if prediction.max() > 1.0:
-        raise ValueError("Not support float `prediction` outside [0, 1].")
+        msg = "Not support float `prediction` outside [0, 1]."
+        raise ValueError(msg)
     if prediction.min() < 0:
-        raise ValueError("Not support float `prediction` outside [0, 1].")
+        msg = "Not support float `prediction` outside [0, 1]."
+        raise ValueError(msg)
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
     if min_val < 0.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
+        msg = f"`min_val={min_val}` is not between [0, 1]."
+        raise ValueError(msg)
     if min_val > 1.0:
-        raise ValueError(f"`min_val={min_val}` is not between [0, 1].")
+        msg = f"`min_val={min_val}` is not between [0, 1]."
+        raise ValueError(msg)
 
     if np.issubdtype(img.dtype, np.floating):
         if img.max() > 1.0:
-            raise ValueError("Not support float `img` outside [0, 1].")
+            msg = "Not support float `img` outside [0, 1]."
+            raise ValueError(msg)
         if img.min() < 0:
-            raise ValueError("Not support float `img` outside [0, 1].")
+            msg = "Not support float `img` outside [0, 1]."
+            raise ValueError(msg)
         return np.array(img * 255, dtype=np.uint8)
     return img
 
@@ -361,8 +405,8 @@ def overlay_prediction_contours(
     canvas: np.ndarray,
     inst_dict: dict,
     draw_dot: bool = False,
-    type_colours: dict = None,
-    inst_colours: Union[np.ndarray, Tuple[int]] = (255, 255, 0),
+    type_colours: dict | None = None,
+    inst_colours: np.ndarray | tuple[int] = (255, 255, 0),
     line_thickness: int = 2,
 ):
     """Overlaying instance contours on image.
@@ -405,8 +449,9 @@ def overlay_prediction_contours(
     elif isinstance(inst_colours, tuple):
         inst_colours = np.array([inst_colours] * len(inst_dict))
     elif not isinstance(inst_colours, np.ndarray):
-        raise ValueError(
-            f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
+        msg = f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
+        raise TypeError(
+            msg,
         )
     inst_colours = inst_colours.astype(np.uint8)
 
@@ -417,7 +462,11 @@ def overlay_prediction_contours(
         else:
             inst_colour = (inst_colours[idx]).tolist()
         cv2.drawContours(
-            overlay, [np.array(inst_contour)], -1, inst_colour, line_thickness
+            overlay,
+            [np.array(inst_contour)],
+            -1,
+            inst_colour,
+            line_thickness,
         )
 
         if draw_dot:
@@ -431,9 +480,9 @@ def plot_graph(
     canvas: np.ndarray,
     nodes: np.ndarray,
     edges: np.ndarray,
-    node_colors: Union[Tuple[int], np.ndarray] = (255, 0, 0),
+    node_colors: tuple[int] | np.ndarray = (255, 0, 0),
     node_size: int = 5,
-    edge_colors: Union[Tuple[int], np.ndarray] = (0, 0, 0),
+    edge_colors: tuple[int] | np.ndarray = (0, 0, 0),
     edge_size: int = 5,
 ):
     """Drawing a graph onto a canvas.
@@ -488,7 +537,9 @@ def plot_graph(
 
 
 class AnnotationRenderer:
-    """Renderer containing information and methods to render annotations
+    """Renders AnnotationStore to a tile.
+
+    Renderer containing information and methods to render annotations
     from an AnnotationStore to a tile.
 
     Args:
@@ -534,6 +585,14 @@ class AnnotationRenderer:
             will override the primary colormap.
         blur_radius (int):
             radius of gaussian blur to apply to rendered annotations.
+        score_prop_edge (str):
+            A key that is present in the properties of annotations
+            to be rendered that will be used to color rendered edges.
+        function_mapper (Callable):
+            A callable which will be given the properties of an annotation
+            and should return a color for the annotation.  If this is specified,
+            mapper and score_prop are ignored.
+
 
     """
 
@@ -550,18 +609,11 @@ class AnnotationRenderer:
         secondary_cmap=None,
         blur_radius=0,
         score_prop_edge=None,
-    ):
-        if mapper is None:
-            mapper = colormaps["jet"]
-        if isinstance(mapper, str) and mapper != "categorical":
-            mapper = colormaps[mapper]
-        if isinstance(mapper, list):
-            colors = random_colors(len(mapper))
-            mapper = {key: (*color, 1) for key, color in zip(mapper, colors)}
-        if isinstance(mapper, dict):
-            self.mapper = lambda x: mapper[x]
-        else:
-            self.mapper = mapper
+        function_mapper=None,
+    ) -> None:
+        """Initialize :class:`AnnotationRenderer`."""
+        self.raw_mapper = None
+        self.mapper = mapper
         self.score_prop = score_prop
         self.score_prop_edge = score_prop_edge
         self.where = where
@@ -573,6 +625,7 @@ class AnnotationRenderer:
         self.zoomed_out_strat = zoomed_out_strat
         self.secondary_cmap = secondary_cmap
         self.blur_radius = blur_radius
+        self.function_mapper = function_mapper
         if blur_radius > 0:
             self.blur = ImageFilter.GaussianBlur(blur_radius)
             self.edge_thickness = 0
@@ -580,8 +633,85 @@ class AnnotationRenderer:
             self.blur = None
 
     @staticmethod
-    def to_tile_coords(coords: List, top_left: Tuple[float, float], scale: float):
+    def decode_wkb(geom: bytes, geom_type: int) -> np.array:
+        """Decode a geometry.
+
+        Decodes a geometry represented as raw wkb bytes
+        to an array of coordinates.
+
+        Args:
+            geom (bytes):
+                The raw wkb bytes representation of a geometry.
+            geom_type (GEOMTYPES):
+                The type of geometry.
+
+        Returns:
+            np.array:
+                An array of coordinates.
+
+        """
+        if geom_type == 1:
+            # point
+            return np.frombuffer(geom, np.double, -1, 5)
+        if geom_type == 2:
+            # line
+            return np.frombuffer(geom, np.double, -1, 9)
+        if geom_type == 3:
+            # polygon
+            n_points = np.frombuffer(geom, np.int32, 1, 9)[0]
+            return np.frombuffer(geom, np.double, n_points * 2, 13)  # do rings?
+        if geom_type == 4:
+            # multi-point
+            n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
+
+            pts = [
+                np.frombuffer(geom, np.double, 2, 14 + i * 21) for i in range(n_points)
+            ]  # each point is 21 bytes
+
+            return np.concatenate(pts)
+        if geom_type == 5:
+            # multi-line
+            n_lines = np.frombuffer(geom, np.int32, 1, 5)[0]
+            lines = []
+            offset = 9
+            for _ in range(n_lines):
+                offset += 5
+                n_points = np.frombuffer(geom, np.int32, n_lines, offset)[0]
+                offset += 4
+                lines.append(np.frombuffer(geom, np.double, n_points * 2, offset))
+                offset += n_points * 16
+            return np.concatenate(lines)
+
+        def decode_polygon(offset=0):
+            offset += 5  # byte order and geom type at start of each polygon
+            n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
+            offset += 4
+
+            rings = []
+            for _ in range(n_rings):
+                n_points = np.frombuffer(geom, np.int32, 1, offset)[0]
+                offset += 4
+                rings.append(np.frombuffer(geom, np.double, n_points * 2, offset))
+                offset += n_points * 16
+            return rings, offset
+
+        if geom_type == 6:
+            # multi-polygon
+            n_polygons = np.frombuffer(geom, np.int32, 1, 5)[0]
+            polygons = []
+            offset = 9
+            for _ in range(n_polygons):
+                rings, offset = decode_polygon(offset)
+                polygons.append(rings)
+            return np.concatenate(polygons)
+
+        msg = f"Unknown geometry type: {geom_type}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):
         """Return coords relative to top left of tile, as array suitable for cv2.
+
         Args:
             coords (List):
                 List of coordinates in the form [x, y].
@@ -589,27 +719,31 @@ class AnnotationRenderer:
                 The top left corner of the tile in wsi.
             scale (float):
                 The zoom scale at which we are rendering.
+
         Returns:
             np.array:
                 Array of coordinates in tile space in the form [x, y].
 
         """
-        return np.squeeze(((np.array(coords) - top_left) / scale).astype(np.int32))
+        return ((np.reshape(coords, (-1, 2)) - top_left) / scale).astype(np.int32)
 
     def get_color(self, annotation: Annotation, edge=False):
         """Get the color for an annotation.
+
         Args:
             annotation (Annotation):
                 Annotation to get color for.
+            edge (bool):
+                Whether to get the color for the edge of the annotation,
+                or the interior.
+
         Returns:
             tuple:
                 A color tuple (rgba).
 
         """
-        if edge:
-            score_prop = self.score_prop_edge
-        else:
-            score_prop = self.score_prop
+        score_prop = self.score_prop_edge if edge else self.score_prop
+
         try:
             if (
                 self.secondary_cmap is not None
@@ -621,10 +755,12 @@ class AnnotationRenderer:
                     int(c * 255)
                     for c in self.secondary_cmap["mapper"](
                         self.score_fn(
-                            annotation.properties[self.secondary_cmap["score_prop"]]
-                        )
+                            annotation.properties[self.secondary_cmap["score_prop"]],
+                        ),
                     )
                 )
+            if self.function_mapper:
+                return self.function_mapper(annotation.properties)
             if score_prop == "color":
                 # use colors directly specified in annotation properties
                 return (*[int(255 * c) for c in annotation.properties["color"]], 255)
@@ -632,14 +768,21 @@ class AnnotationRenderer:
                 return tuple(
                     int(c * 255)
                     for c in self.mapper(
-                        self.score_fn(annotation.properties[score_prop])
+                        self.score_fn(annotation.properties[score_prop]),
                     )
                 )
         except KeyError:
             logger.warning(
-                "'score_prop' not found in properties. Using default color.",
+                "property: %s not found in properties. Using default color.",
+                score_prop,
                 stacklevel=2,
             )
+        except TypeError:
+            logger.warning(
+                "property value type incompatable with cmap. Using default color.",
+                stacklevel=2,
+            )
+
         if edge:
             return (0, 0, 0, 255)  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
@@ -648,10 +791,11 @@ class AnnotationRenderer:
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render a polygon annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -665,10 +809,19 @@ class AnnotationRenderer:
         """
         col = self.get_color(annotation)
 
-        cnt = self.to_tile_coords(annotation.geometry.exterior.coords, top_left, scale)
+        cnt = self.to_tile_coords(
+            self.decode_wkb(annotation.geometry, 3),
+            top_left,
+            scale,
+        )
         if self.thickness > -1:
             cv2.drawContours(
-                tile, [cnt], 0, col, self.edge_thickness, lineType=cv2.LINE_8
+                tile,
+                [cnt],
+                0,
+                col,
+                self.edge_thickness,
+                lineType=cv2.LINE_8,
             )
         else:
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
@@ -677,21 +830,22 @@ class AnnotationRenderer:
             cv2.drawContours(tile, [cnt], 0, edge_col, 1, lineType=cv2.LINE_8)
 
     def render_multipoly(self, tile, annotation, top_left, scale):
-        """render a multipolygon annotation onto a tile using cv2"""
+        """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation)
-
-        for poly in annotation.geometry.geoms:
-            cnt = self.to_tile_coords(poly.exterior.coords, top_left, scale)
+        geoms = self.decode_wkb(annotation.geometry, 6)
+        for poly in geoms:
+            cnt = self.to_tile_coords(poly, top_left, scale)
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
 
     def render_pt(
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render a point annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -706,7 +860,11 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
         cv2.circle(
             tile,
-            self.to_tile_coords(list(annotation.geometry.coords), top_left, scale),
+            self.to_tile_coords(
+                self.decode_wkb(annotation.geometry, 1),
+                top_left,
+                scale,
+            )[0],
             np.maximum(self.edge_thickness, 1),
             col,
             thickness=self.thickness,
@@ -716,10 +874,11 @@ class AnnotationRenderer:
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render a line annotation onto a tile using cv2.
+
         Args:
             tile (ndarray):
                 The rgb(a) tile image to render onto.
@@ -734,13 +893,35 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
         cv2.polylines(
             tile,
-            [self.to_tile_coords(list(annotation.geometry.coords), top_left, scale)],
+            [
+                self.to_tile_coords(
+                    list(self.decode_wkb(annotation.geometry, 2)),
+                    top_left,
+                    scale,
+                ),
+            ],
             False,
             col,
             thickness=3,
         )
 
     def __setattr__(self, __name: str, __value) -> None:
+        """Set attribute each time an attribute is set."""
+        if __name == "mapper":
+            # save a more readable version of the mapper too
+            if __value is None:
+                self.raw_mapper = "jet"
+                __value = colormaps["jet"]
+            if isinstance(__value, str) and __value != "categorical":
+                self.raw_mapper = __value
+                __value = colormaps[__value]
+            if isinstance(__value, list):
+                colors = random_colors(len(__value))
+                __value = {key: (*color, 1) for key, color in zip(__value, colors)}
+            if isinstance(__value, dict):
+                self.raw_mapper = __value
+                self.__dict__[__name] = lambda x: __value[x]
+                return
         if __name == "blur_radius":
             # need to change additional settings
             if __value > 0:
@@ -757,11 +938,11 @@ class AnnotationRenderer:
     def render_annotations(
         self,
         store: AnnotationStore,
-        bounds: Tuple[float, float, float, float],
+        bounds: tuple[float, float, float, float],
         scale: float,
         res: int = 1,
         border: int = 0,
-    ):
+    ) -> np.ndarray:
         """Render annotations within given bounds.
 
         This gets annotations as bounding boxes or geometries according to
@@ -769,17 +950,27 @@ class AnnotationRenderer:
         annotation geometries are decimated if appropriate.
 
         Args:
-            rgb (np.ndarray):
-                The image to render the annotation on.
-            bound_geom (Polygon):
-                A polygon representing the bounding box of the tile.
+            store (AnnotationStore):
+                The annotation store to render from.
+            bounds (Polygon):
+                The bounding box of the tile to render.
             scale (float):
                 The scale at which we are rendering the tile.
+            res (int):
+                The resolution of the tile. Defaults to 1. Can be set to 2 for
+                higher resolution rendering.
+            border (int):
+                The border to add around the tile. Defaults to 0. Used for blurred
+                rendering to avoid edge effects.
+
         Returns:
             np.ndarray:
                 The tile with the annotations rendered.
 
         """
+        # Don't print out multiple warnings.
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         bound_geom = Polygon.from_bounds(*bounds)
         top_left = np.array(bounds[:2])
         output_size = [
@@ -802,6 +993,7 @@ class AnnotationRenderer:
                 bound_geom,
                 self.where,
                 geometry_predicate="bbox_intersects",
+                as_wkb=True,
             )
 
             for ann in anns.values():
@@ -819,7 +1011,7 @@ class AnnotationRenderer:
             for i, (key, box) in enumerate(bounding_boxes.items()):
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
-                    ann = store[key]
+                    ann = store.__getitem__(key, True)
                     self.render_by_type(tile, ann, top_left, scale / res)
         else:
             # Get only annotations > min_area. Plot them all
@@ -828,22 +1020,24 @@ class AnnotationRenderer:
                 self.where,
                 min_area=min_area,
                 geometry_predicate="bbox_intersects",
+                as_wkb=True,
             )
 
             for ann in anns.values():
                 self.render_by_type(tile, ann, top_left, scale / res)
 
+        logger.removeFilter(duplicate_filter)
         if self.blur is None:
             return tile
         return np.array(
-            ImageOps.crop(Image.fromarray(tile).filter(self.blur), border * res)
+            ImageOps.crop(Image.fromarray(tile).filter(self.blur), border * res),
         )
 
     def render_by_type(
         self,
         tile: np.ndarray,
         annotation: Annotation,
-        top_left: Tuple[float, float],
+        top_left: tuple[float, float],
         scale: float,
     ):
         """Render annotation appropriately to its geometry type.
@@ -859,7 +1053,7 @@ class AnnotationRenderer:
                 The scale at which we are rendering the tile.
 
         """
-        geom_type = annotation.geometry.geom_type
+        geom_type = GEOMTYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
         if geom_type == "Point":
             self.render_pt(tile, annotation, top_left, scale)
         elif geom_type == "Polygon":

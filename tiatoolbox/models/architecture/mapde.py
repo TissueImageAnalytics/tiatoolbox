@@ -1,10 +1,11 @@
-"""Defines MapDe architecture.
+"""Define MapDe architecture.
 
 Raza, Shan E Ahmed, et al. "Deconvolving convolutional neural network
 for cell detection." 2019 IEEE 16th International Symposium on Biomedical
 Imaging (ISBI 2019). IEEE, 2019.
 
 """
+from __future__ import annotations
 
 import numpy as np
 import torch
@@ -77,7 +78,8 @@ class MapDe(MicroNet):
         min_distance: int = 4,
         threshold_abs: float = 250,
         num_classes: int = 1,
-    ):
+    ) -> None:
+        """Initialize :class:`MapDe`."""
         super().__init__(
             num_output_channels=num_classes * 2,
             num_input_channels=num_input_channels,
@@ -227,7 +229,7 @@ class MapDe(MicroNet):
         out = F.conv2d(logits, self.dist_filter, padding="same")
         return F.relu(out)
 
-    #  skipcq: PYL-W0221  # noqa: E800
+    #  skipcq: PYL-W0221  # noqa: ERA001
     def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 
@@ -253,8 +255,10 @@ class MapDe(MicroNet):
 
     @staticmethod
     def infer_batch(
-        model: torch.nn.Module, batch_data: np.ndarray, on_gpu: bool
-    ) -> np.ndarray:
+        model: torch.nn.Module,
+        batch_data: np.ndarray,
+        on_gpu: bool,
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -270,7 +274,7 @@ class MapDe(MicroNet):
                 Whether to run inference on a GPU.
 
         Returns:
-            np.ndarray:
+            list(np.ndarray):
                 Probability map as numpy array.
 
         """

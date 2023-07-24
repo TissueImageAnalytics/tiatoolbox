@@ -1,6 +1,5 @@
-"""Tests for code related to saving image tiles."""
+"""Test for code related to saving image tiles."""
 
-import os
 import pathlib
 
 from click.testing import CliRunner
@@ -12,7 +11,7 @@ from tiatoolbox import cli
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_save_tiles(sample_all_wsis2, tmp_path):
+def test_command_line_save_tiles(sample_svs_ndpi_wsis, tmp_path):
     """Test for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -20,20 +19,20 @@ def test_command_line_save_tiles(sample_all_wsis2, tmp_path):
         [
             "save-tiles",
             "--img-input",
-            str(pathlib.Path(sample_all_wsis2)),
+            str(pathlib.Path(sample_svs_ndpi_wsis)),
             "--file-types",
-            "*.ndpi, *.svs, *.jp2",
+            "*.ndpi, *.svs",
             "--tile-objective-value",
             "5",
             "--output-path",
-            os.path.join(tmp_path, "all_tiles"),
+            str(tmp_path / "all_tiles"),
         ],
     )
 
     tmp_path = pathlib.Path(tmp_path)
     cmu_small_region = tmp_path / "all_tiles" / "CMU-1-Small-Region.svs"
     bioformatspull2759 = tmp_path / "all_tiles" / "bioformatspull2759.ndpi"
-    test1jp2 = tmp_path / "all_tiles" / "test1.jp2"
+
     assert save_tiles_result.exit_code == 0
     assert (cmu_small_region / "Output.csv").exists()
     assert (cmu_small_region / "slide_thumbnail.jpg").exists()
@@ -42,9 +41,6 @@ def test_command_line_save_tiles(sample_all_wsis2, tmp_path):
     assert (bioformatspull2759 / "Output.csv").exists()
     assert (bioformatspull2759 / "slide_thumbnail.jpg").exists()
     assert (bioformatspull2759 / "Tile_5_0_0.jpg").exists()
-    assert (test1jp2 / "Output.csv").exists()
-    assert (test1jp2 / "slide_thumbnail.jpg").exists()
-    assert (test1jp2 / "Tile_5_0_0.jpg").exists()
 
 
 def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
