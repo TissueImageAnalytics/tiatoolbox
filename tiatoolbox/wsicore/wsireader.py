@@ -2691,7 +2691,7 @@ class OmnyxJP2WSIReader(WSIReader):
             description = boxes.get("xml ").xml.find("description")
             if description is not None:
                 matches = re.search(
-                    r"AppMag\s*=\s*(\d\d)",
+                    r"AppMag\s*=\s*(\d+)",
                     description.text,
                     flags=re.IGNORECASE,
                 )
