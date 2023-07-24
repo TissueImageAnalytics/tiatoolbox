@@ -1059,7 +1059,7 @@ class TestStore:
         """Test that updating  a new key and None geometry raises an exception."""
         store = store_cls()
         key = "foo"
-        with pytest.raises((TypeError, AttributeError)):
+        with pytest.raises((TypeError, ValueError)):
             store.patch(key, geometry=None, properties={"class": 123})
 
     @staticmethod
