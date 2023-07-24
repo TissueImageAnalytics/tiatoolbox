@@ -201,7 +201,7 @@ def read_bounds_level_consistency(wsi, bounds):
 
 
 # -------------------------------------------------------------------------------------
-# Utility Test Classes
+# Utility Test Classes & Functions
 # -------------------------------------------------------------------------------------
 
 
@@ -223,8 +223,20 @@ class DummyMutableOpenSlideObject:
         return self._properties
 
 
+def relative_level_scales_baseline(wsi: WSIReader) -> None:
+    """Relative level scales for pixels per baseline pixel."""
+    level_scales = wsi.info.relative_level_scales(0.125, "baseline")
+    level_scales = np.array(level_scales)
+    downsamples = np.array(wsi.info.level_downsamples)
+    expected = downsamples * 0.125
+    assert strictly_increasing(level_scales[:, 0])
+    assert strictly_increasing(level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], expected)
+
+
 # -------------------------------------------------------------------------------------
-# Tests
+# Generic Tests
 # -------------------------------------------------------------------------------------
 
 
@@ -254,16 +266,9 @@ def test_wsireader_slide_info_cache(sample_svs):
     assert info.as_dict() == cached_info.as_dict()
 
 
-def relative_level_scales_baseline(wsi):
-    """Relative level scales for pixels per baseline pixel."""
-    level_scales = wsi.info.relative_level_scales(0.125, "baseline")
-    level_scales = np.array(level_scales)
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples * 0.125
-    assert strictly_increasing(level_scales[:, 0])
-    assert strictly_increasing(level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+# -------------------------------------------------------------------------------------
+# Class-Specific Tests
+# -------------------------------------------------------------------------------------
 
 
 def test_relative_level_scales_openslide_baseline(sample_ndpi):
@@ -2317,6 +2322,11 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
     with caplog.at_level(logging.WARNING), pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
     assert "multiple versions" in caplog.text
+
+
+# -----------------------------------------------------------------------------
+# Parameterised WSIReader Tests
+# -----------------------------------------------------------------------------
 
 
 @pytest.fixture(
