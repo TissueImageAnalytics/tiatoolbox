@@ -71,7 +71,7 @@ COLOR_DICT = {
     4: (155, 0, 155, 255),
     5: (0, 155, 155, 255),
 }
-
+RNG = np.random.default_rng()  # Numpy Random Generator
 
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
@@ -1467,7 +1467,7 @@ def test_wsireader_open(
     temp_dir = _get_temp_folder_path()
     temp_dir.mkdir()
     temp_file = f"{temp_dir}/sample.npy"
-    np.save(temp_file, np.random.randint(1, 255, [5, 5, 5]))
+    np.save(temp_file, RNG.integers(1, 255, [5, 5, 5]))
     wsi_out = WSIReader.open(temp_file)
     assert isinstance(wsi_out, VirtualWSIReader)
     shutil.rmtree(temp_dir)
@@ -1854,7 +1854,7 @@ def test_arrayview_unsupported_axes_shape(sample_ome_tiff, monkeypatch):
 
 def test_arrayview_incomplete_index():
     """Test reading from ArrayView without specifying all axes slices."""
-    array = zarr.array(np.random.rand(128, 128, 3))
+    array = zarr.array(RNG.random((128, 128, 3)))
     array_view = ArrayView(array=array, axes="YXS")
     view_1 = array_view[:64, :64, :]
     view_2 = array_view[:64, :64]
@@ -1868,7 +1868,7 @@ def test_arrayview_single_number_index():
     consistency with other __getitem__ objects.
 
     """
-    array = zarr.array(np.random.rand(128, 128, 3))
+    array = zarr.array(RNG.random((128, 128, 3)))
     array_view = ArrayView(array=array, axes="YXS")
     view_1 = array_view[0]
     view_2 = array_view[0]
@@ -1972,7 +1972,7 @@ def test_is_ngff_regular_zarr(tmp_path):
     """Test is_ngff is false for a regular zarr."""
     zarr_path = tmp_path / "zarr.zarr"
     # Create zarr array on disk
-    zarr.array(np.random.rand(32, 32), store=zarr.DirectoryStore(zarr_path))
+    zarr.array(RNG.random((32, 32)), store=zarr.DirectoryStore(zarr_path))
     assert is_zarr(zarr_path)
     assert not is_ngff(zarr_path)
 

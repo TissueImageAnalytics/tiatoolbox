@@ -24,11 +24,12 @@ from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 
+RNG = np.random.default_rng(0)  # Numpy Random Generator
+
 
 @pytest.fixture(scope="session")
 def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
     return [
         cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
     ]
@@ -37,7 +38,6 @@ def cell_grid() -> list[Polygon]:
 @pytest.fixture(scope="session")
 def points_grid(spacing=60) -> list[Point]:
     """Generate a grid of fake point annotations."""
-    np.random.seed(0)
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
 
 
@@ -55,14 +55,14 @@ def fill_store(cell_grid, points_grid):
         cells = [
             Annotation(
                 cell,
-                {"type": "cell", "prob": np.random.rand(1)[0], "color": (0, 1, 0)},
+                {"type": "cell", "prob": RNG.random(1)[0], "color": (0, 1, 0)},
             )
             for cell in cell_grid
         ]
         points = [
             Annotation(
                 point,
-                {"type": "pt", "prob": np.random.rand(1)[0], "color": (1, 0, 0)},
+                {"type": "pt", "prob": RNG.random(1)[0], "color": (1, 0, 0)},
             )
             for point in points_grid
         ]
