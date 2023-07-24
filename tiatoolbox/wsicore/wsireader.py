@@ -2684,17 +2684,32 @@ class OmnyxJP2WSIReader(WSIReader):
             mpp_x = utils.misc.ppu2mpp(ppm_x, "meter")
             mpp_y = utils.misc.ppu2mpp(ppm_y, "meter")
             mpp = [mpp_x, mpp_y]
-        # Check for Omnyx XML (overwrites capture resolution)
+        # Check for Aperio style/Omnyx XML (overwrites capture
+        # resolution). This XML contains pipe seperated key values e.g.
+        # "AppMag = 40 | ..."" in a <description> tag.
         if "xml " in boxes:
             description = boxes.get("xml ").xml.find("description")
-            if description is not None and "Omnyx" in description.text:
-                matches = re.search(r"(?<=AppMag = )\d\d", description.text)
-                objective_power = np.int_(matches[0])
-                vendor = "Omnyx JP2"
-                matches = re.search(r"(?<=MPP = )\d*\.\d+", description.text)
-                mpp_x = float(matches[0])
-                mpp_y = float(matches[0])
-                mpp = [mpp_x, mpp_y]
+            if description is not None:
+                matches = re.search(
+                    r"(?<=AppMag\s*=\s*)\d\d",
+                    description.text,
+                    flags=re.IGNORECASE,
+                )
+                if matches is not None:
+                    objective_power = np.int_(matches[0])
+                if "Omnyx" in description.text:
+                    vendor = "Omnyx"
+                if "Aperio" in description.text:
+                    vendor = "Aperio"
+                matches = re.search(
+                    r"(?<=MPP\s*=\s*)\d*\.\d+",
+                    description.text,
+                    flags=re.IGNORECASE,
+                )
+                if matches is not None:
+                    mpp_x = float(matches[0])
+                    mpp_y = float(matches[0])
+                    mpp = [mpp_x, mpp_y]
 
         # Get image dimensions
         image_header = boxes["ihdr"]
