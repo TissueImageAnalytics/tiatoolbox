@@ -16,6 +16,7 @@ from time import time
 from typing import Iterable
 
 import cv2
+import glymur
 import numpy as np
 import pytest
 import zarr
@@ -2324,8 +2325,60 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
     assert "multiple versions" in caplog.text
 
 
+def test_jp2_no_mpp_appmag(tmp_path):
+    """Test WSIReader init for a JP2 with no resolution metadata."""
+    path = tmp_path / "test.jp2"
+    glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    _ = WSIReader.open(path).info
+
+
+def test_jp2_empty_xml(tmp_path):
+    """Test WSIReader init for a JP2 with empty Jp2 XML."""
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    _ = WSIReader.open(path).info
+
+
+def test_jp2_empty_xml_empty_description(tmp_path):
+    """Test WSIReader init for a JP2 with an empty Jp2 XML description tag."""
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2><description></description></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    _ = WSIReader.open(path).info
+
+
+def test_jp2_empty_xml_description_no_appmag_no_mpp(tmp_path):
+    """Test WSIReader init for a JP2 with not AppMap or MPP in description."""
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2><description>Description here</description></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    _ = WSIReader.open(path).info
+
+
 # -----------------------------------------------------------------------------
-# Parameterised WSIReader Tests
+# Parameterized WSIReader Tests
 # -----------------------------------------------------------------------------
 
 

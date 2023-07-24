@@ -2689,7 +2689,7 @@ class OmnyxJP2WSIReader(WSIReader):
         # "AppMag = 40 | ..."" in a <description> tag.
         if "xml " in boxes:
             description = boxes.get("xml ").xml.find("description")
-            if description is not None:
+            if description is not None and description.text:
                 matches = re.search(
                     r"AppMag\s*=\s*(\d+)",
                     description.text,
