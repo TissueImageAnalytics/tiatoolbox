@@ -5,6 +5,8 @@ import pytest
 
 from tiatoolbox.utils.metrics import dice, f1_detection, pair_coordinates
 
+RNG = np.random.default_rng()  # Numpy Random Generator
+
 
 def test_pair_coordinates():
     """Test for unique coordinates matching."""
@@ -29,8 +31,8 @@ def test_f1_detection():
 
 def test_dice():
     """Test to calculate DICE."""
-    gt_mask = np.random.randint(2, size=(256, 256))
-    pred_mask = np.random.randint(2, size=(256, 256))
+    gt_mask = RNG.integers(2, size=(256, 256))
+    pred_mask = RNG.integers(2, size=(256, 256))
     dice_val = dice(gt_mask, pred_mask)
     assert dice_val >= 0
     assert dice_val <= 1.0
@@ -56,7 +58,7 @@ def test_dice():
 
 def test_dice_shape_mismatch_error():
     """Test if the shape of inputs does not match."""
-    gt_mask = np.random.randint(2, size=(256, 256, 1))
-    pred_mask = np.random.randint(2, size=(256, 256, 3))
+    gt_mask = RNG.integers(2, size=(256, 256, 1))
+    pred_mask = RNG.integers(2, size=(256, 256, 3))
     with pytest.raises(ValueError, match=r".*Shape mismatch between the two masks.*"):
         _ = dice(gt_mask, pred_mask)
