@@ -2381,6 +2381,7 @@ def test_jp2_no_header(tmp_path, monkeypatch):
     """Test WSIReader with an image crafted with a missing header.
 
     Note: This should not be possible for a real file.
+
     """
     path = tmp_path / "test.jp2"
     jp2 = glymur.Jp2k(
