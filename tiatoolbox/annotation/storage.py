@@ -58,7 +58,8 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from shapely import wkb, wkt
+from shapely import wkb as shapely_wkb
+from shapely import wkt as shapely_wkt
 from shapely.affinity import scale, translate
 from shapely.geometry import (
     LineString,
@@ -598,7 +599,11 @@ class AnnotationStore(ABC, MutableMapping):
             Geometry: The deserialized Shapely geometry.
 
         """
-        return wkt.loads(data) if isinstance(data, str) else wkb.loads(data)
+        return (
+            shapely_wkt.loads(data)
+            if isinstance(data, str)
+            else shapely_wkb.loads(data)
+        )
 
     @abstractmethod
     def commit(self) -> None:
@@ -2100,7 +2105,7 @@ class SQLiteStore(AnnotationStore):
             cy: float,
         ) -> bool:
             """Wrapper function to allow WKB as inputs to binary predicates."""
-            a = wkb.loads(wkb_a)
+            a = shapely_wkb.loads(wkb_a)
             b = self._unpack_geometry(b, cx, cy)
             return self._geometry_predicate(name, a, b)
 
@@ -2285,8 +2290,8 @@ class SQLiteStore(AnnotationStore):
             msg = "Unsupported compression method."
             raise ValueError(msg)
         if isinstance(data, str):
-            return wkt.loads(data)
-        return wkb.loads(data)
+            return shapely_wkt.loads(data)
+        return shapely_wkb.loads(data)
 
     @staticmethod
     def compile_options() -> list[str]:
