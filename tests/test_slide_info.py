@@ -37,7 +37,7 @@ def test_command_line_slide_info(sample_all_wsis, tmp_path):
     assert not pathlib.Path(tmp_path, "test1.yaml").exists()
 
 
-def test_command_line_slide_info_jp2(sample_all_wsis, tmp_path):
+def test_command_line_slide_info_jp2(sample_all_wsis):
     """Test the Slide information CLI JP2, svs."""
     runner = CliRunner()
     slide_info_result = runner.invoke(

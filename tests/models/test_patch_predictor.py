@@ -238,7 +238,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     # intentionally created to check error
     # skipcq
     class Proto(PatchDatasetABC):
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
             self.inputs = "CRASH"
             self._check_input_integrity("wsi")
@@ -423,7 +423,7 @@ def test_patch_dataset_abc():
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
     # crash due to undefined __getitem__
@@ -433,7 +433,7 @@ def test_patch_dataset_abc():
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
         # skipcq
