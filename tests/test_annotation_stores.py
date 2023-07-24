@@ -31,13 +31,17 @@ if TYPE_CHECKING:  # pragma: no cover
 
 sqlite3.enable_callback_tracebacks(True)
 
+# ----------------------------------------------------------------------
 # Constants
+# ----------------------------------------------------------------------
 
 GRID_SIZE = (10, 10)
 FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
 RNG = np.random.default_rng(0)  # Numpy Random Generator
 
+# ----------------------------------------------------------------------
 # Helper Functions
+# ----------------------------------------------------------------------
 
 
 def cell_polygon(
@@ -144,7 +148,9 @@ def test_annotation_repr():
     assert repr(annotation).endswith(")")
 
 
+# ----------------------------------------------------------------------
 # Fixtures
+# ----------------------------------------------------------------------
 
 
 @pytest.fixture(scope="session")
@@ -185,7 +191,52 @@ def fill_store(cell_grid, points_grid):
     return _fill_store
 
 
-# Class Specific Tests
+# ----------------------------------------------------------------------
+# Annotation Tests
+# ----------------------------------------------------------------------
+
+
+def test_annotation_init_both_shapely_coords():
+    """Init annotation with both coords and geometry."""
+    with pytest.raises(ValueError, match="coords and geometry"):
+        _ = Annotation(geometry=Point(0, 0), coords=[(0, 0)])
+
+
+def test_annotation_init_neither_shapely_coords():
+    """Init annotation with neither coords nor geometry."""
+    with pytest.raises(ValueError, match="coords or geometry"):
+        _ = Annotation()
+
+
+def test_annotation_init_no_geom_type():
+    """Init annotation with no geom_type."""
+    with pytest.raises(ValueError, match="geom_type"):
+        _ = Annotation(coords=[0, 0], geom_type=None)
+
+
+def test_polygon_annotation_from_coords():
+    """Test creating a polygon annotation from coords."""
+    coords = [(0, 0), (1, 1), (2, 0)]
+    ann = Annotation(coords=coords, geom_type=3)
+    assert ann.geometry == Polygon([(0, 0), (1, 1), (2, 0)])
+    assert ann.properties == {}
+    assert ann.geometry_type == 3
+    assert ann.coords == coords
+
+
+def test_polygon_annotation_from_shapely():
+    """Test creating an annotation from shapely polygon then accessing coords."""
+    polygon = Polygon([(0, 0), (1, 1), (2, 0)])
+    ann = Annotation(geometry=polygon)
+    assert ann.geometry == polygon
+    assert ann.properties == {}
+    assert ann.geometry_type == 3
+    assert ann.coords == polygon.exterior.coords
+
+
+# ----------------------------------------------------------------------
+# Class-Specific Tests
+# ----------------------------------------------------------------------
 
 
 def test_sqlite_store_compile_options():
@@ -532,7 +583,9 @@ def test_init_base_class_exception():
         AnnotationStore()  # skipcq: PYL-E0110
 
 
+# ----------------------------------------------------------------------
 # Annotation Store Interface Tests (AnnotationStoreABC)
+# ----------------------------------------------------------------------
 
 
 class TestStore:
