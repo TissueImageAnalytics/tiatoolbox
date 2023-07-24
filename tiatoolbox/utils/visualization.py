@@ -978,14 +978,16 @@ class AnnotationRenderer:
                 The scale at which we are rendering the tile.
 
         """
-        geom_type = GEOMTYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
-        if geom_type == "Point":
+        geometry_type = GEOMTYPES[
+            np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]
+        ]
+        if geometry_type == "Point":
             self.render_pt(tile, annotation, top_left, scale)
-        elif geom_type == "Polygon":
+        elif geometry_type == "Polygon":
             self.render_poly(tile, annotation, top_left, scale)
-        elif geom_type == "MultiPolygon":
+        elif geometry_type == "MultiPolygon":
             self.render_multipoly(tile, annotation, top_left, scale)
-        elif geom_type == "LineString":
+        elif geometry_type == "LineString":
             self.render_line(tile, annotation, top_left, scale)
         else:
-            logger.warning("Unknown geometry: %s", geom_type, stacklevel=3)
+            logger.warning("Unknown geometry: %s", geometry_type, stacklevel=3)

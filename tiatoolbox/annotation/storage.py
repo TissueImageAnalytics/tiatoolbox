@@ -237,7 +237,7 @@ class Annotation:
         geometry: Geometry | int | str | None = None,
         properties: Properties | None = None,
         coords: np.ndarray | None = None,
-        geom_type: int | None = None,
+        geometry_type: int | None = None,
     ) -> None:
         """Create a new annotation.
 
@@ -251,7 +251,7 @@ class Annotation:
                 The properties of the annotation.
             coords (np.ndarray):
                 The coordinates of the geometry.
-            geom_type (int):
+            geometry_type (int):
                 The type of geometry. Where 1 = point, 2 = line, 3 =
                 polygon, 4 = multi-point, 5 = multi-line, 6 =
                 multi-polygon.
@@ -259,15 +259,15 @@ class Annotation:
         if coords and geometry:
             msg = "Both coords and geometry cannot be specified."
             raise ValueError(msg)
-        if (coords and not geom_type) or (geom_type and not coords):
-            msg = "Both coords and geom_type must be specified, or neither."
+        if (coords and not geometry_type) or (geometry_type and not coords):
+            msg = "Both coords and geometry_type must be specified, or neither."
             raise ValueError(msg)
         if not coords and not geometry:
             msg = "Either coords or geometry must be specified."
             raise ValueError(msg)
         if coords:
             object.__setattr__(self, "_coords", np.array(coords))
-            object.__setattr__(self, "_type", GeometryType(geom_type))
+            object.__setattr__(self, "_type", GeometryType(geometry_type))
             object.__setattr__(self, "_geometry", None)
         else:
             object.__setattr__(self, "_coords", None)
@@ -280,13 +280,13 @@ class Annotation:
         return f"Annotation({self.geometry}, {self.properties})"
 
     @staticmethod
-    def decode_wkb(wkb: bytes, geom_type: int) -> np.ndarray:
+    def decode_wkb(wkb: bytes, geometry_type: int) -> np.ndarray:
         r"""Decode WKB to a NumPy array of coordinates.
 
         Args:
             wkb (bytes):
                 The WKB representation of a geometry.
-            geom_type (int):
+            geometry_type (int):
                 The type of geometry to decode. Where 1 = point, 2 =
                 line, 3 = polygon, 4 = multi-point, 5 = multi-line, 6 =
                 multi-polygon.
@@ -326,17 +326,17 @@ class Annotation:
                 An array of coordinates.
 
         """
-        if geom_type == 1:
+        if geometry_type == 1:
             # Point
             return np.frombuffer(wkb, np.double, -1, 5)
-        if geom_type == 2:
+        if geometry_type == 2:
             # Line
             return np.frombuffer(wkb, np.double, -1, 9)
-        if geom_type == 3:
+        if geometry_type == 3:
             # Polygon
             n_points = np.frombuffer(wkb, np.int32, 1, 9)[0]
             return np.frombuffer(wkb, np.double, n_points * 2, 13)  # do rings?
-        if geom_type == 4:
+        if geometry_type == 4:
             # Multi-point
             n_points = np.frombuffer(wkb, np.int32, 1, 5)[0]
             pts = [
@@ -345,7 +345,7 @@ class Annotation:
                 for i in range(n_points)
             ]
             return np.concatenate(pts)
-        if geom_type == 5:
+        if geometry_type == 5:
             # Multi-line
             n_lines = np.frombuffer(wkb, np.int32, 1, 5)[0]
             lines = []
@@ -384,7 +384,7 @@ class Annotation:
                 offset += n_points * 16
             return rings, offset
 
-        if geom_type == 6:
+        if geometry_type == 6:
             # multi-polygon
             n_polygons = np.frombuffer(wkb, np.int32, 1, 5)[0]
             polygons = []
@@ -394,7 +394,7 @@ class Annotation:
                 polygons.append(rings)
             return np.concatenate(polygons)
 
-        msg = f"Unknown geometry type: {geom_type}"
+        msg = f"Unknown geometry type: {geometry_type}"
         raise ValueError(msg)
 
 
@@ -2352,7 +2352,7 @@ class SQLiteStore(AnnotationStore):
         """Create token data dict for tokenized SQL transaction."""
         key = key or str(uuid.uuid4())
         geometry = annotation.geometry
-        if geometry.geom_type == "Point":
+        if geometry.geometry_type == "Point":
             serialised_geometry = None
         else:
             serialised_geometry = self.serialise_geometry(geometry)
@@ -2365,7 +2365,7 @@ class SQLiteStore(AnnotationStore):
             "min_y": geometry.bounds[1],
             "max_x": geometry.bounds[2],
             "max_y": geometry.bounds[3],
-            "geom_type": geometry.geom_type,
+            "geometry_type": geometry.geometry_type,
             "properties": json.dumps(annotation.properties, separators=(",", ":")),
             "area": geometry.area,
         }
@@ -2409,7 +2409,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute(
             """
                 INSERT INTO annotations VALUES(
-                    NULL, :key, :geom_type,
+                    NULL, :key, :geometry_type,
                     :cx, :cy, :geometry, :properties, :area
                 )
 

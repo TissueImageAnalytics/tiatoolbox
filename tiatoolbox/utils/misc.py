@@ -1066,7 +1066,7 @@ def anns_from_hoverdict(
             make_valid_poly(
                 feature2geometry(
                     {
-                        "type": ann.get("geom_type", "Polygon"),
+                        "type": ann.get("geometry_type", "Polygon"),
                         "coordinates": scale_factor * np.array([ann["contour"]]),
                     },
                 ),
