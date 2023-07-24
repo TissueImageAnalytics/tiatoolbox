@@ -21,7 +21,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.annotation import AnnotationStore
 
-GEOMTYPES = {
+GEOM_TYPES = {
     1: "Point",
     2: "LineString",
     3: "Polygon",
@@ -978,7 +978,7 @@ class AnnotationRenderer:
                 The scale at which we are rendering the tile.
 
         """
-        geom_type = GEOMTYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
+        geom_type = GEOM_TYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
         if geom_type == "Point":
             self.render_pt(tile, annotation, top_left, scale)
         elif geom_type == "Polygon":
