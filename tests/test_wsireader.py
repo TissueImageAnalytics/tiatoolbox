@@ -2377,6 +2377,32 @@ def test_jp2_empty_xml_description_no_appmag_no_mpp(tmp_path):
     _ = WSIReader.open(path).info
 
 
+def test_jp2_no_header(tmp_path, monkeypatch):
+    """Test WSIReader with an image crafted with a missing header.
+
+    Note: This should not be possible for a real file.
+    """
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2><description>Description here</description></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    wsi = WSIReader.open(path)
+    monkeypatch.setattr(
+        wsi.glymur_jp2,
+        "box",
+        [box for box in wsi.glymur_jp2.box if box.box_id != "jp2h"],
+    )
+    # Ensure there is no memoized version of info
+    monkeypatch.setattr(wsi, "_m_info", None)
+    with pytest.raises(ValueError, match="image header missing"):
+        _ = wsi.info
+
+
 # -----------------------------------------------------------------------------
 # Parameterized WSIReader Tests
 # -----------------------------------------------------------------------------
