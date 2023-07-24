@@ -209,19 +209,19 @@ def test_annotation_init_neither_shapely_coords():
         _ = Annotation()
 
 
-def test_annotation_init_no_geometry_type():
-    """Init annotation with no geometry_type."""
-    with pytest.raises(ValueError, match="geometry_type"):
-        _ = Annotation(coords=[0, 0], geometry_type=None)
+def test_annotation_init_no_geom_type():
+    """Init annotation with no geom_type."""
+    with pytest.raises(ValueError, match="geom_type"):
+        _ = Annotation(coords=[0, 0], geom_type=None)
 
 
 def test_polygon_annotation_from_coords():
     """Test creating a polygon annotation from coords."""
     coords = [[0, 0], [1, 1], [2, 0]]
-    ann = Annotation(coords=coords, geometry_type=3)
+    ann = Annotation(coords=coords, geom_type=3)
     assert ann.geometry == Polygon(coords)
     assert ann.properties == {}
-    assert ann.geometry_type == GeometryType.POLYGON
+    assert ann.geom_type == GeometryType.POLYGON
     assert ann.coords.tolist() == coords
 
 
@@ -231,7 +231,7 @@ def test_polygon_annotation_from_shapely():
     ann = Annotation(geometry=polygon)
     assert ann.geometry == polygon
     assert ann.properties == {}
-    assert ann.geometry_type == GeometryType.POLYGON
+    assert ann.geom_type == GeometryType.POLYGON
     assert ann.coords.tolist() == np.array(polygon.exterior.coords).tolist()
 
 
