@@ -81,6 +81,7 @@ from tiatoolbox.annotation.dsl import (
     json_list_sum,
     py_regexp,
 )
+from tiatoolbox.enums import GeometryType
 
 sqlite3.enable_callback_tracebacks(True)
 
@@ -104,12 +105,10 @@ ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 # https://docs.python.org/3/library/dataclasses.html#dataclasses.dataclass
 # therefore we use the following workaround to only use them when available.
 # Using slots gives a performance boost at object creation time.
-_DATACLASS_KWARGS = {"frozen": True}
-if sys.version_info >= (3, 10):  # pragma: no cover
-    _DATACLASS_KWARGS["slots"] = True
+USE_SLOTS = {"slots": True} if sys.version_info >= (3, 10) else {}  # pragma: no cover
 
 
-@dataclass(**_DATACLASS_KWARGS, init=False)
+@dataclass(frozen=True, init=False, **USE_SLOTS)
 class Annotation:
     """An annotation: a geometry and associated properties.
 
@@ -118,11 +117,17 @@ class Annotation:
             The geometry of the annotation.
         properties (dict):
             The properties of the annotation.
+        coords (np.ndarray):
+            The coordinates of the geometry. Optional.
+        geometry_type (GeometryType or int or str):
+            The type of geometry. Where 1 = point, 2 = line, 3 =
+            polygon, 4 = multi-point, 5 = multi-line, 6 =
+            multi-polygon.
 
     """
 
     _coords: np.ndarray | None = field(default=None, repr=False)
-    _type: int | None = field(default=None, repr=False)
+    _type: GeometryType | int | str | None = field(default=None, repr=False)
     _geometry: Geometry | None = field(default=None, repr=False)
     properties: Properties = field(default_factory=dict)
 
@@ -135,8 +140,8 @@ class Annotation:
                 The coordinates of the geometry.
 
         """
-        if not hasattr(self, "_coords"):
-            self._coords = np.array(self.geometry.exterior.coords)
+        if self._coords is None:
+            object.__setattr__(self, "_coords", np.array(self.geometry.exterior.coords))
         return self._coords
 
     @coords.setter
@@ -149,7 +154,11 @@ class Annotation:
     @property
     def geometry(self) -> Geometry:
         """Return the shapely geometry of the annotation."""
-        if self._coords and self._type and not self._geometry:
+        if (
+            self._coords is not None
+            and self._type is not None
+            and self._geometry is None
+        ):
             # Lazy creation of Shapely object when first requested. This
             # is memoized under _geometry. object.__setattr__ must be
             # used becuase the class is frozen and will disallow normal
@@ -181,10 +190,10 @@ class Annotation:
         self._type = None
 
     @property
-    def geometry_type(self) -> int:
+    def geometry_type(self) -> GeometryType:
         """Return the geometry type of the annotation."""
-        if not hasattr(self, "_type"):
-            self._type = self.geometry.type
+        if self._type is None:
+            object.__setattr__(self, "_type", GeometryType(self.geometry.type))
         return self._type
 
     def to_feature(self) -> dict:
@@ -225,7 +234,7 @@ class Annotation:
 
     def __init__(
         self,
-        geometry: Geometry | None = None,
+        geometry: Geometry | int | str | None = None,
         properties: Properties | None = None,
         coords: np.ndarray | None = None,
         geom_type: int | None = None,
@@ -257,8 +266,8 @@ class Annotation:
             msg = "Either coords or geometry must be specified."
             raise ValueError(msg)
         if coords:
-            object.__setattr__(self, "_coords", coords)
-            object.__setattr__(self, "_type", geom_type)
+            object.__setattr__(self, "_coords", np.array(coords))
+            object.__setattr__(self, "_type", GeometryType(geom_type))
             object.__setattr__(self, "_geometry", None)
         else:
             object.__setattr__(self, "_coords", None)

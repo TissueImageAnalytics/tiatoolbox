@@ -25,6 +25,7 @@ from tiatoolbox.annotation import (
     SQLiteStore,
 )
 from tiatoolbox.annotation.storage import SQLiteMetadata
+from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
@@ -216,22 +217,22 @@ def test_annotation_init_no_geom_type():
 
 def test_polygon_annotation_from_coords():
     """Test creating a polygon annotation from coords."""
-    coords = [(0, 0), (1, 1), (2, 0)]
+    coords = [[0, 0], [1, 1], [2, 0]]
     ann = Annotation(coords=coords, geom_type=3)
-    assert ann.geometry == Polygon([(0, 0), (1, 1), (2, 0)])
+    assert ann.geometry == Polygon(coords)
     assert ann.properties == {}
-    assert ann.geometry_type == 3
-    assert ann.coords == coords
+    assert ann.geometry_type == GeometryType.POLYGON
+    assert ann.coords.tolist() == coords
 
 
 def test_polygon_annotation_from_shapely():
     """Test creating an annotation from shapely polygon then accessing coords."""
-    polygon = Polygon([(0, 0), (1, 1), (2, 0)])
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
     ann = Annotation(geometry=polygon)
     assert ann.geometry == polygon
     assert ann.properties == {}
-    assert ann.geometry_type == 3
-    assert ann.coords == polygon.exterior.coords
+    assert ann.geometry_type == GeometryType.POLYGON
+    assert ann.coords.tolist() == np.array(polygon.exterior.coords).tolist()
 
 
 # ----------------------------------------------------------------------
