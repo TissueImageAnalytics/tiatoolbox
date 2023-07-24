@@ -138,7 +138,7 @@ def test_background_composite():
     assert np.all(im[:, :, 3] == 255)
 
 
-def test_mpp2common_objective_power(sample_svs):
+def test_mpp2common_objective_power():
     """Test approximate conversion of mpp to objective power."""
     mapping = [
         (0.05, 100),

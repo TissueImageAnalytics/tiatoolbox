@@ -121,7 +121,7 @@ except ImportError:
         class Tracker:
             """Dummy Tracker context manager."""
 
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args, **kwargs) -> None:
                 """Initialize :class:`Tracker`."""
                 warnings.warn("Memray not installed, skipping tracking.", stacklevel=2)
 
