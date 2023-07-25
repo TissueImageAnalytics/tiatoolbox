@@ -291,6 +291,28 @@ def test_annotation_geometry_geometry_type():
     assert ann.geometry_type == GeometryType.POLYGON
 
 
+def test_annotation_hash():
+    """Test that the hash is the same for two annotations with the same geometry."""
+    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    ann2 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    assert hash(ann_1) == hash(ann2)
+
+
+def test_annotation_eq_false():
+    """Test that two annotations with different geometries are not equal."""
+    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    ann_2 = Annotation(Polygon([[0, 0], [1, 1], [2, 0], [2, 2]]))
+    assert ann_1 != ann_2
+
+
+def test_annotation_wkt():
+    """Test that the WKT is the same for two annotations with the same geometry."""
+    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    ann_2 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    assert isinstance(ann_1.to_wkt(), str)
+    assert ann_1.to_wkt() == ann_2.to_wkt()
+
+
 # ----------------------------------------------------------------------
 # Class-Specific Tests
 # ----------------------------------------------------------------------
