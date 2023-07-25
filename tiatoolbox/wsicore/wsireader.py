@@ -314,7 +314,7 @@ class WSIReader:
 
         suffix_to_reader = {
             ".npy": np_virtual_wsi,
-            ".jp2": OmnyxJP2WSIReader,
+            ".jp2": JP2WSIReader,
             ".jpeg": VirtualWSIReader,
             ".jpg": VirtualWSIReader,
             ".png": VirtualWSIReader,
@@ -2152,7 +2152,7 @@ class OpenSlideWSIReader(WSIReader):
         )
 
 
-class OmnyxJP2WSIReader(WSIReader):
+class JP2WSIReader(WSIReader):
     """Class for reading Omnyx JP2 images.
 
     Supported WSI formats:

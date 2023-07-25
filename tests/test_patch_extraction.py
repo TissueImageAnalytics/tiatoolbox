@@ -10,7 +10,7 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
 from tiatoolbox.wsicore.wsireader import (
-    OmnyxJP2WSIReader,
+    JP2WSIReader,
     OpenSlideWSIReader,
     VirtualWSIReader,
 )
@@ -134,7 +134,7 @@ def test_points_patch_extractor_image_format(
         patch_size=(200, 200),
     )
 
-    assert isinstance(points.wsi, OmnyxJP2WSIReader)
+    assert isinstance(points.wsi, JP2WSIReader)
 
     false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
     with pytest.raises(FileNotSupportedError):

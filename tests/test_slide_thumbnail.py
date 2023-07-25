@@ -22,7 +22,7 @@ def test_wsireader_get_thumbnail_openslide(sample_svs):
 
 def test_wsireader_get_thumbnail_jp2(sample_jp2):
     """Test for get_thumbnail as a python function."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
