@@ -382,7 +382,10 @@ def safe_padded_read(
     clamped_bounds = np.round(clamped_bounds).astype(int)
     # Read the area within the image
     left, top, right, bottom = clamped_bounds
-    region = image[top:bottom:y_stride, left:right:x_stride, ...]
+    if right - left == 0 or bottom - top == 0:
+        region = np.zeros((0, 0, *image.shape[2:]), dtype=image.dtype)
+    else:
+        region = image[top:bottom:y_stride, left:right:x_stride, ...]
     # Reduce bounds an img_size for the stride
     if not np.all(np.isin(stride, [None, 1])):
         # This if is not required but avoids unnecessary calculations

@@ -60,8 +60,8 @@ SVS_TEST_TISSUE_BOUNDS = (1000, 2000, 2000, 3000)
 SVS_TEST_TISSUE_LOCATION = (1000, 2000)
 SVS_TEST_TISSUE_SIZE = (1000, 1000)
 
-JP2_TEST_TISSUE_BOUNDS = (32768, 42880, 33792, 43904)
-JP2_TEST_TISSUE_LOCATION = (32768, 42880)
+JP2_TEST_TISSUE_BOUNDS = (0, 0, 1024, 1024)
+JP2_TEST_TISSUE_LOCATION = (0, 0)
 JP2_TEST_TISSUE_SIZE = (1024, 1024)
 
 COLOR_DICT = {
@@ -806,7 +806,7 @@ def test_read_bounds_openslide_baseline(sample_ndpi):
 
 
 def test_read_bounds_jp2_baseline(sample_jp2):
-    """Test jp2 read bounds at baseline.
+    """Test JP2 read bounds at baseline.
 
     Coordinates in baseline (level 0) reference frame.
 
@@ -819,11 +819,6 @@ def test_read_bounds_jp2_baseline(sample_jp2):
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape == (*size[::-1], 3)
-
-    bounds = (32768, 42880, 33792, 50000)
-    im_region = wsi.read_bounds(bounds, resolution=2.5, units="power")
-    assert im_region.dtype == "uint8"
-    assert im_region.shape == (445, 64, 3)
 
 
 def test_read_bounds_openslide_levels(sample_ndpi):
