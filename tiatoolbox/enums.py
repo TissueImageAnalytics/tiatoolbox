@@ -42,8 +42,3 @@ class GeometryType(enum.IntEnum):
                 ).lstrip("_")
                 return cls[name]
         return super()._missing_(value)
-
-    @classmethod
-    def from_string(cls: type[GeometryType], string: str) -> GeometryType:
-        """Return the GeometryType corresponding to the string."""
-        return cls[string.upper().replace("", "_")]
