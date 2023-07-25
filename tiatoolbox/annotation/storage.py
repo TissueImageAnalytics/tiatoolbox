@@ -73,7 +73,7 @@ from tiatoolbox.annotation.dsl import (
 )
 from tiatoolbox.enums import GeometryType
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import (
         CallablePredicate,
         CallableSelect,
