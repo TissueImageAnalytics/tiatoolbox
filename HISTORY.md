@@ -1,5 +1,11 @@
 # History
 
+## 1.4.1 (2023-07-25)
+
+### Bug Fixes and Other Changes
+
+- Fix dictionary changed size Error #626 (#605)
+
 ## 1.4.0 (2023-04-24)
 
 ### Major Updates and Feature Improvements
