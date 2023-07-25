@@ -2631,7 +2631,7 @@ class OmnyxJP2WSIReader(WSIReader):
                     JP2 box with the given ID. If no box is found, returns
 
             """
-            assert len(box_id) != 4, "Box ID must be 4 characters"  # skipcq
+            assert len(box_id) == 4, "Box ID must be 4 characters"  # skipcq
             if not box or not box.box:
                 return None
             for sub_box in box.box:
