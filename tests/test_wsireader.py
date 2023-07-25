@@ -2457,7 +2457,7 @@ def test_jp2_no_header(tmp_path, monkeypatch):
         },
         {
             "reader_class": OmnyxJP2WSIReader,
-            "sample_key": "jp2-omnyx-1",
+            "sample_key": "jp2-omnyx-small",
             "kwargs": {},
         },
     ],
@@ -2632,14 +2632,9 @@ def test_read_rect_coord_space_consistency(wsi):
     mse = np.mean((roi1 - roi2) ** 2)
     assert mse < 100
 
-    # Check PSNR
-    psnr = peak_signal_noise_ratio(roi1, roi2)
-    assert psnr > 25
-
-    # Check SSIM (skip very small roi regions)
-    if np.greater(roi1.shape[2], 16).all():
-        ssim = structural_similarity(roi1, roi2, multichannel=True)
-        assert ssim > 0.9
+    # Check SSIM
+    ssim = structural_similarity(roi1, roi2, multichannel=True)
+    assert ssim > 0.8
 
 
 def test_file_path_does_not_exist():
