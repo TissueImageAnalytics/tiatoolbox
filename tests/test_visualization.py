@@ -18,6 +18,7 @@ from shapely.geometry import (
 )
 
 from tiatoolbox.annotation.storage import Annotation
+from tiatoolbox.enums import GeometryType
 from tiatoolbox.utils.visualization import (
     overlay_prediction_contours,
     overlay_prediction_mask,
@@ -223,9 +224,18 @@ def test_decode_wkb():
     polygon_wkb = polygon.wkb
 
     # Decode the WKB geometries
-    point_contours = Annotation.decode_wkb(point_wkb, 1).reshape(-1, 2)
-    line_contours = Annotation.decode_wkb(line_wkb, 2).reshape(-1, 2)
-    polygon_contours = Annotation.decode_wkb(polygon_wkb, 3).reshape(-1, 2)
+    point_contours = Annotation.decode_wkb(
+        point_wkb,
+        GeometryType.POINT,
+    ).reshape(-1, 2)
+    line_contours = Annotation.decode_wkb(
+        line_wkb,
+        GeometryType.LINE_STRING,
+    ).reshape(-1, 2)
+    polygon_contours = Annotation.decode_wkb(
+        polygon_wkb,
+        GeometryType.POLYGON,
+    ).reshape(-1, 2)
 
     # Check that the decoded contours are as expected
     assert np.all(point_contours == np.array([[0, 0]]))

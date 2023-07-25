@@ -1,12 +1,24 @@
 """Define Variable types for TIAToolbox."""
-from numbers import Number
-from typing import Literal, Tuple, Union
+from typing import Callable, Literal, Sequence, SupportsFloat, TypeAlias
 
 import numpy as np
+from shapely.geometry import LineString, Point, Polygon
 
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
-Units = Literal["mpp", "power", "baseline", "level"]
-NumPair = Tuple[Number, Number]
-IntPair = Tuple[int, int]
-Bounds = Tuple[Number, Number, Number, Number]
-IntBounds = Tuple[int, int, int, int]
+JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
+NumPair: TypeAlias = tuple[SupportsFloat, SupportsFloat]
+IntPair: TypeAlias = tuple[int, int]
+
+# WSIReader
+Resolution: TypeAlias = SupportsFloat | NumPair | np.ndarray | Sequence[SupportsFloat]
+Units: TypeAlias = Literal["mpp", "power", "baseline", "level"]
+Bounds: TypeAlias = tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
+IntBounds: TypeAlias = tuple[int, int, int, int]
+
+# Annotation Store
+Geometry: TypeAlias = Point | LineString | Polygon
+Properties: TypeAlias = JSON
+QueryGeometry = Bounds | Geometry
+CallablePredicate = Callable[[Properties], bool]
+CallableSelect = Callable[[Properties], Properties]
+Predicate = str | bytes | CallablePredicate
+Select = str | bytes | CallableSelect

@@ -31,6 +31,7 @@ import json
 import os
 import pickle
 import sqlite3
+import struct
 import sys
 import tempfile
 import uuid
@@ -42,33 +43,14 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from numbers import Number
 from pathlib import Path
-from typing import (
-    IO,
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    Generator,
-    Iterable,
-    Iterator,
-    List,
-    Tuple,
-    Union,
-)
+from typing import IO, Any, Callable, ClassVar, Generator, Iterable, Iterator, TypeAlias
 
 import numpy as np
 import pandas as pd
 from shapely import wkb as shapely_wkb
 from shapely import wkt as shapely_wkt
 from shapely.affinity import scale, translate
-from shapely.geometry import (
-    LineString,
-    MultiLineString,
-    MultiPoint,
-    MultiPolygon,
-    Point,
-    Polygon,
-)
+from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
 
@@ -82,24 +64,20 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 from tiatoolbox.enums import GeometryType
+from tiatoolbox.typing import JSON
 
 sqlite3.enable_callback_tracebacks(True)
 
-Geometry = Union[Point, Polygon, LineString]
-Properties = Dict[str, Union[Dict, List, Number, str]]
-BBox = Tuple[Number, Number, Number, Number]
-QueryGeometry = Union[BBox, Geometry]
+Geometry: TypeAlias = Point | LineString | Polygon
+Properties: TypeAlias = JSON
+BBox = tuple[Number, Number, Number, Number]
+QueryGeometry = BBox | Geometry
 CallablePredicate = Callable[[Properties], bool]
 CallableSelect = Callable[[Properties], Properties]
-Predicate = Union[str, bytes, CallablePredicate]
-Select = Union[str, bytes, CallableSelect]
+Predicate = str | bytes | CallablePredicate
+Select = str | bytes | CallableSelect
 
-ASCII_FILE_SEP = "\x1c"
-ASCII_GROUP_SEP = "\x1d"
-ASCII_RECORD_SEP = "\x1e"
-ASCII_UNIT_SEP = "\x1f"
-ASCII_NULL = "\0"
-ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
+WKB_POINT_STRUCT = struct.Struct("<BIdd")
 
 # Only Python 3.10+ supports using slots for dataclasses
 # https://docs.python.org/3/library/dataclasses.html#dataclasses.dataclass
@@ -108,93 +86,63 @@ ISO_8601_DATE_FORMAT = r"%Y-%m-%dT%H:%M:%S.%f%z"
 USE_SLOTS = {"slots": True} if sys.version_info >= (3, 10) else {}  # pragma: no cover
 
 
-@dataclass(frozen=True, init=False, **USE_SLOTS)
+@dataclass(frozen=True, init=False, eq=True, **USE_SLOTS)
 class Annotation:
     """An annotation: a geometry and associated properties.
 
     Attributes:
         geometry (Geometry):
-            The geometry of the annotation.
+            The geometry of the annotation as a Shapely object.
         properties (dict):
             The properties of the annotation.
-        coords (np.ndarray):
-            The coordinates of the geometry. Optional.
-        geom_type (GeometryType or int or str):
-            The type of geometry. Where 1 = point, 2 = line, 3 =
-            polygon, 4 = multi-point, 5 = multi-line, 6 =
-            multi-polygon.
+        wkb (bytes):
+            The WKB representation of the geometry.
 
     """
 
-    _coords: np.ndarray | None = field(default=None, repr=False)
-    _type: GeometryType | int | str | None = field(default=None, repr=False)
-    _geometry: Geometry | None = field(default=None, repr=False)
-    properties: Properties = field(default_factory=dict)
-
-    @property
-    def coords(self) -> np.ndarray:
-        """Return the exterior coordinates of the geometry.
-
-        Returns:
-            np.ndarray:
-                The coordinates of the geometry.
-
-        """
-        if self._coords is None:
-            object.__setattr__(self, "_coords", np.array(self.geometry.exterior.coords))
-        return self._coords
-
-    @coords.setter
-    def coords(self, coords: np.ndarray) -> None:
-        """Set the coordinates of the geometry."""
-        self._coords = coords
-        # Invalidate geometry by setting to None
-        self._geometry = None
+    _geometry: Geometry | None = field(default=None, hash=True)
+    properties: Properties = field(default_factory=dict, hash=True)
+    _wkb: bytes | None = field(default=None, hash=False)
 
     @property
     def geometry(self) -> Geometry:
         """Return the shapely geometry of the annotation."""
-        if (
-            self._coords is not None
-            and self._type is not None
-            and self._geometry is None
-        ):
+        if self._geometry is None:
             # Lazy creation of Shapely object when first requested. This
             # is memoized under _geometry. object.__setattr__ must be
             # used becuase the class is frozen and will disallow normal
             # assignment.
-            if self._type == 1:
-                object.__setattr__(self, "_geometry", Point(self._coords))
-            elif self._type == 2:
-                object.__setattr__(self, "_geometry", LineString(self._coords))
-            elif self._type == 3:
-                object.__setattr__(self, "_geometry", Polygon(self._coords))
-            elif self._type == 4:
-                object.__setattr__(self, "_geometry", MultiPoint(self._coords))
-            elif self._type == 5:
-                object.__setattr__(self, "_geometry", MultiLineString(self._coords))
-            elif self._type == 6:
-                object.__setattr__(self, "_geometry", MultiPolygon(self._coords))
-            else:
-                msg = f"Unknown geometry type: {self._type}"
-                raise ValueError(msg)
+            object.__setattr__(self, "_geometry", shapely_wkb.loads(self._wkb))
         # Return memoized geometry
         return self._geometry
 
-    @geometry.setter
-    def geometry(self, geometry: Geometry) -> None:
-        """Set the geometry of the annotation."""
-        self._geometry = geometry
-        # Invalidate coords and type by setting to None
-        self._coords = None
-        self._type = None
+    @property
+    def wkb(self) -> bytes:
+        """Return the WKB representation of the annotation."""
+        if self._wkb is None:
+            object.__setattr__(self, "_wkb", self.geometry.wkb)
+        return self._wkb
 
     @property
-    def geom_type(self) -> GeometryType:
+    def geometry_type(self) -> GeometryType:
         """Return the geometry type of the annotation."""
-        if self._type is None:
-            object.__setattr__(self, "_type", GeometryType(self.geometry.type))
-        return self._type
+        if self._geometry:
+            return GeometryType(self.geometry.type)
+        return GeometryType(
+            int.from_bytes(
+                self._wkb[1:4],
+                byteorder="big" if self._wkb[0] == "b\0" else "little",
+            ),
+        )
+
+    @property
+    def coords(self) -> np.array:
+        """The annotation geometry as a flat array of 2D coordinates."""
+        return (
+            Annotation.decode_wkb(self._wkb, self.geometry_type.value)
+            if self._wkb
+            else np.concatenate(self.geometry.exterior)
+        )
 
     def to_feature(self) -> dict:
         """Return a feature representation of this annotation.
@@ -223,61 +171,90 @@ class Annotation:
         return json.dumps(self.to_feature())
 
     def to_wkb(self) -> bytes:
-        """Returns the geometry as WKB.
+        """Returns the geometry as Well-Known Binary (WKB).
 
         Returns:
             Annotation:
                 The annotation as a WKB geometry.
 
         """
-        return self.geometry.wkb
+        if self._wkb is None:
+            object.__setattr__(self, "_wkb", self.geometry.wkb)
+        return self._wkb
+
+    def to_wkt(self) -> str:
+        """Returns the geometry as Well-Know Text (WKT).
+
+        Returns:
+            Annotation:
+                The annotation as a WKT geometry.
+
+        """
+        return self.geometry.wkt
 
     def __init__(
         self,
         geometry: Geometry | int | str | None = None,
         properties: Properties | None = None,
-        coords: np.ndarray | None = None,
-        geom_type: int | None = None,
+        wkb: bytes | None = None,
     ) -> None:
         """Create a new annotation.
 
-        Must be initialized with a geometry object or both coords and a
-        geometry type.
+        Must be initialized with either a Shapely geometry object or WKB
+        bytes.
 
         Args:
             geometry (Geometry):
                 The geometry of the annotation.
             properties (dict):
-                The properties of the annotation.
-            coords (np.ndarray):
-                The coordinates of the geometry.
-            geom_type (int):
-                The type of geometry. Where 1 = point, 2 = line, 3 =
-                polygon, 4 = multi-point, 5 = multi-line, 6 =
-                multi-polygon.
+                The properties of the annotation. Optional, defaults to
+                {}.
+            wkb (bytes):
+                The WKB representation of a geometry. Optional.
         """
-        if coords and geometry:
-            msg = "Both coords and geometry cannot be specified."
+        if wkb is not None and geometry is not None:
+            msg = "Cannot init with both geometry and wkb."
             raise ValueError(msg)
-        if (coords and not geom_type) or (geom_type and not coords):
-            msg = "Both coords and geom_type must be specified, or neither."
+        if wkb is None and geometry is None:
+            msg = "Either geometry or wkb must be given."
             raise ValueError(msg)
-        if not coords and not geometry:
-            msg = "Either coords or geometry must be specified."
-            raise ValueError(msg)
-        if coords:
-            object.__setattr__(self, "_coords", np.array(coords))
-            object.__setattr__(self, "_type", GeometryType(geom_type))
+        if wkb is not None:
+            object.__setattr__(self, "_wkb", wkb)
             object.__setattr__(self, "_geometry", None)
         else:
-            object.__setattr__(self, "_coords", None)
-            object.__setattr__(self, "_type", None)
+            object.__setattr__(self, "_wkb", None)
             object.__setattr__(self, "_geometry", geometry)
         object.__setattr__(self, "properties", properties or {})
 
     def __repr__(self) -> str:
         """Return a string representation of the object."""
         return f"Annotation({self.geometry}, {self.properties})"
+
+    def __hash__(self) -> int:
+        """Compute the hash value of the object.
+
+        Returns:
+            int:
+                The hash value.
+
+        """
+        return hash((self.geometry, json.dumps(self.properties, sort_keys=True)))
+
+    def __eq__(self, other: Any) -> bool:
+        """Compare this annotation to another.
+
+        Args:
+            other (Any):
+                The object to compare to.
+
+        Returns:
+            bool:
+                True if the objects are equal, False otherwise.
+
+        """
+        if not isinstance(other, Annotation):
+            return False
+        return self.geometry == other.geometry and self.properties == other.properties
 
     @staticmethod
     def decode_wkb(wkb: bytes, geom_type: int) -> np.ndarray:
@@ -893,7 +870,6 @@ class AnnotationStore(ABC, MutableMapping):
         geometry_predicate: str = "intersects",
         min_area: float | None = None,
         distance: float = 0,
-        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Query the store for annotations.
 
@@ -943,9 +919,6 @@ class AnnotationStore(ABC, MutableMapping):
             distance (float):
                 Distance used when performing a distance based query.
                 E.g. "centers_within_k" geometry predicate.
-            as_wkb (bool):
-                If True, return geometries as raw wkb bytes instead of
-                shapely geometries. Defaults to False.
 
         Returns:
                 list:
@@ -1036,9 +1009,7 @@ class AnnotationStore(ABC, MutableMapping):
             ) and self._eval_where(where, annotation.properties)
 
         return {
-            key: Annotation(annotation.to_wkb(), annotation.properties)
-            if as_wkb
-            else annotation
+            key: annotation
             for key, annotation in self.items()
             if filter_function(annotation)
         }
@@ -1368,7 +1339,6 @@ class AnnotationStore(ABC, MutableMapping):
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
         mode: str = "poly-poly",
-        as_wkb: bool = False,
     ) -> dict[str, dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
@@ -1423,9 +1393,6 @@ class AnnotationStore(ABC, MutableMapping):
                 of two strings. The first string is the mode for the
                 query geometry and the second string is the mode for
                 the nearest annotation geometry.
-            as_wkb (bool):
-                If True, return geometries as raw wkb bytes instead of
-                shapely geometries. Defaults to False.
 
         Returns:
             Dict[str, Dict[str, Annotation]]:
@@ -1550,7 +1517,6 @@ class AnnotationStore(ABC, MutableMapping):
                 where=n_where,
                 geometry_predicate=geometry_predicate,
                 distance=distance,
-                as_wkb=as_wkb,
             )
             if subquery_result:
                 result[key] = subquery_result
@@ -2242,7 +2208,6 @@ class SQLiteStore(AnnotationStore):
         data: str | bytes,
         cx: float,
         cy: float,
-        as_wkb: bool = False,
     ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
@@ -2258,25 +2223,25 @@ class SQLiteStore(AnnotationStore):
                 The X coordinate of the centroid/representative point.
             cy (float):
                 The Y coordinate of the centroid/representative point.
-            as_wkb (bool):
-                If True, return geometries as raw wkb bytes instead of
-                shapely geometries. Defaults to False.
 
         Returns:
             Geometry:
                 The Shapely geometry.
 
         """
-        if as_wkb:
-            if data is None:
-                # make wkb point
-                return (
-                    b"\x01\x01\x00\x00\x00"
-                    + np.double(cx).tobytes()
-                    + np.double(cy).tobytes()
-                )
-            return data if self.compression is None else zlib.decompress(data)
         return Point(cx, cy) if data is None else self.deserialize_geometry(data)
+
+    def _unpack_wkb(
+        self,
+        data: bytes,
+        cx: float,
+        cy: float,
+    ) -> bytes:
+        return (
+            self._decompress_data(data)
+            if data
+            else WKB_POINT_STRUCT.pack(1, GeometryType.POINT, cx, cy)
+        )
 
     def deserialize_geometry(  # skipcq: PYL-W0221
         self,
@@ -2293,14 +2258,33 @@ class SQLiteStore(AnnotationStore):
                 The deserialized Shapely geometry.
 
         """
+        data = self._decompress_data(data)
+        if isinstance(data, str):
+            return shapely_wkt.loads(data)
+        return shapely_wkb.loads(data)
+
+    def _decompress_data(self, data: bytes) -> bytes:
+        """Decompresses geometry data.
+
+        Args:
+            data (bytes):
+                The data to be decompressed.
+
+        Returns:
+            bytes:
+                The decompressed data.
+
+        Raises:
+            ValueError:
+                If the compression method is unsupported.
+
+        """
         if self.compression == "zlib":
             data = zlib.decompress(data)
         elif self.compression is not None:
             msg = "Unsupported compression method."
             raise ValueError(msg)
-        if isinstance(data, str):
-            return shapely_wkt.loads(data)
-        return shapely_wkb.loads(data)
+        return data
 
     @staticmethod
     def compile_options() -> list[str]:
@@ -2721,7 +2705,6 @@ class SQLiteStore(AnnotationStore):
         geometry_predicate: str = "intersects",
         min_area=None,
         distance: float = 0,
-        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Runs Query."""
         query_geometry = geometry
@@ -2736,16 +2719,16 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, Callable):
             return {
                 key: Annotation(
-                    geometry=self._unpack_geometry(blob, cx, cy, as_wkb=as_wkb),
                     properties=json.loads(properties),
+                    wkb=self._unpack_wkb(blob, cx, cy),
                 )
                 for key, properties, cx, cy, blob in cur.fetchall()
                 if where(json.loads(properties))
             }
         return {
             key: Annotation(
-                geometry=self._unpack_geometry(blob, cx, cy, as_wkb=as_wkb),
                 properties=json.loads(properties),
+                wkb=self._unpack_wkb(blob, cx, cy),
             )
             for key, properties, cx, cy, blob in cur.fetchall()
         }
@@ -3158,7 +3141,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str, as_wkb=False) -> Annotation:
+    def __getitem__(self, key: str) -> Annotation:
         """Get an item from the store."""
         cur = self.con.cursor()
         cur.execute(
@@ -3174,13 +3157,10 @@ class SQLiteStore(AnnotationStore):
             raise KeyError(key)
         serialised_geometry, serialised_properties, cx, cy = row
         properties = json.loads(serialised_properties or "{}")
-        geometry = self._unpack_geometry(
-            serialised_geometry,
-            cx,
-            cy,
-            as_wkb=as_wkb,
+        return Annotation(
+            properties=properties,
+            wkb=self._unpack_wkb(serialised_geometry, cx, cy),
         )
-        return Annotation(geometry, properties)
 
     def keys(self) -> Iterable[int]:
         """Return an iterable (usually generator) of all keys in the store.

@@ -14,22 +14,12 @@ from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
 from tiatoolbox import DuplicateFilter, logger
-from tiatoolbox.annotation import Annotation
+from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
     from numpy.typing import ArrayLike
 
-    from tiatoolbox.annotation import AnnotationStore
-
-GEOM_TYPES = {
-    1: "Point",
-    2: "LineString",
-    3: "Polygon",
-    4: "MultiPoint",
-    5: "MultiLineString",
-    6: "MultiPolygon",
-    7: "GeometryCollection",
-}
+    from tiatoolbox.annotation import Annotation, AnnotationStore
 
 
 def random_colors(num_colors, bright=True):
@@ -735,7 +725,7 @@ class AnnotationRenderer:
         col = self.get_color(annotation)
 
         cnt = self.to_tile_coords(
-            Annotation.decode_wkb(annotation.geometry, 3),
+            annotation.coords,
             top_left,
             scale,
         )
@@ -757,7 +747,7 @@ class AnnotationRenderer:
     def render_multipoly(self, tile, annotation, top_left, scale):
         """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation)
-        geoms = Annotation.decode_wkb(annotation.geometry, 6)
+        geoms = annotation.coords
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
@@ -786,7 +776,7 @@ class AnnotationRenderer:
         cv2.circle(
             tile,
             self.to_tile_coords(
-                Annotation.decode_wkb(annotation.geometry, 1),
+                annotation.coords,
                 top_left,
                 scale,
             )[0],
@@ -820,7 +810,7 @@ class AnnotationRenderer:
             tile,
             [
                 self.to_tile_coords(
-                    list(Annotation.decode_wkb(annotation.geometry, 2)),
+                    list(annotation.coords),
                     top_left,
                     scale,
                 ),
@@ -918,7 +908,6 @@ class AnnotationRenderer:
                 bound_geom,
                 self.where,
                 geometry_predicate="bbox_intersects",
-                as_wkb=True,
             )
 
             for ann in anns.values():
@@ -936,7 +925,7 @@ class AnnotationRenderer:
             for i, (key, box) in enumerate(bounding_boxes.items()):
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
-                    ann = store.__getitem__(key, True)
+                    ann = store[key]
                     self.render_by_type(tile, ann, top_left, scale / res)
         else:
             # Get only annotations > min_area. Plot them all
@@ -945,7 +934,6 @@ class AnnotationRenderer:
                 self.where,
                 min_area=min_area,
                 geometry_predicate="bbox_intersects",
-                as_wkb=True,
             )
 
             for ann in anns.values():
@@ -978,14 +966,14 @@ class AnnotationRenderer:
                 The scale at which we are rendering the tile.
 
         """
-        geom_type = GEOM_TYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
-        if geom_type == "Point":
+        geom_type = annotation.geometry_type
+        if geom_type == GeometryType.POINT:
             self.render_pt(tile, annotation, top_left, scale)
-        elif geom_type == "Polygon":
+        elif geom_type == GeometryType.POLYGON:
             self.render_poly(tile, annotation, top_left, scale)
-        elif geom_type == "MultiPolygon":
+        elif geom_type == GeometryType.MULTI_POLYGON:
             self.render_multipoly(tile, annotation, top_left, scale)
-        elif geom_type == "LineString":
+        elif geom_type == GeometryType.LINE_STRING:
             self.render_line(tile, annotation, top_left, scale)
         else:
             logger.warning("Unknown geometry: %s", geom_type, stacklevel=3)

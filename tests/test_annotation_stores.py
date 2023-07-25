@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generator
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
 from shapely import affinity
 from shapely.geometry import MultiPoint, Polygon
 from shapely.geometry.point import Point
@@ -197,32 +198,26 @@ def fill_store(cell_grid, points_grid):
 # ----------------------------------------------------------------------
 
 
-def test_annotation_init_both_shapely_coords():
-    """Init annotation with both coords and geometry."""
-    with pytest.raises(ValueError, match="coords and geometry"):
-        _ = Annotation(geometry=Point(0, 0), coords=[(0, 0)])
+def test_annotation_init_both_shapely_wkb():
+    """Init annotation with both wkb and geometry."""
+    with pytest.raises(ValueError, match="geometry and wkb"):
+        _ = Annotation(geometry=Point(0, 0), wkb=Point(0, 0).wkb)
 
 
-def test_annotation_init_neither_shapely_coords():
-    """Init annotation with neither coords nor geometry."""
-    with pytest.raises(ValueError, match="coords or geometry"):
+def test_annotation_init_neither_shapely_wkb():
+    """Init annotation with neither wkb nor geometry."""
+    with pytest.raises(ValueError, match="geometry or wkb"):
         _ = Annotation()
 
 
-def test_annotation_init_no_geom_type():
-    """Init annotation with no geom_type."""
-    with pytest.raises(ValueError, match="geom_type"):
-        _ = Annotation(coords=[0, 0], geom_type=None)
-
-
-def test_polygon_annotation_from_coords():
-    """Test creating a polygon annotation from coords."""
+def test_polygon_annotation_from_wkb():
+    """Test creating a polygon annotation from wkb."""
     coords = [[0, 0], [1, 1], [2, 0]]
-    ann = Annotation(coords=coords, geom_type=3)
-    assert ann.geometry == Polygon(coords)
+    wkb = Polygon(coords).wkb
+    ann = Annotation(wkb=wkb)
+    assert ann.geometry == shapely.from_wkb(wkb)
     assert ann.properties == {}
-    assert ann.geom_type == GeometryType.POLYGON
-    assert ann.coords.tolist() == coords
+    assert ann.geometry.type == str(GeometryType.POLYGON)
 
 
 def test_polygon_annotation_from_shapely():
@@ -231,8 +226,7 @@ def test_polygon_annotation_from_shapely():
     ann = Annotation(geometry=polygon)
     assert ann.geometry == polygon
     assert ann.properties == {}
-    assert ann.geom_type == GeometryType.POLYGON
-    assert ann.coords.tolist() == np.array(polygon.exterior.coords).tolist()
+    assert ann.geometry.type == str(GeometryType.POLYGON)
 
 
 # ----------------------------------------------------------------------
@@ -483,6 +477,14 @@ def test_sqlite_optimize_no_vacuum(fill_store, tmp_path):
     """Test running the optimize function on an SQLiteStore without VACUUM."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     store.optimize(limit=0, vacuum=False)
+
+
+def test_sqlite_wkb(fill_store):
+    """Test that SQLiteStore returns annotations with WKB geometry."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    results = store.query((0, 0, 30, 30))
+    assert len(results) == 8
+    assert all(annotation._wkb is not None for annotation in results.values())
 
 
 def test_annotation_to_geojson():
@@ -1717,7 +1719,7 @@ class TestStore:
             assert path == Path(fh.name)
 
     @staticmethod
-    def test_nquery_boxpoint_boxpoint(store_cls):
+    def test_nquery_boxpoint_boxpoint(store_cls, tmp_path):
         """Test simple querying within a neighbourhood.
 
         Test that a neighbourhood query returns the correct results
@@ -1726,8 +1728,8 @@ class TestStore:
         .. code-block:: text
 
              ^
-            3|--****-----C
-             |*      *   |
+            3|--****-----+
+             |*      *  C|
             2|         * |
              |     B    *|
             1|   A       *
@@ -2215,14 +2217,3 @@ class TestStore:
         _, store = fill_store(store_cls, ":memory:")
         result = store.query((0, 0, 1000, 1000), min_area=1)
         assert len(result) == 100  # should only get cells, pts are too small
-
-    @staticmethod
-    def test_as_wkb(fill_store, store_cls):
-        """Test that as_wkb returns annotations with wkb geometry."""
-        _, store = fill_store(store_cls, ":memory:")
-        wkb_results = store.query((0, 0, 25, 25), as_wkb=True)
-        results = store.query((0, 0, 30, 30))
-        assert len(results) == 8
-        assert len(wkb_results) == 8
-        for wkb_result, result in zip(wkb_results.values(), results.values()):
-            assert wkb_result.geometry == result.geometry.wkb
