@@ -41,9 +41,17 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from functools import lru_cache
-from numbers import Number
 from pathlib import Path
-from typing import IO, Any, Callable, ClassVar, Generator, Iterable, Iterator, TypeAlias
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Generator,
+    Iterable,
+    Iterator,
+)
 
 import numpy as np
 import pandas as pd
@@ -64,18 +72,19 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 from tiatoolbox.enums import GeometryType
-from tiatoolbox.typing import JSON
+
+if TYPE_CHECKING:
+    from tiatoolbox.typing import (
+        CallablePredicate,
+        CallableSelect,
+        Geometry,
+        Predicate,
+        Properties,
+        QueryGeometry,
+        Select,
+    )
 
 sqlite3.enable_callback_tracebacks(True)
-
-Geometry: TypeAlias = Point | LineString | Polygon
-Properties: TypeAlias = JSON
-BBox = tuple[Number, Number, Number, Number]
-QueryGeometry = BBox | Geometry
-CallablePredicate = Callable[[Properties], bool]
-CallableSelect = Callable[[Properties], Properties]
-Predicate = str | bytes | CallablePredicate
-Select = str | bytes | CallableSelect
 
 WKB_POINT_STRUCT = struct.Struct("<BIdd")
 
