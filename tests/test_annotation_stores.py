@@ -277,6 +277,20 @@ def test_annotation_wkb_coords():
     assert coords == np.array(polygon.exterior.coords).flatten().tolist()
 
 
+def test_annotation_geometry_wkb():
+    """Test generating WKB from geometry."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(geometry=polygon)
+    assert ann.wkb == polygon.wkb
+
+
+def test_annotation_geometry_geometry_type():
+    """Test getting GeometryType from Shapely geometry."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(geometry=polygon)
+    assert ann.geometry_type == GeometryType.POLYGON
+
+
 # ----------------------------------------------------------------------
 # Class-Specific Tests
 # ----------------------------------------------------------------------
