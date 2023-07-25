@@ -187,9 +187,7 @@ class Annotation:
                 The annotation as a WKB geometry.
 
         """
-        if self._wkb is None:
-            object.__setattr__(self, "_wkb", self.geometry.wkb)
-        return self._wkb
+        return copy.copy(self.wkb)
 
     def to_wkt(self) -> str:
         """Returns the geometry as Well-Know Text (WKT).

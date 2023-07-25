@@ -229,6 +229,54 @@ def test_polygon_annotation_from_shapely():
     assert ann.geometry.type == str(GeometryType.POLYGON)
 
 
+def test_annotation_lazy_geometry():
+    """Test that the geometry is not created until it is accessed."""
+    ann = Annotation(wkb=Polygon([[0, 0], [1, 1], [2, 0]]).wkb)
+    assert ann._wkb is not None
+    assert ann._geometry is None
+    _ = ann.geometry
+    assert ann._geometry is not None
+
+
+def test_lazy_geometry_type():
+    """Test that getting geometry type from WKB does not create geometry."""
+    ann = Annotation(wkb=Polygon([[0, 0], [1, 1], [2, 0]]).wkb)
+    assert ann.geometry.type == str(GeometryType.POLYGON)
+    assert ann._geometry is not None
+
+
+def test_annotation_lazy_to_wkb():
+    """Test that the geometry is not created until it is accessed."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    _ = ann.to_wkb()
+    assert ann._geometry is None
+
+
+def test_annotation_lazy_wkb():
+    """Test that the geometry is not created by accessing WKB."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    _ = ann.wkb
+    assert ann._geometry is None
+
+
+def test_annotation_to_wkb_equals_wkb():
+    """Test that to_wkb() and wkb are equal."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    assert ann.to_wkb() == ann.wkb
+
+
+def test_annotation_wkb_coords():
+    """Test generating coordinates from WKB without creating geometry."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    coords = ann.coords.tolist()
+    assert ann._geometry is None
+    assert coords == np.array(polygon.exterior.coords).flatten().tolist()
+
+
 # ----------------------------------------------------------------------
 # Class-Specific Tests
 # ----------------------------------------------------------------------
