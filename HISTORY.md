@@ -4,7 +4,7 @@
 
 ### Bug Fixes and Other Changes
 
-- Fix dictionary changed size Error (#605) #625
+- Fix dictionary changed size Error #626 (#605)
 
 ## 1.4.0 (2023-04-24)
 
