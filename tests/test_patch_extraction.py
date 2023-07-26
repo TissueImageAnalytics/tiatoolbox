@@ -209,11 +209,11 @@ def test_points_patch_extractor_svs(
 
 def test_points_patch_extractor_jp2(
     sample_jp2,
-    patch_extr_jp2_csv,
+    patch_extr_svs_csv,
     patch_extr_jp2_read,
 ):
     """Test PointsPatchExtractor for jp2 image."""
-    locations_list = pathlib.Path(patch_extr_jp2_csv)
+    locations_list = pathlib.Path(patch_extr_svs_csv)
     saved_data = np.load(str(pathlib.Path(patch_extr_jp2_read)))
 
     data = read_points_patches(
@@ -222,7 +222,7 @@ def test_points_patch_extractor_jp2(
         item=2,
         patch_size=(100, 100),
         units="power",
-        resolution=2.5,
+        resolution=2,
     )
 
     assert np.all(data == saved_data)
