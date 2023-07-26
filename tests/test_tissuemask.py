@@ -282,7 +282,7 @@ def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, "test1.png").is_file()
+    assert pathlib.Path(output_path, "CMU-1-Small-Region.omnyx.png").is_file()
 
 
 @pytest.mark.skipif(running_on_ci(), reason="No display on CI.")
