@@ -642,6 +642,9 @@ class AnnotationStore(ABC, MutableMapping):
                 The unique key of the newly inserted annotation.
 
         """
+        if not isinstance(annotation.geometry, (Polygon, Point, LineString)):
+            msg = "Invalid geometry type. Must be one of Point, LineString, Polygon."
+            raise TypeError(msg)
         keys = key if key is None else [key]
         return self.append_many([annotation], keys)[0]
 
@@ -3602,7 +3605,7 @@ class DictionaryStore(AnnotationStore):
 
         """
         if not isinstance(annotation.geometry, (Polygon, Point, LineString)):
-            msg = "Invalid geometry type."
+            msg = "Invalid geometry type. Must be one of Point, LineString, Polygon."
             raise TypeError(msg)
         key = key or str(uuid.uuid4())
         self._rows[key] = {"annotation": annotation}

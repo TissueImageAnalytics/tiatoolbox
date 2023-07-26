@@ -1196,8 +1196,8 @@ class TestStore:
     def test_append_invalid_geometry(fill_store, store_cls):
         """Test that appending invalid geometry raises an exception."""
         store = store_cls()
-        with pytest.raises((TypeError, AttributeError)):
-            store.append("point", {})
+        with pytest.raises(TypeError, match="geometry"):
+            store.append(Annotation("point", {}))
 
     @staticmethod
     def test_update_invalid_geometry(fill_store, store_cls):
