@@ -145,13 +145,21 @@ class Annotation:
         )
 
     @property
-    def coords(self) -> np.array:
-        """The annotation geometry as a flat array of 2D coordinates."""
-        return (
-            Annotation.decode_wkb(self._wkb, self.geometry_type.value)
-            if self._wkb
-            else np.concatenate(self.geometry.exterior)
-        )
+    def coords(self) -> np.array | list[np.array]:
+        """The annotation geometry as an array of 2D coordinates.
+
+        Returns a numpy array of coordinates for point, line string, and
+        polygon geometries. For multi-part geometries, a list of numpy
+        arrays is returned, one for each part.
+
+        """
+        if self._wkb:
+            return Annotation.decode_wkb(self._wkb, self.geometry_type.value)
+        if self.geometry_type in {GeometryType.POLYGON, GeometryType.LINE_STRING}:
+            return np.array(self.geometry.exterior.coords)
+        if self.geometry_type == GeometryType.POINT:
+            return np.array(self.geometry.coords)
+        return [np.array(part.exterior.coords) for part in self.geometry.geoms]
 
     def to_feature(self) -> dict:
         """Return a feature representation of this annotation.
