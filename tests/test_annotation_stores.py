@@ -305,6 +305,12 @@ def test_annotation_eq_false():
     assert ann_1 != ann_2
 
 
+def test_annotation_eq_type_mismatch():
+    """Test that two annotations with different geometries are not equal."""
+    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    assert ann_1 != "ann_2"
+
+
 def test_annotation_wkt():
     """Test that the WKT is the same for two annotations with the same geometry."""
     ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
