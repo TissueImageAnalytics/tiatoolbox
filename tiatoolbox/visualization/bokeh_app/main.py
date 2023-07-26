@@ -16,7 +16,7 @@ import torch
 
 # Bokeh basics
 from bokeh.io import curdoc
-from bokeh.layouts import column, layout, row
+from bokeh.layouts import column, row
 from bokeh.models import (
     BasicTickFormatter,
     BoxEditTool,
@@ -52,17 +52,12 @@ from flask_cors import CORS
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
-from tiatoolbox.annotation.dsl import SQL_GLOBALS, SQLTriplet
-from tiatoolbox.models.architecture import fetch_pretrained_weights
-
-# from tiatoolbox.models.architecture.nuclick import NuClick
 # from tiatoolbox.models.engine.interactive_segmentor import (
 #     InteractiveSegmentor,
 #     IOInteractiveSegmentorConfig,
-# )
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
+from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -136,7 +131,6 @@ def make_ts(route, z_levels, init_z=4):
     if init_z is None:
         init_z = UI["vstate"].init_z
         # if UI["vstate"].init:
-        # init_z=4
     print(f"init z is: {init_z}")
     sf = 2 ** (z_levels - 9 - init_z + 4)  # 2 ** (z_levels - 9)
     ts = WMTSTileSource(
@@ -152,11 +146,8 @@ def make_ts(route, z_levels, init_z=4):
         40211.5 * sf * (2 / (100 * pi))  # * (256/512)
     )  # 156543.03392804097    40030 great circ
     ts.x_origin_offset = 0  # 5000000
-    # ts.y_origin_offset=-2500000
     ts.y_origin_offset = sf * 10294144.78 * (2 / (100 * pi))
     ts.wrap_around = False
-    # ts.max_zoom=10
-    # ts.min_zoom=10
     return ts
 
 
@@ -207,9 +198,14 @@ def make_color_dict(types):
     # grab colors out of config["colour_dict"] if possible, otherwise use random
     type_colours = {}
     for i, t in enumerate(types):
-        if str(t) in config["colour_dict"]:
+        if t in UI["vstate"].mapper:
+            # keep existing color
+            type_colours[t] = UI["vstate"].mapper[t]
+        elif str(t) in config["colour_dict"]:
+            # grab color from config if possible
             type_colours[t] = to_float_rgb(config["colour_dict"][str(t)])
         else:
+            # otherwise use random
             type_colours[t] = (*colors[i], 1)
     return type_colours
 
@@ -237,7 +233,6 @@ def get_mapper_for_prop(prop, enforce_dict=False):
 
 def update_mapper():
     if UI["vstate"].types is not None:
-        # UI["vstate"].mapper = make_color_dict(UI["vstate"].types)
         update_renderer("mapper", UI["vstate"].mapper)
 
 
@@ -248,19 +243,21 @@ def update_renderer(prop, value):
                 value = UI["vstate"].mapper  # put the type mapper dict back
             else:
                 value = get_mapper_for_prop(
-                    UI["cprop_input"].value[0], enforce_dict=True
+                    UI["cprop_input"].value[0],
+                    enforce_dict=True,
                 )
             UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(None)
         if not isinstance(value, dict):
             UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(
-                cm.get_cmap(value)
+                cm.get_cmap(value),
             )
             UI["color_bar"].visible = True
         if isinstance(value, dict):
             # send keys and values separately so types are preserved
             value = {"keys": list(value.keys()), "values": list(value.values())}
         return UI["s"].put(
-            f"http://{host2}:5000/tileserver/cmap", data={"cmap": json.dumps(value)}
+            f"http://{host2}:5000/tileserver/cmap",
+            data={"cmap": json.dumps(value)},
         )
     return UI["s"].put(
         f"http://{host2}:5000/tileserver/renderer/{prop}",
@@ -326,7 +323,7 @@ def initialise_slide():
         UI["p"].y_range.start = y_start
         UI["p"].y_range.end = y_end
         print(
-            f"ranges are x: {UI['p'].x_range.start} - {UI['p'].x_range.end}, y: {UI['p'].y_range.start} - {UI['p'].y_range.end}"
+            f"ranges are x: {UI['p'].x_range.start} - {UI['p'].x_range.end}, y: {UI['p'].y_range.start} - {UI['p'].y_range.end}",
         )
 
     init_z = get_level_by_extent((0, UI["p"].y_range.start, UI["p"].x_range.end, 0))
@@ -353,7 +350,7 @@ def initialise_overlay():
                     height=30,
                     max_width=130,
                     sizing_mode="stretch_width",
-                )
+                ),
             )
             UI["type_column"].children[-1].on_click(layer_select_cb)
             try:
@@ -366,7 +363,7 @@ def initialise_overlay():
                         max_width=70,
                         height=30,
                         sizing_mode="stretch_width",
-                    )
+                    ),
                 )
             except KeyError:
                 UI["color_column"].children.append(
@@ -378,10 +375,11 @@ def initialise_overlay():
                         min_width=60,
                         max_width=70,
                         sizing_mode="stretch_width",
-                    )
+                    ),
                 )
             UI["color_column"].children[-1].on_change(
-                "color", bind_cb_obj(UI["color_column"].children[-1], color_input_cb)
+                "color",
+                bind_cb_obj(UI["color_column"].children[-1], color_input_cb),
             )
 
     for b in UI["type_column"].children.copy():
@@ -407,7 +405,7 @@ def add_layer(lname):
             height=40,
             max_width=130,
             sizing_mode="stretch_width",
-        )
+        ),
     )
     if lname == "nodes":
         UI["type_column"].children[-1].active = (
@@ -418,7 +416,7 @@ def add_layer(lname):
             UI["p"].renderers[UI["vstate"].layer_dict[lname]].visible
         )
     UI["type_column"].children[-1].on_click(
-        bind_cb_obj_tog(UI["type_column"].children[-1], fixed_layer_select_cb)
+        bind_cb_obj_tog(UI["type_column"].children[-1], fixed_layer_select_cb),
     )
     UI["color_column"].children.append(
         Slider(
@@ -432,14 +430,12 @@ def add_layer(lname):
             max_width=90,
             sizing_mode="stretch_width",
             name=f"{lname}_slider",
-        )
+        ),
     )
     UI["color_column"].children[-1].on_change(
-        "value", bind_cb_obj(UI["color_column"].children[-1], layer_slider_cb)
+        "value",
+        bind_cb_obj(UI["color_column"].children[-1], layer_slider_cb),
     )
-
-    # layer_boxes=[Toggle(label=t, active=a, width=100) for t,a in now_active.items()]
-    # lcolors=[ColorPicker(color=col[0:3], name=t, width=60) for col, t in zip(UI["vstate"].colors, UI["vstate"].types)]
 
 
 class TileGroup:
@@ -475,13 +471,7 @@ def change_tiles(layer_name="overlay"):
     if layer_name == "graph" and layer_name not in UI["vstate"].layer_dict.keys():
         # for layer_key in UI["vstate"].layer_dict.keys():
         #     if layer_key in ["rect", "pts", "nodes", "edges"]:
-        #         continue
-        #     grp = tg.get_grp()
-        #     ts = make_ts(
-        #         f"http://{host}:{port}/tileserver/layer/{layer_key}/{UI['user']}/zoomify/TileGroup{grp}"
         #         + r"/{z}-{x}-{y}@{UI["vstate"].res}x.jpg",
-        #     )
-        #     UI["p"].renderers[UI["vstate"].layer_dict[layer_key]].tile_source = ts
         return
 
     ts = make_ts(
@@ -500,7 +490,7 @@ def change_tiles(layer_name="overlay"):
             level="image",
             render_parents=False,
         )
-        for layer_key in UI["vstate"].layer_dict.keys():
+        for layer_key in UI["vstate"].layer_dict:
             if layer_key in ["rect", "pts", "nodes", "edges"]:
                 continue
             grp = tg.get_grp()
@@ -520,9 +510,7 @@ def change_tiles(layer_name="overlay"):
 def run_app():
     app = TileServer(
         title="Testing TileServer",
-        layers={
-            # "slide": UI["vstate"].wsi,
-        },
+        layers={},
     )
     CORS(app, send_wildcard=True)
     app.run(host="127.0.0.1", threaded=False)
@@ -614,7 +602,6 @@ def node_select_cb(attr, old, new):
 def overlay_toggle_cb(attr):
     for i in range(5, len(UI["p"].renderers)):
         if isinstance(UI["p"].renderers[i], GraphRenderer):
-            # set_graph_alpha(UI["p"].renderers[i], new)
             continue
         if UI["p"].renderers[i].alpha == 0:
             UI["p"].renderers[i].alpha = UI["overlay_alpha"].value
@@ -687,14 +674,12 @@ def cprop_input_cb(attr, old, new):
     """Change property to colour by"""
     if len(new) == 0:
         return
-    if new[0] == "type":
-        cmap = UI["vstate"].mapper
-    else:
-        cmap = get_mapper_for_prop(new[0])
+    cmap = UI["vstate"].mapper if new[0] == "type" else get_mapper_for_prop(new[0])
     UI["vstate"].cprop = new[0]
     update_renderer("mapper", cmap)
     UI["s"].put(
-        f"http://{host2}:5000/tileserver/color_prop", data={"prop": json.dumps(new[0])}
+        f"http://{host2}:5000/tileserver/color_prop",
+        data={"prop": json.dumps(new[0])},
     )
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
@@ -709,14 +694,11 @@ def set_graph_alpha(g_renderer, value):
 
 def slide_alpha_cb(attr, old, new):
     UI["p"].renderers[0].alpha = new
-    # UI["p"].renderers[0].tile_source.max_zoom=7
-    # UI["p"].renderers[1].tile_source.max_zoom=7
 
 
 def overlay_alpha_cb(attr, old, new):
     for i in range(5, len(UI["p"].renderers)):
         if isinstance(UI["p"].renderers[i], GraphRenderer):
-            # set_graph_alpha(UI["p"].renderers[i], new)
             pass
         else:
             UI["p"].renderers[i].alpha = new
@@ -763,7 +745,6 @@ def opt_buttons_cb(attr, old, new):
 
 def cmap_select_cb(attr, old, new):
     update_renderer("mapper", new)
-    # change_tiles('overlay')
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
@@ -811,17 +792,12 @@ def slide_select_cb(attr, old, new):
     populate_layer_list(slide_path.stem, config["overlay_folder"])
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
-    # fname='-*-'.join(attr.item.split('\\'))
     fname = make_safe_name(str(slide_path))
     print(fname)
     print(UI["vstate"].mpp)
     UI["s"].put(f"http://{host2}:5000/tileserver/slide", data={"slide_path": fname})
     change_tiles("slide")
     # if len(UI["p"].renderers)==1:
-    # r=UI["p"].rect('x', 'y', 'width', 'height', source=box_source, fill_alpha=0)
-    # UI["p"].add_tools(BoxEditTool(renderers=[r], num_objects=1))
-    # UI["p"].x_range.bounds=MinMaxBounds(0,UI["vstate"].dims[0])
-    # UI["p"].y_range.bounds=(0,-UI["vstate"].dims[1])
 
     # load the overlay and graph automatically for demo purposes
     if config["auto_load"]:
@@ -869,26 +845,16 @@ def layer_drop_cb(attr):
             ],
         }
         # UI["edge_source"].data = {
-        #     "xs": [[graph_dict["coordinates"][inds[0], 0], graph_dict["coordinates"][inds[1], 0]] for inds in graph_dict["edge_index"].T],
-        #     "ys": [[-graph_dict["coordinates"][inds[0], 1], -graph_dict["coordinates"][inds[1], 1]] for inds in graph_dict["edge_index"].T],
-        # }
 
-        # graph_layout = dict(
         #     zip(
-        #         UI["node_source"].data["index"],
-        #         [
-        #             # (x / (4 * UI["vstate"].mpp[0]), -y / (4 * UI["vstate"].mpp[1]))
-        #             (x, -y)
         #             for x, y in graph_dict["coordinates"]
         #         ],
-        #     )
-        # )
         add_layer("edges")
         add_layer("nodes")
         change_tiles("graph")
         if "graph_overlay" not in UI["type_cmap_select"].options:
             UI["type_cmap_select"].options = UI["type_cmap_select"].options + [
-                "graph_overlay"
+                "graph_overlay",
             ]
 
         # add additional data to graph datasource
@@ -920,16 +886,16 @@ def layer_drop_cb(attr):
                 [
                     (graph_feat_names[i], f"@{graph_feat_names[i]}")
                     for i in range(np.minimum(graph_dict["feats"].shape[1], 9))
-                ]
+                ],
             )
             UI["hover"].tooltips = TOOLTIPS
 
         return
 
-    # fname='-*-'.join(attr.item.split('\\'))
     fname = make_safe_name(attr.item)
     resp = UI["s"].put(
-        f"http://{host2}:5000/tileserver/overlay", data={"overlay_path": fname}
+        f"http://{host2}:5000/tileserver/overlay",
+        data={"overlay_path": fname},
     )
     resp = json.loads(resp.text)
 
@@ -938,20 +904,17 @@ def layer_drop_cb(attr):
         props = UI["s"].get(f"http://{host2}:5000/tileserver/prop_names/all")
         UI["vstate"].props = json.loads(props.text)
         # update the color type by prop menu
-        UI["type_cmap_select"].options = [t for t in UI["vstate"].types]
+        UI["type_cmap_select"].options = list(UI["vstate"].types)
         if len(UI["node_source"].data["x_"]) > 0:
             UI["type_cmap_select"].options.append("graph_overlay")
-        # UI["type_cmap_select"].options = UI["vstate"].props
         # update the color type by prop menu
-        UI["type_cmap_select"].options = [t for t in UI["vstate"].types]
+        UI["type_cmap_select"].options = list(UI["vstate"].types)
         if len(UI["node_source"].data["x_"]) > 0:
             UI["type_cmap_select"].options.append("graph_overlay")
         UI["cprop_input"].options = UI["vstate"].props
         # subcat_select.options = ["All"] + list(
-        #     set([UI["p"].split("_")[0] for p in UI["vstate"].props])
-        # )
         UI["cprop_input"].options.append("None")
-        if not UI["vstate"].props == UI["vstate"].props_old:
+        if UI["vstate"].props != UI["vstate"].props_old:
             # if color by prop no longer exists, reset to type
             if (
                 len(UI["cprop_input"].value) == 0
@@ -969,7 +932,6 @@ def layer_drop_cb(attr):
 
 def layer_select_cb(attr):
     build_predicate()
-    # change_tiles('overlay')
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
@@ -982,17 +944,12 @@ def fixed_layer_select_cb(obj, attr):
             UI["p"].renderers[
                 key
             ].visible = True  # line_alpha = UI["overlay_alpha"].value
-            # UI["p"].renderers[key].node_renderer.glyph.line_alpha = UI["overlay_alpha"].value
-            # UI["p"].renderers[key].edge_renderer.glyph.line_alpha = UI["overlay_alpha"].value
         else:
             UI["p"].renderers[key].visible = False  # line_alpha = 0.0
-            # UI["p"].renderers[key].node_renderer.glyph.line_alpha = 0.0
-            # UI["p"].renderers[key].edge_renderer.glyph.line_alpha = 0.0
     elif obj.label == "nodes":
         if UI["p"].renderers[key].glyph.fill_alpha == 0:
             UI["p"].renderers[key].glyph.fill_alpha = UI["overlay_alpha"].value
             UI["p"].renderers[key].glyph.line_alpha = UI["overlay_alpha"].value
-            # UI["p"].renderers[key].edge_renderer.glyph.line_alpha = UI["overlay_alpha"].value
         else:
             UI["p"].renderers[key].glyph.fill_alpha = 0.0
             UI["p"].renderers[key].glyph.line_alpha = 0.0
@@ -1023,7 +980,6 @@ def color_input_cb(obj, attr, old, new):
     UI["vstate"].mapper[UI["vstate"].orig_types[obj.name]] = (*hex2rgb(new), 1)
     if UI["vstate"].cprop == "type":
         update_renderer("mapper", UI["vstate"].mapper)
-    # change_tiles('overlay')
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
@@ -1075,7 +1031,7 @@ def type_cmap_cb(attr, old, new):
             if new[0] == "graph_overlay":
                 UI["type_cmap_select"].options = [
                     key
-                    for key in UI["node_source"].data.keys()
+                    for key in UI["node_source"].data
                     if key not in ["x_", "y_", "node_color_"]
                 ] + [new[0]]
             else:
@@ -1109,7 +1065,7 @@ def type_cmap_cb(attr, old, new):
         )
 
         UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(
-            cm.get_cmap("viridis")
+            cm.get_cmap("viridis"),
         )
         UI["color_bar"].visible = True
         UI["vstate"].update_state = 1
@@ -1122,42 +1078,40 @@ def save_cb(attr):
         save_path = make_safe_name(
             str(
                 config["slide_folder"]
-                / (UI["vstate"].slide_path.stem + "_saved_anns.db")
-            )
+                / (UI["vstate"].slide_path.stem + "_saved_anns.db"),
+            ),
         )
     else:
         save_path = make_safe_name(
             str(
                 config["overlay_folder"]
-                / (UI["vstate"].slide_path.stem + "_saved_anns.db")
-            )
+                / (UI["vstate"].slide_path.stem + "_saved_anns.db"),
+            ),
         )
     UI["s"].post(
-        f"http://{host2}:5000/tileserver/commit", data={"save_path": save_path}
+        f"http://{host2}:5000/tileserver/commit",
+        data={"save_path": save_path},
     )
 
 
 # run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
 def segment_on_box(attr):
     print(UI["vstate"].types)
-    # thumb=UI["vstate"].wsi.slide_thumbnail(resolution=8, units='mpp')
     thumb = UI["vstate"].wsi.slide_thumbnail()
-    # conv_mpp=wsi.convert_resolution_units(1.25, 'power', 'mpp')[0]
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
     print(f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}')
     x = round(
         (UI["box_source"].data["x"][0] - 0.5 * UI["box_source"].data["width"][0])
-        / conv_mpp
+        / conv_mpp,
     )
     y = -round(
         (UI["box_source"].data["y"][0] + 0.5 * UI["box_source"].data["height"][0])
-        / conv_mpp
+        / conv_mpp,
     )
     width = round(UI["box_source"].data["width"][0] / conv_mpp)
     height = round(UI["box_source"].data["height"][0] / conv_mpp)
     print(x, y, width, height)
 
-    # img_tile=wsi.read_rect((x,y),(width,height))
     mask = np.zeros((thumb.shape[0], thumb.shape[1]), dtype=np.uint8)
     mask[y : y + height, x : x + width] = 1
 
@@ -1177,13 +1131,10 @@ def segment_on_box(attr):
         [f"{tmp_mask_dir}\\mask.png"],
         save_dir=f"{tmp_save_dir}\\hover_out",
         mode="wsi",
-        # resolution=UI["vstate"].mpp,
-        # units='mpp',
         on_gpu=torch.cuda.is_available(),
         crash_on_exception=True,
     )
 
-    # fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
     fname = make_safe_name(f"{tmp_save_dir}\\hover_out\\0.dat")
     resp = UI["s"].put(
         f"http://{host2}:5000/tileserver/annotations",
@@ -1194,15 +1145,11 @@ def segment_on_box(attr):
     # update the props options if needed
     props = UI["s"].get(f"http://{host2}:5000/tileserver/prop_names/all")
     UI["vstate"].props = json.loads(props.text)
-    # UI["type_cmap_select"].options = UI["vstate"].props
     UI["cprop_input"].options = UI["vstate"].props
-    # subcat_select.options = ["All"] + list(set([UI["p"].split("_")[0] for p in UI["vstate"].props]))
-    if not UI["vstate"].props == UI["vstate"].props_old:
+    if UI["vstate"].props != UI["vstate"].props_old:
         update_mapper()
         UI["vstate"].props_old = UI["vstate"].props
 
-    # update_mapper()
-    # type_drop.menu=[(str(t),str(t)) for t in UI["vstate"].types]
     rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
     initialise_overlay()
@@ -1213,53 +1160,8 @@ def segment_on_box(attr):
 
 # run nuclick on user selected points in pt_source
 # def nuclick_on_pts(attr):
-#     x = np.round(np.array(UI["pt_source"].data["x"]))
-#     y = -np.round(np.array(UI["pt_source"].data["y"]))
 
-#     model = NuClick(5, 1)
-#     # pretrained_weights = r"C:\Users\meast\app_data\NuClick_Nuclick_40xAll.pth"
 #     fetch_pretrained_weights(
-#         "nuclick_original-pannuke", r"./nuclick_weights.pth", overwrite=False
-#     )
-#     saved_state_dict = torch.load(r"./nuclick_weights.pth", map_location="cpu")
-#     model.load_state_dict(saved_state_dict, strict=True)
-#     UI["vstate"].model_mpp = 0.25
-#     ioconf = IOInteractiveSegmentorConfig(
-#         input_resolutions=[{"resolution": 0.25, "units": "mpp"}], patch_size=(128, 128)
-#     )
-#     inst_segmentor = InteractiveSegmentor(
-#         num_loader_workers=0,
-#         batch_size=16,
-#         model=model,
-#     )
-
-#     points = np.vstack([x, y]).T
-#     points = points / (ioconf.input_resolutions[0]["resolution"] / UI["vstate"].mpp[0])
-#     print(points.shape)
-#     nuclick_output = inst_segmentor.predict(
-#         [UI["vstate"].slide_path],
-#         [points],
-#         ioconfig=ioconf,
-#         save_dir="/app_data/sample_tile_results/",
-#         patch_size=(128, 128),
-#         resolution=0.25,
-#         units="mpp",
-#         on_gpu=False,
-#         save_output=True,
-#     )
-
-#     # fname='-*-'.join('.\\sample_tile_results\\0.dat'.split('\\'))
-#     fname = make_safe_name("\\app_data\\sample_tile_results\\0.dat")
-#     print(fname)
-#     resp = UI["s"].put(
-#         f"http://{host2}:5000/tileserver/load_annotations/{fname}/{UI['vstate'].model_mpp}"
-#     )
-#     print(resp.text)
-#     UI["vstate"].types = json.loads(resp.text)
-#     update_mapper()
-#     rmtree(Path(r"/app_data/sample_tile_results"))
-#     initialise_overlay()
-#     change_tiles("overlay")
 
 
 # endregion
@@ -1285,20 +1187,12 @@ def make_window(vstate):
             y_axis_type="linear",
             width=800,
             height=1000,
-            # max_width=1700,
-            # max_height=1000,
-            # width_policy="max",
-            # height_policy="max",
-            # tooltips=TOOLTIPS,
             tools=tool_str,
             active_scroll="wheel_zoom",
             output_backend="webgl",
             hidpi=True,
             match_aspect=False,
             lod_factor=200000,
-            # lod_interval=500,
-            # lod_threshold=10,
-            # lod_timeout=200,
             sizing_mode="stretch_both",
             name=f"slide_window{win_num}",
         )
@@ -1311,27 +1205,18 @@ def make_window(vstate):
             y_axis_type="linear",
             width=1700,
             height=1000,
-            # max_width=1700,
-            # max_height=1000,
-            # width_policy="max",
-            # height_policy="max",
-            # tooltips=TOOLTIPS,
             tools=tool_str,
             active_scroll="wheel_zoom",
             output_backend="webgl",
             hidpi=True,
             match_aspect=False,
             lod_factor=200000,
-            # lod_interval=500,
-            # lod_threshold=10,
-            # lod_timeout=200,
             sizing_mode="stretch_both",
             name=f"slide_window{win_num}",
         )
         init_z = get_level_by_extent((0, p.y_range.start, p.x_range.end, 0))
         first_z[0] = init_z
     p.axis.visible = False
-    # initialise_slide()
     p.toolbar.tools[1].zoom_on_axis = False
 
     s = requests.Session()
@@ -1345,7 +1230,6 @@ def make_window(vstate):
 
     resp = s.get(f"http://{host2}:5000/tileserver/session_id")
     print(f"cookies are: {resp.cookies}")
-    cookies = resp.cookies
     user = resp.cookies.get("session_id")
     if curdoc().session_context:
         curdoc().session_context.request.arguments["user"] = user
@@ -1394,7 +1278,7 @@ def make_window(vstate):
 
     color_bar = ColorBar(
         color_mapper=LinearColorMapper(
-            make_color_seq_from_cmap(cm.get_cmap("viridis"))
+            make_color_seq_from_cmap(cm.get_cmap("viridis")),
         ),
         label_standoff=12,
     )
@@ -1411,7 +1295,6 @@ def make_window(vstate):
         step=0.05,
         value=1.0,
         width=200,
-        # max_width=200,
         sizing_mode="stretch_width",
         name=f"slide_alpha{win_num}",
     )
@@ -1423,7 +1306,6 @@ def make_window(vstate):
         step=0.05,
         value=0.75,
         width=200,
-        # max_width=200,
         sizing_mode="stretch_width",
         name=f"overlay_alpha{win_num}",
     )
@@ -1435,7 +1317,6 @@ def make_window(vstate):
         step=1,
         value=1,
         width=60,
-        # max_width=60,
         height=50,
         sizing_mode="stretch_width",
         name=f"edge_size{win_num}",
@@ -1448,7 +1329,6 @@ def make_window(vstate):
         step=1,
         value=4,
         width=60,
-        # max_width=60,
         height=50,
         sizing_mode="stretch_width",
         name=f"pt_size{win_num}",
@@ -1459,7 +1339,6 @@ def make_window(vstate):
         active=True,
         button_type="success",
         width=90,
-        # max_width=90,
         sizing_mode="stretch_width",
         name=f"slide_toggle{win_num}",
     )
@@ -1468,7 +1347,6 @@ def make_window(vstate):
         active=True,
         button_type="success",
         width=90,
-        # max_width=90,
         sizing_mode="stretch_width",
         name=f"overlay_toggle{win_num}",
     )
@@ -1478,9 +1356,6 @@ def make_window(vstate):
         sizing_mode="stretch_width",
         name=f"filter{win_num}",
     )
-    # cprop_input = TextInput(
-    #    value="type", title="CProp:", max_width=300, sizing_mode="stretch_width"
-    # )
     cprop_input = MultiChoice(
         title="Colour by:",
         max_items=1,
@@ -1488,7 +1363,6 @@ def make_window(vstate):
         value=[get_from_config(["default_cprop"], "type")],
         search_option_limit=5000,
         sizing_mode="stretch_width",
-        # max_width=300,
         name=f"cprop{win_num}",
     )
     slide_select = MultiChoice(
@@ -1497,7 +1371,6 @@ def make_window(vstate):
         options=[get_from_config(["first_slide"], "*")],
         value=[get_from_config(["first_slide"], "*")],
         search_option_limit=5000,
-        # max_width=300,
         sizing_mode="stretch_width",
         name=f"slide_select{win_num}",
     )
@@ -1512,7 +1385,6 @@ def make_window(vstate):
         options=cmmenu,
         width=60,
         value=get_from_config(["UI_settings", "mapper"], "coolwarm"),
-        # max_width=60,
         height=45,
         sizing_mode="stretch_width",
         name=f"cmap{win_num}",
@@ -1525,7 +1397,6 @@ def make_window(vstate):
         value=get_from_config(["UI_settings", "blur_radius"], 0),
         width=60,
         height=50,
-        # max_width=60,
         sizing_mode="stretch_width",
         name=f"blur{win_num}",
     )
@@ -1536,7 +1407,6 @@ def make_window(vstate):
         step=8,
         value=get_from_config(["UI_settings", "max_scale"], 16),
         width=60,
-        # max_width=60,
         height=50,
         sizing_mode="stretch_width",
         name=f"scale{win_num}",
@@ -1564,12 +1434,15 @@ def make_window(vstate):
         options=["*"],
         search_option_limit=5000,
         sizing_mode="stretch_width",
-        # max_width=300,
         name=f"type_cmap{win_num}",
     )
     layer_boxes = [
         Toggle(
-            label=t, active=True, width=100, max_width=100, sizing_mode="stretch_width"
+            label=t,
+            active=True,
+            width=100,
+            max_width=100,
+            sizing_mode="stretch_width",
         )
         for t in vstate.types
     ]
@@ -1581,14 +1454,12 @@ def make_window(vstate):
         label="Add Overlay",
         button_type="warning",
         menu=[None],
-        # max_width=300,
         sizing_mode="stretch_width",
         name=f"layer_drop{win_num}",
     )
     opt_buttons = CheckboxButtonGroup(
         labels=["Filled", "Microns", "Grid"],
         active=[0],
-        # max_width=300,
         sizing_mode="stretch_width",
         name=f"opt_buttons{win_num}",
     )
@@ -1626,7 +1497,9 @@ def make_window(vstate):
 
     type_column = column(children=layer_boxes, name=f"type_column{win_num}")
     color_column = column(
-        children=lcolors, sizing_mode="stretch_width", name=f"color_column{win_num}"
+        children=lcolors,
+        sizing_mode="stretch_width",
+        name=f"color_column{win_num}",
     )
 
     # create the layout
@@ -1637,10 +1510,12 @@ def make_window(vstate):
         sizing_mode="stretch_width",
     )
     model_row = row(
-        [to_model_button, model_drop, save_button], sizing_mode="stretch_width"
+        [to_model_button, model_drop, save_button],
+        sizing_mode="stretch_width",
     )
     type_select_row = row(
-        children=[type_column, color_column], sizing_mode="stretch_width"
+        children=[type_column, color_column],
+        sizing_mode="stretch_width",
     )
 
     # make element dictionaries
@@ -1670,7 +1545,7 @@ def make_window(vstate):
                 model_row,
                 type_select_row,
             ],
-        )
+        ),
     )
     if "UI_elements_1" in config:
         ui_layout = column(
@@ -1701,7 +1576,7 @@ def make_window(vstate):
                 edge_size_spinner,
                 res_switch,
             ],
-        )
+        ),
     )
     if "UI_elements_2" in config:
         extra_options = column(
@@ -1726,7 +1601,7 @@ def make_window(vstate):
                     ],
                 ),
                 title="window 1",
-            )
+            ),
         )
         controls.append(TabPanel(child=Div(), title="window 2"))
         windows.append(p)
@@ -1778,7 +1653,6 @@ tool_str = "pan,wheel_zoom,reset,save"
 active = 0
 
 # some setup
-# config["base_folder"] = r"E:\TTB_vis_folder"
 
 req_args = []
 do_doc = False
@@ -1825,7 +1699,8 @@ def control_tabs_cb(attr, old, new):
         win_dicts.append(make_window(ViewerState(win_dicts[0]["vstate"].slide_path)))
         win_dicts[1]["vstate"].thickness = win_dicts[0]["vstate"].thickness
         bounds = get_view_bounds(
-            UI["vstate"].dims, np.array([UI["p"].width, UI["p"].height])
+            UI["vstate"].dims,
+            np.array([UI["p"].width, UI["p"].height]),
         )
         active = new
         if "UI_settings" in config:
@@ -1839,13 +1714,13 @@ def control_tabs_cb(attr, old, new):
         slide_select_cb(None, None, new=[UI["vstate"].slide_path])
         if "default_type_cprop" in config:
             UI["type_cmap_select"].value = list(config["default_type_cprop"].values())
-        # initialise_slide()
         populate_slide_list(config["slide_folder"])
         populate_layer_list(
-            Path(UI["vstate"].slide_path).stem, config["overlay_folder"]
+            Path(UI["vstate"].slide_path).stem,
+            config["overlay_folder"],
         )
         win_dicts[0]["vstate"].init_z = get_level_by_extent(
-            (0, bounds[2], bounds[1], 0)
+            (0, bounds[2], bounds[1], 0),
         )
         UI["vstate"].init = False
     else:
@@ -1906,18 +1781,9 @@ class DocConfig:
         if len(config_file) > 0:
             config_file = config_file[0]
             if (config_file).exists():
-                with open(config_file, "r") as f:
+                with open(config_file) as f:
                     config = json.load(f)
                     print(config)
-                # if "config["colour_dict"]" in config:
-                #     self.config["colour_dict"] = config["config["colour_dict"]"]
-                #     print(self.config["colour_dict"])
-                # if "config["initial_views"]" in config:
-                #     self.config["initial_views"] = config["config["initial_views"]"]
-                #     print(self.config["initial_views"])
-                # if "config["default_cprop"]" in config:
-                #     self.config["default_cprop"] = config["config["default_cprop"]"]
-                #     print(self.config["default_cprop"])
 
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder
@@ -1965,21 +1831,14 @@ class DocConfig:
         slide_select_cb(None, None, new=[UI["vstate"].slide_path])
         if "default_type_cprop" in config:
             UI["type_cmap_select"].value = list(config["default_type_cprop"].values())
-        # initialise_slide()
         populate_slide_list(config["slide_folder"])
         populate_layer_list(
-            Path(UI["vstate"].slide_path).stem, config["overlay_folder"]
+            Path(UI["vstate"].slide_path).stem,
+            config["overlay_folder"],
         )
         UI["vstate"].init = False
 
         # # set up main window
-        # slide_wins = row(
-        #     children=windows,
-        #     name="slide_windows",
-        #     sizing_mode="stretch_both",
-        # )
-
-        # control_tabs = Tabs(tabs=controls, name="ui_layout")
 
         slide_wins.children = windows
         control_tabs.tabs = controls
@@ -1994,12 +1853,9 @@ class DocConfig:
         doc.template_variables["demo_name"] = config["demo_name"]
         doc.add_periodic_callback(update, 220)
         doc.add_root(slide_wins)
-        # curdoc().add_root(ui_layout)
         doc.add_root(control_tabs)
-        # curdoc().add_root(opts_column)
         doc.title = "Tiatoolbox Visualization Tool"
         # if "template" in config:
-        #    curdoc().template = str(Path(r"C:\Users\meast\app_data\templates") / config["template"])
         return slide_wins, control_tabs
 
 

@@ -7,8 +7,7 @@ import pkg_resources
 import pytest
 import requests
 from bokeh.application import Application
-from bokeh.application.handlers import DirectoryHandler, FunctionHandler
-from bokeh.client.session import pull_session
+from bokeh.application.handlers import FunctionHandler
 from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
@@ -21,16 +20,22 @@ BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_
 
 
 def get_tile(layer, x, y, z, show=False):
+    """Get a tile from the server."""
     source = main.UI["p"].renderers[main.UI["vstate"].layer_dict[layer]].tile_source
     url = source.url
     # replace {x}, {y}, {z} with tile coordinates
     url = url.replace("{x}", str(x)).replace("{y}", str(y)).replace("{z}", str(z))
     im = io.BytesIO(requests.get(url).content)
-    # import pdb; pdb.set_trace()
     if show:
         plt.imshow(np.array(Image.open(im)))
         plt.show()
     return np.array(Image.open(im))
+
+
+def get_renderer_prop(prop):
+    """Get a renderer property from the server."""
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/renderer/{prop}")
+    return resp.json()
 
 
 @pytest.fixture(scope="module")
@@ -45,16 +50,20 @@ def data_path(tmp_path_factory):
 @pytest.fixture(scope="module", autouse=True)
 def annotation_path(data_path):
     data_path["slide1"] = _fetch_remote_sample(
-        "svs-1-small", data_path["base_path"] / "slides"
+        "svs-1-small",
+        data_path["base_path"] / "slides",
     )
     data_path["slide2"] = _fetch_remote_sample(
-        "ndpi-1", data_path["base_path"] / "slides"
+        "ndpi-1",
+        data_path["base_path"] / "slides",
     )
     data_path["annotations"] = _fetch_remote_sample(
-        "annotation_store_svs_1", data_path["base_path"] / "overlays"
+        "annotation_store_svs_1",
+        data_path["base_path"] / "overlays",
     )
     data_path["graph"] = _fetch_remote_sample(
-        "graph_svs_1", data_path["base_path"] / "overlays"
+        "graph_svs_1",
+        data_path["base_path"] / "overlays",
     )
     return data_path
 
@@ -62,16 +71,13 @@ def annotation_path(data_path):
 """Test bokeh_app."""
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def doc(data_path):
     # make a bokeh app
-    # handler = DirectoryHandler(filename=BOKEH_PATH, argv=[str(tmp_path)])
-    # import pdb; pdb.set_trace()
     main.config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
     handler = FunctionHandler(main.config.setup_doc)
     app = Application(handler)
-    doc = app.create_document()
-    return doc
+    return app.create_document()
 
 
 def test_roots(doc):
@@ -92,7 +98,7 @@ def test_slide_select(doc, data_path):
 
 def test_dual_window(doc, data_path):
     control_tabs = doc.get_model_by_name("ui_layout")
-    slide_wins = doc.get_model_by_name("slide_windows")
+    doc.get_model_by_name("slide_windows")
     control_tabs.active = 1
     slide_select = doc.get_model_by_name("slide_select1")
     assert len(slide_select.options) == 2
@@ -134,21 +140,21 @@ def test_cprop_input(doc):
     # as prob is continuous, cmap should be set to whatever cmap is selected
     assert main.UI["vstate"].cprop == "prob"
     assert main.UI["color_bar"].color_mapper.palette[0] == main.rgb2hex(
-        colormaps[cmap_select.value](0)
+        colormaps[cmap_select.value](0),
     )
 
     cprop_input.value = ["type"]
     # as type is discrete, cmap should be a dict mapping types to colors
     assert isinstance(main.UI["vstate"].mapper, dict)
     assert list(main.UI["vstate"].mapper.keys()) == list(
-        main.UI["vstate"].orig_types.values()
+        main.UI["vstate"].orig_types.values(),
     )
 
 
 def test_type_cmap_select(doc):
     cmap_select = doc.get_model_by_name("type_cmap0")
-    vstate = main.UI["vstate"]
-    user = main.UI["user"]
+    main.UI["vstate"]
+    main.UI["user"]
     cmap_select.value = ["prob", "0"]
     # set edge thicknes to 0 so the edges don't add an extra colour
     spinner = doc.get_model_by_name("edge_size0")
@@ -184,7 +190,6 @@ def test_hovernet_on_box(doc, data_path):
 
     # select hovernet model and run it on box
     model_select = doc.get_model_by_name("model_drop0")
-    # import pdb; pdb.set_trace()
     click = MenuItemClick(model_select, model_select.menu[0])
     model_select._trigger_event(click)
 
@@ -323,3 +328,19 @@ def test_filter_box(doc):
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     # should be no cells
     assert num_after == 0
+
+
+def test_scale_spinner(doc):
+    scale_spinner = doc.get_model_by_name("scale0")
+    # set the scale to 0.5
+    scale_spinner.value = 0.5
+    # check that the scale has been set correctly
+    assert get_renderer_prop("max_scale") == 0.5
+
+
+def test_blur_spinner(doc):
+    blur_spinner = doc.get_model_by_name("blur0")
+    # set the blur to 4
+    blur_spinner.value = 4
+    # check that the blur has been set correctly
+    assert get_renderer_prop("blur_radius") == 4
