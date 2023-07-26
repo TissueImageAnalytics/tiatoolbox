@@ -1025,13 +1025,22 @@ def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
         verbose=True,
     )
     assert (
-        tmp_path / "test_wsireader_jp2_save_tiles" / "test1.jp2" / "Output.csv"
+        tmp_path
+        / "test_wsireader_jp2_save_tiles"
+        / "CMU-1-Small-Region.omnyx.jp2"
+        / "Output.csv"
     ).exists()
     assert (
-        tmp_path / "test_wsireader_jp2_save_tiles" / "test1.jp2" / "slide_thumbnail.jpg"
+        tmp_path
+        / "test_wsireader_jp2_save_tiles"
+        / "CMU-1-Small-Region.omnyx.jp2"
+        / "slide_thumbnail.jpg"
     ).exists()
     assert (
-        tmp_path / "test_wsireader_jp2_save_tiles" / "test1.jp2" / "Tile_5_0_0.jpg"
+        tmp_path
+        / "test_wsireader_jp2_save_tiles"
+        / "CMU-1-Small-Region.omnyx.jp2"
+        / "Tile_5_0_0.jpg"
     ).exists()
 
 
