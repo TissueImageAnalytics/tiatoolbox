@@ -2740,7 +2740,6 @@ class JP2WSIReader(WSIReader):
             level_downsamples=level_downsamples,
             vendor=vendor,
             mpp=mpp,
-            raw=self.glymur_jp2.box,
         )
 
 
