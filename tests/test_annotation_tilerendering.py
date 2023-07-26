@@ -258,16 +258,13 @@ def test_sub_tile_levels(fill_store, tmp_path):
 
 def test_unknown_geometry(fill_store, tmp_path, caplog):
     """Test warning when unknown geometries cannot be rendered."""
-    array = np.ones((1024, 1024))
-    wsi = wsireader.VirtualWSIReader(array)
-    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    store.append(
-        Annotation(geometry=MultiPoint([(5.0, 5.0), (10.0, 10.0)]), properties={}),
-    )
-    store.commit()
     renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
-    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    tg.get_tile(0, 0, 0)
+    renderer.render_by_type(
+        tile=np.zeros((256, 256, 3), dtype=np.uint8),
+        annotation=Annotation(MultiPoint([(5.0, 5.0), (10.0, 10.0)])),
+        top_left=(0, 0),
+        scale=1,
+    )
     assert "Unknown geometry" in caplog.text
 
 

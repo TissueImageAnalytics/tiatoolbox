@@ -319,6 +319,13 @@ def test_annotation_wkt():
     assert ann_1.to_wkt() == ann_2.to_wkt()
 
 
+def test_annotation_decode_unknown_wkb():
+    """Test decoding an unknown WKB type."""
+    wkb = b"\x01\x08\x00\x00\x00"
+    with pytest.raises(ValueError, match="Unknown"):
+        _ = Annotation.decode_wkb(wkb, 7)
+
+
 # ----------------------------------------------------------------------
 # Class-Specific Tests
 # ----------------------------------------------------------------------
