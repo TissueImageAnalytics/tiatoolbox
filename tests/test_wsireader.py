@@ -2637,7 +2637,12 @@ def test_read_rect_coord_space_consistency(wsi):
     assert mse < 100
 
     # Check SSIM
-    ssim = structural_similarity(roi1, roi2, multichannel=True)
+    ssim = structural_similarity(
+        roi1,
+        roi2,
+        channel_axis=-1,
+        winsize=min(*roi1.shape[:2], 7),
+    )
     assert ssim > 0.8
 
 
