@@ -226,6 +226,7 @@ class Annotation:
                 {}.
             wkb (bytes):
                 The WKB representation of a geometry. Optional.
+
         """
         if wkb is not None and geometry is not None:
             msg = "Cannot init with both geometry and wkb."
