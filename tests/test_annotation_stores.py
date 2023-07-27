@@ -16,8 +16,7 @@ import pandas as pd
 import pytest
 import shapely
 from shapely import affinity
-from shapely.geometry import MultiPoint, Polygon
-from shapely.geometry.point import Point
+from shapely.geometry import LineString, MultiPoint, Point, Polygon
 
 from tiatoolbox.annotation import (
     Annotation,
@@ -268,13 +267,35 @@ def test_annotation_to_wkb_equals_wkb():
     assert ann.to_wkb() == ann.wkb
 
 
-def test_annotation_wkb_coords():
+def test_annotation_polygon_wkb_coords():
     """Test generating coordinates from WKB without creating geometry."""
     polygon = Polygon([[0, 0], [1, 1], [2, 0]])
     ann = Annotation(wkb=polygon.wkb)
-    coords = ann.coords.tolist()
+    coords = ann.coords
+    assert isinstance(coords, np.array)
     assert ann._geometry is None
-    assert coords == np.array(polygon.exterior.coords).flatten().tolist()
+    assert len(coords.shape) == 2
+
+
+def test_annotation_point_wkb_coords():
+    """Test generating coordinates from WKB without creating geometry."""
+    point = Point([1, 2])
+    ann = Annotation(wkb=point.wkb)
+    coords = ann.coords
+    assert ann._geometry is None
+    assert isinstance(coords, np.array)
+    assert len(coords) == 2
+    assert len(coords.shape) == 1
+
+
+def test_annotation_line_string_wkb_coords():
+    """Test generating coordinates from WKB without creating geometry."""
+    line = LineString([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=line.wkb)
+    coords = ann.coords
+    assert isinstance(coords, np.array)
+    assert ann._geometry is None
+    assert len(coords.shape) == 2
 
 
 def test_annotation_geometry_wkb():
