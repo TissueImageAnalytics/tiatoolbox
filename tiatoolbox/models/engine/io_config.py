@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore.wsimeta import Units
 
 

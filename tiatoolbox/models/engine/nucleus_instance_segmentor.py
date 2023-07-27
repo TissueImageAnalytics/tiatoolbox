@@ -19,7 +19,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .io_config import IOInstanceSegmentorConfig
 
 
