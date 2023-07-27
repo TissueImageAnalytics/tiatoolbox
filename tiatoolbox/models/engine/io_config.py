@@ -413,11 +413,4 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         reference.
 
         """
-        new_config = super().to_baseline()
-
-        return replace(
-            self,
-            input_resolutions=new_config.input_resolutions,
-            output_resolutions=new_config.output_resolutions,
-            save_resolution=new_config.save_resolution,
-        )
+        return super().to_baseline()
