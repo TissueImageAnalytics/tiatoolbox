@@ -30,7 +30,7 @@ def test_model_abc():
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
         @staticmethod
@@ -63,7 +63,7 @@ def test_model_abc():
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
         @staticmethod

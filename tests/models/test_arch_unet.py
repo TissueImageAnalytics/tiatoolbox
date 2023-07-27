@@ -15,7 +15,7 @@ ON_GPU = False
 # Test pretrained Model =============================
 
 
-def test_functional_unet(remote_sample, tmp_path):
+def test_functional_unet(remote_sample):
     """Test for unet."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
@@ -24,15 +24,15 @@ def test_functional_unet(remote_sample, tmp_path):
 
     reader = WSIReader.open(mini_wsi_svs)
     with pytest.raises(ValueError, match=r".*Unknown encoder*"):
-        model = UNetModel(3, 2, encoder="resnet101", decoder_block=[3])
+        _ = UNetModel(3, 2, encoder="resnet101", decoder_block=[3])
 
     with pytest.raises(ValueError, match=r".*Unknown type of skip connection*"):
-        model = UNetModel(3, 2, encoder="unet", skip_type="attention")
+        _ = UNetModel(3, 2, encoder="unet", skip_type="attention")
 
     # test creation
-    model = UNetModel(5, 5, encoder="resnet50")
-    model = UNetModel(3, 2, encoder="resnet50")
-    model = UNetModel(3, 2, encoder="unet")
+    _ = UNetModel(5, 5, encoder="resnet50")
+    _ = UNetModel(3, 2, encoder="resnet50")
+    _ = UNetModel(3, 2, encoder="unet")
 
     # test inference
     read_kwargs = {"resolution": 2.0, "units": "mpp", "coord_space": "resolution"}
@@ -48,7 +48,7 @@ def test_functional_unet(remote_sample, tmp_path):
     pretrained = torch.load(pretrained_weights, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
-    output = output[0]
+    _ = output[0]
 
     # run untrained network to test for architecture
     model = UNetModel(
@@ -59,4 +59,4 @@ def test_functional_unet(remote_sample, tmp_path):
         encoder_levels=[32, 64],
         skip_type="concat",
     )
-    output = model.infer_batch(model, batch, on_gpu=ON_GPU)
+    _ = model.infer_batch(model, batch, on_gpu=ON_GPU)
