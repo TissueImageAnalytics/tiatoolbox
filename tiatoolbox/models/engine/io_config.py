@@ -315,7 +315,7 @@ class IOPatchPredictorConfig(ModelIOConfigABC):
         >>> # Defining io for a patch predictor network
         >>> ioconfig = IOPatchPredictorConfig(
         ...     input_resolutions=[{"units": "mpp", "resolution": 0.5}],
-        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        ...     output_resolutions=[{"units": "mpp", "resolution": 0.5}],
         ...     patch_input_shape=(224, 224),
         ...     stride_shape=(224, 224),
         ... )
