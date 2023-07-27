@@ -8,6 +8,7 @@ from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.utils.misc import model_to
 
 ON_GPU = False
+RNG = np.random.default_rng()  # Numpy Random Generator
 
 
 def test_functional():
@@ -35,7 +36,7 @@ def test_functional():
 
     b = 4
     h = w = 512
-    samples = torch.from_numpy(np.random.rand(b, h, w, 3))
+    samples = torch.from_numpy(RNG.random((b, h, w, 3)))
 
     # Dummy entry, will generate ValueError if "try" fails without running the loop.
     backbone = "empty"

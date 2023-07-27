@@ -25,6 +25,7 @@ from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
+RNG = np.random.default_rng()  # Numpy Random Generator
 
 
 def _rm_dir(path):
@@ -56,7 +57,7 @@ def test_patch_dataset_list_imgs(tmp_path):
     save_dir_path = tmp_path
 
     size = (5, 5, 3)
-    img = np.random.randint(0, 255, size=size)
+    img = RNG.integers(low=0, high=255, size=size)
     list_imgs = [img, img, img]
     dataset = PatchDataset(list_imgs)
 
@@ -80,7 +81,7 @@ def test_patch_dataset_list_imgs(tmp_path):
     Path.mkdir(save_dir_path, parents=True)
     np.save(
         str(save_dir_path / "sample2.npy"),
-        np.random.randint(0, 255, (4, 4, 3)),
+        RNG.integers(0, 255, (4, 4, 3)),
     )
     imgs = [
         save_dir_path / "sample2.npy",
@@ -98,7 +99,7 @@ def test_patch_dataset_list_imgs(tmp_path):
 def test_patch_datasetarray_imgs():
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
-    img = np.random.randint(0, 255, size=size)
+    img = RNG.integers(0, 255, size=size)
     list_imgs = [img, img, img]
     labels = [1, 2, 3]
     array_imgs = np.array(list_imgs)
@@ -121,11 +122,11 @@ def test_patch_datasetarray_imgs():
 
 def test_patch_dataset_crash(tmp_path):
     """Test to make sure patch dataset crashes with incorrect input."""
-    # all below examples below should fail when input to PatchDataset
+    # all below examples should fail when input to PatchDataset
     save_dir_path = tmp_path
 
     # not supported input type
-    imgs = {"a": np.random.randint(0, 255, (4, 4, 4))}
+    imgs = {"a": RNG.integers(0, 255, (4, 4, 4))}
     with pytest.raises(
         ValueError,
         match=r".*Input must be either a list/array of images.*",
@@ -134,29 +135,29 @@ def test_patch_dataset_crash(tmp_path):
 
     # ndarray of mixed dtype
     imgs = np.array(
-        [np.random.randint(0, 255, (4, 5, 3)), "Should crash"],
+        [RNG.integers(0, 255, (4, 5, 3)), "Should crash"],
         dtype=object,
     )
     with pytest.raises(ValueError, match="Provided input array is non-numerical."):
         _ = PatchDataset(imgs)
 
     # ndarray(s) of NHW images
-    imgs = np.random.randint(0, 255, (4, 4, 4))
+    imgs = RNG.integers(0, 255, (4, 4, 4))
     with pytest.raises(ValueError, match=r".*array of the form HWC*"):
         _ = PatchDataset(imgs)
 
     # list of ndarray(s) with different sizes
     imgs = [
-        np.random.randint(0, 255, (4, 4, 3)),
-        np.random.randint(0, 255, (4, 5, 3)),
+        RNG.integers(0, 255, (4, 4, 3)),
+        RNG.integers(0, 255, (4, 5, 3)),
     ]
     with pytest.raises(ValueError, match="Images must have the same dimensions."):
         _ = PatchDataset(imgs)
 
     # list of ndarray(s) with HW and HWC mixed up
     imgs = [
-        np.random.randint(0, 255, (4, 4, 3)),
-        np.random.randint(0, 255, (4, 4)),
+        RNG.integers(0, 255, (4, 4, 3)),
+        RNG.integers(0, 255, (4, 4)),
     ]
     with pytest.raises(
         ValueError,
@@ -165,7 +166,7 @@ def test_patch_dataset_crash(tmp_path):
         _ = PatchDataset(imgs)
 
     # list of mixed dtype
-    imgs = [np.random.randint(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
+    imgs = [RNG.integers(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
     with pytest.raises(
         ValueError,
         match="Input must be either a list/array of images or a list of "
@@ -197,7 +198,7 @@ def test_patch_dataset_crash(tmp_path):
     torch.save({"a": "a"}, save_dir_path / "sample1.tar")
     np.save(
         str(save_dir_path / "sample2.npy"),
-        np.random.randint(0, 255, (4, 4, 3)),
+        RNG.integers(0, 255, (4, 4, 3)),
     )
 
     imgs = [
@@ -237,7 +238,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     # intentionally created to check error
     # skipcq
     class Proto(PatchDatasetABC):
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
             self.inputs = "CRASH"
             self._check_input_integrity("wsi")
@@ -422,7 +423,7 @@ def test_patch_dataset_abc():
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
     # crash due to undefined __getitem__
@@ -432,7 +433,7 @@ def test_patch_dataset_abc():
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
         # skipcq

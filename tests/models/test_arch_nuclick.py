@@ -14,7 +14,7 @@ ON_GPU = False
 # Test pretrained Model =============================
 
 
-def test_functional_nuclick(remote_sample, tmp_path, caplog):
+def test_functional_nuclick(remote_sample, caplog):
     """Test for NuClick."""
     # convert to pathlib Path to prevent wsireader complaint
     tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
