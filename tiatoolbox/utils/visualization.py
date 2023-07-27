@@ -971,8 +971,6 @@ class AnnotationRenderer:
             self.render_pt(tile, annotation, top_left, scale)
         elif geom_type == GeometryType.POLYGON:
             self.render_poly(tile, annotation, top_left, scale)
-        elif geom_type == GeometryType.MULTI_POLYGON:
-            self.render_multipoly(tile, annotation, top_left, scale)
         elif geom_type == GeometryType.LINE_STRING:
             self.render_line(tile, annotation, top_left, scale)
         else:
