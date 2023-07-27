@@ -125,7 +125,7 @@ def sample_jp2(remote_sample) -> pathlib.Path:
     Download jp2 image for pytest.
 
     """
-    return remote_sample("jp2-omnyx-1")
+    return remote_sample("jp2-omnyx-small")
 
 
 @pytest.fixture(scope="session")

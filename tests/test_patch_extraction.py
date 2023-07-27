@@ -10,7 +10,7 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
 from tiatoolbox.wsicore.wsireader import (
-    OmnyxJP2WSIReader,
+    JP2WSIReader,
     OpenSlideWSIReader,
     VirtualWSIReader,
 )
@@ -134,7 +134,7 @@ def test_points_patch_extractor_image_format(
         patch_size=(200, 200),
     )
 
-    assert isinstance(points.wsi, OmnyxJP2WSIReader)
+    assert isinstance(points.wsi, JP2WSIReader)
 
     false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
     with pytest.raises(FileNotSupportedError):
@@ -209,11 +209,11 @@ def test_points_patch_extractor_svs(
 
 def test_points_patch_extractor_jp2(
     sample_jp2,
-    patch_extr_jp2_csv,
+    patch_extr_svs_csv,
     patch_extr_jp2_read,
 ):
-    """Test PointsPatchExtractor for JP2 image."""
-    locations_list = pathlib.Path(patch_extr_jp2_csv)
+    """Test PointsPatchExtractor for jp2 image."""
+    locations_list = pathlib.Path(patch_extr_svs_csv)
     saved_data = np.load(str(pathlib.Path(patch_extr_jp2_read)))
 
     data = read_points_patches(
@@ -222,7 +222,7 @@ def test_points_patch_extractor_jp2(
         item=2,
         patch_size=(100, 100),
         units="power",
-        resolution=2.5,
+        resolution=2,
     )
 
     assert np.all(data == saved_data)
