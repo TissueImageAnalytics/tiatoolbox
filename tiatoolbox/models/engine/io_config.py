@@ -162,7 +162,20 @@ class ModelIOConfigABC:
             {"units": "baseline", "resolution": v} for v in scale_factors[:end_idx]
         ]
 
-        return replace(self, input_resolutions=input_resolutions, output_resolutions=[])
+        num_input_resolutions = len(self.input_resolutions)
+        num_output_resolutions = len(self.output_resolutions)
+
+        end_idx = num_input_resolutions + num_output_resolutions
+        output_resolutions = [
+            {"units": "baseline", "resolution": v}
+            for v in scale_factors[num_input_resolutions:end_idx]
+        ]
+
+        return replace(
+            self,
+            input_resolutions=input_resolutions,
+            output_resolutions=output_resolutions,
+        )
 
 
 @dataclass
@@ -254,14 +267,6 @@ class IOSegmentorConfig(ModelIOConfigABC):
             resolutions.append(self.save_resolution)
 
         scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
-        num_input_resolutions = len(self.input_resolutions)
-        num_output_resolutions = len(self.output_resolutions)
-
-        end_idx = num_input_resolutions + num_output_resolutions
-        output_resolutions = [
-            {"units": "baseline", "resolution": v}
-            for v in scale_factors[num_input_resolutions:end_idx]
-        ]
 
         save_resolution = None
         if self.save_resolution is not None:
@@ -270,7 +275,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
         return replace(
             self,
             input_resolutions=new_config.input_resolutions,
-            output_resolutions=output_resolutions,
+            output_resolutions=new_config.output_resolutions,
             save_resolution=save_resolution,
         )
 
