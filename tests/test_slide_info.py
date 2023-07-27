@@ -55,7 +55,11 @@ def test_command_line_slide_info_jp2(sample_all_wsis):
     assert slide_info_result.exit_code == 0
     assert pathlib.Path(output_dir, "meta-data", "CMU-1-Small-Region.yaml").exists()
     assert pathlib.Path(output_dir, "meta-data", "CMU-1.yaml").exists()
-    assert pathlib.Path(output_dir, "meta-data", "test1.yaml").exists()
+    assert pathlib.Path(
+        output_dir,
+        "meta-data",
+        "CMU-1-Small-Region.omnyx.yaml",
+    ).exists()
 
 
 def test_command_line_slide_info_svs(sample_svs):
