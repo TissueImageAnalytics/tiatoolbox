@@ -62,7 +62,7 @@ class ModelIOConfigABC:
     stride_shape: list[int] | np.ndarray | tuple[int, int] = None
     output_resolutions: list[dict] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self: ModelIOConfigABC) -> None:
         """Perform post initialization tasks."""
         if self.stride_shape is None:
             self.stride_shape = self.patch_input_shape
@@ -82,7 +82,7 @@ class ModelIOConfigABC:
 
         self._validate()
 
-    def _validate(self):
+    def _validate(self: ModelIOConfigABC) -> None:
         """Validate the data format."""
         resolutions = self.input_resolutions + self.output_resolutions
         units = [v["units"] for v in resolutions]
@@ -106,7 +106,7 @@ class ModelIOConfigABC:
             raise ValueError(msg)
 
     @staticmethod
-    def scale_to_highest(resolutions: list[dict], units: Units):
+    def scale_to_highest(resolutions: list[dict], units: Units) -> np.array:
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
@@ -140,7 +140,7 @@ class ModelIOConfigABC:
             return np.min(old_val) / np.array(old_val)
         return np.array(old_val) / np.max(old_val)
 
-    def to_baseline(self):
+    def to_baseline(self: ModelIOConfigABC) -> ModelIOConfigABC:
         """Returns a new config object converted to baseline form.
 
         This will return a new :class:`ModelIOConfigABC` where
@@ -252,7 +252,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
     patch_output_shape: list[int] | np.ndarray | tuple[int, int] = None
     save_resolution: dict = None
 
-    def to_baseline(self):
+    def to_baseline(self: IOSegmentorConfig) -> IOSegmentorConfig:
         """Returns a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
@@ -409,7 +409,7 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
     margin: int = None
     tile_shape: tuple[int, int] = None
 
-    def to_baseline(self):
+    def to_baseline(self: IOInstanceSegmentorConfig) -> IOInstanceSegmentorConfig:
         """Returns a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
