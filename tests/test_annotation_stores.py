@@ -17,6 +17,7 @@ import pytest
 import shapely
 from shapely import affinity
 from shapely.geometry import (
+    GeometryCollection,
     LineString,
     MultiLineString,
     MultiPoint,
@@ -403,6 +404,20 @@ def test_annotation_multi_line_string_wkb_coords():
     assert ann._geometry is not None
     geom_coords = ann.coords
     assert all(np.array_equal(a, b) for a, b in zip_longest(geom_coords, coords))
+
+
+def test_annotation_coords_wkb_uknown_geometry():
+    """Test generating coordinates from WKB for unknown geometry type."""
+    ann = Annotation(wkb=b"\x00\x07\x00\x00\x00")
+    with pytest.raises(ValueError, match="Unknown geometry type"):
+        _ = ann.coords
+
+
+def test_annotation_coords_geometry_uknown_geometry(monkeypatch):
+    """Test generating coordinates from WKB for unknown geometry type."""
+    ann = Annotation(geometry=GeometryCollection([Point(1, 2)]))
+    with pytest.raises(ValueError, match="Unknown geometry type"):
+        _ = ann.coords
 
 
 def test_annotation_geometry_wkb():

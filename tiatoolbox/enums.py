@@ -26,6 +26,7 @@ class GeometryType(enum.IntEnum):
     MULTI_POINT = 4
     MULTI_LINE_STRING = 5
     MULTI_POLYGON = 6
+    GEOMETRY_COLLECTION = 7
 
     def __str__(self):
         """Return the string representation of the GeometryType."""

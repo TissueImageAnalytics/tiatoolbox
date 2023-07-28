@@ -146,34 +146,39 @@ class Annotation:
         )
 
     @property
-    def coords(self) -> np.array | list[np.array]:
+    def coords(self) -> np.array | list[np.array] | list[list[np.array]]:
         """The annotation geometry as a flat array of 2D coordinates.
 
-        Returns a flat numpy array of coordinates (alternating x and y)
-        for point, line string, and polygon geometries. For multi-part
-        geometries, a list of numpy arrays is returned, one for each
-        part.
+        Returns a numpy array of coordinates for point and line string.
+        For polygons, returns a list of numpy arrays, one for each ring.
+        For multi-geometries, returns a list with one element for each
+        geometry.
 
+        Returns:
+            np.array or list:
+                The coordinates of the annotation geometry.
 
         """
         if self._geometry is None:
             return Annotation.decode_wkb(self._wkb, self.geometry_type.value)
-        if self.geometry_type == GeometryType.POINT:
+        geom_type = self.geometry_type
+        if geom_type == GeometryType.POINT:
             return np.array(self.geometry.coords)
-        if self.geometry_type == GeometryType.LINE_STRING:
+        if geom_type == GeometryType.LINE_STRING:
             return np.array(self.geometry.coords)
-        if self.geometry_type == GeometryType.POLYGON:
+        if geom_type == GeometryType.POLYGON:
             return [np.array(ring.coords) for ring in shapely.get_rings(self.geometry)]
-        if self.geometry_type == GeometryType.MULTI_POINT:
+        if geom_type == GeometryType.MULTI_POINT:
             return [np.array(part.coords) for part in self.geometry.geoms]
-        if self.geometry_type == GeometryType.MULTI_LINE_STRING:
+        if geom_type == GeometryType.MULTI_LINE_STRING:
             return [np.array(part.coords) for part in self.geometry.geoms]
-        if self.geometry_type == GeometryType.MULTI_POLYGON:
+        if geom_type == GeometryType.MULTI_POLYGON:
             return [
                 [np.array(ring.coords) for ring in shapely.get_rings(poly)]
                 for poly in self.geometry.geoms
             ]
-        return None
+        msg = f"Unknown geometry type: {self.geometry_type}"
+        raise ValueError(msg)
 
     def to_feature(self) -> dict:
         """Return a feature representation of this annotation.
