@@ -227,15 +227,15 @@ def test_decode_wkb():
     point_contours = Annotation.decode_wkb(
         point_wkb,
         GeometryType.POINT,
-    ).reshape(-1, 2)
+    )
     line_contours = Annotation.decode_wkb(
         line_wkb,
         GeometryType.LINE_STRING,
-    ).reshape(-1, 2)
+    )
     polygon_contours = Annotation.decode_wkb(
         polygon_wkb,
         GeometryType.POLYGON,
-    ).reshape(-1, 2)
+    )
 
     # Check that the decoded contours are as expected
     assert np.all(point_contours == np.array([[0, 0]]))
@@ -258,9 +258,9 @@ def test_decode_wkb():
     multiline_wkb = multiline.wkb
     multipolygon_wkb = multipolygon.wkb
 
-    multipoint_contours = Annotation.decode_wkb(multipoint_wkb, 4).reshape(3, -1, 2)
-    multiline_contours = Annotation.decode_wkb(multiline_wkb, 5).reshape(2, -1, 2)
-    multipolygon_contours = Annotation.decode_wkb(multipolygon_wkb, 6).reshape(2, -1, 2)
+    multipoint_contours = Annotation.decode_wkb(multipoint_wkb, 4)
+    multiline_contours = Annotation.decode_wkb(multiline_wkb, 5)
+    multipolygon_contours = Annotation.decode_wkb(multipolygon_wkb, 6)
 
     assert np.all(multipoint_contours == np.array([[[0, 0]], [[1, 1]], [[2, 0]]]))
     assert np.all(

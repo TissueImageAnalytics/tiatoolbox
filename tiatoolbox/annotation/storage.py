@@ -55,6 +55,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import shapely
 from shapely import wkb as shapely_wkb
 from shapely import wkt as shapely_wkt
 from shapely.affinity import scale, translate
@@ -146,20 +147,33 @@ class Annotation:
 
     @property
     def coords(self) -> np.array | list[np.array]:
-        """The annotation geometry as an array of 2D coordinates.
+        """The annotation geometry as a flat array of 2D coordinates.
 
-        Returns a numpy array of coordinates for point, line string, and
-        polygon geometries. For multi-part geometries, a list of numpy
-        arrays is returned, one for each part.
+        Returns a flat numpy array of coordinates (alternating x and y)
+        for point, line string, and polygon geometries. For multi-part
+        geometries, a list of numpy arrays is returned, one for each
+        part.
+
 
         """
-        if self._wkb:
+        if self._geometry is None:
             return Annotation.decode_wkb(self._wkb, self.geometry_type.value)
-        if self.geometry_type in {GeometryType.POLYGON, GeometryType.LINE_STRING}:
-            return np.array(self.geometry.exterior.coords)
         if self.geometry_type == GeometryType.POINT:
             return np.array(self.geometry.coords)
-        return [np.array(part.exterior.coords) for part in self.geometry.geoms]
+        if self.geometry_type == GeometryType.LINE_STRING:
+            return np.array(self.geometry.coords)
+        if self.geometry_type == GeometryType.POLYGON:
+            return [np.array(ring.coords) for ring in shapely.get_rings(self.geometry)]
+        if self.geometry_type == GeometryType.MULTI_POINT:
+            return [np.array(part.coords).flatten() for part in self.geometry.geoms]
+        if self.geometry_type == GeometryType.MULTI_LINE_STRING:
+            return [np.array(part.coords) for part in self.geometry.geoms]
+        if self.geometry_type == GeometryType.MULTI_POLYGON:
+            return [
+                [np.array(ring.coords) for ring in shapely.get_rings(poly)]
+                for poly in self.geometry.geoms
+            ]
+        return None
 
     def to_feature(self) -> dict:
         """Return a feature representation of this annotation.
@@ -273,8 +287,16 @@ class Annotation:
         return self.geometry == other.geometry and self.properties == other.properties
 
     @staticmethod
-    def decode_wkb(wkb: bytes, geom_type: int) -> np.ndarray:
-        r"""Decode WKB to a NumPy array of coordinates.
+    def decode_wkb(
+        wkb: bytes,
+        geom_type: int,
+    ) -> np.ndarray | list[np.ndarray] | list[list[np.ndarray]]:
+        r"""Decode WKB to a NumPy array of flat (alternating x, y) coordinates.
+
+        Polygons return a list of NumPy arrays (one array per ring) and
+        multi-part geometries return a list with one element per child
+        geometry e.g. a list of arrays for Multi-Line and a list of
+        lists of arrays for multi-polyon.
 
         Args:
             wkb (bytes):
@@ -315,43 +337,13 @@ class Annotation:
                 If the geometry type is not supported.
 
         Returns:
-            np.ndarray:
-                An array of coordinates.
+            np.ndarray or list:
+                An array of coordinates, a list of coordinates, or a list
+                of lists of coordinates.
 
         """
-        if geom_type == 1:
-            # Point
-            return np.frombuffer(wkb, np.double, -1, 5)
-        if geom_type == 2:
-            # Line
-            return np.frombuffer(wkb, np.double, -1, 9)
-        if geom_type == 3:
-            # Polygon
-            n_points = np.frombuffer(wkb, np.int32, 1, 9)[0]
-            return np.frombuffer(wkb, np.double, n_points * 2, 13)  # do rings?
-        if geom_type == 4:
-            # Multi-point
-            n_points = np.frombuffer(wkb, np.int32, 1, 5)[0]
-            pts = [
-                np.frombuffer(wkb, np.double, 2, 14 + i * 21)
-                # each point is 21 bytes
-                for i in range(n_points)
-            ]
-            return np.concatenate(pts)
-        if geom_type == 5:
-            # Multi-line
-            n_lines = np.frombuffer(wkb, np.int32, 1, 5)[0]
-            lines = []
-            offset = 9
-            for _ in range(n_lines):
-                offset += 5
-                n_points = np.frombuffer(wkb, np.int32, n_lines, offset)[0]
-                offset += 4
-                lines.append(np.frombuffer(wkb, np.double, n_points * 2, offset))
-                offset += n_points * 16
-            return np.concatenate(lines)
 
-        def decode_polygon(offset: int = 0) -> tuple[np.ndarray, int]:
+        def decode_polygon(offset: int = 0) -> tuple[list[np.ndarray], int]:
             """Decode a polygon from WKB.
 
             Args:
@@ -373,19 +365,53 @@ class Annotation:
             for _ in range(n_rings):
                 n_points = np.frombuffer(wkb, np.int32, 1, offset)[0]
                 offset += 4
-                rings.append(np.frombuffer(wkb, np.double, n_points * 2, offset))
+                rings.append(
+                    np.frombuffer(wkb, np.double, n_points * 2, offset).reshape(-1, 2),
+                )
                 offset += n_points * 16
             return rings, offset
 
+        if geom_type == 1:
+            # Point
+            return np.frombuffer(wkb, np.double, -1, 5).reshape(1, 2)
+        if geom_type == 2:
+            # Line
+            return np.frombuffer(wkb, np.double, -1, 9).reshape(-1, 2)
+        if geom_type == 3:
+            # Polygon
+            return decode_polygon()[0]
+        if geom_type == 4:
+            # Multi-point
+            n_points = np.frombuffer(wkb, np.int32, 1, 5)[0]
+            return [
+                np.frombuffer(wkb, np.double, 2, 14 + i * 21).reshape(1, 2)
+                # each point is 21 bytes
+                for i in range(n_points)
+            ]
+        if geom_type == 5:
+            # Multi-line
+            n_lines = np.frombuffer(wkb, np.int32, 1, 5)[0]
+            lines = []
+            offset = 9
+            for _ in range(n_lines):
+                offset += 5
+                n_points = np.frombuffer(wkb, np.int32, n_lines, offset)[0]
+                offset += 4
+                lines.append(
+                    np.frombuffer(wkb, np.double, n_points * 2, offset).reshape(-1, 2),
+                )
+                offset += n_points * 16
+            return lines
+
         if geom_type == 6:
-            # multi-polygon
+            # Multi-polygon
             n_polygons = np.frombuffer(wkb, np.int32, 1, 5)[0]
             polygons = []
             offset = 9
             for _ in range(n_polygons):
                 rings, offset = decode_polygon(offset)
                 polygons.append(rings)
-            return np.concatenate(polygons)
+            return polygons
 
         msg = f"Unknown geometry type: {geom_type}"
         raise ValueError(msg)

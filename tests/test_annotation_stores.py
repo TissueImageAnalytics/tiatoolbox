@@ -6,7 +6,7 @@ import pickle
 import random
 import sqlite3
 import sys
-from itertools import repeat
+from itertools import repeat, zip_longest
 from pathlib import Path
 from timeit import timeit
 from typing import TYPE_CHECKING, Any, ClassVar, Generator
@@ -16,7 +16,14 @@ import pandas as pd
 import pytest
 import shapely
 from shapely import affinity
-from shapely.geometry import LineString, MultiPoint, Point, Polygon
+from shapely.geometry import (
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 
 from tiatoolbox.annotation import (
     Annotation,
@@ -268,34 +275,110 @@ def test_annotation_to_wkb_equals_wkb():
 
 
 def test_annotation_polygon_wkb_coords():
-    """Test generating coordinates from WKB without creating geometry."""
+    """Test generating coordinates from WKB for Polygon.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
     polygon = Polygon([[0, 0], [1, 1], [2, 0]])
     ann = Annotation(wkb=polygon.wkb)
     coords = ann.coords
-    assert isinstance(coords, np.ndarray)
+    assert isinstance(coords, list)
+    assert isinstance(coords[0], np.ndarray)
     assert ann._geometry is None
-    assert len(coords.shape) == 1
+    assert len(coords[0].shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
 
 
 def test_annotation_point_wkb_coords():
-    """Test generating coordinates from WKB without creating geometry."""
+    """Test generating coordinates from WKB for Point.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
     point = Point([1, 2])
     ann = Annotation(wkb=point.wkb)
     coords = ann.coords
     assert ann._geometry is None
     assert isinstance(coords, np.ndarray)
-    assert len(coords) == 2
-    assert len(coords.shape) == 1
+    assert len(coords) == 1
+    assert len(coords.shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
 
 
 def test_annotation_line_string_wkb_coords():
-    """Test generating coordinates from WKB without creating geometry."""
+    """Test generating coordinates from WKB for LineString.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
     line = LineString([[0, 0], [1, 1], [2, 0]])
     ann = Annotation(wkb=line.wkb)
     coords = ann.coords
     assert isinstance(coords, np.ndarray)
     assert ann._geometry is None
-    assert len(coords.shape) == 1
+    assert len(coords.shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
+
+
+def test_annotation_multi_polygon_wkb_coords():
+    """Test generating coordinates from WKB for MultiPolygon.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    multi_poly = MultiPolygon(
+        polygons=[
+            Polygon([[0, 0], [1, 1], [2, 0]]),
+            Polygon([[0, 0], [1, 1], [2, 2], [3, 3]]),
+        ],
+    )
+    ann = Annotation(wkb=multi_poly.wkb)
+    coords = ann.coords
+    assert len(coords) == len(multi_poly.geoms)
+    assert isinstance(coords[0], list)
+    assert ann._geometry is None
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert all(np.array_equal(a, b) for a, b in zip_longest(geom_coords, coords))
+
+
+def test_annotation_multi_line_string_wkb_coords():
+    """Test generating coordinates from WKB for MultiLineString.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    multi_line_string = MultiLineString(
+        [
+            LineString([(0, 0), (1, 1)]),
+            LineString([(2, 2), (3, 3)]),
+        ],
+    )
+    ann = Annotation(wkb=multi_line_string.wkb)
+    coords = ann.coords
+    assert len(coords) == len(multi_line_string.geoms)
+    assert isinstance(coords[0], np.ndarray)
+    assert ann._geometry is None
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert all(np.array_equal(a, b) for a, b in zip_longest(geom_coords, coords))
 
 
 def test_annotation_geometry_wkb():
