@@ -274,26 +274,6 @@ def test_annotation_to_wkb_equals_wkb():
     assert ann.to_wkb() == ann.wkb
 
 
-def test_annotation_polygon_wkb_coords():
-    """Test generating coordinates from WKB for Polygon.
-
-    This should produce coordinates without generating a Shapely
-    geometry.
-    """
-    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
-    ann = Annotation(wkb=polygon.wkb)
-    coords = ann.coords
-    assert isinstance(coords, list)
-    assert isinstance(coords[0], np.ndarray)
-    assert ann._geometry is None
-    assert len(coords[0].shape) == 2
-    # Check that coords are the same after creating geometry
-    _ = ann.geometry
-    assert ann._geometry is not None
-    geom_coords = ann.coords
-    assert np.array_equal(geom_coords, coords)
-
-
 def test_annotation_point_wkb_coords():
     """Test generating coordinates from WKB for Point.
 
@@ -314,6 +294,26 @@ def test_annotation_point_wkb_coords():
     assert np.array_equal(geom_coords, coords)
 
 
+def test_annotation_polygon_wkb_coords():
+    """Test generating coordinates from WKB for Polygon.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    coords = ann.coords
+    assert isinstance(coords, list)
+    assert isinstance(coords[0], np.ndarray)
+    assert ann._geometry is None
+    assert len(coords[0].shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
+
+
 def test_annotation_line_string_wkb_coords():
     """Test generating coordinates from WKB for LineString.
 
@@ -326,6 +326,30 @@ def test_annotation_line_string_wkb_coords():
     assert isinstance(coords, np.ndarray)
     assert ann._geometry is None
     assert len(coords.shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
+
+
+def test_annotation_multi_point_wkb_coords():
+    """Test generating coordinates from WKB for MultiPoint.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    multi_point = MultiPoint(
+        [
+            Point(0, 1),
+            Point(2, 3),
+        ],
+    )
+    ann = Annotation(wkb=multi_point.wkb)
+    coords = ann.coords
+    assert len(coords) == len(multi_point.geoms)
+    assert isinstance(coords[0], np.ndarray)
+    assert ann._geometry is None
     # Check that coords are the same after creating geometry
     _ = ann.geometry
     assert ann._geometry is not None

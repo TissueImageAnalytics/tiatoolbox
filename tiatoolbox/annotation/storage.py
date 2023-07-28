@@ -165,7 +165,7 @@ class Annotation:
         if self.geometry_type == GeometryType.POLYGON:
             return [np.array(ring.coords) for ring in shapely.get_rings(self.geometry)]
         if self.geometry_type == GeometryType.MULTI_POINT:
-            return [np.array(part.coords).flatten() for part in self.geometry.geoms]
+            return [np.array(part.coords) for part in self.geometry.geoms]
         if self.geometry_type == GeometryType.MULTI_LINE_STRING:
             return [np.array(part.coords) for part in self.geometry.geoms]
         if self.geometry_type == GeometryType.MULTI_POLYGON:
