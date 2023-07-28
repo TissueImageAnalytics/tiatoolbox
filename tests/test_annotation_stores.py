@@ -272,7 +272,7 @@ def test_annotation_polygon_wkb_coords():
     polygon = Polygon([[0, 0], [1, 1], [2, 0]])
     ann = Annotation(wkb=polygon.wkb)
     coords = ann.coords
-    assert isinstance(coords, np.array)
+    assert isinstance(coords, np.ndarray)
     assert ann._geometry is None
     assert len(coords.shape) == 2
 
@@ -283,7 +283,7 @@ def test_annotation_point_wkb_coords():
     ann = Annotation(wkb=point.wkb)
     coords = ann.coords
     assert ann._geometry is None
-    assert isinstance(coords, np.array)
+    assert isinstance(coords, np.ndarray)
     assert len(coords) == 2
     assert len(coords.shape) == 1
 
@@ -293,7 +293,7 @@ def test_annotation_line_string_wkb_coords():
     line = LineString([[0, 0], [1, 1], [2, 0]])
     ann = Annotation(wkb=line.wkb)
     coords = ann.coords
-    assert isinstance(coords, np.array)
+    assert isinstance(coords, np.ndarray)
     assert ann._geometry is None
     assert len(coords.shape) == 2
 
