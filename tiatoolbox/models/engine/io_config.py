@@ -85,8 +85,7 @@ class ModelIOConfigABC:
     def _validate(self: ModelIOConfigABC) -> None:
         """Validate the data format."""
         resolutions = self.input_resolutions + self.output_resolutions
-        units = [v["units"] for v in resolutions]
-        units = np.unique(units)
+        units = {v["units"] for v in resolutions}
 
         if len(units) != 1:
             msg = (
@@ -97,12 +96,12 @@ class ModelIOConfigABC:
                 msg,
             )
 
-        if units[0] not in [
+        if units.pop() not in [
             "power",
             "baseline",
             "mpp",
         ]:
-            msg = f"Invalid resolution units `{units[0]}`."
+            msg = f"Invalid resolution units `{units}`."
             raise ValueError(msg)
 
     @staticmethod
