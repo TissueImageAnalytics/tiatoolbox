@@ -109,7 +109,10 @@ class ModelIOConfigABC:
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
-        the highest resolution found in the input resolutions list.
+        the highest resolution found in the input resolutions list. If a model
+        requires images at multiple resolutions. This helps to read the image a
+        single resolution. The image will be read at the highest required resolution
+        and will be scaled for low resolution requirements using interpolation.
 
         Args:
             resolutions (list):
@@ -121,7 +124,34 @@ class ModelIOConfigABC:
         Returns:
             :class:`numpy.ndarray`:
                 A 1D array of scaling factors having the same length as
-                `resolutions`
+                `resolutions`.
+
+        Examples:
+            >>> # Defining io for a base network and converting to baseline.
+            >>> ioconfig = ModelIOConfigABC(
+            ...     input_resolutions=[
+            ...                {"units": "mpp", "resolution": 0.25},
+            ...                {"units": "mpp", "resolution": 0.5},
+            ...                ],
+            ...     output_resolutions=[{"units": "mpp", "resolution": 1.0}],
+            ...     patch_input_shape=(224, 224),
+            ...     stride_shape=(224, 224),
+            ... )
+            >>> ioconfig = ioconfig.scale_to_highest()
+            ... array([1. , 0.5])
+            >>>
+            >>> # Defining io for a base network and converting to baseline.
+            >>> ioconfig = ModelIOConfigABC(
+            ...     input_resolutions=[
+            ...                {"units": "mpp", "resolution": 0.5},
+            ...                {"units": "mpp", "resolution": 0.25},
+            ...                ],
+            ...     output_resolutions=[{"units": "mpp", "resolution": 1.0}],
+            ...     patch_input_shape=(224, 224),
+            ...     stride_shape=(224, 224),
+            ... )
+            >>> ioconfig = ioconfig.scale_to_highest()
+            ... array([0.5 , 1.])
 
         """
         old_val = [v["resolution"] for v in resolutions]
