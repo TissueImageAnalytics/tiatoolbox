@@ -138,7 +138,7 @@ class ModelIOConfigABC:
             ...     stride_shape=(224, 224),
             ... )
             >>> ioconfig = ioconfig.scale_to_highest()
-            ... array([1. , 0.5])
+            ... array([1. , 0.5])  # output
             >>>
             >>> # Defining io for a base network and converting to baseline.
             >>> ioconfig = ModelIOConfigABC(
@@ -151,7 +151,7 @@ class ModelIOConfigABC:
             ...     stride_shape=(224, 224),
             ... )
             >>> ioconfig = ioconfig.scale_to_highest()
-            ... array([0.5 , 1.])
+            ... array([0.5 , 1.])  # output
 
         """
         old_val = [v["resolution"] for v in resolutions]
