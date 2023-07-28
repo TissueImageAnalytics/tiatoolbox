@@ -19,9 +19,8 @@ from tiatoolbox.models.dataset import (
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils import download_data
+from tiatoolbox.utils import download_data, imread, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
