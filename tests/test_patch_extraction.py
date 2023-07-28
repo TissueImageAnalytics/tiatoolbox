@@ -1,4 +1,4 @@
-"""Tests for code related to patch extraction."""
+"""Test for code related to patch extraction."""
 
 import pathlib
 
@@ -8,9 +8,9 @@ import pytest
 from tiatoolbox.tools import patchextraction
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import FileNotSupported, MethodNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
 from tiatoolbox.wsicore.wsireader import (
-    OmnyxJP2WSIReader,
+    JP2WSIReader,
     OpenSlideWSIReader,
     VirtualWSIReader,
 )
@@ -39,13 +39,15 @@ def read_points_patches(
     data = np.empty([3, patch_size[0], patch_size[1], 3])
     try:
         data[0] = next(patches)
-    except StopIteration:
-        raise StopIteration("Index out of bounds.")
+    except StopIteration as exc:
+        msg = "Index out of bounds."
+        raise StopIteration(msg) from exc
 
     try:
         data[1] = next(patches)
-    except StopIteration:
-        raise StopIteration("Index out of bounds.")
+    except StopIteration as exc:
+        msg = "Index out of bounds."
+        raise StopIteration(msg) from exc
 
     data[2] = patches[item]
 
@@ -93,12 +95,15 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
 
     assert isinstance(sliding_window, patchextraction.SlidingWindowPatchExtractor)
 
-    with pytest.raises(MethodNotSupported):
+    with pytest.raises(MethodNotSupportedError):
         patchextraction.get_patch_extractor("unknown")
 
 
 def test_points_patch_extractor_image_format(
-    sample_svs, sample_jp2, source_image, patch_extr_csv
+    sample_svs,
+    sample_jp2,
+    source_image,
+    patch_extr_csv,
 ):
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = pathlib.Path(__file__).parent
@@ -129,10 +134,10 @@ def test_points_patch_extractor_image_format(
         patch_size=(200, 200),
     )
 
-    assert isinstance(points.wsi, OmnyxJP2WSIReader)
+    assert isinstance(points.wsi, JP2WSIReader)
 
     false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
-    with pytest.raises(FileNotSupported):
+    with pytest.raises(FileNotSupportedError):
         _ = patchextraction.get_patch_extractor(
             input_img=false_image,
             locations_list=locations_list,
@@ -182,7 +187,9 @@ def test_points_patch_extractor(
 
 
 def test_points_patch_extractor_svs(
-    sample_svs, patch_extr_svs_csv, patch_extr_svs_npy_read
+    sample_svs,
+    patch_extr_svs_csv,
+    patch_extr_svs_npy_read,
 ):
     """Test PointsPatchExtractor for svs image."""
     locations_list = pathlib.Path(patch_extr_svs_csv)
@@ -201,10 +208,12 @@ def test_points_patch_extractor_svs(
 
 
 def test_points_patch_extractor_jp2(
-    sample_jp2, patch_extr_jp2_csv, patch_extr_jp2_read
+    sample_jp2,
+    patch_extr_svs_csv,
+    patch_extr_jp2_read,
 ):
     """Test PointsPatchExtractor for jp2 image."""
-    locations_list = pathlib.Path(patch_extr_jp2_csv)
+    locations_list = pathlib.Path(patch_extr_svs_csv)
     saved_data = np.load(str(pathlib.Path(patch_extr_jp2_read)))
 
     data = read_points_patches(
@@ -213,7 +222,7 @@ def test_points_patch_extractor_jp2(
         item=2,
         patch_size=(100, 100),
         units="power",
-        resolution=2.5,
+        resolution=2,
     )
 
     assert np.all(data == saved_data)
@@ -239,7 +248,8 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
     num_patches_img = len(coord_list)
     img_patches = np.zeros(
-        (num_patches_img, patch_size[1], patch_size[0], 3), dtype=img.dtype
+        (num_patches_img, patch_size[1], patch_size[0], 3),
+        dtype=img.dtype,
     )
 
     for i, coord in enumerate(coord_list):
@@ -258,9 +268,7 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
     assert np.all(img_patches[0] == patches[0])
 
-    img_patches_test = []
-    for patch in patches:
-        img_patches_test.append(patch)
+    img_patches_test = list(patches)
 
     img_patches_test = np.array(img_patches_test)
     assert np.all(img_patches == img_patches_test)
@@ -272,7 +280,7 @@ def test_get_coordinates():
         [
             [0, 0, 4, 4],
             [4, 0, 8, 4],
-        ]
+        ],
     )
     output = PatchExtractor.get_coordinates(
         image_shape=[9, 6],
@@ -290,7 +298,7 @@ def test_get_coordinates():
             [4, 4, 8, 8],
             [8, 0, 12, 4],
             [8, 4, 12, 8],
-        ]
+        ],
     )
     output = PatchExtractor.get_coordinates(
         image_shape=[9, 6],
@@ -411,7 +419,7 @@ def test_get_coordinates():
 
 
 def test_filter_coordinates():
-    """Test different coordinate filtering functions for patch extraction"""
+    """Test different coordinate filtering functions for patch extraction."""
     bbox_list = np.array(
         [
             [0, 0, 4, 4],
@@ -420,7 +428,7 @@ def test_filter_coordinates():
             [4, 4, 8, 8],
             [8, 0, 12, 4],
             [8, 4, 12, 8],
-        ]
+        ],
     )
     mask = np.zeros([9, 6])
     mask[0:4, 3:8] = 1  # will flag first 2
@@ -444,7 +452,8 @@ def test_filter_coordinates():
 
     # Test for bad mask input
     with pytest.raises(
-        ValueError, match="`mask_reader` should be wsireader.VirtualWSIReader."
+        TypeError,
+        match="`mask_reader` should be wsireader.VirtualWSIReader.",
     ):
         PatchExtractor.filter_coordinates(
             mask,

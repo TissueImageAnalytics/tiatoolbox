@@ -15,7 +15,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 def test_get_pretrained_model():
     """Test for downloading and creating pretrained models."""
     pretrained_info = rcParam["pretrained_model_info"]
-    for pretrained_name in pretrained_info.keys():
+    for pretrained_name in pretrained_info:
         get_pretrained_model(pretrained_name, overwrite=True)
 
 
@@ -30,7 +30,7 @@ def test_model_abc():
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
         @staticmethod
@@ -63,7 +63,7 @@ def test_model_abc():
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
         @staticmethod

@@ -1,10 +1,10 @@
-import os
-import pathlib
+"""Define classes and methods for classification datasets."""
+from pathlib import Path
 
 import cv2
 import numpy as np
 import PIL
-import torchvision.transforms as transforms
+from torchvision import transforms
 
 from tiatoolbox import logger
 from tiatoolbox.models.dataset import dataset_abc
@@ -26,7 +26,7 @@ class _TorchPreprocCaller:
 
     """
 
-    def __init__(self, preprocs):
+    def __init__(self, preprocs) -> None:
         self.func = transforms.Compose(preprocs)
 
     def __call__(self, img):
@@ -41,6 +41,7 @@ def predefined_preproc_func(dataset_name):
     Args:
         dataset_name (str):
             Dataset name used to determine what preprocessing was used.
+
     Returns:
         _TorchPreprocCaller:
             Preprocessing function for transforming the input data.
@@ -56,8 +57,9 @@ def predefined_preproc_func(dataset_name):
     }
 
     if dataset_name not in preproc_dict:
+        msg = f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
         raise ValueError(
-            f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
+            msg,
         )
 
     preprocs = preproc_dict[dataset_name]
@@ -65,7 +67,9 @@ def predefined_preproc_func(dataset_name):
 
 
 class PatchDataset(dataset_abc.PatchDatasetABC):
-    """Defines a simple patch dataset, which inherits from the
+    """Define PatchDataset for torch inference.
+
+    Define a simple patch dataset, which inherits from the
       `torch.utils.data.Dataset` class.
 
     Attributes:
@@ -84,12 +88,13 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         >>> # create a dataset to get patches preprocessed by the above function
         >>> ds = PatchDataset(
         ...     inputs=['/A/B/C/img1.png', '/A/B/C/img2.png'],
-        ...     preproc_func=preproc_func
+        ...     labels=["labels1", "labels2"],
         ... )
 
     """
 
-    def __init__(self, inputs, labels=None):
+    def __init__(self, inputs, labels=None) -> None:
+        """Initialize :class:`PatchDataset`."""
         super().__init__()
 
         self.data_is_npy_alike = False
@@ -101,6 +106,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
+        """Get an item from the dataset."""
         patch = self.inputs[idx]
 
         # Mode 0 is list of paths
@@ -121,7 +127,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
 
 
 class WSIPatchDataset(dataset_abc.PatchDatasetABC):
-    """Defines a WSI-level patch dataset.
+    """Define a WSI-level patch dataset.
 
     Attributes:
         reader (:class:`.WSIReader`):
@@ -157,7 +163,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         auto_get_mask=True,
         min_mask_ratio=0,
         preproc_func=None,
-    ):
+    ) -> None:
         """Create a WSI-level patch dataset.
 
         Args:
@@ -165,10 +171,10 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 Can be either `wsi` or `tile` to denote the image to
                 read is either a whole-slide image or a large image
                 tile.
-            img_path (:obj:`str` or :obj:`pathlib.Path`):
+            img_path (str or Path):
                 Valid to pyramidal whole-slide image or large tile to
                 read.
-            mask_path (:obj:`str` or :obj:`pathlib.Path`):
+            mask_path (str or Path):
                 Valid mask image.
             patch_input_shape:
                 A tuple (int, int) or ndarray of shape (2,). Expected
@@ -218,10 +224,12 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         super().__init__()
 
         # Is there a generic func for path test in toolbox?
-        if not os.path.isfile(img_path):
-            raise ValueError("`img_path` must be a valid file path.")
+        if not Path.is_file(Path(img_path)):
+            msg = "`img_path` must be a valid file path."
+            raise ValueError(msg)
         if mode not in ["wsi", "tile"]:
-            raise ValueError(f"`{mode}` is not supported.")
+            msg = f"`{mode}` is not supported."
+            raise ValueError(msg)
         patch_input_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
 
@@ -230,16 +238,18 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             or np.size(patch_input_shape) > 2
             or np.any(patch_input_shape < 0)
         ):
-            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
+            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+            raise ValueError(msg)
         if (
             not np.issubdtype(stride_shape.dtype, np.integer)
             or np.size(stride_shape) > 2
             or np.any(stride_shape < 0)
         ):
-            raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
+            msg = f"Invalid `stride_shape` value {stride_shape}."
+            raise ValueError(msg)
 
         self.preproc_func = preproc_func
-        img_path = pathlib.Path(img_path)
+        img_path = Path(img_path)
         if mode == "wsi":
             self.reader = WSIReader.open(img_path)
         else:
@@ -248,8 +258,6 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 '`units="baseline"` and `resolution=1.0`.',
                 stacklevel=2,
             )
-            units = "baseline"
-            resolution = 1.0
             img = imread(img_path)
             axes = "YXS"[: len(img.shape)]
             # initialise metadata for VirtualWSIReader.
@@ -263,7 +271,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
             )
-            # hack value such that read if mask is provided is through
+            # infer value such that read if mask provided is through
             # 'mpp' or 'power' as varying 'baseline' is locked atm
             units = "mpp"
             resolution = 1.0
@@ -286,8 +294,10 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         mask_reader = None
         if mask_path is not None:
-            if not os.path.isfile(mask_path):
-                raise ValueError("`mask_path` must be a valid file path.")
+            mask_path = Path(mask_path)
+            if not Path.is_file(mask_path):
+                msg = "`mask_path` must be a valid file path."
+                raise ValueError(msg)
             mask = imread(mask_path)  # assume to be gray
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
@@ -311,7 +321,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             self.inputs = self.inputs[selected]
 
         if len(self.inputs) == 0:
-            raise ValueError("No patch coordinates remain after filtering.")
+            msg = "No patch coordinates remain after filtering."
+            raise ValueError(msg)
 
         self.patch_input_shape = patch_input_shape
         self.resolution = resolution
@@ -321,6 +332,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         self._check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
+        """Get an item from the dataset."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
