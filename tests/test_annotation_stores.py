@@ -274,7 +274,7 @@ def test_annotation_polygon_wkb_coords():
     coords = ann.coords
     assert isinstance(coords, np.ndarray)
     assert ann._geometry is None
-    assert len(coords.shape) == 2
+    assert len(coords.shape) == 1
 
 
 def test_annotation_point_wkb_coords():
@@ -295,7 +295,7 @@ def test_annotation_line_string_wkb_coords():
     coords = ann.coords
     assert isinstance(coords, np.ndarray)
     assert ann._geometry is None
-    assert len(coords.shape) == 2
+    assert len(coords.shape) == 1
 
 
 def test_annotation_geometry_wkb():
