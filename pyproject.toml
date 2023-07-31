@@ -38,13 +38,6 @@
   ignore_errors = true
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
-[tool.isort]
-  profile = "black"
-  multi_line_output = 3
-  line_length = 88
-  filter_files = "True"
-  skip = [".gitignore", "benchmarks/*"]
-
 [build-system]
   requires = ["setuptools"]
   build-backend = "setuptools.build_meta"
@@ -86,6 +79,7 @@ select = [
   "E",     # pycodestyle - Error
   "F",     # pyflakes
   "G",     # flake8-logging-format
+  "I",     # Isort
   "N",     # pep8-naming
   # "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
@@ -134,7 +128,7 @@ select = [
 ]
 ignore = []
 # Allow Ruff to discover `*.ipynb` files.
-include = ["*.py", "*.pyi", "**/pyproject.toml", "*ing.ipynb", "*normalization.ipynb", "*segmentation.ipynb", "*extraction.ipynb", "*prediction.ipynb"]
+include = ["*.py", "*.pyi", "**/pyproject.toml", "e*/*.ipynb"]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
