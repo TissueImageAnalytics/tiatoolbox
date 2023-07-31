@@ -29,6 +29,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread, imwrite
+from tiatoolbox.utils.misc import chdir
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
@@ -472,7 +473,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     imwrite(mini_wsi_msk, (thumb > 0).astype(np.uint8))
 
     # preemptive clean up
-    _rm_dir("output")  # default output dir test
+    _rm_dir(save_dir)  # default output dir test
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
@@ -490,9 +491,10 @@ def test_functional_segmentor(remote_sample, tmp_path):
         resolution=resolution,
         units="mpp",
         crash_on_exception=False,
+        save_dir=save_dir,
     )
 
-    _rm_dir("output")  # default output dir test
+    _rm_dir(save_dir)  # default output dir test
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
@@ -501,23 +503,25 @@ def test_functional_segmentor(remote_sample, tmp_path):
         resolution=1 / resolution,
         units="baseline",
         crash_on_exception=True,
+        save_dir=save_dir,
     )
-    _rm_dir("output")  # default output dir test
+    _rm_dir(save_dir)  # default output dir test
 
-    # * check exception bypass in the log
-    # there should be no exception, but how to check the log?
-    semantic_segmentor.predict(
-        [mini_wsi_jpg],
-        mode="tile",
-        on_gpu=ON_GPU,
-        patch_input_shape=(512, 512),
-        patch_output_shape=(512, 512),
-        stride_shape=(512, 512),
-        resolution=1 / resolution,
-        units="baseline",
-        crash_on_exception=False,
-    )
-    _rm_dir("output")  # default output dir test
+    with chdir(tmp_path):
+        # * check exception bypass in the log
+        # there should be no exception, but how to check the log?
+        semantic_segmentor.predict(
+            [mini_wsi_jpg],
+            mode="tile",
+            on_gpu=ON_GPU,
+            patch_input_shape=(512, 512),
+            patch_output_shape=(512, 512),
+            stride_shape=(512, 512),
+            resolution=1 / resolution,
+            units="baseline",
+            crash_on_exception=False,
+        )
+        _rm_dir(tmp_path / "output")  # default output dir test
 
     # * test basic running and merging prediction
     # * should dumping all 1 in the output
