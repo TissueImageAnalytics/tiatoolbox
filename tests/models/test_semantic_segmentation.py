@@ -258,7 +258,7 @@ def test_functional_wsi_stream_dataset(remote_sample):
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(remote_sample):
+def test_crash_segmentor(remote_sample, tmp_path):
     """Functional crash tests for segmentor."""
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
@@ -266,7 +266,10 @@ def test_crash_segmentor(remote_sample):
     mini_wsi_msk = pathlib.Path(remote_sample("wsi2_4k_4k_msk"))
 
     model = _CNNTo1()
+
+    save_dir = pathlib.Path(f"{tmp_path}/test_crash_segmentor")
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
+
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
@@ -274,7 +277,6 @@ def test_crash_segmentor(remote_sample):
     semantic_segmentor.num_postproc_workers = 1
 
     # * test basic crash
-    _rm_dir("output")  # default output dir test
     with pytest.raises(ValueError, match=r".*`mask_reader`.*"):
         semantic_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
@@ -285,7 +287,7 @@ def test_crash_segmentor(remote_sample):
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
         semantic_segmentor.get_reader(mini_wsi_msk, "not_exist", "wsi", True)
 
-    _rm_dir("output")  # default output dir test
+    _rm_dir(save_dir)
     with pytest.raises(ValueError, match=r".*provide.*"):
         SemanticSegmentor()
     with pytest.raises(ValueError, match=r".*valid mode.*"):
@@ -298,10 +300,13 @@ def test_crash_segmentor(remote_sample):
             mode="tile",
             on_gpu=ON_GPU,
             crash_on_exception=True,
+            save_dir=save_dir,
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
-        semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
-    _rm_dir("output")  # default output dir test
+        semantic_segmentor.predict(
+            [], mode="tile", patch_input_shape=[2048, 2048], save_dir=save_dir
+        )
+    _rm_dir(save_dir)
 
     # * test not providing any io_config info when not using pretrained model
     with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
@@ -310,11 +315,11 @@ def test_crash_segmentor(remote_sample):
             mode="tile",
             on_gpu=ON_GPU,
             crash_on_exception=True,
+            save_dir=save_dir,
         )
-    _rm_dir("output")  # default output dir test
+    _rm_dir(save_dir)
 
     # * Test crash propagation when parallelize post processing
-    _rm_dir("output")
     semantic_segmentor.num_postproc_workers = 2
     semantic_segmentor.model.forward = _crash_func
     with pytest.raises(ValueError, match=r"Propagation Crash."):
@@ -324,8 +329,10 @@ def test_crash_segmentor(remote_sample):
             mode="wsi",
             on_gpu=ON_GPU,
             crash_on_exception=True,
+            save_dir=save_dir,
         )
-    _rm_dir("output")
+    _rm_dir(save_dir)
+
     # test ignore crash
     semantic_segmentor.predict(
         [mini_wsi_svs],
@@ -333,8 +340,8 @@ def test_crash_segmentor(remote_sample):
         mode="wsi",
         on_gpu=ON_GPU,
         crash_on_exception=False,
+        save_dir=save_dir,
     )
-    _rm_dir("output")
 
 
 def test_functional_segmentor_merging(tmp_path):

@@ -15,9 +15,8 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(remote_sample):
     """Functionality test."""
-    tmp_path = str(tmp_path)
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)
 
