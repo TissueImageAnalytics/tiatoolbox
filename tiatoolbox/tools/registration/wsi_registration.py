@@ -1648,10 +1648,9 @@ class AffineWSITransformer:
         transformed_patch = transformed_patch[start_row:end_row, start_col:end_col, :]
 
         # Resize to desired size
-        transformed_patch = imresize(
+        return imresize(
             img=transformed_patch,
             scale_factor=post_read_scale,
             output_size=size,
-            interpolation='optimise',
+            interpolation="optimise",
         )
-        return transformed_patch
