@@ -8,7 +8,7 @@ on:
     branches: [ develop, pre-release, master, main ]
     tags: v*
   pull_request:
-    branches: [ develop, pre-release, master, main, ci-cache-playground ]
+    branches: [ develop, pre-release, master, main ]
 
 jobs:
   build:
@@ -30,7 +30,7 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest pytest-cov pytest-runner pytest-xdist[psutil] pytest-sugar
+        python -m pip install flake8 pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
     - name: Print Version Information
       run: |
@@ -54,7 +54,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest -n auto --basetemp={envtmpdir} \
+        pytest --basetemp={envtmpdir} \
            --cov=tiatoolbox --cov-report=term --cov-report=xml \
            --capture=sys \
            --durations=10 --durations-min=1.0 \
