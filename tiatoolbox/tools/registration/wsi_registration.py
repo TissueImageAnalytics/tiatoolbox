@@ -1617,7 +1617,7 @@ class AffineWSITransformer:
         """
         (
             read_level,
-            level_location,
+            _level_location,
             level_size,
             post_read_scale,
             _baseline_read_size,
