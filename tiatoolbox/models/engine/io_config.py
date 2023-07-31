@@ -155,7 +155,7 @@ class ModelIOConfigABC:
 
         """
         old_val = [v["resolution"] for v in resolutions]
-        if units not in ["baseline", "mpp", "power"]:
+        if units not in {"baseline", "mpp", "power"}:
             msg = (
                 f"Unknown units `{units}`. "
                 f"Units should be one of 'baseline', 'mpp' or 'power'."
