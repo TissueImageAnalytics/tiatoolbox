@@ -1,21 +1,21 @@
-"""Defines original NuClick architecture
+"""Define original NuClick architecture.
 
 Koohbanani, N. A., Jahanifar, M., Tajadin, N. Z., & Rajpoot, N. (2020).
 NuClick: a deep learning framework for interactive segmentation of microscopic images.
 Medical Image Analysis, 65, 101771.
 
 """
-from typing import Tuple, Union
+from __future__ import annotations
 
 import numpy as np
 import torch
-import torch.nn as nn
 from skimage.morphology import (
     disk,
     reconstruction,
     remove_small_holes,
     remove_small_objects,
 )
+from torch import nn
 
 from tiatoolbox import logger
 from tiatoolbox.models.models_abc import ModelABC
@@ -54,13 +54,14 @@ class ConvBnRelu(nn.Module):
         self,
         num_input_channels: int,
         num_output_channels: int,
-        kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
-        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        kernel_size: tuple[int, int] | np.ndarray = (3, 3),
+        strides: tuple[int, int] | np.ndarray = (1, 1),
         use_bias: bool = False,
-        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
-        activation: str = "relu",
+        dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
+        activation: str | None = "relu",
         do_batchnorm: bool = True,
-    ):
+    ) -> None:
+        """Initialize :class:`ConvBnRelu`."""
         super().__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -113,13 +114,13 @@ class ConvBnRelu(nn.Module):
                 Number of channels in input.
             out_channels (int):
                 Number of channels in output.
-            kernel_size (list):
+            kernel_size (int or tuple(int, int)):
                 Size of the kernel in the acquired convolution block.
             strides (int):
                 Size of stride in the convolution layer.
             use_bias (bool):
                 Whether to use bias in the convolution layer.
-            dilation_rate (list):
+            dilation_rate (int or tuple(int, int)):
                 Dilation rate for each convolution layer.
             activation (str):
                 Name of the activation function to use.
@@ -155,7 +156,7 @@ class ConvBnRelu(nn.Module):
 
 
 class MultiscaleConvBlock(nn.Module):
-    """Defines Multiscale convolution block.
+    """Define Multiscale convolution block.
 
     Args:
         num_input_channels (int):
@@ -182,13 +183,14 @@ class MultiscaleConvBlock(nn.Module):
     def __init__(
         self,
         num_input_channels: int,
-        kernel_sizes: Union[Tuple[int, int], np.ndarray],
-        dilation_rates: Union[Tuple[int, int], np.ndarray],
+        kernel_sizes: tuple[int, int] | np.ndarray,
+        dilation_rates: tuple[int, int] | np.ndarray,
         num_output_channels: int = 32,
-        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        strides: tuple[int, int] | np.ndarray = (1, 1),
         activation: str = "relu",
         use_bias: bool = False,
-    ):
+    ) -> None:
+        """Initialize :class:`MultiscaleConvBlock`."""
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
@@ -239,6 +241,7 @@ class MultiscaleConvBlock(nn.Module):
         Args:
             input_map (torch.Tensor):
                 Input, the tensor is of the shape NCHW.
+
         Returns:
             output (torch.Tensor):
                 The inference output.
@@ -281,11 +284,12 @@ class ResidualConv(nn.Module):
         self,
         num_input_channels: int,
         num_output_channels: int = 32,
-        kernel_size: Union[Tuple[int, int], np.ndarray] = (3, 3),
-        strides: Union[Tuple[int, int], np.ndarray] = (1, 1),
+        kernel_size: tuple[int, int] | np.ndarray = (3, 3),
+        strides: tuple[int, int] | np.ndarray = (1, 1),
         use_bias: bool = False,
-        dilation_rate: Union[Tuple[int, int], np.ndarray] = (1, 1),
-    ):
+        dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
+    ) -> None:
+        """Initialize :class:`ResidualConv`."""
         super().__init__()
 
         self.conv_block_1 = ConvBnRelu(
@@ -353,7 +357,8 @@ class NuClick(ModelABC):
 
     """
 
-    def __init__(self, num_input_channels: int, num_output_channels: int):
+    def __init__(self, num_input_channels: int, num_output_channels: int) -> None:
+        """Initialize :class:`NuClick`."""
         super().__init__()
         self.net_name = "NuClick"
 
@@ -394,11 +399,13 @@ class NuClick(ModelABC):
         )
 
         self.residual_block_2 = ResidualConv(
-            num_input_channels=64, num_output_channels=128
+            num_input_channels=64,
+            num_output_channels=128,
         )
 
         self.residual_block_3 = ResidualConv(
-            num_input_channels=128, num_output_channels=128
+            num_input_channels=128,
+            num_output_channels=128,
         )
 
         self.residual_block_4 = nn.Sequential(
@@ -424,11 +431,13 @@ class NuClick(ModelABC):
         )
 
         self.residual_block_8 = ResidualConv(
-            num_input_channels=512, num_output_channels=256
+            num_input_channels=512,
+            num_output_channels=256,
         )
 
         self.residual_block_9 = ResidualConv(
-            num_input_channels=256, num_output_channels=256
+            num_input_channels=256,
+            num_output_channels=256,
         )
 
         self.residual_block_10 = nn.Sequential(
@@ -437,11 +446,13 @@ class NuClick(ModelABC):
         )
 
         self.residual_block_11 = ResidualConv(
-            num_input_channels=128, num_output_channels=64
+            num_input_channels=128,
+            num_output_channels=64,
         )
 
         self.residual_block_12 = ResidualConv(
-            num_input_channels=64, num_output_channels=64
+            num_input_channels=64,
+            num_output_channels=64,
         )
 
         # -------------Multi-scale Convolution blocks------------
@@ -603,7 +614,9 @@ class NuClick(ModelABC):
 
                 if np.any(this_mask[this_marker > 0]):
                     this_mask = reconstruction(
-                        this_marker, this_mask, footprint=disk(1)
+                        this_marker,
+                        this_mask,
+                        footprint=disk(1),
                     )
                     masks[i] = np.array([this_mask])
                 else:

@@ -1,6 +1,6 @@
-import os
-import pathlib
+"""Define dataset abstract classes."""
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -9,11 +9,12 @@ from tiatoolbox.utils import imread
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
-    """Defines abstract base class for patch dataset."""
+    """Define abstract base class for patch dataset."""
 
     def __init__(
         self,
-    ):
+    ) -> None:
+        """Initialize :class:`PatchDatasetABC`."""
         super().__init__()
         self._preproc = self.preproc
         self.data_is_npy_alike = False
@@ -33,11 +34,13 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
         """
         if any(len(v) != 3 for v in shapes):
-            raise ValueError("Each sample must be an array of the form HWC.")
+            msg = "Each sample must be an array of the form HWC."
+            raise ValueError(msg)
 
         max_shape = np.max(shapes, axis=0)
         if (shapes - max_shape[None]).sum() != 0:
-            raise ValueError("Images must have the same dimensions.")
+            msg = "Images must have the same dimensions."
+            raise ValueError(msg)
 
     def _check_input_integrity(self, mode):
         """Check that variables received during init are valid.
@@ -50,23 +53,26 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """
         if mode == "patch":
             self.data_is_npy_alike = False
-            is_all_paths = all(isinstance(v, (pathlib.Path, str)) for v in self.inputs)
+            is_all_paths = all(isinstance(v, (Path, str)) for v in self.inputs)
             is_all_npy = all(isinstance(v, np.ndarray) for v in self.inputs)
+
+            msg = (
+                "Input must be either a list/array of images "
+                "or a list of valid image paths."
+            )
 
             if not (is_all_paths or is_all_npy or isinstance(self.inputs, np.ndarray)):
                 raise ValueError(
-                    "Input must be either a list/array of images "
-                    "or a list of valid image paths."
+                    msg,
                 )
 
             shapes = None
             # When a list of paths is provided
             if is_all_paths:
-                if any(not os.path.exists(v) for v in self.inputs):
+                if any(not Path(v).exists() for v in self.inputs):
                     # at least one of the paths are invalid
                     raise ValueError(
-                        "Input must be either a list/array of images "
-                        "or a list of valid image paths."
+                        msg,
                     )
                 # Preload test for sanity check
                 shapes = [self.load_img(v).shape for v in self.inputs]
@@ -84,18 +90,13 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                 # Check that input array is numerical
                 if not np.issubdtype(self.inputs.dtype, np.number):
                     # ndarray of mixed data types
-                    raise ValueError("Provided input array is non-numerical.")
-                # N H W C | N C H W
-                if len(self.inputs.shape) != 4:
-                    raise ValueError(
-                        "Input must be an array of images of the form NHWC. This can "
-                        "be achieved by converting a list of images to a numpy array. "
-                        " eg., np.array([img1, img2])."
-                    )
+                    msg = "Provided input array is non-numerical."
+                    raise ValueError(msg)
                 self.data_is_npy_alike = True
 
         elif not isinstance(self.inputs, (list, np.ndarray)):
-            raise ValueError("`inputs` should be a list of patch coordinates.")
+            msg = "`inputs` should be a list of patch coordinates."
+            raise ValueError(msg)
 
     @staticmethod
     def load_img(path):
@@ -105,10 +106,11 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             path (str): Path to an image file.
 
         """
-        path = pathlib.Path(path)
+        path = Path(path)
 
         if path.suffix not in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
-            raise ValueError(f"Cannot load image data from `{path.suffix}` files.")
+            msg = f"Cannot load image data from `{path.suffix}` files."
+            raise ValueError(msg)
 
         return imread(path, as_uint8=False)
 
@@ -143,11 +145,14 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         elif callable(func):
             self._preproc = func
         else:
-            raise ValueError(f"{func} is not callable!")
+            msg = f"{func} is not callable!"
+            raise ValueError(msg)
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Return the length of the instance attributes."""
         return len(self.inputs)
 
     @abstractmethod
     def __getitem__(self, idx):
+        """Get an item from the dataset."""
         ...  # pragma: no cover

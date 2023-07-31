@@ -145,6 +145,7 @@ numpy
 openslide
 otsu
 pathlib
+pdist
 pixman
 postproc
 pred
@@ -180,6 +181,7 @@ uint8
 uncallable
 v4
 viridis
+wkb
 wsi
 wsireader
 zarr

@@ -52,7 +52,6 @@ repos:
       - id: mixed-line-ending       # Replaces or checks mixed line endings.
       - id: requirements-txt-fixer  # Sorts entries in requirements.txt.
       - id: trailing-whitespace     # Trims trailing whitespace.
-        exclude: 'setup.cfg'
       - id: file-contents-sorter    # Sorts the lines in specified files (defaults to alphabetical).
         files: whitelist.txt
       - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source.
@@ -63,10 +62,6 @@ repos:
       - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
       - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon.
       - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst.
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
   - repo: https://github.com/psf/black
     rev: 23.7.0 # Replace with any tag/version: https://github.com/psf/black/tags
     hooks:
@@ -75,26 +70,9 @@ repos:
         additional_dependencies: ['click==8.0.4']  # Currently >8.0.4 breaks black
       - id: black-jupyter
         language: python
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.0.280
     hooks:
-      - id: flake8
-        additional_dependencies: [
-          flake8-bugbear, # Detect potential bugs
-          flake8-builtins, # Check for built-ins being used as variables
-          flake8-cognitive-complexity, # Check max function complexity
-          flake8-comprehensions, # Suggestions for better list/set/dict comprehensions
-          flake8-eradicate, # Find dead/commented out code
-          flake8-expression-complexity, # Check max expression complexity
-          flake8-fixme, # Check for FIXME, TODO, and XXX left in comments
-          flake8-isort, # Check import ordering
-          flake8-logging-format, # Validate (lack of) logging format strings
-          flake8-mutable, # Check for mutable default arguments
-          flake8-pie, # Misc. linting rules
-          flake8-pytest-style, # Check against pytest style guide
-          flake8-return, # Check return statements
-          flake8-simplify, # Suggestions to simplify code
-          flake8-spellcheck, # Spelling checker
-          flake8-use-fstring, # Encourages use of f-strings vs old style
-          pep8-naming, # Check PEP8 class naming
-        ]
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]

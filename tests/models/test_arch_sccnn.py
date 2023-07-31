@@ -22,7 +22,7 @@ def _load_sccnn(name):
 def test_functionality(remote_sample):
     """Functionality test for SCCNN.
 
-    Tests the functionality of SCCNN model for inference at the patch level.
+    Test the functionality of SCCNN model for inference at the patch level.
 
     """
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
@@ -30,7 +30,10 @@ def test_functionality(remote_sample):
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (30, 30, 61, 61), resolution=0.25, units="mpp", coord_space="resolution"
+        (30, 30, 61, 61),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = _load_sccnn(name="sccnn-crchisto")

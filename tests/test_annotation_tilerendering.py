@@ -1,8 +1,11 @@
-"""tests for annotation rendering using
-AnnotationRenderer and AnnotationTileGenerator
+"""Test for rendering tile annotations.
+
+Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerator.
+
 """
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,20 +24,20 @@ from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 
+RNG = np.random.default_rng(0)  # Numpy Random Generator
+
 
 @pytest.fixture(scope="session")
-def cell_grid() -> List[Polygon]:
+def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
     return [
         cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
     ]
 
 
 @pytest.fixture(scope="session")
-def points_grid(spacing=60) -> List[Point]:
+def points_grid(spacing=60) -> list[Point]:
     """Generate a grid of fake point annotations."""
-    np.random.seed(0)
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
 
 
@@ -44,28 +47,30 @@ def fill_store(cell_grid, points_grid):
 
     def _fill_store(
         store_class: AnnotationStore,
-        path: Union[str, Path],
+        path: str | Path,
     ):
         """Fills store with random variety of annotations."""
         store = store_class(path)
 
         cells = [
             Annotation(
-                cell, {"type": "cell", "prob": np.random.rand(1)[0], "color": (0, 1, 0)}
+                cell,
+                {"type": "cell", "prob": RNG.random(1)[0], "color": (0, 1, 0)},
             )
             for cell in cell_grid
         ]
         points = [
             Annotation(
-                point, {"type": "pt", "prob": np.random.rand(1)[0], "color": (1, 0, 0)}
+                point,
+                {"type": "pt", "prob": RNG.random(1)[0], "color": (1, 0, 0)},
             )
             for point in points_grid
         ]
         lines = [
             Annotation(
-                LineString(((x, x + 500) for x in range(100, 400, 10))),
+                LineString((x, x + 500) for x in range(100, 400, 10)),
                 {"type": "line", "prob": 0.75, "color": (0, 0, 1)},
-            )
+            ),
         ]
 
         annotations = cells + points + lines
@@ -169,7 +174,9 @@ def test_zoomed_out_rendering(fill_store, tmp_path):
     )
     store.append(small_annotation)
     renderer = AnnotationRenderer(
-        max_scale=1, edge_thickness=0, zoomed_out_strat="scale"
+        max_scale=1,
+        edge_thickness=0,
+        zoomed_out_strat="scale",
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
@@ -250,16 +257,12 @@ def test_sub_tile_levels(fill_store, tmp_path):
 
 
 def test_unknown_geometry(fill_store, tmp_path, caplog):
-    """
-    Test warning when unknown geometries are present that cannot
-    be rendered.
-
-    """
+    """Test warning when unknown geometries cannot be rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     store.append(
-        Annotation(geometry=MultiPoint([(5.0, 5.0), (10.0, 10.0)]), properties={})
+        Annotation(geometry=MultiPoint([(5.0, 5.0), (10.0, 10.0)]), properties={}),
     )
     store.commit()
     renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
@@ -295,7 +298,7 @@ def test_user_provided_cm(fill_store, tmp_path):
     color = color[0, :]
     viridis_mapper = colormaps["viridis"]
     assert np.all(
-        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
+        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8)),
     )  # expect rendered color to be viridis(0.75)
 
 
@@ -328,10 +331,11 @@ def test_categorical_mapper(fill_store, tmp_path):
             assert 0 <= val <= 1
 
 
-def test_colour_prop_warning(fill_store, tmp_path, caplog):
-    """
-    Test warning when rendering annotations in which the provided
-    score_prop does not exist.
+def test_colour_prop_warnings(fill_store, tmp_path, caplog):
+    """Test warning with inappropriate property.
+
+    Test warning is correctly shown when rendering annotations when the provided
+    score_prop does not exist, or its type does not match the mapper.
 
     """
     array = np.ones((1024, 1024))
@@ -341,6 +345,11 @@ def test_colour_prop_warning(fill_store, tmp_path, caplog):
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tg.get_tile(1, 0, 0)
     assert "not found in properties" in caplog.text
+
+    renderer = AnnotationRenderer(score_prop="type", mapper="jet")
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    tg.get_tile(1, 0, 0)
+    assert "property value type incompatable" in caplog.text
 
 
 def test_blur(fill_store, tmp_path):
@@ -382,7 +391,9 @@ def test_secondary_cmap(fill_store, tmp_path):
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     cmap_dict = {"type": "line", "score_prop": "prob", "mapper": colormaps["viridis"]}
     renderer = AnnotationRenderer(
-        score_prop="type", secondary_cmap=cmap_dict, edge_thickness=0
+        score_prop="type",
+        secondary_cmap=cmap_dict,
+        edge_thickness=0,
     )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tile = np.array(tg.get_tile(1, 0, 1))  # line here with prob=0.75
@@ -390,7 +401,7 @@ def test_secondary_cmap(fill_store, tmp_path):
     color = color[0, :]
     viridis_mapper = colormaps["viridis"]
     assert np.all(
-        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8))
+        np.equal(color, (np.array(viridis_mapper(0.75)) * 255)[:3].astype(np.uint8)),
     )  # expect rendered color to be viridis(0.75)
 
 
@@ -420,3 +431,30 @@ def test_multipolygon_render(cell_grid, tmp_path):
     tile = np.array(tg.get_tile(1, 0, 0))
     _, num = label(np.array(tile)[:, :, 0])
     assert num == 25  # expect 25 red objects
+
+
+def test_function_mapper(fill_store, tmp_path):
+    """Test function mapper."""
+    array = np.ones((1024, 1024))
+    wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
+    _, store = fill_store(SQLiteStore, tmp_path / "test.db")
+
+    def color_fn(props):
+        # simple test function that returns red for cells, otherwise green.
+        if props["type"] == "cell":
+            return 1, 0, 0
+        return 0, 1, 0
+
+    renderer = AnnotationRenderer(
+        score_prop="type",
+        function_mapper=color_fn,
+        edge_thickness=0,
+    )
+    tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
+    thumb = tg.get_thumb_tile()
+    _, num = label(np.array(thumb)[:, :, 0])
+    assert num == 25  # expect 25 red objects
+    _, num = label(np.array(thumb)[:, :, 1])
+    assert num == 50  # expect 50 green objects
+    _, num = label(np.array(thumb)[:, :, 2])
+    assert num == 0  # expect 0 blue objects

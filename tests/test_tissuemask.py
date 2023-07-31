@@ -1,4 +1,4 @@
-"""Tests for code related to tissue mask generation."""
+"""Test for code related to tissue mask generation."""
 
 import os
 import pathlib
@@ -172,7 +172,8 @@ def test_transform_fit_otsu_wrong_shape():
 def test_transform_morphological_conflicting_args():
     """Test giving conflicting arguments to morphological masker."""
     with pytest.raises(
-        ValueError, match="Only one of mpp, power, kernel_size can be given."
+        ValueError,
+        match="Only one of mpp, power, kernel_size can be given.",
     ):
         tissuemask.MorphologicalMasker(mpp=32, power=1.25)
 
@@ -281,7 +282,7 @@ def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, "test1.png").is_file()
+    assert pathlib.Path(output_path, "CMU-1-Small-Region.omnyx.png").is_file()
 
 
 @pytest.mark.skipif(running_on_ci(), reason="No display on CI.")
