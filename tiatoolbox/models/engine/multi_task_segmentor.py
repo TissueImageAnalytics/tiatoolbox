@@ -30,12 +30,11 @@ import numpy as np
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
+from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
     _process_instance_predictions,
 )
-
-from .semantic_segmentor import WSIStreamDataset
 
 if TYPE_CHECKING:  # pragma: no cover
     import torch
@@ -442,7 +441,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 callback(*future)
                 continue
             # some errors happen, log it and propagate exception
-            # ! this will lead to discard a whole bunch of
+            # ! this will lead to discard a bunch of
             # ! inferred tiles within this current WSI
             if future.exception() is not None:
                 raise future.exception()  # noqa: RSE102

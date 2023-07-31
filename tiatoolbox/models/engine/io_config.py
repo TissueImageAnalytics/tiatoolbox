@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.wsicore.wsimeta import Units
+    from tiatoolbox.typing import Units
 
 
 @dataclass
@@ -257,6 +257,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
         ...     patch_output_shape=(1024, 1024),
         ...     stride_shape=(512, 512),
         ... )
+        ...
         >>> # Defining io for a network having 3 input and 2 output
         >>> # at the same resolution, the output is then merged at a
         >>> # different resolution.

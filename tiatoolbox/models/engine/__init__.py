@@ -4,3 +4,9 @@ from tiatoolbox.models.engine import (
     patch_predictor,
     semantic_segmentor,
 )
+
+__all__ = [
+    "nucleus_instance_segmentor",
+    "patch_predictor",
+    "semantic_segmentor",
+]

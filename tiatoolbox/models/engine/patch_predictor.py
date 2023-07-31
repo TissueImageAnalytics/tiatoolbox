@@ -11,15 +11,16 @@ import torch
 import tqdm
 
 from tiatoolbox import logger
-from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
-from .io_config import IOPatchPredictorConfig
-
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import Resolution, Units
+
+from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
+
+from .io_config import IOPatchPredictorConfig
 
 
 class PatchPredictor:
