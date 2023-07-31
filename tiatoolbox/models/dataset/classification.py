@@ -1,5 +1,7 @@
+"""Define classes and methods for classification datasets."""
+
 import PIL
-import torchvision.transforms as transforms
+from torchvision import transforms
 
 
 class _TorchPreprocCaller:
@@ -14,7 +16,7 @@ class _TorchPreprocCaller:
 
     """
 
-    def __init__(self, preprocs):
+    def __init__(self, preprocs) -> None:
         self.func = transforms.Compose(preprocs)
 
     def __call__(self, img):
@@ -29,6 +31,7 @@ def predefined_preproc_func(dataset_name):
     Args:
         dataset_name (str):
             Dataset name used to determine what preprocessing was used.
+
     Returns:
         _TorchPreprocCaller:
             Preprocessing function for transforming the input data.
@@ -44,8 +47,9 @@ def predefined_preproc_func(dataset_name):
     }
 
     if dataset_name not in preproc_dict:
+        msg = f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
         raise ValueError(
-            f"Predefined preprocessing for dataset `{dataset_name}` does not exist."
+            msg,
         )
 
     preprocs = preproc_dict[dataset_name]

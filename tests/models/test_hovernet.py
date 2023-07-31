@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from tiatoolbox.models import HoVerNet
 from tiatoolbox.models.architecture import fetch_pretrained_weights
@@ -15,20 +15,22 @@ from tiatoolbox.models.architecture.hovernet import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(remote_sample):
     """Functionality test."""
-    tmp_path = str(tmp_path)
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (0, 0, 256, 256), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 256, 256),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=6, mode="fast")
-    fetch_pretrained_weights("hovernet_fast-pannuke", f"{tmp_path}/weights.pth")
-    pretrained = torch.load(f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights("hovernet_fast-pannuke")
+    pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
@@ -37,12 +39,15 @@ def test_functionality(remote_sample, tmp_path):
 
     # * test fast mode (architecture used for MoNuSAC data)
     patch = reader.read_bounds(
-        (0, 0, 256, 256), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 256, 256),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=5, mode="fast")
-    fetch_pretrained_weights("hovernet_fast-monusac", f"{tmp_path}/weights.pth")
-    pretrained = torch.load(f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights("hovernet_fast-monusac")
+    pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
@@ -51,12 +56,15 @@ def test_functionality(remote_sample, tmp_path):
 
     # * test original mode on CoNSeP dataset (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
-        (0, 0, 270, 270), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 270, 270),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=5, mode="original")
-    fetch_pretrained_weights("hovernet_original-consep", f"{tmp_path}/weights.pth")
-    pretrained = torch.load(f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights("hovernet_original-consep")
+    pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
@@ -65,12 +73,15 @@ def test_functionality(remote_sample, tmp_path):
 
     # * test original mode on Kumar dataset (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
-        (0, 0, 270, 270), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 270, 270),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
     batch = torch.from_numpy(patch)[None]
     model = HoVerNet(num_types=None, mode="original")
-    fetch_pretrained_weights("hovernet_original-kumar", f"{tmp_path}/weights.pth")
-    pretrained = torch.load(f"{tmp_path}/weights.pth")
+    weights_path = fetch_pretrained_weights("hovernet_original-kumar")
+    pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     output = [v[0] for v in output]
@@ -83,7 +94,7 @@ def test_functionality(remote_sample, tmp_path):
 
 
 def test_unit_blocks():
-    """Tests for blocks within HoVerNet."""
+    """Test for blocks within HoVerNet."""
     # padding
     model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))
     sample = torch.rand((1, 3, 14, 14), dtype=torch.float32)

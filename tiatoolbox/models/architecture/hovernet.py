@@ -1,15 +1,17 @@
+"""Define HoVerNet architecture."""
+from __future__ import annotations
+
 import math
 from collections import OrderedDict
-from typing import List
 
 import cv2
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 from scipy import ndimage
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
+from torch import nn
 
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
@@ -29,7 +31,8 @@ class TFSamepaddingLayer(nn.Module):
 
     """
 
-    def __init__(self, ksize: int, stride: int):
+    def __init__(self, ksize: int, stride: int) -> None:
+        """Initialize :class:`TFSamepaddingLayer`."""
         super().__init__()
         self.ksize = ksize
         self.stride = stride
@@ -66,14 +69,16 @@ class DenseBlock(nn.Module):
     def __init__(
         self,
         in_ch: int,
-        unit_ksizes: List[int],
-        unit_chs: List[int],
+        unit_ksizes: list[int],
+        unit_chs: list[int],
         unit_count: int,
         split: int = 1,
-    ):
+    ) -> None:
+        """Initialize :class:`DenseBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info.")
+            msg = "Unbalance Unit Info."
+            raise ValueError(msg)
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -112,7 +117,7 @@ class DenseBlock(nn.Module):
                             bias=False,
                         ),
                     ),
-                ]
+                ],
             )
             return nn.Sequential(layers)
 
@@ -127,8 +132,8 @@ class DenseBlock(nn.Module):
                 [
                     ("bn", nn.BatchNorm2d(unit_in_ch, eps=1e-5)),
                     ("relu", nn.ReLU(inplace=True)),
-                ]
-            )
+                ],
+            ),
         )
 
     def forward(self, prev_feat: torch.Tensor):
@@ -153,14 +158,16 @@ class ResidualBlock(nn.Module):
     def __init__(
         self,
         in_ch: int,
-        unit_ksizes: List[int],
-        unit_chs: List[int],
+        unit_ksizes: list[int],
+        unit_chs: list[int],
         unit_count: int,
         stride: int = 1,
-    ):
+    ) -> None:
+        """Initialize :class:`ResidualBlock`."""
         super().__init__()
         if len(unit_ksizes) != len(unit_chs):
-            raise ValueError("Unbalance Unit Info.")
+            msg = "Unbalance Unit Info."
+            raise ValueError(msg)
 
         self.nr_unit = unit_count
         self.in_ch = in_ch
@@ -188,7 +195,8 @@ class ResidualBlock(nn.Module):
                 (
                     "conv2/pad",
                     TFSamepaddingLayer(
-                        ksize=unit_ksizes[1], stride=stride if idx == 0 else 1
+                        ksize=unit_ksizes[1],
+                        stride=stride if idx == 0 else 1,
                     ),
                 ),
                 (
@@ -233,16 +241,13 @@ class ResidualBlock(nn.Module):
                 [
                     ("bn", nn.BatchNorm2d(unit_in_ch, eps=1e-5)),
                     ("relu", nn.ReLU(inplace=True)),
-                ]
-            )
+                ],
+            ),
         )
 
     def forward(self, prev_feat: torch.Tensor):
         """Logic for using layers defined in init."""
-        if self.shortcut is None:
-            shortcut = prev_feat
-        else:
-            shortcut = self.shortcut(prev_feat)
+        shortcut = prev_feat if self.shortcut is None else self.shortcut(prev_feat)
 
         for _, unit in enumerate(self.units):
             new_feat = prev_feat
@@ -319,16 +324,23 @@ class HoVerNet(ModelABC):
     """
 
     def __init__(
-        self, num_input_channels: int = 3, num_types: int = None, mode: str = "original"
-    ):
+        self,
+        num_input_channels: int = 3,
+        num_types: int | None = None,
+        mode: str = "original",
+    ) -> None:
+        """Initialize :class:`HoVerNet`."""
         super().__init__()
         self.mode = mode
         self.num_types = num_types
 
         if mode not in ["original", "fast"]:
-            raise ValueError(
+            msg = (
                 f"Invalid mode {mode} for HoVerNet. "
-                "Only support `original` or `fast`."
+                f"Only support `original` or `fast`."
+            )
+            raise ValueError(
+                msg,
             )
 
         modules = [
@@ -359,8 +371,8 @@ class HoVerNet(ModelABC):
                     [
                         ("np", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
                         ("hv", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
-                    ]
-                )
+                    ],
+                ),
             )
         else:
             self.decoder = nn.ModuleDict(
@@ -369,13 +381,14 @@ class HoVerNet(ModelABC):
                         (
                             "tp",
                             HoVerNet._create_decoder_branch(
-                                ksize=ksize, out_ch=num_types
+                                ksize=ksize,
+                                out_ch=num_types,
                             ),
                         ),
                         ("np", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
                         ("hv", HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2)),
-                    ]
-                )
+                    ],
+                ),
             )
 
         self.upsample2x = UpSample2x()
@@ -471,7 +484,7 @@ class HoVerNet(ModelABC):
         u0 = nn.Sequential(OrderedDict(modules))
 
         return nn.Sequential(
-            OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)])
+            OrderedDict([("u3", u3), ("u2", u2), ("u1", u1), ("u0", u0)]),
         )
 
     @staticmethod
@@ -631,7 +644,9 @@ class HoVerNet(ModelABC):
             inst_map = inst_map.astype(np.uint8)
             inst_moment = cv2.moments(inst_map)
             inst_contour = cv2.findContours(
-                inst_map, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+                inst_map,
+                cv2.RETR_TREE,
+                cv2.CHAIN_APPROX_SIMPLE,
             )
             # * opencv protocol format may break
             inst_contour = inst_contour[0][0].astype(np.int32)
@@ -689,8 +704,8 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221  # noqa: E800
-    def postproc(raw_maps: List[np.ndarray]):
+    # skipcq: PYL-W0221  # noqa: ERA001
+    def postproc(raw_maps: list[np.ndarray]):
         """Post-processing script for image tiles.
 
         Args:
@@ -794,7 +809,7 @@ class HoVerNet(ModelABC):
         with torch.inference_mode():
             pred_dict = model(patch_imgs_gpu)
             pred_dict = OrderedDict(
-                [[k, v.permute(0, 2, 3, 1).contiguous()] for k, v in pred_dict.items()]
+                [[k, v.permute(0, 2, 3, 1).contiguous()] for k, v in pred_dict.items()],
             )
             pred_dict["np"] = F.softmax(pred_dict["np"], dim=-1)[..., 1:]
             if "tp" in pred_dict:

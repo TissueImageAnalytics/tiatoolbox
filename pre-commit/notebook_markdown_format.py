@@ -5,12 +5,12 @@ import argparse
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import mdformat
 
 
-def format_notebook(notebook: Dict[str, Any]) -> Dict[str, Any]:
+def format_notebook(notebook: dict[str, Any]) -> dict[str, Any]:
     """Format a notebook in MyST style.
 
     Args:
@@ -36,7 +36,7 @@ def format_notebook(notebook: Dict[str, Any]) -> Dict[str, Any]:
     return notebook
 
 
-def main(files: List[Path]) -> None:
+def main(files: list[Path]) -> None:
     """Check markdown cells in notebooks for common mistakes.
 
     Args:
@@ -54,13 +54,14 @@ def main(files: List[Path]) -> None:
         changed = any(
             cell != formatted_cell
             for cell, formatted_cell in zip(
-                notebook["cells"], formatted_notebook["cells"]
+                notebook["cells"],
+                formatted_notebook["cells"],
             )
         )
         if not changed:
             continue
         print("Formatting notebook", path)
-        with open(path, "w") as fh:
+        with Path.open(path, "w") as fh:
             json.dump(formatted_notebook, fh, indent=1, ensure_ascii=False)
             fh.write("\n")
 
@@ -68,7 +69,10 @@ def main(files: List[Path]) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Lint notebook markdown files.")
     parser.add_argument(
-        "files", nargs="*", help="Notebook markdown files to lint.", type=Path
+        "files",
+        nargs="*",
+        help="Notebook markdown files to lint.",
+        type=Path,
     )
     args = parser.parse_args()
     main(sorted(args.files))

@@ -1,4 +1,4 @@
-"""Unit test package for architecture utilities"""
+"""Unit test package for architecture utilities."""
 
 import numpy as np
 import pytest
@@ -24,7 +24,7 @@ def test_all():
             [1, 1, 2, 2],
             [3, 3, 4, 4],
             [3, 3, 4, 4],
-        ]
+        ],
     )
     assert np.sum(_output - output) == 0
 

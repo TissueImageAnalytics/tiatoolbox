@@ -1,11 +1,11 @@
-"""Tests for Nucleus Instance Segmentor."""
+"""Test for Nucleus Instance Segmentor."""
 
 import copy
 
 # ! The garbage collector
 import gc
-import pathlib
 import shutil
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -42,7 +42,8 @@ def _rm_dir(path):
 
 def _crash_func(x):
     """Helper to induce crash."""
-    raise ValueError("Propataion Crash.")
+    msg = "Propataion Crash."
+    raise ValueError(msg)
 
 
 def helper_tile_info():
@@ -90,14 +91,14 @@ def test_get_tile_info():
     assert (
         np.sum(
             np.nonzero(flag[:, 0])
-            != np.array([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+            != np.array([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]),
         )
         == 0
     ), "Fail Top"
     # removal flag at bottom edges
     assert (
         np.sum(
-            np.nonzero(flag[:, 1]) != np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+            np.nonzero(flag[:, 1]) != np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
         )
         == 0
     ), "Fail Bottom"
@@ -105,14 +106,15 @@ def test_get_tile_info():
     assert (
         np.sum(
             np.nonzero(flag[:, 2])
-            != np.array([1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15])
+            != np.array([1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15]),
         )
         == 0
     ), "Fail Left"
     # removal flag at right edges
     assert (
         np.sum(
-            np.nonzero(flag[:, 3]) != np.array([0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14])
+            np.nonzero(flag[:, 3])
+            != np.array([0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]),
         )
         == 0
     ), "Fail Right"
@@ -135,7 +137,7 @@ def test_vertical_boundary_boxes():
             [3, 12, 5, 16],
             [7, 12, 9, 16],
             [11, 12, 13, 16],
-        ]
+        ],
     )
     _flag = np.array(
         [
@@ -151,7 +153,7 @@ def test_vertical_boundary_boxes():
             [1, 0, 0, 0],
             [1, 0, 0, 0],
             [1, 0, 0, 0],
-        ]
+        ],
     )
     boxes, flag = info[1]
     assert np.sum(_boxes - boxes) == 0, "Wrong Vertical Bounds"
@@ -175,7 +177,7 @@ def test_horizontal_boundary_boxes():
             [4, 11, 8, 13],
             [8, 11, 12, 13],
             [12, 11, 16, 13],
-        ]
+        ],
     )
     _flag = np.array(
         [
@@ -191,7 +193,7 @@ def test_horizontal_boundary_boxes():
             [0, 0, 1, 1],
             [0, 0, 1, 1],
             [0, 0, 1, 0],
-        ]
+        ],
     )
     boxes, flag = info[2]
     assert np.sum(_boxes - boxes) == 0, "Wrong Horizontal Bounds"
@@ -212,7 +214,7 @@ def test_cross_section_boundary_boxes():
             [2, 10, 6, 14],
             [6, 10, 10, 14],
             [10, 10, 14, 14],
-        ]
+        ],
     )
     _flag = np.array(
         [
@@ -225,7 +227,7 @@ def test_cross_section_boundary_boxes():
             [1, 1, 1, 1],
             [1, 1, 1, 1],
             [1, 1, 1, 1],
-        ]
+        ],
     )
     boxes, flag = info[3]
     assert np.sum(boxes - _boxes) == 0, "Wrong Cross Section Bounds"
@@ -234,8 +236,8 @@ def test_cross_section_boundary_boxes():
 
 def test_crash_segmentor(remote_sample, tmp_path):
     """Test engine crash when given malformed input."""
-    root_save_dir = pathlib.Path(tmp_path)
-    sample_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    root_save_dir = Path(tmp_path)
+    sample_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
     imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
@@ -280,11 +282,11 @@ def test_crash_segmentor(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_travis(remote_sample, tmp_path):
+def test_functionality_ci(remote_sample, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     gc.collect()
-    root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    root_save_dir = Path(tmp_path)
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 2.0
 
@@ -331,11 +333,11 @@ def test_functionality_travis(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
+def test_functionality_merge_tile_predictions_ci(remote_sample, tmp_path):
     """Functional tests for merging tile predictions."""
     gc.collect()  # Force clean up everything on hold
-    save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    save_dir = Path(f"{tmp_path}/output")
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 0.5
     ioconfig = IOInstanceSegmentorConfig(
@@ -436,9 +438,9 @@ def test_functionality_merge_tile_predictions_travis(remote_sample, tmp_path):
 )
 def test_functionality_local(remote_sample, tmp_path):
     """Local functionality test for nuclei instance segmentor."""
-    root_save_dir = pathlib.Path(tmp_path)
-    save_dir = pathlib.Path(f"{tmp_path}/output")
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_1k_1k_svs"))
+    root_save_dir = Path(tmp_path)
+    save_dir = Path(f"{tmp_path}/output")
+    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
 
     # * generate full output w/o parallel post processing worker first
     _rm_dir(save_dir)
@@ -508,8 +510,8 @@ def test_functionality_local(remote_sample, tmp_path):
 
 
 def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
-    """Test for nucleus segmentation with IOconfig."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    """Test for nucleus segmentation with IOConfig."""
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
 
     resolution = 2.0
@@ -519,9 +521,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
-    fetch_pretrained_weights(
-        "hovernet_fast-pannuke", str(tmp_path.joinpath("hovernet_fast-pannuke.pth"))
-    )
+    pretrained_weights = fetch_pretrained_weights("hovernet_fast-pannuke")
 
     # resolution for travis testing, not the correct ones
     config = {
@@ -539,7 +539,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
         "save_resolution": {"units": "mpp", "resolution": 8.0},
     }
 
-    with open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+    with Path.open(tmp_path / "config.yaml", "w") as fptr:
         yaml.dump(config, fptr)
 
     runner = CliRunner()
@@ -550,7 +550,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
             "--img-input",
             str(mini_wsi_jpg),
             "--pretrained-weights",
-            str(tmp_path.joinpath("hovernet_fast-pannuke.pth")),
+            str(pretrained_weights),
             "--num-loader-workers",
             str(0),
             "--num-postproc-workers",
@@ -560,7 +560,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
             "--output-path",
             str(output_path),
             "--yaml-config-path",
-            tmp_path.joinpath("config.yaml"),
+            str(tmp_path.joinpath("config.yaml")),
         ],
     )
 
@@ -573,7 +573,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
 
 def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
     """Test for nucleus segmentation."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
 
     runner = CliRunner()

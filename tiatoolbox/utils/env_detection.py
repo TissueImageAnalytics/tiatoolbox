@@ -14,6 +14,7 @@ as accurate as can be reasonably be expected depending on what is being
 detected.
 
 """
+from __future__ import annotations
 
 import os
 import platform
@@ -23,12 +24,14 @@ import socket
 import subprocess
 import sys
 import threading
-from numbers import Number
-from typing import List, Tuple
+from typing import TYPE_CHECKING
 
 import torch
 
 from tiatoolbox import logger
+
+if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
 
 
 def has_gpu() -> bool:
@@ -102,11 +105,12 @@ def is_notebook() -> bool:
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
             return True  # Jupyter notebook or qtconsole
-        if shell == "TerminalInteractiveShell":  # noqa: PIE801
+        if shell == "TerminalInteractiveShell":
             return False  # Terminal running IPython
-        return False  # Other type (?)
     except (NameError, ImportError):
         return False  # Probably standard Python interpreter
+    else:
+        return False  # Other type (?)
 
 
 def in_conda_env() -> bool:
@@ -168,11 +172,11 @@ def running_on_ci() -> bool:
     """
     return any(
         (
-            os.environ.get("CI") == "true",
+            os.environ.get("CI", "").lower() == "true",
             running_on_travis(),
             running_on_github(),
             running_on_circleci(),
-        )
+        ),
     )
 
 
@@ -213,8 +217,9 @@ def colab_has_gpu() -> bool:
 
 
 def has_network(
-    hostname="one.one.one.one", timeout: Number = 3
-) -> bool:  # noqa: CCR001
+    hostname: str = "one.one.one.one",
+    timeout: Number = 3,
+) -> bool:
     """Detect if the current environment has a network connection.
 
     Create a socket connection to the hostname and check if the connection
@@ -238,12 +243,13 @@ def has_network(
         # Connect to host
         connection = socket.create_connection((host, 80), timeout=timeout)
         connection.close()
-        return True
     except (socket.gaierror, socket.timeout):
         return False
+    else:
+        return True
 
 
-def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
+def pixman_versions() -> list[tuple[int, ...]]:
     """The version(s) of pixman that are installed.
 
     Some package managers (brew) may report multiple versions of pixman
@@ -268,7 +274,8 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         try:
             conda_list = subprocess.Popen(("conda", "list"), stdout=subprocess.PIPE)
             conda_pixman = subprocess.check_output(
-                ("grep", "pixman"), stdin=conda_list.stdout
+                ("grep", "pixman"),
+                stdin=conda_list.stdout,
             )
             conda_list.wait()
         except subprocess.SubprocessError:
@@ -285,7 +292,7 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         using = "dpkg"
         try:
             dkpg_output = subprocess.check_output(
-                ["/usr/bin/dpkg", "-s", "libpixman-1-0"]
+                ["/usr/bin/dpkg", "-s", "libpixman-1-0"],
             )
         except subprocess.SubprocessError:
             dkpg_output = b""
@@ -301,10 +308,12 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         using = "brew"
         try:
             brew_list = subprocess.Popen(
-                ("brew", "list", "--versions"), stdout=subprocess.PIPE
+                ("brew", "list", "--versions"),
+                stdout=subprocess.PIPE,
             )
             brew_pixman = subprocess.check_output(
-                ("grep", "pixman"), stdin=brew_list.stdout
+                ("grep", "pixman"),
+                stdin=brew_list.stdout,
             )
             brew_list.wait()
         except subprocess.SubprocessError:
@@ -322,7 +331,8 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
         using = "port"
         port_list = subprocess.Popen(("port", "installed"), stdout=subprocess.PIPE)
         port_pixman = subprocess.check_output(
-            ("grep", "pixman"), stdin=port_list.stdout
+            ("grep", "pixman"),
+            stdin=port_list.stdout,
         )
         port_list.wait()
         matches = re.findall(
@@ -334,10 +344,11 @@ def pixman_versions() -> List[Tuple[int, ...]]:  # noqa: CCR001
             versions = [version_to_tuple(matches.group(1))]
     if versions:
         return versions, using
-    raise EnvironmentError("Unable to detect pixman version(s).")
+    msg = "Unable to detect pixman version(s)."
+    raise OSError(msg)
 
 
-def version_to_tuple(match: str) -> Tuple[int, ...]:
+def version_to_tuple(match: str) -> tuple[int, ...]:
     """Convert a version string to a tuple of ints.
 
     Only supports versions containing integers and periods.
@@ -352,7 +363,8 @@ def version_to_tuple(match: str) -> Tuple[int, ...]:
     """
     # Check that the string only contains integers and periods
     if not re.match(r"^\d+([._]\d+)*$", match):
-        raise ValueError(f"{match} is not a valid version string.")
+        msg = f"{match} is not a valid version string."
+        raise ValueError(msg)
     return tuple(int(part) for part in match.split("."))
 
 
@@ -368,7 +380,7 @@ def pixman_warning() -> None:  # pragma: no cover
         """Show a warning message if pixman is version 0.38."""
         try:
             versions, using = pixman_versions()
-        except EnvironmentError:
+        except OSError:
             # Unable to determine the pixman version
             return
 

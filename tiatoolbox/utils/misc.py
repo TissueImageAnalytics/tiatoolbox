@@ -3,11 +3,9 @@ from __future__ import annotations
 
 import copy
 import json
-import os
-import pathlib
 import zipfile
-from os import PathLike
-from typing import IO, Dict, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import IO, TYPE_CHECKING
 
 import cv2
 import joblib
@@ -16,19 +14,25 @@ import pandas as pd
 import requests
 import torch
 import yaml
-from shapely import geometry
+from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
-from tiatoolbox.utils.exceptions import FileNotSupported
+from tiatoolbox.utils.exceptions import FileNotSupportedError
+
+if TYPE_CHECKING:  # pragma: no cover
+    import os
+    from os import PathLike
+
+    from shapely import geometry
 
 
 def split_path_name_ext(
     full_path: os | PathLike,
-) -> Tuple[pathlib.Path, str, List[str]]:
+) -> tuple[Path, str, list[str]]:
     """Split path of a file to directory path, file name and extensions.
 
     Args:
@@ -38,7 +42,7 @@ def split_path_name_ext(
     Returns:
         tuple:
             Three parts of the input file path:
-            - :py:obj:`pathlib.Path` - Parent directory path
+            - :py:obj:`Path` - Parent directory path
             - :py:obj:`str` - File name
             - :py:obj:`list(str)` - File extensions
 
@@ -47,14 +51,14 @@ def split_path_name_ext(
         >>> dir_path, file_name, extensions = split_path_name_ext(full_path)
 
     """
-    input_path = pathlib.Path(full_path)
+    input_path = Path(full_path)
     return input_path.parent.absolute(), input_path.name, input_path.suffixes
 
 
 def grab_files_from_dir(
     input_path: os | PathLike,
-    file_types: Union[str, Tuple[str]] = ("*.jpg", "*.png", "*.tif"),
-) -> List[pathlib.Path]:
+    file_types: str | tuple[str] = ("*.jpg", "*.png", "*.tif"),
+) -> list[Path]:
     """Grab file paths specified by file extensions.
 
     Args:
@@ -76,7 +80,7 @@ def grab_files_from_dir(
         ...     file_types=file_types)
 
     """
-    input_path = pathlib.Path(input_path)
+    input_path = Path(input_path)
 
     if isinstance(file_types, str):
         if len(file_types.split(",")) > 1:
@@ -111,22 +115,21 @@ def save_yaml(
         exist_ok (bool):
             Overwrite the output file if it exists. Default is False.
 
-
-    Returns:
-
     Examples:
         >>> from tiatoolbox import utils
         >>> input_dict = {'hello': 'Hello World!'}
         >>> utils.misc.save_yaml(input_dict, './hello.yaml')
 
     """
-    path = pathlib.Path(output_path)
+    path = Path(output_path)
     if path.exists() and not exist_ok:
-        raise FileExistsError("File already exists.")
+        msg = "File already exists."
+        raise FileExistsError(msg)
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
-    with open(  # skipcq: PTC-W6004: PTC-W6004
-        str(pathlib.Path(output_path)), "w"
+    with Path.open(
+        output_path,
+        "w+",
     ) as yaml_file:
         yaml.dump(input_dict, yaml_file)
 
@@ -147,12 +150,12 @@ def imwrite(image_path: os | PathLike, img: np.ndarray) -> None:
         ...     np.ones([100, 100, 3]).astype('uint8')*255)
 
     """
-    if isinstance(image_path, pathlib.Path):
+    if isinstance(image_path, Path):
         image_path = str(image_path)
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def imread(image_path: os | PathLike, as_uint8: bool = True) -> np.ndarray:
+def imread(image_path, as_uint8=True):
     """Read an image as numpy array.
 
     Args:
@@ -170,13 +173,17 @@ def imread(image_path: os | PathLike, as_uint8: bool = True) -> np.ndarray:
         >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
-    if isinstance(image_path, pathlib.Path):
-        image_path = str(image_path)
+    if not isinstance(image_path, (str, Path)):
+        msg = "Please provide path to an image."
+        raise TypeError(msg)
 
-    if pathlib.Path(image_path).suffix == ".npy":
-        image = np.load(image_path)
+    if isinstance(image_path, str):
+        image_path = Path(image_path)
+
+    if image_path.suffix == ".npy":
+        image = np.load(str(image_path))
     else:
-        image = cv2.imread(image_path)
+        image = cv2.imread(str(image_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
         return image.astype(np.uint8)
@@ -202,12 +209,15 @@ def load_stain_matrix(stain_matrix_input: np.ndarray | os | PathLike) -> np.ndar
         >>> sm = utils.misc.load_stain_matrix(stain_matrix_input)
 
     """
-    if isinstance(stain_matrix_input, (str, pathlib.Path)):
+    if isinstance(stain_matrix_input, (str, Path)):
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
-            raise FileNotSupported(
-                "If supplying a path to a stain matrix, use either a \
-                npy or a csv file"
+            msg = (
+                "If supplying a path to a stain matrix, "
+                "use either a npy or a csv file"
+            )
+            raise FileNotSupportedError(
+                msg,
             )
 
         if suffixes[-1] == ".csv":
@@ -219,8 +229,9 @@ def load_stain_matrix(stain_matrix_input: np.ndarray | os | PathLike) -> np.ndar
     if isinstance(stain_matrix_input, np.ndarray):
         return stain_matrix_input
 
+    msg = "Stain_matrix must be either a path to npy/csv file or a numpy array"
     raise TypeError(
-        "Stain_matrix must be either a path to npy/csv file or a numpy array"
+        msg,
     )
 
 
@@ -250,14 +261,16 @@ def get_luminosity_tissue_mask(img: np.ndarray, threshold: float) -> np.ndarray:
 
     # check it's not empty
     if tissue_mask.sum() == 0:
-        raise ValueError("Empty tissue mask computed.")
+        msg = "Empty tissue mask computed."
+        raise ValueError(msg)
 
     return tissue_mask
 
 
 def mpp2common_objective_power(
-    mpp: Union[float, Tuple[float, float]],
-    common_powers: Union[float, Tuple[float]] = (
+    mpp: float | tuple[float, float],
+    common_powers: float
+    | tuple[float] = (
         1,
         1.25,
         2,
@@ -304,14 +317,13 @@ def mpp2common_objective_power(
 
 
 mpp2common_objective_power = np.vectorize(
-    mpp2common_objective_power, excluded={"common_powers"}
+    mpp2common_objective_power,
+    excluded={"common_powers"},
 )
 
 
 @np.vectorize
-def objective_power2mpp(
-    objective_power: Union[float, Tuple[float]]
-) -> Union[float, Tuple[float]]:
+def objective_power2mpp(objective_power: float | tuple[float]) -> float | tuple[float]:
     r"""Approximate mpp from objective power.
 
     The formula used for estimation is :math:`power = \frac{10}{mpp}`.
@@ -339,7 +351,7 @@ def objective_power2mpp(
 
 
 @np.vectorize
-def mpp2objective_power(mpp: Union[float, Tuple[float]]) -> Union[float, Tuple[float]]:
+def mpp2objective_power(mpp: float | tuple[float]) -> float | tuple[float]:
     """Approximate objective_power from mpp.
 
     Alias to :func:`objective_power2mpp` as it is a self-inverse
@@ -367,8 +379,9 @@ def mpp2objective_power(mpp: Union[float, Tuple[float]]) -> Union[float, Tuple[f
 
 
 def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.ndarray:
-    """Enhancing contrast of the input image using intensity adjustment.
-       This method uses both image low and high percentiles.
+    """Enhance contrast of the input image using intensity adjustment.
+
+    This method uses both image low and high percentiles.
 
     Args:
         img (:class:`numpy.ndarray`): input image used to obtain tissue mask.
@@ -390,21 +403,25 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
 
     """
     # check if image is not uint8
-    if not img.dtype == np.uint8:
-        raise AssertionError("Image should be uint8.")
+    if img.dtype != np.uint8:
+        msg = "Image should be uint8."
+        raise AssertionError(msg)
     img_out = img.copy()
     p_low, p_high = np.percentile(img_out, (low_p, high_p))
     if p_low >= p_high:
         p_low, p_high = np.min(img_out), np.max(img_out)
     if p_high > p_low:
         img_out = exposure.rescale_intensity(
-            img_out, in_range=(p_low, p_high), out_range=(0.0, 255.0)
+            img_out,
+            in_range=(p_low, p_high),
+            out_range=(0.0, 255.0),
         )
     return np.uint8(img_out)
 
 
 def __numpy_array_to_table(input_table: np.ndarray) -> pd.DataFrame:
-    """Checks numpy array to be 2 or 3 columns.
+    """Check numpy array to be 2 or 3 columns.
+
     If it has two columns then class should be assigned None.
 
     Args:
@@ -425,16 +442,16 @@ def __numpy_array_to_table(input_table: np.ndarray) -> pd.DataFrame:
     if input_table.shape[1] == 3:
         return pd.DataFrame(input_table, columns=["x", "y", "class"])
 
-    raise ValueError("Numpy table should be of format `x, y` or `x, y, class`.")
+    msg = "Numpy table should be of format `x, y` or `x, y, class`."
+    raise ValueError(msg)
 
 
-def __assign_unknown_class(
-    input_table: Union[np.ndarray, pd.DataFrame]
-) -> pd.DataFrame:
+def __assign_unknown_class(input_table: np.ndarray | pd.DataFrame) -> pd.DataFrame:
     """Creates a column and assigns None if class is unknown.
 
     Args:
-        input_table (np.ndarray or pd.DataFrame): input table.
+        input_table: (np.ndarray or pd.DataFrame):
+            input table.
 
     Returns:
         table (:class:`pd.DataFrame`): Pandas DataFrame with desired features.
@@ -445,7 +462,8 @@ def __assign_unknown_class(
 
     """
     if input_table.shape[1] not in [2, 3]:
-        raise ValueError("Input table must have 2 or 3 columns.")
+        msg = "Input table must have 2 or 3 columns."
+        raise ValueError(msg)
 
     if input_table.shape[1] == 2:
         input_table["class"] = None
@@ -459,8 +477,8 @@ def read_locations(
     """Read annotations as pandas DataFrame.
 
     Args:
-        input_table (os | PathLike | :class:`numpy.ndarray` |
-            :class:`pandas.DataFrame`): path to csv, npy or json. Input can also be a
+        input_table (os | PathLike | np.ndarray | pd.DataFrame`):
+            Path to csv, npy or json. Input can also be a
             :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             First column in the table represents x position, second
             column represents y position. The third column represents the class.
@@ -468,10 +486,11 @@ def read_locations(
             Json should have `x`, `y` and `class` fields.
 
     Returns:
-        pd.DataFrame: DataFrame with x, y location and class type.
+        pd.DataFrame:
+            DataFrame with x, y location and class type.
 
     Raises:
-        FileNotSupported:
+        FileNotSupportedError:
             If the path to input table is not of supported type.
 
     Examples:
@@ -479,7 +498,7 @@ def read_locations(
         >>> labels = read_locations('./annotations.csv')
 
     """
-    if isinstance(input_table, (str, pathlib.Path)):
+    if isinstance(input_table, (str, Path)):
         _, _, suffixes = split_path_name_ext(input_table)
 
         if suffixes[-1] == ".npy":
@@ -503,7 +522,8 @@ def read_locations(
             out_table = pd.read_json(input_table)
             return __assign_unknown_class(out_table)
 
-        raise FileNotSupported("File type not supported.")
+        msg = "File type not supported."
+        raise FileNotSupportedError(msg)
 
     if isinstance(input_table, np.ndarray):
         return __numpy_array_to_table(input_table)
@@ -511,12 +531,16 @@ def read_locations(
     if isinstance(input_table, pd.DataFrame):
         return __assign_unknown_class(input_table)
 
-    raise TypeError("Please input correct image path or an ndarray image.")
+    msg = "Please input correct image path or an ndarray image."
+    raise TypeError(msg)
 
 
 @np.vectorize
 def conv_out_size(
-    in_size: int, kernel_size: int = 1, padding: int = 0, stride: int = 1
+    in_size: int,
+    kernel_size: int = 1,
+    padding: int = 0,
+    stride: int = 1,
 ) -> int:
     r"""Calculate convolution output size.
 
@@ -556,7 +580,7 @@ def conv_out_size(
     return (np.floor((in_size - kernel_size + (2 * padding)) / stride) + 1).astype(int)
 
 
-def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
+def parse_cv2_interpolaton(interpolation: str | int) -> int:
     """Convert a string to a OpenCV (cv2) interpolation enum.
 
     Interpolation modes:
@@ -599,11 +623,13 @@ def parse_cv2_interpolaton(interpolation: Union[str, int]) -> int:
         return cv2.INTER_CUBIC
     if interpolation in ["lanczos", cv2.INTER_LANCZOS4]:
         return cv2.INTER_LANCZOS4
-    raise ValueError("Invalid interpolation mode.")
+    msg = "Invalid interpolation mode."
+    raise ValueError(msg)
 
 
 def assert_dtype_int(
-    input_var: np.ndarray, message: str = "Input must be integer."
+    input_var: np.ndarray,
+    message: str = "Input must be integer.",
 ) -> AssertionError or None:
     """Generate error if dtype is not int.
 
@@ -622,35 +648,77 @@ def assert_dtype_int(
         raise AssertionError(message)
 
 
-def download_data(url: str, save_path: os | PathLike, overwrite: bool = False):
-    """Download data from a given URL to location. Can overwrite data if demanded
-    else no action is taken
+def download_data(
+    url: str,
+    save_path: os | PathLike | None = None,
+    save_dir: os | PathLike | None = None,
+    overwrite: bool = False,
+    unzip: bool = False,
+) -> Path:
+    """Download data from a given URL to location.
+
+    The function can overwrite data if demanded else no action is taken.
 
     Args:
-        url (path): URL from where to download the data.
-        save_path (os | PathLike): Location to unzip the data.
-        overwrite (bool): True to force overwriting of existing data, default=False
+        url (str | Path):
+            URL from where to download the data.
+        save_path (os | PathLike):
+            Location to download the data (including filename).
+            Can't be used with save_dir.
+        save_dir (os | PathLike):
+            Directory to save the data. Can't be used with save_path.
+        overwrite (bool):
+            True to force overwriting of existing data, default=False
+        unzip (bool):
+            True to unzip the data, default=False
 
     """
-    print(f"Download from {url}")
-    print(f"Save to {save_path}")
-    save_dir = pathlib.Path(save_path).parent
+    if save_path is not None and save_dir is not None:
+        msg = "save_path and save_dir can't both be specified"
+        raise ValueError(msg)
 
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    if not overwrite and os.path.exists(save_path):
-        return
+    if save_path is not None:
+        save_dir = Path(save_path).parent
+        save_path = Path(save_path)
 
-    r = requests.get(url)
-    request_response = requests.head(url)
-    status_code = request_response.status_code
-    url_exists = status_code == 200
+    elif save_dir is not None:
+        save_dir = Path(save_dir)
+        save_path = save_dir / Path(url).name
 
-    if not url_exists:
-        raise ConnectionError(f"Could not find URL at {url}")
+    else:
+        msg = "save_path or save_dir must be specified"
+        raise ValueError(msg)
 
-    with open(save_path, "wb") as f:
-        f.write(r.content)
+    logger.debug("Download from %s to %s", url, save_path)
+
+    if not save_dir.exists():
+        save_dir.mkdir(parents=True)
+
+    if not overwrite and save_path.exists() and not unzip:
+        return save_path
+
+    lock_path = save_path.with_suffix(".lock")
+
+    with FileLock(lock_path):
+        if not overwrite and save_path.exists():
+            pass  # file was downloaded by another process
+        else:
+            # Start the connection with a 5-second timeout
+            # to avoid hanging indefinitely.
+            response = requests.get(url, stream=True, timeout=5)
+            # Raise an exception for status codes != 200
+            response.raise_for_status()
+            # Write the file in blocks of 1024 bytes to avoid running out of memory
+            with save_path.open("wb") as handle:
+                for block in response.iter_content(1024):
+                    handle.write(block)
+
+        if unzip:
+            unzip_path = save_dir / save_path.stem
+            unzip_data(str(save_path), str(unzip_path), del_zip=False)
+            return unzip_path
+
+    return save_path
 
 
 def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool = True):
@@ -666,11 +734,12 @@ def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool 
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
     if del_zip:
+        zip_path = Path(zip_path)
         # Remove zip file
-        os.remove(zip_path)
+        Path.unlink(zip_path)
 
 
-def __walk_list_dict(in_list_dict: Union[list, dict]) -> Union[list, dict]:
+def __walk_list_dict(in_list_dict):
     """Recursive walk and jsonify in place.
 
     Args:
@@ -690,10 +759,12 @@ def __walk_list_dict(in_list_dict: Union[list, dict]) -> Union[list, dict]:
     elif isinstance(in_list_dict, np.generic):
         in_list_dict = in_list_dict.item()
     elif in_list_dict is not None and not isinstance(
-        in_list_dict, (int, float, str, bool)
+        in_list_dict,
+        (int, float, str, bool),
     ):
-        raise ValueError(
-            f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
+        msg = f"Value type `{type(in_list_dict)}` `{in_list_dict}` is not jsonified."
+        raise TypeError(
+            msg,
         )
     return in_list_dict
 
@@ -718,13 +789,14 @@ def __walk_dict(dct: dict):
     """
     for k, v in dct.items():
         if not isinstance(k, (int, float, str, bool)):
-            raise ValueError(f"Key type `{type(k)}` `{k}` is not jsonified.")
+            msg = f"Key type `{type(k)}` `{k}` is not jsonified."
+            raise TypeError(msg)
         dct[k] = __walk_list_dict(v)
 
 
 def save_as_json(
-    data: Union[dict, list],
-    save_path: os | PathLike,
+    data: dict | list,
+    save_path: str | PathLike,
     parents: bool = False,
     exist_ok: bool = False,
 ):
@@ -749,19 +821,21 @@ def save_as_json(
     """
     shadow_data = copy.deepcopy(data)  # make a copy of source input
     if not isinstance(shadow_data, (dict, list)):
-        raise ValueError(f"Type of `data` ({type(data)}) must be in (dict, list).")
+        msg = f"Type of `data` ({type(data)}) must be in (dict, list)."
+        raise TypeError(msg)
 
     if isinstance(shadow_data, dict):
         __walk_dict(shadow_data)
     else:
         __walk_list(shadow_data)
 
-    save_path = pathlib.Path(save_path)
+    save_path = Path(save_path)
     if save_path.exists() and not exist_ok:
-        raise FileExistsError("File already exists.")
+        msg = "File already exists."
+        raise FileExistsError(msg)
     if parents:
         save_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(save_path, "w") as handle:  # skipcq: PTC-W6004
+    with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
         json.dump(shadow_data, handle)
 
 
@@ -828,7 +902,7 @@ def get_bounding_box(img: np.ndarray) -> np.ndarray:
     return np.array([c_min, r_min, cmax, r_max])
 
 
-def string_to_tuple(in_str: str) -> Tuple[str]:
+def string_to_tuple(in_str: str) -> tuple[str]:
     """Splits input string to tuple at ','.
 
     Args:
@@ -837,14 +911,14 @@ def string_to_tuple(in_str: str) -> Tuple[str]:
 
     Returns:
         tuple:
-            Returns a tuple of strings by splitting in_str at ','.
+            Return a tuple of strings by splitting in_str at ','.
 
     """
     return tuple(substring.strip() for substring in in_str.split(","))
 
 
-def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
-    """Convert pixels per unit (ppu) to microns per pixel (mpp)
+def ppu2mpp(ppu: int, units: str | int) -> float:
+    """Convert pixels per unit (ppu) to microns per pixel (mpp).
 
     Args:
         ppu (int):
@@ -859,6 +933,8 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
 
     """
     microns_per_unit = {
+        "meter": 1e6,  # 1,000,000
+        "m": 1e6,  # 1,000,000
         "centimeter": 1e4,  # 10,000
         "cm": 1e4,  # 10,000
         "mm": 1e3,  # 1,000
@@ -868,12 +944,13 @@ def ppu2mpp(ppu: int, units: Union[str, int]) -> float:
         3: 1e4,  # cm in TIFF tags
     }
     if units not in microns_per_unit:
-        raise ValueError(f"Invalid units: {units}")
+        msg = f"Invalid units: {units}"
+        raise ValueError(msg)
     return 1 / ppu * microns_per_unit[units]
 
 
-def select_cv2_interpolation(scale_factor: Union[int, float]) -> str:
-    """Returns appropriate interpolation method for opencv based image resize.
+def select_cv2_interpolation(scale_factor: int | float) -> str:
+    """Return appropriate interpolation method for opencv based image resize.
 
     Args:
         scale_factor (int or float):
@@ -891,11 +968,11 @@ def select_cv2_interpolation(scale_factor: Union[int, float]) -> str:
 
 def store_from_dat(
     fp: IO | os | PathLike,
-    scale_factor: Tuple[float, float] = (1, 1),
-    typedict: Optional[Dict] = None,
-    origin: Tuple[float, float] = (0, 0),
+    scale_factor: tuple[float, float] = (1, 1),
+    typedict: dict | None = None,
+    origin: tuple[float, float] = (0, 0),
     cls: AnnotationStore = SQLiteStore,
-) -> "AnnotationStore":
+) -> AnnotationStore:
     """Load annotations from a hovernet-style .dat file.
 
     Args:
@@ -904,7 +981,8 @@ def store_from_dat(
         scale_factor (Tuple[float, float]):
             The scale factor in each dimension to use when loading the annotations.
             All coordinates will be multiplied by this factor to allow import of
-            annotations saved at non-baseline resolution.
+            annotations saved at non-baseline resolution. Should be model_mpp/slide_mpp,
+            where model_mpp is the resolution at which the annotations were saved.
         typedict (Dict[str, str]):
             A dictionary mapping annotation types to annotation keys. Annotations
             with a type that is a key in the dictionary, will have their type
@@ -929,7 +1007,10 @@ def store_from_dat(
     return store
 
 
-def make_valid_poly(poly: geometry, origin: Tuple[float, float] = None) -> geometry:
+def make_valid_poly(
+    poly: geometry,
+    origin: tuple[float, float] | None = None,
+) -> geometry:
     """Helper function to make a valid polygon.
 
     Args:
@@ -953,8 +1034,12 @@ def make_valid_poly(poly: geometry, origin: Tuple[float, float] = None) -> geome
 
 
 def anns_from_hoverdict(
-    data: dict, props: list, typedict: dict, origin: Tuple, scale_factor: float
-) -> List[Annotation]:
+    data: dict,
+    props: list,
+    typedict: dict,
+    origin: tuple,
+    scale_factor: float,
+) -> list[Annotation]:
     """Helper function to create list of Annotation objects.
 
     Creates annotations from a hovernet-style dict of segmentations, mapping types
@@ -972,6 +1057,7 @@ def anns_from_hoverdict(
         scale_factor (float):
             The scale factor to use when loading the annotations. All coordinates
             will be multiplied by this factor.
+
     Returns:
         list(Annotation):
             A list of Annotation objects.
@@ -984,7 +1070,7 @@ def anns_from_hoverdict(
                     {
                         "type": ann.get("geom_type", "Polygon"),
                         "coordinates": scale_factor * np.array([ann["contour"]]),
-                    }
+                    },
                 ),
                 origin,
             ),
@@ -1013,6 +1099,7 @@ def make_default_dict(data: dict, subcat: str) -> dict:
             The data loaded from the .dat file.
         subcat (str):
             The subcategory of the data, eg 'Gland' or 'Nuclei'.
+
     Returns:
         A dictionary mapping types to more descriptive names.
 
@@ -1027,11 +1114,11 @@ def make_default_dict(data: dict, subcat: str) -> dict:
 
 
 def add_from_dat(
-    store: List[AnnotationStore],
+    store: list[AnnotationStore],
     fp: IO | os | PathLike,
-    scale_factor: Tuple[float, float] = (1, 1),
-    typedict: Optional[Dict] = None,
-    origin: Tuple[float, float] = (0, 0),
+    scale_factor: tuple[float, float] = (1, 1),
+    typedict: dict | None = None,
+    origin: tuple[float, float] = (0, 0),
 ) -> None:
     """Add annotations from a .dat file to an existing store.
 
@@ -1060,7 +1147,7 @@ def add_from_dat(
 
     """
     data = joblib.load(fp)
-    props = list(data[list(data.keys())[0]].keys())
+    props = list(data[next(iter(data.keys()))].keys())
     if "contour" not in props:
         # assume cerberus format with objects subdivided into categories
         anns = []
@@ -1078,11 +1165,15 @@ def add_from_dat(
                 typedict_sub = typedict[subcat]
             anns.extend(
                 anns_from_hoverdict(
-                    data[subcat], props, typedict_sub, origin, scale_factor
-                )
+                    data[subcat],
+                    props,
+                    typedict_sub,
+                    origin,
+                    scale_factor,
+                ),
             )
     else:
         anns = anns_from_hoverdict(data, props, typedict, origin, scale_factor)
 
-    print(f"added {len(anns)} annotations")
+    logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)

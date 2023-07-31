@@ -1,3 +1,4 @@
+"""Define Variable types for TIAToolbox."""
 from numbers import Number
 from typing import Literal, Tuple, Union
 

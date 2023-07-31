@@ -1,3 +1,4 @@
+"""Defines Abstract Base Class for TIAToolbox Model Engines."""
 from abc import ABC, abstractmethod
 
 
@@ -5,10 +6,12 @@ class EngineABC(ABC):
     """Abstract base class for engines used in tiatoolbox."""
 
     def __init__(self):
+        """Initialize Engine."""
         super().__init__()
 
     @abstractmethod
     def process_patch(self):
+        """Process an image patch."""
         raise NotImplementedError
 
     # how to deal with patches, list of patches/numpy arrays, WSIs

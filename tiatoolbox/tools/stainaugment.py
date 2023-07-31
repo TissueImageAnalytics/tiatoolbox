@@ -1,4 +1,6 @@
 """Stain augmentation."""
+from __future__ import annotations
+
 import copy
 import random
 
@@ -101,13 +103,14 @@ class StainAugmentor(ImageOnlyTransform):
     def __init__(
         self,
         method: str = "vahadane",
-        stain_matrix: np.ndarray = None,
+        stain_matrix: np.ndarray | None = None,
         sigma1: float = 0.4,
         sigma2: float = 0.2,
         augment_background: bool = False,
         always_apply=False,
         p=0.5,
-    ) -> np.ndarray:
+    ) -> None:
+        """Initialize :class:`StainAugmentor`."""
         super().__init__(always_apply=always_apply, p=p)
 
         self.augment_background = augment_background
@@ -117,9 +120,12 @@ class StainAugmentor(ImageOnlyTransform):
         self.stain_matrix = stain_matrix
 
         if self.method.lower() not in {"macenko", "vahadane"}:
+            msg = (
+                f"Unsupported stain extractor method {self.method!r} "
+                f"for StainAugmentor. Choose either 'vahadane' or 'macenko'."
+            )
             raise ValueError(
-                f"Unsupported stain extractor method {self.method!r} for "
-                "StainAugmentor. Choose either 'vahadane' or 'macenko'."
+                msg,
             )
         self.stain_normalizer = get_normalizer(self.method.lower())
 
@@ -155,12 +161,14 @@ class StainAugmentor(ImageOnlyTransform):
             self.source_concentrations = self.stain_normalizer.target_concentrations
         else:
             self.source_concentrations = self.stain_normalizer.get_concentrations(
-                img, self.stain_matrix
+                img,
+                self.stain_matrix,
             )
         self.n_stains = self.source_concentrations.shape[1]
         if not self.augment_background:
             self.tissue_mask = get_luminosity_tissue_mask(
-                img, threshold=threshold
+                img,
+                threshold=threshold,
             ).ravel()
         self.img_shape = img.shape
 
@@ -188,7 +196,7 @@ class StainAugmentor(ImageOnlyTransform):
                 augmented_concentrations[self.tissue_mask, i] *= self.alpha
                 augmented_concentrations[self.tissue_mask, i] += self.beta
         img_augmented = 255 * np.exp(
-            -1 * np.dot(augmented_concentrations, self.stain_matrix)
+            -1 * np.dot(augmented_concentrations, self.stain_matrix),
         )
         img_augmented = img_augmented.reshape(self.img_shape)
         img_augmented = np.clip(img_augmented, 0, 255)
@@ -200,6 +208,8 @@ class StainAugmentor(ImageOnlyTransform):
         Args:
             img (:class:`numpy.ndarray`):
                 Input RGB image in the form of unit8 numpy array.
+            params (dict):
+                Additional parameters.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -211,13 +221,13 @@ class StainAugmentor(ImageOnlyTransform):
         return self.augment()
 
     def get_params(self):
-        """Returns randomly generated parameters based on input arguments."""
+        """Return randomly generated parameters based on input arguments."""
         self.alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
         self.beta = random.uniform(-self.sigma2, self.sigma2)
         return {}
 
     def get_params_dependent_on_targets(self, params):  # skipcq: PYL-W0613, PYL-R0201
-        """Does nothing, added to resolve flake 8 error"""
+        """Does nothing, added to resolve flake 8 error."""
         return {}
 
     @staticmethod

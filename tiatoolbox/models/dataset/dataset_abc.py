@@ -1,34 +1,34 @@
+"""Define dataset abstract classes."""
 from __future__ import annotations
 
 import copy
-import os
-import pathlib
 from abc import ABC, abstractmethod
-from multiprocessing.managers import Namespace
-from typing import TYPE_CHECKING, Callable, List, Union
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import numpy as np
 import torch
-from torch.utils import data as torch_data
+import torch.utils.data as torch_data
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.utils import imread
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:
-    from tiatoolbox.models import IOSegmentorConfig
+    from multiprocessing.managers import Namespace
 
-from tiatoolbox.utils import imread
-from tiatoolbox.wsicore import WSIMeta, WSIReader
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader
+    from tiatoolbox.models.engine.io_config import IOSegmentorConfig
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
-    """Defines abstract base class for patch dataset."""
+    """Define abstract base class for patch dataset."""
 
     def __init__(
         self,
-    ):
+    ) -> None:
+        """Initialize :class:`PatchDatasetABC`."""
         super().__init__()
         self._preproc = self.preproc
         self.data_is_npy_alike = False
@@ -48,11 +48,13 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
         """
         if any(len(v) != 3 for v in shapes):
-            raise ValueError("Each sample must be an array of the form HWC.")
+            msg = "Each sample must be an array of the form HWC."
+            raise ValueError(msg)
 
         max_shape = np.max(shapes, axis=0)
         if (shapes - max_shape[None]).sum() != 0:
-            raise ValueError("Images must have the same dimensions.")
+            msg = "Images must have the same dimensions."
+            raise ValueError(msg)
 
     def _check_input_integrity(self, mode):
         """Check that variables received during init are valid.
@@ -65,23 +67,26 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """
         if mode == "patch":
             self.data_is_npy_alike = False
-            is_all_paths = all(isinstance(v, (pathlib.Path, str)) for v in self.inputs)
+            is_all_paths = all(isinstance(v, (Path, str)) for v in self.inputs)
             is_all_npy = all(isinstance(v, np.ndarray) for v in self.inputs)
+
+            msg = (
+                "Input must be either a list/array of images "
+                "or a list of valid image paths."
+            )
 
             if not (is_all_paths or is_all_npy or isinstance(self.inputs, np.ndarray)):
                 raise ValueError(
-                    "Input must be either a list/array of images "
-                    "or a list of valid image paths."
+                    msg,
                 )
 
             shapes = None
             # When a list of paths is provided
             if is_all_paths:
-                if any(not os.path.exists(v) for v in self.inputs):
+                if any(not Path(v).exists() for v in self.inputs):
                     # at least one of the paths are invalid
                     raise ValueError(
-                        "Input must be either a list/array of images "
-                        "or a list of valid image paths."
+                        msg,
                     )
                 # Preload test for sanity check
                 shapes = [self.load_img(v).shape for v in self.inputs]
@@ -99,18 +104,13 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                 # Check that input array is numerical
                 if not np.issubdtype(self.inputs.dtype, np.number):
                     # ndarray of mixed data types
-                    raise ValueError("Provided input array is non-numerical.")
-                # N H W C | N C H W
-                if len(self.inputs.shape) != 4:
-                    raise ValueError(
-                        "Input must be an array of images of the form NHWC. This can "
-                        "be achieved by converting a list of images to a numpy array. "
-                        " eg., np.array([img1, img2])."
-                    )
+                    msg = "Provided input array is non-numerical."
+                    raise ValueError(msg)
                 self.data_is_npy_alike = True
 
         elif not isinstance(self.inputs, (list, np.ndarray)):
-            raise ValueError("`inputs` should be a list of patch coordinates.")
+            msg = "`inputs` should be a list of patch coordinates."
+            raise ValueError(msg)
 
     @staticmethod
     def load_img(path):
@@ -120,10 +120,11 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             path (str): Path to an image file.
 
         """
-        path = pathlib.Path(path)
+        path = Path(path)
 
         if path.suffix not in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
-            raise ValueError(f"Cannot load image data from `{path.suffix}` files.")
+            msg = f"Cannot load image data from `{path.suffix}` files."
+            raise ValueError(msg)
 
         return imread(path, as_uint8=False)
 
@@ -158,13 +159,16 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         elif callable(func):
             self._preproc = func
         else:
-            raise ValueError(f"{func} is not callable!")
+            msg = f"{func} is not callable!"
+            raise ValueError(msg)
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Return the length of the instance attributes."""
         return len(self.inputs)
 
     @abstractmethod
     def __getitem__(self, idx):
+        """Get an item from the dataset."""
         ...  # pragma: no cover
 
 
@@ -193,7 +197,6 @@ class WSIStreamDataset(torch_data.Dataset):
             in `wsi_paths`.
 
     Examples:
-
         >>> ioconfig = IOSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
@@ -212,11 +215,12 @@ class WSIStreamDataset(torch_data.Dataset):
     def __init__(
         self,
         ioconfig: IOSegmentorConfig,
-        wsi_paths: List[Union[str, pathlib.Path]],
+        wsi_paths: list[str | Path],
         mp_shared_space: Namespace,
-        preproc: Callable[[np.ndarray], np.ndarray] = None,
+        preproc: Callable[[np.ndarray], np.ndarray] | None = None,
         mode="wsi",
-    ):
+    ) -> None:
+        """Initialize :class:`WSIStreamDataset`."""
         super().__init__()
         self.mode = mode
         self.preproc = preproc
@@ -238,7 +242,7 @@ class WSIStreamDataset(torch_data.Dataset):
 
     def _get_reader(self, img_path):
         """Get appropriate reader for input path."""
-        img_path = pathlib.Path(img_path)
+        img_path = Path(img_path)
         if self.mode == "wsi":
             return WSIReader.open(img_path)
         img = imread(img_path)
@@ -257,7 +261,8 @@ class WSIStreamDataset(torch_data.Dataset):
             info=metadata,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Return the length of the instance attributes."""
         return len(self.mp_shared_space.patch_inputs)
 
     @staticmethod
@@ -274,6 +279,7 @@ class WSIStreamDataset(torch_data.Dataset):
         return torch.utils.data.dataloader.default_collate(batch)
 
     def __getitem__(self, idx: int):
+        """Get an item from the dataset."""
         # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
             self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
@@ -286,7 +292,8 @@ class WSIStreamDataset(torch_data.Dataset):
         # be the same as bounds br-tl, unless bounds are of float
         patch_data_ = []
         scale_factors = self.ioconfig.scale_to_highest(
-            self.ioconfig.input_resolutions, self.ioconfig.resolution_unit
+            self.ioconfig.input_resolutions,
+            self.ioconfig.resolution_unit,
         )
         for idy, resolution in enumerate(self.ioconfig.input_resolutions):
             resolution_bounds = np.round(bounds * scale_factors[idy])
@@ -309,7 +316,7 @@ class WSIStreamDataset(torch_data.Dataset):
 
 
 class WSIPatchDataset(PatchDatasetABC):
-    """Defines a WSI-level patch dataset.
+    """Define a WSI-level patch dataset.
 
     Attributes:
         reader (:class:`.WSIReader`):
@@ -345,7 +352,7 @@ class WSIPatchDataset(PatchDatasetABC):
         auto_get_mask=True,
         min_mask_ratio=0,
         preproc_func=None,
-    ):
+    ) -> None:
         """Create a WSI-level patch dataset.
 
         Args:
@@ -353,10 +360,10 @@ class WSIPatchDataset(PatchDatasetABC):
                 Can be either `wsi` or `tile` to denote the image to
                 read is either a whole-slide image or a large image
                 tile.
-            img_path (:obj:`str` or :obj:`pathlib.Path`):
+            img_path (str or Path):
                 Valid to pyramidal whole-slide image or large tile to
                 read.
-            mask_path (:obj:`str` or :obj:`pathlib.Path`):
+            mask_path (str or Path):
                 Valid mask image.
             patch_input_shape:
                 A tuple (int, int) or ndarray of shape (2,). Expected
@@ -406,10 +413,12 @@ class WSIPatchDataset(PatchDatasetABC):
         super().__init__()
 
         # Is there a generic func for path test in toolbox?
-        if not os.path.isfile(img_path):
-            raise ValueError("`img_path` must be a valid file path.")
+        if not Path.is_file(Path(img_path)):
+            msg = "`img_path` must be a valid file path."
+            raise ValueError(msg)
         if mode not in ["wsi", "tile"]:
-            raise ValueError(f"`{mode}` is not supported.")
+            msg = f"`{mode}` is not supported."
+            raise ValueError(msg)
         patch_input_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
 
@@ -418,16 +427,18 @@ class WSIPatchDataset(PatchDatasetABC):
             or np.size(patch_input_shape) > 2
             or np.any(patch_input_shape < 0)
         ):
-            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
+            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+            raise ValueError(msg)
         if (
             not np.issubdtype(stride_shape.dtype, np.integer)
             or np.size(stride_shape) > 2
             or np.any(stride_shape < 0)
         ):
-            raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
+            msg = f"Invalid `stride_shape` value {stride_shape}."
+            raise ValueError(msg)
 
         self.preproc_func = preproc_func
-        img_path = pathlib.Path(img_path)
+        img_path = Path(img_path)
         if mode == "wsi":
             self.reader = WSIReader.open(img_path)
         else:
@@ -436,8 +447,6 @@ class WSIPatchDataset(PatchDatasetABC):
                 '`units="baseline"` and `resolution=1.0`.',
                 stacklevel=2,
             )
-            units = "baseline"
-            resolution = 1.0
             img = imread(img_path)
             axes = "YXS"[: len(img.shape)]
             # initialise metadata for VirtualWSIReader.
@@ -451,7 +460,7 @@ class WSIPatchDataset(PatchDatasetABC):
                 level_downsamples=[1.0],
                 level_dimensions=[np.array(img.shape[:2][::-1])],
             )
-            # hack value such that read if mask is provided is through
+            # infer value such that read if mask provided is through
             # 'mpp' or 'power' as varying 'baseline' is locked atm
             units = "mpp"
             resolution = 1.0
@@ -474,8 +483,10 @@ class WSIPatchDataset(PatchDatasetABC):
 
         mask_reader = None
         if mask_path is not None:
-            if not os.path.isfile(mask_path):
-                raise ValueError("`mask_path` must be a valid file path.")
+            mask_path = Path(mask_path)
+            if not Path.is_file(mask_path):
+                msg = "`mask_path` must be a valid file path."
+                raise ValueError(msg)
             mask = imread(mask_path)  # assume to be gray
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
@@ -499,7 +510,8 @@ class WSIPatchDataset(PatchDatasetABC):
             self.inputs = self.inputs[selected]
 
         if len(self.inputs) == 0:
-            raise ValueError("No patch coordinates remain after filtering.")
+            msg = "No patch coordinates remain after filtering."
+            raise ValueError(msg)
 
         self.patch_input_shape = patch_input_shape
         self.resolution = resolution
@@ -509,6 +521,7 @@ class WSIPatchDataset(PatchDatasetABC):
         self._check_input_integrity(mode="wsi")
 
     def __getitem__(self, idx):
+        """Get an item from the dataset."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
@@ -526,7 +539,9 @@ class WSIPatchDataset(PatchDatasetABC):
 
 
 class PatchDataset(PatchDatasetABC):
-    """Defines a simple patch dataset, which inherits from the
+    """Define PatchDataset for torch inference.
+
+    Define a simple patch dataset, which inherits from the
       `torch.utils.data.Dataset` class.
 
     Attributes:
@@ -538,10 +553,6 @@ class PatchDataset(PatchDatasetABC):
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
 
-    Properties:
-        preproc_func:
-            Preprocessing function used to transform the input data.
-
     Examples:
         >>> # A user defined preproc func and expected behavior
         >>> preproc_func = lambda img: img/2  # reduce intensity by half
@@ -549,12 +560,13 @@ class PatchDataset(PatchDatasetABC):
         >>> # create a dataset to get patches preprocessed by the above function
         >>> ds = PatchDataset(
         ...     inputs=['/A/B/C/img1.png', '/A/B/C/img2.png'],
-        ...     preproc_func=preproc_func
+        ...     labels=["labels1", "labels2"],
         ... )
 
     """
 
-    def __init__(self, inputs, labels=None):
+    def __init__(self, inputs, labels=None) -> None:
+        """Initialize :class:`PatchDataset`."""
         super().__init__()
 
         self.data_is_npy_alike = False
@@ -566,6 +578,7 @@ class PatchDataset(PatchDatasetABC):
         self._check_input_integrity(mode="patch")
 
     def __getitem__(self, idx):
+        """Get an item from the dataset."""
         patch = self.inputs[idx]
 
         # Mode 0 is list of paths
