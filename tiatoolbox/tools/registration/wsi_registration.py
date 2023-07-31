@@ -1506,6 +1506,7 @@ class AffineWSITransformer:
         y = np.array(list(itertools.chain.from_iterable(y)))
 
         points = np.array([x, y]).transpose()
+        transform = transform * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]  # remove translation
         transform_points = self.transform_points(points, transform)
 
         width = np.max(transform_points[:, 0]) - np.min(transform_points[:, 0]) + 1
@@ -1616,9 +1617,9 @@ class AffineWSITransformer:
         """
         (
             read_level,
-            _,
-            _,
-            _post_read_scale,
+            level_location,
+            level_size,
+            post_read_scale,
             _baseline_read_size,
         ) = self.wsi_reader.find_read_rect_params(
             location=location,
@@ -1628,19 +1629,29 @@ class AffineWSITransformer:
         )
         transformed_location, max_size = self.get_transformed_location(
             location,
-            size,
+            level_size,
             read_level,
         )
-        patch = self.wsi_reader.read_rect(
-            transformed_location,
-            max_size,
-            resolution=resolution,
-            units=units,
-        )
+
+        # Read at optimal level and corrected read size
+        patch = self.wsi_reader.read_region(transformed_location, read_level, max_size)
+        patch = np.array(patch)
+
+        # Apply transformation
         transformed_patch = self.transform_patch(patch, max_size)
 
-        start_row = int(max_size[1] / 2) - int(size[1] / 2)
-        end_row = int(max_size[1] / 2) + int(size[1] / 2)
-        start_col = int(max_size[0] / 2) - int(size[0] / 2)
-        end_col = int(max_size[0] / 2) + int(size[0] / 2)
-        return transformed_patch[start_row:end_row, start_col:end_col, :]
+        # Crop to get rid of black borders due to rotation
+        start_row = int(max_size[1] / 2) - int(level_size[1] / 2)
+        end_row = int(max_size[1] / 2) + int(level_size[1] / 2)
+        start_col = int(max_size[0] / 2) - int(level_size[0] / 2)
+        end_col = int(max_size[0] / 2) + int(level_size[0] / 2)
+        transformed_patch = transformed_patch[start_row:end_row, start_col:end_col, :]
+
+        # Resize to desired size
+        transformed_patch = imresize(
+            img=transformed_patch,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation='optimise',
+        )
+        return transformed_patch
