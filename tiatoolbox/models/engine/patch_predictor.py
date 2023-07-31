@@ -13,35 +13,13 @@ import tqdm
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
-from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc, save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
+from .io_config import IOPatchPredictorConfig
+
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import Resolution, Units
-
-
-class IOPatchPredictorConfig(IOSegmentorConfig):
-    """Contains patch predictor input and output information."""
-
-    def __init__(
-        self,
-        patch_input_shape=None,
-        input_resolutions=None,
-        stride_shape=None,
-        **kwargs,
-    ) -> None:
-        """Initialize :class:`IOPatchPredictorConfig`."""
-        stride_shape = patch_input_shape if stride_shape is None else stride_shape
-        super().__init__(
-            input_resolutions=input_resolutions,
-            output_resolutions=[],
-            stride_shape=stride_shape,
-            patch_input_shape=patch_input_shape,
-            patch_output_shape=patch_input_shape,
-            save_resolution=None,
-            **kwargs,
-        )
 
 
 class PatchPredictor:
@@ -471,10 +449,10 @@ class PatchPredictor:
         resolution,
         units,
     ):
-        """Updates the ioconfig.
+        """Update the ioconfig.
 
         Args:
-            ioconfig (IOPatchPredictorConfig):
+            ioconfig (:class:`IOPatchPredictorConfig`):
                 Input ioconfig for PatchPredictor.
             patch_input_shape (tuple):
                 Size of patches input to the model. Patches are at
@@ -533,6 +511,7 @@ class PatchPredictor:
             input_resolutions=[{"resolution": resolution, "units": units}],
             patch_input_shape=patch_input_shape,
             stride_shape=stride_shape,
+            output_resolutions=[],
         )
 
     @staticmethod

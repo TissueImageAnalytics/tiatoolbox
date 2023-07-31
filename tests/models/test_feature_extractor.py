@@ -6,11 +6,9 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from tiatoolbox.models import IOSegmentorConfig
 from tiatoolbox.models.architecture.vanilla import CNNBackbone
-from tiatoolbox.models.engine.semantic_segmentor import (
-    DeepFeatureExtractor,
-    IOSegmentorConfig,
-)
+from tiatoolbox.models.engine.semantic_segmentor import DeepFeatureExtractor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader
 

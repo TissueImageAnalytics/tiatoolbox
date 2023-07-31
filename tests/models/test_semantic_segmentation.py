@@ -1,7 +1,4 @@
 """Test for Semantic Segmentor."""
-
-import copy
-
 # ! The garbage collector
 import gc
 import multiprocessing
@@ -18,13 +15,10 @@ from click.testing import CliRunner
 from torch import nn
 
 from tiatoolbox import cli
-from tiatoolbox.models import SemanticSegmentor
+from tiatoolbox.models import IOSegmentorConfig, SemanticSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import centre_crop
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-    WSIStreamDataset,
-)
+from tiatoolbox.models.engine.semantic_segmentor import WSIStreamDataset
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread, imwrite
@@ -113,39 +107,6 @@ class _CNNTo1(ModelABC):
 
 def test_segmentor_ioconfig():
     """Test for IOConfig."""
-    default_config = {
-        "input_resolutions": [
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.50},
-            {"units": "mpp", "resolution": 0.75},
-        ],
-        "output_resolutions": [
-            {"units": "mpp", "resolution": 0.25},
-            {"units": "mpp", "resolution": 0.50},
-        ],
-        "patch_input_shape": [2048, 2048],
-        "patch_output_shape": [1024, 1024],
-        "stride_shape": [512, 512],
-    }
-
-    # error when uniform resolution units are not uniform
-    xconfig = copy.deepcopy(default_config)
-    xconfig["input_resolutions"] = [
-        {"units": "mpp", "resolution": 0.25},
-        {"units": "power", "resolution": 0.50},
-    ]
-    with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        _ = IOSegmentorConfig(**xconfig)
-
-    # error when uniform resolution units are not supported
-    xconfig = copy.deepcopy(default_config)
-    xconfig["input_resolutions"] = [
-        {"units": "alpha", "resolution": 0.25},
-        {"units": "alpha", "resolution": 0.50},
-    ]
-    with pytest.raises(ValueError, match=r".*Invalid resolution units.*"):
-        _ = IOSegmentorConfig(**xconfig)
-
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
@@ -268,8 +229,8 @@ def test_crash_segmentor(remote_sample):
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
-    # post processing workers because baseline Semantic Segmentor does not support
-    # post processing out of the box. It only contains condition to create it
+    # post-processing workers because baseline Semantic Segmentor does not support
+    # post-processing out of the box. It only contains condition to create it
     # for any subclass
     semantic_segmentor.num_postproc_workers = 1
 
@@ -301,7 +262,7 @@ def test_crash_segmentor(remote_sample):
             crash_on_exception=True,
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
-        semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
+        semantic_segmentor.predict([], mode="tile", patch_input_shape=(2048, 2048))
     _rm_dir("output")  # default output dir test
 
     # * test not providing any io_config info when not using pretrained model
@@ -314,26 +275,42 @@ def test_crash_segmentor(remote_sample):
         )
     _rm_dir("output")  # default output dir test
 
-    # * Test crash propagation when parallelize post processing
+    # * Test crash propagation when parallelize post-processing
     _rm_dir("output")
     semantic_segmentor.num_postproc_workers = 2
     semantic_segmentor.model.forward = _crash_func
     with pytest.raises(ValueError, match=r"Propagation Crash."):
         semantic_segmentor.predict(
             [mini_wsi_svs],
-            patch_input_shape=[2048, 2048],
+            patch_input_shape=(2048, 2048),
+            mode="wsi",
+            on_gpu=ON_GPU,
+            crash_on_exception=True,
+            resolution=1.0,
+            units="baseline",
+        )
+
+    _rm_dir("output")
+
+    with pytest.raises(ValueError, match=r"Invalid resolution.*"):
+        semantic_segmentor.predict(
+            [mini_wsi_svs],
+            patch_input_shape=(2048, 2048),
             mode="wsi",
             on_gpu=ON_GPU,
             crash_on_exception=True,
         )
+
     _rm_dir("output")
     # test ignore crash
     semantic_segmentor.predict(
         [mini_wsi_svs],
-        patch_input_shape=[2048, 2048],
+        patch_input_shape=(2048, 2048),
         mode="wsi",
         on_gpu=ON_GPU,
         crash_on_exception=False,
+        resolution=1.0,
+        units="baseline",
     )
     _rm_dir("output")
 
@@ -429,7 +406,7 @@ def test_functional_segmentor_merging(tmp_path):
     _rm_dir(save_dir)
     save_dir.mkdir()
 
-    # * with out of bound location
+    # * with an out of bound location
     canvas = semantic_segmentor.merge_prediction(
         [4, 4],
         [
@@ -465,8 +442,8 @@ def test_functional_segmentor(remote_sample, tmp_path):
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
-    # post processing workers because baseline Semantic Segmentor does not support
-    # post processing out of the box. It only contains condition to create it
+    # post-processing workers because baseline Semantic Segmentor does not support
+    # post-processing out of the box. It only contains condition to create it
     # for any subclass
     semantic_segmentor.num_postproc_workers = 1
 
@@ -486,7 +463,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[512, 512],
+        patch_input_shape=(512, 512),
         resolution=1 / resolution,
         units="baseline",
         crash_on_exception=True,

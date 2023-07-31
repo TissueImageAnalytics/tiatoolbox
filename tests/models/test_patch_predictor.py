@@ -459,19 +459,6 @@ def test_patch_dataset_abc():
 # -------------------------------------------------------------------------------------
 
 
-def test_io_patch_predictor_config():
-    """Test for IOConfig."""
-    # test for creating
-    cfg = IOPatchPredictorConfig(
-        patch_input_shape=[224, 224],
-        stride_shape=[224, 224],
-        input_resolutions=[{"resolution": 0.5, "units": "mpp"}],
-        # test adding random kwarg and they should be accessible as kwargs
-        crop_from_source=True,
-    )
-    assert cfg.crop_from_source
-
-
 # -------------------------------------------------------------------------------------
 # Engine
 # -------------------------------------------------------------------------------------
@@ -545,6 +532,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
         patch_input_shape=[512, 512],
         stride_shape=[256, 256],
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
+        output_resolutions=[],
     )
     predictor.predict(
         [mini_wsi_svs],
