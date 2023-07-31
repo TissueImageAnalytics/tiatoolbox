@@ -154,7 +154,7 @@ class ModelIOConfigABC:
             ... array([0.5 , 1.])  # output
 
         """
-        old_val = [v["resolution"] for v in resolutions]
+        old_vals = [v["resolution"] for v in resolutions]
         if units not in {"baseline", "mpp", "power"}:
             msg = (
                 f"Unknown units `{units}`. "
@@ -164,10 +164,10 @@ class ModelIOConfigABC:
                 msg,
             )
         if units == "baseline":
-            return old_val
+            return old_vals
         if units == "mpp":
-            return np.min(old_val) / np.array(old_val)
-        return np.array(old_val) / np.max(old_val)
+            return np.min(old_vals) / np.array(old_vals)
+        return np.array(old_vals) / np.max(old_vals)
 
     def to_baseline(self: ModelIOConfigABC) -> ModelIOConfigABC:
         """Returns a new config object converted to baseline form.
