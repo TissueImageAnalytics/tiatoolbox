@@ -14,8 +14,8 @@ ON_GPU = False
 # Test pretrained Model =============================
 
 
-def test_functional_nuclick(remote_sample, tmp_path, caplog):
-    """Tests for NuClick."""
+def test_functional_nuclick(remote_sample, caplog):
+    """Test for NuClick."""
     # convert to pathlib Path to prevent wsireader complaint
     tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
     img = imread(tile_path)
@@ -39,7 +39,8 @@ def test_functional_nuclick(remote_sample, tmp_path, caplog):
     patch = np.float32(patch) / 255.0
     patch = np.moveaxis(patch, -1, 0)
     batch = np.concatenate(
-        (patch, inclusion_map[np.newaxis, ...], exclusion_map[np.newaxis, ...]), axis=0
+        (patch, inclusion_map[np.newaxis, ...], exclusion_map[np.newaxis, ...]),
+        axis=0,
     )
 
     batch = torch.from_numpy(batch[np.newaxis, ...])
@@ -49,7 +50,9 @@ def test_functional_nuclick(remote_sample, tmp_path, caplog):
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     postproc_masks = model.postproc(
-        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+        output,
+        do_reconstruction=True,
+        nuc_points=inclusion_map[np.newaxis, ...],
     )
 
     gt_path = pathlib.Path(remote_sample("nuclick-output"))
@@ -66,6 +69,8 @@ def test_functional_nuclick(remote_sample, tmp_path, caplog):
     inclusion_map = np.zeros((128, 128))
     inclusion_map[0, 0] = 1
     _ = model.postproc(
-        output, do_reconstruction=True, nuc_points=inclusion_map[np.newaxis, ...]
+        output,
+        do_reconstruction=True,
+        nuc_points=inclusion_map[np.newaxis, ...],
     )
     assert "Nuclei reconstruction was not done" in caplog.text

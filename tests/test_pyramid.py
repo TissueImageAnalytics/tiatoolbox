@@ -1,4 +1,4 @@
-"""Tests for tile pyramid generation."""
+"""Test for tile pyramid generation."""
 import re
 from pathlib import Path
 
@@ -92,7 +92,7 @@ def test_zoomify_tile_group_index_error():
         dz.tile_group(0, 100, 100)
 
 
-def test_zoomify_dump_options_combinations(tmp_path):  # noqa: CCR001
+def test_zoomify_dump_options_combinations(tmp_path):
     """Test for no fatal errors on all option combinations for dump."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -172,7 +172,10 @@ def test_sub_tile_levels():
     wsi = wsireader.VirtualWSIReader(array)
 
     class MockTileGenerator(pyramid.TilePyramidGenerator):
+        """Mock Tile Generator class for tests."""
+
         def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
+            """Return path to mock tile."""
             return Path(level, x, y)
 
         @property

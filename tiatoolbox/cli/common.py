@@ -1,12 +1,14 @@
-"""Defines common code required for cli."""
-import os
-import pathlib
+"""Define common code required for cli."""
+from __future__ import annotations
+
+from pathlib import Path
 
 import click
 
 
 def add_default_to_usage_help(
-    usage_help: str, default: str or int or float or bool
+    usage_help: str,
+    default: str or int or float or bool,
 ) -> str:
     """Adds default value to usage help string.
 
@@ -41,7 +43,7 @@ def cli_name(
     usage_help: str = "User defined name to be used as an identifier.",
     multiple: bool = False,
 ) -> callable:
-    """enables --name option for cli"""
+    """Enable --name option for cli."""
     if multiple:
         usage_help = usage_help + " Multiple instances may be provided."
     return click.option("--name", help=usage_help, type=str, multiple=multiple)
@@ -49,7 +51,7 @@ def cli_name(
 
 def cli_output_path(
     usage_help: str = "Path to output directory to save the output.",
-    default: str = None,
+    default: str | None = None,
 ) -> callable:
     """Enables --output-path option for cli."""
     return click.option(
@@ -76,7 +78,7 @@ def cli_file_type(
 def cli_mode(
     usage_help: str = "Selected mode to show or save the required information.",
     default: str = "save",
-    input_type: click.Choice = None,
+    input_type: click.Choice | None = None,
 ) -> callable:
     """Enables --mode option for cli."""
     if input_type is None:
@@ -105,12 +107,13 @@ def cli_region(
 def cli_units(
     usage_help: str = "Image resolution units to read the image.",
     default: str = "level",
-    input_type: click.Choice = None,
+    input_type: click.Choice | None = None,
 ) -> callable:
     """Enables --units option for cli."""
     if input_type is None:
         input_type = click.Choice(
-            ["mpp", "power", "level", "baseline"], case_sensitive=False
+            ["mpp", "power", "level", "baseline"],
+            case_sensitive=False,
         )
     return click.option(
         "--units",
@@ -121,7 +124,8 @@ def cli_units(
 
 
 def cli_resolution(
-    usage_help: str = "Image resolution to read the image.", default: float = 0
+    usage_help: str = "Image resolution to read the image.",
+    default: float = 0,
 ) -> callable:
     """Enables --resolution option for cli."""
     return click.option(
@@ -133,7 +137,8 @@ def cli_resolution(
 
 
 def cli_tile_objective(
-    usage_help: str = "Objective value for the saved tiles.", default: int = 20
+    usage_help: str = "Objective value for the saved tiles.",
+    default: int = 20,
 ) -> callable:
     """Enables --tile-objective-value option for cli."""
     return click.option(
@@ -172,7 +177,7 @@ def cli_tile_format(
 def cli_method(
     usage_help: str = "Select method of for tissue masking.",
     default: str = "Otsu",
-    input_type: click.Choice = None,
+    input_type: click.Choice | None = None,
 ) -> callable:
     """Enables --method option for cli."""
     if input_type is None:
@@ -208,7 +213,7 @@ def cli_pretrained_model(
 def cli_pretrained_weights(
     usage_help: str = "Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
-    default: str = None,
+    default: str | None = None,
 ) -> callable:
     """Enables --pretrained-weights option for cli."""
     return click.option(
@@ -276,7 +281,7 @@ def cli_masks(
     "If masks are not provided, then a tissue mask will be "
     "automatically generated for whole-slide images or the entire image is "
     "processed for image tiles. Supported file types are jpg, png and npy.",
-    default: str = None,
+    default: str | None = None,
 ) -> callable:
     """Enables --masks option for cli."""
     return click.option(
@@ -303,7 +308,7 @@ def cli_yaml_config_path(
     usage_help: str = "Path to ioconfig file. Sample yaml file can be viewed in "
     "tiatoolbox.data.pretrained_model.yaml. "
     "if pretrained_model is used the ioconfig is automatically set.",
-    default: str = None,
+    default: str | None = None,
 ) -> callable:
     """Enables --yaml-config-path option for cli."""
     return click.option(
@@ -314,7 +319,8 @@ def cli_yaml_config_path(
 
 
 def cli_on_gpu(
-    usage_help: str = "Run the model on GPU.", default: bool = False
+    usage_help: str = "Run the model on GPU.",
+    default: bool = False,
 ) -> callable:
     """Enables --on-gpu option for cli."""
     return click.option(
@@ -353,7 +359,8 @@ def cli_num_postproc_workers(
 
 
 def cli_verbose(
-    usage_help: str = "Prints the console output.", default: bool = True
+    usage_help: str = "Prints the console output.",
+    default: bool = True,
 ) -> callable:
     """Enables --verbose option for cli."""
     return click.option(
@@ -365,36 +372,44 @@ def cli_verbose(
 
 
 class TIAToolboxCLI(click.Group):
-    """Defines TIAToolbox Commandline Interface Click group."""
+    """Define TIAToolbox Commandline Interface Click group."""
 
-    def __init__(self, *args, **kwargs):
-        super(TIAToolboxCLI, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize TIAToolboxCLI."""
+        super().__init__(*args, **kwargs)
         self.help = "Computational pathology toolbox by TIA Centre."
         self.add_help_option = {"help_option_names": ["-h", "--help"]}
 
 
 def no_input_message(
-    input_file: str or pathlib.Path = None, message: str = "No image input provided.\n"
-) -> None:
+    input_file: (str or Path) | None = None,
+    message: str = "No image input provided.\n",
+) -> Path:
     """This function is called if no input is provided.
 
     Args:
-        input_file (str or pathlib.Path): Path to input file.
+        input_file (str or Path): Path to input file.
         message (str): Error message to display.
+
+    Returns:
+        Path:
+            Return input path as :class:`Path`.
 
     """
     if input_file is None:
         ctx = click.get_current_context()
         ctx.fail(message=message)
 
+    return Path(input_file)
+
 
 def prepare_file_dir_cli(
-    img_input: str or pathlib.Path,
-    output_path: str or pathlib.Path,
+    img_input: str or Path,
+    output_path: str or Path,
     file_types: str,
     mode: str,
     sub_dirname: str,
-) -> [list, pathlib.Path]:
+) -> [list, Path]:
     """Prepares CLI for running code on multiple files or a directory.
 
     Checks for existing directories to run tests.
@@ -402,11 +417,16 @@ def prepare_file_dir_cli(
     creates list of file paths if input is a directory.
 
     Args:
-        img_input (str or pathlib.Path): file path to images.
-        output_path (str or pathlib.Path): output directory path.
-        file_types (str): file types to process using cli.
-        mode (str): wsi or tile mode.
-        sub_dirname (str): name of subdirectory to save output.
+        img_input (str or Path):
+            File path to images.
+        output_path (str or Path):
+            Output directory path.
+        file_types (str):
+            File types to process using cli.
+        mode (str):
+            wsi or tile mode.
+        sub_dirname (str):
+            Name of subdirectory to save output.
 
     Returns:
         list: list of file paths to process.
@@ -415,24 +435,24 @@ def prepare_file_dir_cli(
     """
     from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
-    no_input_message(input_file=img_input)
+    img_input = no_input_message(input_file=img_input)
     file_types = string_to_tuple(in_str=file_types)
 
     if isinstance(output_path, str):
-        output_path = pathlib.Path(output_path)
+        output_path = Path(output_path)
 
-    if not os.path.exists(img_input):
+    if not Path.exists(img_input):
         raise FileNotFoundError
 
     files_all = [
         img_input,
     ]
 
-    if os.path.isdir(img_input):
+    if Path.is_dir(img_input):
         files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
 
     if output_path is None and mode == "save":
-        input_dir = pathlib.Path(img_input).parent
+        input_dir = Path(img_input).parent
         output_path = input_dir / sub_dirname
 
     if mode == "save":
@@ -442,11 +462,11 @@ def prepare_file_dir_cli(
 
 
 def prepare_model_cli(
-    img_input: str or pathlib.Path,
-    output_path: str or pathlib.Path,
-    masks: str or pathlib.Path,
+    img_input: str or Path,
+    output_path: str or Path,
+    masks: str or Path,
     file_types: str,
-) -> [list, list, pathlib.Path]:
+) -> [list, list, Path]:
     """Prepares cli for running models.
 
     Checks for existing directories to run tests.
@@ -454,45 +474,55 @@ def prepare_model_cli(
     creates list of file paths if input is a directory.
 
     Args:
-        img_input (str or pathlib.Path): file path to images.
-        output_path (str or pathlib.Path): output directory path.
-        masks (str or pathlib.Path): file path to masks.
-        file_types (str): file types to process using cli.
+        img_input (str or Path):
+            File path to images.
+        output_path (str or Path):
+            Output directory path.
+        masks (str or Path):
+            File path to masks.
+        file_types (str):
+            File types to process using cli.
 
     Returns:
-        list: list of file paths to process.
-        list: list of masks corresponding to input files.
-        pathlib.Path: output path
+        list:
+            List of file paths to process.
+        list:
+            List of masks corresponding to input files.
+        Path:
+            Output path.
 
     """
     from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
-    no_input_message(input_file=img_input)
-    output_path = pathlib.Path(output_path)
+    img_input = no_input_message(input_file=img_input)
+    output_path = Path(output_path)
     file_types = string_to_tuple(in_str=file_types)
 
     if output_path.exists():
-        raise FileExistsError("Path already exists.")
+        msg = "Path already exists."
+        raise FileExistsError(msg)
 
-    if not os.path.exists(img_input):
+    if not Path.exists(img_input):
         raise FileNotFoundError
 
     files_all = [
         img_input,
     ]
 
-    if masks is None:
-        masks_all = None
-    else:
-        masks_all = [
-            masks,
-        ]
+    masks_all = None
 
-    if os.path.isdir(img_input):
+    if masks is not None:
+        masks = Path(masks)
+        if masks.is_file():
+            masks_all = [masks]
+        if masks.is_dir():
+            masks_all = grab_files_from_dir(
+                input_path=masks,
+                file_types=("*.jpg", "*.png"),
+            )
+
+    if Path.is_dir(img_input):
         files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
-
-    if os.path.isdir(str(masks)):
-        masks_all = grab_files_from_dir(input_path=masks, file_types=("*.jpg", "*.png"))
 
     return [files_all, masks_all, output_path]
 
@@ -505,7 +535,7 @@ def prepare_ioconfig_seg(segment_config_class, pretrained_weights, yaml_config_p
     import yaml
 
     if pretrained_weights is not None:
-        with open(yaml_config_path) as registry_handle:
+        with Path(yaml_config_path).open() as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
 
         return segment_config_class(**ioconfig)

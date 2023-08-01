@@ -2,7 +2,7 @@
 from tiatoolbox.wsicore.metadata import ngff
 
 
-class TestDataclassInit:  # noqa: PIE798
+class TestDataclassInit:
     """Test that initialization paths do not error."""
 
     @staticmethod

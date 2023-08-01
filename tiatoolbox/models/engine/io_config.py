@@ -1,9 +1,13 @@
+"""Defines IOConfig for Model Engines."""
+from __future__ import annotations
+
 from dataclasses import dataclass, field, replace
-from typing import List, Tuple, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 
-from tiatoolbox.wsicore.wsimeta import Units
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import Units
 
 
 @dataclass
@@ -41,14 +45,25 @@ class ModelIOConfigABC:
             output resolutions. This helps to read the image at the optimal
             resolution and improves performance.
 
+    Examples:
+        >>> # Defining io for a base network and converting to baseline.
+        >>> ioconfig = ModelIOConfigABC(
+        ...     input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        ...     output_resolutions=[{"units": "mpp", "resolution": 1.0}],
+        ...     patch_input_shape=(224, 224),
+        ...     stride_shape=(224, 224),
+        ... )
+        >>> ioconfig = ioconfig.to_baseline()
+
     """
 
-    input_resolutions: List[dict]
-    patch_input_shape: Union[List[int], np.ndarray, Tuple[int, int]]
-    stride_shape: Union[List[int], np.ndarray, Tuple[int, int]] = None
-    output_resolutions: List[dict] = field(default_factory=list)
+    input_resolutions: list[dict]
+    patch_input_shape: list[int] | np.ndarray | tuple[int, int]
+    stride_shape: list[int] | np.ndarray | tuple[int, int] = None
+    output_resolutions: list[dict] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self: ModelIOConfigABC) -> None:
+        """Perform post initialization tasks."""
         if self.stride_shape is None:
             self.stride_shape = self.patch_input_shape
 
@@ -56,40 +71,48 @@ class ModelIOConfigABC:
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions,
+                key=lambda x: x["resolution"],
             )
         else:
             self.highest_input_resolution = max(
-                self.input_resolutions, key=lambda x: x["resolution"]
+                self.input_resolutions,
+                key=lambda x: x["resolution"],
             )
 
         self._validate()
 
-    def _validate(self):
+    def _validate(self: ModelIOConfigABC) -> None:
         """Validate the data format."""
         resolutions = self.input_resolutions + self.output_resolutions
-        units = [v["units"] for v in resolutions]
-        units = np.unique(units)
+        units = {v["units"] for v in resolutions}
 
         if len(units) != 1:
-            raise ValueError(
+            msg = (
                 f"Multiple resolution units found: `{units}`. "
                 f"Mixing resolution units is not allowed."
             )
+            raise ValueError(
+                msg,
+            )
 
-        if units[0] not in [
+        if units.pop() not in [
             "power",
             "baseline",
             "mpp",
         ]:
-            raise ValueError(f"Invalid resolution units `{units[0]}`.")
+            msg = f"Invalid resolution units `{units}`."
+            raise ValueError(msg)
 
     @staticmethod
-    def scale_to_highest(resolutions: List[dict], units: Units):
+    def scale_to_highest(resolutions: list[dict], units: Units) -> np.array:
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
-        the highest resolution found in the input resolutions list.
+        the highest resolution found in the input resolutions list. If a model
+        requires images at multiple resolutions. This helps to read the image a
+        single resolution. The image will be read at the highest required resolution
+        and will be scaled for low resolution requirements using interpolation.
 
         Args:
             resolutions (list):
@@ -101,22 +124,52 @@ class ModelIOConfigABC:
         Returns:
             :class:`numpy.ndarray`:
                 A 1D array of scaling factors having the same length as
-                `resolutions`
+                `resolutions`.
+
+        Examples:
+            >>> # Defining io for a base network and converting to baseline.
+            >>> ioconfig = ModelIOConfigABC(
+            ...     input_resolutions=[
+            ...                {"units": "mpp", "resolution": 0.25},
+            ...                {"units": "mpp", "resolution": 0.5},
+            ...                ],
+            ...     output_resolutions=[{"units": "mpp", "resolution": 1.0}],
+            ...     patch_input_shape=(224, 224),
+            ...     stride_shape=(224, 224),
+            ... )
+            >>> ioconfig = ioconfig.scale_to_highest()
+            ... array([1. , 0.5])  # output
+            >>>
+            >>> # Defining io for a base network and converting to baseline.
+            >>> ioconfig = ModelIOConfigABC(
+            ...     input_resolutions=[
+            ...                {"units": "mpp", "resolution": 0.5},
+            ...                {"units": "mpp", "resolution": 0.25},
+            ...                ],
+            ...     output_resolutions=[{"units": "mpp", "resolution": 1.0}],
+            ...     patch_input_shape=(224, 224),
+            ...     stride_shape=(224, 224),
+            ... )
+            >>> ioconfig = ioconfig.scale_to_highest()
+            ... array([0.5 , 1.])  # output
 
         """
-        old_val = [v["resolution"] for v in resolutions]
-        if units not in ["baseline", "mpp", "power"]:
-            raise ValueError(
+        old_vals = [v["resolution"] for v in resolutions]
+        if units not in {"baseline", "mpp", "power"}:
+            msg = (
                 f"Unknown units `{units}`. "
-                "Units should be one of 'baseline', 'mpp' or 'power'."
+                f"Units should be one of 'baseline', 'mpp' or 'power'."
+            )
+            raise ValueError(
+                msg,
             )
         if units == "baseline":
-            return old_val
+            return old_vals
         if units == "mpp":
-            return np.min(old_val) / np.array(old_val)
-        return np.array(old_val) / np.max(old_val)
+            return np.min(old_vals) / np.array(old_vals)
+        return np.array(old_vals) / np.max(old_vals)
 
-    def to_baseline(self):
+    def to_baseline(self: ModelIOConfigABC) -> ModelIOConfigABC:
         """Returns a new config object converted to baseline form.
 
         This will return a new :class:`ModelIOConfigABC` where
@@ -138,7 +191,20 @@ class ModelIOConfigABC:
             {"units": "baseline", "resolution": v} for v in scale_factors[:end_idx]
         ]
 
-        return replace(self, input_resolutions=input_resolutions, output_resolutions=[])
+        num_input_resolutions = len(self.input_resolutions)
+        num_output_resolutions = len(self.output_resolutions)
+
+        end_idx = num_input_resolutions + num_output_resolutions
+        output_resolutions = [
+            {"units": "baseline", "resolution": v}
+            for v in scale_factors[num_input_resolutions:end_idx]
+        ]
+
+        return replace(
+            self,
+            input_resolutions=input_resolutions,
+            output_resolutions=output_resolutions,
+        )
 
 
 @dataclass
@@ -191,8 +257,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
         ...     patch_output_shape=(1024, 1024),
         ...     stride_shape=(512, 512),
         ... )
-
-    Examples:
+        ...
         >>> # Defining io for a network having 3 input and 2 output
         >>> # at the same resolution, the output is then merged at a
         >>> # different resolution.
@@ -214,10 +279,10 @@ class IOSegmentorConfig(ModelIOConfigABC):
 
     """
 
-    patch_output_shape: Union[List[int], np.ndarray, Tuple[int, int]] = None
+    patch_output_shape: list[int] | np.ndarray | tuple[int, int] = None
     save_resolution: dict = None
 
-    def to_baseline(self):
+    def to_baseline(self: IOSegmentorConfig) -> IOSegmentorConfig:
         """Returns a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
@@ -232,14 +297,6 @@ class IOSegmentorConfig(ModelIOConfigABC):
             resolutions.append(self.save_resolution)
 
         scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
-        num_input_resolutions = len(self.input_resolutions)
-        num_output_resolutions = len(self.output_resolutions)
-
-        end_idx = num_input_resolutions + num_output_resolutions
-        output_resolutions = [
-            {"units": "baseline", "resolution": v}
-            for v in scale_factors[num_input_resolutions:end_idx]
-        ]
 
         save_resolution = None
         if self.save_resolution is not None:
@@ -248,7 +305,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
         return replace(
             self,
             input_resolutions=new_config.input_resolutions,
-            output_resolutions=output_resolutions,
+            output_resolutions=new_config.output_resolutions,
             save_resolution=save_resolution,
         )
 
@@ -283,6 +340,15 @@ class IOPatchPredictorConfig(ModelIOConfigABC):
             Highest resolution to process the image based on input and
             output resolutions. This helps to read the image at the optimal
             resolution and improves performance.
+
+    Examples:
+        >>> # Defining io for a patch predictor network
+        >>> ioconfig = IOPatchPredictorConfig(
+        ...     input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        ...     output_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        ...     patch_input_shape=(224, 224),
+        ...     stride_shape=(224, 224),
+        ... )
 
     """
 
@@ -338,19 +404,19 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
         >>> # same resolution
-        >>> ioconfig = IOSegmentorConfig(
+        >>> ioconfig = IOInstanceSegmentorConfig(
         ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         ...     patch_input_shape=(2048, 2048),
         ...     patch_output_shape=(1024, 1024),
         ...     stride_shape=(512, 512),
+        ...     margin=128,
+        ...     tile_shape=(1024, 1024),
         ... )
-
-    Examples:
         >>> # Defining io for a network having 3 input and 2 output
         >>> # at the same resolution, the output is then merged at a
         >>> # different resolution.
-        >>> ioconfig = IOSegmentorConfig(
+        >>> ioconfig = IOInstanceSegmentorConfig(
         ...     input_resolutions=[
         ...         {"units": "mpp", "resolution": 0.25},
         ...         {"units": "mpp", "resolution": 0.50},
@@ -364,14 +430,16 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         ...     patch_output_shape=(1024, 1024),
         ...     stride_shape=(512, 512),
         ...     save_resolution={"units": "mpp", "resolution": 4.0},
+        ...     margin=128,
+        ...     tile_shape=(1024, 1024),
         ... )
 
     """
 
     margin: int = None
-    tile_shape: Tuple[int, int] = None
+    tile_shape: tuple[int, int] = None
 
-    def to_baseline(self):
+    def to_baseline(self: IOInstanceSegmentorConfig) -> IOInstanceSegmentorConfig:
         """Returns a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
@@ -380,11 +448,4 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         reference.
 
         """
-        new_config = super().to_baseline()
-
-        return replace(
-            self,
-            input_resolutions=new_config.input_resolutions,
-            output_resolutions=new_config.output_resolutions,
-            save_resolution=new_config.save_resolution,
-        )
+        return super().to_baseline()

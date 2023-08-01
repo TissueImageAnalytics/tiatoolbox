@@ -1,15 +1,16 @@
-"""Defines vanilla CNNs with torch backbones, mainly for patch classification."""
+"""Define vanilla CNNs with torch backbones, mainly for patch classification."""
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torchvision.models as torch_models
+from torch import nn
+from torchvision.models import WeightsEnum
 
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import select_device
 
 
-def _get_architecture(arch_name, weights="DEFAULT", **kwargs):
+def _get_architecture(arch_name, weights: str or WeightsEnum = "DEFAULT", **kwargs):
     """Get a model.
 
     Model architectures are either already defined within torchvision or
@@ -18,6 +19,10 @@ def _get_architecture(arch_name, weights="DEFAULT", **kwargs):
     Args:
         arch_name (str):
             Architecture name.
+        weights (str or WeightsEnum):
+            torchvision model weights (get_model_weights).
+        kwargs (dict):
+            Key-word arguments.
 
     Returns:
         List of PyTorch network layers wrapped with `nn.Sequential`.
@@ -45,7 +50,8 @@ def _get_architecture(arch_name, weights="DEFAULT", **kwargs):
         "mobilenet_v3_small": torch_models.mobilenet_v3_small,
     }
     if arch_name not in backbone_dict:
-        raise ValueError(f"Backbone `{arch_name}` is not supported.")
+        msg = f"Backbone `{arch_name}` is not supported."
+        raise ValueError(msg)
 
     creator = backbone_dict[arch_name]
     model = creator(weights=weights, **kwargs)
@@ -85,7 +91,8 @@ class CNNModel(ModelABC):
 
     """
 
-    def __init__(self, backbone, num_classes=1):
+    def __init__(self, backbone, num_classes=1) -> None:
+        """Initialize :class:`CNNModel`."""
         super().__init__()
         self.num_classes = num_classes
 
@@ -138,7 +145,7 @@ class CNNModel(ModelABC):
 
         """
         img_patches_device = batch_data.to(select_device(on_gpu)).type(
-            torch.float32
+            torch.float32,
         )  # to NCHW
         img_patches_device = img_patches_device.permute(0, 3, 1, 2).contiguous()
 
@@ -193,7 +200,8 @@ class CNNBackbone(ModelABC):
 
     """
 
-    def __init__(self, backbone):
+    def __init__(self, backbone) -> None:
+        """Initialize :class:`CNNBackbone`."""
         super().__init__()
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
@@ -229,7 +237,7 @@ class CNNBackbone(ModelABC):
 
         """
         img_patches_device = batch_data.to(select_device(on_gpu)).type(
-            torch.float32
+            torch.float32,
         )  # to NCHW
         img_patches_device = img_patches_device.permute(0, 3, 1, 2).contiguous()
 

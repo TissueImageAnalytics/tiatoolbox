@@ -18,7 +18,8 @@ from tiatoolbox.cli.common import (
 @tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
-    usage_help="Path to output directory to save the output.", default="tiles"
+    usage_help="Path to output directory to save the output.",
+    default="tiles",
 )
 @cli_file_type()
 @cli_tile_objective()
@@ -38,7 +39,11 @@ def save_tiles(
     from tiatoolbox.wsicore.wsireader import WSIReader
 
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, "save", "tiles"
+        img_input,
+        output_path,
+        file_types,
+        "save",
+        "tiles",
     )
     if verbose:
         logger.setLevel(logging.DEBUG)

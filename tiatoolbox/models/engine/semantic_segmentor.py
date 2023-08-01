@@ -1,14 +1,12 @@
 """This module implements semantic segmentation."""
-
+from __future__ import annotations
 
 import copy
 import logging
-import os
-import pathlib
 import shutil
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing.managers import Namespace
-from typing import Callable, List, Tuple, Union
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import joblib
@@ -20,12 +18,15 @@ import tqdm
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.typing import Resolution, Units
 from tiatoolbox.utils import imread, misc
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 from .io_config import IOSegmentorConfig
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import Resolution, Units
 
 
 def _estimate_canvas_parameters(sample_prediction, canvas_shape):
@@ -36,6 +37,7 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
             Patch prediction assuming to be of shape HWC.
         canvas_shape (:class:`numpy.ndarray`):
             HW of the supposed assembled image.
+
     Returns:
         (tuple, tuple, bool):
             Canvas Shape, Canvas Count and whether to add singleton dimension.
@@ -43,30 +45,37 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
     """
     if len(sample_prediction.shape) == 3:
         num_output_ch = sample_prediction.shape[-1]
-        canvas_cum_shape_ = tuple(canvas_shape) + (num_output_ch,)
-        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        canvas_cum_shape_ = (*tuple(canvas_shape), num_output_ch)
+        canvas_count_shape_ = (*tuple(canvas_shape), 1)
         add_singleton_dim = num_output_ch == 1
     else:
-        canvas_cum_shape_ = tuple(canvas_shape) + (1,)
-        canvas_count_shape_ = tuple(canvas_shape) + (1,)
+        canvas_cum_shape_ = (*tuple(canvas_shape), 1)
+        canvas_count_shape_ = (*tuple(canvas_shape), 1)
         add_singleton_dim = True
 
     return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
 
 
 def _prepare_save_output(
-    save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+    save_path,
+    cache_count_path,
+    canvas_cum_shape_,
+    canvas_count_shape_,
 ):
     """Prepares for saving the cached output."""
     if save_path is not None:
-        if os.path.exists(save_path) and os.path.exists(cache_count_path):
-            cum_canvas = np.load(save_path, mmap_mode="r+")
-            count_canvas = np.load(cache_count_path, mmap_mode="r+")
+        save_path = Path(save_path)
+        cache_count_path = Path(cache_count_path)
+        if Path.exists(save_path) and Path.exists(cache_count_path):
+            cum_canvas = np.load(str(save_path), mmap_mode="r+")
+            count_canvas = np.load(str(cache_count_path), mmap_mode="r+")
             if canvas_cum_shape_ != cum_canvas.shape:
-                raise ValueError("Existing image shape in `save_path` does not match.")
+                msg = "Existing image shape in `save_path` does not match."
+                raise ValueError(msg)
             if canvas_count_shape_ != count_canvas.shape:
+                msg = "Existing image shape in `cache_count_path` does not match."
                 raise ValueError(
-                    "Existing image shape in `cache_count_path` does not match."
+                    msg,
                 )
         else:
             cum_canvas = np.lib.format.open_memmap(
@@ -95,146 +104,6 @@ def _prepare_save_output(
         count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
 
     return is_on_drive, count_canvas, cum_canvas
-
-
-class WSIStreamDataset(torch_data.Dataset):
-    """Reading a wsi in parallel mode with persistent workers.
-
-    To speed up the inference process for multiple WSIs. The
-    `torch.utils.data.Dataloader` is set to run in persistent mode.
-    Normally, this will prevent workers from altering their initial
-    states (such as provided input etc.). To sidestep this, we use a
-    shared parallel workspace context manager to send data and signal
-    from the main thread, thus allowing each worker to load a new wsi as
-    well as corresponding patch information.
-
-    Args:
-        mp_shared_space (:class:`Namespace`):
-            A shared multiprocessing space, must be from
-            `torch.multiprocessing`.
-        ioconfig (:class:`IOSegmentorConfig`):
-            An object which contains I/O placement for patches.
-        wsi_paths (list): List of paths pointing to a WSI or tiles.
-        preproc (Callable):
-            Pre-processing function to be applied to a patch.
-        mode (str):
-            Either `"wsi"` or `"tile"` to indicate the format of images
-            in `wsi_paths`.
-
-    Examples:
-
-        >>> ioconfig = IOSegmentorConfig(
-        ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
-        ... )
-        >>> mp_manager = torch_mp.Manager()
-        >>> mp_shared_space = mp_manager.Namespace()
-        >>> mp_shared_space.signal = 1  # adding variable to the shared space
-        >>> wsi_paths = ['A.svs', 'B.svs']
-        >>> wsi_dataset = WSIStreamDataset(ioconfig, wsi_paths, mp_shared_space)
-
-    """
-
-    def __init__(
-        self,
-        ioconfig: IOSegmentorConfig,
-        wsi_paths: List[Union[str, pathlib.Path]],
-        mp_shared_space: Namespace,
-        preproc: Callable[[np.ndarray], np.ndarray] = None,
-        mode="wsi",
-    ):
-        super().__init__()
-        self.mode = mode
-        self.preproc = preproc
-        self.ioconfig = copy.deepcopy(ioconfig)
-
-        if mode == "tile":
-            logger.warning(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"`. Resolutions will be converted '
-                "to baseline value.",
-                stacklevel=2,
-            )
-            self.ioconfig = self.ioconfig.to_baseline()
-
-        self.mp_shared_space = mp_shared_space
-        self.wsi_paths = wsi_paths
-        self.wsi_idx = None  # to be received externally via thread communication
-        self.reader = None
-
-    def _get_reader(self, img_path):
-        """Get appropriate reader for input path."""
-        img_path = pathlib.Path(img_path)
-        if self.mode == "wsi":
-            return WSIReader.open(img_path)
-        img = imread(img_path)
-        # initialise metadata for VirtualWSIReader.
-        # here, we simulate a whole-slide image, but with a single level.
-        metadata = WSIMeta(
-            mpp=np.array([1.0, 1.0]),
-            objective_power=10,
-            axes="YXS",
-            slide_dimensions=np.array(img.shape[:2][::-1]),
-            level_downsamples=[1.0],
-            level_dimensions=[np.array(img.shape[:2][::-1])],
-        )
-        return VirtualWSIReader(
-            img,
-            info=metadata,
-        )
-
-    def __len__(self):
-        return len(self.mp_shared_space.patch_inputs)
-
-    @staticmethod
-    def collate_fn(batch):
-        """Prototype to handle reading exception.
-
-        This will exclude any sample with `None` from the batch. As
-        such, wrapping `__getitem__` with try-catch and return `None`
-        upon exceptions will prevent crashing the entire program. But as
-        a side effect, the batch may not have the size as defined.
-
-        """
-        batch = [v for v in batch if v is not None]
-        return torch.utils.data.dataloader.default_collate(batch)
-
-    def __getitem__(self, idx: int):
-        # ! no need to lock as we do not modify source value in shared space
-        if self.wsi_idx != self.mp_shared_space.wsi_idx:
-            self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
-            self.reader = self._get_reader(self.wsi_paths[self.wsi_idx])
-
-        # this is in XY and at requested resolution (not baseline)
-        bounds = self.mp_shared_space.patch_inputs[idx]
-        bounds = bounds.numpy()  # expected to be a torch.Tensor
-
-        # be the same as bounds br-tl, unless bounds are of float
-        patch_data_ = []
-        scale_factors = self.ioconfig.scale_to_highest(
-            self.ioconfig.input_resolutions, self.ioconfig.resolution_unit
-        )
-        for idy, resolution in enumerate(self.ioconfig.input_resolutions):
-            resolution_bounds = np.round(bounds * scale_factors[idy])
-            patch_data = self.reader.read_bounds(
-                resolution_bounds.astype(np.int32),
-                coord_space="resolution",
-                pad_constant_values=0,  # expose this ?
-                **resolution,
-            )
-
-            if self.preproc is not None:
-                patch_data = patch_data.copy()
-                patch_data = self.preproc(patch_data)
-            patch_data_.append(patch_data)
-        if len(patch_data_) == 1:
-            patch_data_ = patch_data_[0]
-
-        bound = self.mp_shared_space.patch_outputs[idx]
-        return patch_data_, bound
 
 
 class SemanticSegmentor:
@@ -327,26 +196,28 @@ class SemanticSegmentor:
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,  # skipcq: PYL-W0613
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-    ):
+    ) -> None:
+        """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
 
         if model is None and pretrained_model is None:
-            raise ValueError("Must provide either of `model` or `pretrained_model`")
+            msg = "Must provide either of `model` or `pretrained_model`"
+            raise ValueError(msg)
 
         if model is not None:
+            self.model = model
             # template ioconfig, usually coming from pretrained
-            ioconfig = None
+            self.ioconfig = None
         else:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
-
-        self.ioconfig = ioconfig
-        self.model = model
+            self.ioconfig = ioconfig
+            self.model = model
 
         # local variables for flagging mode within class,
         # subclass should have overwritten to alter some specific behavior
@@ -375,7 +246,8 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_coordinates(
-        image_shape: Union[List[int], np.ndarray], ioconfig: IOSegmentorConfig
+        image_shape: list[int] | np.ndarray,
+        ioconfig: IOSegmentorConfig,
     ):
         """Calculate patch tiling coordinates.
 
@@ -432,11 +304,10 @@ class SemanticSegmentor:
     def filter_coordinates(
         mask_reader: VirtualWSIReader,
         bounds: np.ndarray,
-        resolution: Resolution = None,
-        units: Units = None,
+        resolution: Resolution | None = None,
+        units: Units | None = None,
     ):
-        """
-        Indicates which coordinate is valid basing on the mask.
+        """Indicates which coordinate is valid basing on the mask.
 
         To use your own approaches, either subclass to overwrite or
         directly assign your own function to this name. In either cases,
@@ -459,6 +330,7 @@ class SemanticSegmentor:
                 Resolution of the requested patch.
             units (Units):
                 Units of the requested patch.
+
         Returns:
             :class:`numpy.ndarray`:
                 List of flags to indicate which coordinate is valid.
@@ -474,15 +346,20 @@ class SemanticSegmentor:
 
         """
         if not isinstance(mask_reader, VirtualWSIReader):
-            raise ValueError("`mask_reader` should be VirtualWSIReader.")
+            msg = "`mask_reader` should be VirtualWSIReader."
+            raise TypeError(msg)
+
         if not isinstance(bounds, np.ndarray) or not np.issubdtype(
-            bounds.dtype, np.integer
+            bounds.dtype,
+            np.integer,
         ):
-            raise ValueError("`coordinates` should be ndarray of integer type.")
+            msg = "`coordinates` should be ndarray of integer type."
+            raise ValueError(msg)
 
         mask_real_shape = mask_reader.img.shape[:2]
         mask_resolution_shape = mask_reader.slide_dimensions(
-            resolution=resolution, units=units
+            resolution=resolution,
+            units=units,
         )[::-1]
         mask_real_shape = np.array(mask_real_shape)
         mask_resolution_shape = np.array(mask_resolution_shape)
@@ -500,15 +377,22 @@ class SemanticSegmentor:
         return np.array(flags)
 
     @staticmethod
-    def get_reader(img_path: str, mask_path: str, mode: str, auto_get_mask: bool):
+    def get_reader(
+        img_path: str,
+        mask_path: str | Path,
+        mode: str,
+        auto_get_mask: bool,
+    ):
         """Define how to get reader for mask and source image."""
-        img_path = pathlib.Path(img_path)
+        img_path = Path(img_path)
         reader = WSIReader.open(img_path)
 
         mask_reader = None
         if mask_path is not None:
-            if not os.path.isfile(mask_path):
-                raise ValueError("`mask_path` must be a valid file path.")
+            mask_path = Path(mask_path)
+            if not Path.is_file(mask_path):
+                msg = "`mask_path` must be a valid file path."
+                raise ValueError(msg)
             mask = imread(mask_path)  # assume to be gray
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
@@ -544,13 +428,16 @@ class SemanticSegmentor:
                 Either `"tile"` or `"wsi"` to indicate run mode.
 
         """
-        cache_dir = f"{self._cache_dir}/{wsi_idx}/"
-        os.makedirs(cache_dir)
+        cache_dir = self._cache_dir / str(wsi_idx)
+        cache_dir.mkdir(parents=True)
 
         wsi_path = self.imgs[wsi_idx]
         mask_path = None if self.masks is None else self.masks[wsi_idx]
         wsi_reader, mask_reader = self.get_reader(
-            wsi_path, mask_path, mode, self.auto_generate_mask
+            wsi_path,
+            mask_path,
+            mode,
+            self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -613,7 +500,11 @@ class SemanticSegmentor:
             sample_outputs = list(zip(sample_infos, sample_outputs))
             if self.process_prediction_per_batch:
                 self._process_predictions(
-                    sample_outputs, wsi_reader, ioconfig, save_path, cache_dir
+                    sample_outputs,
+                    wsi_reader,
+                    ioconfig,
+                    save_path,
+                    cache_dir,
                 )
             else:
                 cum_output.extend(sample_outputs)
@@ -621,7 +512,11 @@ class SemanticSegmentor:
         pbar.close()
 
         self._process_predictions(
-            cum_output, wsi_reader, ioconfig, save_path, cache_dir
+            cum_output,
+            wsi_reader,
+            ioconfig,
+            save_path,
+            cache_dir,
         )
 
         # clean up the cache directories
@@ -629,7 +524,7 @@ class SemanticSegmentor:
 
     def _process_predictions(
         self,
-        cum_batch_predictions: List,
+        cum_batch_predictions: list,
         wsi_reader: WSIReader,
         ioconfig: IOSegmentorConfig,
         save_path: str,
@@ -691,11 +586,11 @@ class SemanticSegmentor:
 
     @staticmethod
     def merge_prediction(
-        canvas_shape: Union[Tuple[int], List[int], np.ndarray],
-        predictions: List[np.ndarray],
-        locations: Union[List, np.ndarray],
-        save_path: Union[str, pathlib.Path] = None,
-        cache_count_path: Union[str, pathlib.Path] = None,
+        canvas_shape: tuple[int] | list[int] | np.ndarray,
+        predictions: list[np.ndarray],
+        locations: list | np.ndarray,
+        save_path: str | Path | None = None,
+        cache_count_path: str | Path | None = None,
     ):
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
@@ -729,7 +624,6 @@ class SemanticSegmentor:
                 An image contains merged data.
 
         Examples:
-
         >>> SemanticSegmentor.merge_prediction(
         ...     canvas_shape=[4, 4],
         ...     predictions=[
@@ -751,7 +645,8 @@ class SemanticSegmentor:
         sample_prediction = predictions[0]
 
         if len(sample_prediction.shape) not in (2, 3):
-            raise ValueError(f"Prediction is no HW or HWC: {sample_prediction.shape}.")
+            msg = f"Prediction is no HW or HWC: {sample_prediction.shape}."
+            raise ValueError(msg)
 
         (
             canvas_cum_shape_,
@@ -760,7 +655,10 @@ class SemanticSegmentor:
         ) = _estimate_canvas_parameters(sample_prediction, canvas_shape)
 
         is_on_drive, count_canvas, cum_canvas = _prepare_save_output(
-            save_path, cache_count_path, canvas_cum_shape_, canvas_count_shape_
+            save_path,
+            cache_count_path,
+            canvas_cum_shape_,
+            canvas_count_shape_,
         )
 
         def index(arr, tl, br):
@@ -801,7 +699,8 @@ class SemanticSegmentor:
 
             # now cropping the prediction region
             patch_pred = prediction[
-                tl_in_patch[0] : br_in_patch[0], tl_in_patch[1] : br_in_patch[1]
+                tl_in_patch[0] : br_in_patch[0],
+                tl_in_patch[1] : br_in_patch[1],
             ]
 
             patch_count = np.ones(patch_pred.shape[:2])[..., None]
@@ -832,15 +731,15 @@ class SemanticSegmentor:
                 "location under folder 'output'. Overwriting may happen! ",
                 stacklevel=2,
             )
-            save_dir = os.path.join(os.getcwd(), "output")
+            save_dir = Path.cwd() / "output"
 
-        save_dir = os.path.abspath(save_dir)
-        save_dir = pathlib.Path(save_dir)
+        save_dir = Path(save_dir).resolve()
         if save_dir.is_dir():
-            raise ValueError(f"`save_dir` already exists! {save_dir}")
+            msg = f"`save_dir` already exists! {save_dir}"
+            raise ValueError(msg)
         save_dir.mkdir(parents=True)
-        cache_dir = f"{save_dir}/cache"
-        os.makedirs(cache_dir)
+        cache_dir = Path(f"{save_dir}/cache")
+        Path.mkdir(cache_dir, parents=True)
 
         return save_dir, cache_dir
 
@@ -917,7 +816,7 @@ class SemanticSegmentor:
         self._postproc_workers = None
         if self.num_postproc_workers is not None:
             self._postproc_workers = ProcessPoolExecutor(
-                max_workers=self.num_postproc_workers
+                max_workers=self.num_postproc_workers,
             )
 
     def _memory_cleanup(self):
@@ -935,7 +834,14 @@ class SemanticSegmentor:
         self._postproc_workers = None
 
     def _predict_wsi_handle_exception(
-        self, imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+        self,
+        imgs,
+        wsi_idx,
+        img_path,
+        mode,
+        ioconfig,
+        save_dir,
+        crash_on_exception,
     ):
         """Predict on multiple WSIs.
 
@@ -977,7 +883,7 @@ class SemanticSegmentor:
 
         """
         try:
-            wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
+            wsi_save_path = save_dir / f"{wsi_idx}"
             self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
 
             # Do not use dict with file name as key, because it can be
@@ -986,10 +892,10 @@ class SemanticSegmentor:
             self._outputs.append([str(img_path), str(wsi_save_path)])
 
             # ? will this corrupt old version if control + c midway?
-            map_file_path = os.path.join(save_dir, "file_map.dat")
+            map_file_path = save_dir / "file_map.dat"
             # backup old version first
-            if os.path.exists(map_file_path):
-                old_map_file_path = os.path.join(save_dir, "file_map_old.dat")
+            if Path.exists(map_file_path):
+                old_map_file_path = save_dir / "file_map_old.dat"
                 shutil.copy(map_file_path, old_map_file_path)
             joblib.dump(self._outputs, map_file_path)
 
@@ -999,11 +905,11 @@ class SemanticSegmentor:
             logging.info("--Output: %s", str(wsi_save_path))
         # prevent deep source check because this is bypass and
         # delegating error message
-        except Exception as err:  # noqa: PIE786  # skipcq: PYL-W0703
+        except Exception as err:  # skipcq: PYL-W0703
             wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
             if crash_on_exception:
-                raise err
-            logging.error("Crashed on %s", wsi_save_path)
+                raise err  # noqa: TRY201
+            logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(
         self,
@@ -1100,7 +1006,8 @@ class SemanticSegmentor:
 
         """
         if mode not in ["wsi", "tile"]:
-            raise ValueError(f"{mode} is not a valid mode. Use either `tile` or `wsi`.")
+            msg = f"{mode} is not a valid mode. Use either `tile` or `wsi`."
+            raise ValueError(msg)
 
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
 
@@ -1108,15 +1015,19 @@ class SemanticSegmentor:
             ioconfig = copy.deepcopy(self.ioconfig)
 
         if ioconfig is None and patch_input_shape is None:
-            raise ValueError(
+            msg = (
                 "Must provide either `ioconfig` or "
                 "`patch_input_shape` and `patch_output_shape`"
+            )
+            raise ValueError(
+                msg,
             )
 
         if resolution is None and units is None:
             if ioconfig is None:
+                msg = f"Invalid resolution: `{resolution}` and units: `{units}`. "
                 raise ValueError(
-                    f"Invalid resolution: `{resolution}` and units: `{units}`. "
+                    msg,
                 )
 
             resolution = ioconfig.input_resolutions[0]["resolution"]
@@ -1169,7 +1080,13 @@ class SemanticSegmentor:
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
             self._predict_wsi_handle_exception(
-                imgs, wsi_idx, img_path, mode, ioconfig, save_dir, crash_on_exception
+                imgs,
+                wsi_idx,
+                img_path,
+                mode,
+                ioconfig,
+                save_dir,
+                crash_on_exception,
             )
 
         # clean up the cache directories
@@ -1249,13 +1166,14 @@ class DeepFeatureExtractor(SemanticSegmentor):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
-        model: torch.nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        model: torch.nn.Module | None = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = True,
         auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
-    ):
+    ) -> None:
+        """Initialize :class:`DeepFeatureExtractor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,
@@ -1271,7 +1189,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
     def _process_predictions(
         self,
-        cum_batch_predictions: List,
+        cum_batch_predictions: list,
         wsi_reader: WSIReader,
         ioconfig: IOSegmentorConfig,
         save_path: str,

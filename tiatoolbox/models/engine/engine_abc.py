@@ -1,4 +1,6 @@
+"""Defines Abstract Base Class for TIAToolbox Model Engines."""
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import torch.nn as nn
 
@@ -97,17 +99,19 @@ class EngineABC(ABC):
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
         model: nn.Module = None,
-        pretrained_model: str = None,
-        pretrained_weights: str = None,
+        pretrained_model: Optional[str] = None,
+        pretrained_weights: Optional[str] = None,
         verbose: bool = False,
     ):
+        """Initialize Engine."""
         super().__init__()
 
         self.images = None
         self.mode = None
 
         if model is None and pretrained_model is None:
-            raise ValueError("Must provide either `model` or `pretrained_model`.")
+            msg = "Must provide either `model` or `pretrained_model`."
+            raise ValueError(msg)
 
         if model is not None:
             self.model = model
