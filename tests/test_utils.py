@@ -1514,7 +1514,7 @@ def test_imwrite(tmp_path):
     utils.misc.imwrite(image_path, img)
 
     # Check that the file was created
-    assert os.path.isfile(image_path)
+    assert image_path.is_file()
 
     # Check that the image can be read and has the correct shape
     read_img = cv2.imread(str(image_path))
