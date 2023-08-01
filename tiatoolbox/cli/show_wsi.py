@@ -23,7 +23,12 @@ from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
     colour map string or 'categorical' (random colours will be generated
     for each possible value of property).""",
 )
-def show_wsi(img_input, name, colour_by, colour_map):  # pragma: no cover
+def show_wsi(
+    img_input: str,
+    name: str,
+    colour_by: str,
+    colour_map: str,
+) -> None:  # pragma: no cover
     """Show a slide together with any overlays."""
     from tiatoolbox.utils.visualization import AnnotationRenderer
     from tiatoolbox.visualization.tileserver import TileServer

@@ -18,7 +18,7 @@ from tiatoolbox.cli.stain_norm import stain_norm
 from tiatoolbox.cli.tissue_mask import tissue_mask
 
 
-def version_msg():
+def version_msg() -> str:
     """Return a string with tiatoolbox package version and python version."""
     return f"tiatoolbox {__version__} (Python {python_version()}) on {platform()}."
 
@@ -31,7 +31,7 @@ def version_msg():
     help="Show the tiatoolbox version",
     message=version_msg(),
 )
-def main():
+def main() -> click.BaseCommand:
     """Computational pathology toolbox by TIA Centre."""
     return 0
 
