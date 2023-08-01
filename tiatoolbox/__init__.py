@@ -57,7 +57,7 @@ class DuplicateFilter(logging.Filter):
 
     """
 
-    def filter(self, record):  # noqa: A003
+    def filter(self, record):
         """Filter input record."""
         current_log = (record.module, record.levelno, record.msg)
         if current_log != getattr(self, "last_log", None):
