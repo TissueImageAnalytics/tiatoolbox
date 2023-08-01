@@ -936,6 +936,8 @@ def ppu2mpp(ppu: int, units: str | int) -> float:
 
     """
     microns_per_unit = {
+        "meter": 1e6,  # 1,000,000
+        "m": 1e6,  # 1,000,000
         "centimeter": 1e4,  # 10,000
         "cm": 1e4,  # 10,000
         "mm": 1e3,  # 1,000
