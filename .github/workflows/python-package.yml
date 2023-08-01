@@ -32,6 +32,11 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install ruff==0.0.281 pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
+    - name: Cache tiatoolbox static assets
+      uses: actions/cache@v3
+      with:
+        key: tiatoolbox-home-static
+        path: ~/.tiatoolbox
     - name: Print Version Information
       run: |
         echo "---SQlite---"
