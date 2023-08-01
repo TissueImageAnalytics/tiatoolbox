@@ -314,7 +314,7 @@ class PatchPredictor:
         output_shape = output_shape[::-1]  # XY to YX
         fx = np.array(canvas_shape) / np.array(output_shape)
 
-        if "probabilities" not in output.keys():
+        if "probabilities" not in output:
             coordinates = output["coordinates"]
             predictions = output["predictions"]
             denominator = None
