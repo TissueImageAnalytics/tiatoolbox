@@ -81,7 +81,7 @@ def check_imports(source_tree: ast.AST, doc: doctest.DocTest, rel_path: Path) ->
             source = "\n".join(eg.source.strip() for eg in doc.examples)
             try:
                 spec = importlib.util.find_spec(name)
-            except ModuleNotFoundError as e:  # noqa: PERF203
+            except ModuleNotFoundError as e:
                 raise_source_exception(
                     source,
                     rel_path,

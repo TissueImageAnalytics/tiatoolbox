@@ -1416,7 +1416,7 @@ class AnnotationStore(ABC, MutableMapping):
             if hasattr(fp, "write"):
                 return file_fn(fp)
             # Turn a path into a file handle, then write to it
-            with open(fp, "w", encoding="utf-8") as file_handle:
+            with Path(fp).open("w", encoding="utf-8") as file_handle:
                 return file_fn(file_handle)
         # Return as str or bytes if no handle/path is given
         return none_fn()
@@ -1430,7 +1430,7 @@ class AnnotationStore(ABC, MutableMapping):
         """Loads cases for an input file handle or path."""
         with contextlib.suppress(OSError):
             if isinstance(fp, (Path, str)) and Path(fp).exists():
-                with open(fp) as file_handle:
+                with Path(fp).open() as file_handle:
                     return file_fn(file_handle)
         if isinstance(fp, (str, bytes)):
             return string_fn(fp)
