@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
@@ -11,6 +12,9 @@ else:  # pragma: no cover
     import importlib_resources  # To support Python 3.8
 
 import yaml
+
+if TYPE_CHECKING:
+    from logging import LogRecord
 
 __author__ = """TIA Centre"""
 __email__ = "tialab@dcs.warwick.ac.uk"
@@ -27,7 +31,7 @@ import logging
 
 # We only create a logger if root has no handler to prevent overwriting use existing
 # logging
-logging.captureWarnings(True)
+logging.captureWarnings(capture=True)
 if not logging.getLogger().hasHandlers():
     formatter = logging.Formatter(
         "|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s",
@@ -57,7 +61,7 @@ class DuplicateFilter(logging.Filter):
 
     """
 
-    def filter(self, record):
+    def filter(self: DuplicateFilter, record: LogRecord) -> bool:
         """Filter input record."""
         current_log = (record.module, record.levelno, record.msg)
         if current_log != getattr(self, "last_log", None):
@@ -72,7 +76,7 @@ rcParam = {  # noqa: N816
 }
 
 
-def read_registry_files(path_to_registry: str | Path):
+def read_registry_files(path_to_registry: str | Path) -> dict | str:
     """Reads registry files using importlib_resources.
 
     Args:
@@ -97,7 +101,7 @@ def read_registry_files(path_to_registry: str | Path):
 rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.yaml")
 
 
-def _lazy_import(name: str, module_location: Path):
+def _lazy_import(name: str, module_location: Path) -> sys.modules:
     spec = importlib.util.spec_from_file_location(name, module_location)
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
