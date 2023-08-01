@@ -25,7 +25,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-import tiatoolbox  # noqa: E402
+import tiatoolbox
 
 # -- General configuration ---------------------------------------------
 

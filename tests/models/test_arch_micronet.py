@@ -15,15 +15,19 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(
+    remote_sample,
+):
     """Functionality test."""
-    tmp_path = str(tmp_path)
-    sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
+    sample_wsi = remote_sample("wsi1_2k_2k_svs")
     reader = WSIReader.open(sample_wsi)
 
     # * test fast mode (architecture used in PanNuke paper)
     patch = reader.read_bounds(
-        (0, 0, 252, 252), resolution=0.25, units="mpp", coord_space="resolution"
+        (0, 0, 252, 252),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
     )
 
     model = MicroNet()
@@ -31,6 +35,7 @@ def test_functionality(remote_sample, tmp_path):
     batch = torch.from_numpy(patch)[None]
     weights_path = fetch_pretrained_weights("micronet-consep")
     map_location = select_device(ON_GPU)
+    model = model.to(map_location)
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
@@ -49,7 +54,7 @@ def test_value_error():
     reason="Local test on machine with GPU.",
 )
 def test_micronet_output(remote_sample, tmp_path):
-    """Tests the output of MicroNet."""
+    """Test the output of MicroNet."""
     svs_1_small = pathlib.Path(remote_sample("svs-1-small"))
     micronet_output = pathlib.Path(remote_sample("micronet-output"))
     pretrained_model = "micronet-consep"
