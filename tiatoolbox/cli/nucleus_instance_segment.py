@@ -1,4 +1,6 @@
 """Command line interface for nucleus instance segmentation."""
+from __future__ import annotations
+
 import click
 
 from tiatoolbox.cli.common import (
@@ -47,21 +49,21 @@ from tiatoolbox.cli.common import (
 @cli_num_postproc_workers(default=0)
 @cli_auto_generate_mask(default=False)
 def nucleus_instance_segment(
-    pretrained_model,
-    pretrained_weights,
-    img_input,
-    file_types,
-    masks,
-    mode,
-    output_path,
-    batch_size,
-    yaml_config_path,
-    num_loader_workers,
-    num_postproc_workers,
-    auto_generate_mask,
-    on_gpu,
-    verbose,
-):
+    pretrained_model: str,
+    pretrained_weights: str,
+    img_input: str,
+    file_types: str,
+    masks: str | None,
+    mode: str,
+    output_path: str,
+    batch_size: int,
+    yaml_config_path: str,
+    num_loader_workers: int,
+    num_postproc_workers: int,
+    auto_generate_mask: bool,
+    on_gpu: bool,
+    verbose: bool,
+) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
     from tiatoolbox.models import IOSegmentorConfig, NucleusInstanceSegmentor
     from tiatoolbox.utils import save_as_json
