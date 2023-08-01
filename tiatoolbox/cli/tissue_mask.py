@@ -18,7 +18,7 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.tools.tissuemask import TissueMasker
 
 

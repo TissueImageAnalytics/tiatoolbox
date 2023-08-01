@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import click
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import IOConfigABC
 
 
