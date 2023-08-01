@@ -1565,5 +1565,6 @@ def test_imwrite(tmp_path):
 
     with pytest.raises(IOError, match="Could not write image"):
         utils.misc.imwrite(
-            tmp_path / "thisfolderdoesnotexist" / "test_imwrite.jpg", img,
+            tmp_path / "thisfolderdoesnotexist" / "test_imwrite.jpg",
+            img,
         )
