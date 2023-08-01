@@ -26,7 +26,14 @@ from tiatoolbox.cli.common import (
 @cli_resolution()
 @cli_units()
 @cli_mode(default="show")
-def read_bounds(img_input, region, resolution, units, output_path, mode):
+def read_bounds(
+    img_input: str,
+    region: str,
+    resolution: float,
+    units: str,
+    output_path: str,
+    mode: str,
+) -> None:
     """Read a region in a whole slide image as specified."""
     from PIL import Image
 
