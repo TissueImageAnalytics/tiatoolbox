@@ -2,8 +2,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import click
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.models.models_abc import IOConfigABC
 
 
 def add_default_to_usage_help(
@@ -31,9 +35,12 @@ def add_default_to_usage_help(
 
 def cli_img_input(
     usage_help: str = "Path to WSI or directory containing WSIs.",
-    multiple: bool = False,
+    multiple: bool | None = None,
 ) -> callable:
     """Enables --img-input option for cli."""
+    if multiple is None:
+        multiple = False
+
     if multiple:
         usage_help = usage_help + " Multiple instances may be provided."
     return click.option("--img-input", help=usage_help, type=str, multiple=multiple)
@@ -41,9 +48,12 @@ def cli_img_input(
 
 def cli_name(
     usage_help: str = "User defined name to be used as an identifier.",
-    multiple: bool = False,
+    multiple: bool | None = None,
 ) -> callable:
     """Enable --name option for cli."""
+    if multiple is None:
+        multiple = False
+
     if multiple:
         usage_help = usage_help + " Multiple instances may be provided."
     return click.option("--name", help=usage_help, type=str, multiple=multiple)
@@ -225,9 +235,12 @@ def cli_pretrained_weights(
 
 def cli_return_probabilities(
     usage_help: str = "Whether to return raw model probabilities.",
-    default: bool = False,
+    default: bool | None = None,
 ) -> callable:
     """Enables --return-probabilities option for cli."""
+    if default is None:
+        default = False
+
     return click.option(
         "--return-probabilities",
         type=bool,
@@ -238,9 +251,12 @@ def cli_return_probabilities(
 
 def cli_merge_predictions(
     usage_help: str = "Whether to merge the predictions to form a 2-dimensional map.",
-    default: bool = True,
+    default: bool | None = None,
 ) -> callable:
     """Enables --merge-predictions option for cli."""
+    if default is None:
+        default = True
+
     return click.option(
         "--merge-predictions",
         type=bool,
@@ -251,9 +267,12 @@ def cli_merge_predictions(
 
 def cli_return_labels(
     usage_help: str = "Whether to return raw model output as labels.",
-    default: bool = True,
+    default: bool | None = None,
 ) -> callable:
     """Enables --return-labels option for cli."""
+    if default is None:
+        default = True
+
     return click.option(
         "--return-labels",
         type=bool,
@@ -293,9 +312,12 @@ def cli_masks(
 
 def cli_auto_generate_mask(
     usage_help: str = "Automatically generate tile/WSI tissue mask.",
-    default: bool = False,
+    default: bool | None = None,
 ) -> callable:
     """Enables --auto-generate-mask option for cli."""
+    if default is None:
+        default = False
+
     return click.option(
         "--auto-generate-mask",
         help=add_default_to_usage_help(usage_help, default),
@@ -320,9 +342,12 @@ def cli_yaml_config_path(
 
 def cli_on_gpu(
     usage_help: str = "Run the model on GPU.",
-    default: bool = False,
+    default: bool | None = None,
 ) -> callable:
     """Enables --on-gpu option for cli."""
+    if default is None:
+        default = False
+
     return click.option(
         "--on-gpu",
         type=bool,
@@ -360,9 +385,12 @@ def cli_num_postproc_workers(
 
 def cli_verbose(
     usage_help: str = "Prints the console output.",
-    default: bool = True,
+    default: bool | None = None,
 ) -> callable:
     """Enables --verbose option for cli."""
+    if default is None:
+        default = True
+
     return click.option(
         "--verbose",
         type=bool,
@@ -374,7 +402,11 @@ def cli_verbose(
 class TIAToolboxCLI(click.Group):
     """Define TIAToolbox Commandline Interface Click group."""
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(
+        self: TIAToolboxCLI,
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ) -> None:
         """Initialize TIAToolboxCLI."""
         super().__init__(*args, **kwargs)
         self.help = "Computational pathology toolbox by TIA Centre."
@@ -530,7 +562,11 @@ def prepare_model_cli(
 tiatoolbox_cli = TIAToolboxCLI()
 
 
-def prepare_ioconfig_seg(segment_config_class, pretrained_weights, yaml_config_path):
+def prepare_ioconfig_seg(
+    segment_config_class: IOConfigABC,
+    pretrained_weights: str | Path,
+    yaml_config_path: str | Path,
+) -> IOConfigABC | None:
     """Prepare ioconfig for segmentation."""
     import yaml
 
