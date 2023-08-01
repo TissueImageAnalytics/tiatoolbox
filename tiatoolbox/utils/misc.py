@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import zipfile
 from pathlib import Path
 from typing import IO, TYPE_CHECKING
@@ -24,7 +25,6 @@ from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteSto
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
-    import os
     from os import PathLike
 
     from shapely import geometry
@@ -737,6 +737,30 @@ def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool 
         zip_path = Path(zip_path)
         # Remove zip file
         Path.unlink(zip_path)
+
+
+try:
+    from contextlib import chdir
+except ImportError:  # remove when python 3.11 is required
+    from contextlib import AbstractContextManager
+
+    class chdir(AbstractContextManager):  # noqa: N801
+        """Non thread-safe context manager to change the current working directory.
+
+        See Also: https://github.com/python/cpython/blob/main/Lib/contextlib.py.
+
+        """
+
+        def __init__(self, path):  # noqa: D107
+            self.path = path
+            self._old_cwd = []
+
+        def __enter__(self):  # noqa: D105
+            self._old_cwd.append(os.getcwd())  # noqa: PTH109
+            os.chdir(self.path)
+
+        def __exit__(self, *excinfo):  # noqa: D105
+            os.chdir(self._old_cwd.pop())
 
 
 def __walk_list_dict(in_list_dict):

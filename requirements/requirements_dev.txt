@@ -10,6 +10,7 @@ pre-commit>=2.20.0
 pytest>=7.2.0
 pytest-cov>=4.0.0
 pytest-runner>=6.0
+pytest-xdist
 ruff==0.0.280  # This will be updated by pre-commit bot to latest version
 toml>=0.10.2
 twine>=4.0.1
