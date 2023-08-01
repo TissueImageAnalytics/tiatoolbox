@@ -81,27 +81,27 @@ select = [
   "G",     # flake8-logging-format
   "I",     # Isort
   "N",     # pep8-naming
-  # "S",     # flake8-bandit
+  "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "Q",     # flake8-quotes
   "C4",    # flake8-comprehensions
   "FA",    # flake8-future-annotations
   "EM",    # flake8-errmsg
   "PD",    # pandas-vet
-  # "PL",  # Pylint
+  "PL",  # Pylint
   "PT",    # flake8-pytest-style
   "TD",    # flake8-todos
   "UP",    # pyupgrade
   "C90",   # mccabe
   "T10",   # flake8-debugger
   "T20",   # flake8-print
-  # "ANN",   # flake8-annotations
-  # "ARG",   # flake8-unused-arguments
+  "ANN",   # flake8-annotations
+  "ARG",   # flake8-unused-arguments
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
   "DTZ",   # flake8-datetimez
   "ERA",   # eradicate
-  # "FBT",   # flake8-boolean-trap
+  "FBT",   # flake8-boolean-trap
   "FIX",   # flake8-fixme
   "FLY",   # flynt
   "ICN",   # flake8-import-conventions
