@@ -127,10 +127,7 @@ def save_yaml(
         raise FileExistsError(msg)
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
-    with Path.open(
-        output_path,
-        "w+",
-    ) as yaml_file:
+    with Path(output_path).open("w+") as yaml_file:
         yaml.dump(input_dict, yaml_file)
 
 
