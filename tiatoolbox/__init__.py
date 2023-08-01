@@ -13,7 +13,7 @@ else:  # pragma: no cover
 
 import yaml
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from logging import LogRecord
 
 __author__ = """TIA Centre"""
