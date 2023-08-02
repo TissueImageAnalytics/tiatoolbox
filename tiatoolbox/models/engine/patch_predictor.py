@@ -203,7 +203,7 @@ class PatchPredictor(EngineABC):
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
+        num_post_proc_workers: int = 0,
         model: torch.nn.Module = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
@@ -213,7 +213,7 @@ class PatchPredictor(EngineABC):
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,
-            num_postproc_workers=num_postproc_workers,
+            num_post_proc_workers=num_post_proc_workers,
             model=model,
             pretrained_model=pretrained_model,
             pretrained_weights=pretrained_weights,
@@ -221,34 +221,44 @@ class PatchPredictor(EngineABC):
         )
 
     def pre_process_patch(self):
-        pass
+        """Pre-process an image patch."""
+        raise NotImplementedError
 
     def pre_process_tile(self):
-        pass
+        """Pre-process an image tile."""
+        raise NotImplementedError
 
     def pre_process_wsi(self):
-        pass
-
-    def post_process_patch(self):
-        pass
-
-    def post_process_tile(self):
-        pass
-
-    def post_process_wsi(self):
-        pass
+        """Pre-process a WSI."""
+        raise NotImplementedError
 
     def infer_patch(self):
-        pass
+        """Model inference on an image patch."""
+        raise NotImplementedError
 
     def infer_tile(self):
-        pass
+        """Model inference on an image tile."""
+        raise NotImplementedError
 
     def infer_wsi(self):
-        pass
+        """Model inference on a WSI."""
+        raise NotImplementedError
+
+    def post_process_patch(self):
+        """Post-process an image patch."""
+        raise NotImplementedError
+
+    def post_process_tile(self):
+        """Post-process an image tile."""
+        raise NotImplementedError
+
+    def post_process_wsi(self):
+        """Post-process a WSI."""
+        raise NotImplementedError
 
     def run(self):
-        pass
+        """Run engine."""
+        raise NotImplementedError
 
     @staticmethod
     def merge_predictions(
@@ -256,7 +266,7 @@ class PatchPredictor(EngineABC):
         output: dict,
         resolution: Resolution | None = None,
         units: Units | None = None,
-        postproc_func: Callable | None = None,
+        post_proc_func: Callable | None = None,
         return_raw: bool = False,
     ):
         """Merge patch level predictions to form a 2-dimensional prediction map.
@@ -277,7 +287,7 @@ class PatchPredictor(EngineABC):
             units (Units):
                 Units of resolution used when merging predictions. This
                 must be the same `units` used when processing the data.
-            postproc_func (callable):
+            post_proc_func (callable):
                 A function to post-process raw prediction from model. By
                 default, internal code uses the `np.argmax` function.
             return_raw (bool):
@@ -359,8 +369,8 @@ class PatchPredictor(EngineABC):
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
             if not return_raw:
                 # convert raw probabilities to predictions
-                if postproc_func is not None:
-                    output = postproc_func(output)
+                if post_proc_func is not None:
+                    output = post_proc_func(output)
                 else:
                     output = np.argmax(output, axis=-1)
                 # to make sure background is 0 while class will be 1...N
@@ -639,7 +649,7 @@ class PatchPredictor(EngineABC):
                 file paths or a numpy array of an image list. When using
                 `tile` or `wsi` mode, the input must be a list of file
                 paths.
-            masks (list):
+            masks (list or None):
                 List of masks. Only utilised when processing image tiles
                 and whole-slide images. Patches are only processed if
                 they are within a masked area. If not provided, then a
@@ -740,7 +750,7 @@ class PatchPredictor(EngineABC):
                     output_model,
                     resolution=output_model["resolution"],
                     units=output_model["units"],
-                    postproc_func=self.model.postproc,
+                    post_proc_func=self.model.postproc,
                 )
                 outputs.append(merged_prediction)
 

@@ -1,10 +1,13 @@
 """Defines Abstract Base Class for TIAToolbox Model Engines."""
-from abc import ABC, abstractmethod
-from typing import Optional
+from __future__ import annotations
 
-import torch.nn as nn
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from tiatoolbox.models.architecture import get_pretrained_model
+
+if TYPE_CHECKING:
+    from torch import nn
 
 
 class EngineABC(ABC):
@@ -36,7 +39,7 @@ class EngineABC(ABC):
         num_loader_workers (int):
             Number of workers to load the data using :class:`torch.utils.data.Dataset`.
             Please note that they will also perform preprocessing. default = 0
-        num_postproc_workers (int):
+        num_post_proc_workers (int):
             Number of workers to postprocess the results of the model. default = 0
         verbose (bool):
             Whether to output logging information.
@@ -69,27 +72,28 @@ class EngineABC(ABC):
         >>> # list of 2 image patches as input
         >>> data = ["path/to/image1.svs", "path/to/image2.svs"]
         >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
-        >>> output = engine.predict(data, mode='patch')
+        >>> output = engine.run(data, mode='patch')
 
         >>> # array of list of 2 image patches as input
+        >>> import numpy as np
         >>> data = np.array([img1, img2])
         >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
-        >>> output = engine.predict(data, mode='patch')
+        >>> output = engine.run(data, mode='patch')
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
         >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
-        >>> output = engine.predict(data, mode='patch')
+        >>> output = engine.run(data, mode='patch')
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
         >>> engine = EngineABC(pretraind_model="resnet18-kather100k")
-        >>> output = engine.predict(tile_file, mode='tile')
+        >>> output = engine.run(tile_file, mode='tile')
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> engine = EngineABC(pretraind_model="resnet18-kather100k")
-        >>> output = engine.predict(wsi_file, mode='wsi')
+        >>> output = engine.run(wsi_file, mode='wsi')
 
     """
 
@@ -97,12 +101,12 @@ class EngineABC(ABC):
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
+        num_post_proc_workers: int = 0,
         model: nn.Module = None,
-        pretrained_model: Optional[str] = None,
-        pretrained_weights: Optional[str] = None,
+        pretrained_model: str | None = None,
+        pretrained_weights: str | None = None,
         verbose: bool = False,
-    ):
+    ) -> None:
         """Initialize Engine."""
         super().__init__()
 
@@ -125,45 +129,55 @@ class EngineABC(ABC):
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
-        self.num_postproc_workers = num_postproc_workers
+        self.num_post_proc_workers = num_post_proc_workers
         self.verbose = verbose
 
     @abstractmethod
     def pre_process_patch(self):
+        """Pre-process an image patch."""
         raise NotImplementedError
 
     @abstractmethod
     def pre_process_tile(self):
+        """Pre-process an image tile."""
         raise NotImplementedError
 
     @abstractmethod
     def pre_process_wsi(self):
+        """Pre-process a WSI."""
         raise NotImplementedError
 
     @abstractmethod
     def infer_patch(self):
+        """Model inference on an image patch."""
         raise NotImplementedError
 
     @abstractmethod
     def infer_tile(self):
+        """Model inference on an image tile."""
         raise NotImplementedError
 
     @abstractmethod
     def infer_wsi(self):
+        """Model inference on a WSI."""
         raise NotImplementedError
 
     @abstractmethod
     def post_process_patch(self):
+        """Post-process an image patch."""
         raise NotImplementedError
 
     @abstractmethod
     def post_process_tile(self):
+        """Post-process an image tile."""
         raise NotImplementedError
 
     @abstractmethod
     def post_process_wsi(self):
+        """Post-process a WSI."""
         raise NotImplementedError
 
     @abstractmethod
     def run(self):
+        """Run engine."""
         raise NotImplementedError
