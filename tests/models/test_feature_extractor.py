@@ -2,6 +2,7 @@
 
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import torch
@@ -30,7 +31,7 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_functional(remote_sample, tmp_path):
+def test_functional(remote_sample: Callable, tmp_path):
     """Test for feature extraction."""
     save_dir = Path(f"{tmp_path}/output/")
     # # convert to pathlib Path to prevent wsireader complaint

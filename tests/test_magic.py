@@ -2,7 +2,7 @@
 import sqlite3
 import zipfile
 from io import BytesIO
-from typing import BinaryIO
+from typing import BinaryIO, Callable
 
 import pytest
 
@@ -23,7 +23,7 @@ def test_is_sqlite3(tmp_path):
     assert not is_sqlite3(tmp_path / "test.txt")
 
 
-def test_is_dcm(remote_sample):
+def test_is_dcm(remote_sample: Callable):
     """Get a dummy DICOM file and use tiatoolbox.magic.is_dicom()."""
     path = remote_sample("dicom-1")
     for subpath in path.glob("**/*.dcm"):

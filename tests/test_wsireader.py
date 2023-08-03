@@ -13,7 +13,7 @@ from pathlib import Path
 from time import time
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
-from typing import Iterable
+from typing import Callable, Iterable
 
 import cv2
 import glymur
@@ -1796,7 +1796,7 @@ def test_openslide_read_bounds_edge_reflect_padding(sample_svs):
     assert 0 not in region.min(axis=-1)
 
 
-def test_tiffwsireader_invalid_tiff(remote_sample):
+def test_tiffwsireader_invalid_tiff(remote_sample: Callable):
     """Test for TIFF which is not supported by TIFFWSIReader."""
     with pytest.raises(ValueError, match="Unsupported TIFF"):
         _ = wsireader.TIFFWSIReader(remote_sample("two-tiled-pages"))
@@ -1917,7 +1917,7 @@ def test_manual_power_invalid(sample_svs):
         _ = wsireader.OpenSlideWSIReader(sample_svs, power=(42,))
 
 
-def test_tiled_tiff_openslide(remote_sample):
+def test_tiled_tiff_openslide(remote_sample: Callable):
     """Test reading a tiled TIFF file with OpenSlide."""
     sample_path = remote_sample("tiled-tiff-1-small-jpeg")
     # Test with top-level import
@@ -1925,7 +1925,7 @@ def test_tiled_tiff_openslide(remote_sample):
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
 
-def test_tiled_tiff_tifffile(remote_sample):
+def test_tiled_tiff_tifffile(remote_sample: Callable):
     """Test fallback to tifffile for files which openslide cannot read.
 
     E.G. tiled tiffs with JPEG XL compression.
@@ -1991,7 +1991,7 @@ def test_is_ngff_regular_zarr(tmp_path):
         WSIReader.open(zarr_path)
 
 
-def test_is_ngff_sqlite3(tmp_path, remote_sample):
+def test_is_ngff_sqlite3(tmp_path, remote_sample: Callable):
     """Test is_ngff is false for a sqlite3 file.
 
     Copies the ngff-1 sample to a sqlite3 file and checks that it is
@@ -2014,7 +2014,7 @@ def test_store_reader_no_info(tmp_path):
         AnnotationStoreReader(tmp_path / "store.db")
 
 
-def test_store_reader_explicit_info(remote_sample, tmp_path):
+def test_store_reader_explicit_info(remote_sample: Callable, tmp_path):
     """Test AnnotationStoreReader with explicit info."""
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
@@ -2022,14 +2022,14 @@ def test_store_reader_explicit_info(remote_sample, tmp_path):
     assert reader._info().as_dict() == wsi_reader.info.as_dict()
 
 
-def test_store_reader_from_store(remote_sample):
+def test_store_reader_from_store(remote_sample: Callable):
     """Test AnnotationStoreReader from an AnnotationStore object."""
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store)
     assert isinstance(reader.store, SQLiteStore)
 
 
-def test_store_reader_base_wsi_str(remote_sample):
+def test_store_reader_base_wsi_str(remote_sample: Callable):
     """Test AnnotationStoreReader with base_wsi as a string."""
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store, base_wsi=remote_sample("svs-1-small"))
@@ -2037,7 +2037,7 @@ def test_store_reader_base_wsi_str(remote_sample):
     assert isinstance(reader.base_wsi, WSIReader)
 
 
-def test_store_reader_alpha(remote_sample):
+def test_store_reader_alpha(remote_sample: Callable):
     """Test AnnotationStoreReader with alpha channel."""
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
     store_reader = AnnotationStoreReader(
@@ -2062,7 +2062,7 @@ def test_store_reader_alpha(remote_sample):
     )
 
 
-def test_store_reader_no_types(tmp_path, remote_sample):
+def test_store_reader_no_types(tmp_path, remote_sample: Callable):
     """Test AnnotationStoreReader with no types."""
     SQLiteStore(tmp_path / "store.db")
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
@@ -2071,7 +2071,7 @@ def test_store_reader_no_types(tmp_path, remote_sample):
     assert reader.renderer.score_prop is None
 
 
-def test_store_reader_info_from_base(tmp_path, remote_sample):
+def test_store_reader_info_from_base(tmp_path, remote_sample: Callable):
     """Test AnnotationStoreReader with no wsi metadata.
 
     Test that AnnotationStoreReader will correctly get metadata

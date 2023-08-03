@@ -5,6 +5,7 @@ import json
 import pathlib
 import urllib
 from pathlib import Path, PureWindowsPath
+from typing import Callable
 
 import joblib
 import numpy as np
@@ -84,7 +85,7 @@ def fill_store(cell_grid, points_grid):
 
 
 @pytest.fixture()
-def app(remote_sample, tmp_path) -> TileServer:
+def app(remote_sample: Callable, tmp_path) -> TileServer:
     """Create a testing TileServer WSGI app."""
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.
@@ -274,7 +275,7 @@ def test_color_prop(app):
         assert app.pyramids["default"]["overlay"].renderer.score_prop is None
 
 
-def test_change_slide(app, remote_sample):
+def test_change_slide(app, remote_sample: Callable):
     """Test changing slide."""
     slide_path = remote_sample("svs-1-small")
     slide_path2 = remote_sample("wsi2_4k_4k_jpg")
@@ -359,7 +360,7 @@ def test_load_save_annotations(app, tmp_path):
     assert len(store) == num_annotations + 2
 
 
-def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
+def test_load_annotations_empty(empty_app, tmp_path, remote_sample: Callable):
     """Test loading annotations when no annotations are present."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -396,7 +397,7 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
         assert len(json.loads(response.data)) == 2
 
 
-def test_change_overlay(empty_app, tmp_path, remote_sample):
+def test_change_overlay(empty_app, tmp_path, remote_sample: Callable):
     """Test changing overlay."""
     sample_store = Path(remote_sample("annotation_store_svs_1"))
     store = SQLiteStore(sample_store)

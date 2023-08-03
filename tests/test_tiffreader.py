@@ -1,11 +1,13 @@
 """Test TIFFWSIReader."""
+from typing import Callable
+
 import pytest
 from defusedxml import ElementTree
 
 from tiatoolbox.wsicore import wsireader
 
 
-def test_ome_missing_instrument_ref(monkeypatch, remote_sample):
+def test_ome_missing_instrument_ref(monkeypatch, remote_sample: Callable):
     """Test that an OME-TIFF can be read without instrument reference."""
     sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)

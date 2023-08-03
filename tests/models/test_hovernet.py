@@ -1,5 +1,7 @@
 """Unit test package for HoVerNet."""
 
+from typing import Callable
+
 import numpy as np
 import pytest
 import torch
@@ -15,7 +17,7 @@ from tiatoolbox.models.architecture.hovernet import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_functionality(remote_sample):
+def test_functionality(remote_sample: Callable):
     """Functionality test."""
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)

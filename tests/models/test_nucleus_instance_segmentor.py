@@ -6,6 +6,7 @@ import copy
 import gc
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import joblib
 import numpy as np
@@ -234,7 +235,7 @@ def test_cross_section_boundary_boxes():
     assert np.sum(flag - _flag) == 0, "Fail Cross Section Flag"
 
 
-def test_crash_segmentor(remote_sample, tmp_path):
+def test_crash_segmentor(remote_sample: Callable, tmp_path):
     """Test engine crash when given malformed input."""
     root_save_dir = Path(tmp_path)
     sample_wsi_svs = Path(remote_sample("svs-1-small"))
@@ -282,7 +283,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_ci(remote_sample, tmp_path):
+def test_functionality_ci(remote_sample: Callable, tmp_path):
     """Functionality test for nuclei instance segmentor."""
     gc.collect()
     root_save_dir = Path(tmp_path)

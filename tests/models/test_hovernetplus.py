@@ -1,5 +1,7 @@
 """Unit test package for HoVerNet+."""
 
+from typing import Callable
+
 import torch
 
 from tiatoolbox.models import HoVerNetPlus
@@ -8,7 +10,7 @@ from tiatoolbox.utils import imread
 from tiatoolbox.utils.transforms import imresize
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(remote_sample: Callable, tmp_path):
     """Functionality test."""
     tmp_path = str(tmp_path)
     sample_patch = str(remote_sample("stainnorm-source"))

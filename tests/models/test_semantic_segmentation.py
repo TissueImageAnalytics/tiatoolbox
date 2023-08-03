@@ -7,6 +7,7 @@ import gc
 import multiprocessing
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pytest
@@ -200,7 +201,7 @@ def test_segmentor_ioconfig():
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_wsi_stream_dataset(remote_sample):
+def test_functional_wsi_stream_dataset(remote_sample: Callable):
     """Functional test for WSIStreamDataset."""
     gc.collect()  # Force clean up everything on hold
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
@@ -258,7 +259,7 @@ def test_functional_wsi_stream_dataset(remote_sample):
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(remote_sample):
+def test_crash_segmentor(remote_sample: Callable):
     """Functional crash tests for segmentor."""
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
@@ -447,7 +448,7 @@ def test_functional_segmentor_merging(tmp_path):
     save_dir.mkdir()
 
 
-def test_functional_segmentor(remote_sample, tmp_path):
+def test_functional_segmentor(remote_sample: Callable, tmp_path):
     """Functional test for segmentor."""
     save_dir = Path(f"{tmp_path}/dump")
     # # convert to pathlib Path to prevent wsireader complaint
@@ -587,7 +588,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     _rm_dir(save_dir)
 
 
-def test_subclass(remote_sample, tmp_path):
+def test_subclass(remote_sample: Callable, tmp_path):
     """Create subclass and test parallel processing setup."""
     save_dir = Path(tmp_path)
     mini_wsi_jpg = Path(remote_sample("wsi2_4k_4k_jpg"))
@@ -618,7 +619,7 @@ def test_subclass(remote_sample, tmp_path):
 
 
 # specifically designed for travis
-def test_functional_pretrained(remote_sample, tmp_path):
+def test_functional_pretrained(remote_sample: Callable, tmp_path):
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = Path(f"{tmp_path}/output")
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
@@ -662,7 +663,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_tissue_mask_local(remote_sample, tmp_path):
+def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = Path(tmp_path)
     wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
@@ -704,7 +705,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_bcss_local(remote_sample, tmp_path):
+def test_behavior_bcss_local(remote_sample: Callable, tmp_path):
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = Path(tmp_path)
 

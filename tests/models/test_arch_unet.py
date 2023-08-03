@@ -1,6 +1,6 @@
 """Unit test package for Unet."""
-
 import pathlib
+from typing import Callable
 
 import numpy as np
 import pytest
@@ -15,7 +15,7 @@ ON_GPU = False
 # Test pretrained Model =============================
 
 
-def test_functional_unet(remote_sample):
+def test_functional_unet(remote_sample: Callable):
     """Test for unet."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))

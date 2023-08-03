@@ -3,6 +3,7 @@
 import copy
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import cv2
 import numpy as np
@@ -511,7 +512,7 @@ def test_predictor_crash():
     _rm_dir("output")
 
 
-def test_io_config_delegation(remote_sample, tmp_path):
+def test_io_config_delegation(remote_sample: Callable, tmp_path):
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
 
@@ -1102,7 +1103,7 @@ def test_cli_model_single_file(sample_svs, tmp_path):
     assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_model_single_file_mask(remote_sample, tmp_path):
+def test_cli_model_single_file_mask(remote_sample: Callable, tmp_path):
     """Test for models CLI single file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")

@@ -1,8 +1,10 @@
 """Unit test package for NuClick."""
 
-import pathlib
+from pathlib import Path
+from typing import Callable
 
 import numpy as np
+import pytest
 import torch
 
 from tiatoolbox.models import NuClick
@@ -14,10 +16,13 @@ ON_GPU = False
 # Test pretrained Model =============================
 
 
-def test_functional_nuclick(remote_sample, caplog):
+def test_functional_nuclick(
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test for NuClick."""
     # convert to pathlib Path to prevent wsireader complaint
-    tile_path = pathlib.Path(remote_sample("patch-extraction-vf"))
+    tile_path = Path(remote_sample("patch-extraction-vf"))
     img = imread(tile_path)
 
     weights_path = fetch_pretrained_weights("nuclick_original-pannuke")
@@ -55,8 +60,8 @@ def test_functional_nuclick(remote_sample, caplog):
         nuc_points=inclusion_map[np.newaxis, ...],
     )
 
-    gt_path = pathlib.Path(remote_sample("nuclick-output"))
-    gt_mask = np.load(gt_path)
+    gt_path = Path(remote_sample("nuclick-output"))
+    gt_mask = np.load(str(gt_path))
 
     assert (
         np.count_nonzero(postproc_masks * gt_mask) / np.count_nonzero(gt_mask) > 0.999
