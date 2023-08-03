@@ -448,7 +448,7 @@ def test_functional_segmentor_merging(tmp_path: Path):
     save_dir.mkdir()
 
 
-def test_functional_segmentor(remote_sample: Callable, tmp_path):
+def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     """Functional test for segmentor."""
     save_dir = Path(f"{tmp_path}/dump")
     # # convert to pathlib Path to prevent wsireader complaint
@@ -588,7 +588,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path):
     _rm_dir(save_dir)
 
 
-def test_subclass(remote_sample: Callable, tmp_path):
+def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
     """Create subclass and test parallel processing setup."""
     save_dir = Path(tmp_path)
     mini_wsi_jpg = Path(remote_sample("wsi2_4k_4k_jpg"))
@@ -619,7 +619,7 @@ def test_subclass(remote_sample: Callable, tmp_path):
 
 
 # specifically designed for travis
-def test_functional_pretrained(remote_sample: Callable, tmp_path):
+def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = Path(f"{tmp_path}/output")
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
@@ -663,7 +663,7 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path):
+def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = Path(tmp_path)
     wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
@@ -705,7 +705,7 @@ def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_bcss_local(remote_sample: Callable, tmp_path):
+def test_behavior_bcss_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = Path(tmp_path)
 
@@ -736,7 +736,10 @@ def test_behavior_bcss_local(remote_sample: Callable, tmp_path):
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
+def test_cli_semantic_segment_out_exists_error(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for semantic segmentation if output path exists."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
@@ -764,7 +767,10 @@ def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
     assert isinstance(semantic_segment_result.exception, FileExistsError)
 
 
-def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
+def test_cli_semantic_segmentation_ioconfig(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for semantic segmentation single file custom ioconfig."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
@@ -812,7 +818,10 @@ def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
     assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
+def test_cli_semantic_segmentation_multi_file(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for models CLI multiple file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")

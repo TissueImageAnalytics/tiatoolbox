@@ -60,13 +60,13 @@ def root_path(request) -> Path:
 
 
 @pytest.fixture(scope="session")
-def tmp_samples_path(tmp_path_factory: TempPathFactory):
+def tmp_samples_path(tmp_path_factory: TempPathFactory) -> Path:
     """Return a temporary path."""
     return tmp_path_factory.mktemp("data")
 
 
 @pytest.fixture(scope="session")
-def remote_sample(tmp_samples_path) -> Callable:
+def remote_sample(tmp_samples_path: str) -> Callable:
     """Factory fixture for fetching sample files."""
 
     def __remote_sample(key: str) -> Path:
@@ -448,7 +448,7 @@ def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def sample_wsi_dict(remote_sample):
+def sample_wsi_dict(remote_sample: Callable):
     """Sample pytest fixture for torch wsi dataset.
 
     Download svs image for pytest.

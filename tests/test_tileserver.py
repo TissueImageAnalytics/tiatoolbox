@@ -211,7 +211,7 @@ def test_get_index(app) -> None:
         assert response.content_type == "text/html; charset=utf-8"
 
 
-def test_create_with_dict(sample_svs):
+def test_create_with_dict(sample_svs: Path) -> None:
     """Test initializing with layers dict."""
     wsi = WSIReader.open(Path(sample_svs))
 
@@ -330,7 +330,7 @@ def test_change_cmap(app):
         assert response.json == cdict
 
 
-def test_load_save_annotations(app, tmp_path):
+def test_load_save_annotations(app, tmp_path: Path) -> None:
     """Test loading and saving annotations."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -359,7 +359,7 @@ def test_load_save_annotations(app, tmp_path):
     assert len(store) == num_annotations + 2
 
 
-def test_load_annotations_empty(empty_app, tmp_path, remote_sample: Callable):
+def test_load_annotations_empty(empty_app, tmp_path: Path, remote_sample: Callable):
     """Test loading annotations when no annotations are present."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -396,7 +396,7 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample: Callable):
         assert len(json.loads(response.data)) == 2
 
 
-def test_change_overlay(empty_app, tmp_path, remote_sample: Callable):
+def test_change_overlay(empty_app, tmp_path: Path, remote_sample: Callable):
     """Test changing overlay."""
     sample_store = Path(remote_sample("annotation_store_svs_1"))
     store = SQLiteStore(sample_store)
@@ -509,7 +509,7 @@ def test_change_overlay(empty_app, tmp_path, remote_sample: Callable):
         assert layer.wsi.info.file_path == tiff_path
 
 
-def test_commit(empty_app, tmp_path, remote_sample):
+def test_commit(empty_app, tmp_path: Path, remote_sample: Callable) -> None:
     """Test committing annotations."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -667,7 +667,7 @@ def test_reset(app_alt):
         assert app_alt.layers == {}
 
 
-def test_no_ann_layer(empty_app, remote_sample):
+def test_no_ann_layer(empty_app, remote_sample: Callable) -> None:
     """Test doing something needing annotation layer when none exists."""
     with empty_app.test_client() as client:
         setup_app(client)

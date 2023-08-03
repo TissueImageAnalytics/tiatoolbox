@@ -334,7 +334,10 @@ def test_functionality_ci(remote_sample: Callable, tmp_path: Path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_merge_tile_predictions_ci(remote_sample, tmp_path: Path):
+def test_functionality_merge_tile_predictions_ci(
+    remote_sample: Callable,
+    tmp_path: Path,
+):
     """Functional tests for merging tile predictions."""
     gc.collect()  # Force clean up everything on hold
     save_dir = Path(f"{tmp_path}/output")
@@ -437,7 +440,7 @@ def test_functionality_merge_tile_predictions_ci(remote_sample, tmp_path: Path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_functionality_local(remote_sample, tmp_path):
+def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Local functionality test for nuclei instance segmentor."""
     root_save_dir = Path(tmp_path)
     save_dir = Path(f"{tmp_path}/output")
@@ -510,7 +513,10 @@ def test_functionality_local(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
+def test_cli_nucleus_instance_segment_ioconfig(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for nucleus segmentation with IOConfig."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
@@ -572,7 +578,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
+def test_cli_nucleus_instance_segment(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for nucleus segmentation."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"

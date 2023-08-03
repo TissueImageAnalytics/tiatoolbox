@@ -215,7 +215,7 @@ def test_warning(
     moving_image,
     fixed_mask,
     moving_mask,
-    caplog,
+    caplog: pytest.LogCaptureFixture,
 ):
     """Test for displaying warning in prealignment function."""
     fixed_img = imread(Path(fixed_image))

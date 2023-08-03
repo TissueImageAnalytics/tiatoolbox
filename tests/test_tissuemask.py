@@ -18,7 +18,7 @@ from tiatoolbox.wsicore import wsireader
 # -------------------------------------------------------------------------------------
 
 
-def test_otsu_masker(sample_svs):
+def test_otsu_masker(sample_svs: Path) -> None:
     """Test Otsu's thresholding method."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     mpp = 32
@@ -35,7 +35,7 @@ def test_otsu_masker(sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
-def test_otsu_greyscale_masker(sample_svs):
+def test_otsu_greyscale_masker(sample_svs: Path) -> None:
     """Test Otsu's thresholding method with greyscale inputs."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     mpp = 32
@@ -54,7 +54,7 @@ def test_otsu_greyscale_masker(sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
-def test_morphological_masker(sample_svs):
+def test_morphological_masker(sample_svs: Path) -> None:
     """Test simple morphological thresholding."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     thumb = wsi.slide_thumbnail()
@@ -70,7 +70,7 @@ def test_morphological_masker(sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
-def test_morphological_greyscale_masker(sample_svs):
+def test_morphological_greyscale_masker(sample_svs: Path) -> None:
     """Test morphological masker with greyscale inputs."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     mpp = 32
@@ -89,7 +89,7 @@ def test_morphological_greyscale_masker(sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
-def test_morphological_masker_int_kernel_size(sample_svs):
+def test_morphological_masker_int_kernel_size(sample_svs: Path) -> None:
     """Test simple morphological thresholding with mpp with int kernel_size."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     mpp = 32
@@ -106,7 +106,7 @@ def test_morphological_masker_int_kernel_size(sample_svs):
     assert mask_a.shape == thumb.shape[:2]
 
 
-def test_morphological_masker_mpp(sample_svs):
+def test_morphological_masker_mpp(sample_svs: Path) -> None:
     """Test simple morphological thresholding with mpp."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     mpp = 32
@@ -128,7 +128,7 @@ def test_morphological_masker_mpp(sample_svs):
         assert mask_a.shape == thumb.shape[:2]
 
 
-def test_morphological_masker_power(sample_svs):
+def test_morphological_masker_power(sample_svs: Path) -> None:
     """Test simple morphological thresholding with objective power."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     power = 1.25
@@ -217,7 +217,7 @@ def test_morphological_min_region_size():
     not os.environ.get("SHOW_TESTS"),
     reason="Visual tests disabled, set SHOW_TESTS to enable.",
 )
-def test_cli_tissue_mask_otsu_show(sample_svs):
+def test_cli_tissue_mask_otsu_show(sample_svs: Path) -> None:
     """Test Otsu tissue masking with default input CLI and showing in a window."""
     source_img = Path(sample_svs)
     runner = CliRunner()
@@ -237,7 +237,7 @@ def test_cli_tissue_mask_otsu_show(sample_svs):
     assert tissue_mask_result.exit_code == 0
 
 
-def test_cli_tissue_mask_otsu_save(sample_svs):
+def test_cli_tissue_mask_otsu_save(sample_svs: Path) -> None:
     """Test Otsu tissue masking with default input CLI and saving to a file."""
     source_img = Path(sample_svs)
     runner = CliRunner()
@@ -290,7 +290,7 @@ def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis):
     not os.environ.get("SHOW_TESTS"),
     reason="Visual tests disabled, set SHOW_TESTS to enable.",
 )
-def test_cli_tissue_mask_morphological_show(sample_svs):
+def test_cli_tissue_mask_morphological_show(sample_svs: Path) -> None:
     """Test Morphological tissue masking with default input CLI."""
     source_img = Path(sample_svs)
     runner = CliRunner()
@@ -310,7 +310,7 @@ def test_cli_tissue_mask_morphological_show(sample_svs):
     assert tissue_mask_result.exit_code == 0
 
 
-def test_cli_tissue_mask_morphological_save(sample_svs):
+def test_cli_tissue_mask_morphological_save(sample_svs: Path) -> None:
     """Test Morphological tissue masking with morphological method CLI."""
     source_img = Path(sample_svs)
     runner = CliRunner()
@@ -334,7 +334,7 @@ def test_cli_tissue_mask_morphological_save(sample_svs):
     assert Path(output_path, source_img.stem + ".png").is_file()
 
 
-def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs):
+def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs: Path) -> None:
     """Test Morphological tissue masking with morphological method CLI.
 
     Adds option to specify resolution and units in power (appmag).
@@ -365,7 +365,7 @@ def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs):
     assert Path(output_path, source_img.stem + ".png").is_file()
 
 
-def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs):
+def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs: Path) -> None:
     """Test Morphological tissue masking with morphological method CLI.
 
     Adds option to specify resolution and units in mpp (micrometers per pixel).
@@ -396,7 +396,7 @@ def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs):
     assert Path(output_path, source_img.stem + ".png").is_file()
 
 
-def test_cli_tissue_mask_morphological_kernel_size_save(sample_svs):
+def test_cli_tissue_mask_morphological_kernel_size_save(sample_svs: Path) -> None:
     """Test Morphological tissue masking with morphological method CLI.
 
     Adds option to specify kernel size.
@@ -426,7 +426,7 @@ def test_cli_tissue_mask_morphological_kernel_size_save(sample_svs):
     assert Path(output_path, source_img.stem + ".png").is_file()
 
 
-def test_cli_tissue_mask_method_not_supported(sample_svs):
+def test_cli_tissue_mask_method_not_supported(sample_svs: Path) -> None:
     """Test method not supported for the tissue masking CLI."""
     source_img = Path(sample_svs)
     runner = CliRunner()

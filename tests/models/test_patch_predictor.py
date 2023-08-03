@@ -512,7 +512,7 @@ def test_predictor_crash():
     _rm_dir("output")
 
 
-def test_io_config_delegation(remote_sample: Callable, tmp_path):
+def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
 
@@ -618,7 +618,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path):
     _rm_dir(f"{tmp_path}/dump")
 
 
-def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
+def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> None:
     """Helper function to get the model output using API 1."""
     save_dir_path = tmp_path
 
@@ -706,7 +706,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
+def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     """Test normal run of wsi predictor."""
     save_dir_path = tmp_path
 
@@ -1037,7 +1037,7 @@ def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_models_file_not_found(sample_svs, tmp_path):
+def test_command_line_models_file_not_found(sample_svs, tmp_path: Path) -> None:
     """Test for models CLI file not found error."""
     runner = CliRunner()
     model_file_not_found_result = runner.invoke(
@@ -1058,7 +1058,7 @@ def test_command_line_models_file_not_found(sample_svs, tmp_path):
     assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
 
 
-def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
+def test_command_line_models_incorrect_mode(sample_svs, tmp_path: Path) -> None:
     """Test for models CLI mode not in wsi, tile."""
     runner = CliRunner()
     mode_not_in_wsi_tile_result = runner.invoke(
@@ -1081,7 +1081,7 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
     assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
 
 
-def test_cli_model_single_file(sample_svs, tmp_path):
+def test_cli_model_single_file(sample_svs, tmp_path: Path) -> None:
     """Test for models CLI single file."""
     runner = CliRunner()
     models_wsi_result = runner.invoke(
@@ -1103,7 +1103,7 @@ def test_cli_model_single_file(sample_svs, tmp_path):
     assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_model_single_file_mask(remote_sample: Callable, tmp_path):
+def test_cli_model_single_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for models CLI single file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
@@ -1133,7 +1133,7 @@ def test_cli_model_single_file_mask(remote_sample: Callable, tmp_path):
     assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_model_multiple_file_mask(remote_sample, tmp_path):
+def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for models CLI multiple file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")

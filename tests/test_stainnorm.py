@@ -232,7 +232,7 @@ def test_command_line_stainnorm(source_image, tmp_path: Path):
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_dir(source_image, tmp_path):
+def test_cli_stainnorm_dir(source_image, tmp_path: Path) -> None:
     """Test directory input for the stain normalization CLI."""
     source_img = source_image.parent
     target_img = _local_sample_path("target_image.png")
@@ -255,7 +255,7 @@ def test_cli_stainnorm_dir(source_image, tmp_path):
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_file_not_found_error(source_image, tmp_path):
+def test_cli_stainnorm_file_not_found_error(source_image, tmp_path: Path) -> None:
     """Test file not found error for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = stain_norm_target()
@@ -280,7 +280,7 @@ def test_cli_stainnorm_file_not_found_error(source_image, tmp_path):
     assert isinstance(stainnorm_result.exception, FileNotFoundError)
 
 
-def test_cli_stainnorm_method_not_supported(source_image, tmp_path):
+def test_cli_stainnorm_method_not_supported(source_image, tmp_path: Path) -> None:
     """Test method not supported for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = stain_norm_target()

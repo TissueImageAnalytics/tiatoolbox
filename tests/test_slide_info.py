@@ -62,7 +62,7 @@ def test_command_line_slide_info_jp2(sample_all_wsis):
     ).exists()
 
 
-def test_command_line_slide_info_svs(sample_svs):
+def test_command_line_slide_info_svs(sample_svs: Path) -> None:
     """Test CLI slide info for single file."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -83,7 +83,7 @@ def test_command_line_slide_info_svs(sample_svs):
     assert slide_info_result.exit_code == 0
 
 
-def test_command_line_slide_info_file_not_found(sample_svs):
+def test_command_line_slide_info_file_not_found(sample_svs: Path) -> None:
     """Test CLI slide info file not found error."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -104,7 +104,7 @@ def test_command_line_slide_info_file_not_found(sample_svs):
     assert isinstance(slide_info_result.exception, FileNotFoundError)
 
 
-def test_command_line_slide_info_output_none_mode_save(sample_svs):
+def test_command_line_slide_info_output_none_mode_save(sample_svs: Path) -> None:
     """Test CLI slide info for single file."""
     runner = CliRunner()
     slide_info_result = runner.invoke(

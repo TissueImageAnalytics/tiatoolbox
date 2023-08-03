@@ -63,21 +63,21 @@ def test_normalize_type_error():
         _normalize_binaryio(1)
 
 
-def test_normalize_non_existent(tmp_path):
+def test_normalize_non_existent(tmp_path: Path) -> None:
     """Test that _normalize_binaryio() returns empty BinaryIO for non-existant file."""
     assert isinstance(_normalize_binaryio(tmp_path / "foo"), (BytesIO, BinaryIO))
 
 
-def test_is_sqlite3_dir(tmp_path):
+def test_is_sqlite3_dir(tmp_path: Path) -> None:
     """Test that is_sqlite3() returns False for directories."""
     assert not is_sqlite3(tmp_path)
 
 
-def test_is_dcm_dir(tmp_path):
+def test_is_dcm_dir(tmp_path: Path) -> None:
     """Test that is_dcm() returns False for directories."""
     assert not is_dcm(tmp_path)
 
 
-def test_is_zip_dir(tmp_path):
+def test_is_zip_dir(tmp_path: Path) -> None:
     """Test that is_zip() returns False for directories."""
     assert not is_zip(tmp_path)

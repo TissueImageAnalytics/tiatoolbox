@@ -806,7 +806,7 @@ def test_contrast_enhancer():
     assert np.all(result_array == output_array)
 
 
-def test_load_stain_matrix(tmp_path):
+def test_load_stain_matrix(tmp_path: Path) -> None:
     """Test to load stain matrix."""
     with pytest.raises(FileNotSupportedError):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
@@ -1271,7 +1271,7 @@ def test_model_to():
     assert isinstance(model, nn.Module)
 
 
-def test_save_as_json(tmp_path):
+def test_save_as_json(tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
     import json
@@ -1358,7 +1358,7 @@ def test_save_as_json(tmp_path):
     )
 
 
-def test_save_as_json_exists(tmp_path):
+def test_save_as_json_exists(tmp_path: Path) -> None:
     """Test save data to json which already exists."""
     dictionary = {"a": 1, "b": 2}
     misc.save_as_json(dictionary, tmp_path / "sample_json.json")
@@ -1367,14 +1367,14 @@ def test_save_as_json_exists(tmp_path):
     misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
 
 
-def test_save_as_json_parents(tmp_path):
+def test_save_as_json_parents(tmp_path: Path) -> None:
     """Test save data to json where parents need to be created and parents is False."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
         misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
 
 
-def test_save_yaml_exists(tmp_path):
+def test_save_yaml_exists(tmp_path: Path) -> None:
     """Test save data to yaml which already exists."""
     dictionary = {"a": 1, "b": 2}
     utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
@@ -1383,7 +1383,7 @@ def test_save_yaml_exists(tmp_path):
     utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
 
 
-def test_save_yaml_parents(tmp_path):
+def test_save_yaml_parents(tmp_path: Path) -> None:
     """Test save data to yaml where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
@@ -1439,7 +1439,7 @@ def make_simple_dat(centroids=((0, 0), (100, 100))):
     }
 
 
-def test_from_dat(tmp_path):
+def test_from_dat(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -1447,7 +1447,7 @@ def test_from_dat(tmp_path):
     assert len(store) == 2
 
 
-def test_from_dat_type_dict(tmp_path):
+def test_from_dat_type_dict(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a type dict."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -1459,7 +1459,7 @@ def test_from_dat_type_dict(tmp_path):
     assert len(result) == 1
 
 
-def test_from_dat_transformed(tmp_path):
+def test_from_dat_transformed(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a transform."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -1475,7 +1475,7 @@ def test_from_dat_transformed(tmp_path):
     assert np.rint(poly.geometry.centroid.y) == 150
 
 
-def test_from_multi_head_dat(tmp_path):
+def test_from_multi_head_dat(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with multiple heads."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
@@ -1493,7 +1493,7 @@ def test_from_multi_head_dat(tmp_path):
     assert len(result) == 1
 
 
-def test_invalid_poly(tmp_path, caplog):
+def test_invalid_poly(tmp_path: Path, caplog):
     """Test that invalid polygons are dealt with correctly."""
     coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
     poly = Polygon(coords)
@@ -1513,7 +1513,7 @@ def test_invalid_poly(tmp_path, caplog):
     assert next(iter(result.values())).geometry.is_valid
 
 
-def test_from_multi_head_dat_type_dict(tmp_path):
+def test_from_multi_head_dat_type_dict(tmp_path: Path) -> None:
     """Test generating a store from a .dat file with multiple heads, with typedict."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
@@ -1531,7 +1531,7 @@ def test_from_multi_head_dat_type_dict(tmp_path):
     assert len(result) == 2
 
 
-def test_fetch_pretrained_weights(tmp_path):
+def test_fetch_pretrained_weights(tmp_path: Path) -> None:
     """Test fetching pretrained weights for a model."""
     file_path = tmp_path / "test_fetch_pretrained_weights.pth"
     if file_path.exists():

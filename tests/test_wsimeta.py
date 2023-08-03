@@ -1,5 +1,7 @@
 """Test for obtaining whole-slide image metadata."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -81,7 +83,7 @@ def test_wsimeta_openslidewsireader_ndpi(sample_ndpi):
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_svs(sample_svs):
+def test_wsimeta_openslidewsireader_svs(sample_svs: Path) -> None:
     """Test OpenSlide reader metadata for svs."""
     wsi_obj = wsireader.OpenSlideWSIReader(sample_svs)
     meta = wsi_obj.info
@@ -92,7 +94,7 @@ def test_wsimeta_openslidewsireader_svs(sample_svs):
     assert isinstance(m["mpp"], tuple)
 
 
-def test_wsimeta_setter(sample_svs):
+def test_wsimeta_setter(sample_svs: Path) -> None:
     """Test setter for metadata."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     meta = wsi.info

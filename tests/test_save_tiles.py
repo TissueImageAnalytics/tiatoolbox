@@ -11,7 +11,7 @@ from tiatoolbox import cli
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_save_tiles(sample_svs_ndpi_wsis, tmp_path):
+def test_command_line_save_tiles(sample_svs_ndpi_wsis, tmp_path: Path) -> None:
     """Test for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -84,7 +84,7 @@ def test_command_line_save_tiles_single_file(sample_svs, tmp_path: Path):
     )
 
 
-def test_command_line_save_tiles_file_not_found(sample_svs, tmp_path):
+def test_command_line_save_tiles_file_not_found(sample_svs, tmp_path: Path) -> None:
     """Test for save_tiles CLI file not found error."""
     runner = CliRunner()
     save_svs_tiles_result = runner.invoke(
