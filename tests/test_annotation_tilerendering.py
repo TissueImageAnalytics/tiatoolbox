@@ -302,7 +302,7 @@ def test_user_provided_cm(fill_store, tmp_path: Path) -> None:
     )  # expect rendered color to be viridis(0.75)
 
 
-def test_random_mapper():
+def test_random_mapper() -> None:
     """Test random colour map dict for list."""
     test_list = ["line", "pt", "cell"]
     renderer = AnnotationRenderer(mapper=test_list)

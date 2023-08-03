@@ -84,7 +84,7 @@ def helper_tile_info():
 # ----------------------------------------------------
 
 
-def test_get_tile_info():
+def test_get_tile_info() -> None:
     """Test for getting tile info."""
     info = helper_tile_info()
     _, flag = info[0]  # index 0 should be full grid, removal
@@ -121,7 +121,7 @@ def test_get_tile_info():
     ), "Fail Right"
 
 
-def test_vertical_boundary_boxes():
+def test_vertical_boundary_boxes() -> None:
     """Test for vertical boundary boxes."""
     info = helper_tile_info()
     _boxes = np.array(
@@ -161,7 +161,7 @@ def test_vertical_boundary_boxes():
     assert np.sum(flag - _flag) == 0, "Fail Vertical Flag"
 
 
-def test_horizontal_boundary_boxes():
+def test_horizontal_boundary_boxes() -> None:
     """Test for horizontal boundary boxes."""
     info = helper_tile_info()
     _boxes = np.array(
@@ -201,7 +201,7 @@ def test_horizontal_boundary_boxes():
     assert np.sum(flag - _flag) == 0, "Fail Horizontal Flag"
 
 
-def test_cross_section_boundary_boxes():
+def test_cross_section_boundary_boxes() -> None:
     """Test for cross-section boundary boxes."""
     info = helper_tile_info()
     _boxes = np.array(

@@ -46,7 +46,7 @@ class Proto4(DatasetInfoABC):
         self.label_names = "a"
 
 
-def test_dataset_abc():
+def test_dataset_abc() -> None:
     """Test for ABC."""
     # test defining a subclass of dataset info but not defining
     # enforcing attributes - should crash
@@ -61,7 +61,7 @@ def test_dataset_abc():
 
 
 @pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
-def test_kather_dataset_default():
+def test_kather_dataset_default() -> None:
     """Test for kather patch dataset with default parameters."""
     # test Kather with default init
     dataset_path = rcParam["TIATOOLBOX_HOME"] / "dataset" / "kather100k-validation"
@@ -75,7 +75,7 @@ def test_kather_dataset_default():
     shutil.rmtree(dataset_path, ignore_errors=False)
 
 
-def test_kather_nonexisting_dir():
+def test_kather_nonexisting_dir() -> None:
     """Pytest for not exist dir."""
     with pytest.raises(
         ValueError,

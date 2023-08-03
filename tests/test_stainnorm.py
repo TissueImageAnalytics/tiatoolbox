@@ -13,7 +13,7 @@ from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils import imread
 
 
-def test_stain_extract():
+def test_stain_extract() -> None:
     """Test stain extraction class."""
     stain_matrix = np.array([0.65, 0.70, 0.29])
     with pytest.raises(
@@ -23,7 +23,7 @@ def test_stain_extract():
         _ = stainextract.CustomExtractor(stain_matrix)
 
 
-def test_vectors_in_right_direction():
+def test_vectors_in_right_direction() -> None:
     """Test if eigenvectors are corrected in the right direction."""
     e_vect = np.ones([2, 2])
     e_vect = stainextract.vectors_in_correct_direction(e_vectors=e_vect)
@@ -44,7 +44,7 @@ def test_vectors_in_right_direction():
     assert e_vect[1, 1] == -1
 
 
-def test_h_e_in_correct_order():
+def test_h_e_in_correct_order() -> None:
     """Test if H&E vectors are returned in the correct order."""
     v1 = np.ones(3)
     v2 = np.zeros(3)
@@ -55,7 +55,7 @@ def test_h_e_in_correct_order():
     assert np.all(he == np.array([v1, v2]))
 
 
-def test_dl_output_for_h_and_e():
+def test_dl_output_for_h_and_e() -> None:
     """Test if correct value for H and E from dictionary learning output is returned."""
     dictionary = np.zeros([20, 15])
     dictionary1 = stainextract.dl_output_for_h_and_e(dictionary=dictionary)
@@ -98,7 +98,7 @@ def test_custom_normalize(source_image, norm_ruifrok):
     assert np.mean(np.absolute(custom_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_get_normalizer_assertion():
+def test_get_normalizer_assertion() -> None:
     """Test get normalizer assertion error."""
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
     with pytest.raises(

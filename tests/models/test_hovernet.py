@@ -95,7 +95,7 @@ def test_functionality(remote_sample: Callable):
         model = HoVerNet(num_types=None, mode="super")
 
 
-def test_unit_blocks():
+def test_unit_blocks() -> None:
     """Test for blocks within HoVerNet."""
     # padding
     model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))

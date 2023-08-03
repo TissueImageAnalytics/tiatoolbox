@@ -64,7 +64,7 @@ def test_fetch_sample_skip(tmp_path: Path):
     _ = _fetch_remote_sample("stainnorm-source", tmp_path)
 
 
-def test_small_svs():
+def test_small_svs() -> None:
     """Test for fetching small SVS (CMU-1-Small-Region) sample image."""
     path = small_svs()
     # Check it exists

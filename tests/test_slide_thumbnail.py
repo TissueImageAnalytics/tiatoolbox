@@ -48,7 +48,7 @@ def command_line_slide_thumbnail(runner, sample, tmp_path: Path, mode="save"):
         assert (Path(tmp_path) / (sample.stem + ".jpg")).is_file()
 
 
-def test_command_line_slide_thumbnail(sample_ndpi, tmp_path: Path):
+def test_command_line_slide_thumbnail(sample_ndpi: Path, tmp_path: Path):
     """Test for the slide_thumbnail CLI."""
     runner = CliRunner()
 

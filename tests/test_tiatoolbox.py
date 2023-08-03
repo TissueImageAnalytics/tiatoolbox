@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_help_interface():
+def test_command_line_help_interface() -> None:
     """Test the CLI help."""
     runner = CliRunner()
     result = runner.invoke(cli.main)
@@ -34,7 +34,7 @@ def test_command_line_help_interface():
     assert "Computational pathology toolbox by TIA Centre." in help_result.output
 
 
-def test_command_line_version():
+def test_command_line_version() -> None:
     """Test for version check."""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-v"])

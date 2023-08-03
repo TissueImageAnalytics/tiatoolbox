@@ -274,7 +274,7 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
     assert np.all(img_patches == img_patches_test)
 
 
-def test_get_coordinates():
+def test_get_coordinates() -> None:
     """Test get tile coordinates functionality."""
     expected_output = np.array(
         [
@@ -418,7 +418,7 @@ def test_get_coordinates():
         )
 
 
-def test_filter_coordinates():
+def test_filter_coordinates() -> None:
     """Test different coordinate filtering functions for patch extraction."""
     bbox_list = np.array(
         [
@@ -494,7 +494,7 @@ def test_filter_coordinates():
         )
 
 
-def test_mask_based_patch_extractor_ndpi(sample_ndpi, caplog):
+def test_mask_based_patch_extractor_ndpi(sample_ndpi: Path, caplog):
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
     patch_size = stride = (400, 400)

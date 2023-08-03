@@ -135,7 +135,7 @@ def annotations_center_of_mass(annotations):
     return MultiPoint(centroids).centroid
 
 
-def test_annotation_repr():
+def test_annotation_repr() -> None:
     """Test the repr of an annotation."""
     annotation = Annotation(Polygon([(0, 0), (1, 1), (2, 0)]))
     assert isinstance(repr(annotation), str)
@@ -188,7 +188,7 @@ def fill_store(cell_grid, points_grid):
 # Class Specific Tests
 
 
-def test_sqlite_store_compile_options():
+def test_sqlite_store_compile_options() -> None:
     """Test SQLiteStore compile options."""
     options = SQLiteStore.compile_options()
     assert all(isinstance(x, str) for x in options)
@@ -241,7 +241,7 @@ def test_sqlite_store_multiple_connection(tmp_path: Path):
     assert len(store) == len(store2)
 
 
-def test_sqlite_store_index_type_error():
+def test_sqlite_store_index_type_error() -> None:
     """Test adding an index of invalid type."""
     store = SQLiteStore()
     with pytest.raises(TypeError, match="where"):
@@ -338,7 +338,7 @@ def test_sqlite_store_no_compression(sample_triangle):
     assert deserialised.wkb == sample_triangle.wkb
 
 
-def test_sqlite_store_unsupported_decompression():
+def test_sqlite_store_unsupported_decompression() -> None:
     """Test that using an unsupported decompression str raises error."""
     store = SQLiteStore(compression="foo")
     with pytest.raises(ValueError, match="Unsupported"):
@@ -364,27 +364,27 @@ def test_sqlite_store_wkb_deserialisation(sample_triangle):
     assert geom == sample_triangle
 
 
-def test_sqlite_store_metadata_get_key():
+def test_sqlite_store_metadata_get_key() -> None:
     """Test getting a metadata entry."""
     store = SQLiteStore()
     assert store.metadata["compression"] == "zlib"
 
 
-def test_sqlite_store_metadata_get_keyerror():
+def test_sqlite_store_metadata_get_keyerror() -> None:
     """Test getting a metadata entry that does not exists."""
     store = SQLiteStore()
     with pytest.raises(KeyError):
         store.metadata["foo"]
 
 
-def test_sqlite_store_metadata_delete_keyerror():
+def test_sqlite_store_metadata_delete_keyerror() -> None:
     """Test deleting a metadata entry that does not exists."""
     store = SQLiteStore(compression=None)
     with pytest.raises(KeyError):
         del store.metadata["foo"]
 
 
-def test_sqlite_store_metadata_delete():
+def test_sqlite_store_metadata_delete() -> None:
     """Test adding and deleting a metadata entry."""
     store = SQLiteStore(compression=None)
     store.metadata["foo"] = 1
@@ -393,7 +393,7 @@ def test_sqlite_store_metadata_delete():
     assert "foo" not in store.metadata
 
 
-def test_sqlite_store_metadata_iter():
+def test_sqlite_store_metadata_iter() -> None:
     """Test iterating over metadata entries."""
     conn = sqlite3.Connection(":memory:")
     metadata = SQLiteMetadata(conn)
@@ -402,7 +402,7 @@ def test_sqlite_store_metadata_iter():
     assert set(metadata.keys()) == {"foo", "bar"}
 
 
-def test_sqlite_store_metadata_len():
+def test_sqlite_store_metadata_len() -> None:
     """Test len of metadata entries."""
     conn = sqlite3.Connection(":memory:")
     metadata = SQLiteMetadata(conn)
@@ -411,7 +411,7 @@ def test_sqlite_store_metadata_len():
     assert len(metadata) == 2
 
 
-def test_sqlite_drop_index():
+def test_sqlite_drop_index() -> None:
     """Test creating and dropping an index."""
     store = SQLiteStore()
     store.create_index("foo", "props['class']")
@@ -420,7 +420,7 @@ def test_sqlite_drop_index():
     assert "foo" not in store.indexes()
 
 
-def test_sqlite_drop_index_fail():
+def test_sqlite_drop_index_fail() -> None:
     """Test dropping an index that does not exist."""
     store = SQLiteStore()
     with pytest.raises(sqlite3.OperationalError):
@@ -433,7 +433,7 @@ def test_sqlite_optimize_no_vacuum(fill_store, tmp_path: Path) -> None:
     store.optimize(limit=0, vacuum=False)
 
 
-def test_annotation_to_geojson():
+def test_annotation_to_geojson() -> None:
     """Test converting an annotation to geojson."""
     annotation = Annotation(
         geometry=Point(0, 0),
@@ -526,7 +526,7 @@ def test_auto_commit(fill_store, tmp_path: Path) -> None:
     assert len(store) == 2  # check explicitly committing works
 
 
-def test_init_base_class_exception():
+def test_init_base_class_exception() -> None:
     """Test that the base class cannot be initialized."""
     with pytest.raises(TypeError, match="abstract class"):
         AnnotationStore()  # skipcq: PYL-E0110

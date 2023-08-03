@@ -49,13 +49,13 @@ SAMPLE_PROPERTIES = {
 }
 
 
-def test_invalid_sqltriplet():
+def test_invalid_sqltriplet() -> None:
     """Test invalid SQLTriplet."""
     with pytest.raises(ValueError, match="Invalid SQLTriplet"):
         str(SQLTriplet(SQLJSONDictionary()))
 
 
-def test_json_contains():
+def test_json_contains() -> None:
     """Test json_contains function."""
     properties = json.dumps(SAMPLE_PROPERTIES)
     assert json_contains(properties, "int")
@@ -97,7 +97,7 @@ class TestSQLite:
     """Test converting from our DSL to an SQLite backend."""
 
     @staticmethod
-    def test_prop_or_prop():
+    def test_prop_or_prop() -> None:
         """Test OR operator between two prop accesses."""
         query = eval(  # skipcq: PYL-W0123
             "(props['int'] == 2) | (props['int'] == 3)",

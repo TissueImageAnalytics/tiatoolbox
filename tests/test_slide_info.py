@@ -130,7 +130,7 @@ def test_command_line_slide_info_output_none_mode_save(sample_svs: Path) -> None
     ).exists()
 
 
-def test_command_line_slide_info_no_input():
+def test_command_line_slide_info_no_input() -> None:
     """Test CLI slide info for single file."""
     runner = CliRunner()
     slide_info_result = runner.invoke(

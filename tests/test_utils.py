@@ -40,7 +40,7 @@ def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_imresize():
+def test_imresize() -> None:
     """Test for imresize."""
     img = np.zeros((2000, 1000, 3))
     resized_img = utils.transforms.imresize(img, scale_factor=0.5)

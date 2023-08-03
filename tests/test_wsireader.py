@@ -271,7 +271,7 @@ def test_wsireader_slide_info_cache(sample_svs: Path) -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_relative_level_scales_openslide_baseline(sample_ndpi):
+def test_relative_level_scales_openslide_baseline(sample_ndpi: Path):
     """Test openslide relative level scales for pixels per baseline pixel."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_baseline(wsi)
@@ -283,7 +283,7 @@ def test_relative_level_scales_jp2_baseline(sample_jp2):
     relative_level_scales_baseline(wsi)
 
 
-def test_relative_level_scales_openslide_mpp(sample_ndpi):
+def test_relative_level_scales_openslide_mpp(sample_ndpi: Path):
     """Test openslide calculation of relative level scales for mpp."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     level_scales = wsi.info.relative_level_scales(0.5, "mpp")
@@ -315,7 +315,7 @@ def relative_level_scales_power(wsi):
     assert np.array_equal(level_scales[:, 0], downsamples)
 
 
-def test_relative_level_scales_openslide_power(sample_ndpi):
+def test_relative_level_scales_openslide_power(sample_ndpi: Path):
     """Test openslide calculation of relative level scales for objective power."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_power(wsi)
@@ -338,7 +338,7 @@ def relative_level_scales_level(wsi):
     assert np.array_equal(level_scales[:, 0], expected)
 
 
-def test_relative_level_scales_openslide_level(sample_ndpi):
+def test_relative_level_scales_openslide_level(sample_ndpi: Path):
     """Test openslide calculation of relative level scales for level."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_level(wsi)
@@ -361,7 +361,7 @@ def relative_level_scales_float(wsi):
     assert np.array_equal(level_scales[:, 0], expected)
 
 
-def test_relative_level_scales_openslide_level_float(sample_ndpi):
+def test_relative_level_scales_openslide_level_float(sample_ndpi: Path):
     """Test openslide calculation of relative level scales for fractional level."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_float(wsi)
@@ -380,7 +380,7 @@ def test_relative_level_scales_invalid_units(sample_svs: Path) -> None:
         wsi.info.relative_level_scales(1.0, "gibberish")
 
 
-def test_relative_level_scales_no_mpp():
+def test_relative_level_scales_no_mpp() -> None:
     """Test relative_level_scales objective when mpp is None."""
 
     class DummyWSI:
@@ -395,7 +395,7 @@ def test_relative_level_scales_no_mpp():
         wsi.info.relative_level_scales(1.0, "mpp")
 
 
-def test_relative_level_scales_no_objective_power():
+def test_relative_level_scales_no_objective_power() -> None:
     """Test relative_level_scales objective when objective power is None."""
 
     class DummyWSI:
@@ -418,7 +418,7 @@ def test_relative_level_scales_level_too_high(sample_svs: Path) -> None:
 
 
 def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
-    sample_ndpi,
+    sample_ndpi: Path,
     caplog: pytest.LogCaptureFixture,
 ):
     """Test finding optimal level for mpp read with scale > 1.
@@ -453,7 +453,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
     )
 
 
-def test_find_optimal_level_and_downsample_mpp(sample_ndpi):
+def test_find_optimal_level_and_downsample_mpp(sample_ndpi: Path):
     """Test finding optimal level for mpp read."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
@@ -475,7 +475,7 @@ def test_find_optimal_level_and_downsample_mpp(sample_ndpi):
         assert post_read_scale_factor == pytest.approx(expected_scale)
 
 
-def test_find_optimal_level_and_downsample_power(sample_ndpi):
+def test_find_optimal_level_and_downsample_power(sample_ndpi: Path):
     """Test finding optimal level for objective power read."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
@@ -491,7 +491,7 @@ def test_find_optimal_level_and_downsample_power(sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-def test_find_optimal_level_and_downsample_level(sample_ndpi):
+def test_find_optimal_level_and_downsample_level(sample_ndpi: Path):
     """Test finding optimal level for level read.
 
     For integer levels, the returned level should always be the same as
@@ -510,7 +510,7 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-def test_convert_resolution_units(sample_ndpi, caplog):
+def test_convert_resolution_units(sample_ndpi: Path, caplog):
     """Test the resolution unit conversion code."""
     wsi = wsireader.WSIReader.open(sample_ndpi)
 
@@ -573,7 +573,7 @@ def test_convert_resolution_units(sample_ndpi, caplog):
     assert "output_unit is returned as None." in caplog.text
 
 
-def test_find_read_rect_params_power(sample_ndpi):
+def test_find_read_rect_params_power(sample_ndpi: Path):
     """Test finding read rect parameters for objective power."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
@@ -594,7 +594,7 @@ def test_find_read_rect_params_power(sample_ndpi):
         assert np.array_equal(post_read_downscaled_size, np.array(size))
 
 
-def test_find_read_rect_params_mpp(sample_ndpi):
+def test_find_read_rect_params_mpp(sample_ndpi: Path):
     """Test finding read rect parameters for objective mpp."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
@@ -615,7 +615,7 @@ def test_find_read_rect_params_mpp(sample_ndpi):
         assert np.array_equal(post_read_downscaled_size, np.array(size))
 
 
-def test_read_rect_openslide_baseline(sample_ndpi):
+def test_read_rect_openslide_baseline(sample_ndpi: Path):
     """Test openslide read rect at baseline.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -678,7 +678,7 @@ def test_is_tiled_tiff(source_image):
     source_image.with_suffix(".tiff").replace(source_image)
 
 
-def test_read_rect_openslide_levels(sample_ndpi):
+def test_read_rect_openslide_levels(sample_ndpi: Path):
     """Test openslide read rect with resolution in levels.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -738,7 +738,7 @@ def read_rect_mpp(wsi, location, size):
         assert im_region.shape == (*size[::-1], 3)
 
 
-def test_read_rect_openslide_mpp(sample_ndpi):
+def test_read_rect_openslide_mpp(sample_ndpi: Path):
     """Test openslide read rect with resolution in microns per pixel.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -762,7 +762,7 @@ def test_read_rect_jp2_mpp(sample_jp2):
     read_rect_mpp(wsi, location, size)
 
 
-def test_read_rect_openslide_objective_power(sample_ndpi):
+def test_read_rect_openslide_objective_power(sample_ndpi: Path):
     """Test openslide read rect with resolution in objective power.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -788,7 +788,7 @@ def test_read_rect_jp2_objective_power(sample_jp2):
     read_rect_objective_power(wsi, location, size)
 
 
-def test_read_bounds_openslide_baseline(sample_ndpi):
+def test_read_bounds_openslide_baseline(sample_ndpi: Path):
     """Test openslide read bounds at baseline.
 
     Coordinates in baseline (level 0) reference frame.
@@ -820,7 +820,7 @@ def test_read_bounds_jp2_baseline(sample_jp2):
     assert im_region.shape == (*size[::-1], 3)
 
 
-def test_read_bounds_openslide_levels(sample_ndpi):
+def test_read_bounds_openslide_levels(sample_ndpi: Path):
     """Test openslide read bounds with resolution in levels.
 
     Coordinates in baseline (level 0) reference frame.
@@ -861,7 +861,7 @@ def test_read_bounds_jp2_levels(sample_jp2):
         assert im_region.shape[2] == 3
 
 
-def test_read_bounds_openslide_mpp(sample_ndpi):
+def test_read_bounds_openslide_mpp(sample_ndpi: Path):
     """Test openslide read bounds with resolution in microns per pixel.
 
     Coordinates in baseline (level 0) reference frame.
@@ -887,7 +887,7 @@ def test_read_bounds_jp2_mpp(sample_jp2):
     read_bounds_mpp(wsi, bounds, size, jp2=True)
 
 
-def test_read_bounds_openslide_objective_power(sample_ndpi):
+def test_read_bounds_openslide_objective_power(sample_ndpi: Path):
     """Test openslide read bounds with resolution in objective power.
 
     Coordinates in baseline (level 0) reference frame.
@@ -938,7 +938,7 @@ def test_read_bounds_interpolated(sample_svs: Path) -> None:
     assert all(np.array(im_region.shape[:2]) > size)
 
 
-def test_read_bounds_level_consistency_openslide(sample_ndpi):
+def test_read_bounds_level_consistency_openslide(sample_ndpi: Path):
     """Test read_bounds produces the same visual field across resolution levels."""
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
@@ -1436,7 +1436,7 @@ def test_invalid_masker_method(sample_svs: Path) -> None:
 
 def test_wsireader_open(
     sample_svs,
-    sample_ndpi,
+    sample_ndpi: Path,
     sample_jp2,
     sample_ome_tiff,
     source_image,
@@ -1662,7 +1662,7 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_read_bounds(sample_ndpi, tmp_path: Path) -> None:
+def test_command_line_read_bounds(sample_ndpi: Path, tmp_path: Path) -> None:
     """Test OpenSlide read_bounds CLI."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(

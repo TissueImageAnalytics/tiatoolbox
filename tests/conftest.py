@@ -77,7 +77,7 @@ def remote_sample(tmp_samples_path: str) -> Callable:
 
 
 @pytest.fixture(scope="session")
-def sample_ndpi(remote_sample) -> Path:
+def sample_ndpi(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ndpi images.
 
     Download ndpi image for pytest.
@@ -87,7 +87,7 @@ def sample_ndpi(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_ndpi2(remote_sample) -> Path:
+def sample_ndpi2(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ndpi images.
 
     Download ndpi image for pytest.
@@ -128,7 +128,7 @@ def sample_jp2(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_all_wsis(sample_ndpi, sample_svs, sample_jp2, tmpdir_factory):
+def sample_all_wsis(sample_ndpi: Path, sample_svs, sample_jp2, tmpdir_factory):
     """Sample wsi(s) of all types supported by tiatoolbox."""
     dir_path = Path(tmpdir_factory.mktemp("data"))
 
@@ -145,7 +145,7 @@ def sample_all_wsis(sample_ndpi, sample_svs, sample_jp2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
+def sample_all_wsis2(sample_ndpi2: Path, sample_svs, sample_jp2, tmpdir_factory):
     """Sample wsi(s) of all types supported by tiatoolbox.
 
     Adds sample fluorescence ndpi image.
@@ -166,7 +166,7 @@ def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def sample_svs_ndpi_wsis(sample_ndpi2, sample_svs, tmpdir_factory):
+def sample_svs_ndpi_wsis(sample_ndpi2: Path, sample_svs: Path, tmpdir_factory):
     """Sample SVS and NDPI wsi(s).
 
     Uses sample fluorescence ndpi image.

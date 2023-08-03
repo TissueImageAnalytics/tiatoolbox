@@ -72,7 +72,7 @@ def test_feature_mapping(fixed_image, moving_image):
     assert np.mean(output - expected) < 1.0e-6
 
 
-def test_dfbr_features():
+def test_dfbr_features() -> None:
     """Test for feature input to feature_mapping function."""
     dfbr = DFBRegister()
     fixed_img = np.repeat(
@@ -97,7 +97,7 @@ def test_dfbr_features():
         _, _, _ = dfbr.feature_mapping(features)
 
 
-def test_prealignment_mask():
+def test_prealignment_mask() -> None:
     """Test for mask inputs to prealignment function."""
     fixed_img = RNG.random((10, 10))
     moving_img = RNG.random((10, 10))
@@ -107,7 +107,7 @@ def test_prealignment_mask():
         _ = prealignment(fixed_img, moving_img, no_fixed_mask, no_moving_mask)
 
 
-def test_prealignment_input_shape():
+def test_prealignment_input_shape() -> None:
     """Test for inputs to prealignment function."""
     fixed_img = RNG.random((10, 10))
     moving_img = RNG.random((15, 10))

@@ -228,7 +228,7 @@ def test_create_with_dict(sample_svs: Path) -> None:
         assert response.content_type == "image/webp"
 
 
-def test_cli_name_multiple_flag():
+def test_cli_name_multiple_flag() -> None:
     """Test cli_name multiple flag."""
 
     @cli_name()

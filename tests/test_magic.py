@@ -41,23 +41,23 @@ def test_is_zip(tmp_path: Path):
     assert not is_zip(tmp_path / "test.txt")
 
 
-def test_normalize_must_exist():
+def test_normalize_must_exist() -> None:
     """Test that must_exist raises FileNotFoundError."""
     with pytest.raises(FileNotFoundError):
         _normalize_binaryio("nonexistent", must_exist=True)
 
 
-def test_normalize_bytes():
+def test_normalize_bytes() -> None:
     """Test that _normalize_binaryio() returns BytesIO for bytes."""
     assert isinstance(_normalize_binaryio(b"test"), (BytesIO, BinaryIO))
 
 
-def test_normalize_binaryio():
+def test_normalize_binaryio() -> None:
     """Test that _normalize_binaryio() returns BinaryIO for BinaryIO."""
     assert isinstance(_normalize_binaryio(BytesIO(b"test")), (BytesIO, BinaryIO))
 
 
-def test_normalize_type_error():
+def test_normalize_type_error() -> None:
     """Test that _normalize_binaryio() raises TypeError for invalid types."""
     with pytest.raises(TypeError):
         _normalize_binaryio(1)

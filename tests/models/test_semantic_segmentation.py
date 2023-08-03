@@ -112,7 +112,7 @@ class _CNNTo1(ModelABC):
 # -------------------------------------------------------------------------------------
 
 
-def test_segmentor_ioconfig():
+def test_segmentor_ioconfig() -> None:
     """Test for IOConfig."""
     default_config = {
         "input_resolutions": [
