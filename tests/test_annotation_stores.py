@@ -35,6 +35,7 @@ sqlite3.enable_callback_tracebacks(True)
 
 GRID_SIZE = (10, 10)
 FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
+RNG = np.random.default_rng(0)  # Numpy Random Generator
 
 # Helper Functions
 
@@ -71,10 +72,10 @@ def cell_polygon(
     # Generate points about an ellipse with random eccentricity
     x, y = xy
     alpha = np.linspace(0, 2 * np.pi - (2 * np.pi / n_points), n_points)
-    rx = radius * (np.random.rand() + 0.5)
-    ry = np.random.uniform(*eccentricity) * radius - 0.5 * rx
-    x = rx * np.cos(alpha) + x + (np.random.rand(n_points) - 0.5) * noise
-    y = ry * np.sin(alpha) + y + (np.random.rand(n_points) - 0.5) * noise
+    rx = radius * (RNG.random() + 0.5)
+    ry = RNG.uniform(*eccentricity) * radius - 0.5 * rx
+    x = rx * np.cos(alpha) + x + (RNG.random(n_points) - 0.5) * noise
+    y = ry * np.sin(alpha) + y + (RNG.random(n_points) - 0.5) * noise
     boundary_coords = np.stack([x, y], axis=1).tolist()
 
     # Copy first coordinate to the end if required
@@ -88,7 +89,7 @@ def cell_polygon(
     polygon = Polygon(boundary_coords)
 
     # Add random rotation
-    angle = np.random.rand() * 360
+    angle = RNG.random() * 360
     return affinity.rotate(polygon, angle, origin="centroid")
 
 
@@ -149,14 +150,12 @@ def test_annotation_repr():
 @pytest.fixture(scope="session")
 def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
-    np.random.seed(0)
     return [cell_polygon((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
 @pytest.fixture(scope="session")
 def points_grid() -> list[Polygon]:
     """Generate a grid of fake point annotations."""
-    np.random.seed(0)
     return [Point((i * 25, j * 25)) for i, j in np.ndindex(*GRID_SIZE)]
 
 
@@ -1496,7 +1495,7 @@ class TestStore:
 
         # Fuzz
         for _ in range(100):
-            box = Polygon.from_bounds(*np.random.randint(0, 100, 4))
+            box = Polygon.from_bounds(*RNG.integers(0, 100, 4))
             assert store._is_rectangle(*box.exterior.coords)
 
         # Failure case

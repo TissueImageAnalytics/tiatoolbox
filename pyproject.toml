@@ -38,13 +38,6 @@
   ignore_errors = true
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
-[tool.isort]
-  profile = "black"
-  multi_line_output = 3
-  line_length = 88
-  filter_files = "True"
-  skip = [".gitignore", "benchmarks/*"]
-
 [build-system]
   requires = ["setuptools"]
   build-backend = "setuptools.build_meta"
@@ -82,17 +75,18 @@ replace = 'TOOLBOX_VER: {new_version}'
 select = [
   "A",     # flake8-builtins
   "B",     # flake8-bugbear
-  # "D",     # pydocstyle, need to enable for docstrings check.
+  "D",     # pydocstyle, need to enable for docstrings check.
   "E",     # pycodestyle - Error
   "F",     # pyflakes
   "G",     # flake8-logging-format
+  "I",     # Isort
   "N",     # pep8-naming
   # "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "Q",     # flake8-quotes
   "C4",    # flake8-comprehensions
-  # "FA",    # flake8-future-annotations
-  # "EM",    # flake8-errmsg
+  "FA",    # flake8-future-annotations
+  "EM",    # flake8-errmsg
   "PD",    # pandas-vet
   # "PL",  # Pylint
   "PT",    # flake8-pytest-style
@@ -114,25 +108,27 @@ select = [
   "INP",   # flake8-no-pep420
   "INT",   # flake8-gettext
   "ISC",   # flake8-implicit-str-concat
-  # "NPY",   # NumPy-specific rules
-  # "PGH",   # pygrep-hooks
+  "NPY",   # NumPy-specific rules
+  "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
-  # "PTH",   # flake8-use-pathlib
+  "PTH",   # flake8-use-pathlib
   "PYI",   # flake8-pyi
   "RET",   # flake8-return
   "RSE",   # flake8-raise
-  # "RUF",   # Ruff-specific rules
-  # "SLF",   # flake8-self
+  "RUF",   # Ruff-specific rules
+  "SLF",   # flake8-self
   "SIM",   # flake8-simplify
   "TID",   # flake8-tidy-imports
-  # "TCH",   # flake8-type-checking
-  # "TRY",   # tryceratops
+  "TCH",   # flake8-type-checking
+  "TRY",   # tryceratops
   "YTT",   # flake8-2020
   "PERF",  # Perflint
   "SLOT",  # flake8-slots
   "ASYNC", # flake8-async
 ]
 ignore = []
+# Allow Ruff to discover `*.ipynb` files.
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]

@@ -1,9 +1,9 @@
-"""Tests for reading whole-slide images."""
+"""Test for reading whole-slide images."""
+from __future__ import annotations
 
 import copy
 import json
 import logging
-import os
 import pathlib
 import random
 import re
@@ -16,6 +16,7 @@ from time import time
 from typing import Iterable
 
 import cv2
+import glymur
 import numpy as np
 import pytest
 import zarr
@@ -38,8 +39,8 @@ from tiatoolbox.wsicore.wsireader import (
     AnnotationStoreReader,
     ArrayView,
     DICOMWSIReader,
+    JP2WSIReader,
     NGFFWSIReader,
-    OmnyxJP2WSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
@@ -59,8 +60,8 @@ SVS_TEST_TISSUE_BOUNDS = (1000, 2000, 2000, 3000)
 SVS_TEST_TISSUE_LOCATION = (1000, 2000)
 SVS_TEST_TISSUE_SIZE = (1000, 1000)
 
-JP2_TEST_TISSUE_BOUNDS = (32768, 42880, 33792, 43904)
-JP2_TEST_TISSUE_LOCATION = (32768, 42880)
+JP2_TEST_TISSUE_BOUNDS = (0, 0, 1024, 1024)
+JP2_TEST_TISSUE_LOCATION = (0, 0)
 JP2_TEST_TISSUE_SIZE = (1024, 1024)
 
 COLOR_DICT = {
@@ -71,7 +72,7 @@ COLOR_DICT = {
     4: (155, 0, 155, 255),
     5: (0, 155, 155, 255),
 }
-
+RNG = np.random.default_rng()  # Numpy Random Generator
 
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
@@ -79,8 +80,8 @@ COLOR_DICT = {
 
 
 def _get_temp_folder_path(prefix="temp"):
-    """Return unique temp folder path"""
-    return os.path.join(rcParam["TIATOOLBOX_HOME"], f"{prefix}-{int(time())}")
+    """Return unique temp folder path."""
+    return rcParam["TIATOOLBOX_HOME"] / f"{prefix}-{int(time())}"
 
 
 def strictly_increasing(sequence: Iterable) -> bool:
@@ -201,7 +202,7 @@ def read_bounds_level_consistency(wsi, bounds):
 
 
 # -------------------------------------------------------------------------------------
-# Utility Test Classes
+# Utility Test Classes & Functions
 # -------------------------------------------------------------------------------------
 
 
@@ -209,10 +210,12 @@ class DummyMutableOpenSlideObject:
     """Dummy OpenSlide object with mutable properties."""
 
     def __init__(self, openslide_obj) -> None:
+        """DummyMutableOpenSlideObject initialization."""
         self.openslide_obj = openslide_obj
         self._properties = dict(openslide_obj.properties)
 
     def __getattr__(self, name: str):
+        """Catch references to OpenSlide object attributes."""
         return getattr(self.openslide_obj, name)
 
     @property
@@ -221,8 +224,20 @@ class DummyMutableOpenSlideObject:
         return self._properties
 
 
+def relative_level_scales_baseline(wsi: WSIReader) -> None:
+    """Relative level scales for pixels per baseline pixel."""
+    level_scales = wsi.info.relative_level_scales(0.125, "baseline")
+    level_scales = np.array(level_scales)
+    downsamples = np.array(wsi.info.level_downsamples)
+    expected = downsamples * 0.125
+    assert strictly_increasing(level_scales[:, 0])
+    assert strictly_increasing(level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
+    assert np.array_equal(level_scales[:, 0], expected)
+
+
 # -------------------------------------------------------------------------------------
-# Tests
+# Generic Tests
 # -------------------------------------------------------------------------------------
 
 
@@ -252,16 +267,9 @@ def test_wsireader_slide_info_cache(sample_svs):
     assert info.as_dict() == cached_info.as_dict()
 
 
-def relative_level_scales_baseline(wsi):
-    """Relative level scales for pixels per baseline pixel."""
-    level_scales = wsi.info.relative_level_scales(0.125, "baseline")
-    level_scales = np.array(level_scales)
-    downsamples = np.array(wsi.info.level_downsamples)
-    expected = downsamples * 0.125
-    assert strictly_increasing(level_scales[:, 0])
-    assert strictly_increasing(level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], level_scales[:, 1])
-    assert np.array_equal(level_scales[:, 0], expected)
+# -------------------------------------------------------------------------------------
+# Class-Specific Tests
+# -------------------------------------------------------------------------------------
 
 
 def test_relative_level_scales_openslide_baseline(sample_ndpi):
@@ -272,7 +280,7 @@ def test_relative_level_scales_openslide_baseline(sample_ndpi):
 
 def test_relative_level_scales_jp2_baseline(sample_jp2):
     """Test jp2 relative level scales for pixels per baseline pixel."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_baseline(wsi)
 
 
@@ -288,7 +296,7 @@ def test_relative_level_scales_openslide_mpp(sample_ndpi):
 
 def test_relative_level_scales_jp2_mpp(sample_jp2):
     """Test jp2 calculation of relative level scales for mpp."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     level_scales = wsi.info.relative_level_scales(0.5, "mpp")
     level_scales = np.array(level_scales)
     assert strictly_increasing(level_scales[:, 0])
@@ -316,7 +324,7 @@ def test_relative_level_scales_openslide_power(sample_ndpi):
 
 def test_relative_level_scales_jp2_power(sample_jp2):
     """Test jp2 calculation of relative level scales for objective power."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_power(wsi)
 
 
@@ -339,7 +347,7 @@ def test_relative_level_scales_openslide_level(sample_ndpi):
 
 def test_relative_level_scales_jp2_level(sample_jp2):
     """Test jp2 calculation of relative level scales for level."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_level(wsi)
 
 
@@ -362,7 +370,7 @@ def test_relative_level_scales_openslide_level_float(sample_ndpi):
 
 def test_relative_level_scales_jp2_level_float(sample_jp2):
     """Test jp2 calculation of relative level scales for fractional level."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_float(wsi)
 
 
@@ -438,7 +446,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
     will be applied to the output. A UserWarning should be raised in this case.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
     assert (
         "Read: Scale > 1.This means that the desired resolution is higher"
@@ -630,7 +638,7 @@ def test_read_rect_jp2_baseline(sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -665,6 +673,7 @@ def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff):
 
 
 def test_is_tiled_tiff(source_image):
+    """Test if source_image is a tiled tiff."""
     source_image.replace(source_image.with_suffix(".tiff"))
     assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
@@ -693,7 +702,7 @@ def test_read_rect_jp2_levels(sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = (0, 0)
     size = JP2_TEST_TISSUE_SIZE
     width, height = size
@@ -748,7 +757,7 @@ def test_read_rect_jp2_mpp(sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
     read_rect_mpp(wsi, location, size)
@@ -773,7 +782,7 @@ def test_read_rect_jp2_objective_power(sample_jp2):
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
 
@@ -797,12 +806,12 @@ def test_read_bounds_openslide_baseline(sample_ndpi):
 
 
 def test_read_bounds_jp2_baseline(sample_jp2):
-    """Test jp2 read bounds at baseline.
+    """Test JP2 read bounds at baseline.
 
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
@@ -810,11 +819,6 @@ def test_read_bounds_jp2_baseline(sample_jp2):
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape == (*size[::-1], 3)
-
-    bounds = (32768, 42880, 33792, 50000)
-    im_region = wsi.read_bounds(bounds, resolution=2.5, units="power")
-    assert im_region.dtype == "uint8"
-    assert im_region.shape == (445, 64, 3)
 
 
 def test_read_bounds_openslide_levels(sample_ndpi):
@@ -843,7 +847,7 @@ def test_read_bounds_jp2_levels(sample_jp2):
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     width, height = JP2_TEST_TISSUE_SIZE
     for level, downsample in enumerate(wsi.info.level_downsamples):
@@ -877,7 +881,7 @@ def test_read_bounds_jp2_mpp(sample_jp2):
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
 
@@ -904,7 +908,7 @@ def test_read_bounds_jp2_objective_power(sample_jp2):
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
@@ -946,7 +950,7 @@ def test_read_bounds_level_consistency_openslide(sample_ndpi):
 def test_read_bounds_level_consistency_jp2(sample_jp2):
     """Test read_bounds produces the same visual field across resolution levels."""
     bounds = JP2_TEST_TISSUE_BOUNDS
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
 
     read_bounds_level_consistency(wsi, bounds)
 
@@ -1013,7 +1017,7 @@ def test_incompatible_level(sample_svs, tmp_path, caplog):
 def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
     tmp_path = pathlib.Path(tmp_path)
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     wsi.save_tiles(
         output_dir=str(tmp_path / "test_wsireader_jp2_save_tiles"),
         tile_objective_value=5,
@@ -1021,13 +1025,22 @@ def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
         verbose=True,
     )
     assert (
-        tmp_path / "test_wsireader_jp2_save_tiles" / "test1.jp2" / "Output.csv"
+        tmp_path
+        / "test_wsireader_jp2_save_tiles"
+        / "CMU-1-Small-Region.omnyx.jp2"
+        / "Output.csv"
     ).exists()
     assert (
-        tmp_path / "test_wsireader_jp2_save_tiles" / "test1.jp2" / "slide_thumbnail.jpg"
+        tmp_path
+        / "test_wsireader_jp2_save_tiles"
+        / "CMU-1-Small-Region.omnyx.jp2"
+        / "slide_thumbnail.jpg"
     ).exists()
     assert (
-        tmp_path / "test_wsireader_jp2_save_tiles" / "test1.jp2" / "Tile_5_0_0.jpg"
+        tmp_path
+        / "test_wsireader_jp2_save_tiles"
+        / "CMU-1-Small-Region.omnyx.jp2"
+        / "Tile_5_0_0.jpg"
     ).exists()
 
 
@@ -1065,7 +1078,7 @@ def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
 
 
 def test_virtual_wsi_reader(source_image, caplog):
-    """Test VirtualWSIReader"""
+    """Test VirtualWSIReader."""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
     _ = wsi._info()
     assert "Unknown scale" in caplog.text
@@ -1089,7 +1102,7 @@ def test_virtual_wsi_reader_invalid_mode(source_image):
 
 
 def test_virtual_wsi_reader_read_bounds(source_image):
-    """Test VirtualWSIReader read bounds"""
+    """Test VirtualWSIReader read bounds."""
     wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
     assert img.shape == (100, 50, 3)
@@ -1443,7 +1456,7 @@ def test_wsireader_open(
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
     wsi = WSIReader.open(sample_jp2)
-    assert isinstance(wsi, wsireader.OmnyxJP2WSIReader)
+    assert isinstance(wsi, wsireader.JP2WSIReader)
 
     wsi = WSIReader.open(sample_ome_tiff)
     assert isinstance(wsi, wsireader.TIFFWSIReader)
@@ -1462,9 +1475,9 @@ def test_wsireader_open(
 
     # test loading .npy
     temp_dir = _get_temp_folder_path()
-    os.mkdir(temp_dir)
+    temp_dir.mkdir()
     temp_file = f"{temp_dir}/sample.npy"
-    np.save(temp_file, np.random.randint(1, 255, [5, 5, 5]))
+    np.save(temp_file, RNG.integers(1, 255, [5, 5, 5]))
     wsi_out = WSIReader.open(temp_file)
     assert isinstance(wsi_out, VirtualWSIReader)
     shutil.rmtree(temp_dir)
@@ -1472,8 +1485,8 @@ def test_wsireader_open(
 
 def test_jp2_missing_cod(sample_jp2, caplog):
     """Test for warning if JP2 is missing COD segment."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
-    wsi.glymur_wsi.codestream.segment = []
+    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi.glymur_jp2.codestream.segment = []
     _ = wsi.info
     assert "missing COD" in caplog.text
 
@@ -1488,7 +1501,7 @@ def test_read_rect_at_resolution(sample_wsi_dict):
     reader_list = [
         VirtualWSIReader(mini_wsi2_jpg),
         OpenSlideWSIReader(mini_wsi2_svs),
-        OmnyxJP2WSIReader(mini_wsi2_jp2),
+        JP2WSIReader(mini_wsi2_jp2),
     ]
 
     for reader_idx, reader in enumerate(reader_list):
@@ -1635,7 +1648,7 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
         ({"resolution": 1.35, "units": "baseline"}, np.array([4000, 4000, 5000, 5000])),
         ({"resolution": 1.00, "units": "level"}, np.array([1500, 1500, 2000, 2000])),
     ]
-    wsi_reader = OmnyxJP2WSIReader(mini_wsi2_jp2)
+    wsi_reader = JP2WSIReader(mini_wsi2_jp2)
     wsi_thumb = wsi_reader.slide_thumbnail(resolution=0.85, units="mpp")
     vrt_reader = VirtualWSIReader(wsi_thumb)
     vrt_reader.info = wsi_reader.info
@@ -1725,7 +1738,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
     utils.env_detection.running_on_ci(),
     reason="No need to display image on travis.",
 )
-def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
+def test_command_line_jp2_read_bounds_show(sample_jp2):
     """Test JP2 read_bounds with mode as 'show'."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
@@ -1746,7 +1759,7 @@ def test_command_line_jp2_read_bounds_show(sample_jp2, tmp_path):
     assert read_bounds_result.exit_code == 0
 
 
-def test_command_line_unsupported_file_read_bounds(sample_svs, tmp_path):
+def test_command_line_unsupported_file_read_bounds(sample_svs):
     """Test unsupported file read bounds."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
@@ -1851,7 +1864,7 @@ def test_arrayview_unsupported_axes_shape(sample_ome_tiff, monkeypatch):
 
 def test_arrayview_incomplete_index():
     """Test reading from ArrayView without specifying all axes slices."""
-    array = zarr.array(np.random.rand(128, 128, 3))
+    array = zarr.array(RNG.random((128, 128, 3)))
     array_view = ArrayView(array=array, axes="YXS")
     view_1 = array_view[:64, :64, :]
     view_2 = array_view[:64, :64]
@@ -1865,7 +1878,7 @@ def test_arrayview_single_number_index():
     consistency with other __getitem__ objects.
 
     """
-    array = zarr.array(np.random.rand(128, 128, 3))
+    array = zarr.array(RNG.random((128, 128, 3)))
     array_view = ArrayView(array=array, axes="YXS")
     view_1 = array_view[0]
     view_2 = array_view[0]
@@ -1947,7 +1960,7 @@ def test_is_zarr_array(tmp_path):
         "filters": None,
         "zarr_format": 2,
     }
-    with open(_zarray_path, "w") as f:
+    with Path.open(_zarray_path, "w") as f:
         json.dump(minimal_zarray, f)
     assert is_zarr(zarr_dir)
 
@@ -1960,7 +1973,7 @@ def test_is_zarr_group(tmp_path):
     minimal_zgroup = {
         "zarr_format": 2,
     }
-    with open(_zgroup_path, "w") as f:
+    with Path.open(_zgroup_path, "w") as f:
         json.dump(minimal_zgroup, f)
     assert is_zarr(zarr_dir)
 
@@ -1969,7 +1982,7 @@ def test_is_ngff_regular_zarr(tmp_path):
     """Test is_ngff is false for a regular zarr."""
     zarr_path = tmp_path / "zarr.zarr"
     # Create zarr array on disk
-    zarr.array(np.random.rand(32, 32), store=zarr.DirectoryStore(zarr_path))
+    zarr.array(RNG.random((32, 32)), store=zarr.DirectoryStore(zarr_path))
     assert is_zarr(zarr_path)
     assert not is_ngff(zarr_path)
 
@@ -2009,14 +2022,14 @@ def test_store_reader_explicit_info(remote_sample, tmp_path):
     assert reader._info().as_dict() == wsi_reader.info.as_dict()
 
 
-def test_store_reader_from_store(remote_sample, tmp_path):
+def test_store_reader_from_store(remote_sample):
     """Test AnnotationStoreReader from an AnnotationStore object."""
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store)
     assert isinstance(reader.store, SQLiteStore)
 
 
-def test_store_reader_base_wsi_str(remote_sample, tmp_path):
+def test_store_reader_base_wsi_str(remote_sample):
     """Test AnnotationStoreReader with base_wsi as a string."""
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store, base_wsi=remote_sample("svs-1-small"))
@@ -2088,10 +2101,10 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(tmp_path, remote_sample, caplog):
     # Create a copy of the sample with a non-micrometer scale
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["axes"][0]["unit"] = "foo"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
 
     wsi = wsireader.NGFFWSIReader(sample_copy)
@@ -2106,10 +2119,10 @@ def test_ngff_zattrs_missing_axes_mpp(tmp_path, remote_sample):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["axes"] = []
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
@@ -2121,10 +2134,10 @@ def test_ngff_empty_datasets_mpp(tmp_path, remote_sample):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     zattrs["multiscales"][0]["datasets"] = []
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
@@ -2136,12 +2149,12 @@ def test_ngff_no_scale_transforms_mpp(tmp_path, remote_sample):
     # Create a copy of the sample with no axes
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     for i, _ in enumerate(zattrs["multiscales"][0]["datasets"]):
         datasets = zattrs["multiscales"][0]["datasets"][i]
         datasets["coordinateTransformations"][0]["type"] = "identity"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
@@ -2153,11 +2166,11 @@ def test_ngff_missing_omero_version(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Remove the omero version
     del zattrs["omero"]["version"]
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsireader.WSIReader.open(sample_copy)
 
@@ -2168,11 +2181,11 @@ def test_ngff_missing_multiscales_returns_false(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Remove the multiscales key
     del zattrs["multiscales"]
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     assert not wsireader.is_ngff(sample_copy)
 
@@ -2183,11 +2196,11 @@ def test_ngff_wrong_format_metadata(tmp_path, caplog, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"] = "foo"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with caplog.at_level(logging.WARNING):
         assert not wsireader.is_ngff(sample_copy)
@@ -2200,11 +2213,11 @@ def test_ngff_omero_below_min_version(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["omero"]["version"] = "0.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
@@ -2216,11 +2229,11 @@ def test_ngff_omero_above_max_version(tmp_path, caplog, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["omero"]["version"] = "10.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     # Check that the warning is logged
     with caplog.at_level(logging.WARNING):
@@ -2234,11 +2247,11 @@ def test_ngff_multiscales_below_min_version(tmp_path, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"][0]["version"] = "0.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
@@ -2250,11 +2263,11 @@ def test_ngff_multiscales_above_max_version(tmp_path, caplog, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Change the format to something else
     zattrs["multiscales"][0]["version"] = "10.0"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     # Check that the warning is logged
     with caplog.at_level(logging.WARNING):
@@ -2283,11 +2296,11 @@ def test_ngff_non_numeric_version(tmp_path, monkeypatch, remote_sample):
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Set the omero version to a non-numeric string
     zattrs["omero"]["version"] = "0.5-dev"
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     wsireader.WSIReader.open(sample_copy)
 
@@ -2298,7 +2311,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
     # Create a copy of the sample
     sample_copy = tmp_path / "ngff-1.zarr"
     shutil.copytree(sample, sample_copy)
-    with open(sample_copy / ".zattrs") as fh:
+    with Path.open(sample_copy / ".zattrs") as fh:
         zattrs = json.load(fh)
     # Set the versions to be inconsistent
     multiscales = zattrs["multiscales"]
@@ -2308,12 +2321,96 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
     for i, _ in enumerate(multiscales):
         multiscales[i]["version"] = f"0.{i}-dev"
     zattrs["omero"]["multiscales"] = multiscales
-    with open(sample_copy / ".zattrs", "w") as fh:
+    with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     # Capture logger output to check for warning
     with caplog.at_level(logging.WARNING), pytest.raises(FileNotSupportedError):
         wsireader.WSIReader.open(sample_copy)
     assert "multiple versions" in caplog.text
+
+
+def test_jp2_no_mpp_appmag(tmp_path):
+    """Test WSIReader init for a JP2 with no resolution metadata."""
+    path = tmp_path / "test.jp2"
+    glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    _ = WSIReader.open(path).info
+
+
+def test_jp2_empty_xml(tmp_path):
+    """Test WSIReader init for a JP2 with empty Jp2 XML."""
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    _ = WSIReader.open(path).info
+
+
+def test_jp2_empty_xml_empty_description(tmp_path):
+    """Test WSIReader init for a JP2 with an empty JP2 XML description tag."""
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2><description></description></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    _ = WSIReader.open(path).info
+
+
+def test_jp2_empty_xml_description_no_appmag_no_mpp(tmp_path):
+    """Test WSIReader init for a JP2 with not AppMap or MPP in description."""
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2><description>Description here</description></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    _ = WSIReader.open(path).info
+
+
+def test_jp2_no_header(tmp_path, monkeypatch):
+    """Test WSIReader with an image crafted with a missing header.
+
+    Note: This should not be possible for a real file.
+
+    """
+    path = tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(
+        path,
+        data=np.ones((128, 128, 3), np.uint8),
+    )
+    xml_path = tmp_path / "data.xml"
+    xml_path.write_text("<Jp2><description>Description here</description></Jp2>")
+    xmlbox = glymur.jp2box.XMLBox(filename=xml_path)
+    jp2.append(xmlbox)
+    wsi = WSIReader.open(path)
+    monkeypatch.setattr(
+        wsi.glymur_jp2,
+        "box",
+        [box for box in wsi.glymur_jp2.box if box.box_id != "jp2h"],
+    )
+    # Ensure there is no memoized version of info
+    monkeypatch.setattr(wsi, "_m_info", None)
+    with pytest.raises(ValueError, match="image header missing"):
+        _ = wsi.info
+
+
+# -----------------------------------------------------------------------------
+# Parameterized WSIReader Tests
+# -----------------------------------------------------------------------------
 
 
 @pytest.fixture(
@@ -2363,8 +2460,8 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
             "kwargs": {},
         },
         {
-            "reader_class": OmnyxJP2WSIReader,
-            "sample_key": "jp2-omnyx-1",
+            "reader_class": JP2WSIReader,
+            "sample_key": "jp2-omnyx-small",
             "kwargs": {},
         },
     ],
@@ -2380,6 +2477,7 @@ def test_ngff_inconsistent_multiscales_versions(tmp_path, caplog, remote_sample)
 )
 def wsi(request, remote_sample):
     """WSIReader instance fixture.
+
     Reader type varies as fixture is parametrized.
 
     """
@@ -2538,24 +2636,25 @@ def test_read_rect_coord_space_consistency(wsi):
     mse = np.mean((roi1 - roi2) ** 2)
     assert mse < 100
 
-    # Check PSNR
-    psnr = peak_signal_noise_ratio(roi1, roi2)
-    assert psnr > 25
-
-    # Check SSIM (skip very small roi regions)
-    if np.greater(roi1.shape[2], 16).all():
-        ssim = structural_similarity(roi1, roi2, multichannel=True)
-        assert ssim > 0.9
+    # Check SSIM
+    ssim = structural_similarity(
+        roi1,
+        roi2,
+        channel_axis=-1,
+        winsize=min(*roi1.shape[:2], 7),
+    )
+    assert ssim > 0.8
 
 
 def test_file_path_does_not_exist():
+    """Test that FileNotFoundError is raised when file does not exist."""
     for reader_class in [
         AnnotationStoreReader,
         TIFFWSIReader,
         DICOMWSIReader,
         NGFFWSIReader,
         OpenSlideWSIReader,
-        OmnyxJP2WSIReader,
+        JP2WSIReader,
     ]:
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")

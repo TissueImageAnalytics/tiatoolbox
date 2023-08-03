@@ -61,7 +61,7 @@ class _CNNTo1(ModelABC):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.conv = nn.Conv2d(3, 1, 3, padding=1)
         self.conv.weight.data.fill_(0)
@@ -597,7 +597,7 @@ def test_subclass(remote_sample, tmp_path):
     class XSegmentor(SemanticSegmentor):
         """Dummy class to test subclassing."""
 
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__(model=model)
             self.num_postproc_worker = 2
 

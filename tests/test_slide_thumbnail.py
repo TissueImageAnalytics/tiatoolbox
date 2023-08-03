@@ -22,7 +22,7 @@ def test_wsireader_get_thumbnail_openslide(sample_svs):
 
 def test_wsireader_get_thumbnail_jp2(sample_jp2):
     """Test for get_thumbnail as a python function."""
-    wsi = wsireader.OmnyxJP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"
@@ -55,7 +55,7 @@ def test_command_line_slide_thumbnail(sample_ndpi, tmp_path):
     command_line_slide_thumbnail(runner, sample=sample_ndpi, tmp_path=tmp_path)
 
 
-def test_command_line_slide_thumbnail_output_none(sample_svs, tmp_path):
+def test_command_line_slide_thumbnail_output_none(sample_svs):
     """Test cli slide thumbnail with output dir None."""
     runner = CliRunner()
     slide_thumb_result = runner.invoke(

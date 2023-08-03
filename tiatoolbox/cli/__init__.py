@@ -19,7 +19,7 @@ from tiatoolbox.cli.tissue_mask import tissue_mask
 from tiatoolbox.cli.visualize import visualize
 
 
-def version_msg():
+def version_msg() -> str:
     """Return a string with tiatoolbox package version and python version."""
     return f"tiatoolbox {__version__} (Python {python_version()}) on {platform()}."
 
@@ -32,7 +32,7 @@ def version_msg():
     help="Show the tiatoolbox version",
     message=version_msg(),
 )
-def main():
+def main() -> click.BaseCommand:
     """Computational pathology toolbox by TIA Centre."""
     return 0
 
