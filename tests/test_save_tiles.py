@@ -1,6 +1,6 @@
 """Test for code related to saving image tiles."""
 
-import pathlib
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -19,7 +19,7 @@ def test_command_line_save_tiles(sample_svs_ndpi_wsis, tmp_path):
         [
             "save-tiles",
             "--img-input",
-            str(pathlib.Path(sample_svs_ndpi_wsis)),
+            str(Path(sample_svs_ndpi_wsis)),
             "--file-types",
             "*.ndpi, *.svs",
             "--tile-objective-value",
@@ -29,7 +29,7 @@ def test_command_line_save_tiles(sample_svs_ndpi_wsis, tmp_path):
         ],
     )
 
-    tmp_path = pathlib.Path(tmp_path)
+    tmp_path = Path(tmp_path)
     cmu_small_region = tmp_path / "all_tiles" / "CMU-1-Small-Region.svs"
     bioformatspull2759 = tmp_path / "all_tiles" / "bioformatspull2759.ndpi"
 
@@ -65,19 +65,19 @@ def test_command_line_save_tiles_single_file(sample_svs, tmp_path):
 
     assert save_svs_tiles_result.exit_code == 0
     assert (
-        pathlib.Path(tmp_path)
+        Path(tmp_path)
         .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Output.csv")
         .exists()
     )
     assert (
-        pathlib.Path(tmp_path)
+        Path(tmp_path)
         .joinpath("CMU-1-Small-Region.svs")
         .joinpath("slide_thumbnail.jpg")
         .exists()
     )
     assert (
-        pathlib.Path(tmp_path)
+        Path(tmp_path)
         .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Tile_5_0_0.jpg")
         .exists()

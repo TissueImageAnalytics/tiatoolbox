@@ -1,7 +1,7 @@
 """Test for code related to obtaining slide thumbnails."""
 
 import os
-import pathlib
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -35,17 +35,17 @@ def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
         [
             "slide-thumbnail",
             "--img-input",
-            str(pathlib.Path(sample)),
+            str(Path(sample)),
             "--mode",
             mode,
             "--output-path",
-            str(pathlib.Path(tmp_path)),
+            str(Path(tmp_path)),
         ],
     )
 
     assert slide_thumb_result.exit_code == 0
     if mode == "save":
-        assert (pathlib.Path(tmp_path) / (sample.stem + ".jpg")).is_file()
+        assert (Path(tmp_path) / (sample.stem + ".jpg")).is_file()
 
 
 def test_command_line_slide_thumbnail(sample_ndpi, tmp_path):
@@ -63,7 +63,7 @@ def test_command_line_slide_thumbnail_output_none(sample_svs):
         [
             "slide-thumbnail",
             "--img-input",
-            str(pathlib.Path(sample_svs)),
+            str(Path(sample_svs)),
             "--mode",
             "save",
         ],
@@ -71,7 +71,7 @@ def test_command_line_slide_thumbnail_output_none(sample_svs):
 
     assert slide_thumb_result.exit_code == 0
     assert (
-        pathlib.Path(sample_svs).parent / "slide-thumbnail" / (sample_svs.stem + ".jpg")
+        Path(sample_svs).parent / "slide-thumbnail" / (sample_svs.stem + ".jpg")
     ).is_file()
 
 
@@ -108,11 +108,11 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(sample_jp2, tmp_pat
         [
             "slide-thumbnail",
             "--img-input",
-            str(pathlib.Path(sample_jp2))[:-1],
+            str(Path(sample_jp2))[:-1],
             "--mode",
             "save",
             "--output-path",
-            str(pathlib.Path(tmp_path)),
+            str(Path(tmp_path)),
         ],
     )
 

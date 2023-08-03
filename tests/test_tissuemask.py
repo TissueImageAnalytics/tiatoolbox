@@ -1,7 +1,7 @@
 """Test for code related to tissue mask generation."""
 
 import os
-import pathlib
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -219,7 +219,7 @@ def test_morphological_min_region_size():
 )
 def test_cli_tissue_mask_otsu_show(sample_svs):
     """Test Otsu tissue masking with default input CLI and showing in a window."""
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
     tissue_mask_result = runner.invoke(
         cli.main,
@@ -239,9 +239,9 @@ def test_cli_tissue_mask_otsu_show(sample_svs):
 
 def test_cli_tissue_mask_otsu_save(sample_svs):
     """Test Otsu tissue masking with default input CLI and saving to a file."""
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
-    output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
+    output_path = str(Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
@@ -258,14 +258,14 @@ def test_cli_tissue_mask_otsu_save(sample_svs):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
+    assert Path(output_path, source_img.stem + ".png").is_file()
 
 
 def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis):
     """Test Otsu tissue masking for multiple files with default input CLI."""
-    source_img = pathlib.Path(sample_all_wsis)
+    source_img = Path(sample_all_wsis)
     runner = CliRunner()
-    output_path = str(pathlib.Path(source_img, "tissue_mask"))
+    output_path = str(Path(source_img, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
@@ -282,7 +282,7 @@ def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, "CMU-1-Small-Region.omnyx.png").is_file()
+    assert Path(output_path, "CMU-1-Small-Region.omnyx.png").is_file()
 
 
 @pytest.mark.skipif(running_on_ci(), reason="No display on CI.")
@@ -292,7 +292,7 @@ def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis):
 )
 def test_cli_tissue_mask_morphological_show(sample_svs):
     """Test Morphological tissue masking with default input CLI."""
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
     tissue_mask_result = runner.invoke(
         cli.main,
@@ -312,9 +312,9 @@ def test_cli_tissue_mask_morphological_show(sample_svs):
 
 def test_cli_tissue_mask_morphological_save(sample_svs):
     """Test Morphological tissue masking with morphological method CLI."""
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
-    output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
+    output_path = str(Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
@@ -331,7 +331,7 @@ def test_cli_tissue_mask_morphological_save(sample_svs):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
+    assert Path(output_path, source_img.stem + ".png").is_file()
 
 
 def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs):
@@ -339,9 +339,9 @@ def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs):
 
     Adds option to specify resolution and units in power (appmag).
     """
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
-    output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
+    output_path = str(Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
@@ -362,7 +362,7 @@ def test_cli_tissue_mask_morphological_power_resolution_save(sample_svs):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
+    assert Path(output_path, source_img.stem + ".png").is_file()
 
 
 def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs):
@@ -370,9 +370,9 @@ def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs):
 
     Adds option to specify resolution and units in mpp (micrometers per pixel).
     """
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
-    output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
+    output_path = str(Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
@@ -393,7 +393,7 @@ def test_cli_tissue_mask_morphological_mpp_resolution_save(sample_svs):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
+    assert Path(output_path, source_img.stem + ".png").is_file()
 
 
 def test_cli_tissue_mask_morphological_kernel_size_save(sample_svs):
@@ -401,9 +401,9 @@ def test_cli_tissue_mask_morphological_kernel_size_save(sample_svs):
 
     Adds option to specify kernel size.
     """
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
-    output_path = str(pathlib.Path(sample_svs.parent, "tissue_mask"))
+    output_path = str(Path(sample_svs.parent, "tissue_mask"))
     tissue_mask_result = runner.invoke(
         cli.main,
         [
@@ -423,12 +423,12 @@ def test_cli_tissue_mask_morphological_kernel_size_save(sample_svs):
     )
 
     assert tissue_mask_result.exit_code == 0
-    assert pathlib.Path(output_path, source_img.stem + ".png").is_file()
+    assert Path(output_path, source_img.stem + ".png").is_file()
 
 
 def test_cli_tissue_mask_method_not_supported(sample_svs):
     """Test method not supported for the tissue masking CLI."""
-    source_img = pathlib.Path(sample_svs)
+    source_img = Path(sample_svs)
     runner = CliRunner()
     tissue_mask_result = runner.invoke(
         cli.main,
@@ -469,7 +469,7 @@ def test_cli_tissue_mask_method_not_supported(sample_svs):
 
 def test_cli_tissue_mask_file_not_found_error(source_image):
     """Test file not found error for the tissue masking CLI."""
-    source_img = pathlib.Path(source_image)
+    source_img = Path(source_image)
     runner = CliRunner()
     tissue_mask_result = runner.invoke(
         cli.main,

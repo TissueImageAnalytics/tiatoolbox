@@ -1,5 +1,5 @@
 """Unit test package for Unet."""
-import pathlib
+from pathlib import Path
 from typing import Callable
 
 import numpy as np
@@ -18,7 +18,7 @@ ON_GPU = False
 def test_functional_unet(remote_sample: Callable):
     """Test for unet."""
     # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
 
     pretrained_weights = fetch_pretrained_weights("fcn-tissue_mask")
 

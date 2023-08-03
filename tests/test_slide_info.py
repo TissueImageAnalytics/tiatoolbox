@@ -1,6 +1,6 @@
 """Test for code related to obtaining slide information."""
 
-import pathlib
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -19,7 +19,7 @@ def test_command_line_slide_info(sample_all_wsis, tmp_path):
         [
             "slide-info",
             "--img-input",
-            str(pathlib.Path(sample_all_wsis)),
+            str(Path(sample_all_wsis)),
             "--mode",
             "save",
             "--file-types",
@@ -32,9 +32,9 @@ def test_command_line_slide_info(sample_all_wsis, tmp_path):
     )
 
     assert slide_info_result.exit_code == 0
-    assert pathlib.Path(tmp_path, "CMU-1-Small-Region.yaml").exists()
-    assert pathlib.Path(tmp_path, "CMU-1.yaml").exists()
-    assert not pathlib.Path(tmp_path, "test1.yaml").exists()
+    assert Path(tmp_path, "CMU-1-Small-Region.yaml").exists()
+    assert Path(tmp_path, "CMU-1.yaml").exists()
+    assert not Path(tmp_path, "test1.yaml").exists()
 
 
 def test_command_line_slide_info_jp2(sample_all_wsis):
@@ -45,17 +45,17 @@ def test_command_line_slide_info_jp2(sample_all_wsis):
         [
             "slide-info",
             "--img-input",
-            str(pathlib.Path(sample_all_wsis)),
+            str(Path(sample_all_wsis)),
             "--mode",
             "save",
         ],
     )
 
-    output_dir = pathlib.Path(sample_all_wsis).parent
+    output_dir = Path(sample_all_wsis).parent
     assert slide_info_result.exit_code == 0
-    assert pathlib.Path(output_dir, "meta-data", "CMU-1-Small-Region.yaml").exists()
-    assert pathlib.Path(output_dir, "meta-data", "CMU-1.yaml").exists()
-    assert pathlib.Path(
+    assert Path(output_dir, "meta-data", "CMU-1-Small-Region.yaml").exists()
+    assert Path(output_dir, "meta-data", "CMU-1.yaml").exists()
+    assert Path(
         output_dir,
         "meta-data",
         "CMU-1-Small-Region.omnyx.yaml",
@@ -123,7 +123,7 @@ def test_command_line_slide_info_output_none_mode_save(sample_svs):
     )
 
     assert slide_info_result.exit_code == 0
-    assert pathlib.Path(
+    assert Path(
         sample_svs.parent,
         "meta-data",
         "CMU-1-Small-Region.yaml",

@@ -5,8 +5,8 @@ import copy
 # ! The garbage collector
 import gc
 import multiprocessing
-import pathlib
 import shutil
+from pathlib import Path
 from typing import Callable
 
 import joblib
@@ -55,8 +55,8 @@ def semantic_postproc_func(raw_output):
 def test_functionality_local(remote_sample: Callable, tmp_path):
     """Local functionality test for multi task segmentor."""
     gc.collect()
-    root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    root_save_dir = Path(tmp_path)
+    mini_wsi_svs = Path(remote_sample("svs-1-small"))
     save_dir = f"{root_save_dir}/multitask/"
     _rm_dir(save_dir)
 
@@ -107,8 +107,8 @@ def test_functionality_local(remote_sample: Callable, tmp_path):
 
 def test_functionality_hovernetplus(remote_sample: Callable, tmp_path):
     """Functionality test for multitask segmentor."""
-    root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    root_save_dir = Path(tmp_path)
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     required_dims = (258, 258)
     # above image is 512 x 512 at 0.252 mpp resolution. This is 258 x 258 at 0.500 mpp.
 
@@ -141,8 +141,8 @@ def test_functionality_hovernetplus(remote_sample: Callable, tmp_path):
 
 def test_functionality_hovernet(remote_sample, tmp_path):
     """Functionality test for multitask segmentor."""
-    root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    root_save_dir = Path(tmp_path)
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     save_dir = f"{root_save_dir}/multi/"
     _rm_dir(save_dir)
@@ -168,8 +168,8 @@ def test_functionality_hovernet(remote_sample, tmp_path):
 
 def test_masked_segmentor(remote_sample, tmp_path):
     """Test segmentor when image is masked."""
-    root_save_dir = pathlib.Path(tmp_path)
-    sample_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    root_save_dir = Path(tmp_path)
+    sample_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
     imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
@@ -216,8 +216,8 @@ def test_masked_segmentor(remote_sample, tmp_path):
 
 def test_functionality_process_instance_predictions(remote_sample, tmp_path):
     """Test the functionality of instance predictions processing."""
-    root_save_dir = pathlib.Path(tmp_path)
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    root_save_dir = Path(tmp_path)
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     save_dir = root_save_dir / "semantic"
     _rm_dir(save_dir)
@@ -259,7 +259,7 @@ def test_functionality_process_instance_predictions(remote_sample, tmp_path):
 
 def test_empty_image(tmp_path):
     """Test MultiTaskSegmentor for an empty image."""
-    root_save_dir = pathlib.Path(tmp_path)
+    root_save_dir = Path(tmp_path)
     sample_patch = np.ones((256, 256, 3), dtype="uint8") * 255
     sample_patch_path = root_save_dir / "sample_tile.png"
     imwrite(sample_patch_path, sample_patch)
@@ -328,7 +328,7 @@ def test_empty_image(tmp_path):
 
 def test_functionality_semantic(remote_sample, tmp_path):
     """Functionality test for multitask segmentor."""
-    root_save_dir = pathlib.Path(tmp_path)
+    root_save_dir = Path(tmp_path)
 
     save_dir = f"{root_save_dir}/multi/"
     _rm_dir(save_dir)
@@ -342,7 +342,7 @@ def test_functionality_semantic(remote_sample, tmp_path):
             num_postproc_workers=NUM_POSTPROC_WORKERS,
         )
 
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     save_dir = f"{root_save_dir}/multi/"
     _rm_dir(tmp_path)
 
@@ -383,8 +383,8 @@ def test_functionality_semantic(remote_sample, tmp_path):
 
 def test_crash_segmentor(remote_sample, tmp_path):
     """Test engine crash when given malformed input."""
-    root_save_dir = pathlib.Path(tmp_path)
-    sample_wsi_svs = pathlib.Path(remote_sample("svs-1-small"))
+    root_save_dir = Path(tmp_path)
+    sample_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
     imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)

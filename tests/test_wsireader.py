@@ -4,7 +4,6 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import pathlib
 import random
 import re
 import shutil
@@ -245,7 +244,7 @@ def test_wsireader_slide_info(sample_svs, tmp_path):
     """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(sample_svs).parent),
+        input_path=str(Path(sample_svs).parent),
         file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
@@ -258,7 +257,7 @@ def test_wsireader_slide_info_cache(sample_svs):
     """Test for caching slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(sample_svs).parent),
+        input_path=str(Path(sample_svs).parent),
         file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
@@ -957,10 +956,10 @@ def test_read_bounds_level_consistency_jp2(sample_jp2):
 
 def test_wsireader_save_tiles(sample_svs, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
-    tmp_path = pathlib.Path(tmp_path)
+    tmp_path = Path(tmp_path)
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(
-        input_path=str(pathlib.Path(sample_svs).parent),
+        input_path=str(Path(sample_svs).parent),
         file_types=file_types,
     )
     wsi = wsireader.OpenSlideWSIReader(files_all[0])
@@ -993,7 +992,7 @@ def test_incompatible_objective_value(sample_svs, tmp_path):
     with pytest.raises(ValueError, match="objective power"):
         wsi.save_tiles(
             output_dir=str(
-                pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles"),
+                Path(tmp_path).joinpath("test_wsireader_save_tiles"),
             ),
             tile_objective_value=3,
             tile_read_size=(5000, 5000),
@@ -1005,7 +1004,7 @@ def test_incompatible_level(sample_svs, tmp_path, caplog):
     """Test for incompatible objective value."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.save_tiles(
-        output_dir=str(pathlib.Path(tmp_path).joinpath("test_wsireader_save_tiles2")),
+        output_dir=str(Path(tmp_path).joinpath("test_wsireader_save_tiles2")),
         tile_objective_value=1,
         tile_read_size=(500, 500),
         verbose=True,
@@ -1016,7 +1015,7 @@ def test_incompatible_level(sample_svs, tmp_path, caplog):
 
 def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path):
     """Test for save_tiles in wsireader as a python function."""
-    tmp_path = pathlib.Path(tmp_path)
+    tmp_path = Path(tmp_path)
     wsi = wsireader.JP2WSIReader(sample_jp2)
     wsi.save_tiles(
         output_dir=str(tmp_path / "test_wsireader_jp2_save_tiles"),
@@ -1079,7 +1078,7 @@ def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
 
 def test_virtual_wsi_reader(source_image, caplog):
     """Test VirtualWSIReader."""
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
+    wsi = wsireader.VirtualWSIReader(Path(source_image))
     _ = wsi._info()
     assert "Unknown scale" in caplog.text
 
@@ -1098,12 +1097,12 @@ def test_virtual_wsi_reader(source_image, caplog):
 def test_virtual_wsi_reader_invalid_mode(source_image):
     """Test creating a VritualWSIReader with an invalid mode."""
     with pytest.raises(ValueError, match="Invalid mode"):
-        wsireader.VirtualWSIReader(pathlib.Path(source_image), mode="foo")
+        wsireader.VirtualWSIReader(Path(source_image), mode="foo")
 
 
 def test_virtual_wsi_reader_read_bounds(source_image):
     """Test VirtualWSIReader read bounds."""
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
+    wsi = wsireader.VirtualWSIReader(Path(source_image))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
     assert img.shape == (100, 50, 3)
 
@@ -1122,7 +1121,7 @@ def test_virtual_wsi_reader_read_bounds(source_image):
 
 def test_virtual_wsi_reader_read_rect(source_image):
     """Test VirtualWSIReader read rect."""
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image))
+    wsi = wsireader.VirtualWSIReader(Path(source_image))
     info = wsi.info
 
     img = wsi.read_rect(location=(0, 0), size=(50, 100))
@@ -1155,14 +1154,14 @@ def test_virtual_wsi_reader_read_rect(source_image):
     with pytest.raises(ValueError, match="level"):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
 
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=info)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=info)
 
     assert info.as_dict() == wsi.info.as_dict()
 
 
 def test_virtual_wsi_reader_read_bounds_virtual_baseline(source_image):
     """Test VirtualWSIReader read bounds with virtual baseline."""
-    image_path = pathlib.Path(source_image)
+    image_path = Path(source_image)
     img_array = utils.misc.imread(image_path)
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
@@ -1189,11 +1188,11 @@ def test_virtual_wsi_reader_read_rect_virtual_baseline(source_image):
     as large as the input image.
 
     """
-    img_array = utils.misc.imread(pathlib.Path(source_image))
+    img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), pad_mode="reflect")
     target = cv2.resize(
         img_array[:50, :25, :],
@@ -1212,7 +1211,7 @@ def test_virtual_wsi_reader_read_rect_virtual_levels(source_image):
     Checks that the regions read at each level line up with expected values.
 
     """
-    img_array = utils.misc.imread(pathlib.Path(source_image))
+    img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
@@ -1220,7 +1219,7 @@ def test_virtual_wsi_reader_read_rect_virtual_levels(source_image):
         level_downsamples=[1, 2, 4],
         axes="YXS",
     )
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
     target = img_array[:100, :50, :]
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
@@ -1240,7 +1239,7 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels(source_image):
     Checks that the regions read at each level line up with expected values.
 
     """
-    img_array = utils.misc.imread(pathlib.Path(source_image))
+    img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
@@ -1248,7 +1247,7 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels(source_image):
         level_downsamples=[1, 2, 4],
         axes="YXS",
     )
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
@@ -1282,7 +1281,7 @@ def test_virtual_wsi_reader_read_rect_virtual_levels_mpp(source_image):
     with expected values.
 
     """
-    img_array = utils.misc.imread(pathlib.Path(source_image))
+    img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
@@ -1291,7 +1290,7 @@ def test_virtual_wsi_reader_read_rect_virtual_levels_mpp(source_image):
         level_downsamples=[1, 2, 4],
         mpp=(0.25, 0.25),
     )
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=0.5, units="mpp")
     target = img_array[:100, :50, :]
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
@@ -1317,7 +1316,7 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels_mpp(source_image):
     Checks that the regions read at each level line up with expected values.
 
     """
-    img_array = utils.misc.imread(pathlib.Path(source_image))
+    img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
     meta = wsireader.WSIMeta(
@@ -1326,7 +1325,7 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels_mpp(source_image):
         level_downsamples=[1, 2, 4],
         mpp=(0.25, 0.25),
     )
-    wsi = wsireader.VirtualWSIReader(pathlib.Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
@@ -1461,10 +1460,10 @@ def test_wsireader_open(
     wsi = WSIReader.open(sample_ome_tiff)
     assert isinstance(wsi, wsireader.TIFFWSIReader)
 
-    wsi = WSIReader.open(pathlib.Path(source_image))
+    wsi = WSIReader.open(Path(source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
 
-    img = utils.misc.imread(str(pathlib.Path(source_image)))
+    img = utils.misc.imread(str(Path(source_image)))
     wsi = WSIReader.open(input_img=img)
     assert isinstance(wsi, wsireader.VirtualWSIReader)
 
@@ -1493,9 +1492,9 @@ def test_jp2_missing_cod(sample_jp2, caplog):
 
 def test_read_rect_at_resolution(sample_wsi_dict):
     """Test for read rect using location at requested."""
-    mini_wsi2_svs = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_svs"])
-    mini_wsi2_jpg = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
-    mini_wsi2_jp2 = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
+    mini_wsi2_svs = Path(sample_wsi_dict["wsi1_8k_8k_svs"])
+    mini_wsi2_jpg = Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
+    mini_wsi2_jp2 = Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
 
     # * check sync read between Virtual Reader and WSIReader (openslide) (reference)
     reader_list = [
@@ -1529,10 +1528,10 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict):
     """Actually a duel test for sync read and read at requested."""
     # """Test synchronize read for VirtualReader"""
     # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi1_msk = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_msk"])
-    mini_wsi2_svs = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_svs"])
-    mini_wsi2_jpg = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
-    mini_wsi2_jp2 = pathlib.Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
+    mini_wsi1_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi2_svs = Path(sample_wsi_dict["wsi1_8k_8k_svs"])
+    mini_wsi2_jpg = Path(sample_wsi_dict["wsi1_8k_8k_jpg"])
+    mini_wsi2_jp2 = Path(sample_wsi_dict["wsi1_8k_8k_jp2"])
 
     def compare_reader(reader1, reader2, read_coord, read_cfg, check_content=True):
         """Correlation test to compare output of 2 readers."""
@@ -1671,7 +1670,7 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
         [
             "read-bounds",
             "--img-input",
-            str(pathlib.Path(sample_ndpi)),
+            str(Path(sample_ndpi)),
             "--resolution",
             "0",
             "--units",
@@ -1684,19 +1683,19 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
             "2000",
             "2000",
             "--output-path",
-            str(pathlib.Path(tmp_path).joinpath("im_region.jpg")),
+            str(Path(tmp_path).joinpath("im_region.jpg")),
         ],
     )
 
     assert read_bounds_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("im_region.jpg").is_file()
+    assert Path(tmp_path).joinpath("im_region.jpg").is_file()
 
     read_bounds_result = runner.invoke(
         cli.main,
         [
             "read-bounds",
             "--img-input",
-            str(pathlib.Path(sample_ndpi)),
+            str(Path(sample_ndpi)),
             "--resolution",
             "0",
             "--units",
@@ -1704,12 +1703,12 @@ def test_command_line_read_bounds(sample_ndpi, tmp_path):
             "--mode",
             "save",
             "--output-path",
-            str(pathlib.Path(tmp_path).joinpath("im_region2.jpg")),
+            str(Path(tmp_path).joinpath("im_region2.jpg")),
         ],
     )
 
     assert read_bounds_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("im_region2.jpg").is_file()
+    assert Path(tmp_path).joinpath("im_region2.jpg").is_file()
 
 
 def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
@@ -1720,7 +1719,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
         [
             "read-bounds",
             "--img-input",
-            str(pathlib.Path(sample_jp2)),
+            str(Path(sample_jp2)),
             "--resolution",
             "0",
             "--units",
@@ -1731,7 +1730,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path):
     )
 
     assert read_bounds_result.exit_code == 0
-    assert pathlib.Path(tmp_path).joinpath("../im_region.jpg").is_file()
+    assert Path(tmp_path).joinpath("../im_region.jpg").is_file()
 
 
 @pytest.mark.skipif(
@@ -1746,7 +1745,7 @@ def test_command_line_jp2_read_bounds_show(sample_jp2):
         [
             "read-bounds",
             "--img-input",
-            str(pathlib.Path(sample_jp2)),
+            str(Path(sample_jp2)),
             "--resolution",
             "0",
             "--units",
@@ -1767,7 +1766,7 @@ def test_command_line_unsupported_file_read_bounds(sample_svs):
         [
             "read-bounds",
             "--img-input",
-            str(pathlib.Path(sample_svs))[:-1],
+            str(Path(sample_svs))[:-1],
             "--resolution",
             "0",
             "--units",

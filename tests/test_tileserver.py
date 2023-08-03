@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import pathlib
 import urllib
 from pathlib import Path, PureWindowsPath
 from typing import Callable
@@ -57,7 +56,7 @@ def fill_store(cell_grid, points_grid):
 
     def _fill_store(
         store_class: AnnotationStore,
-        path: str | pathlib.Path,
+        path: str | Path,
     ):
         """Fills store with random variety of annotations."""
         store = store_class(path)

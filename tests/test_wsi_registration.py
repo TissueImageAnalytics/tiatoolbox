@@ -1,5 +1,5 @@
 """Test WSI Registration."""
-import pathlib
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -218,10 +218,10 @@ def test_warning(
     caplog,
 ):
     """Test for displaying warning in prealignment function."""
-    fixed_img = imread(pathlib.Path(fixed_image))
-    moving_img = imread(pathlib.Path(moving_image))
-    fixed_mask = imread(pathlib.Path(fixed_mask))
-    moving_mask = imread(pathlib.Path(moving_mask))
+    fixed_img = imread(Path(fixed_image))
+    moving_img = imread(Path(moving_image))
+    fixed_mask = imread(Path(fixed_mask))
+    moving_mask = imread(Path(moving_mask))
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
 
     _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.9)

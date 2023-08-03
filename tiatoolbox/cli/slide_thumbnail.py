@@ -1,5 +1,5 @@
 """Command line interface for slide_thumbnail."""
-import pathlib
+from pathlib import Path
 
 from tiatoolbox.cli.common import (
     cli_file_type,
@@ -56,4 +56,4 @@ def slide_thumbnail(
             im_region.show()
 
         # the only other option left for mode is "save".
-        imwrite(output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb)
+        imwrite(output_path / (Path(curr_file).stem + ".jpg"), slide_thumb)
