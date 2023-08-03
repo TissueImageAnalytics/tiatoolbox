@@ -84,7 +84,7 @@ def test_kather_nonexisting_dir():
         _ = KatherPatchDataset(save_dir_path="non-existing-path")
 
 
-def test_kather_dataset(tmp_path):
+def test_kather_dataset(tmp_path: Path):
     """Test for kather patch dataset."""
     save_dir_path = tmp_path
 

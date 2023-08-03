@@ -80,7 +80,7 @@ def fill_store(cell_grid, points_grid):
     return _fill_store
 
 
-def test_tile_generator_len(fill_store, tmp_path):
+def test_tile_generator_len(fill_store, tmp_path: Path):
     """Test __len__ for AnnotationTileGenerator."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -89,7 +89,7 @@ def test_tile_generator_len(fill_store, tmp_path):
     assert len(tg) == (4 * 4) + (2 * 2) + 1
 
 
-def test_tile_generator_iter(fill_store, tmp_path):
+def test_tile_generator_iter(fill_store, tmp_path: Path):
     """Test __iter__ for AnnotationTileGenerator."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -101,7 +101,7 @@ def test_tile_generator_iter(fill_store, tmp_path):
 
 
 @pytest.mark.skipif(running_on_travis(), reason="no display on travis.")
-def test_show_generator_iter(fill_store, tmp_path):
+def test_show_generator_iter(fill_store, tmp_path: Path):
     """Show tiles with example annotations (if not travis)."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))

@@ -52,7 +52,7 @@ def test_patch_dataset_path_imgs(sample_patch1, sample_patch2):
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_list_imgs(tmp_path):
+def test_patch_dataset_list_imgs(tmp_path: Path):
     """Test for patch dataset with a list of images as input."""
     save_dir_path = tmp_path
 
@@ -120,7 +120,7 @@ def test_patch_datasetarray_imgs():
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_crash(tmp_path):
+def test_patch_dataset_crash(tmp_path: Path):
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples should fail when input to PatchDataset
     save_dir_path = tmp_path
@@ -219,7 +219,7 @@ def test_patch_dataset_crash(tmp_path):
         predefined_preproc_func("secret-dataset")
 
 
-def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
+def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path):
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])

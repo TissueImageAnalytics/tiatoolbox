@@ -92,7 +92,7 @@ def test_zoomify_tile_group_index_error():
         dz.tile_group(0, 100, 100)
 
 
-def test_zoomify_dump_options_combinations(tmp_path):
+def test_zoomify_dump_options_combinations(tmp_path: Path):
     """Test for no fatal errors on all option combinations for dump."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -114,7 +114,7 @@ def test_zoomify_dump_options_combinations(tmp_path):
             assert out_path.exists()
 
 
-def test_zoomify_dump_compression_error(tmp_path):
+def test_zoomify_dump_compression_error(tmp_path: Path):
     """Test ValueError is raised on invalid compression modes."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -131,7 +131,7 @@ def test_zoomify_dump_compression_error(tmp_path):
         dz.dump(out_path, container="tar", compression="deflate")
 
 
-def test_zoomify_dump_container_error(tmp_path):
+def test_zoomify_dump_container_error(tmp_path: Path):
     """Test ValueError is raised on invalid containers."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -142,7 +142,7 @@ def test_zoomify_dump_container_error(tmp_path):
         dz.dump(out_path, container="foo")
 
 
-def test_zoomify_dump(tmp_path):
+def test_zoomify_dump(tmp_path: Path):
     """Test dumping to directory."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)

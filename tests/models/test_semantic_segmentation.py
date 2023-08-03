@@ -339,7 +339,7 @@ def test_crash_segmentor(remote_sample: Callable):
     _rm_dir("output")
 
 
-def test_functional_segmentor_merging(tmp_path):
+def test_functional_segmentor_merging(tmp_path: Path):
     """Functional test for assmebling output."""
     save_dir = Path(tmp_path)
 

@@ -158,7 +158,7 @@ def test_vahadane_normalize(source_image, norm_vahadane):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_stainnorm(source_image, tmp_path):
+def test_command_line_stainnorm(source_image, tmp_path: Path):
     """Test for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = _local_sample_path("target_image.png")

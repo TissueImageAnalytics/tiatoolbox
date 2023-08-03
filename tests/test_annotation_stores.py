@@ -234,7 +234,7 @@ def test_sqlite_store_compile_options_missing_math(monkeypatch, caplog):
     assert "SQLite math functions are not enabled" in caplog.text
 
 
-def test_sqlite_store_multiple_connection(tmp_path):
+def test_sqlite_store_multiple_connection(tmp_path: Path):
     """Test SQLiteStore multiple connections."""
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
@@ -256,7 +256,7 @@ def test_sqlite_store_index_version_error(monkeypatch):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
-def test_sqlite_store_index_str(fill_store, tmp_path):
+def test_sqlite_store_index_str(fill_store, tmp_path: Path):
     """Test that adding an index improves performance."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
 
@@ -283,7 +283,7 @@ def test_sqlite_store_index_str(fill_store, tmp_path):
     assert t2 < t1
 
 
-def test_sqlite_create_index_no_analyze(fill_store, tmp_path):
+def test_sqlite_create_index_no_analyze(fill_store, tmp_path: Path):
     """Test that creating an index without ANALYZE."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     properties_predicate = "props['class']"

@@ -240,7 +240,7 @@ def relative_level_scales_baseline(wsi: WSIReader) -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_wsireader_slide_info(sample_svs, tmp_path):
+def test_wsireader_slide_info(sample_svs, tmp_path: Path):
     """Test for slide_info in WSIReader class as a python function."""
     file_types = ("*.svs",)
     files_all = utils.misc.grab_files_from_dir(

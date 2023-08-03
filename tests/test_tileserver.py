@@ -84,7 +84,7 @@ def fill_store(cell_grid, points_grid):
 
 
 @pytest.fixture()
-def app(remote_sample: Callable, tmp_path) -> TileServer:
+def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     """Create a testing TileServer WSGI app."""
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.

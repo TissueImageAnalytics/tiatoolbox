@@ -2,6 +2,8 @@
 """Pytests for `tiatoolbox` package."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from click.testing import CliRunner
 
 from tiatoolbox import __version__, cli
@@ -13,6 +15,9 @@ from tiatoolbox.cli.common import (
     cli_return_probabilities,
     tiatoolbox_cli,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # -------------------------------------------------------------------------------------
 # Command Line Interface
@@ -64,7 +69,7 @@ def func_default_param(
     save_yaml(input_dict=out_dict, output_path=output_path)
 
 
-def test_cli_defaults(tmp_path):
+def test_cli_defaults(tmp_path: Path):
     """Check if the default bool values are correctly returned.
 
     The test checks if the default bool values are identified

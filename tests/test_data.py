@@ -9,7 +9,7 @@ from tiatoolbox.data import _fetch_remote_sample, small_svs, stain_norm_target
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_fetch_sample(tmp_path):
+def test_fetch_sample(tmp_path: Path):
     """Test for fetching sample via code name."""
     # Load a dictionary of sample files data (names and urls)
     # code name retrieved from TOOLBOX_ROOT/data/remote_samples.yaml
@@ -35,7 +35,7 @@ def test_fetch_sample(tmp_path):
     assert isinstance(arr, np.ndarray)
 
 
-def test_fetch_sample_skip(tmp_path):
+def test_fetch_sample_skip(tmp_path: Path):
     """Test skipping fetching sample via code name if already downloaded."""
     # Fetch the remote file twice
     tmp_path = Path(tmp_path)

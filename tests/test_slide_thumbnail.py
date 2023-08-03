@@ -28,7 +28,7 @@ def test_wsireader_get_thumbnail_jp2(sample_jp2):
     assert slide_thumbnail.dtype == "uint8"
 
 
-def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
+def command_line_slide_thumbnail(runner, sample, tmp_path: Path, mode="save"):
     """Command line slide thumbnail helper."""
     slide_thumb_result = runner.invoke(
         cli.main,
@@ -48,7 +48,7 @@ def command_line_slide_thumbnail(runner, sample, tmp_path, mode="save"):
         assert (Path(tmp_path) / (sample.stem + ".jpg")).is_file()
 
 
-def test_command_line_slide_thumbnail(sample_ndpi, tmp_path):
+def test_command_line_slide_thumbnail(sample_ndpi, tmp_path: Path):
     """Test for the slide_thumbnail CLI."""
     runner = CliRunner()
 

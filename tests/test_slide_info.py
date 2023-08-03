@@ -11,7 +11,7 @@ from tiatoolbox import cli
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_slide_info(sample_all_wsis, tmp_path):
+def test_command_line_slide_info(sample_all_wsis, tmp_path: Path):
     """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
