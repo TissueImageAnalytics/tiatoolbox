@@ -98,7 +98,7 @@ def sample_ndpi2(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_svs(remote_sample) -> Path:
+def sample_svs(remote_sample: Callable) -> Path:
     """Sample pytest fixture for svs images.
 
     Download svs image for pytest.
@@ -118,7 +118,7 @@ def sample_ome_tiff(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_jp2(remote_sample) -> Path:
+def sample_jp2(remote_sample: Callable) -> Path:
     """Sample pytest fixture for JP2 images.
 
     Download jp2 image for pytest.
@@ -128,7 +128,12 @@ def sample_jp2(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_all_wsis(sample_ndpi: Path, sample_svs, sample_jp2, tmpdir_factory):
+def sample_all_wsis(
+    sample_ndpi: Path,
+    sample_svs: Path,
+    sample_jp2: Path,
+    tmpdir_factory,
+) -> Path:
     """Sample wsi(s) of all types supported by tiatoolbox."""
     dir_path = Path(tmpdir_factory.mktemp("data"))
 
@@ -145,7 +150,7 @@ def sample_all_wsis(sample_ndpi: Path, sample_svs, sample_jp2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def sample_all_wsis2(sample_ndpi2: Path, sample_svs, sample_jp2, tmpdir_factory):
+def sample_all_wsis2(sample_ndpi2: Path, sample_svs, sample_jp2: Path, tmpdir_factory):
     """Sample wsi(s) of all types supported by tiatoolbox.
 
     Adds sample fluorescence ndpi image.
@@ -185,7 +190,7 @@ def sample_svs_ndpi_wsis(sample_ndpi2: Path, sample_svs: Path, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def source_image(remote_sample) -> Path:
+def source_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for source image.
 
     Download stain normalization source image for pytest.
@@ -195,7 +200,7 @@ def source_image(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def norm_macenko(remote_sample) -> Path:
+def norm_macenko(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_macenko image.
 
     Download norm_macenko image for pytest.
@@ -205,7 +210,7 @@ def norm_macenko(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def norm_reinhard(remote_sample) -> Path:
+def norm_reinhard(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_reinhard image.
 
     Download norm_reinhard image for pytest.
@@ -215,7 +220,7 @@ def norm_reinhard(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def norm_ruifrok(remote_sample) -> Path:
+def norm_ruifrok(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_ruifrok image.
 
     Download norm_ruifrok image for pytest.
@@ -225,7 +230,7 @@ def norm_ruifrok(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def norm_vahadane(remote_sample) -> Path:
+def norm_vahadane(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_vahadane image.
 
     Download norm_vahadane image for pytest.
@@ -263,7 +268,7 @@ def sample_visual_fields(
 
 
 @pytest.fixture(scope="session")
-def patch_extr_vf_image(remote_sample) -> Path:
+def patch_extr_vf_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for a visual field image.
 
     Download TCGA-HE-7130-01Z-00-DX1 image for pytest.
@@ -273,7 +278,7 @@ def patch_extr_vf_image(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_csv(remote_sample) -> Path:
+def patch_extr_csv(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction csv.
 
     Download sample patch extraction csv for pytest.
@@ -283,7 +288,7 @@ def patch_extr_csv(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_json(remote_sample) -> Path:
+def patch_extr_json(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction json.
 
     Download sample patch extraction json for pytest.
@@ -293,7 +298,7 @@ def patch_extr_json(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_npy(remote_sample) -> Path:
+def patch_extr_npy(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction npy.
 
     Download sample patch extraction npy for pytest.
@@ -303,7 +308,7 @@ def patch_extr_npy(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_csv_noheader(remote_sample) -> Path:
+def patch_extr_csv_noheader(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction noheader csv.
 
     Download sample patch extraction noheader csv for pytest.
@@ -313,7 +318,7 @@ def patch_extr_csv_noheader(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_2col_json(remote_sample) -> Path:
+def patch_extr_2col_json(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction 2col json.
 
     Download sample patch extraction 2col json for pytest.
@@ -323,7 +328,7 @@ def patch_extr_2col_json(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_2col_npy(remote_sample) -> Path:
+def patch_extr_2col_npy(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction 2col npy.
 
     Download sample patch extraction 2col npy for pytest.
@@ -333,7 +338,7 @@ def patch_extr_2col_npy(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_jp2_csv(remote_sample) -> Path:
+def patch_extr_jp2_csv(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction jp2 csv.
 
     Download sample patch extraction jp2 csv for pytest.
@@ -343,7 +348,7 @@ def patch_extr_jp2_csv(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_jp2_read(remote_sample) -> Path:
+def patch_extr_jp2_read(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction jp2 read npy.
 
     Download sample patch extraction jp2 read npy for pytest.
@@ -353,7 +358,7 @@ def patch_extr_jp2_read(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_npy_read(remote_sample) -> Path:
+def patch_extr_npy_read(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction read npy.
 
     Download sample patch extraction read npy for pytest.
@@ -363,7 +368,7 @@ def patch_extr_npy_read(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_svs_csv(remote_sample) -> Path:
+def patch_extr_svs_csv(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction svs csv.
 
     Download sample patch extraction svs csv for pytest.
@@ -373,7 +378,7 @@ def patch_extr_svs_csv(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_svs_header(remote_sample) -> Path:
+def patch_extr_svs_header(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction svs_header csv.
 
     Download sample patch extraction svs_header csv for pytest.
@@ -383,7 +388,7 @@ def patch_extr_svs_header(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_svs_npy_read(remote_sample) -> Path:
+def patch_extr_svs_npy_read(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction svs_read npy.
 
     Download sample patch extraction svs_read npy for pytest.
@@ -393,7 +398,7 @@ def patch_extr_svs_npy_read(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch1(remote_sample) -> Path:
+def sample_patch1(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 1.
 
     Download sample patch 1 (Kather100K) for pytest.
@@ -403,7 +408,7 @@ def sample_patch1(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch2(remote_sample) -> Path:
+def sample_patch2(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 2.
 
     Download sample patch 2 (Kather100K) for pytest.
@@ -413,7 +418,7 @@ def sample_patch2(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch3(remote_sample) -> Path:
+def sample_patch3(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 3.
 
     Download sample patch 3 (PCam) for pytest.
@@ -423,7 +428,7 @@ def sample_patch3(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch4(remote_sample) -> Path:
+def sample_patch4(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 4.
 
     Download sample patch 4 (PCam) for pytest.
@@ -472,7 +477,7 @@ def sample_wsi_dict(remote_sample: Callable):
 
 
 @pytest.fixture(scope="session")
-def fixed_image(remote_sample) -> Path:
+def fixed_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for fixed image.
 
     Download fixed image for pytest.
@@ -481,7 +486,7 @@ def fixed_image(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def moving_image(remote_sample) -> Path:
+def moving_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for moving image.
 
     Download moving image for pytest.
@@ -490,7 +495,7 @@ def moving_image(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def dfbr_features(remote_sample) -> Path:
+def dfbr_features(remote_sample: Callable) -> Path:
     """Sample pytest fixture for DFBR features.
 
     Download features used by Deep Feature Based
@@ -500,7 +505,7 @@ def dfbr_features(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def fixed_mask(remote_sample) -> Path:
+def fixed_mask(remote_sample: Callable) -> Path:
     """Sample pytest fixture for fixed mask.
 
     Download fixed mask for pytest.
@@ -509,7 +514,7 @@ def fixed_mask(remote_sample) -> Path:
 
 
 @pytest.fixture(scope="session")
-def moving_mask(remote_sample) -> Path:
+def moving_mask(remote_sample: Callable) -> Path:
     """Sample pytest fixture for moving mask.
 
     Download moving mask for pytest.

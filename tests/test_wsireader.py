@@ -277,7 +277,7 @@ def test_relative_level_scales_openslide_baseline(sample_ndpi: Path):
     relative_level_scales_baseline(wsi)
 
 
-def test_relative_level_scales_jp2_baseline(sample_jp2):
+def test_relative_level_scales_jp2_baseline(sample_jp2: Path):
     """Test jp2 relative level scales for pixels per baseline pixel."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_baseline(wsi)
@@ -293,7 +293,7 @@ def test_relative_level_scales_openslide_mpp(sample_ndpi: Path):
     assert all(level_scales[0] == wsi.info.mpp / 0.5)
 
 
-def test_relative_level_scales_jp2_mpp(sample_jp2):
+def test_relative_level_scales_jp2_mpp(sample_jp2: Path):
     """Test jp2 calculation of relative level scales for mpp."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     level_scales = wsi.info.relative_level_scales(0.5, "mpp")
@@ -321,7 +321,7 @@ def test_relative_level_scales_openslide_power(sample_ndpi: Path):
     relative_level_scales_power(wsi)
 
 
-def test_relative_level_scales_jp2_power(sample_jp2):
+def test_relative_level_scales_jp2_power(sample_jp2: Path):
     """Test jp2 calculation of relative level scales for objective power."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_power(wsi)
@@ -344,7 +344,7 @@ def test_relative_level_scales_openslide_level(sample_ndpi: Path):
     relative_level_scales_level(wsi)
 
 
-def test_relative_level_scales_jp2_level(sample_jp2):
+def test_relative_level_scales_jp2_level(sample_jp2: Path):
     """Test jp2 calculation of relative level scales for level."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_level(wsi)
@@ -367,7 +367,7 @@ def test_relative_level_scales_openslide_level_float(sample_ndpi: Path):
     relative_level_scales_float(wsi)
 
 
-def test_relative_level_scales_jp2_level_float(sample_jp2):
+def test_relative_level_scales_jp2_level_float(sample_jp2: Path):
     """Test jp2 calculation of relative level scales for fractional level."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_float(wsi)
@@ -436,7 +436,7 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
 
 
 def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
-    sample_jp2,
+    sample_jp2: Path,
     caplog: pytest.LogCaptureFixture,
 ):
     """Test finding optimal level for mpp read with scale > 1.
@@ -634,7 +634,7 @@ def test_read_rect_openslide_baseline(sample_ndpi: Path):
     assert im_region.shape == (*size[::-1], 3)
 
 
-def test_read_rect_jp2_baseline(sample_jp2):
+def test_read_rect_jp2_baseline(sample_jp2: Path):
     """Test jp2 read rect at baseline.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -698,7 +698,7 @@ def test_read_rect_openslide_levels(sample_ndpi: Path):
         assert im_region.shape == (*size[::-1], 3)
 
 
-def test_read_rect_jp2_levels(sample_jp2):
+def test_read_rect_jp2_levels(sample_jp2: Path):
     """Test jp2 read rect with resolution in levels.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -753,7 +753,7 @@ def test_read_rect_openslide_mpp(sample_ndpi: Path):
     read_rect_mpp(wsi, location, size)
 
 
-def test_read_rect_jp2_mpp(sample_jp2):
+def test_read_rect_jp2_mpp(sample_jp2: Path):
     """Test jp2 read rect with resolution in microns per pixel.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -778,7 +778,7 @@ def test_read_rect_openslide_objective_power(sample_ndpi: Path):
     read_rect_objective_power(wsi, location, size)
 
 
-def test_read_rect_jp2_objective_power(sample_jp2):
+def test_read_rect_jp2_objective_power(sample_jp2: Path):
     """Test jp2 read rect with resolution in objective power.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -807,7 +807,7 @@ def test_read_bounds_openslide_baseline(sample_ndpi: Path):
     assert im_region.shape == (*size[::-1], 3)
 
 
-def test_read_bounds_jp2_baseline(sample_jp2):
+def test_read_bounds_jp2_baseline(sample_jp2: Path):
     """Test JP2 read bounds at baseline.
 
     Coordinates in baseline (level 0) reference frame.
@@ -843,7 +843,7 @@ def test_read_bounds_openslide_levels(sample_ndpi: Path):
         assert im_region.shape == expected_output_shape
 
 
-def test_read_bounds_jp2_levels(sample_jp2):
+def test_read_bounds_jp2_levels(sample_jp2: Path):
     """Test jp2 read bounds with resolution in levels.
 
     Coordinates in baseline (level 0) reference frame.
@@ -877,7 +877,7 @@ def test_read_bounds_openslide_mpp(sample_ndpi: Path):
     read_bounds_mpp(wsi, bounds, size)
 
 
-def test_read_bounds_jp2_mpp(sample_jp2):
+def test_read_bounds_jp2_mpp(sample_jp2: Path):
     """Test jp2 read bounds with resolution in microns per pixel.
 
     Coordinates in baseline (level 0) reference frame.
@@ -904,7 +904,7 @@ def test_read_bounds_openslide_objective_power(sample_ndpi: Path):
     read_bounds_objective_power(wsi, slide_power, bounds, size)
 
 
-def test_read_bounds_jp2_objective_power(sample_jp2):
+def test_read_bounds_jp2_objective_power(sample_jp2: Path):
     """Test jp2 read bounds with resolution in objective power.
 
     Coordinates in baseline (level 0) reference frame.
@@ -949,7 +949,7 @@ def test_read_bounds_level_consistency_openslide(sample_ndpi: Path):
     read_bounds_level_consistency(wsi, bounds)
 
 
-def test_read_bounds_level_consistency_jp2(sample_jp2):
+def test_read_bounds_level_consistency_jp2(sample_jp2: Path):
     """Test read_bounds produces the same visual field across resolution levels."""
     bounds = JP2_TEST_TISSUE_BOUNDS
     wsi = wsireader.JP2WSIReader(sample_jp2)
@@ -1020,7 +1020,7 @@ def test_incompatible_level(
     assert "Reading at tile_objective_value 1 not allowed" in caplog.text
 
 
-def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path: Path) -> None:
+def test_wsireader_jp2_save_tiles(sample_jp2: Path, tmp_path: Path) -> None:
     """Test for save_tiles in wsireader as a python function."""
     tmp_path = Path(tmp_path)
     wsi = wsireader.JP2WSIReader(sample_jp2)
@@ -1448,12 +1448,12 @@ def test_invalid_masker_method(sample_svs: Path) -> None:
 
 
 def test_wsireader_open(
-    sample_svs,
+    sample_svs: Path,
     sample_ndpi: Path,
-    sample_jp2,
+    sample_jp2: Path,
     sample_ome_tiff,
     source_image,
-):
+) -> None:
     """Test WSIReader.open() to return correct object."""
     with pytest.raises(FileNotSupportedError):
         _ = WSIReader.open("./sample.csv")
@@ -1495,7 +1495,7 @@ def test_wsireader_open(
     shutil.rmtree(temp_dir)
 
 
-def test_jp2_missing_cod(sample_jp2, caplog: pytest.LogCaptureFixture) -> None:
+def test_jp2_missing_cod(sample_jp2: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test for warning if JP2 is missing COD segment."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     wsi.glymur_jp2.codestream.segment = []
@@ -1724,7 +1724,7 @@ def test_command_line_read_bounds(sample_ndpi: Path, tmp_path: Path) -> None:
     assert Path(tmp_path).joinpath("im_region2.jpg").is_file()
 
 
-def test_command_line_jp2_read_bounds(sample_jp2, tmp_path: Path) -> None:
+def test_command_line_jp2_read_bounds(sample_jp2: Path, tmp_path: Path) -> None:
     """Test JP2 read_bounds."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
@@ -1750,7 +1750,7 @@ def test_command_line_jp2_read_bounds(sample_jp2, tmp_path: Path) -> None:
     utils.env_detection.running_on_ci(),
     reason="No need to display image on travis.",
 )
-def test_command_line_jp2_read_bounds_show(sample_jp2):
+def test_command_line_jp2_read_bounds_show(sample_jp2: Path) -> None:
     """Test JP2 read_bounds with mode as 'show'."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(

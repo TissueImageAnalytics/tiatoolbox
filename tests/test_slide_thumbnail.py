@@ -20,7 +20,7 @@ def test_wsireader_get_thumbnail_openslide(sample_svs: Path) -> None:
     assert slide_thumbnail.dtype == "uint8"
 
 
-def test_wsireader_get_thumbnail_jp2(sample_jp2):
+def test_wsireader_get_thumbnail_jp2(sample_jp2: Path):
     """Test for get_thumbnail as a python function."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     slide_thumbnail = wsi.slide_thumbnail()
@@ -75,7 +75,7 @@ def test_command_line_slide_thumbnail_output_none(sample_svs: Path) -> None:
     ).is_file()
 
 
-def test_command_line_jp2_slide_thumbnail(sample_jp2, tmp_path: Path) -> None:
+def test_command_line_jp2_slide_thumbnail(sample_jp2: Path, tmp_path: Path) -> None:
     """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
 
@@ -87,7 +87,10 @@ def test_command_line_jp2_slide_thumbnail(sample_jp2, tmp_path: Path) -> None:
     not os.environ.get("SHOW_TESTS"),
     reason="Visual tests disabled, set SHOW_TESTS to enable.",
 )
-def test_command_line_jp2_slide_thumbnail_mode_show(sample_jp2, tmp_path: Path) -> None:
+def test_command_line_jp2_slide_thumbnail_mode_show(
+    sample_jp2: Path,
+    tmp_path: Path,
+) -> None:
     """Test for the jp2 slide_thumbnail CLI mode='show'."""
     runner = CliRunner()
 
@@ -100,7 +103,7 @@ def test_command_line_jp2_slide_thumbnail_mode_show(sample_jp2, tmp_path: Path) 
 
 
 def test_command_line_jp2_slide_thumbnail_file_not_supported(
-    sample_jp2,
+    sample_jp2: Path,
     tmp_path: Path,
 ) -> None:
     """Test for the jp2 slide_thumbnail CLI."""

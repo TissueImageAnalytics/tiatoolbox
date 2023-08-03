@@ -100,8 +100,8 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
 
 
 def test_points_patch_extractor_image_format(
-    sample_svs,
-    sample_jp2,
+    sample_svs: Path,
+    sample_jp2: Path,
     source_image,
     patch_extr_csv,
 ):
@@ -208,7 +208,7 @@ def test_points_patch_extractor_svs(
 
 
 def test_points_patch_extractor_jp2(
-    sample_jp2,
+    sample_jp2: Path,
     patch_extr_svs_csv,
     patch_extr_jp2_read,
 ):
