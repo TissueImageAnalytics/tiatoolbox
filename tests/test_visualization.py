@@ -28,7 +28,7 @@ from tiatoolbox.utils.visualization import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_overlay_prediction_mask(sample_wsi_dict):
+def test_overlay_prediction_mask(sample_wsi_dict: dict) -> None:
     """Test for overlaying merged patch prediction of wsi."""
     mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_pred = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_pred"])
@@ -93,7 +93,7 @@ def test_overlay_prediction_mask(sample_wsi_dict):
     _ = overlay_prediction_mask(thumb_float, merged, min_val=0.5, return_ax=False)
 
 
-def test_overlay_probability_map(sample_wsi_dict):
+def test_overlay_probability_map(sample_wsi_dict: dict) -> None:
     """Test functional run for overlaying merged patch prediction of wsi."""
     mini_wsi_svs = pathlib.Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     reader = WSIReader.open(mini_wsi_svs)
@@ -130,7 +130,7 @@ def test_overlay_probability_map(sample_wsi_dict):
         overlay_probability_map(thumb, thumb_float[..., None])
 
 
-def test_overlay_instance_prediction():
+def test_overlay_instance_prediction() -> None:
     """Test for overlaying instance predictions on canvas."""
     inst_map = np.array(
         [
@@ -169,8 +169,9 @@ def test_overlay_instance_prediction():
         type_colours=type_colours,
         line_thickness=1,
     )
+    ref_value = -12
     assert np.sum(canvas[..., 0].astype(np.int32) - inst_map) == 0
-    assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == -12
+    assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == ref_value
     assert np.sum(canvas[..., 2].astype(np.int32) - inst_map) == 0
     canvas = overlay_prediction_contours(
         canvas,
@@ -196,7 +197,7 @@ def test_overlay_instance_prediction():
         overlay_prediction_contours(canvas, inst_dict, inst_colours=inst_colours)
 
 
-def test_plot_graph():
+def test_plot_graph() -> None:
     """Test plotting graph."""
     canvas = np.zeros([10, 10])
     nodes = np.array([[1, 1], [2, 2], [2, 5]])
@@ -211,7 +212,7 @@ def test_plot_graph():
     plot_graph(canvas, nodes, edges, node_colors=node_colors, edge_colors=edge_colors)
 
 
-def test_decode_wkb():
+def test_decode_wkb() -> None:
     """Test decoding of WKB geometries."""
     # Create some Shapely geometries of supported types
     point = Point(0, 0)
