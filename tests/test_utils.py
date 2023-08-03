@@ -1493,7 +1493,7 @@ def test_from_multi_head_dat(tmp_path: Path) -> None:
     assert len(result) == 1
 
 
-def test_invalid_poly(tmp_path: Path, caplog):
+def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test that invalid polygons are dealt with correctly."""
     coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
     poly = Polygon(coords)

@@ -222,7 +222,10 @@ def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
         SQLiteStore()
 
 
-def test_sqlite_store_compile_options_missing_math(monkeypatch, caplog):
+def test_sqlite_store_compile_options_missing_math(
+    monkeypatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test that a warning is shown if the sqlite math module is missing."""
     monkeypatch.setattr(
         SQLiteStore,
@@ -291,7 +294,10 @@ def test_sqlite_create_index_no_analyze(fill_store, tmp_path: Path):
     assert "test_index" in store.indexes()
 
 
-def test_sqlite_pquery_warn_no_index(fill_store, caplog):
+def test_sqlite_pquery_warn_no_index(
+    fill_store,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test that querying without an index warns."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.pquery("*", unique=False)

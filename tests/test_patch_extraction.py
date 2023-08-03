@@ -494,7 +494,10 @@ def test_filter_coordinates() -> None:
         )
 
 
-def test_mask_based_patch_extractor_ndpi(sample_ndpi: Path, caplog):
+def test_mask_based_patch_extractor_ndpi(
+    sample_ndpi: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
     patch_size = stride = (400, 400)

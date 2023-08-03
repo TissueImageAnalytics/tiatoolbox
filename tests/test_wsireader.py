@@ -510,7 +510,10 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi: Path):
         assert np.array_equal(post_read_scale_factor, [1.0, 1.0])
 
 
-def test_convert_resolution_units(sample_ndpi: Path, caplog):
+def test_convert_resolution_units(
+    sample_ndpi: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test the resolution unit conversion code."""
     wsi = wsireader.WSIReader.open(sample_ndpi)
 
@@ -1000,7 +1003,11 @@ def test_incompatible_objective_value(sample_svs, tmp_path: Path) -> None:
         )
 
 
-def test_incompatible_level(sample_svs, tmp_path: Path, caplog):
+def test_incompatible_level(
+    sample_svs,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test for incompatible objective value."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.save_tiles(
@@ -1043,7 +1050,10 @@ def test_wsireader_jp2_save_tiles(sample_jp2, tmp_path: Path) -> None:
     ).exists()
 
 
-def test_openslide_objective_power_from_mpp(sample_svs, caplog):
+def test_openslide_objective_power_from_mpp(
+    sample_svs,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test OpenSlideWSIReader approximation of objective power from mpp."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
@@ -1059,7 +1069,10 @@ def test_openslide_objective_power_from_mpp(sample_svs, caplog):
     assert "Unable to determine objective power" in caplog.text
 
 
-def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
+def test_openslide_mpp_from_tiff_resolution(
+    sample_svs: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
     wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
@@ -1076,7 +1089,7 @@ def test_openslide_mpp_from_tiff_resolution(sample_svs, caplog):
     assert np.array_equal(wsi.info.mpp, [1, 1])
 
 
-def test_virtual_wsi_reader(source_image, caplog):
+def test_virtual_wsi_reader(source_image, caplog: pytest.LogCaptureFixture) -> None:
     """Test VirtualWSIReader."""
     wsi = wsireader.VirtualWSIReader(Path(source_image))
     _ = wsi._info()
@@ -1482,7 +1495,7 @@ def test_wsireader_open(
     shutil.rmtree(temp_dir)
 
 
-def test_jp2_missing_cod(sample_jp2, caplog):
+def test_jp2_missing_cod(sample_jp2, caplog: pytest.LogCaptureFixture) -> None:
     """Test for warning if JP2 is missing COD segment."""
     wsi = wsireader.JP2WSIReader(sample_jp2)
     wsi.glymur_jp2.codestream.segment = []

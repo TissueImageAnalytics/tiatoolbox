@@ -256,7 +256,11 @@ def test_sub_tile_levels(fill_store, tmp_path: Path) -> None:
     assert tile.size == (112, 112)
 
 
-def test_unknown_geometry(fill_store, tmp_path: Path, caplog):
+def test_unknown_geometry(
+    fill_store,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test warning when unknown geometries cannot be rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -271,7 +275,11 @@ def test_unknown_geometry(fill_store, tmp_path: Path, caplog):
     assert "Unknown geometry" in caplog.text
 
 
-def test_interp_pad_warning(fill_store, tmp_path: Path, caplog):
+def test_interp_pad_warning(
+    fill_store,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test warning when providing unused options."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -331,7 +339,11 @@ def test_categorical_mapper(fill_store, tmp_path: Path) -> None:
             assert 0 <= val <= 1
 
 
-def test_colour_prop_warnings(fill_store, tmp_path: Path, caplog):
+def test_colour_prop_warnings(
+    fill_store,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test warning with inappropriate property.
 
     Test warning is correctly shown when rendering annotations when the provided
