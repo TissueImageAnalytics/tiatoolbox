@@ -123,8 +123,8 @@ except ImportError:
 
             def __init__(
                 self: memray,
-                *args: list[Any],
-                **kwargs: dict[str, Any],
+                *args: list[Any],  # noqa: ARG002
+                **kwargs: dict[str, Any],  # noqa: ARG002
             ) -> None:
                 """Initialize :class:`Tracker`."""
                 warnings.warn("Memray not installed, skipping tracking.", stacklevel=2)
@@ -153,7 +153,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
 
-def cell_polygon(
+def cell_polygon(  # noqa: PLR0913
     xy: tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 8,
@@ -251,7 +251,7 @@ STORES = {
 
 def main(
     store: str,
-    in_memory: bool,
+    in_memory: bool,  # noqa: FBT001
     size: tuple[int, int],
 ) -> None:
     """Run the benchmark.
@@ -306,7 +306,7 @@ def main(
             return
         regex = re.compile(r"Total memory allocated:\s*([\d.]+)MB")
         pipe = subprocess.Popen(
-            [
+            [  # noqa: S603
                 sys.executable,
                 "-m",
                 "memray",
