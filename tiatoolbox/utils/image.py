@@ -23,7 +23,7 @@ applies the padding to the bounds.
 PADDING_TO_BOUNDS.flags.writeable = False
 
 
-def normalize_padding_size(padding):
+def normalize_padding_size(padding: int | tuple[int, int]) -> np.ndarray:
     """Normalizes padding to be length 4 (left, top, right, bottom).
 
     Given a scalar value, this is assumed to apply to all sides and
@@ -65,7 +65,11 @@ def normalize_padding_size(padding):
     return np.array(padding)
 
 
-def find_padding(read_location, read_size, image_size):
+def find_padding(
+    read_location: tuple[int],
+    read_size: tuple[int],
+    image_size: tuple[int],
+) -> tuple[tuple[int, int], tuple[int, int]]:
     """Find the correct padding to add when reading a region of an image.
 
     Args:

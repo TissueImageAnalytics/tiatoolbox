@@ -1,11 +1,16 @@
 """This module defines several metrics used in computational pathology."""
+from __future__ import annotations
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial import distance
 
 
-def pair_coordinates(set_a: np.ndarray, set_b: np.ndarray, radius: float):
+def pair_coordinates(
+    set_a: np.ndarray,
+    set_b: np.ndarray,
+    radius: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Find optimal unique pairing between two sets of coordinates.
 
     This function uses the Munkres or Kuhn-Munkres algorithm behind the
@@ -58,7 +63,7 @@ def pair_coordinates(set_a: np.ndarray, set_b: np.ndarray, radius: float):
     return pairing, unpaired_a, unpaired_b
 
 
-def f1_detection(true, pred, radius) -> float:
+def f1_detection(true: np.ndarray, pred: np.ndarray, radius: float) -> float:
     """Calculate the F1-score for predicted set of coordinates."""
     (paired_true, unpaired_true, unpaired_pred) = pair_coordinates(true, pred, radius)
 
