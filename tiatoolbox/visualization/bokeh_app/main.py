@@ -76,9 +76,15 @@ class DummyAttr:
 class UIWrapper:
     """Wrapper class to access ui elements."""
 
+    def __init__(self):
+        """Initialize the class."""
+        self.active = 0
+
     def __getitem__(self, key):
         """Gets active ui element."""
-        return win_dicts[active][key]
+        if key == "active":
+            return self.active
+        return win_dicts[self.active][key]
 
 
 def get_view_bounds(dims, plot_size):
@@ -816,7 +822,7 @@ def handle_graph_layer(attr):
     """Handle adding a graph layer."""
     do_feats = False
     with Path(attr.item).open("rb") as f:
-        graph_dict = pickle.load(f)  # noqa: BAN-B301
+        graph_dict = pickle.load(f)
     node_cm = cm.get_cmap("viridis")
     num_nodes = graph_dict["coordinates"].shape[0]
     if "score" in graph_dict:
@@ -1654,7 +1660,6 @@ color_cycler = ColorCycler()
 tg = TileGroup()
 tool_str = "pan,wheel_zoom,reset,save"
 
-active = 0
 
 # some setup
 
@@ -1692,7 +1697,6 @@ def update():
 
 def control_tabs_cb(attr, old, new):
     """Callback to handle selecting active window."""
-    global active
     if new == 1 and len(slide_wins.children) == 1:
         # make new window
         win_dicts.append(make_window(ViewerState(win_dicts[0]["vstate"].slide_path)))
@@ -1701,7 +1705,7 @@ def control_tabs_cb(attr, old, new):
             UI["vstate"].dims,
             np.array([UI["p"].width, UI["p"].height]),
         )
-        active = new
+        UI.active = new
         if "UI_settings" in doc_config:
             for k in doc_config["UI_settings"]:
                 update_renderer(k, doc_config["UI_settings"][k])
@@ -1725,19 +1729,18 @@ def control_tabs_cb(attr, old, new):
         )
         UI["vstate"].init = False
     else:
-        active = new
+        doc_config.active = new
 
 
 def control_tabs_remove_cb(attr, old, new):
     """Callback to handle removing a window."""
-    global active
     if len(new) == 1:
         # remove the second window
         slide_wins.children.pop()
         slide_wins.children[0].width = 1700  # set back to original size
         control_tabs.tabs.append(TabPanel(child=Div(), title="window 2"))
         win_dicts.pop()
-        active = 0
+        UI.active = 0
 
 
 class DocConfig:

@@ -320,7 +320,8 @@ def test_change_cmap(app) -> None:
         assert layer.renderer.mapper(0.5) == colormaps["jet"](0.5)
 
         cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
-        response = client.put("/tileserver/cmap", data={"cmap": json.dumps(cdict)})
+        req_data = {"keys": list(cdict.keys()), "values": list(cdict.values())}
+        response = client.put("/tileserver/cmap", data={"cmap": json.dumps(req_data)})
         assert layer.renderer.mapper("type2") == [0, 1, 0]
 
         # test corresponding get

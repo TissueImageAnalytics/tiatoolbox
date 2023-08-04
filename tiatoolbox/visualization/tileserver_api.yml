@@ -151,7 +151,7 @@ paths:
               properties:
                 cmap:
                   type: string
-                  description: The colormap, should be a JSON encoded matplotlib colormap name or dict of possible property values as keys, and RGBA tuples as values
+                  description: The colormap, should be a JSON encoded matplotlib colormap name or dict containing list of possible property values under "keys", and list of RGBA tuples under "values".
       responses:
         '200':
           description: Successful response
