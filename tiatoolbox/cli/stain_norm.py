@@ -38,7 +38,14 @@ input_type = click.Choice(
     "there must not be any column headers.",
     default=None,
 )
-def stain_norm(img_input, target_input, method, stain_matrix, output_path, file_types):
+def stain_norm(
+    img_input: str,
+    target_input: str,
+    method: str,
+    stain_matrix: str,
+    output_path: str,
+    file_types: str,
+) -> None:
     """Stain normalize an input image/directory of input images."""
     from tiatoolbox.tools import stainnorm as sn
     from tiatoolbox.utils import imread, imwrite

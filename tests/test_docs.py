@@ -27,7 +27,7 @@ def source_files(root_path):
     return generator()
 
 
-def test_validate_docstring_examples(source_files, root_path):
+def test_validate_docstring_examples(source_files, root_path) -> None:
     """Test that all docstring examples are valid.
 
     Validity checks are:
@@ -81,7 +81,7 @@ def check_imports(source_tree: ast.AST, doc: doctest.DocTest, rel_path: Path) ->
             source = "\n".join(eg.source.strip() for eg in doc.examples)
             try:
                 spec = importlib.util.find_spec(name)
-            except ModuleNotFoundError as e:  # noqa: PERF203
+            except ModuleNotFoundError as e:
                 raise_source_exception(
                     source,
                     rel_path,

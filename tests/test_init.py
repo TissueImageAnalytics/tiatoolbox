@@ -12,7 +12,7 @@ import tiatoolbox
 from tiatoolbox import DuplicateFilter, logger
 
 
-def test_set_root_dir():
+def test_set_root_dir() -> None:
     """Test for setting new root dir."""
     # skipcq
     importlib.reload(tiatoolbox)
@@ -36,7 +36,7 @@ def test_set_root_dir():
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-def test_set_logger():
+def test_set_logger() -> None:
     """Test for setting new logger."""
     logger = logging.getLogger()
     logger.handlers = []  # reset first to overwrite import
@@ -57,7 +57,7 @@ def test_set_logger():
     assert len(logger.handlers) == 2
 
 
-def helper_logger_test(level: str):
+def helper_logger_test(level: str) -> None:
     """Helper for logger tests."""
     if level.lower() in ["debug", "info"]:
         output = "out"
@@ -89,7 +89,7 @@ def helper_logger_test(level: str):
     assert proc.communicate()[order[1]] == b""
 
 
-def test_logger_output():
+def test_logger_output() -> None:
     """Test if logger is writing output to correct value."""
     # Test DEBUG is written to stdout
     helper_logger_test(level="debug")
@@ -107,7 +107,7 @@ def test_logger_output():
     helper_logger_test(level="critical")
 
 
-def test_duplicate_filter(caplog):
+def test_duplicate_filter(caplog: pytest.LogCaptureFixture) -> None:
     """Test DuplicateFilter for warnings."""
     for _ in range(2):
         logger.warning("Test duplicate filter warnings.")
@@ -125,7 +125,7 @@ def test_duplicate_filter(caplog):
     assert "\n" not in caplog.text[:-2]
 
 
-def test_lazy_import():
+def test_lazy_import() -> None:
     """Test lazy import for tiatoolbox."""
     import sys
 
