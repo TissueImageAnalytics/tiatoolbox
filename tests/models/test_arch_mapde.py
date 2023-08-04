@@ -1,4 +1,6 @@
 """Unit test package for SCCNN."""
+from typing import Callable
+
 import numpy as np
 import torch
 
@@ -11,7 +13,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 
 
-def _load_mapde(name):
+def _load_mapde(name: str) -> torch.nn.Module:
     """Loads MapDe model with specified weights."""
     model = MapDe()
     weights_path = fetch_pretrained_weights(name)
@@ -22,7 +24,7 @@ def _load_mapde(name):
     return model
 
 
-def test_functionality(remote_sample):
+def test_functionality(remote_sample: Callable) -> None:
     """Functionality test for MapDe.
 
     Test the functionality of MapDe model for inference at the patch level.
