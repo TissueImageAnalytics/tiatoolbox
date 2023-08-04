@@ -699,7 +699,7 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_reader(
-        img_path: str,
+        img_path: str | Path,
         mask_path: str | Path,
         mode: str,
         auto_get_mask: bool,

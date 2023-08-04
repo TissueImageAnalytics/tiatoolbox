@@ -126,7 +126,7 @@ def test_background_composite() -> None:
     """Test for background composite."""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
     new_im[:1000, :, 3] = 255
-    im = utils.transforms.background_composite(new_im)
+    im = utils.transforms.background_composite(new_im, alpha=False)
     assert np.all(im[1000:, :, :] == 255)
     assert np.all(im[:1000, :, :] == 0)
 

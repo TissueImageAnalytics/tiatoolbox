@@ -99,9 +99,9 @@ def grab_files_from_dir(
 def save_yaml(
     input_dict: dict,
     output_path: os | PathLike = "output.yaml",
-    parents: bool = False,
-    exist_ok: bool = False,
-):
+    parents: bool | None = False,
+    exist_ok: bool | None = False,
+) -> None:
     """Save dictionary as yaml.
 
     Args:
@@ -152,7 +152,7 @@ def imwrite(image_path: os | PathLike, img: np.ndarray) -> None:
     cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def imread(image_path, as_uint8=True):
+def imread(image_path: os | PathLike, as_uint8: bool | None = None) -> np.ndarray:
     """Read an image as numpy array.
 
     Args:
@@ -170,6 +170,9 @@ def imread(image_path, as_uint8=True):
         >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
+    if as_uint8 is None:
+        as_uint8 = True  # default reading of images is in uint8 format.
+
     if not isinstance(image_path, (str, Path)):
         msg = "Please provide path to an image."
         raise TypeError(msg)
@@ -267,7 +270,7 @@ def get_luminosity_tissue_mask(img: np.ndarray, threshold: float) -> np.ndarray:
 def mpp2common_objective_power(
     mpp: float | tuple[float, float],
     common_powers: float
-    | tuple[float] = (
+    | tuple[float, ...] = (
         1,
         1.25,
         2,
@@ -289,7 +292,7 @@ def mpp2common_objective_power(
 
     Args:
         mpp (float or tuple(float)): Microns per-pixel.
-        common_powers (tuple or list of float): A sequence of objective
+        common_powers (tuple or tuple(float, ...)): A sequence of objective
             power values to round to. Defaults to
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
 
@@ -302,8 +305,8 @@ def mpp2common_objective_power(
         array(40)
 
         >>> mpp2common_objective_power(
-        ...     [0.253, 0.478],
-        ...     common_powers=(10, 20, 40),
+        ...     (0.253, 0.478),
+        ...     common_powers=(10.0, 20.0, 40.0),
         ... )
         array([40, 20])
 
@@ -718,7 +721,11 @@ def download_data(
     return save_path
 
 
-def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool = True):
+def unzip_data(
+    zip_path: os | PathLike,
+    save_path: os | PathLike,
+    del_zip: bool = True,
+) -> None:
     """Extract data from zip file.
 
     Args:
@@ -736,7 +743,7 @@ def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool 
         Path.unlink(zip_path)
 
 
-def __walk_list_dict(in_list_dict):
+def __walk_list_dict(in_list_dict: dict | list[dict]) -> dict | list[dict]:
     """Recursive walk and jsonify in place.
 
     Args:
@@ -766,7 +773,7 @@ def __walk_list_dict(in_list_dict):
     return in_list_dict
 
 
-def __walk_list(lst: list):
+def __walk_list(lst: list) -> None:
     """Recursive walk and jsonify a list in place.
 
     Args:
@@ -777,7 +784,7 @@ def __walk_list(lst: list):
         lst[i] = __walk_list_dict(v)
 
 
-def __walk_dict(dct: dict):
+def __walk_dict(dct: dict) -> None:
     """Recursive walk and jsonify a dictionary in place.
 
     Args:
@@ -796,7 +803,7 @@ def save_as_json(
     save_path: str | PathLike,
     parents: bool = False,
     exist_ok: bool = False,
-):
+) -> None:
     """Save data to a json file.
 
     The function will deepcopy the `data` and then jsonify the content

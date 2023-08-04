@@ -1873,7 +1873,7 @@ class OpenSlideWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
         self,
@@ -2058,7 +2058,7 @@ class OpenSlideWSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
     @staticmethod
     def _estimate_mpp(props):
@@ -2412,7 +2412,7 @@ class JP2WSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
         self,
@@ -2586,7 +2586,7 @@ class JP2WSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
     @staticmethod
     def _get_jp2_boxes(
@@ -3088,7 +3088,7 @@ class VirtualWSIReader(WSIReader):
         )
 
         if self.mode == "rgb":
-            return utils.transforms.background_composite(image=im_region)
+            return utils.transforms.background_composite(image=im_region, alpha=False)
         return im_region
 
     def read_bounds(
@@ -3261,7 +3261,7 @@ class VirtualWSIReader(WSIReader):
             )
 
         if self.mode == "rgb":
-            return utils.transforms.background_composite(image=im_region)
+            return utils.transforms.background_composite(image=im_region, alpha=False)
         return im_region
 
 
@@ -3870,7 +3870,7 @@ class TIFFWSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return utils.transforms.background_composite(im_region)
+            return utils.transforms.background_composite(im_region, alpha=False)
 
         # Find parameters for optimal read
         (
@@ -3904,7 +3904,7 @@ class TIFFWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
         self,
@@ -4384,7 +4384,7 @@ class DICOMWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
         self,
@@ -4579,7 +4579,7 @@ class DICOMWSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
 
 class NGFFWSIReader(WSIReader):
@@ -4902,7 +4902,7 @@ class NGFFWSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return utils.transforms.background_composite(image=im_region)
+            return utils.transforms.background_composite(image=im_region, alpha=False)
 
         # Find parameters for optimal read
         (
@@ -4936,7 +4936,7 @@ class NGFFWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
-        return utils.transforms.background_composite(image=im_region)
+        return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
         self,
@@ -5483,7 +5483,7 @@ class AnnotationStoreReader(WSIReader):
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
             return np.array(base_region)
-        return utils.transforms.background_composite(im_region)
+        return utils.transforms.background_composite(im_region, alpha=False)
 
     def read_bounds(
         self,
@@ -5676,4 +5676,4 @@ class AnnotationStoreReader(WSIReader):
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
             return np.array(base_region)
-        return utils.transforms.background_composite(im_region)
+        return utils.transforms.background_composite(im_region, alpha=False)

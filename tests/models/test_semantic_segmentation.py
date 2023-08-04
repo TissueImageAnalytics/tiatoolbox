@@ -283,9 +283,14 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             WSIReader.open(mini_wsi_msk),
             np.array([1.0, 2.0]),
         )
-    semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", True)
+    semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", auto_get_mask=True)
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
-        semantic_segmentor.get_reader(mini_wsi_msk, "not_exist", "wsi", True)
+        semantic_segmentor.get_reader(
+            mini_wsi_msk,
+            "not_exist",
+            "wsi",
+            auto_get_mask=True,
+        )
 
     _rm_dir("output")  # default output dir test
     with pytest.raises(ValueError, match=r".*provide.*"):
