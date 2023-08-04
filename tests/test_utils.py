@@ -26,7 +26,7 @@ from tiatoolbox.utils.transforms import locsize2bounds
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
+def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh) -> None:
     """sub_pixel_read test helper function."""
     output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
     assert (ow, oh) == tuple(output.shape[:2][::-1])
@@ -40,7 +40,7 @@ def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh):
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_imresize():
+def test_imresize() -> None:
     """Test for imresize."""
     img = np.zeros((2000, 1000, 3))
     resized_img = utils.transforms.imresize(img, scale_factor=0.5)
@@ -101,28 +101,28 @@ def test_imresize():
         )
 
 
-def test_imresize_1x1():
+def test_imresize_1x1() -> None:
     """Test imresize with 1x1 image."""
     img = np.zeros((1, 1, 3))
     resized_img = utils.transforms.imresize(img, scale_factor=10)
     assert resized_img.shape == (10, 10, 3)
 
 
-def test_imresize_no_scale_factor():
+def test_imresize_no_scale_factor() -> None:
     """Test for imresize with no scale_factor given."""
     img = np.zeros((2000, 1000, 3))
     resized_img = utils.transforms.imresize(img, output_size=(50, 100))
     assert resized_img.shape == (100, 50, 3)
 
 
-def test_imresize_no_scale_factor_or_output_size():
+def test_imresize_no_scale_factor_or_output_size() -> None:
     """Test imresize with no scale_factor or output_size."""
     img = np.zeros((2000, 1000, 3))
     with pytest.raises(TypeError, match="One of scale_factor and output_size"):
         utils.transforms.imresize(img)
 
 
-def test_background_composite():
+def test_background_composite() -> None:
     """Test for background composite."""
     new_im = np.zeros((2000, 2000, 4)).astype("uint8")
     new_im[:1000, :, 3] = 255
@@ -138,7 +138,7 @@ def test_background_composite():
     assert np.all(im[:, :, 3] == 255)
 
 
-def test_mpp2common_objective_power():
+def test_mpp2common_objective_power() -> None:
     """Test approximate conversion of mpp to objective power."""
     mapping = [
         (0.05, 100),
@@ -168,13 +168,13 @@ def test_mpp2common_objective_power():
         )
 
 
-def test_ppu2mpp_invalid_units():
+def test_ppu2mpp_invalid_units() -> None:
     """Test ppu2mpp with invalid units."""
     with pytest.raises(ValueError, match="Invalid units"):
         utils.misc.ppu2mpp(1, units="invalid")
 
 
-def test_ppu2mpp():
+def test_ppu2mpp() -> None:
     """Test converting pixels-per-unit to mpp with ppu2mpp."""
     assert utils.misc.ppu2mpp(1, units="in") == 25_400
     assert utils.misc.ppu2mpp(1, units="inch") == 25_400
@@ -186,7 +186,7 @@ def test_ppu2mpp():
     assert utils.misc.ppu2mpp(50_000, units="in") == pytest.approx(0.508, abs=0.1)
 
 
-def test_assert_dtype_int():
+def test_assert_dtype_int() -> None:
     """Test AssertionError for dtype test."""
     utils.misc.assert_dtype_int(input_var=np.array([1, 2]))
     with pytest.raises(AssertionError):
@@ -196,7 +196,7 @@ def test_assert_dtype_int():
         )
 
 
-def test_safe_padded_read_non_int_bounds():
+def test_safe_padded_read_non_int_bounds() -> None:
     """Test safe_padded_read with non-integer bounds."""
     data = np.zeros((16, 16))
 
@@ -205,7 +205,7 @@ def test_safe_padded_read_non_int_bounds():
         utils.image.safe_padded_read(data, bounds)
 
 
-def test_safe_padded_read_negative_padding():
+def test_safe_padded_read_negative_padding() -> None:
     """Test safe_padded_read with negative bounds."""
     data = np.zeros((16, 16))
 
@@ -214,7 +214,7 @@ def test_safe_padded_read_negative_padding():
         utils.image.safe_padded_read(data, bounds, padding=-1)
 
 
-def test_safe_padded_read_pad_mode_none():
+def test_safe_padded_read_pad_mode_none() -> None:
     """Test safe_padded_read with pad_mode=None."""
     data = np.zeros((16, 16))
     bounds = (-5, -5, 5, 5)
@@ -222,7 +222,7 @@ def test_safe_padded_read_pad_mode_none():
     assert region.shape == (5, 5)
 
 
-def test_safe_padded_read_padding_formats():
+def test_safe_padded_read_padding_formats() -> None:
     """Test safe_padded_read with different padding argument formats."""
     data = np.zeros((16, 16))
     bounds = (0, 0, 8, 8)
@@ -237,7 +237,7 @@ def test_safe_padded_read_padding_formats():
         assert region.shape == (8 + 2, 8 + 2)
 
 
-def test_safe_padded_read_pad_kwargs(source_image):
+def test_safe_padded_read_pad_kwargs(source_image) -> None:
     """Test passing extra kwargs to safe_padded_read for np.pad."""
     data = utils.imread(str(source_image))
     bounds = (0, 0, 8, 8)
@@ -271,7 +271,7 @@ def test_safe_padded_read_pad_kwargs(source_image):
     assert not np.all(region == odd_region)
 
 
-def test_safe_padded_read_pad_constant_values():
+def test_safe_padded_read_pad_constant_values() -> None:
     """Test safe_padded_read with custom pad constant values.
 
     This test creates an image of zeros and reads the whole image with a
@@ -292,7 +292,7 @@ def test_safe_padded_read_pad_constant_values():
         assert np.sum(region == 10) == (4 * side_len) + 4
 
 
-def test_fuzz_safe_padded_read_edge_padding():
+def test_fuzz_safe_padded_read_edge_padding() -> None:
     """Fuzz test for padding at edges of an image.
 
     This test creates a 16x16 image with a gradient from 1 to 17 across
@@ -318,7 +318,7 @@ def test_fuzz_safe_padded_read_edge_padding():
         assert np.sum(region == 0) == (16 * shift_magnitude)
 
 
-def test_fuzz_safe_padded_read():
+def test_fuzz_safe_padded_read() -> None:
     """Fuzz test for safe_padded_read."""
     random.seed(0)
     for _ in range(1000):
@@ -332,7 +332,7 @@ def test_fuzz_safe_padded_read():
         assert all(np.array(region.shape) == 16 + 2 * padding)
 
 
-def test_safe_padded_read_padding_shape():
+def test_safe_padded_read_padding_shape() -> None:
     """Test safe_padded_read for invalid padding shape."""
     data = np.zeros((16, 16))
 
@@ -341,7 +341,7 @@ def test_safe_padded_read_padding_shape():
         utils.image.safe_padded_read(data, bounds, padding=(1, 1, 1))
 
 
-def test_safe_padded_read_stride_shape():
+def test_safe_padded_read_stride_shape() -> None:
     """Test safe_padded_read for invalid stride size."""
     data = np.zeros((16, 16))
 
@@ -350,7 +350,7 @@ def test_safe_padded_read_stride_shape():
         utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
 
 
-def test_sub_pixel_read(source_image):
+def test_sub_pixel_read(source_image) -> None:
     """Test sub-pixel numpy image reads with known tricky parameters."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -378,7 +378,7 @@ def test_sub_pixel_read(source_image):
     sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
 
-def test_aligned_padded_sub_pixel_read(source_image):
+def test_aligned_padded_sub_pixel_read(source_image) -> None:
     """Test sub-pixel numpy image reads with pixel-aligned bounds."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -396,7 +396,7 @@ def test_aligned_padded_sub_pixel_read(source_image):
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_sub_pixel_read_with_pad_kwargs(source_image):
+def test_sub_pixel_read_with_pad_kwargs(source_image) -> None:
     """Test sub-pixel numpy image reads with pad kwargs."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -421,7 +421,7 @@ def test_sub_pixel_read_with_pad_kwargs(source_image):
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_aligned_padded_sub_pixel_read(source_image):
+def test_non_aligned_padded_sub_pixel_read(source_image) -> None:
     """Test sub-pixel numpy image reads with non-pixel-aligned bounds."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -445,7 +445,7 @@ def test_non_aligned_padded_sub_pixel_read(source_image):
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_baseline_padded_sub_pixel_read(source_image):
+def test_non_baseline_padded_sub_pixel_read(source_image) -> None:
     """Test sub-pixel numpy image reads with baseline padding."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -471,7 +471,7 @@ def test_non_baseline_padded_sub_pixel_read(source_image):
         )
 
 
-def test_sub_pixel_read_pad_mode_none():
+def test_sub_pixel_read_pad_mode_none() -> None:
     """Test sub_pixel_read with invalid interpolation."""
     data = np.ones((16, 16))
 
@@ -480,7 +480,7 @@ def test_sub_pixel_read_pad_mode_none():
     assert region.shape[:2] == (5, 5)
 
 
-def test_sub_pixel_read_invalid_interpolation():
+def test_sub_pixel_read_invalid_interpolation() -> None:
     """Test sub_pixel_read with invalid interpolation."""
     data = np.zeros((16, 16))
     out_size = data.shape
@@ -490,7 +490,7 @@ def test_sub_pixel_read_invalid_interpolation():
         utils.image.sub_pixel_read(data, bounds, out_size, interpolation="fizz")
 
 
-def test_sub_pixel_read_invalid_bounds():
+def test_sub_pixel_read_invalid_bounds() -> None:
     """Test sub_pixel_read with invalid bounds."""
     data = np.zeros((16, 16))
     out_size = data.shape
@@ -504,7 +504,7 @@ def test_sub_pixel_read_invalid_bounds():
         utils.image.sub_pixel_read(data, bounds, out_size)
 
 
-def test_sub_pixel_read_pad_at_baseline():
+def test_sub_pixel_read_pad_at_baseline() -> None:
     """Test sub_pixel_read with baseline padding."""
     data = np.zeros((16, 16))
     out_size = data.shape
@@ -529,7 +529,7 @@ def test_sub_pixel_read_pad_at_baseline():
     assert region.shape == (16, 16)
 
 
-def test_sub_pixel_read_bad_read_func():
+def test_sub_pixel_read_bad_read_func() -> None:
     """Test sub_pixel_read with read_func returning None."""
     data = np.zeros((16, 16))
     out_size = data.shape
@@ -547,7 +547,7 @@ def test_sub_pixel_read_bad_read_func():
         )
 
 
-def test_sub_pixel_read_padding_formats():
+def test_sub_pixel_read_padding_formats() -> None:
     """Test sub_pixel_read with different padding argument formats."""
     data = np.zeros((16, 16))
     out_size = data.shape
@@ -565,7 +565,7 @@ def test_sub_pixel_read_padding_formats():
         assert region.shape == (16 + 2, 16 + 2)
 
 
-def test_sub_pixel_read_negative_size_bounds(source_image):
+def test_sub_pixel_read_negative_size_bounds(source_image) -> None:
     """Test sub_pixel_read with different padding argument formats."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -592,7 +592,7 @@ def test_sub_pixel_read_negative_size_bounds(source_image):
     assert np.all(np.fliplr(np.flipud(flipped_output)) == output)
 
 
-def test_fuzz_sub_pixel_read(source_image):
+def test_fuzz_sub_pixel_read(source_image) -> None:
     """Fuzz test for numpy sub-pixel image reads."""
     random.seed(0)
 
@@ -617,7 +617,7 @@ def test_fuzz_sub_pixel_read(source_image):
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_fuzz_padded_sub_pixel_read(source_image):
+def test_fuzz_padded_sub_pixel_read(source_image) -> None:
     """Fuzz test for numpy sub-pixel image reads with padding."""
     random.seed(0)
 
@@ -645,7 +645,7 @@ def test_fuzz_padded_sub_pixel_read(source_image):
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_sub_pixel_read_interpolation_modes():
+def test_sub_pixel_read_interpolation_modes() -> None:
     """Test sub_pixel_read with different padding argument formats."""
     data = np.mgrid[:16:1, :16:1].sum(0).astype(np.uint8)
     out_size = data.shape
@@ -655,7 +655,7 @@ def test_sub_pixel_read_interpolation_modes():
         assert output.shape == out_size
 
 
-def test_sub_pixel_read_incorrect_read_func_return():
+def test_sub_pixel_read_incorrect_read_func_return() -> None:
     """Test for sub pixel reading with incorrect read func return."""
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
@@ -672,7 +672,7 @@ def test_sub_pixel_read_incorrect_read_func_return():
         )
 
 
-def test_sub_pixel_read_empty_read_func_return():
+def test_sub_pixel_read_empty_read_func_return() -> None:
     """Test for sub pixel reading with empty read func return."""
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
@@ -689,7 +689,7 @@ def test_sub_pixel_read_empty_read_func_return():
         )
 
 
-def test_sub_pixel_read_empty_bounds():
+def test_sub_pixel_read_empty_bounds() -> None:
     """Test for sub pixel reading with empty bounds."""
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
@@ -703,7 +703,7 @@ def test_sub_pixel_read_empty_bounds():
         )
 
 
-def test_fuzz_bounds2locsize():
+def test_fuzz_bounds2locsize() -> None:
     """Fuzz test for bounds2size."""
     random.seed(0)
     for _ in range(1000):
@@ -713,7 +713,7 @@ def test_fuzz_bounds2locsize():
         assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
-def test_fuzz_bounds2locsize_lower():
+def test_fuzz_bounds2locsize_lower() -> None:
     """Fuzz test for bounds2size with origin lower."""
     random.seed(0)
     for _ in range(1000):
@@ -729,7 +729,7 @@ def test_fuzz_bounds2locsize_lower():
         assert s == pytest.approx(size)
 
 
-def test_fuzz_roundtrip_bounds2size():
+def test_fuzz_roundtrip_bounds2size() -> None:
     """Fuzz roundtrip bounds2locsize and locsize2bounds."""
     random.seed(0)
     for _ in range(1000):
@@ -740,20 +740,20 @@ def test_fuzz_roundtrip_bounds2size():
         )
 
 
-def test_bounds2size_value_error():
+def test_bounds2size_value_error() -> None:
     """Test bounds to size ValueError."""
     with pytest.raises(ValueError, match="Invalid origin"):
         utils.transforms.bounds2locsize((0, 0, 1, 1), origin="middle")
 
 
-def test_bounds2slices_invalid_stride():
+def test_bounds2slices_invalid_stride() -> None:
     """Test bounds2slices raises ValueError with invalid stride."""
     bounds = (0, 0, 10, 10)
     with pytest.raises(ValueError, match="Invalid stride"):
         utils.transforms.bounds2slices(bounds, stride=(1, 1, 1))
 
 
-def test_pad_bounds_sample_cases():
+def test_pad_bounds_sample_cases() -> None:
     """Test sample inputs for pad_bounds."""
     output = utils.transforms.pad_bounds([0] * 4, 1)
     assert np.array_equal(output, (-1, -1, 1, 1))
@@ -762,7 +762,7 @@ def test_pad_bounds_sample_cases():
     assert np.array_equal(output, (-1, -2, 11, 12))
 
 
-def test_pad_bounds_invalid_inputs():
+def test_pad_bounds_invalid_inputs() -> None:
     """Test invalid inputs for pad_bounds."""
     with pytest.raises(ValueError, match="even"):
         utils.transforms.pad_bounds(bounds=(0, 0, 10), padding=1)
@@ -774,7 +774,7 @@ def test_pad_bounds_invalid_inputs():
     utils.transforms.pad_bounds(bounds=(0, 0, 10, 10), padding=1)
 
 
-def test_contrast_enhancer():
+def test_contrast_enhancer() -> None:
     """Test contrast enhancement functionality."""
     # input array to the contrast_enhancer function
     input_array = np.array(
@@ -806,7 +806,7 @@ def test_contrast_enhancer():
     assert np.all(result_array == output_array)
 
 
-def test_load_stain_matrix(tmp_path):
+def test_load_stain_matrix(tmp_path: Path) -> None:
     """Test to load stain matrix."""
     with pytest.raises(FileNotSupportedError):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
@@ -825,7 +825,7 @@ def test_load_stain_matrix(tmp_path):
     assert np.all(out_stain_matrix == stain_matrix)
 
 
-def test_get_luminosity_tissue_mask():
+def test_get_luminosity_tissue_mask() -> None:
     """Test get luminosity tissue mask."""
     with pytest.raises(ValueError, match="Empty tissue mask"):
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
@@ -840,7 +840,7 @@ def test_read_point_annotations(
     patch_extr_npy,
     patch_extr_json,
     patch_extr_2col_json,
-):
+) -> None:
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
     labels = Path(patch_extr_csv)
 
@@ -926,7 +926,7 @@ def test_read_point_annotations(
         _ = utils.misc.read_locations(["a", "b", "c"])
 
 
-def test_grab_files_from_dir(sample_visual_fields):
+def test_grab_files_from_dir(sample_visual_fields) -> None:
     """Test grab files from dir utils.misc."""
     file_parent_dir = Path(__file__).parent
     input_path = file_parent_dir.joinpath("data")
@@ -951,7 +951,7 @@ def test_grab_files_from_dir(sample_visual_fields):
     assert len(out) == 0
 
 
-def test_download_unzip_data():
+def test_download_unzip_data() -> None:
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
     save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
@@ -979,7 +979,7 @@ def test_download_unzip_data():
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_download_data():
+def test_download_data() -> None:
     """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
     save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
@@ -1036,7 +1036,7 @@ def test_download_data():
         misc.download_data(url)
 
 
-def test_parse_cv2_interpolaton():
+def test_parse_cv2_interpolaton() -> None:
     """Test parsing interpolation modes for cv2."""
     cases = [str.upper, str.lower, str.capitalize]
     mode_strings = ["cubic", "linear", "area", "lanczos"]
@@ -1050,7 +1050,7 @@ def test_parse_cv2_interpolaton():
         assert utils.misc.parse_cv2_interpolaton(1337)
 
 
-def test_make_bounds_size_positive():
+def test_make_bounds_size_positive() -> None:
     """Test make_bounds_size_positive outputs positive bounds."""
     # Horizontal only
     bounds = (0, 0, -10, 10)
@@ -1083,7 +1083,7 @@ def test_make_bounds_size_positive():
     assert flipud is True
 
 
-def test_crop_and_pad_edges():
+def test_crop_and_pad_edges() -> None:
     """Test crop and pad util function."""
     slide_dimensions = (1024, 1024)
 
@@ -1133,7 +1133,7 @@ def test_crop_and_pad_edges():
     assert output.shape == region.shape
 
 
-def test_crop_and_pad_edges_common_fail_cases():
+def test_crop_and_pad_edges_common_fail_cases() -> None:
     """Test common failure cases for crop_and_pad_edges."""
     bounds = (15, -5, 25, 5)
     slide_dimensions = (10, 10)
@@ -1147,7 +1147,7 @@ def test_crop_and_pad_edges_common_fail_cases():
     assert output.shape == (10, 10)
 
 
-def test_fuzz_crop_and_pad_edges_output_size():
+def test_fuzz_crop_and_pad_edges_output_size() -> None:
     """Fuzz test crop and pad util function output size."""
     random.seed(0)
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
@@ -1169,7 +1169,7 @@ def test_fuzz_crop_and_pad_edges_output_size():
         assert output.shape == size
 
 
-def test_fuzz_crop_and_pad_edges_output_size_no_padding():
+def test_fuzz_crop_and_pad_edges_output_size_no_padding() -> None:
     """Fuzz test crop and pad util function output size with no padding."""
     random.seed(0)
 
@@ -1197,7 +1197,7 @@ def test_fuzz_crop_and_pad_edges_output_size_no_padding():
         assert output.shape == expected
 
 
-def test_crop_and_pad_edges_negative_max_dims():
+def test_crop_and_pad_edges_negative_max_dims() -> None:
     """Test crop and pad edges for negative max dims."""
     for max_dims in [(-1, 1), (1, -1), (-1, -1)]:
         with pytest.raises(ValueError, match="must be >= 0"):
@@ -1217,7 +1217,7 @@ def test_crop_and_pad_edges_negative_max_dims():
     )
 
 
-def test_crop_and_pad_edges_non_positive_bounds_size():
+def test_crop_and_pad_edges_non_positive_bounds_size() -> None:
     """Test crop and pad edges for non positive bound size."""
     with pytest.raises(ValueError, match="[bB]ounds.*> 0"):
         # Zero dimensions and negative bounds size
@@ -1238,13 +1238,13 @@ def test_crop_and_pad_edges_non_positive_bounds_size():
         )
 
 
-def test_normalize_padding_input_dims():
+def test_normalize_padding_input_dims() -> None:
     """Test that normalize padding error with input dimensions > 1."""
     with pytest.raises(ValueError, match="1 dimensional"):
         utils.image.normalize_padding_size(((0, 0), (0, 0)))
 
 
-def test_select_device():
+def test_select_device() -> None:
     """Test if correct device is selected for models."""
     device = misc.select_device(on_gpu=True)
     assert device == "cuda"
@@ -1253,7 +1253,7 @@ def test_select_device():
     assert device == "cpu"
 
 
-def test_model_to():
+def test_model_to() -> None:
     """Test for placing model on device."""
     import torchvision.models as torch_models
     from torch import nn
@@ -1271,7 +1271,7 @@ def test_model_to():
     assert isinstance(model, nn.Module)
 
 
-def test_save_as_json(tmp_path):
+def test_save_as_json(tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
     import json
@@ -1358,7 +1358,7 @@ def test_save_as_json(tmp_path):
     )
 
 
-def test_save_as_json_exists(tmp_path):
+def test_save_as_json_exists(tmp_path: Path) -> None:
     """Test save data to json which already exists."""
     dictionary = {"a": 1, "b": 2}
     misc.save_as_json(dictionary, tmp_path / "sample_json.json")
@@ -1367,14 +1367,14 @@ def test_save_as_json_exists(tmp_path):
     misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
 
 
-def test_save_as_json_parents(tmp_path):
+def test_save_as_json_parents(tmp_path: Path) -> None:
     """Test save data to json where parents need to be created and parents is False."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
         misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
 
 
-def test_save_yaml_exists(tmp_path):
+def test_save_yaml_exists(tmp_path: Path) -> None:
     """Test save data to yaml which already exists."""
     dictionary = {"a": 1, "b": 2}
     utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
@@ -1383,7 +1383,7 @@ def test_save_yaml_exists(tmp_path):
     utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
 
 
-def test_save_yaml_parents(tmp_path):
+def test_save_yaml_parents(tmp_path: Path) -> None:
     """Test save data to yaml where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
@@ -1392,14 +1392,14 @@ def test_save_yaml_parents(tmp_path):
     utils.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
 
 
-def test_imread_none_args():
+def test_imread_none_args() -> None:
     """Test imread with wrong input type."""
     img = np.zeros((10, 10, 3))
     with pytest.raises(TypeError):
         utils.imread(img)
 
 
-def test_detect_pixman():
+def test_detect_pixman() -> None:
     """Test detection of the pixman version.
 
     Simply check it passes without exception or that it raises
@@ -1416,7 +1416,7 @@ def test_detect_pixman():
         pass
 
 
-def test_detect_gpu():
+def test_detect_gpu() -> None:
     """Test detection of GPU in the current runtime environment.
 
     Simply check it passes without exception.
@@ -1439,7 +1439,7 @@ def make_simple_dat(centroids=((0, 0), (100, 100))):
     }
 
 
-def test_from_dat(tmp_path):
+def test_from_dat(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -1447,7 +1447,7 @@ def test_from_dat(tmp_path):
     assert len(store) == 2
 
 
-def test_from_dat_type_dict(tmp_path):
+def test_from_dat_type_dict(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a type dict."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -1459,7 +1459,7 @@ def test_from_dat_type_dict(tmp_path):
     assert len(result) == 1
 
 
-def test_from_dat_transformed(tmp_path):
+def test_from_dat_transformed(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a transform."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -1475,7 +1475,7 @@ def test_from_dat_transformed(tmp_path):
     assert np.rint(poly.geometry.centroid.y) == 150
 
 
-def test_from_multi_head_dat(tmp_path):
+def test_from_multi_head_dat(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with multiple heads."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
@@ -1493,7 +1493,7 @@ def test_from_multi_head_dat(tmp_path):
     assert len(result) == 1
 
 
-def test_invalid_poly(tmp_path, caplog):
+def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test that invalid polygons are dealt with correctly."""
     coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
     poly = Polygon(coords)
@@ -1513,7 +1513,7 @@ def test_invalid_poly(tmp_path, caplog):
     assert next(iter(result.values())).geometry.is_valid
 
 
-def test_from_multi_head_dat_type_dict(tmp_path):
+def test_from_multi_head_dat_type_dict(tmp_path: Path) -> None:
     """Test generating a store from a .dat file with multiple heads, with typedict."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
@@ -1531,7 +1531,7 @@ def test_from_multi_head_dat_type_dict(tmp_path):
     assert len(result) == 2
 
 
-def test_fetch_pretrained_weights(tmp_path):
+def test_fetch_pretrained_weights(tmp_path: Path) -> None:
     """Test fetching pretrained weights for a model."""
     file_path = tmp_path / "test_fetch_pretrained_weights.pth"
     if file_path.exists():

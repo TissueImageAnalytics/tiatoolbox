@@ -57,7 +57,7 @@ def _normalize_binaryio(
 def is_dir(file: str | Path | bytes | BinaryIO | BytesIO) -> bool:
     """Check if file is a directory.
 
-    Thin wrapper around `pathlib.Path.is_dir()` to handle multiple input types.
+    Thin wrapper around `Path.is_dir()` to handle multiple input types.
 
     Args:
         file (Union[str, Path, bytes]):

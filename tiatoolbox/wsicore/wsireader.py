@@ -6,10 +6,10 @@ import json
 import logging
 import math
 import os
-import pathlib
 import re
 from datetime import datetime
 from numbers import Number
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 
 import numpy as np
@@ -41,17 +41,17 @@ MIN_NGFF_VERSION = Version("0.4")
 MAX_NGFF_VERSION = Version("0.4")
 
 
-def is_dicom(path: pathlib.Path) -> bool:
+def is_dicom(path: Path) -> bool:
     """Check if the input is a DICOM file.
 
     Args:
-        path (pathlib.Path): Path to the file to check.
+        path (Path): Path to the file to check.
 
     Returns:
         bool: True if the file is a DICOM file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     is_dcm = path.suffix.lower() == ".dcm"
     is_dcm_dir = path.is_dir() and any(
         p.suffix.lower() == ".dcm" for p in path.iterdir()
@@ -59,11 +59,11 @@ def is_dicom(path: pathlib.Path) -> bool:
     return is_dcm or is_dcm_dir
 
 
-def is_tiled_tiff(path: pathlib.Path) -> bool:
+def is_tiled_tiff(path: Path) -> bool:
     """Check if the input is a tiled TIFF file.
 
     Args:
-        path (pathlib.Path):
+        path (Path):
             Path to the file to check.
 
     Returns:
@@ -71,7 +71,7 @@ def is_tiled_tiff(path: pathlib.Path) -> bool:
             True if the file is a tiled TIFF file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     try:
         tif = tifffile.TiffFile(path)
     except tifffile.TiffFileError:
@@ -79,11 +79,11 @@ def is_tiled_tiff(path: pathlib.Path) -> bool:
     return tif.pages[0].is_tiled
 
 
-def is_zarr(path: pathlib.Path) -> bool:
+def is_zarr(path: Path) -> bool:
     """Check if the input is a Zarr file.
 
     Args:
-        path (pathlib.Path):
+        path (Path):
             Path to the file to check.
 
     Returns:
@@ -91,7 +91,7 @@ def is_zarr(path: pathlib.Path) -> bool:
             True if the file is a Zarr file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     try:
         _ = zarr.open(path, mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
@@ -101,7 +101,7 @@ def is_zarr(path: pathlib.Path) -> bool:
 
 
 def is_ngff(
-    path: pathlib.Path,
+    path: Path,
     min_version: Version = MIN_NGFF_VERSION,
     max_version: Version = MAX_NGFF_VERSION,
 ) -> bool:
@@ -111,7 +111,7 @@ def is_ngff(
     file, or SQLite database.
 
     Args:
-        path (pathlib.Path):
+        path (Path):
             Path to the file to check.
         min_version (Tuple[int, ...]):
             Minimum version of the NGFF file to be considered valid.
@@ -123,7 +123,7 @@ def is_ngff(
             True if the file is an NGFF file.
 
     """
-    path = pathlib.Path(path)
+    path = Path(path)
     store = zarr.SQLiteStore(path) if path.is_file() and is_sqlite3(path) else path
     try:
         zarr_group = zarr.open(store, mode="r")
@@ -209,11 +209,11 @@ class WSIReader:
     from whole slide image (WSI) files.
 
     Attributes:
-        input_path (pathlib.Path):
+        input_path (Path):
             Input path to WSI file.
 
     Args:
-        input_img (str, :obj:`pathlib.Path`, :obj:`ndarray` or :obj:`.WSIReader`):
+        input_img (str, :obj:`Path`, :obj:`ndarray` or :obj:`.WSIReader`):
             Input path to WSI.
         mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
             The MPP of the WSI. If not provided, the MPP is approximated
@@ -226,7 +226,7 @@ class WSIReader:
 
     @staticmethod
     def open(  # noqa: A003
-        input_img: str | pathlib.Path | np.ndarray | WSIReader,
+        input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         **kwargs,
@@ -234,9 +234,9 @@ class WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
 
         Args:
-            input_img (str, pathlib.Path, :obj:`numpy.ndarray` or :obj:`.WSIReader`):
+            input_img (str, Path, :obj:`numpy.ndarray` or :obj:`.WSIReader`):
                 Input to create a WSI object from. Supported types of
-                input are: `str` and :obj:`pathlib.Path` which point to the
+                input are: `str` and :obj:`Path` which point to the
                 location on the disk where image is stored,
                 :class:`numpy.ndarray` in which the input image in the
                 form of numpy array (HxWxC) is stored, or :obj:`.WSIReader`
@@ -260,11 +260,8 @@ class WSIReader:
 
         """
         # Validate inputs
-        if not isinstance(input_img, (WSIReader, np.ndarray, str, pathlib.Path)):
-            msg = (
-                "Invalid input: Must be a "
-                "WSIRead, numpy array, string or pathlib.Path"
-            )
+        if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
+            msg = "Invalid input: Must be a WSIRead, numpy array, string or Path"
             raise TypeError(
                 msg,
             )
@@ -274,8 +271,8 @@ class WSIReader:
         if isinstance(input_img, WSIReader):
             return input_img
 
-        # Input is a string or pathlib.Path, normalise to pathlib.Path
-        input_path = pathlib.Path(input_img)
+        # Input is a string or Path, normalise to Path
+        input_path = Path(input_img)
         WSIReader.verify_supported_wsi(input_path)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
@@ -329,11 +326,11 @@ class WSIReader:
         return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
 
     @staticmethod
-    def verify_supported_wsi(input_path: pathlib.Path) -> None:
+    def verify_supported_wsi(input_path: Path) -> None:
         """Verify that an input image is supported.
 
         Args:
-            input_path (:class:`pathlib.Path`):
+            input_path (:class:`Path`):
                 Input path to WSI.
 
         Raises:
@@ -367,7 +364,7 @@ class WSIReader:
 
     def __init__(
         self,
-        input_img: str | pathlib.Path | np.ndarray | AnnotationStore,
+        input_img: str | Path | np.ndarray | AnnotationStore,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
@@ -375,7 +372,7 @@ class WSIReader:
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
         else:
-            self.input_path = pathlib.Path(input_img)
+            self.input_path = Path(input_img)
             if not self.input_path.exists():
                 msg = f"Input path does not exist: {self.input_path}"
                 raise FileNotFoundError(msg)
@@ -1468,7 +1465,7 @@ class WSIReader:
 
     def save_tiles(
         self,
-        output_dir: str | pathlib.Path = "tiles",
+        output_dir: str | Path = "tiles",
         tile_objective_value: int = 20,
         tile_read_size: tuple[int, int] = (5000, 5000),
         tile_format: str = ".jpg",
@@ -1477,7 +1474,7 @@ class WSIReader:
         """Generate image tiles from whole slide images.
 
         Args:
-            output_dir(str or :obj:`pathlib.Path`):
+            output_dir(str or :obj:`Path`):
                 Output directory to save the tiles.
             tile_objective_value (int):
                 Objective value at which tile is generated, default = 20
@@ -1505,7 +1502,7 @@ class WSIReader:
 
         logger.debug("Processing %s.", self.input_path.name)
 
-        output_dir = pathlib.Path(output_dir, self.input_path.name)
+        output_dir = Path(output_dir, self.input_path.name)
 
         level, slide_dimension, rescale, tile_objective_value = self._find_tile_params(
             tile_objective_value,
@@ -1517,7 +1514,7 @@ class WSIReader:
         tile_h = tile_read_size[1]
         tile_w = tile_read_size[0]
 
-        output_dir = pathlib.Path(output_dir)
+        output_dir = Path(output_dir)
         output_dir.mkdir(parents=True)
         data = []
 
@@ -1628,7 +1625,7 @@ class OpenSlideWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: str | pathlib.Path | np.ndarray,
+        input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
@@ -2166,7 +2163,7 @@ class JP2WSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: str | pathlib.Path | np.ndarray,
+        input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
@@ -2767,7 +2764,7 @@ class VirtualWSIReader(WSIReader):
         mode (str)
 
     Args:
-        input_img (str, :obj:`pathlib.Path`, :class:`numpy.ndarray`):
+        input_img (str, :obj:`Path`, :class:`numpy.ndarray`):
             Input path to WSI.
         info (WSIMeta):
             Metadata for the virtual wsi.
@@ -2779,7 +2776,7 @@ class VirtualWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: str | pathlib.Path | np.ndarray,
+        input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         info: WSIMeta | None = None,
@@ -3323,7 +3320,7 @@ class TIFFWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: str | pathlib.Path | np.ndarray,
+        input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         series="auto",
@@ -4088,7 +4085,7 @@ class DICOMWSIReader(WSIReader):
 
     def __init__(
         self,
-        input_img: str | pathlib.Path | np.ndarray,
+        input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
     ) -> None:
@@ -5148,7 +5145,7 @@ class AnnotationStoreReader(WSIReader):
 
     def __init__(
         self,
-        store: AnnotationStore | str | pathlib.Path,
+        store: AnnotationStore | str | Path,
         info: WSIMeta | None = None,
         renderer: AnnotationRenderer | None = None,
         base_wsi: WSIReader | str | None = None,
@@ -5158,12 +5155,10 @@ class AnnotationStoreReader(WSIReader):
         """Initialize :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
         self.store = (
-            SQLiteStore(pathlib.Path(store))
-            if isinstance(store, (str, pathlib.Path))
-            else store
+            SQLiteStore(Path(store)) if isinstance(store, (str, Path)) else store
         )
         self.base_wsi = base_wsi
-        if isinstance(base_wsi, (str, pathlib.Path)):
+        if isinstance(base_wsi, (str, Path)):
             self.base_wsi = WSIReader.open(base_wsi)
         if info is None:
             # try to get metadata from store

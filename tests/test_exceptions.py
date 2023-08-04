@@ -6,7 +6,7 @@ from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils.exceptions import MethodNotSupportedError
 
 
-def test_exception_tests():
+def test_exception_tests() -> None:
     """Test for Exceptions."""
     with pytest.raises(MethodNotSupportedError):
         get_normalizer(method_name="invalid_normalizer")
