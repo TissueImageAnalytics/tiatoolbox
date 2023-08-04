@@ -267,10 +267,10 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         pretrained_model="hovernet_fast-pannuke",
     )
 
-    # * Test crash propagation when parallelize post processing
+    # * Test crash propagation when parallelize post-processing
     _rm_dir(save_dir)
     instance_segmentor.model.postproc_func = _crash_func
-    with pytest.raises(ValueError, match=r"Propataion Crash."):
+    with pytest.raises(ValueError, match=r"Propagation Crash."):
         instance_segmentor.predict(
             [sample_wsi_svs],
             masks=[sample_wsi_msk],
