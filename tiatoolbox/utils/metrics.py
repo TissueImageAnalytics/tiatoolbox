@@ -5,7 +5,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.spatial import distance
 
 
-def pair_coordinates(set_a, set_b, radius):
+def pair_coordinates(set_a: np.ndarray, set_b: np.ndarray, radius: float):
     """Find optimal unique pairing between two sets of coordinates.
 
     This function uses the Munkres or Kuhn-Munkres algorithm behind the
@@ -14,13 +14,13 @@ def pair_coordinates(set_a, set_b, radius):
     function.
 
     Args:
-        set_a (ndarray):
+        set_a (np.ndarray):
             An array of shape Nx2 contains the of XY coordinate of N
             different points.
-        set_b (ndarray):
+        set_b (np.ndarray):
             An array of shape Mx2 contains the of XY coordinate of M
             different points.
-        radius:
+        radius (float):
             Valid area around a point in set A to consider a given
             coordinate in set B a candidate for matching.
 
@@ -58,7 +58,7 @@ def pair_coordinates(set_a, set_b, radius):
     return pairing, unpaired_a, unpaired_b
 
 
-def f1_detection(true, pred, radius):
+def f1_detection(true, pred, radius) -> float:
     """Calculate the F1-score for predicted set of coordinates."""
     (paired_true, unpaired_true, unpaired_pred) = pair_coordinates(true, pred, radius)
 
@@ -68,7 +68,7 @@ def f1_detection(true, pred, radius):
     return tp / (tp + 0.5 * fp + 0.5 * fn)
 
 
-def dice(gt_mask, pred_mask):
+def dice(gt_mask: np.ndarray, pred_mask: np.ndarray) -> float:
     r"""Compute the Sørensen-Dice coefficient.
 
     This function computes `Sørensen-Dice coefficient
@@ -79,14 +79,14 @@ def dice(gt_mask, pred_mask):
         DSC = 2 * |X ∩ Y| / |X| + |Y|
 
     Args:
-        gt_mask (:class:`numpy.ndarray`):
+        gt_mask (:class:`np.ndarray`):
             A binary ground truth mask
-        pred_mask (:class:`numpy.ndarray`):
+        pred_mask (:class:`np.ndarray`):
             A binary predicted mask
 
     Returns:
         :class:`float`:
-            A dice overlap
+            An estimate of Sørensen-Dice coefficient value.
 
     """
     if gt_mask.shape != pred_mask.shape:
