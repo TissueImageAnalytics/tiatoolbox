@@ -2,10 +2,7 @@ from cmath import pi
 
 import numpy as np
 
-# get_resolution(level: number): number {
-#    return this._computed_initial_resolution() / 2**level
-#  }
-sf = 1.00301 / 0.5015  # *(vstate.maxds/32.0063)#*(vstate.maxds/32.0063)
+sf = 2
 init_res = 40211.5 * sf * (2 / (100 * pi))
 min_zoom = 0
 max_zoom = 10
