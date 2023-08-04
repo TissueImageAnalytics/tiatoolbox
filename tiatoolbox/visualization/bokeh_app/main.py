@@ -82,8 +82,6 @@ class UIWrapper:
 
     def __getitem__(self, key):
         """Gets active ui element."""
-        if key == "active":
-            return self.active
         return win_dicts[self.active][key]
 
 
@@ -1297,7 +1295,7 @@ def make_window(vstate):
         p.add_layout(color_bar, "below")
 
     # Define UI elements
-    res_switch = RadioButtonGroup(labels=["1x", "2x"], active=1)
+    res_switch = RadioButtonGroup(labels=["1x", "2x"], active=1, name=f"res{win_num}")
 
     slide_alpha = Slider(
         title="Slide Alpha",
@@ -1659,7 +1657,6 @@ win_dicts = []
 color_cycler = ColorCycler()
 tg = TileGroup()
 tool_str = "pan,wheel_zoom,reset,save"
-
 
 # some setup
 
