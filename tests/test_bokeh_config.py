@@ -8,10 +8,10 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
 from PIL import Image
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -70,9 +70,6 @@ def annotation_path(data_path):
         data_path["base_path"] / "overlays",
     )
     return data_path
-
-
-"""Test configuring the visualization tool with a config.json."""
 
 
 @pytest.fixture(scope="module")

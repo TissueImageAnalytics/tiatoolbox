@@ -14,6 +14,9 @@ import matplotlib.cm as cm
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
 # Bokeh stuff
 from bokeh.io import curdoc
@@ -49,10 +52,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -993,6 +992,7 @@ def bind_cb_obj(cb_obj, cb):
     """Wrapper to bind a callback to a bokeh object."""
 
     def wrapped(attr, old, new):
+        """Wrapper function."""
         cb(cb_obj, attr, old, new)
 
     return wrapped
@@ -1002,6 +1002,7 @@ def bind_cb_obj_tog(cb_obj, cb):
     """Wrapper to bind a callback to a bokeh toggle object."""
 
     def wrapped(attr):
+        """Wrapper function."""
         cb(cb_obj, attr)
 
     return wrapped
@@ -1137,21 +1138,21 @@ def segment_on_box():
         num_postproc_workers=8,
         batch_size=24,
     )
-    tmp_save_dir = tempfile.mkdtemp()
-    tmp_mask_dir = tempfile.mkdtemp()
-    Image.fromarray(mask).save(f"{tmp_mask_dir}\\mask.png")
+    tmp_save_dir = Path(tempfile.mkdtemp())
+    tmp_mask_dir = Path(tempfile.mkdtemp())
+    Image.fromarray(mask).save(tmp_mask_dir / "mask.png")
 
     UI["vstate"].model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
     tile_output = inst_segmentor.predict(
         [UI["vstate"].slide_path],
-        [f"{tmp_mask_dir}\\mask.png"],
-        save_dir=f"{tmp_save_dir}\\hover_out",
+        [tmp_mask_dir / "mask.png"],
+        save_dir=tmp_save_dir / "hover_out",
         mode="wsi",
         on_gpu=torch.cuda.is_available(),
         crash_on_exception=True,
     )
 
-    fname = make_safe_name(f"{tmp_save_dir}\\hover_out\\0.dat")
+    fname = make_safe_name(tmp_save_dir / "hover_out" / "0.dat")
     resp = UI["s"].put(
         f"http://{host2}:5000/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
@@ -1811,7 +1812,7 @@ class DocConfig:
         self.config = config
         self.config["auto_load"] = get_from_config(["auto_load"], 0) == 1
 
-    def setup_doc(self, doc):
+    def setup_doc(self, base_doc):
         """Set up the document."""
         self._get_config()
 
@@ -1863,11 +1864,11 @@ class DocConfig:
         control_tabs.on_change("active", control_tabs_cb)
         control_tabs.on_change("tabs", control_tabs_remove_cb)
 
-        doc.template_variables["demo_name"] = doc_config["demo_name"]
-        doc.add_periodic_callback(update, 220)
-        doc.add_root(slide_wins)
-        doc.add_root(control_tabs)
-        doc.title = "Tiatoolbox Visualization Tool"
+        base_doc.template_variables["demo_name"] = doc_config["demo_name"]
+        base_doc.add_periodic_callback(update, 220)
+        base_doc.add_root(slide_wins)
+        base_doc.add_root(control_tabs)
+        base_doc.title = "Tiatoolbox Visualization Tool"
         return slide_wins, control_tabs
 
 
