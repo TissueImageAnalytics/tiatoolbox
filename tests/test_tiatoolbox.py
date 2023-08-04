@@ -2,6 +2,8 @@
 """Pytests for `tiatoolbox` package."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from click.testing import CliRunner
 
 from tiatoolbox import __version__, cli
@@ -14,12 +16,15 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_help_interface():
+def test_command_line_help_interface() -> None:
     """Test the CLI help."""
     runner = CliRunner()
     result = runner.invoke(cli.main)
@@ -29,7 +34,7 @@ def test_command_line_help_interface():
     assert "Computational pathology toolbox by TIA Centre." in help_result.output
 
 
-def test_command_line_version():
+def test_command_line_version() -> None:
     """Test for version check."""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-v"])
@@ -64,7 +69,7 @@ def func_default_param(
     save_yaml(input_dict=out_dict, output_path=output_path)
 
 
-def test_cli_defaults(tmp_path):
+def test_cli_defaults(tmp_path: Path) -> None:
     """Check if the default bool values are correctly returned.
 
     The test checks if the default bool values are identified

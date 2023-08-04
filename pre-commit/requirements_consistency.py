@@ -27,7 +27,7 @@ def parse_pip(
     dashes are considered equivalent.
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the requirements file.
         lines (list):
             List of lines to parse.
@@ -69,7 +69,7 @@ def parse_conda(file_path: Path) -> dict[str, Requirement]:
     """Parse a conda requirements file.
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the requirements file.
 
     Returns:
@@ -104,7 +104,7 @@ def parse_setup_py(file_path) -> dict[str, Requirement]:
     """Parse a setup.py file.
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the setup.py file.
 
     Returns:
@@ -130,7 +130,7 @@ def test_files_exist(root_dir: Path) -> None:
     """Test that all requirements files exist.
 
     Args:
-        root_dir (pathlib.Path):
+        root_dir (Path):
             Path to the root directory of the project.
 
     Raises:
@@ -157,7 +157,7 @@ def parse_requirements(
     """Parse a requirements file (pip or conda).
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the requirements file.
         lines (list):
             List of lines to parse.
