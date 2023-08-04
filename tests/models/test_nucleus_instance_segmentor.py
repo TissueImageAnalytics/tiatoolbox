@@ -36,14 +36,14 @@ BATCH_SIZE = 1 if not ON_GPU else 16
 # ----------------------------------------------------
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     shutil.rmtree(path, ignore_errors=True)
 
 
-def _crash_func(x):
+def _crash_func(x) -> None:
     """Helper to induce crash."""
-    msg = "Propataion Crash."
+    msg = "Propagation Crash."
     raise ValueError(msg)
 
 
@@ -235,7 +235,7 @@ def test_cross_section_boundary_boxes() -> None:
     assert np.sum(flag - _flag) == 0, "Fail Cross Section Flag"
 
 
-def test_crash_segmentor(remote_sample: Callable, tmp_path: Path):
+def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     """Test engine crash when given malformed input."""
     root_save_dir = Path(tmp_path)
     sample_wsi_svs = Path(remote_sample("svs-1-small"))
@@ -283,7 +283,7 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_ci(remote_sample: Callable, tmp_path: Path):
+def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
     """Functionality test for nuclei instance segmentor."""
     gc.collect()
     root_save_dir = Path(tmp_path)
@@ -337,7 +337,7 @@ def test_functionality_ci(remote_sample: Callable, tmp_path: Path):
 def test_functionality_merge_tile_predictions_ci(
     remote_sample: Callable,
     tmp_path: Path,
-):
+) -> None:
     """Functional tests for merging tile predictions."""
     gc.collect()  # Force clean up everything on hold
     save_dir = Path(f"{tmp_path}/output")

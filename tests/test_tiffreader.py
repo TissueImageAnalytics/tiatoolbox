@@ -7,7 +7,7 @@ from defusedxml import ElementTree
 from tiatoolbox.wsicore import wsireader
 
 
-def test_ome_missing_instrument_ref(monkeypatch, remote_sample: Callable):
+def test_ome_missing_instrument_ref(monkeypatch, remote_sample: Callable) -> None:
     """Test that an OME-TIFF can be read without instrument reference."""
     sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)

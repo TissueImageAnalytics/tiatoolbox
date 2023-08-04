@@ -194,7 +194,7 @@ def test_sqlite_store_compile_options() -> None:
     assert all(isinstance(x, str) for x in options)
 
 
-def test_sqlite_store_compile_options_exception(monkeypatch):
+def test_sqlite_store_compile_options_exception(monkeypatch) -> None:
     """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 37, 0))
     monkeypatch.setattr(
@@ -209,7 +209,7 @@ def test_sqlite_store_compile_options_exception(monkeypatch):
         SQLiteStore()
 
 
-def test_sqlite_store_compile_options_exception_v3_38(monkeypatch):
+def test_sqlite_store_compile_options_exception_v3_38(monkeypatch) -> None:
     """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
     monkeypatch.setattr(
@@ -237,7 +237,7 @@ def test_sqlite_store_compile_options_missing_math(
     assert "SQLite math functions are not enabled" in caplog.text
 
 
-def test_sqlite_store_multiple_connection(tmp_path: Path):
+def test_sqlite_store_multiple_connection(tmp_path: Path) -> None:
     """Test SQLiteStore multiple connections."""
     store = SQLiteStore(tmp_path / "annotations.db")
     store2 = SQLiteStore(tmp_path / "annotations.db")
@@ -251,7 +251,7 @@ def test_sqlite_store_index_type_error() -> None:
         store.create_index("foo", lambda g, p: "foo" in p)
 
 
-def test_sqlite_store_index_version_error(monkeypatch):
+def test_sqlite_store_index_version_error(monkeypatch) -> None:
     """Test adding an index with SQlite <3.9."""
     store = SQLiteStore()
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
@@ -259,7 +259,7 @@ def test_sqlite_store_index_version_error(monkeypatch):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
-def test_sqlite_store_index_str(fill_store, tmp_path: Path):
+def test_sqlite_store_index_str(fill_store, tmp_path: Path) -> None:
     """Test that adding an index improves performance."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
 
@@ -286,7 +286,7 @@ def test_sqlite_store_index_str(fill_store, tmp_path: Path):
     assert t2 < t1
 
 
-def test_sqlite_create_index_no_analyze(fill_store, tmp_path: Path):
+def test_sqlite_create_index_no_analyze(fill_store, tmp_path: Path) -> None:
     """Test that creating an index without ANALYZE."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     properties_predicate = "props['class']"
@@ -323,7 +323,7 @@ def test_sqlite_drop_index_error(fill_store, tmp_path: Path) -> None:
         store.drop_index("test_index")
 
 
-def test_sqlite_store_unsupported_compression(sample_triangle):
+def test_sqlite_store_unsupported_compression(sample_triangle) -> None:
     """Test that using an unsupported compression str raises error."""
     store = SQLiteStore(compression="foo")
     with pytest.raises(ValueError, match="Unsupported"):
@@ -336,7 +336,7 @@ def test_sqlite_optimize(fill_store, tmp_path: Path) -> None:
     store.optimize()
 
 
-def test_sqlite_store_no_compression(sample_triangle):
+def test_sqlite_store_no_compression(sample_triangle) -> None:
     """Test that using no compression raises no error."""
     store = SQLiteStore(compression=None)
     serialised = store.serialise_geometry(sample_triangle)
@@ -351,7 +351,7 @@ def test_sqlite_store_unsupported_decompression() -> None:
         _ = store.deserialize_geometry(b"")
 
 
-def test_sqlite_store_wkt_deserialisation(sample_triangle):
+def test_sqlite_store_wkt_deserialisation(sample_triangle) -> None:
     """Test WKT deserialisation."""
     store = SQLiteStore(compression=None)
     wkt = sample_triangle.wkt
@@ -359,7 +359,7 @@ def test_sqlite_store_wkt_deserialisation(sample_triangle):
     assert geom == sample_triangle
 
 
-def test_sqlite_store_wkb_deserialisation(sample_triangle):
+def test_sqlite_store_wkb_deserialisation(sample_triangle) -> None:
     """Test WKB deserialisation.
 
     Test the default stattic method in the ABC.
@@ -451,7 +451,7 @@ def test_annotation_to_geojson() -> None:
     assert geojson["properties"] == {"foo": "bar", "baz": "qux"}
 
 
-def test_remove_area_column(fill_store):
+def test_remove_area_column(fill_store) -> None:
     """Test removing an area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
@@ -466,7 +466,7 @@ def test_remove_area_column(fill_store):
     assert "area" not in store.indexes()
 
 
-def test_remove_area_column_indexed(fill_store):
+def test_remove_area_column_indexed(fill_store) -> None:
     """Test removing an area column if theres an index on it."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.create_index("area", '"area"')
@@ -476,7 +476,7 @@ def test_remove_area_column_indexed(fill_store):
     assert len(result) == 200
 
 
-def test_add_area_column(fill_store):
+def test_add_area_column(fill_store) -> None:
     """Test adding an area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
@@ -497,7 +497,7 @@ def test_add_area_column(fill_store):
     assert "area" not in store.indexes()
 
 
-def test_query_min_area_no_area_column(fill_store):
+def test_query_min_area_no_area_column(fill_store) -> None:
     """Test querying with a minimum area when there is no area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
@@ -550,7 +550,7 @@ class TestStore:
     ]
 
     @staticmethod
-    def test_open_close(fill_store, tmp_path: Path, store_cls):
+    def test_open_close(fill_store, tmp_path: Path, store_cls) -> None:
         """Test opening and closing a store."""
         path = tmp_path / "polygons"
         keys, store = fill_store(store_cls, path)
@@ -559,7 +559,7 @@ class TestStore:
         assert len(store2) == len(keys)
 
     @staticmethod
-    def test_append_many(cell_grid, tmp_path: Path, store_cls):
+    def test_append_many(cell_grid, tmp_path: Path, store_cls) -> None:
         """Test bulk append of annotations."""
         store = store_cls(tmp_path / "polygons")
         annotations = [
@@ -569,7 +569,7 @@ class TestStore:
         assert len(keys) == len(cell_grid)
 
     @staticmethod
-    def test_append_many_with_keys(cell_grid, tmp_path: Path, store_cls):
+    def test_append_many_with_keys(cell_grid, tmp_path: Path, store_cls) -> None:
         """Test bulk append of annotations with keys."""
         store = store_cls(tmp_path / "polygons")
         annotations = [
@@ -581,7 +581,11 @@ class TestStore:
         assert keys == returned_keys
 
     @staticmethod
-    def test_append_many_with_keys_len_mismatch(cell_grid, tmp_path: Path, store_cls):
+    def test_append_many_with_keys_len_mismatch(
+        cell_grid,
+        tmp_path: Path,
+        store_cls,
+    ) -> None:
         """Test bulk append of annotations with keys of wrong length."""
         store = store_cls(tmp_path / "polygons")
         annotations = [
@@ -592,14 +596,14 @@ class TestStore:
             store.append_many(annotations, keys=keys)
 
     @staticmethod
-    def test_query_bbox(fill_store, tmp_path: Path, store_cls):
+    def test_query_bbox(fill_store, tmp_path: Path, store_cls) -> None:
         """Test query with a bounding box."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.query((0, 0, 25, 25))
         assert len(results) == 8
 
     @staticmethod
-    def test_iquery_bbox(fill_store, tmp_path: Path, store_cls):
+    def test_iquery_bbox(fill_store, tmp_path: Path, store_cls) -> None:
         """Test iquery with a bounding box."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.iquery((0, 0, 25, 25))
@@ -607,7 +611,7 @@ class TestStore:
         assert all(isinstance(key, str) for key in results)
 
     @staticmethod
-    def test_query_polygon(fill_store, tmp_path: Path, store_cls):
+    def test_query_polygon(fill_store, tmp_path: Path, store_cls) -> None:
         """Test query with a non-rectangular geometry."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.query(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
@@ -615,7 +619,7 @@ class TestStore:
         assert all(isinstance(ann, Annotation) for ann in results.values())
 
     @staticmethod
-    def test_iquery_polygon(fill_store, tmp_path: Path, store_cls):
+    def test_iquery_polygon(fill_store, tmp_path: Path, store_cls) -> None:
         """Test iquery with a non-rectangular geometry."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         results = store.iquery(Polygon([(0, 0), (0, 25), (1, 1), (25, 0)]))
@@ -623,7 +627,7 @@ class TestStore:
         assert all(isinstance(key, str) for key in results)
 
     @staticmethod
-    def test_patch(fill_store, tmp_path: Path, store_cls):
+    def test_patch(fill_store, tmp_path: Path, store_cls) -> None:
         """Test patching an annotation."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         key = keys[0]
@@ -636,7 +640,7 @@ class TestStore:
         assert store[key].properties["abc"] == 123
 
     @staticmethod
-    def test_patch_append(fill_store, tmp_path: Path, store_cls):
+    def test_patch_append(fill_store, tmp_path: Path, store_cls) -> None:
         """Test patching an annotation that does not exist."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
@@ -644,7 +648,7 @@ class TestStore:
         assert store["foo"].geometry == new_geometry
 
     @staticmethod
-    def test_patch_many(fill_store, tmp_path: Path, store_cls):
+    def test_patch_many(fill_store, tmp_path: Path, store_cls) -> None:
         """Test bulk patch."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
@@ -659,7 +663,7 @@ class TestStore:
             assert store[key].properties["abc"] == 123
 
     @staticmethod
-    def test_patch_many_no_properies(fill_store, tmp_path: Path, store_cls):
+    def test_patch_many_no_properies(fill_store, tmp_path: Path, store_cls) -> None:
         """Test bulk patch with no properties."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
@@ -670,7 +674,7 @@ class TestStore:
             assert store[key].properties == {}
 
     @staticmethod
-    def test_patch_many_no_geometry(fill_store, tmp_path: Path, store_cls):
+    def test_patch_many_no_geometry(fill_store, tmp_path: Path, store_cls) -> None:
         """Test bulk patch with no geometry."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         store.patch_many(keys, properties_iter=repeat({"abc": 123}, len(keys)))
@@ -684,14 +688,14 @@ class TestStore:
         fill_store,
         tmp_path: Path,
         store_cls,
-    ):
+    ) -> None:
         """Test bulk patch with no geometry and no properties."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         with pytest.raises(ValueError, match="At least one"):
             store.patch_many(keys)
 
     @staticmethod
-    def test_patch_many_append(fill_store, tmp_path: Path, store_cls):
+    def test_patch_many_append(fill_store, tmp_path: Path, store_cls) -> None:
         """Test bulk patching annotations that do not exist."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
@@ -700,7 +704,7 @@ class TestStore:
         assert store["bar"].geometry == new_geometry
 
     @staticmethod
-    def test_patch_many_len_mismatch(fill_store, tmp_path: Path, store_cls):
+    def test_patch_many_len_mismatch(fill_store, tmp_path: Path, store_cls) -> None:
         """Test bulk patch with wrong number of keys."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         new_geometry = Polygon([(0, 0), (1, 1), (2, 2)])
@@ -708,7 +712,7 @@ class TestStore:
             store.patch_many(keys[1:], repeat(new_geometry, 10))
 
     @staticmethod
-    def test_keys(fill_store, tmp_path: Path, store_cls):
+    def test_keys(fill_store, tmp_path: Path, store_cls) -> None:
         """Test getting a keys iterator."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         keys = list(keys)
@@ -716,7 +720,7 @@ class TestStore:
         assert isinstance(next(iter(store.keys())), type(keys[0]))
 
     @staticmethod
-    def test_remove(fill_store, tmp_path: Path, store_cls):
+    def test_remove(fill_store, tmp_path: Path, store_cls) -> None:
         """Test removing an annotation."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         key = keys[0]
@@ -724,7 +728,7 @@ class TestStore:
         assert len(store) == FILLED_LEN - 1
 
     @staticmethod
-    def test_delitem(fill_store, tmp_path: Path, store_cls):
+    def test_delitem(fill_store, tmp_path: Path, store_cls) -> None:
         """Test using the delitem syntax."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         key = keys[0]
@@ -732,34 +736,34 @@ class TestStore:
         assert len(store) == FILLED_LEN - 1
 
     @staticmethod
-    def test_remove_many(fill_store, tmp_path: Path, store_cls):
+    def test_remove_many(fill_store, tmp_path: Path, store_cls) -> None:
         """Test bulk deletion."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         store.remove_many(keys)
         assert len(store) == 0
 
     @staticmethod
-    def test_len(fill_store, tmp_path: Path, store_cls):
+    def test_len(fill_store, tmp_path: Path, store_cls) -> None:
         """Test finding the number of annotation via the len operator."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         assert len(store) == FILLED_LEN
 
     @staticmethod
-    def test_contains(fill_store, tmp_path: Path, store_cls):
+    def test_contains(fill_store, tmp_path: Path, store_cls) -> None:
         """Test using the contains (in) operator."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         for key in keys:
             assert key in store
 
     @staticmethod
-    def test_iter(fill_store, tmp_path: Path, store_cls):
+    def test_iter(fill_store, tmp_path: Path, store_cls) -> None:
         """Test iterating over the store."""
         keys, store = fill_store(store_cls, tmp_path / "polygon.db")
         for key in store:
             assert key in keys
 
     @staticmethod
-    def test_getitem(fill_store, tmp_path: Path, sample_triangle, store_cls):
+    def test_getitem(fill_store, tmp_path: Path, sample_triangle, store_cls) -> None:
         """Test the getitem syntax."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         key = store.append(Annotation(sample_triangle))
@@ -768,7 +772,7 @@ class TestStore:
         assert annotation.properties == {}
 
     @staticmethod
-    def test_setitem(fill_store, tmp_path: Path, sample_triangle, store_cls):
+    def test_setitem(fill_store, tmp_path: Path, sample_triangle, store_cls) -> None:
         """Test the setitem syntax."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         key = store.append(Annotation(sample_triangle))
@@ -783,7 +787,7 @@ class TestStore:
         tmp_path: Path,
         sample_triangle,
         store_cls,
-    ):
+    ) -> None:
         """Test getting an setting an annotation."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         key = store.append(Annotation(sample_triangle, {"class": 0}))
@@ -792,7 +796,7 @@ class TestStore:
         assert store[key] == annotation
 
     @staticmethod
-    def test_from_dataframe(cell_grid, store_cls):
+    def test_from_dataframe(cell_grid, store_cls) -> None:
         """Test loading from to a pandas dataframe."""
         cell_grid_df = pd.DataFrame.from_records(
             [
@@ -809,7 +813,7 @@ class TestStore:
         assert "row_id" in annotation.properties
 
     @staticmethod
-    def test_to_dataframe(fill_store, tmp_path: Path, store_cls):
+    def test_to_dataframe(fill_store, tmp_path: Path, store_cls) -> None:
         """Test converting to a pandas dataframe."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         store_as_df = store.to_dataframe()
@@ -820,7 +824,7 @@ class TestStore:
         assert isinstance(store_as_df.geometry.iloc[0], Polygon)
 
     @staticmethod
-    def test_features(fill_store, tmp_path: Path, store_cls):
+    def test_features(fill_store, tmp_path: Path, store_cls) -> None:
         """Test converting to a features dictionaries."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         features = store.features()
@@ -833,7 +837,7 @@ class TestStore:
         )
 
     @staticmethod
-    def test_to_geodict(fill_store, tmp_path: Path, store_cls):
+    def test_to_geodict(fill_store, tmp_path: Path, store_cls) -> None:
         """Test converting to a geodict."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         geodict = store.to_geodict()
@@ -844,7 +848,7 @@ class TestStore:
         assert geodict["features"] == list(store.features())
 
     @staticmethod
-    def test_from_geojson_str(fill_store, tmp_path: Path, store_cls):
+    def test_from_geojson_str(fill_store, tmp_path: Path, store_cls) -> None:
         """Test loading from geojson with a file path string."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         geojson = store.to_geojson()
@@ -852,7 +856,7 @@ class TestStore:
         assert len(store) == len(store2)
 
     @staticmethod
-    def test_from_geojson_file(fill_store, tmp_path: Path, store_cls):
+    def test_from_geojson_file(fill_store, tmp_path: Path, store_cls) -> None:
         """Test loading from geojson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
@@ -861,7 +865,7 @@ class TestStore:
         assert len(store) == len(store2)
 
     @staticmethod
-    def test_from_geojson_path(fill_store, tmp_path: Path, store_cls):
+    def test_from_geojson_path(fill_store, tmp_path: Path, store_cls) -> None:
         """Test loading from geojson with a file path."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         store.to_geojson(tmp_path / "polygon.json")
@@ -869,7 +873,7 @@ class TestStore:
         assert len(store) == len(store2)
 
     @staticmethod
-    def test_from_geojson_path_transform(fill_store, tmp_path: Path, store_cls):
+    def test_from_geojson_path_transform(fill_store, tmp_path: Path, store_cls) -> None:
         """Test loading from geojson with a transform."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
@@ -886,10 +890,10 @@ class TestStore:
         assert com2.y == pytest.approx((com.y - 100) * 2)
 
     @staticmethod
-    def test_transform(fill_store, tmp_path: Path, store_cls):
+    def test_transform(fill_store, tmp_path: Path, store_cls) -> None:
         """Test translating a store."""
 
-        def test_translation(geom):
+        def test_translation(geom) -> None:
             """Performs a translation of input geometry."""
             return affinity.translate(geom, 100, 100)
 
@@ -901,7 +905,7 @@ class TestStore:
         assert com2.y - com.y == pytest.approx(100)
 
     @staticmethod
-    def test_to_geojson_str(fill_store, tmp_path: Path, store_cls):
+    def test_to_geojson_str(fill_store, tmp_path: Path, store_cls) -> None:
         """Test exporting to ndjson with a file path string."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         geojson = store.to_geojson()
@@ -913,7 +917,7 @@ class TestStore:
         assert len(geodict["features"]) == len(list(store.features()))
 
     @staticmethod
-    def test_to_geojson_file(fill_store, tmp_path: Path, store_cls):
+    def test_to_geojson_file(fill_store, tmp_path: Path, store_cls) -> None:
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         with Path.open(tmp_path / "polygon.json", "w") as fh:
@@ -927,7 +931,7 @@ class TestStore:
         assert len(geodict["features"]) == len(list(store.features()))
 
     @staticmethod
-    def test_to_geojson_path(fill_store, tmp_path: Path, store_cls):
+    def test_to_geojson_path(fill_store, tmp_path: Path, store_cls) -> None:
         """Test exporting to geojson with a file path."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         geojson = store.to_geojson(fp=tmp_path / "polygon.json")
@@ -940,7 +944,7 @@ class TestStore:
         assert len(geodict["features"]) == len(list(store.features()))
 
     @staticmethod
-    def test_to_ndjson_str(fill_store, tmp_path: Path, store_cls):
+    def test_to_ndjson_str(fill_store, tmp_path: Path, store_cls) -> None:
         """Test exporting to ndjson with a file path string."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         ndjson = store.to_ndjson()
@@ -952,7 +956,7 @@ class TestStore:
             assert "properties" in feature
 
     @staticmethod
-    def test_to_ndjson_file(fill_store, tmp_path: Path, store_cls):
+    def test_to_ndjson_file(fill_store, tmp_path: Path, store_cls) -> None:
         """Test exporting to ndjson with a file handle."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         with Path.open(tmp_path / "polygon.ndjson", "w") as fh:
@@ -967,7 +971,7 @@ class TestStore:
                 assert "properties" in feature
 
     @staticmethod
-    def test_to_ndjson_path(fill_store, tmp_path: Path, store_cls):
+    def test_to_ndjson_path(fill_store, tmp_path: Path, store_cls) -> None:
         """Test exporting to ndjson with a file path."""
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         ndjson = store.to_ndjson(fp=tmp_path / "polygon.ndjson")
@@ -981,14 +985,14 @@ class TestStore:
                 assert "properties" in feature
 
     @staticmethod
-    def test_dump(fill_store, tmp_path: Path, store_cls):
+    def test_dump(fill_store, tmp_path: Path, store_cls) -> None:
         """Test dumping to a file path."""
         _, store = fill_store(store_cls, ":memory:")
         store.dump(tmp_path / "dump_test.db")
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
     @staticmethod
-    def test_dump_file_handle(fill_store, tmp_path: Path, store_cls):
+    def test_dump_file_handle(fill_store, tmp_path: Path, store_cls) -> None:
         """Test dumping to a file handle."""
         _, store = fill_store(store_cls, ":memory:")
         with Path.open(tmp_path / "dump_test.db", "w") as fh:
@@ -996,14 +1000,14 @@ class TestStore:
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
     @staticmethod
-    def test_dumps(fill_store, store_cls):
+    def test_dumps(fill_store, store_cls) -> None:
         """Test dumping by returning a string."""
         _, store = fill_store(store_cls, ":memory:")
         string = store.dumps()
         assert isinstance(string, str)
 
     @staticmethod
-    def test_iquery_predicate_str(fill_store, store_cls):
+    def test_iquery_predicate_str(fill_store, store_cls) -> None:
         """Test iquering with a predicate string."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
@@ -1012,7 +1016,7 @@ class TestStore:
         assert results[0] == keys[0]
 
     @staticmethod
-    def test_iquery_predicate_callable(fill_store, store_cls):
+    def test_iquery_predicate_callable(fill_store, store_cls) -> None:
         """Test iquering with a predicate function."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
@@ -1024,7 +1028,7 @@ class TestStore:
         assert results[0] == keys[0]
 
     @staticmethod
-    def test_iquery_predicate_pickle(fill_store, store_cls):
+    def test_iquery_predicate_pickle(fill_store, store_cls) -> None:
         """Test iquering with a pickled predicate function."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
@@ -1033,7 +1037,7 @@ class TestStore:
         assert len(results) == 1
 
     @staticmethod
-    def test_query_predicate_str(fill_store, store_cls):
+    def test_query_predicate_str(fill_store, store_cls) -> None:
         """Test quering with a predicate string."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
@@ -1041,7 +1045,7 @@ class TestStore:
         assert len(results) == 1
 
     @staticmethod
-    def test_query_predicate_callable(fill_store, store_cls):
+    def test_query_predicate_callable(fill_store, store_cls) -> None:
         """Test quering with a predicate function."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
@@ -1053,7 +1057,7 @@ class TestStore:
         assert len(results) == 1
 
     @staticmethod
-    def test_query_predicate_pickle(fill_store, store_cls):
+    def test_query_predicate_pickle(fill_store, store_cls) -> None:
         """Test quering with a pickled predicate function."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
@@ -1062,14 +1066,14 @@ class TestStore:
         assert len(results) == 1
 
     @staticmethod
-    def test_append_invalid_geometry(fill_store, store_cls):
+    def test_append_invalid_geometry(fill_store, store_cls) -> None:
         """Test that appending invalid geometry raises an exception."""
         store = store_cls()
         with pytest.raises((TypeError, AttributeError)):
             store.append("point", {})
 
     @staticmethod
-    def test_update_invalid_geometry(fill_store, store_cls):
+    def test_update_invalid_geometry(fill_store, store_cls) -> None:
         """Test that updating  a new key and None geometry raises an exception."""
         store = store_cls()
         key = "foo"
@@ -1077,7 +1081,7 @@ class TestStore:
             store.patch(key, geometry=None, properties={"class": 123})
 
     @staticmethod
-    def test_pop_key(fill_store, store_cls):
+    def test_pop_key(fill_store, store_cls) -> None:
         """Test popping an annotation by key."""
         keys, store = fill_store(store_cls, ":memory:")
         assert keys[0] in store
@@ -1086,14 +1090,14 @@ class TestStore:
         assert annotation not in store.values()
 
     @staticmethod
-    def test_pop_key_error(fill_store, store_cls):
+    def test_pop_key_error(fill_store, store_cls) -> None:
         """Test that popping a key that is not in the store raises an exception."""
         store = store_cls()
         with pytest.raises(KeyError):
             store.pop("foo")
 
     @staticmethod
-    def test_popitem(fill_store, store_cls):
+    def test_popitem(fill_store, store_cls) -> None:
         """Test popping a key and annotation by key."""
         keys, store = fill_store(store_cls, ":memory:")
         key, annotation = store.popitem()
@@ -1102,14 +1106,14 @@ class TestStore:
         assert annotation not in store.values()
 
     @staticmethod
-    def test_popitem_empty_error(fill_store, store_cls):
+    def test_popitem_empty_error(fill_store, store_cls) -> None:
         """Test that popping an empty store raises an exception."""
         store = store_cls()
         with pytest.raises(KeyError):
             store.popitem()
 
     @staticmethod
-    def test_setdefault(fill_store, store_cls, sample_triangle):
+    def test_setdefault(fill_store, store_cls, sample_triangle) -> None:
         """Test setting a default value for a key."""
         store = store_cls()
         default = Annotation(sample_triangle)
@@ -1119,28 +1123,28 @@ class TestStore:
         assert default in store.values()
 
     @staticmethod
-    def test_setdefault_error(fill_store, store_cls, sample_triangle):
+    def test_setdefault_error(fill_store, store_cls, sample_triangle) -> None:
         """Test setting a default value for a key with invalid type."""
         store = store_cls()
         with pytest.raises(TypeError):
             store.setdefault("foo", {})
 
     @staticmethod
-    def test_get(fill_store, store_cls):
+    def test_get(fill_store, store_cls) -> None:
         """Test getting an annotation by key."""
         keys, store = fill_store(store_cls, ":memory:")
         assert keys[0] in store
         assert store.get(keys[0]) == store[keys[0]]
 
     @staticmethod
-    def test_get_default(fill_store, store_cls):
+    def test_get_default(fill_store, store_cls) -> None:
         """Test getting a default value for a key."""
         store = store_cls()
         assert "foo" not in store
         assert store.get("foo") is None
 
     @staticmethod
-    def test_eq(fill_store, store_cls):
+    def test_eq(fill_store, store_cls) -> None:
         """Test comparing two stores for equality."""
         store1 = store_cls()
         store2 = store_cls()
@@ -1154,14 +1158,14 @@ class TestStore:
         assert store1 == store2
 
     @staticmethod
-    def test_ne(fill_store, store_cls):
+    def test_ne(fill_store, store_cls) -> None:
         """Test comparing two stores for inequality."""
         store1 = fill_store(store_cls, ":memory:")[1]
         store2 = fill_store(store_cls, ":memory:")[1]
         assert store1 != store2
 
     @staticmethod
-    def test_clear(fill_store, store_cls):
+    def test_clear(fill_store, store_cls) -> None:
         """Test clearing a store."""
         keys, store = fill_store(store_cls, ":memory:")
         store.clear()
@@ -1170,7 +1174,7 @@ class TestStore:
         assert not store
 
     @staticmethod
-    def test_update(fill_store, store_cls, sample_triangle):
+    def test_update(fill_store, store_cls, sample_triangle) -> None:
         """Test updating a store with a dictionary."""
         _, store = fill_store(store_cls, ":memory:")
         annotations = {
@@ -1182,7 +1186,7 @@ class TestStore:
         assert store["foo"] == annotations["foo"]
 
     @staticmethod
-    def test_cast_dict(fill_store, store_cls):
+    def test_cast_dict(fill_store, store_cls) -> None:
         """Test casting a store to a dictionary."""
         keys, store = fill_store(store_cls, ":memory:")
         store_dict = dict(store)
@@ -1190,28 +1194,28 @@ class TestStore:
         assert store[keys[0]] in store_dict.values()
 
     @staticmethod
-    def test_query_invalid_geometry_predicate(fill_store, store_cls):
+    def test_query_invalid_geometry_predicate(fill_store, store_cls) -> None:
         """Test that invalid geometry predicate raises an exception."""
         store = store_cls()
         with pytest.raises(ValueError, match="Invalid geometry predicate"):
             store.query((0, 0, 1024, 1024), geometry_predicate="foo")
 
     @staticmethod
-    def test_query_no_geometry_or_where(fill_store, store_cls):
+    def test_query_no_geometry_or_where(fill_store, store_cls) -> None:
         """Test that query raises exception when no geometry or predicate given."""
         store = store_cls()
         with pytest.raises(ValueError, match="At least one of"):
             store.query()
 
     @staticmethod
-    def test_iquery_invalid_geometry_predicate(fill_store, store_cls):
+    def test_iquery_invalid_geometry_predicate(fill_store, store_cls) -> None:
         """Test that invalid geometry predicate raises an exception."""
         store = store_cls()
         with pytest.raises(ValueError, match="Invalid geometry predicate"):
             store.iquery((0, 0, 1024, 1024), geometry_predicate="foo")
 
     @staticmethod
-    def test_serialise_deseialise_geometry(fill_store, store_cls):
+    def test_serialise_deseialise_geometry(fill_store, store_cls) -> None:
         """Test that geometry can be serialised and deserialised."""
         _, store = fill_store(store_cls, ":memory:")
         for annotation in store.values():
@@ -1237,14 +1241,14 @@ class TestStore:
         assert "foo" in test_store
 
     @staticmethod
-    def test_load_cases_error(fill_store, store_cls):
+    def test_load_cases_error(fill_store, store_cls) -> None:
         """Test that loading a store with an invalid file handle raises an exception."""
         store = store_cls()
         with pytest.raises(IOError, match="Invalid file handle or path"):
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py38_init(fill_store, store_cls, monkeypatch):
+    def test_py38_init(fill_store, store_cls, monkeypatch) -> None:
         """Test that __init__ is compatible with Python 3.8."""
         py38_version = (3, 8, 0)
 
@@ -1260,7 +1264,7 @@ class TestStore:
         _ = store_cls()
 
     @staticmethod
-    def test_bquery(fill_store, store_cls):
+    def test_bquery(fill_store, store_cls) -> None:
         """Test querying a store with a bounding box."""
         _, store = fill_store(store_cls, ":memory:")
         dictionary = store.bquery((0, 0, 1e10, 1e10))
@@ -1268,7 +1272,7 @@ class TestStore:
         assert len(dictionary) == len(store)
 
     @staticmethod
-    def test_bquery_polygon(fill_store, store_cls):
+    def test_bquery_polygon(fill_store, store_cls) -> None:
         """Test querying a store with a polygon."""
         _, store = fill_store(store_cls, ":memory:")
         dictionary = store.bquery(Polygon.from_bounds(0, 0, 1e10, 1e10))
@@ -1276,7 +1280,7 @@ class TestStore:
         assert len(dictionary) == len(store)
 
     @staticmethod
-    def test_bquery_callable(fill_store, store_cls):
+    def test_bquery_callable(fill_store, store_cls) -> None:
         """Test querying a store with a bounding box and a callable where."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
@@ -1288,7 +1292,7 @@ class TestStore:
         assert len(dictionary) == 1
 
     @staticmethod
-    def test_pquery_all(fill_store, store_cls):
+    def test_pquery_all(fill_store, store_cls) -> None:
         """Test querying for all properties."""
         keys, store = fill_store(store_cls, ":memory:")
         dictionary = store.pquery("*", unique=False)
@@ -1297,14 +1301,14 @@ class TestStore:
         assert isinstance(dictionary[keys[0]], dict)
 
     @staticmethod
-    def test_pquery_all_unique_exception(fill_store, store_cls):
+    def test_pquery_all_unique_exception(fill_store, store_cls) -> None:
         """Test querying for all properties."""
         _, store = fill_store(store_cls, ":memory:")
         with pytest.raises(ValueError, match="unique"):
             _ = store.pquery("*", unique=True)
 
     @staticmethod
-    def test_pquery_unique(fill_store, store_cls):
+    def test_pquery_unique(fill_store, store_cls) -> None:
         """Test querying for properties."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(select="props.get('class')")
@@ -1312,7 +1316,7 @@ class TestStore:
         assert result_set == {0, 1, 2, 3, 4, None}
 
     @staticmethod
-    def test_pquery_unique_with_geometry(fill_store, store_cls):
+    def test_pquery_unique_with_geometry(fill_store, store_cls) -> None:
         """Test querying for properties with a geometry intersection."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1323,7 +1327,7 @@ class TestStore:
         assert result_set == {0, 1, 2, 3, 4, None}
 
     @staticmethod
-    def test_pquery_unique_with_where(fill_store, store_cls):
+    def test_pquery_unique_with_where(fill_store, store_cls) -> None:
         """Test querying for properties with a where predicate."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1334,7 +1338,7 @@ class TestStore:
         assert result_set == {1}
 
     @staticmethod
-    def test_pquery_unique_with_geometry_and_where(fill_store, store_cls):
+    def test_pquery_unique_with_geometry_and_where(fill_store, store_cls) -> None:
         """Test querying for properties with a geometry and where predicate."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1346,7 +1350,7 @@ class TestStore:
         assert result_set == {1}
 
     @staticmethod
-    def test_pquery_callable_unique(fill_store, store_cls):
+    def test_pquery_callable_unique(fill_store, store_cls) -> None:
         """Test querying for properties with a callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1358,7 +1362,7 @@ class TestStore:
         assert result_set == {1}
 
     @staticmethod
-    def test_pquery_callable_unique_no_squeeze(fill_store, store_cls):
+    def test_pquery_callable_unique_no_squeeze(fill_store, store_cls) -> None:
         """Test querying for properties with a callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1371,7 +1375,7 @@ class TestStore:
         assert result_set == [{1}]
 
     @staticmethod
-    def test_pquery_callable_unique_multi_select(fill_store, store_cls):
+    def test_pquery_callable_unique_multi_select(fill_store, store_cls) -> None:
         """Test querying unique properties with a callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1383,7 +1387,7 @@ class TestStore:
         assert result_set == [{1}, {1}]
 
     @staticmethod
-    def test_pquery_callable(fill_store, store_cls):
+    def test_pquery_callable(fill_store, store_cls) -> None:
         """Test querying for properties with a callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1395,7 +1399,7 @@ class TestStore:
         assert set(result_set.values()) == {1}
 
     @staticmethod
-    def test_pquery_callable_no_where(fill_store, store_cls):
+    def test_pquery_callable_no_where(fill_store, store_cls) -> None:
         """Test querying for properties with callable select, no where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
@@ -1407,7 +1411,7 @@ class TestStore:
         assert set(result_set.values()).issubset({0, 1, 2, 3, 4, None})
 
     @staticmethod
-    def test_pquery_pickled(fill_store, store_cls):
+    def test_pquery_pickled(fill_store, store_cls) -> None:
         """Test querying for properties with a pickled select and where."""
         _, store = fill_store(store_cls, ":memory:")
 
@@ -1419,7 +1423,7 @@ class TestStore:
         assert result_set == {1}
 
     @staticmethod
-    def test_pquery_pickled_no_squeeze(fill_store, store_cls):
+    def test_pquery_pickled_no_squeeze(fill_store, store_cls) -> None:
         """Test querying for properties with a pickled select and where."""
         _, store = fill_store(store_cls, ":memory:")
 
@@ -1432,7 +1436,7 @@ class TestStore:
         assert result_set == [{1}]
 
     @staticmethod
-    def test_pquery_pickled_multi_select(fill_store, store_cls):
+    def test_pquery_pickled_multi_select(fill_store, store_cls) -> None:
         """Test querying for properties with a pickled select and where."""
         _, store = fill_store(store_cls, ":memory:")
 
@@ -1444,21 +1448,21 @@ class TestStore:
         assert result_set == [{1}, {1}]
 
     @staticmethod
-    def test_pquery_invalid_expression_type(fill_store, store_cls):
+    def test_pquery_invalid_expression_type(fill_store, store_cls) -> None:
         """Test querying for properties with an invalid expression type."""
         _, store = fill_store(store_cls, ":memory:")
         with pytest.raises(TypeError):
             _ = store.pquery(select=123, where=456)
 
     @staticmethod
-    def test_pquery_non_matching_type(fill_store, store_cls):
+    def test_pquery_non_matching_type(fill_store, store_cls) -> None:
         """Test querying with a non-matching type for select and where."""
         _, store = fill_store(store_cls, ":memory:")
         with pytest.raises(TypeError):
             _ = store.pquery(select=123, where="foo")
 
     @staticmethod
-    def test_pquery_dict(fill_store, store_cls):
+    def test_pquery_dict(fill_store, store_cls) -> None:
         """Test querying for properties."""
         _, store = fill_store(store_cls, ":memory:")
         dictionary = store.pquery(select="props.get('class')", unique=False)
@@ -1467,7 +1471,7 @@ class TestStore:
         assert all(key in store for key in dictionary)
 
     @staticmethod
-    def test_pquery_dict_with_geometry(fill_store, store_cls):
+    def test_pquery_dict_with_geometry(fill_store, store_cls) -> None:
         """Test querying for properties with a geometry intersection."""
         _, store = fill_store(store_cls, ":memory:")
         dictionary = store.pquery(
@@ -1480,7 +1484,7 @@ class TestStore:
         assert all(key in store for key in dictionary)
 
     @staticmethod
-    def test_is_rectangle(store_cls):
+    def test_is_rectangle(store_cls) -> None:
         """Test that _is_rectangle returns True only for rectangles."""
         store = store_cls()
 
@@ -1524,14 +1528,14 @@ class TestStore:
         )
 
     @staticmethod
-    def test_is_rectangle_invalid_input(store_cls):
+    def test_is_rectangle_invalid_input(store_cls) -> None:
         """Test that _is_rectangle returns False for invalid input."""
         store = store_cls()
         assert not store._is_rectangle(1, 2, 3, 4)
         assert not store._is_rectangle((0, 0), (0, 1), (1, 1), (1, 0), (2, 0))
 
     @staticmethod
-    def test_is_right_angle(store_cls):
+    def test_is_right_angle(store_cls) -> None:
         """Test that _is_right_angle returns True only for right angles."""
         store = store_cls()
 
@@ -1589,7 +1593,7 @@ class TestStore:
         )
 
     @staticmethod
-    def test_box_query_polygon_intersection(store_cls):
+    def test_box_query_polygon_intersection(store_cls) -> None:
         """Test that a box query correctly checks intersections with polygons."""
         store = store_cls()
 
@@ -1642,7 +1646,7 @@ class TestStore:
         assert len(result) == 1
 
     @staticmethod
-    def test_bquery_bounds(fill_store, store_cls):
+    def test_bquery_bounds(fill_store, store_cls) -> None:
         """Test querying a store with a bounding box iterable."""
         _, store = fill_store(store_cls, ":memory:")
         dictionary = store.bquery((0, 0, 1e10, 1e10))
@@ -1650,7 +1654,7 @@ class TestStore:
         assert len(dictionary) == len(store)
 
     @staticmethod
-    def test_validate_equal_lengths(store_cls):
+    def test_validate_equal_lengths(store_cls) -> None:
         """Test that equal length lists are valid."""
         store_cls._validate_equal_lengths([1, 2, 3], [1, 2, 3])
         store_cls._validate_equal_lengths()
@@ -1658,13 +1662,13 @@ class TestStore:
             store_cls._validate_equal_lengths([1, 2, 3], [1, 2])
 
     @staticmethod
-    def test_connection_to_path_memory(store_cls):
+    def test_connection_to_path_memory(store_cls) -> None:
         """Test converting a :memory: connection to a path."""
         path = store_cls._connection_to_path(":memory:")
         assert path == Path(":memory:")
 
     @staticmethod
-    def test_connection_to_path_type_error(store_cls):
+    def test_connection_to_path_type_error(store_cls) -> None:
         """Test converting an invalid type connection to a path."""
         with pytest.raises(TypeError):
             _ = store_cls._connection_to_path(123)
@@ -1678,7 +1682,7 @@ class TestStore:
             assert path == Path(fh.name)
 
     @staticmethod
-    def test_nquery_boxpoint_boxpoint(store_cls):
+    def test_nquery_boxpoint_boxpoint(store_cls) -> None:
         """Test simple querying within a neighbourhood.
 
         Test that a neighbourhood query returns the correct results
@@ -1731,7 +1735,7 @@ class TestStore:
         assert result["A"] == {"B": ann_b}
 
     @staticmethod
-    def test_nquery_boxpoint_boxpoint_no_results(store_cls):
+    def test_nquery_boxpoint_boxpoint_no_results(store_cls) -> None:
         """Test querying within a neighbourhood with no results.
 
         Test that a neighbourhood query returns an empty dictionary
@@ -1765,7 +1769,7 @@ class TestStore:
         assert len(result) == 0
 
     @staticmethod
-    def test_nquery_boxpoint_boxpoint_multiple(store_cls):
+    def test_nquery_boxpoint_boxpoint_multiple(store_cls) -> None:
         """Test querying within a neighbourhood with multiple results.
 
         Test that a neighbourhood query returns the correct results
@@ -1821,7 +1825,7 @@ class TestStore:
         assert result["A"] == {"B": ann_b, "C": ann_c}
 
     @staticmethod
-    def test_nquery_poly_poly(store_cls):
+    def test_nquery_poly_poly(store_cls) -> None:
         """Test querying within a neighbourhood with multiple results.
 
         Test that a neighbourhood query returns the correct results
@@ -1860,7 +1864,7 @@ class TestStore:
         assert len(result) == 1
 
     @staticmethod
-    def test_nquery_poly_poly_vs_boxpoint_boxpoint(store_cls):
+    def test_nquery_poly_poly_vs_boxpoint_boxpoint(store_cls) -> None:
         """Test querying within a neighbourhood with two polygons.
 
         Test that a full polygon neighbourhood query returns results
@@ -1914,7 +1918,7 @@ class TestStore:
         assert len(result) == 1
 
     @staticmethod
-    def test_nquery_polygon_boundary_alt(store_cls):
+    def test_nquery_polygon_boundary_alt(store_cls) -> None:
         """Test querying within a neighbourhood with two polygons.
 
         This test is similar to test_nquery_polygon_boundary, but
@@ -1985,7 +1989,7 @@ class TestStore:
         assert len(result) == 1
 
     @staticmethod
-    def test_nquery_overlapping_grid_box_box(store_cls):
+    def test_nquery_overlapping_grid_box_box(store_cls) -> None:
         r"""Find duplicate (overlapping) cell boundaries via bounding boxes.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
@@ -2031,7 +2035,7 @@ class TestStore:
             assert len(v) == 1
 
     @staticmethod
-    def test_nquery_overlapping_grid_boxpoint_boxpoint(store_cls):
+    def test_nquery_overlapping_grid_boxpoint_boxpoint(store_cls) -> None:
         r"""Find duplicate (overlapping) cell boundaries via bbox centroid distance.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
@@ -2077,7 +2081,7 @@ class TestStore:
             assert len(v) == 1
 
     @staticmethod
-    def test_nquery_overlapping_grid_poly_poly(store_cls):
+    def test_nquery_overlapping_grid_poly_poly(store_cls) -> None:
         r"""Find duplicate (overlapping) cell boundaries via polygon intersection.
 
         This generates an :math:`n \\times n` (where :math:`n=10`) grid
@@ -2122,7 +2126,7 @@ class TestStore:
             assert len(v) == 1
 
     @staticmethod
-    def test_invalid_mode_type(store_cls):
+    def test_invalid_mode_type(store_cls) -> None:
         """Test invalid mode type for AnnotationStore."""
         store: AnnotationStore = store_cls()
 
@@ -2135,7 +2139,7 @@ class TestStore:
             )
 
     @staticmethod
-    def test_invalid_mode_format(store_cls):
+    def test_invalid_mode_format(store_cls) -> None:
         """Check invalid mode string format raises ValueError."""
         store: AnnotationStore = store_cls()
 
@@ -2148,7 +2152,7 @@ class TestStore:
             )
 
     @staticmethod
-    def test_invalid_mode(store_cls):
+    def test_invalid_mode(store_cls) -> None:
         """Check unsupported mode raises ValueError."""
         store: AnnotationStore = store_cls()
 
@@ -2161,7 +2165,7 @@ class TestStore:
             )
 
     @staticmethod
-    def test_bquery_only_where(store_cls):
+    def test_bquery_only_where(store_cls) -> None:
         """Test that bquery when only a where predicate is given.
 
         This simply checks for no exceptions raised about None values.
@@ -2171,14 +2175,14 @@ class TestStore:
         assert store.bquery(where="props['foo'] == 'bar'") == {}
 
     @staticmethod
-    def test_query_min_area(fill_store, store_cls):
+    def test_query_min_area(fill_store, store_cls) -> None:
         """Test querying with a minimum area."""
         _, store = fill_store(store_cls, ":memory:")
         result = store.query((0, 0, 1000, 1000), min_area=1)
         assert len(result) == 100  # should only get cells, pts are too small
 
     @staticmethod
-    def test_as_wkb(fill_store, store_cls):
+    def test_as_wkb(fill_store, store_cls) -> None:
         """Test that as_wkb returns annotations with wkb geometry."""
         _, store = fill_store(store_cls, ":memory:")
         wkb_results = store.query((0, 0, 25, 25), as_wkb=True)

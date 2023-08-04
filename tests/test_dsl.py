@@ -133,7 +133,7 @@ class TestPredicate:
     ]
 
     @staticmethod
-    def test_number_binary_operations(eval_globals, eval_locals, check):
+    def test_number_binary_operations(eval_globals, eval_locals, check) -> None:
         """Check that binary operations between ints does not error."""
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} 2"
@@ -141,7 +141,7 @@ class TestPredicate:
             assert isinstance(check(result), Number)
 
     @staticmethod
-    def test_property_binary_operations(eval_globals, eval_locals, check):
+    def test_property_binary_operations(eval_globals, eval_locals, check) -> None:
         """Check that binary operations between properties does not error."""
         for op in BINARY_OP_STRINGS:
             query = f"props['int'] {op} props['int']"
@@ -149,7 +149,7 @@ class TestPredicate:
             assert isinstance(check(result), Number)
 
     @staticmethod
-    def test_r_binary_operations(eval_globals, eval_locals, check):
+    def test_r_binary_operations(eval_globals, eval_locals, check) -> None:
         """Test right hand binary operations between numbers and properties."""
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} props['int']"
@@ -157,7 +157,7 @@ class TestPredicate:
             assert isinstance(check(result), Number)
 
     @staticmethod
-    def test_number_prefix_operations(eval_globals, eval_locals, check):
+    def test_number_prefix_operations(eval_globals, eval_locals, check) -> None:
         """Test prefix operations on numbers."""
         for op in PREFIX_OP_STRINGS:
             query = f"{op}1"
@@ -165,7 +165,7 @@ class TestPredicate:
             assert isinstance(check(result), Number)
 
     @staticmethod
-    def test_property_prefix_operations(eval_globals, eval_locals, check):
+    def test_property_prefix_operations(eval_globals, eval_locals, check) -> None:
         """Test prefix operations on properties."""
         for op in PREFIX_OP_STRINGS:
             query = f"{op}props['int']"

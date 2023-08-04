@@ -17,7 +17,7 @@ from tiatoolbox.utils.env_detection import running_on_ci
 # -------------------------------------------------------------------------------------
 
 
-def pytest_configure(config):
+def pytest_configure(config) -> None:
     """Perform initial configuration for TIAToolbox tests."""
     logger.info(
         "🏁 Starting tests. TIAToolbox Version: %s. CI: %s",
@@ -26,7 +26,7 @@ def pytest_configure(config):
     )
 
 
-def pytest_generate_tests(metafunc):
+def pytest_generate_tests(metafunc) -> None:
     """Generate (parameterize) test scenarios.
 
     Adapted from pytest documentation. For more information on
@@ -108,7 +108,7 @@ def sample_svs(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_ome_tiff(remote_sample) -> Path:
+def sample_ome_tiff(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ome-tiff (brightfield pyramid) images.
 
     Download ome-tiff image for pytest.
@@ -150,7 +150,12 @@ def sample_all_wsis(
 
 
 @pytest.fixture(scope="session")
-def sample_all_wsis2(sample_ndpi2: Path, sample_svs, sample_jp2: Path, tmpdir_factory):
+def sample_all_wsis2(
+    sample_ndpi2: Path,
+    sample_svs,
+    sample_jp2: Path,
+    tmpdir_factory,
+) -> Path:
     """Sample wsi(s) of all types supported by tiatoolbox.
 
     Adds sample fluorescence ndpi image.
@@ -171,7 +176,7 @@ def sample_all_wsis2(sample_ndpi2: Path, sample_svs, sample_jp2: Path, tmpdir_fa
 
 
 @pytest.fixture(scope="session")
-def sample_svs_ndpi_wsis(sample_ndpi2: Path, sample_svs: Path, tmpdir_factory):
+def sample_svs_ndpi_wsis(sample_ndpi2: Path, sample_svs: Path, tmpdir_factory) -> Path:
     """Sample SVS and NDPI wsi(s).
 
     Uses sample fluorescence ndpi image.
@@ -247,7 +252,7 @@ def sample_visual_fields(
     norm_macenko,
     norm_vahadane,
     tmpdir_factory,
-):
+) -> Path:
     """Sample visual fields(s) of all types supported by tiatoolbox."""
     dir_path = Path(tmpdir_factory.mktemp("data"))
 
@@ -438,7 +443,7 @@ def sample_patch4(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
-def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory):
+def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory) -> Path:
     """Directory of sample image patches for testing."""
     dir_path = Path(tmpdir_factory.mktemp("data"))
 
@@ -453,7 +458,7 @@ def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def sample_wsi_dict(remote_sample: Callable):
+def sample_wsi_dict(remote_sample: Callable) -> dict:
     """Sample pytest fixture for torch wsi dataset.
 
     Download svs image for pytest.

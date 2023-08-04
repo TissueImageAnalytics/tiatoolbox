@@ -17,7 +17,7 @@ from tiatoolbox.models.architecture.hovernet import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_functionality(remote_sample: Callable):
+def test_functionality(remote_sample: Callable) -> None:
     """Functionality test."""
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)

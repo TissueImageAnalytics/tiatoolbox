@@ -76,7 +76,7 @@ def test_wsimeta_validate_pass() -> None:
     assert meta.validate()
 
 
-def test_wsimeta_openslidewsireader_ndpi(sample_ndpi: Path):
+def test_wsimeta_openslidewsireader_ndpi(sample_ndpi: Path) -> None:
     """Test OpenSlide reader metadata for ndpi."""
     wsi_obj = wsireader.OpenSlideWSIReader(sample_ndpi)
     meta = wsi_obj.info

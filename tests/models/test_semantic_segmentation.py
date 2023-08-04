@@ -42,13 +42,13 @@ except NotImplementedError:
 # ----------------------------------------------------
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     if Path(path).exists():
         shutil.rmtree(path, ignore_errors=True)
 
 
-def _crash_func(x):
+def _crash_func(x) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
     raise ValueError(msg)
@@ -201,7 +201,7 @@ def test_segmentor_ioconfig() -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_wsi_stream_dataset(remote_sample: Callable):
+def test_functional_wsi_stream_dataset(remote_sample: Callable) -> None:
     """Functional test for WSIStreamDataset."""
     gc.collect()  # Force clean up everything on hold
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
@@ -259,7 +259,7 @@ def test_functional_wsi_stream_dataset(remote_sample: Callable):
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(remote_sample: Callable):
+def test_crash_segmentor(remote_sample: Callable) -> None:
     """Functional crash tests for segmentor."""
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
@@ -339,7 +339,7 @@ def test_crash_segmentor(remote_sample: Callable):
     _rm_dir("output")
 
 
-def test_functional_segmentor_merging(tmp_path: Path):
+def test_functional_segmentor_merging(tmp_path: Path) -> None:
     """Functional test for assmebling output."""
     save_dir = Path(tmp_path)
 

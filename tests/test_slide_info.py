@@ -11,7 +11,7 @@ from tiatoolbox import cli
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_slide_info(sample_all_wsis, tmp_path: Path):
+def test_command_line_slide_info(sample_all_wsis, tmp_path: Path) -> None:
     """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -37,7 +37,7 @@ def test_command_line_slide_info(sample_all_wsis, tmp_path: Path):
     assert not Path(tmp_path, "test1.yaml").exists()
 
 
-def test_command_line_slide_info_jp2(sample_all_wsis):
+def test_command_line_slide_info_jp2(sample_all_wsis) -> None:
     """Test the Slide information CLI JP2, svs."""
     runner = CliRunner()
     slide_info_result = runner.invoke(

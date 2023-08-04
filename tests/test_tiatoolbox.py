@@ -69,7 +69,7 @@ def func_default_param(
     save_yaml(input_dict=out_dict, output_path=output_path)
 
 
-def test_cli_defaults(tmp_path: Path):
+def test_cli_defaults(tmp_path: Path) -> None:
     """Check if the default bool values are correctly returned.
 
     The test checks if the default bool values are identified

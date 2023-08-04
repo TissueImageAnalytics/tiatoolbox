@@ -68,7 +68,7 @@ def test_dl_output_for_h_and_e() -> None:
     assert np.all(dictionary2 == dictionary[[1, 0], :])
 
 
-def test_reinhard_normalize(source_image, norm_reinhard):
+def test_reinhard_normalize(source_image, norm_reinhard) -> None:
     """Test for Reinhard colour normalization."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -82,7 +82,7 @@ def test_reinhard_normalize(source_image, norm_reinhard):
     assert np.mean(np.absolute(reinhard_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_custom_normalize(source_image, norm_ruifrok):
+def test_custom_normalize(source_image, norm_ruifrok) -> None:
     """Test for stain normalization with user-defined stain matrix."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -108,7 +108,7 @@ def test_get_normalizer_assertion() -> None:
         _ = get_normalizer("ruifrok", stain_matrix)
 
 
-def test_ruifrok_normalize(source_image, norm_ruifrok):
+def test_ruifrok_normalize(source_image, norm_ruifrok) -> None:
     """Test for stain normalization with stain matrix from Ruifrok and Johnston."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -123,7 +123,7 @@ def test_ruifrok_normalize(source_image, norm_ruifrok):
     assert np.mean(np.absolute(ruifrok_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_macenko_normalize(source_image, norm_macenko):
+def test_macenko_normalize(source_image, norm_macenko) -> None:
     """Test for stain normalization with stain matrix from Macenko et al."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -138,7 +138,7 @@ def test_macenko_normalize(source_image, norm_macenko):
     assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_vahadane_normalize(source_image, norm_vahadane):
+def test_vahadane_normalize(source_image, norm_vahadane) -> None:
     """Test for stain normalization with stain matrix from Vahadane et al."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -158,7 +158,7 @@ def test_vahadane_normalize(source_image, norm_vahadane):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_stainnorm(source_image, tmp_path: Path):
+def test_command_line_stainnorm(source_image, tmp_path: Path) -> None:
     """Test for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = _local_sample_path("target_image.png")

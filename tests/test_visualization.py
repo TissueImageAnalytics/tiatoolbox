@@ -27,7 +27,7 @@ from tiatoolbox.utils.visualization import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_overlay_prediction_mask(sample_wsi_dict):
+def test_overlay_prediction_mask(sample_wsi_dict) -> None:
     """Test for overlaying merged patch prediction of wsi."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_pred = Path(sample_wsi_dict["wsi2_4k_4k_pred"])
@@ -92,7 +92,7 @@ def test_overlay_prediction_mask(sample_wsi_dict):
     _ = overlay_prediction_mask(thumb_float, merged, min_val=0.5, return_ax=False)
 
 
-def test_overlay_probability_map(sample_wsi_dict):
+def test_overlay_probability_map(sample_wsi_dict) -> None:
     """Test functional run for overlaying merged patch prediction of wsi."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     reader = WSIReader.open(mini_wsi_svs)

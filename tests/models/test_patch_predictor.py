@@ -28,7 +28,7 @@ ON_GPU = toolbox_env.has_gpu()
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     if Path(path).exists():
         shutil.rmtree(path, ignore_errors=True)
@@ -39,7 +39,7 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_patch_dataset_path_imgs(sample_patch1, sample_patch2):
+def test_patch_dataset_path_imgs(sample_patch1, sample_patch2) -> None:
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
@@ -52,7 +52,7 @@ def test_patch_dataset_path_imgs(sample_patch1, sample_patch2):
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_list_imgs(tmp_path: Path):
+def test_patch_dataset_list_imgs(tmp_path: Path) -> None:
     """Test for patch dataset with a list of images as input."""
     save_dir_path = tmp_path
 
@@ -96,7 +96,7 @@ def test_patch_dataset_list_imgs(tmp_path: Path):
     _rm_dir(save_dir_path)
 
 
-def test_patch_datasetarray_imgs():
+def test_patch_datasetarray_imgs() -> None:
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
     img = RNG.integers(0, 255, size=size)
@@ -120,7 +120,7 @@ def test_patch_datasetarray_imgs():
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_crash(tmp_path: Path):
+def test_patch_dataset_crash(tmp_path: Path) -> None:
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples should fail when input to PatchDataset
     save_dir_path = tmp_path
@@ -219,7 +219,7 @@ def test_patch_dataset_crash(tmp_path: Path):
         predefined_preproc_func("secret-dataset")
 
 
-def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path):
+def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path) -> None:
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -413,7 +413,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path):
     assert np.min(correlation) > 0.9, correlation
 
 
-def test_patch_dataset_abc():
+def test_patch_dataset_abc() -> None:
     """Test for ABC methods.
 
     Test missing definition for abstract intentionally created to check error.
@@ -460,7 +460,7 @@ def test_patch_dataset_abc():
 # -------------------------------------------------------------------------------------
 
 
-def test_io_patch_predictor_config():
+def test_io_patch_predictor_config() -> None:
     """Test for IOConfig."""
     # test for creating
     cfg = IOPatchPredictorConfig(
@@ -478,7 +478,7 @@ def test_io_patch_predictor_config():
 # -------------------------------------------------------------------------------------
 
 
-def test_predictor_crash():
+def test_predictor_crash() -> None:
     """Test for crash when making predictor."""
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
@@ -822,7 +822,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     _rm_dir("output")
 
 
-def test_wsi_predictor_merge_predictions(sample_wsi_dict):
+def test_wsi_predictor_merge_predictions(sample_wsi_dict) -> None:
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent reader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -928,7 +928,7 @@ def _test_predictor_output(
     probabilities_check=None,
     predictions_check=None,
     on_gpu=ON_GPU,
-):
+) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = PatchPredictor(
         pretrained_model=pretrained_model,
@@ -962,7 +962,7 @@ def _test_predictor_output(
         )
 
 
-def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
+def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2) -> None:
     """Test the output of patch prediction models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
     pretrained_info = {
@@ -997,7 +997,7 @@ def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
             break
 
 
-def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
+def test_patch_predictor_pcam_output(sample_patch3, sample_patch4) -> None:
     """Test the output of patch prediction models on PCam dataset."""
     inputs = [Path(sample_patch3), Path(sample_patch4)]
     pretrained_info = {

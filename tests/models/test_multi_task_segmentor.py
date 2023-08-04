@@ -28,12 +28,12 @@ except NotImplementedError:
 # ----------------------------------------------------
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     shutil.rmtree(path, ignore_errors=True)
 
 
-def _crash_func(_):
+def _crash_func(_) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
     raise ValueError(msg)
@@ -52,7 +52,7 @@ def semantic_postproc_func(raw_output):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_functionality_local(remote_sample: Callable, tmp_path: Path):
+def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Local functionality test for multi task segmentor."""
     gc.collect()
     root_save_dir = Path(tmp_path)
@@ -105,7 +105,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path):
+def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> None:
     """Functionality test for multitask segmentor."""
     root_save_dir = Path(tmp_path)
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))

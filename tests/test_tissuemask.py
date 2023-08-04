@@ -261,7 +261,7 @@ def test_cli_tissue_mask_otsu_save(sample_svs: Path) -> None:
     assert Path(output_path, source_img.stem + ".png").is_file()
 
 
-def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis):
+def test_cli_tissue_mask_otsu_dir_save(sample_all_wsis) -> None:
     """Test Otsu tissue masking for multiple files with default input CLI."""
     source_img = Path(sample_all_wsis)
     runner = CliRunner()
@@ -467,7 +467,7 @@ def test_cli_tissue_mask_method_not_supported(sample_svs: Path) -> None:
     assert isinstance(tissue_mask_result.exception, SystemExit)
 
 
-def test_cli_tissue_mask_file_not_found_error(source_image):
+def test_cli_tissue_mask_file_not_found_error(source_image) -> None:
     """Test file not found error for the tissue masking CLI."""
     source_img = Path(source_image)
     runner = CliRunner()

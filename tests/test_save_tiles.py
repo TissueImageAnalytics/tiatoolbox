@@ -43,7 +43,7 @@ def test_command_line_save_tiles(sample_svs_ndpi_wsis, tmp_path: Path) -> None:
     assert (bioformatspull2759 / "Tile_5_0_0.jpg").exists()
 
 
-def test_command_line_save_tiles_single_file(sample_svs, tmp_path: Path):
+def test_command_line_save_tiles_single_file(sample_svs, tmp_path: Path) -> None:
     """Test for save_tiles CLI single file."""
     runner = CliRunner()
     save_svs_tiles_result = runner.invoke(

@@ -65,7 +65,7 @@ def read_points_patches(
     return data
 
 
-def test_patch_extractor(source_image):
+def test_patch_extractor(source_image) -> None:
     """Test base class patch extractor."""
     input_img = misc.imread(Path(source_image))
     patches = patchextraction.PatchExtractor(input_img=input_img, patch_size=(20, 20))
@@ -73,7 +73,7 @@ def test_patch_extractor(source_image):
     assert next_patches.n == 0
 
 
-def test_get_patch_extractor(source_image, patch_extr_csv):
+def test_get_patch_extractor(source_image, patch_extr_csv) -> None:
     """Test get_patch_extractor returns the right object."""
     input_img = misc.imread(Path(source_image))
     locations_list = Path(patch_extr_csv)
@@ -104,7 +104,7 @@ def test_points_patch_extractor_image_format(
     sample_jp2: Path,
     source_image,
     patch_extr_csv,
-):
+) -> None:
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = Path(__file__).parent
     locations_list = Path(patch_extr_csv)
@@ -154,7 +154,7 @@ def test_points_patch_extractor(
     patch_extr_2col_npy,
     patch_extr_json,
     patch_extr_csv_noheader,
-):
+) -> None:
     """Test PointsPatchExtractor for VirtualWSIReader."""
     input_img = Path(patch_extr_vf_image)
 
@@ -190,7 +190,7 @@ def test_points_patch_extractor_svs(
     sample_svs,
     patch_extr_svs_csv,
     patch_extr_svs_npy_read,
-):
+) -> None:
     """Test PointsPatchExtractor for svs image."""
     locations_list = Path(patch_extr_svs_csv)
     saved_data = np.load(str(Path(patch_extr_svs_npy_read)))
@@ -211,7 +211,7 @@ def test_points_patch_extractor_jp2(
     sample_jp2: Path,
     patch_extr_svs_csv,
     patch_extr_jp2_read,
-):
+) -> None:
     """Test PointsPatchExtractor for jp2 image."""
     locations_list = Path(patch_extr_svs_csv)
     saved_data = np.load(str(Path(patch_extr_jp2_read)))
@@ -228,7 +228,7 @@ def test_points_patch_extractor_jp2(
     assert np.all(data == saved_data)
 
 
-def test_sliding_windowpatch_extractor(patch_extr_vf_image):
+def test_sliding_windowpatch_extractor(patch_extr_vf_image) -> None:
     """Test SlidingWindowPatchExtractor for VF."""
     input_img = Path(patch_extr_vf_image)
 

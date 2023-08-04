@@ -11,7 +11,7 @@ from tiatoolbox.utils import imread
 from tiatoolbox.utils.transforms import imresize
 
 
-def test_functionality(remote_sample: Callable, tmp_path: Path):
+def test_functionality(remote_sample: Callable, tmp_path: Path) -> None:
     """Functionality test."""
     tmp_path = str(tmp_path)
     sample_patch = str(remote_sample("stainnorm-source"))
