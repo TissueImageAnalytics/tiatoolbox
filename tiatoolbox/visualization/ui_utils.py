@@ -1,3 +1,4 @@
+"""Some utilities for bokeh ui."""
 from cmath import pi
 
 import numpy as np
@@ -10,6 +11,7 @@ resolutions = [init_res / 2**lev for lev in range(min_zoom, max_zoom + 1)]
 
 
 def get_level_by_extent(extent):
+    """Replicates the bokeh tile renderer get_level_by_extent function."""
     x_rs = (extent[2] - extent[0]) / 1700
     y_rs = (extent[3] - extent[1]) / 1000
     resolution = np.maximum(x_rs, y_rs)

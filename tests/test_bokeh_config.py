@@ -1,15 +1,17 @@
+"""Test the bokeh app with a config.json."""
 import io
 import json
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
 from PIL import Image
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -46,6 +48,7 @@ def data_path(tmp_path_factory):
 
 @pytest.fixture(scope="module", autouse=True)
 def annotation_path(data_path):
+    """Set up a dictionary defining the paths to the annotation files."""
     data_path["slide1"] = _fetch_remote_sample(
         "svs-1-small",
         data_path["base_path"] / "slides",
@@ -69,11 +72,12 @@ def annotation_path(data_path):
     return data_path
 
 
-"""Test configuring a visualization tool."""
+"""Test configuring the visualization tool with a config.json."""
 
 
 @pytest.fixture(scope="module")
 def doc(data_path):
+    """Create a test document for the visualization tool."""
     # make a bokeh app
     main.config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
     handler = FunctionHandler(main.config.setup_doc)
@@ -82,14 +86,16 @@ def doc(data_path):
 
 
 def test_roots(doc):
+    """Test that the bokeh app has the correct number of roots."""
     # should be 2 roots, main window and controls
     assert len(doc.roots) == 2
 
 
 def test_config_loaded(doc, data_path):
+    """Test that the config is loaded correctly."""
     # config should be loaded
     doc_config = main.config.config
-    with open(data_path["config"]) as f:
+    with Path(data_path["config"]).open() as f:
         file_config = json.load(f)
 
     # check that all keys in file_config are in doc_config
