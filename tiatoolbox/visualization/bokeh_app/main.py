@@ -13,8 +13,11 @@ import matplotlib.cm as cm
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
-# Bokeh basics
+# Bokeh stuff
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -48,13 +51,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
-# from tiatoolbox.models.engine.interactive_segmentor import (
-#     InteractiveSegmentor,
-#     IOInteractiveSegmentorConfig,
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.visualization import random_colors
@@ -77,7 +73,7 @@ class UIWrapper:
 
 
 def get_view_bounds(dims, plot_size):
-    """helper to get the current view bounds"""
+    """Helper to get the current view bounds."""
     pad = int(np.mean(dims) / 10)
     aspect_ratio = plot_size[0] / plot_size[1]
     large_dim = np.argmax(np.array(dims) / plot_size)
@@ -91,7 +87,6 @@ def get_view_bounds(dims, plot_size):
         )
         y_range_start = -dims[1] - pad
         y_range_end = pad
-        # UI["p"].x_range.min_interval = ?
     else:
         x_range_start = -aspect_ratio * pad
         x_range_end = dims[0] + pad * aspect_ratio
@@ -103,8 +98,9 @@ def get_view_bounds(dims, plot_size):
 
 
 def to_num(x):
-    """helper to convert a str representation of a number to an appropriate
-    numerical value."""
+    """Helper to convert a str representation of a number to an appropriate
+    numerical value.
+    """
     if not isinstance(x, str):
         return x
     if x == "None":
@@ -116,7 +112,7 @@ def to_num(x):
 
 
 def get_from_config(keys, default=None):
-    """helper to get a value from a config dict"""
+    """Helper to get a value from a config dict."""
     c_dict = config.config
     for k in keys:
         if k in c_dict:
@@ -127,12 +123,10 @@ def get_from_config(keys, default=None):
 
 
 def make_ts(route, z_levels, init_z=4):
-    """helper to make a tile source"""
+    """Helper to make a tile source."""
     if init_z is None:
         init_z = UI["vstate"].init_z
-        # if UI["vstate"].init:
-    print(f"init z is: {init_z}")
-    sf = 2 ** (z_levels - 9 - init_z + 4)  # 2 ** (z_levels - 9)
+    sf = 2 ** (z_levels - init_z - 5)
     ts = WMTSTileSource(
         name="WSI provider",
         url=route,
@@ -142,22 +136,20 @@ def make_ts(route, z_levels, init_z=4):
         max_zoom=z_levels - 1,
     )
     ts.tile_size = 256
-    ts.initial_resolution = (
-        40211.5 * sf * (2 / (100 * pi))  # * (256/512)
-    )  # 156543.03392804097    40030 great circ
-    ts.x_origin_offset = 0  # 5000000
+    ts.initial_resolution = 40211.5 * sf * (2 / (100 * pi))
+    ts.x_origin_offset = 0
     ts.y_origin_offset = sf * 10294144.78 * (2 / (100 * pi))
     ts.wrap_around = False
     return ts
 
 
 def to_float_rgb(rgb):
-    """Helper to convert from int to float rgb(a) tuple"""
+    """Helper to convert from int to float rgb(a) tuple."""
     return tuple(v / 255 for v in rgb)
 
 
 def to_int_rgb(rgb):
-    """Helper to convert from float to int rgb(a) tuple"""
+    """Helper to convert from float to int rgb(a) tuple."""
     return tuple(int(v * 255) for v in rgb)
 
 
@@ -173,7 +165,7 @@ def hex2rgb(hex_val):
 
 
 def rgb2hex(rgb):
-    """covert float rgb(a) tuple to hex string"""
+    """Covert float rgb(a) tuple to hex string."""
     return "#{:02x}{:02x}{:02x}".format(*to_int_rgb(rgb))
 
 
@@ -211,14 +203,13 @@ def make_color_dict(types):
 
 
 def set_alpha_glyph(glyph, alpha):
-    """Sets both fill and line alpha for a glyph"""
+    """Sets both fill and line alpha for a glyph."""
     glyph.fill_alpha = alpha
     glyph.line_alpha = alpha
 
 
 def get_mapper_for_prop(prop, enforce_dict=False):
     # find out the unique values of the chosen property
-    print(prop)
     resp = UI["s"].get(f"http://{host2}:5000/tileserver/prop_values/{prop}/all")
     prop_vals = json.loads(resp.text)
     # guess what cmap should be
@@ -285,7 +276,6 @@ def build_predicate():
         else:
             combo = "(" + combo + ") & (" + UI["filter_input"].value + ")"
 
-    print(combo)
     update_renderer("where", combo)
     return combo
 
@@ -322,26 +312,17 @@ def initialise_slide():
         UI["p"].x_range.end = x_end
         UI["p"].y_range.start = y_start
         UI["p"].y_range.end = y_end
-        print(
-            f"ranges are x: {UI['p'].x_range.start} - {UI['p'].x_range.end}, y: {UI['p'].y_range.start} - {UI['p'].y_range.end}",
-        )
 
     init_z = get_level_by_extent((0, UI["p"].y_range.start, UI["p"].x_range.end, 0))
     UI["vstate"].init_z = init_z
-    print(f"initial_zoom: {init_z}")
     print(UI["vstate"].wsi.info.as_dict())
 
 
 def initialise_overlay():
     UI["vstate"].colors = list(UI["vstate"].mapper.values())
-    # UI["vstate"].types = [
-    #     t for t in UI["vstate"].types
-    # ]  # UI["vstate"].mapper.keys()]
     now_active = {b.label: b.active for b in UI["type_column"].children}
-    print(UI["vstate"].types)
-    print(now_active)
     for t in sorted(UI["vstate"].types):
-        if str(t) not in now_active.keys():
+        if str(t) not in now_active:
             UI["type_column"].children.append(
                 Toggle(
                     label=str(t),
@@ -383,11 +364,7 @@ def initialise_overlay():
             )
 
     for b in UI["type_column"].children.copy():
-        if (
-            b.label not in UI["vstate"].types
-            and b.label not in UI["vstate"].layer_dict.keys()
-        ):
-            print(f"removing {b.label}")
+        if b.label not in UI["vstate"].types and b.label not in UI["vstate"].layer_dict:
             UI["type_column"].children.remove(b)
     for c in UI["color_column"].children.copy():
         if c.name not in UI["vstate"].types and "slider" not in c.name:
@@ -468,10 +445,7 @@ class ColorCycler:
 def change_tiles(layer_name="overlay"):
     grp = tg.get_grp()
 
-    if layer_name == "graph" and layer_name not in UI["vstate"].layer_dict.keys():
-        # for layer_key in UI["vstate"].layer_dict.keys():
-        #     if layer_key in ["rect", "pts", "nodes", "edges"]:
-        #         + r"/{z}-{x}-{y}@{UI["vstate"].res}x.jpg",
+    if layer_name == "graph" and layer_name not in UI["vstate"].layer_dict:
         return
 
     ts = make_ts(
@@ -503,13 +477,12 @@ def change_tiles(layer_name="overlay"):
             UI["p"].renderers[UI["vstate"].layer_dict[layer_key]].tile_source = ts
         UI["vstate"].layer_dict[layer_name] = len(UI["p"].renderers) - 1
 
-    print(UI["vstate"].layer_dict)
-    print(UI["p"].renderers)
+    print(f"current layers: {UI['vstate'].layer_dict}")
 
 
 def run_app():
     app = TileServer(
-        title="Testing TileServer",
+        title="Tiatoolbox TileServer",
         layers={},
     )
     CORS(app, send_wildcard=True)
@@ -525,7 +498,6 @@ class ViewerState:
             if self.mpp is None:
                 self.mpp = [1, 1]
             self.dims = self.wsi.info.slide_dimensions
-            print(f"nzoom_levs: {self.num_zoom_levels}")
         else:
             self.dims = [30000, 20000]
             self.mpp = None
@@ -582,7 +554,8 @@ def res_switch_cb(attr, old, new):
     elif new == 1:
         UI["vstate"].res = 2
     else:
-        raise ValueError("Invalid resolution")
+        msg = "Invalid resolution"
+        raise ValueError(msg)
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay", "slide"])
 
@@ -625,7 +598,7 @@ def populate_layer_list(slide_name, overlay_path: Path):
         "*.jpg",
         "*.pkl",
         "*.tiff",
-    ]:  # and '*.tiff'?
+    ]:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
     file_list = [(str(p), str(p)) for p in sorted(file_list) if slide_name in str(p)]
@@ -635,7 +608,7 @@ def populate_layer_list(slide_name, overlay_path: Path):
 def populate_slide_list(slide_folder, search_txt=None):
     file_list = []
     len_slidepath = len(slide_folder.parts)
-    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png"]:
+    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png", "*.tif"]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
     if search_txt is None:
@@ -653,25 +626,15 @@ def populate_slide_list(slide_folder, search_txt=None):
     UI["slide_select"].options = file_list
 
 
-def layer_folder_input_cb(attr, old, new):
-    # unused at the moment
-    file_list = []
-    for ext in ["*.db", "*.dat", "*.geojson", "*.png", "*.jpg", ".tiff"]:
-        file_list.extend(list(Path(new).glob("*\\" + ext)))
-    file_list = [(str(p), str(p)) for p in sorted(file_list)]
-    UI["layer_drop"].menu = file_list
-    return file_list
-
-
 def filter_input_cb(attr, old, new):
-    """Change predicate to be used to filter annotations"""
+    """Change predicate to be used to filter annotations."""
     build_predicate()
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
 def cprop_input_cb(attr, old, new):
-    """Change property to colour by"""
+    """Change property to colour by."""
     if len(new) == 0:
         return
     cmap = UI["vstate"].mapper if new[0] == "type" else get_mapper_for_prop(new[0])
@@ -739,8 +702,6 @@ def opt_buttons_cb(attr, old, new):
     else:
         UI["p"].ygrid.grid_line_alpha = 0
         UI["p"].xgrid.grid_line_alpha = 0
-    print(UI["p"].ygrid)
-    print(UI["p"].grid)
 
 
 def cmap_select_cb(attr, old, new):
@@ -762,7 +723,7 @@ def scale_spinner_cb(attr, old, new):
 
 
 def slide_select_cb(attr, old, new):
-    """setup the newly chosen slide"""
+    """Setup the newly chosen slide."""
     if len(new) == 0:
         return
     slide_path = Path(config["slide_folder"]) / Path(new[0])
@@ -777,29 +738,17 @@ def slide_select_cb(attr, old, new):
             UI["p"].renderers.remove(r)
     UI["vstate"].layer_dict = {"slide": 0, "rect": 1, "pts": 2, "nodes": 3, "edges": 4}
     UI["vstate"].slide_path = slide_path
-    """
-    for c in UI["color_column"].children.copy():
-        if "_slider" in c.name:
-            UI["color_column"].children.remove(c)
-    for b in UI["type_column"].children.copy():
-        if "layer" in b.label or "graph" in b.label:
-            UI["type_column"].children.remove(b)
-    """
     UI["color_column"].children = []
     UI["type_column"].children = []
-    print(UI["p"].renderers)
-    print(slide_path)
+    print(f"loading {slide_path}")
     populate_layer_list(slide_path.stem, config["overlay_folder"])
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
     fname = make_safe_name(str(slide_path))
-    print(fname)
-    print(UI["vstate"].mpp)
     UI["s"].put(f"http://{host2}:5000/tileserver/slide", data={"slide_path": fname})
     change_tiles("slide")
-    # if len(UI["p"].renderers)==1:
 
-    # load the overlay and graph automatically for demo purposes
+    # load the overlay and graph automatically if set in config
     if config["auto_load"]:
         for f in UI["layer_drop"].menu:
             dummy_attr = DummyAttr(f[0])
@@ -807,7 +756,7 @@ def slide_select_cb(attr, old, new):
 
 
 def layer_drop_cb(attr):
-    """setup the newly chosen overlay"""
+    """Setup the newly chosen overlay."""
     if Path(attr.item).suffix == ".pkl":
         # its a graph
         do_feats = False
@@ -844,16 +793,12 @@ def layer_drop_cb(attr):
                 -graph_dict["coordinates"][i, 1] for i in graph_dict["edge_index"][1, :]
             ],
         }
-        # UI["edge_source"].data = {
-
-        #     zip(
-        #             for x, y in graph_dict["coordinates"]
-        #         ],
         add_layer("edges")
         add_layer("nodes")
         change_tiles("graph")
         if "graph_overlay" not in UI["type_cmap_select"].options:
-            UI["type_cmap_select"].options = UI["type_cmap_select"].options + [
+            UI["type_cmap_select"].options = [
+                *UI["type_cmap_select"].options,
                 "graph_overlay",
             ]
 
@@ -912,7 +857,6 @@ def layer_drop_cb(attr):
         if len(UI["node_source"].data["x_"]) > 0:
             UI["type_cmap_select"].options.append("graph_overlay")
         UI["cprop_input"].options = UI["vstate"].props
-        # subcat_select.options = ["All"] + list(
         UI["cprop_input"].options.append("None")
         if UI["vstate"].props != UI["vstate"].props_old:
             # if color by prop no longer exists, reset to type
@@ -937,15 +881,12 @@ def layer_select_cb(attr):
 
 
 def fixed_layer_select_cb(obj, attr):
-    print(UI["vstate"].layer_dict)
     key = UI["vstate"].layer_dict[obj.label]
     if obj.label == "edges":
-        if not UI["p"].renderers[key].visible:  # line_alpha == 0:
-            UI["p"].renderers[
-                key
-            ].visible = True  # line_alpha = UI["overlay_alpha"].value
+        if not UI["p"].renderers[key].visible:
+            UI["p"].renderers[key].visible = True
         else:
-            UI["p"].renderers[key].visible = False  # line_alpha = 0.0
+            UI["p"].renderers[key].visible = False
     elif obj.label == "nodes":
         if UI["p"].renderers[key].glyph.fill_alpha == 0:
             UI["p"].renderers[key].glyph.fill_alpha = UI["overlay_alpha"].value
@@ -976,7 +917,6 @@ def layer_slider_cb(obj, attr, old, new):
 
 
 def color_input_cb(obj, attr, old, new):
-    print(new)
     UI["vstate"].mapper[UI["vstate"].orig_types[obj.name]] = (*hex2rgb(new), 1)
     if UI["vstate"].cprop == "type":
         update_renderer("mapper", UI["vstate"].mapper)
@@ -1006,14 +946,15 @@ def to_model_cb(attr):
     if UI["vstate"].current_model == "hovernet":
         segment_on_box(attr)
     elif UI["vstate"].current_model == "nuclick":
-        nuclick_on_pts(attr)
+        # can we keep this? no interactive_segmentor in ttb for now
+        pass  # nuclick_on_pts(attr)
     else:
         print("unknown model")
 
 
 def type_cmap_cb(attr, old, new):
     if len(new) == 0:
-        UI["type_cmap_select"].options = UI["vstate"].types + ["graph_overlay"]
+        UI["type_cmap_select"].options = [*UI["vstate"].types, "graph_overlay"]
         UI["s"].put(
             f"http://{host2}:5000/tileserver/secondary_cmap",
             data={
@@ -1027,7 +968,7 @@ def type_cmap_cb(attr, old, new):
         return
     if len(new) == 1:
         # find out what still has to be selected
-        if new[0] in UI["vstate"].types + ["graph_overlay"]:
+        if new[0] in [*UI["vstate"].types, "graph_overlay"]:
             if new[0] == "graph_overlay":
                 UI["type_cmap_select"].options = [
                     key
@@ -1035,11 +976,13 @@ def type_cmap_cb(attr, old, new):
                     if key not in ["x_", "y_", "node_color_"]
                 ] + [new[0]]
             else:
-                UI["type_cmap_select"].options = UI["vstate"].props + [new[0]]
+                UI["type_cmap_select"].options = [*UI["vstate"].props, new[0]]
         elif new[0] in UI["vstate"].props:
-            UI["type_cmap_select"].options = (
-                UI["vstate"].types + [new[0]] + ["graph_overlay"]
-            )
+            UI["type_cmap_select"].options = [
+                *UI["vstate"].types,
+                new[0],
+                "graph_overlay",
+            ]
     else:
         # both selected, update the renderer
         if new[1] in UI["vstate"].types:
@@ -1096,7 +1039,6 @@ def save_cb(attr):
 
 # run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
 def segment_on_box(attr):
-    print(UI["vstate"].types)
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
     print(f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}')
@@ -1110,7 +1052,6 @@ def segment_on_box(attr):
     )
     width = round(UI["box_source"].data["width"][0] / conv_mpp)
     height = round(UI["box_source"].data["height"][0] / conv_mpp)
-    print(x, y, width, height)
 
     mask = np.zeros((thumb.shape[0], thumb.shape[1]), dtype=np.uint8)
     mask[y : y + height, x : x + width] = 1
@@ -1156,12 +1097,6 @@ def segment_on_box(attr):
     change_tiles("overlay")
 
     return tile_output
-
-
-# run nuclick on user selected points in pt_source
-# def nuclick_on_pts(attr):
-
-#     fetch_pretrained_weights(
 
 
 # endregion
@@ -1225,11 +1160,9 @@ def make_window(vstate):
         total=5,
         backoff_factor=0.1,
     )
-    # status_forcelist=[ 500, 502, 503, 504 ])
     s.mount("http://", HTTPAdapter(max_retries=retries))
 
     resp = s.get(f"http://{host2}:5000/tileserver/session_id")
-    print(f"cookies are: {resp.cookies}")
     user = resp.cookies.get("session_id")
     if curdoc().session_context:
         curdoc().session_context.request.arguments["user"] = user
@@ -1239,13 +1172,8 @@ def make_window(vstate):
         + r"/{z}-{x}-{y}"
         + f"@{vstate.res}x.jpg",
         vstate.num_zoom_levels,
-        # 4,
     )
-    print(p.renderers)
-    print(p.y_range)
     p.add_tile(ts1, smoothing=True, level="image", render_parents=True)
-    print(p.y_range)
-    print(f"max zoom is: {p.renderers[0].tile_source.max_zoom}")
 
     p.grid.grid_line_color = None
     box_source = ColumnDataSource({"x": [], "y": [], "width": [], "height": []})
@@ -1659,11 +1587,9 @@ do_doc = False
 if curdoc().session_context is not None:
     req_args = curdoc().session_context.request.arguments
     do_doc = True
-print(f"req args are: {req_args}")
 
 is_deployed = False
 rand_id = token.generate_session_id()
-print(f"rand id is: {rand_id}")
 first_z = [1]
 
 if is_deployed:
@@ -1674,11 +1600,6 @@ else:
     host = "127.0.0.1"
     host2 = "127.0.0.1"
     port = "5000"
-
-
-def cleanup_session(session_context):
-    # If present, this function executes when the server closes a session.
-    sys.exit()
 
 
 def update():
@@ -1765,7 +1686,6 @@ class DocConfig:
         if len(sys_args) > 1 and sys_args[1] != "None":
             base_folder = Path(sys_args[1])
             if len(req_args) > 0:
-                print(req_args)
                 config["demo_name"] = str(req_args["demo"][0], "utf-8")
                 base_folder = base_folder.joinpath(str(req_args["demo"][0], "utf-8"))
             slide_folder = base_folder.joinpath("slides")
@@ -1783,7 +1703,8 @@ class DocConfig:
             if (config_file).exists():
                 with open(config_file) as f:
                     config = json.load(f)
-                    print(config)
+                    if not is_deployed:
+                        print(f"loaded config: {config}")
 
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder
@@ -1838,7 +1759,7 @@ class DocConfig:
         )
         UI["vstate"].init = False
 
-        # # set up main window
+        # set up main window
 
         slide_wins.children = windows
         control_tabs.tabs = controls
@@ -1846,16 +1767,11 @@ class DocConfig:
         control_tabs.on_change("active", control_tabs_cb)
         control_tabs.on_change("tabs", control_tabs_remove_cb)
 
-        print("windows and controls are:")
-        print(windows)
-        print(controls)
-        print(doc.template)
         doc.template_variables["demo_name"] = config["demo_name"]
         doc.add_periodic_callback(update, 220)
         doc.add_root(slide_wins)
         doc.add_root(control_tabs)
         doc.title = "Tiatoolbox Visualization Tool"
-        # if "template" in config:
         return slide_wins, control_tabs
 
 

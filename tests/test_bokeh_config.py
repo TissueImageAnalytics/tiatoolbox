@@ -6,10 +6,10 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
 from PIL import Image
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -69,10 +69,10 @@ def annotation_path(data_path):
     return data_path
 
 
-"""Test bokeh_app."""
+"""Test configuring a visualization tool."""
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def doc(data_path):
     # make a bokeh app
     main.config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
@@ -86,7 +86,7 @@ def test_roots(doc):
     assert len(doc.roots) == 2
 
 
-def test_config_loaded(doc):
+def test_config_loaded(doc, data_path):
     # config should be loaded
     doc_config = main.config.config
     with open(data_path["config"]) as f:

@@ -6,13 +6,13 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -68,7 +68,7 @@ def annotation_path(data_path):
     return data_path
 
 
-"""Test bokeh_app."""
+"""Test visualization tool."""
 
 
 @pytest.fixture(scope="module")
@@ -344,3 +344,7 @@ def test_blur_spinner(doc):
     blur_spinner.value = 4
     # check that the blur has been set correctly
     assert get_renderer_prop("blur_radius") == 4
+
+
+def test_session_end(doc):
+    doc.clear()
