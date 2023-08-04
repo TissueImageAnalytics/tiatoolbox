@@ -16,7 +16,7 @@ from typing import BinaryIO
 
 def _normalize_binaryio(
     file: str | Path | bytes | BinaryIO | BytesIO,
-    must_exist: bool = False,
+    must_exist: bool | None = None,
 ) -> BinaryIO:
     """Normalize the input to a BinaryIO object.
 
@@ -33,6 +33,10 @@ def _normalize_binaryio(
             The file as a BinaryIO object.
 
     """
+    from .misc import bool_is_none_default_value
+
+    must_exist = bool_is_none_default_value(default_value=False, input_value=must_exist)
+
     if isinstance(file, (str, Path)):
         path = Path(file)
         if not path.exists():
@@ -40,7 +44,7 @@ def _normalize_binaryio(
                 msg = f"File {path} does not exist."
                 raise FileNotFoundError(msg)
             return BytesIO()
-        return Path.open(path, "rb")  # -- intentional
+        return Path.open(path, mode="rb")  # -- intentional
     if isinstance(file, (BinaryIO, BytesIO)):
         return file
     if isinstance(file, bytes):
