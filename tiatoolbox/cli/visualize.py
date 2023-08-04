@@ -1,4 +1,4 @@
-"""Command line interface for visualization tool"""
+"""Command line interface for visualization tool."""
 import pathlib
 import subprocess
 
@@ -27,10 +27,12 @@ def visualize(img_input, port):
     if port is None:
         port = 5006
     if img_input is None:
-        raise ValueError("No input directory specified.")
+        msg = "No input directory specified."
+        raise ValueError(msg)
     for input_path in img_input:
         if not pathlib.Path(input_path).exists():
-            raise FileNotFoundError(f"{input_path} does not exist")
+            msg = f"{input_path} does not exist"
+            raise FileNotFoundError(msg)
 
     cmd = [
         "bokeh",
