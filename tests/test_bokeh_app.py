@@ -76,8 +76,8 @@ def annotation_path(data_path):
 @pytest.fixture(scope="module")
 def doc(data_path):
     """Create a test document for the visualization tool."""
-    main.config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
-    handler = FunctionHandler(main.config.setup_doc)
+    main.doc_config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
+    handler = FunctionHandler(main.doc_config.setup_doc)
     app = Application(handler)
     return app.create_document()
 
@@ -124,7 +124,7 @@ def test_remove_dual_window(doc, data_path):
     assert main.UI["vstate"].slide_path == data_path["slide1"]
 
 
-def test_add_annotation_layer(doc, data_path):
+def test_add_annotation_layer(doc):
     """Test adding an annotation layer."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     assert len(layer_drop.menu) == 2
@@ -162,8 +162,6 @@ def test_cprop_input(doc):
 def test_type_cmap_select(doc):
     """Test changing the type cmap."""
     cmap_select = doc.get_model_by_name("type_cmap0")
-    main.UI["vstate"]
-    main.UI["user"]
     cmap_select.value = ["prob", "0"]
     # set edge thicknes to 0 so the edges don't add an extra colour
     spinner = doc.get_model_by_name("edge_size0")
@@ -207,7 +205,7 @@ def test_hovernet_on_box(doc, data_path):
     click = ButtonClick(go_button)
     go_button._trigger_event(click)
     im = get_tile("overlay", 4, 8, 4)
-    lab, num = label(np.any(im[:, :, :3], axis=2))
+    _, num = label(np.any(im[:, :, :3], axis=2))
     # check there are multiple cells being detected
     assert len(main.UI["color_column"].children) > 3
     assert num > 10
@@ -281,7 +279,7 @@ def test_color_boxes(doc):
     assert main.UI["vstate"].mapper[1] == (0, 0, 1, 1)
 
 
-def test_node_and_edge_alpha(doc, data_path):
+def test_node_and_edge_alpha(doc):
     """Test sliders for adjusting graph node and edge alpha."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .db file
@@ -315,11 +313,6 @@ def test_node_and_edge_alpha(doc, data_path):
         main.UI["p"].renderers[main.UI["vstate"].layer_dict["edges"]].glyph.line_alpha
         == 0.3
     )
-
-
-def test_hover_tool(doc):
-    """Test hover tool."""
-    # how to test this?
 
 
 def test_filter_box(doc):

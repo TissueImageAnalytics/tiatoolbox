@@ -120,7 +120,7 @@ def to_num(x):
 
 def get_from_config(keys, default=None):
     """Helper to get a value from a config dict."""
-    c_dict = config.config
+    c_dict = doc_config.config
     for k in keys:
         if k in c_dict:
             c_dict = c_dict[k]
@@ -175,7 +175,8 @@ def hex2rgb(hex_val):
 
 def rgb2hex(rgb):
     """Covert float rgb(a) tuple to hex string."""
-    return "#{:02x}{:02x}{:02x}".format(*to_int_rgb(rgb))
+    int_rgb = to_int_rgb(rgb)
+    return f"#{int_rgb[0]:02x}{int_rgb[1]:02x}{int_rgb[2]:02x}"
 
 
 def make_color_seq_from_cmap(cmap):
@@ -196,15 +197,15 @@ def make_safe_name(name):
 def make_color_dict(types):
     """Helper to make a color dict from a list of types."""
     colors = random_colors(len(types))
-    # grab colors out of config["colour_dict"] if possible, otherwise use random
+    # grab colors out of doc_config["colour_dict"] if possible, otherwise use random
     type_colours = {}
     for i, t in enumerate(types):
         if t in UI["vstate"].mapper:
             # keep existing color
             type_colours[t] = UI["vstate"].mapper[t]
-        elif str(t) in config["colour_dict"]:
+        elif str(t) in doc_config["colour_dict"]:
             # grab color from config if possible
-            type_colours[t] = to_float_rgb(config["colour_dict"][str(t)])
+            type_colours[t] = to_float_rgb(doc_config["colour_dict"][str(t)])
         else:
             # otherwise use random
             type_colours[t] = (*colors[i], 1)
@@ -307,8 +308,8 @@ def initialise_slide():
     plot_size = np.array([UI["p"].width, UI["p"].height])
 
     UI["vstate"].micron_formatter.args["mpp"] = UI["vstate"].mpp[0]
-    if slide_name in config["initial_views"]:
-        lims = config["initial_views"][slide_name]
+    if slide_name in doc_config["initial_views"]:
+        lims = doc_config["initial_views"][slide_name]
         UI["p"].x_range.start = lims[0]
         UI["p"].x_range.end = lims[2]
         UI["p"].y_range.start = -lims[3]
@@ -465,7 +466,8 @@ class ColorCycler:
         """Get a random color from the list."""
         return str(rng.choice(self.colors))
 
-    def generate_random(self):
+    @staticmethod
+    def generate_random():
         """Generate a new random color."""
         return rgb2hex(rng.choice(256, 3) / 255)
 
@@ -483,7 +485,8 @@ def change_tiles(layer_name="overlay"):
         return
 
     ts = make_ts(
-        f"http://{host}:{port}/tileserver/layer/{layer_name}/{UI['user']}/zoomify/TileGroup{grp}"
+        f"http://{host}:{port}/tileserver/layer/{layer_name}/{UI['user']}/"
+        f"zoomify/TileGroup{grp}"
         r"/{z}-{x}-{y}"
         f"@{UI['vstate'].res}x.jpg",
         UI["vstate"].num_zoom_levels,
@@ -503,7 +506,8 @@ def change_tiles(layer_name="overlay"):
                 continue
             grp = tg.get_grp()
             ts = make_ts(
-                f"http://{host}:{port}/tileserver/layer/{layer_key}/{UI['user']}/zoomify/TileGroup{grp}"
+                f"http://{host}:{port}/tileserver/layer/{layer_key}/{UI['user']}/"
+                f"zoomify/TileGroup{grp}"
                 r"/{z}-{x}-{y}"
                 f"@{UI['vstate'].res}x.jpg",
                 UI["vstate"].num_zoom_levels,
@@ -511,7 +515,7 @@ def change_tiles(layer_name="overlay"):
             UI["p"].renderers[UI["vstate"].layer_dict[layer_key]].tile_source = ts
         UI["vstate"].layer_dict[layer_name] = len(UI["p"].renderers) - 1
 
-    logger.info(f"current layers: {UI['vstate'].layer_dict}")
+    logger.info("current layers: %s", UI["vstate"].layer_dict)
 
 
 def run_app():
@@ -779,7 +783,7 @@ def slide_select_cb(attr, old, new):
     """Setup the newly chosen slide."""
     if len(new) == 0:
         return
-    slide_path = Path(config["slide_folder"]) / Path(new[0])
+    slide_path = Path(doc_config["slide_folder"]) / Path(new[0])
     # reset the data sources for glyph overlays
     UI["pt_source"].data = {"x": [], "y": []}
     UI["box_source"].data = {"x": [], "y": [], "width": [], "height": []}
@@ -793,8 +797,8 @@ def slide_select_cb(attr, old, new):
     UI["vstate"].slide_path = slide_path
     UI["color_column"].children = []
     UI["type_column"].children = []
-    logger.info(f"loading {slide_path}")
-    populate_layer_list(slide_path.stem, config["overlay_folder"])
+    logger.info("loading %s", slide_path)
+    populate_layer_list(slide_path.stem, doc_config["overlay_folder"])
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
     fname = make_safe_name(str(slide_path))
@@ -802,7 +806,7 @@ def slide_select_cb(attr, old, new):
     change_tiles("slide")
 
     # load the overlay and graph automatically if set in config
-    if config["auto_load"]:
+    if doc_config["auto_load"]:
         for f in UI["layer_drop"].menu:
             dummy_attr = DummyAttr(f[0])
             layer_drop_cb(dummy_attr)
@@ -812,7 +816,7 @@ def handle_graph_layer(attr):
     """Handle adding a graph layer."""
     do_feats = False
     with Path(attr.item).open("rb") as f:
-        graph_dict = pickle.load(f)
+        graph_dict = pickle.load(f)  # noqa: BAN-B301
     node_cm = cm.get_cmap("viridis")
     num_nodes = graph_dict["coordinates"].shape[0]
     if "score" in graph_dict:
@@ -883,8 +887,6 @@ def handle_graph_layer(attr):
             ],
         )
         UI["hover"].tooltips = tooltips
-
-    return
 
 
 def layer_drop_cb(attr):
@@ -1012,7 +1014,7 @@ def model_drop_cb(attr):
 def to_model_cb(attr):
     """Callback to run currently selected model."""
     if UI["vstate"].current_model == "hovernet":
-        segment_on_box(attr)
+        segment_on_box()
     elif UI["vstate"].current_model == "nuclick":
         # can we keep this? no interactive_segmentor in ttb for now
         pass  # nuclick_on_pts(attr)
@@ -1086,18 +1088,18 @@ def type_cmap_cb(attr, old, new):
 
 def save_cb(attr):
     """Callback to handle saving annotations."""
-    if config["overlay_folder"] is None:
+    if doc_config["overlay_folder"] is None:
         # save in slide folder instead
         save_path = make_safe_name(
             str(
-                config["slide_folder"]
+                doc_config["slide_folder"]
                 / (UI["vstate"].slide_path.stem + "_saved_anns.db"),
             ),
         )
     else:
         save_path = make_safe_name(
             str(
-                config["overlay_folder"]
+                doc_config["overlay_folder"]
                 / (UI["vstate"].slide_path.stem + "_saved_anns.db"),
             ),
         )
@@ -1108,13 +1110,12 @@ def save_cb(attr):
 
 
 # run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
-def segment_on_box(attr):
+def segment_on_box():
     """Callback to run hovernet on a region of the slide."""
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
-    logger.info(
-        f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}',
-    )
+    msg = f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}'
+    logger.info(msg)
     x = round(
         (UI["box_source"].data["x"][0] - 0.5 * UI["box_source"].data["width"][0])
         / conv_mpp,
@@ -1495,7 +1496,7 @@ def make_window(vstate):
     node_source.selected.on_change("indices", node_select_cb)
     type_cmap_select.on_change("value", type_cmap_cb)
 
-    vstate.cprop = config["default_cprop"]
+    vstate.cprop = doc_config["default_cprop"]
 
     type_column = column(children=layer_boxes, name=f"type_column{win_num}")
     color_column = column(
@@ -1549,12 +1550,12 @@ def make_window(vstate):
             ],
         ),
     )
-    if "ui_elements_1" in config:
+    if "ui_elements_1" in doc_config:
         ui_layout = column(
             [
                 ui_elements_1[el]
-                for el in config["ui_elements_1"]
-                if config["ui_elements_1"][el] == 1
+                for el in doc_config["ui_elements_1"]
+                if doc_config["ui_elements_1"][el] == 1
             ],
             sizing_mode="stretch_width",
         )
@@ -1580,12 +1581,12 @@ def make_window(vstate):
             ],
         ),
     )
-    if "ui_elements_2" in config:
+    if "ui_elements_2" in doc_config:
         extra_options = column(
             [
                 ui_elements_2[el]
-                for el in config["ui_elements_2"]
-                if config["ui_elements_2"][el] == 1
+                for el in doc_config["ui_elements_2"]
+                if doc_config["ui_elements_2"][el] == 1
             ],
         )
     else:
@@ -1649,7 +1650,6 @@ win_dicts = []
 
 color_cycler = ColorCycler()
 tg = TileGroup()
-do_feats = False
 tool_str = "pan,wheel_zoom,reset,save"
 
 active = 0
@@ -1700,21 +1700,23 @@ def control_tabs_cb(attr, old, new):
             np.array([UI["p"].width, UI["p"].height]),
         )
         active = new
-        if "UI_settings" in config:
-            for k in config["UI_settings"]:
-                update_renderer(k, config["UI_settings"][k])
-            if config["default_cprop"] is not None:
+        if "UI_settings" in doc_config:
+            for k in doc_config["UI_settings"]:
+                update_renderer(k, doc_config["UI_settings"][k])
+            if doc_config["default_cprop"] is not None:
                 UI["s"].put(
                     f"http://{host2}:5000/tileserver/color_prop/",
-                    data={"prop": json.dumps(config["default_cprop"])},
+                    data={"prop": json.dumps(doc_config["default_cprop"])},
                 )
         slide_select_cb(None, None, new=[UI["vstate"].slide_path])
-        if "default_type_cprop" in config:
-            UI["type_cmap_select"].value = list(config["default_type_cprop"].values())
-        populate_slide_list(config["slide_folder"])
+        if "default_type_cprop" in doc_config:
+            UI["type_cmap_select"].value = list(
+                doc_config["default_type_cprop"].values(),
+            )
+        populate_slide_list(doc_config["slide_folder"])
         populate_layer_list(
             Path(UI["vstate"].slide_path).stem,
-            config["overlay_folder"],
+            doc_config["overlay_folder"],
         )
         win_dicts[0]["vstate"].init_z = get_level_by_extent(
             (0, bounds[2], bounds[1], 0),
@@ -1741,15 +1743,15 @@ class DocConfig:
 
     def __init__(self) -> None:
         """Initialise the class."""
-        config = {}
-        config["colour_dict"] = {}
-        config["initial_views"] = {}
-        config["default_cprop"] = "type"
-        config["demo_name"] = "TIAvis"
-        config["base_folder"] = Path("/app_data")
-        config["slide_folder"] = config["base_folder"].joinpath("slides")
-        config["overlay_folder"] = config["base_folder"].joinpath("overlays")
-        self.config = config
+        self.config = {
+            "colour_dict": {},
+            "initial_views": {},
+            "default_cprop": "type",
+            "demo_name": "TIAvis",
+            "base_folder": Path("/app_data"),
+            "slide_folder": Path("/app_data").joinpath("slides"),
+            "overlay_folder": Path("/app_data").joinpath("overlays"),
+        }
         self.sys_args = None
 
     def __getitem__(self, key):
@@ -1770,7 +1772,7 @@ class DocConfig:
         if len(sys_args) > 1 and sys_args[1] != "None":
             base_folder = Path(sys_args[1])
             if len(req_args) > 0:
-                config["demo_name"] = str(req_args["demo"][0], "utf-8")
+                self.config["demo_name"] = str(req_args["demo"][0], "utf-8")
                 base_folder = base_folder.joinpath(str(req_args["demo"][0], "utf-8"))
             slide_folder = base_folder.joinpath("slides")
             overlay_folder = base_folder.joinpath("overlays")
@@ -1789,7 +1791,7 @@ class DocConfig:
                 with config_file.open() as f:
                     config = json.load(f)
                     if not is_deployed:
-                        logger.info(f"loaded config: {config}")
+                        logger.info("loaded config: %s", config)
 
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder
@@ -1801,8 +1803,8 @@ class DocConfig:
             config["first_slide"] = str(req_args["slide"][0], "utf-8")
             if "window" in req_args:
                 if "initial_views" not in config:
-                    config["initial_views"] = {}
-                config["initial_views"][Path(config["first_slide"]).stem] = [
+                    doc_config["initial_views"] = {}
+                doc_config["initial_views"][Path(doc_config["first_slide"]).stem] = [
                     int(s) for s in str(req_args["window"][0], "utf-8")[1:-1].split(",")
                 ]
         self.config = config
@@ -1820,31 +1822,35 @@ class DocConfig:
         # set initial slide to first one in base folder
         slide_list = []
         for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.png", "*.jpg"]:
-            slide_list.extend(list(config["slide_folder"].glob(ext)))
-            slide_list.extend(list(config["slide_folder"].glob(str(Path("*") / ext))))
+            slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
+            slide_list.extend(
+                list(doc_config["slide_folder"].glob(str(Path("*") / ext))),
+            )
         first_slide_path = slide_list[0]
-        if "first_slide" in config:
-            first_slide_path = config["slide_folder"] / config["first_slide"]
+        if "first_slide" in self.config:
+            first_slide_path = self.config["slide_folder"] / self.config["first_slide"]
 
         # make initial window
         win_dicts.append(make_window(ViewerState(first_slide_path)))
         # set up any initial ui settings from config file
-        if "UI_settings" in config:
-            for k in config["UI_settings"]:
-                update_renderer(k, config["UI_settings"][k])
+        if "UI_settings" in self.config:
+            for k in self.config["UI_settings"]:
+                update_renderer(k, self.config["UI_settings"][k])
         if self.config["default_cprop"] is not None:
             UI["s"].put(
                 f"http://{host2}:5000/tileserver/color_prop",
-                data={"prop": json.dumps(config["default_cprop"])},
+                data={"prop": json.dumps(self.config["default_cprop"])},
             )
         # open up initial slide
         slide_select_cb(None, None, new=[UI["vstate"].slide_path])
-        if "default_type_cprop" in config:
-            UI["type_cmap_select"].value = list(config["default_type_cprop"].values())
-        populate_slide_list(config["slide_folder"])
+        if "default_type_cprop" in self.config:
+            UI["type_cmap_select"].value = list(
+                doc_config["default_type_cprop"].values(),
+            )
+        populate_slide_list(self.config["slide_folder"])
         populate_layer_list(
             Path(UI["vstate"].slide_path).stem,
-            config["overlay_folder"],
+            doc_config["overlay_folder"],
         )
         UI["vstate"].init = False
 
@@ -1856,7 +1862,7 @@ class DocConfig:
         control_tabs.on_change("active", control_tabs_cb)
         control_tabs.on_change("tabs", control_tabs_remove_cb)
 
-        doc.template_variables["demo_name"] = config["demo_name"]
+        doc.template_variables["demo_name"] = doc_config["demo_name"]
         doc.add_periodic_callback(update, 220)
         doc.add_root(slide_wins)
         doc.add_root(control_tabs)
@@ -1864,8 +1870,8 @@ class DocConfig:
         return slide_wins, control_tabs
 
 
-config = DocConfig()
+doc_config = DocConfig()
 if do_doc:
-    config.set_sys_args(sys.argv)
+    doc_config.set_sys_args(sys.argv)
     doc = curdoc()
-    slide_wins, control_tabs = config.setup_doc(doc)
+    slide_wins, control_tabs = doc_config.setup_doc(doc)

@@ -79,8 +79,8 @@ def annotation_path(data_path):
 def doc(data_path):
     """Create a test document for the visualization tool."""
     # make a bokeh app
-    main.config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
-    handler = FunctionHandler(main.config.setup_doc)
+    main.doc_config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
+    handler = FunctionHandler(main.doc_config.setup_doc)
     app = Application(handler)
     return app.create_document()
 
@@ -94,12 +94,12 @@ def test_roots(doc):
 def test_config_loaded(doc, data_path):
     """Test that the config is loaded correctly."""
     # config should be loaded
-    doc_config = main.config.config
+    loaded_config = main.doc_config.config
     with Path(data_path["config"]).open() as f:
         file_config = json.load(f)
 
     # check that all keys in file_config are in doc_config
     # and that the values are the same
     for key in file_config:
-        assert key in doc_config
-        assert doc_config[key] == file_config[key]
+        assert key in loaded_config
+        assert loaded_config[key] == file_config[key]
