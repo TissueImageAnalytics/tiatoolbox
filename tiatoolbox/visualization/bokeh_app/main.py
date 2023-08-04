@@ -1,7 +1,6 @@
 """Main module for the tiatoolbox visualization bokeh app."""
 import json
 import os
-import pickle
 import sys
 import tempfile
 import urllib
@@ -643,7 +642,7 @@ def populate_layer_list(slide_name, overlay_path: Path):
         "*.geojson",
         "*.png",
         "*.jpg",
-        "*.pkl",
+        "*.json",
         "*.tiff",
     ]:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
@@ -820,7 +819,11 @@ def handle_graph_layer(attr):
     """Handle adding a graph layer."""
     do_feats = False
     with Path(attr.item).open("rb") as f:
-        graph_dict = pickle.load(f)  # ruff: noqa: S301
+        graph_dict = json.load(f)
+    # convert the values to numpy arrays
+    for k, v in graph_dict.items():
+        if isinstance(v, list):
+            graph_dict[k] = np.array(v)
     node_cm = cm.get_cmap("viridis")
     num_nodes = graph_dict["coordinates"].shape[0]
     if "score" in graph_dict:
@@ -895,7 +898,7 @@ def handle_graph_layer(attr):
 
 def layer_drop_cb(attr):
     """Setup the newly chosen overlay."""
-    if Path(attr.item).suffix == ".pkl":
+    if Path(attr.item).suffix == ".json":
         # its a graph
         handle_graph_layer(attr)
         return
