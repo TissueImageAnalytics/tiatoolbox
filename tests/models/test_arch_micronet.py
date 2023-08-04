@@ -1,6 +1,7 @@
 """Unit test package for MicroNet."""
 
-import pathlib
+from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pytest
@@ -16,8 +17,8 @@ ON_GPU = toolbox_env.has_gpu()
 
 
 def test_functionality(
-    remote_sample,
-):
+    remote_sample: Callable,
+) -> None:
     """Functionality test."""
     sample_wsi = remote_sample("wsi1_2k_2k_svs")
     reader = WSIReader.open(sample_wsi)
@@ -43,7 +44,7 @@ def test_functionality(
     assert np.max(np.unique(output)) == 46
 
 
-def test_value_error():
+def test_value_error() -> None:
     """Test to generate value error is num_output_channels < 2."""
     with pytest.raises(ValueError, match="Number of classes should be >=2"):
         _ = MicroNet(num_output_channels=1)
@@ -53,10 +54,10 @@ def test_value_error():
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_micronet_output(remote_sample, tmp_path):
+def test_micronet_output(remote_sample: Callable, tmp_path: Path) -> None:
     """Test the output of MicroNet."""
-    svs_1_small = pathlib.Path(remote_sample("svs-1-small"))
-    micronet_output = pathlib.Path(remote_sample("micronet-output"))
+    svs_1_small = Path(remote_sample("svs-1-small"))
+    micronet_output = Path(remote_sample("micronet-output"))
     pretrained_model = "micronet-consep"
     batch_size = 5
     num_loader_workers = 0

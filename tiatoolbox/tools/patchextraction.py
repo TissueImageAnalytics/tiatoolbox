@@ -42,7 +42,7 @@ class PatchExtractor(PatchExtractorABC):
     """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, Path, :class:`numpy.ndarray`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
