@@ -1543,24 +1543,3 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="does not exist"):
         fetch_pretrained_weights("abc", file_path)
-
-
-def test_default_value():
-    """Tests if correct default value is returned."""
-    value = misc.bool_is_none_default_value(default_value=True, input_value=None)
-    assert value is True
-
-    value = misc.bool_is_none_default_value(default_value=False, input_value=None)
-    assert value is False
-
-    value = misc.bool_is_none_default_value(default_value=True, input_value=True)
-    assert value is True
-
-    value = misc.bool_is_none_default_value(default_value=True, input_value=False)
-    assert value is False
-
-    value = misc.bool_is_none_default_value(default_value=False, input_value=True)
-    assert value is True
-
-    value = misc.bool_is_none_default_value(default_value=False, input_value=False)
-    assert value is False

@@ -16,7 +16,8 @@ from typing import BinaryIO
 
 def _normalize_binaryio(
     file: str | Path | bytes | BinaryIO | BytesIO,
-    must_exist: bool | None = None,
+    *,
+    must_exist: bool,
 ) -> BinaryIO:
     """Normalize the input to a BinaryIO object.
 
@@ -33,10 +34,6 @@ def _normalize_binaryio(
             The file as a BinaryIO object.
 
     """
-    from .misc import bool_is_none_default_value
-
-    must_exist = bool_is_none_default_value(default_value=False, input_value=must_exist)
-
     if isinstance(file, (str, Path)):
         path = Path(file)
         if not path.exists():
@@ -89,7 +86,7 @@ def is_sqlite3(file: str | Path | bytes | BinaryIO | BytesIO) -> bool:
     """
     if is_dir(file):
         return False
-    with _normalize_binaryio(file) as io:
+    with _normalize_binaryio(file, must_exist=False) as io:
         return io.read(16) == b"SQLite format 3\x00"
 
 
@@ -103,7 +100,7 @@ def is_zip(file: str | Path | bytes | BytesIO | BytesIO) -> bool:
     """
     if is_dir(file):
         return False
-    with _normalize_binaryio(file) as io:
+    with _normalize_binaryio(file, must_exist=False) as io:
         return zipfile.is_zipfile(io)
 
 
@@ -130,6 +127,6 @@ def is_dcm(file: str | Path | bytes | BytesIO | BytesIO) -> bool:
     """
     if is_dir(file):
         return False
-    with _normalize_binaryio(file) as io:
+    with _normalize_binaryio(file, must_exist=False) as io:
         io.seek(128)  # Preamble should be ignored for security reasons
         return io.read(4) == b"DICM"

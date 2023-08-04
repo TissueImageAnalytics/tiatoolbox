@@ -99,8 +99,8 @@ def grab_files_from_dir(
 def save_yaml(
     input_dict: dict,
     output_path: os | PathLike = "output.yaml",
-    parents: bool = False,
-    exist_ok: bool = False,
+    parents: bool | None = False,
+    exist_ok: bool | None = False,
 ):
     """Save dictionary as yaml.
 
@@ -1174,24 +1174,3 @@ def add_from_dat(
 
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
-
-
-def bool_is_none_default_value(default_value: bool, input_value: bool | None = None):
-    """Helper function to fix FBT002 default bool value.
-
-    Args:
-        input_value (bool | None):
-            Input value to the function which needs updating
-            to default value.
-        default_value (bool | None):
-            Default value expected by the function.
-
-    Returns:
-        bool:
-            Default value expected by the function.
-
-    """
-    if input_value is None:
-        return default_value
-
-    return input_value
