@@ -14,6 +14,9 @@ import matplotlib.cm as cm
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
 # Bokeh stuff
 from bokeh.io import curdoc
@@ -49,10 +52,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -1730,7 +1729,7 @@ def control_tabs_cb(attr, old, new):
         )
         UI["vstate"].init = False
     else:
-        doc_config.active = new
+        UI.active = new
 
 
 def control_tabs_remove_cb(attr, old, new):
