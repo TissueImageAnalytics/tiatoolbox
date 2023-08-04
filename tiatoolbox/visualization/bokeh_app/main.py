@@ -820,7 +820,7 @@ def handle_graph_layer(attr):
     """Handle adding a graph layer."""
     do_feats = False
     with Path(attr.item).open("rb") as f:
-        graph_dict = pickle.load(f)
+        graph_dict = pickle.load(f)  # ruff: noqa: S301
     node_cm = cm.get_cmap("viridis")
     num_nodes = graph_dict["coordinates"].shape[0]
     if "score" in graph_dict:
