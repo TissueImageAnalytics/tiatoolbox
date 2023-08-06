@@ -1352,8 +1352,8 @@ def test_save_as_json(tmp_path: Path) -> None:
     # should fail because key is not of primitive type [str, int, float, bool]
     with pytest.raises(TypeError, match=r".*Key.*.*not jsonified.*"):
         misc.save_as_json(
-            {frozenset(key_dict): sample},
-            tmp_path / "sample_json.json",
+            data={frozenset(key_dict): sample},
+            save_path=tmp_path / "sample_json.json",
             exist_ok=True,
         )
     with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):

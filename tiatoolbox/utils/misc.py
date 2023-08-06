@@ -801,6 +801,7 @@ def __walk_dict(dct: dict) -> None:
 def save_as_json(
     data: dict | list,
     save_path: str | PathLike,
+    *,
     parents: bool = False,
     exist_ok: bool = False,
 ) -> None:

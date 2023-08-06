@@ -1469,6 +1469,7 @@ class WSIReader:
         tile_objective_value: int = 20,
         tile_read_size: tuple[int, int] = (5000, 5000),
         tile_format: str = ".jpg",
+        *,
         verbose: bool = False,
     ) -> None:
         """Generate image tiles from whole slide images.
