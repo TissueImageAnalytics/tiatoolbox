@@ -3085,6 +3085,7 @@ class VirtualWSIReader(WSIReader):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
             read_kwargs=kwargs,
+            pad_at_baseline=False,
         )
 
         if self.mode == "rgb":
@@ -3245,6 +3246,7 @@ class VirtualWSIReader(WSIReader):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
             read_kwargs=kwargs,
+            pad_at_baseline=False,
         )
 
         if coord_space == "resolution":
@@ -4060,6 +4062,7 @@ class TIFFWSIReader(WSIReader):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
             read_kwargs=kwargs,
+            pad_at_baseline=False,
         )
 
         if coord_space == "resolution":
@@ -5092,6 +5095,7 @@ class NGFFWSIReader(WSIReader):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
             read_kwargs=kwargs,
+            pad_at_baseline=False,
         )
 
         if coord_space == "resolution":

@@ -28,14 +28,20 @@ RNG = np.random.default_rng()  # Numpy Random Generator
 
 def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh) -> None:
     """sub_pixel_read test helper function."""
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+    output = utils.image.sub_pixel_read(
+        test_image,
+        bounds,
+        output_size=(ow, oh),
+        pad_at_baseline=False,
+    )
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
     output = utils.image.sub_pixel_read(
         pillow_test_image,
         bounds,
-        (ow, oh),
+        output_size=(ow, oh),
         stride=[1, 1],
+        pad_at_baseline=False,
     )
     assert (ow, oh) == tuple(output.shape[:2][::-1])
 
@@ -392,7 +398,13 @@ def test_aligned_padded_sub_pixel_read(source_image) -> None:
     bounds = (x, y, x + w, y + h)
     ow = 4
     oh = 4
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh), padding=padding)
+    output = utils.image.sub_pixel_read(
+        test_image,
+        bounds,
+        output_size=(ow, oh),
+        padding=padding,
+        pad_at_baseline=False,
+    )
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
@@ -417,6 +429,7 @@ def test_sub_pixel_read_with_pad_kwargs(source_image) -> None:
         padding=padding,
         pad_mode="reflect",
         pad_kwargs={"reflect_type": "even"},
+        pad_at_baseline=False,
     )
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
@@ -440,6 +453,7 @@ def test_non_aligned_padded_sub_pixel_read(source_image) -> None:
             bounds,
             (ow, oh),
             padding=padding,
+            pad_at_baseline=False,
         )
 
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
@@ -476,7 +490,13 @@ def test_sub_pixel_read_pad_mode_none() -> None:
     data = np.ones((16, 16))
 
     bounds = (-1, -1, 5, 5)
-    region = utils.image.sub_pixel_read(data, bounds, (6, 6), pad_mode="none")
+    region = utils.image.sub_pixel_read(
+        data,
+        bounds,
+        (6, 6),
+        pad_mode="none",
+        pad_at_baseline=False,
+    )
     assert region.shape[:2] == (5, 5)
 
 
@@ -487,7 +507,13 @@ def test_sub_pixel_read_invalid_interpolation() -> None:
 
     bounds = (1.5, 1, 5, 5)
     with pytest.raises(ValueError, match="interpolation"):
-        utils.image.sub_pixel_read(data, bounds, out_size, interpolation="fizz")
+        utils.image.sub_pixel_read(
+            data,
+            bounds,
+            out_size,
+            interpolation="fizz",
+            pad_at_baseline=False,
+        )
 
 
 def test_sub_pixel_read_invalid_bounds() -> None:
@@ -497,11 +523,11 @@ def test_sub_pixel_read_invalid_bounds() -> None:
 
     bounds = (0, 0, 0, 0)
     with pytest.raises(ValueError, match="Bounds must have non-zero size"):
-        utils.image.sub_pixel_read(data, bounds, out_size)
+        utils.image.sub_pixel_read(data, bounds, out_size, pad_at_baseline=False)
 
     bounds = (1.5, 1, 1.5, 0)
     with pytest.raises(ValueError, match="Bounds must have non-zero size"):
-        utils.image.sub_pixel_read(data, bounds, out_size)
+        utils.image.sub_pixel_read(data, bounds, out_size, pad_at_baseline=False)
 
 
 def test_sub_pixel_read_pad_at_baseline() -> None:
@@ -544,6 +570,7 @@ def test_sub_pixel_read_bad_read_func() -> None:
             bounds,
             out_size,
             read_func=bad_read_func,
+            pad_at_baseline=False,
         )
 
 
@@ -561,7 +588,13 @@ def test_sub_pixel_read_padding_formats() -> None:
             pad_at_baseline=True,
         )
         assert region.shape == (16 + 4, 16 + 4)
-        region = utils.image.sub_pixel_read(data, bounds, out_size, padding=padding)
+        region = utils.image.sub_pixel_read(
+            data,
+            bounds,
+            out_size,
+            padding=padding,
+            pad_at_baseline=False,
+        )
         assert region.shape == (16 + 2, 16 + 2)
 
 
@@ -579,7 +612,12 @@ def test_sub_pixel_read_negative_size_bounds(source_image) -> None:
     w = -4.5
     h = -4.5
     bounds = locsize2bounds((x, y), (w, h))
-    output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+    output = utils.image.sub_pixel_read(
+        test_image,
+        bounds,
+        (ow, oh),
+        pad_at_baseline=False,
+    )
 
     x = 0.5
     y = 0.5
@@ -587,7 +625,12 @@ def test_sub_pixel_read_negative_size_bounds(source_image) -> None:
     h = 4.5
     bounds = locsize2bounds((x, y), (w, h))
     print(bounds)
-    flipped_output = utils.image.sub_pixel_read(test_image, bounds, (ow, oh))
+    flipped_output = utils.image.sub_pixel_read(
+        test_image,
+        bounds,
+        (ow, oh),
+        pad_at_baseline=False,
+    )
 
     assert np.all(np.fliplr(np.flipud(flipped_output)) == output)
 
@@ -613,6 +656,7 @@ def test_fuzz_sub_pixel_read(source_image) -> None:
             bounds,
             (ow, oh),
             interpolation="linear",
+            pad_at_baseline=False,
         )
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
@@ -641,6 +685,7 @@ def test_fuzz_padded_sub_pixel_read(source_image) -> None:
             interpolation="linear",
             padding=padding,
             pad_kwargs={"constant_values": 0},
+            pad_at_baseline=False,
         )
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
@@ -651,7 +696,13 @@ def test_sub_pixel_read_interpolation_modes() -> None:
     out_size = data.shape
     bounds = (0, 0, 8, 8)
     for mode in ["nearest", "linear", "cubic", "lanczos"]:
-        output = utils.image.sub_pixel_read(data, bounds, out_size, interpolation=mode)
+        output = utils.image.sub_pixel_read(
+            data,
+            bounds,
+            out_size,
+            interpolation=mode,
+            pad_at_baseline=False,
+        )
         assert output.shape == out_size
 
 
@@ -669,6 +720,7 @@ def test_sub_pixel_read_incorrect_read_func_return() -> None:
             bounds=bounds,
             output_size=(10, 10),
             read_func=read_func,
+            pad_at_baseline=False,
         )
 
 
@@ -686,6 +738,7 @@ def test_sub_pixel_read_empty_read_func_return() -> None:
             bounds=bounds,
             output_size=(10, 10),
             read_func=read_func,
+            pad_at_baseline=False,
         )
 
 
@@ -700,6 +753,7 @@ def test_sub_pixel_read_empty_bounds() -> None:
             bounds=bounds,
             output_size=(2, 2),
             padding=-1,
+            pad_at_baseline=False,
         )
 
 
