@@ -334,12 +334,10 @@ def cli_yaml_config_path(
 
 def cli_on_gpu(
     usage_help: str = "Run the model on GPU.",
-    default: bool | None = None,
+    *,
+    default: bool = False,
 ) -> callable:
     """Enables --on-gpu option for cli."""
-    if default is None:
-        default = False
-
     return click.option(
         "--on-gpu",
         type=bool,
@@ -377,12 +375,10 @@ def cli_num_postproc_workers(
 
 def cli_verbose(
     usage_help: str = "Prints the console output.",
-    default: bool | None = None,
+    *,
+    default: bool = True,
 ) -> callable:
     """Enables --verbose option for cli."""
-    if default is None:
-        default = True
-
     return click.option(
         "--verbose",
         type=bool,
