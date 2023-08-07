@@ -251,8 +251,9 @@ STORES = {
 
 def main(
     store: str,
-    in_memory: bool,  # noqa: FBT001
     size: tuple[int, int],
+    *,
+    in_memory: bool,
 ) -> None:
     """Run the benchmark.
 
