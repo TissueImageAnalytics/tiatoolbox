@@ -288,8 +288,9 @@ class ResidualConv(nn.Module):
         num_output_channels: int = 32,
         kernel_size: tuple[int, int] | np.ndarray = (3, 3),
         strides: tuple[int, int] | np.ndarray = (1, 1),
-        use_bias: bool = False,
         dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
+        *,
+        use_bias: bool = False,
     ) -> None:
         """Initialize :class:`ResidualConv`."""
         super().__init__()
@@ -581,8 +582,9 @@ class NuClick(ModelABC):
         thresh=0.33,
         min_size=10,
         min_hole_size=30,
-        do_reconstruction=False,
         nuc_points=None,
+        *,
+        do_reconstruction=False,
     ):
         """Post processing.
 
