@@ -40,12 +40,12 @@ from tiatoolbox.cli.common import (
 )
 @cli_pretrained_model(default="hovernet_fast-pannuke")
 @cli_pretrained_weights(default=None)
-@cli_on_gpu()
+@cli_on_gpu(default=False)
 @cli_batch_size()
 @cli_masks(default=None)
 @cli_yaml_config_path(default=None)
 @cli_num_loader_workers()
-@cli_verbose()
+@cli_verbose(default=True)
 @cli_num_postproc_workers(default=0)
 @cli_auto_generate_mask(default=False)
 def nucleus_instance_segment(
@@ -60,6 +60,7 @@ def nucleus_instance_segment(
     yaml_config_path: str,
     num_loader_workers: int,
     num_postproc_workers: int,
+    *,
     auto_generate_mask: bool,
     on_gpu: bool,
     verbose: bool,

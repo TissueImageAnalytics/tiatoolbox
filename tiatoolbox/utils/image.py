@@ -415,20 +415,21 @@ def safe_padded_read(
 
 
 def sub_pixel_read(  # noqa: C901
-    image,
+    image: np.ndarray,
     bounds,
     output_size,
     padding=0,
     stride=1,
     interpolation="nearest",
-    pad_at_baseline=False,
     interpolation_padding=2,
     read_func=None,
     pad_mode="constant",
     pad_constant_values=0,
     read_kwargs=None,
     pad_kwargs=None,
-):
+    *,
+    pad_at_baseline: bool,
+) -> np.ndarray:
     """Read and resize an image region with sub-pixel bounds.
 
     Allows for reading of image regions with sub-pixel coordinates, and
@@ -499,7 +500,7 @@ def sub_pixel_read(  # noqa: C901
     Examples:
         >>> # Simple read
         >>> bounds = (0, 0, 10.5, 10.5)
-        >>> sub_pixel_read(image, bounds)
+        >>> sub_pixel_read(image, bounds, pad_at_baseline=False)
 
         >>> # Read with padding applied to bounds before reading:
         >>> bounds = (0, 0, 10.5, 10.5)
@@ -508,11 +509,12 @@ def sub_pixel_read(  # noqa: C901
         ...     bounds,
         ...     padding=2,
         ...     pad_mode="reflect",
+        ...     pad_at_baseline=False,
         ... )
 
         >>> # Read with padding applied after reading:
         >>> bounds = (0, 0, 10.5, 10.5)
-        >>> region = sub_pixel_read(image, bounds)
+        >>> region = sub_pixel_read(image, bounds, pad_at_baseline=False)
         >>> region = np.pad(region, padding=2, mode="reflect")
 
         >>> # Custom read function which generates a diagonal gradient:
@@ -520,7 +522,7 @@ def sub_pixel_read(  # noqa: C901
         >>> def gradient(_, b, **kw):
         ...     width, height = (b[2] - b[0], b[3] - b[1])
         ...     return np.mgrid[:height, :width].sum(0)
-        >>> sub_pixel_read(bounds, read_func=gradient)
+        >>> sub_pixel_read(bounds, read_func=gradient, pad_at_baseline=False)
 
         >>> # Custom read function which gets pixel data from a custom object:
         >>> bounds = (0, 0, 10, 10)
@@ -530,7 +532,7 @@ def sub_pixel_read(  # noqa: C901
         ...     size = (right - left, bottom - top)
         ...     pil_img = image.read_region((left, top), level=0, size=size)
         ...     return np.array(pil_img.convert("RGB"))
-        >>> sub_pixel_read(bounds, read_func=openslide_read)
+        >>> sub_pixel_read(bounds, read_func=openslide_read, pad_at_baseline=False)
 
     """
     # Handle inputs
