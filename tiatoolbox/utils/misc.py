@@ -99,8 +99,9 @@ def grab_files_from_dir(
 def save_yaml(
     input_dict: dict,
     output_path: os | PathLike = "output.yaml",
-    parents: bool | None = False,
-    exist_ok: bool | None = False,
+    *,
+    parents: bool = False,
+    exist_ok: bool = False,
 ) -> None:
     """Save dictionary as yaml.
 
@@ -652,6 +653,7 @@ def download_data(
     url: str,
     save_path: os | PathLike | None = None,
     save_dir: os | PathLike | None = None,
+    *,
     overwrite: bool = False,
     unzip: bool = False,
 ) -> Path:
@@ -724,6 +726,7 @@ def download_data(
 def unzip_data(
     zip_path: os | PathLike,
     save_path: os | PathLike,
+    *,
     del_zip: bool = True,
 ) -> None:
     """Extract data from zip file.
@@ -801,6 +804,7 @@ def __walk_dict(dct: dict) -> None:
 def save_as_json(
     data: dict | list,
     save_path: str | PathLike,
+    *,
     parents: bool = False,
     exist_ok: bool = False,
 ) -> None:
@@ -843,7 +847,7 @@ def save_as_json(
         json.dump(shadow_data, handle)
 
 
-def select_device(on_gpu: bool) -> str:
+def select_device(*, on_gpu: bool) -> str:
     """Selects the appropriate device as requested.
 
     Args:
@@ -860,12 +864,12 @@ def select_device(on_gpu: bool) -> str:
     return "cpu"
 
 
-def model_to(on_gpu: bool, model: torch.nn.Module) -> torch.nn.Module:
+def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
     """Transfers model to cpu/gpu.
 
     Args:
-        on_gpu (bool): Transfers model to gpu if True otherwise to cpu
         model (torch.nn.Module): PyTorch defined model.
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
 
     Returns:
         torch.nn.Module:

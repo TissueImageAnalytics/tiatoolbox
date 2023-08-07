@@ -50,7 +50,7 @@ from tiatoolbox.cli.common import (
 @cli_units(default="mpp")
 @cli_masks(default=None)
 @cli_num_loader_workers(default=0)
-@cli_verbose()
+@cli_verbose(default=True)
 def patch_predictor(
     pretrained_model: str,
     pretrained_weights: str,
@@ -62,10 +62,11 @@ def patch_predictor(
     batch_size: int,
     resolution: float,
     units: str,
+    num_loader_workers: int,
+    *,
     return_probabilities: bool,
     return_labels: bool,
     merge_predictions: bool,
-    num_loader_workers: int,
     on_gpu: bool,
     verbose: bool,
 ) -> None:

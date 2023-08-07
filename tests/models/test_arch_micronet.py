@@ -35,7 +35,7 @@ def test_functionality(
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
     weights_path = fetch_pretrained_weights("micronet-consep")
-    map_location = select_device(ON_GPU)
+    map_location = select_device(on_gpu=ON_GPU)
     model = model.to(map_location)
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)

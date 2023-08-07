@@ -235,12 +235,10 @@ def cli_pretrained_weights(
 
 def cli_return_probabilities(
     usage_help: str = "Whether to return raw model probabilities.",
-    default: bool | None = None,
+    *,
+    default: bool = False,
 ) -> callable:
     """Enables --return-probabilities option for cli."""
-    if default is None:
-        default = False
-
     return click.option(
         "--return-probabilities",
         type=bool,
@@ -251,12 +249,10 @@ def cli_return_probabilities(
 
 def cli_merge_predictions(
     usage_help: str = "Whether to merge the predictions to form a 2-dimensional map.",
-    default: bool | None = None,
+    *,
+    default: bool = True,
 ) -> callable:
     """Enables --merge-predictions option for cli."""
-    if default is None:
-        default = True
-
     return click.option(
         "--merge-predictions",
         type=bool,
@@ -267,12 +263,10 @@ def cli_merge_predictions(
 
 def cli_return_labels(
     usage_help: str = "Whether to return raw model output as labels.",
-    default: bool | None = None,
+    *,
+    default: bool = True,
 ) -> callable:
     """Enables --return-labels option for cli."""
-    if default is None:
-        default = True
-
     return click.option(
         "--return-labels",
         type=bool,
@@ -312,12 +306,10 @@ def cli_masks(
 
 def cli_auto_generate_mask(
     usage_help: str = "Automatically generate tile/WSI tissue mask.",
-    default: bool | None = None,
+    *,
+    default: bool = False,
 ) -> callable:
     """Enables --auto-generate-mask option for cli."""
-    if default is None:
-        default = False
-
     return click.option(
         "--auto-generate-mask",
         help=add_default_to_usage_help(usage_help, default),
@@ -342,12 +334,10 @@ def cli_yaml_config_path(
 
 def cli_on_gpu(
     usage_help: str = "Run the model on GPU.",
-    default: bool | None = None,
+    *,
+    default: bool = False,
 ) -> callable:
     """Enables --on-gpu option for cli."""
-    if default is None:
-        default = False
-
     return click.option(
         "--on-gpu",
         type=bool,
@@ -385,12 +375,10 @@ def cli_num_postproc_workers(
 
 def cli_verbose(
     usage_help: str = "Prints the console output.",
-    default: bool | None = None,
+    *,
+    default: bool = True,
 ) -> callable:
     """Enables --verbose option for cli."""
-    if default is None:
-        default = True
-
     return click.option(
         "--verbose",
         type=bool,

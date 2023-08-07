@@ -33,7 +33,8 @@ def save_tiles(
     tile_objective_value: int,
     tile_read_size: str,
     tile_format: str,
-    verbose: bool = False,
+    *,
+    verbose: bool,
 ) -> None:
     """Display or save WSI metadata."""
     from tiatoolbox.wsicore.wsireader import WSIReader
