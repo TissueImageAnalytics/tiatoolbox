@@ -432,7 +432,7 @@ class PatchPredictor:
             batch_output_probabilities = self.model.infer_batch(
                 model,
                 batch_data["image"],
-                on_gpu,
+                on_gpu=on_gpu,
             )
             # We get the index of the class with the maximum probability
             batch_output_predictions = self.model.postproc_func(

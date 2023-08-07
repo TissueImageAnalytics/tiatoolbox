@@ -639,7 +639,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
-                self._on_gpu,
+                on_gpu=self._on_gpu,
             )
             # repackage so that it's a N list, each contains
             # L x etc. output
