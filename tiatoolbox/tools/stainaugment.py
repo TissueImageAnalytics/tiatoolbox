@@ -106,9 +106,10 @@ class StainAugmentor(ImageOnlyTransform):
         stain_matrix: np.ndarray | None = None,
         sigma1: float = 0.4,
         sigma2: float = 0.2,
+        p=0.5,
+        *,
         augment_background: bool = False,
         always_apply=False,
-        p=0.5,
     ) -> None:
         """Initialize :class:`StainAugmentor`."""
         super().__init__(always_apply=always_apply, p=p)

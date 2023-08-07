@@ -8,11 +8,11 @@ from PIL import Image
 from tiatoolbox.utils.misc import parse_cv2_interpolaton, select_cv2_interpolation
 
 
-def background_composite(image, fill=255, alpha=False):
+def background_composite(image: np.ndarray | Image, fill: int = 255, *, alpha: bool):
     """Image composite with specified background.
 
     Args:
-        image (ndarray or PIL.Image):
+        image (ndarray or :class:`Image`):
             Input image.
         fill (int):
             Fill value for the background, defaults to 255.

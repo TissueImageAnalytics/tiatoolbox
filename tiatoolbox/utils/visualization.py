@@ -31,7 +31,7 @@ GEOMTYPES = {
 }
 
 
-def random_colors(num_colors, bright=True):
+def random_colors(num_colors: int, *, bright: bool) -> list:
     """Generate a number of random colors.
 
     To get visually distinct colors, generate them in HSV space then
@@ -55,7 +55,7 @@ def random_colors(num_colors, bright=True):
     return colors
 
 
-def colourise_image(img, cmap="viridis"):
+def colourise_image(img: np.ndarray, cmap: str = "viridis") -> np.ndarray:
     """If input img is single channel, colourise it.
 
     Args:
@@ -83,7 +83,8 @@ def overlay_prediction_mask(
     label_info: dict | None = None,
     min_val: float = 0.0,
     ax=None,
-    return_ax: bool = True,
+    *,
+    return_ax: bool,
 ):
     """Generate an overlay, given a 2D prediction map.
 
@@ -268,7 +269,8 @@ def overlay_probability_map(
     colour_map: str = "jet",
     min_val: float = 0.0,
     ax=None,
-    return_ax: bool = True,
+    *,
+    return_ax: bool,
 ):
     """Generate an overlay, given a 2D prediction map.
 
@@ -404,10 +406,11 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
 def overlay_prediction_contours(
     canvas: np.ndarray,
     inst_dict: dict,
-    draw_dot: bool = False,
     type_colours: dict | None = None,
     inst_colours: np.ndarray | tuple[int] = (255, 255, 0),
     line_thickness: int = 2,
+    *,
+    draw_dot: bool,
 ):
     """Overlaying instance contours on image.
 
@@ -443,7 +446,7 @@ def overlay_prediction_contours(
     overlay = np.copy(canvas)
 
     if inst_colours is None:
-        inst_colours = random_colors(len(inst_dict))
+        inst_colours = random_colors(len(inst_dict), bright=True)
         inst_colours = np.array(inst_colours) * 255
         inst_colours = inst_colours.astype(np.uint8)
     elif isinstance(inst_colours, tuple):
@@ -727,7 +730,7 @@ class AnnotationRenderer:
         """
         return ((np.reshape(coords, (-1, 2)) - top_left) / scale).astype(np.int32)
 
-    def get_color(self, annotation: Annotation, edge=False):
+    def get_color(self, annotation: Annotation, *, edge: bool) -> tuple[int, ...]:
         """Get the color for an annotation.
 
         Args:
@@ -784,7 +787,7 @@ class AnnotationRenderer:
             )
 
         if edge:
-            return (0, 0, 0, 255)  # default to black for edge
+            return 0, 0, 0, 255  # default to black for edge
         return 0, 255, 0, 255  # default color if no score_prop given
 
     def render_poly(
@@ -807,7 +810,7 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         """
-        col = self.get_color(annotation)
+        col = self.get_color(annotation, edge=False)
 
         cnt = self.to_tile_coords(
             self.decode_wkb(annotation.geometry, 3),
@@ -826,12 +829,12 @@ class AnnotationRenderer:
         else:
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
         if self.thickness == -1 and self.edge_thickness > 0:
-            edge_col = self.get_color(annotation, True)
+            edge_col = self.get_color(annotation, edge=True)
             cv2.drawContours(tile, [cnt], 0, edge_col, 1, lineType=cv2.LINE_8)
 
     def render_multipoly(self, tile, annotation, top_left, scale):
         """Render a multipolygon annotation onto a tile using cv2."""
-        col = self.get_color(annotation)
+        col = self.get_color(annotation, edge=False)
         geoms = self.decode_wkb(annotation.geometry, 6)
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
@@ -857,7 +860,7 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         """
-        col = self.get_color(annotation)
+        col = self.get_color(annotation, edge=False)
         cv2.circle(
             tile,
             self.to_tile_coords(
@@ -890,7 +893,7 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         """
-        col = self.get_color(annotation)
+        col = self.get_color(annotation, edge=False)
         cv2.polylines(
             tile,
             [
@@ -900,8 +903,8 @@ class AnnotationRenderer:
                     scale,
                 ),
             ],
-            False,
-            col,
+            isClosed=False,
+            color=col,
             thickness=3,
         )
 
@@ -916,7 +919,7 @@ class AnnotationRenderer:
                 self.raw_mapper = __value
                 __value = colormaps[__value]
             if isinstance(__value, list):
-                colors = random_colors(len(__value))
+                colors = random_colors(len(__value), bright=True)
                 __value = {key: (*color, 1) for key, color in zip(__value, colors)}
             if isinstance(__value, dict):
                 self.raw_mapper = __value
@@ -1011,7 +1014,7 @@ class AnnotationRenderer:
             for i, (key, box) in enumerate(bounding_boxes.items()):
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
-                    ann = store.__getitem__(key, True)
+                    ann = store.__getitem__(key, True)  # noqa: FBT003
                     self.render_by_type(tile, ann, top_left, scale / res)
         else:
             # Get only annotations > min_area. Plot them all
