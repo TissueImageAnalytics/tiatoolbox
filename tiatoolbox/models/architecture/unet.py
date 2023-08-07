@@ -410,7 +410,7 @@ class UNetModel(ModelABC):
 
         """
         model.eval()
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
 
         ####
         imgs = batch_data

@@ -420,7 +420,7 @@ class PatchPredictor:
             )
 
         # use external for testing
-        model = misc.model_to(on_gpu, self.model)
+        model = misc.model_to(model=self.model, on_gpu=on_gpu)
 
         cum_output = {
             "probabilities": [],

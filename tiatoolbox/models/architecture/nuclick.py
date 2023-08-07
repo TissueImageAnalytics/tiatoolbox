@@ -647,7 +647,7 @@ class NuClick(ModelABC):
 
         """
         model.eval()
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
 
         # Assume batch_data is NCHW
         batch_data = batch_data.to(device).type(torch.float32)

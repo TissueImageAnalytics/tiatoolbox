@@ -1354,7 +1354,7 @@ class SemanticSegmentor:
 
         # use external for testing
         self._on_gpu = on_gpu
-        self._model = misc.model_to(on_gpu, self.model)
+        self._model = misc.model_to(model=self.model, on_gpu=on_gpu)
 
         # workers should be > 0 else Value Error will be thrown
         self._prepare_workers()
