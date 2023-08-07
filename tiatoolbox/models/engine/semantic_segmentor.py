@@ -520,9 +520,10 @@ class SemanticSegmentor:
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        dataset_class: Callable = WSIStreamDataset,
+        *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        dataset_class: Callable = WSIStreamDataset,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
@@ -702,6 +703,7 @@ class SemanticSegmentor:
         img_path: str | Path,
         mask_path: str | Path,
         mode: str,
+        *,
         auto_get_mask: bool,
     ):
         """Define how to get reader for mask and source image."""
@@ -758,7 +760,7 @@ class SemanticSegmentor:
             wsi_path,
             mask_path,
             mode,
-            self.auto_generate_mask,
+            auto_get_mask=self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -1247,7 +1249,6 @@ class SemanticSegmentor:
         imgs,
         masks=None,
         mode="tile",
-        on_gpu=True,
         ioconfig=None,
         patch_input_shape=None,
         patch_output_shape=None,
@@ -1255,6 +1256,8 @@ class SemanticSegmentor:
         resolution=1.0,
         units="baseline",
         save_dir=None,
+        *,
+        on_gpu=True,
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.
@@ -1478,9 +1481,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        dataset_class: Callable = WSIStreamDataset,
+        *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        dataset_class: Callable = WSIStreamDataset,
     ) -> None:
         """Initialize :class:`DeepFeatureExtractor`."""
         super().__init__(
@@ -1543,7 +1547,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
         imgs,
         masks=None,
         mode="tile",
-        on_gpu=True,
         ioconfig=None,
         patch_input_shape=None,
         patch_output_shape=None,
@@ -1551,6 +1554,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
         resolution=1.0,
         units="baseline",
         save_dir=None,
+        *,
+        on_gpu=True,
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.

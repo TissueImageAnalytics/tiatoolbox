@@ -179,7 +179,7 @@ class PatchPredictor:
             is case insensitive.
         batch_size (int):
             Number of images fed into the model each time.
-        num_loader_workers (int):
+        num_loader_worker (int):
             Number of workers used in torch.utils.data.DataLoader.
         verbose (bool):
             Whether to output logging information.
@@ -228,6 +228,7 @@ class PatchPredictor:
         model=None,
         pretrained_model=None,
         pretrained_weights=None,
+        *,
         verbose=True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
@@ -261,6 +262,7 @@ class PatchPredictor:
         resolution: Resolution | None = None,
         units: Units | None = None,
         postproc_func: Callable | None = None,
+        *,
         return_raw: bool = False,
     ):
         """Merge patch level predictions to form a 2-dimensional prediction map.
@@ -374,6 +376,7 @@ class PatchPredictor:
     def _predict_engine(
         self,
         dataset,
+        *,
         return_probabilities=False,
         return_labels=False,
         return_coordinates=False,
@@ -613,10 +616,10 @@ class PatchPredictor:
         dataset = PatchDataset(imgs, labels)
         return self._predict_engine(
             dataset,
-            return_probabilities,
-            return_labels,
-            return_coordinates,
-            on_gpu,
+            return_probabilities=return_probabilities,
+            return_labels=return_labels,
+            return_coordinates=return_coordinates,
+            on_gpu=on_gpu,
         )
 
     def _predict_tile_wsi(
@@ -770,14 +773,15 @@ class PatchPredictor:
         masks=None,
         labels=None,
         mode="patch",
-        return_probabilities=False,
-        return_labels=False,
-        on_gpu=True,
         ioconfig: IOPatchPredictorConfig | None = None,
         patch_input_shape: tuple[int, int] | None = None,
         stride_shape: tuple[int, int] | None = None,
         resolution=None,
         units=None,
+        *,
+        return_probabilities=False,
+        return_labels=False,
+        on_gpu=True,
         merge_predictions=False,
         save_dir=None,
         save_output=False,
