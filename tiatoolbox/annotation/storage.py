@@ -74,7 +74,7 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 
-sqlite3.enable_callback_tracebacks(True)
+sqlite3.enable_callback_tracebacks(True)  # noqa: FBT003
 
 Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]
@@ -2099,7 +2099,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         with sqlite3.connect(":memory:") as conn:
-            conn.enable_load_extension(True)
+            conn.enable_load_extension(True)  # noqa: FBT003
             options = conn.execute("pragma compile_options").fetchall()
         return [opt for opt, in options]
 
@@ -2929,7 +2929,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str, as_wkb=False) -> Annotation:
+    def __getitem__(self, key: str, as_wkb=False) -> Annotation:  # noqa: FBT002
         """Get an item from the store."""
         cur = self.con.cursor()
         cur.execute(

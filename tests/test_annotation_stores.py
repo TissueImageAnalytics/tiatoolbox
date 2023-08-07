@@ -29,7 +29,7 @@ from tiatoolbox.annotation.storage import SQLiteMetadata
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
-sqlite3.enable_callback_tracebacks(True)
+sqlite3.enable_callback_tracebacks(True)  # noqa: FBT003
 
 # Constants
 
