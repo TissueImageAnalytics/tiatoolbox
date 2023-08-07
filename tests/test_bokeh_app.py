@@ -7,20 +7,20 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
 BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
 
 
-def get_tile(layer, x, y, z, show=False):
+def get_tile(layer, x, y, z, *, show: bool):
     """Get a tile from the server."""
     source = main.UI["p"].renderers[main.UI["vstate"].layer_dict[layer]].tile_source
     url = source.url
@@ -163,7 +163,7 @@ def test_type_cmap_select(doc):
     # set edge thicknes to 0 so the edges don't add an extra colour
     spinner = doc.get_model_by_name("edge_size0")
     spinner.value = 0
-    im = get_tile("overlay", 1, 2, 2)
+    im = get_tile("overlay", 1, 2, 2, show=False)
     # check there are more than just num_types unique colors in the image,
     # as we have mapped type 0 to a continuous cmap on prob
     assert len(np.unique(im.sum(axis=2))) > 10
@@ -201,7 +201,7 @@ def test_hovernet_on_box(doc, data_path):
 
     click = ButtonClick(go_button)
     go_button._trigger_event(click)
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num = label(np.any(im[:, :, :3], axis=2))
     # check there are multiple cells being detected
     assert len(main.UI["color_column"].children) > 3
@@ -245,21 +245,21 @@ def test_type_select(doc):
     click = MenuItemClick(layer_drop, layer_drop.menu[0][0])
     layer_drop._trigger_event(click)
     time.sleep(1)
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_before = label(np.any(im[:, :, :3], axis=2))
     type_column_list = doc.get_model_by_name("type_column0").children
     # click on the first and last to deselect them
     type_column_list[0].active = False
     type_column_list[-1].active = False
     # check that the number of cells has decreased
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     assert num_after < num_before
     # reselect them
     type_column_list[0].active = True
     type_column_list[-1].active = True
     # check we are back to original number of cells
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     assert num_after == num_before
 
@@ -315,23 +315,23 @@ def test_node_and_edge_alpha(doc):
 def test_filter_box(doc):
     """Test annotation filter box."""
     filter_input = doc.get_model_by_name("filter0")
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_before = label(np.any(im[:, :, :3], axis=2))
     # filter for cells of type 0
     filter_input.value = "props['type'] == 0"
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     # should be less than without the filter
     assert num_after < num_before
     # set no filter
     filter_input.value = ""
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     # should be back to original number
     assert num_after == num_before
     # set an impossible filter
     filter_input.value = "props['prob'] < 0"
-    im = get_tile("overlay", 4, 8, 4)
+    im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     # should be no cells
     assert num_after == 0

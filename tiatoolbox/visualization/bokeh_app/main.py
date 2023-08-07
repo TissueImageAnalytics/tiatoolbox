@@ -13,6 +13,9 @@ import matplotlib.cm as cm
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
 # Bokeh stuff
 from bokeh.io import curdoc
@@ -48,10 +51,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -200,7 +199,7 @@ def make_safe_name(name):
 
 def make_color_dict(types):
     """Helper to make a color dict from a list of types."""
-    colors = random_colors(len(types))
+    colors = random_colors(len(types), bright=True)
     # grab colors out of doc_config["colour_dict"] if possible, otherwise use random
     type_colours = {}
     for i, t in enumerate(types):
@@ -222,13 +221,17 @@ def set_alpha_glyph(glyph, alpha):
     glyph.line_alpha = alpha
 
 
-def get_mapper_for_prop(prop, enforce_dict=False):
+def get_mapper_for_prop(prop, mapper_type="auto"):
     """Helper to get appropriate mapper for a property."""
     # find out the unique values of the chosen property
     resp = UI["s"].get(f"http://{host2}:5000/tileserver/prop_values/{prop}/all")
     prop_vals = json.loads(resp.text)
-    # guess what cmap should be
-    if (len(prop_vals) > 10 or len(prop_vals) == 0) and not enforce_dict:
+    # if auto, guess what cmap should be
+    if (
+        (len(prop_vals) > 10 or len(prop_vals) == 0)
+        and mapper_type == "auto"
+        or mapper_type == "continuous"
+    ):
         cmap = (
             "viridis" if UI["cmap_select"].value == "Dict" else UI["cmap_select"].value
         )
@@ -252,7 +255,7 @@ def update_renderer(prop, value):
             else:
                 value = get_mapper_for_prop(
                     UI["cprop_input"].value[0],
-                    enforce_dict=True,
+                    mapper_type="dict",
                 )
             UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(None)
         if not isinstance(value, dict):
@@ -1278,11 +1281,11 @@ def make_window(vstate):
     vstate.graph_node = Circle(x="x_", y="y_", fill_color="node_color_", size=5)
     vstate.graph_edge = Segment(x0="x0_", y0="y0_", x1="x1_", y1="y1_")
     p.add_glyph(node_source, vstate.graph_node)
-    if not get_from_config(["opts", "nodes_on"], True):
+    if not get_from_config(["opts", "nodes_on"], default=True):
         p.renderers[-1].glyph.fill_alpha = 0
         p.renderers[-1].glyph.line_alpha = 0
     p.add_glyph(edge_source, vstate.graph_edge)
-    if not get_from_config(["opts", "edges_on"], False):
+    if not get_from_config(["opts", "edges_on"], default=False):
         p.renderers[-1].visible = False
     vstate.layer_dict["nodes"] = len(p.renderers) - 2
     vstate.layer_dict["edges"] = len(p.renderers) - 1

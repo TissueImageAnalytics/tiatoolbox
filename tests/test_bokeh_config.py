@@ -8,17 +8,17 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
 from PIL import Image
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
 BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
 
 
-def get_tile(layer, x, y, z, show=False):
+def get_tile(layer, x, y, z, *, show: bool):
     """Get a tile from the server."""
     source = main.UI["p"].renderers[main.UI["vstate"].layer_dict[layer]].tile_source
     url = source.url
