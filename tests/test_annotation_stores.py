@@ -46,8 +46,9 @@ def cell_polygon(
     radius: Number = 10,
     noise: Number = 0.01,
     eccentricity: tuple[Number, Number] = (1, 3),
-    repeat_first: bool = True,
     direction: str = "CCW",
+    *,
+    repeat_first: bool = True,
 ) -> Polygon:
     """Generate a fake cell boundary polygon.
 
@@ -493,7 +494,7 @@ def test_add_area_column(fill_store) -> None:
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
     assert "area" not in store.indexes()
-    store.add_area_column(False)
+    store.add_area_column(mk_index=False)
     assert "area" not in store.indexes()
 
 
