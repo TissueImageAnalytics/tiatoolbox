@@ -543,8 +543,8 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
 
     # test providing config / full input info for not pretrained models
     ioconfig = IOPatchPredictorConfig(
-        patch_input_shape=[512, 512],
-        stride_shape=[256, 256],
+        patch_input_shape=(512, 512),
+        stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
     )
     predictor.predict(
@@ -574,7 +574,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
-    assert predictor._ioconfig.patch_input_shape == [300, 300]
+    assert predictor._ioconfig.patch_input_shape == (300, 300)
     _rm_dir(f"{tmp_path}/dump")
 
     predictor.predict(
@@ -584,7 +584,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
-    assert predictor._ioconfig.stride_shape == [300, 300]
+    assert predictor._ioconfig.stride_shape == (300, 300)
     _rm_dir(f"{tmp_path}/dump")
 
     predictor.predict(
