@@ -22,6 +22,7 @@ PRETRAINED_INFO = rcParam["pretrained_model_info"]
 def fetch_pretrained_weights(
     model_name: str,
     save_path: str | Path | None = None,
+    *,
     overwrite: bool = False,
 ) -> Path:
     """Get the pretrained model information from yml file.
@@ -58,6 +59,7 @@ def fetch_pretrained_weights(
 def get_pretrained_model(
     pretrained_model: str | None = None,
     pretrained_weights: str | Path | None = None,
+    *,
     overwrite: bool = False,
 ):
     """Load a predefined PyTorch model with the appropriate pretrained weights.

@@ -14,7 +14,7 @@ def _load_sccnn(name: str) -> torch.nn.Module:
     """Loads SCCNN model with specified weights."""
     model = SCCNN()
     weights_path = fetch_pretrained_weights(name)
-    map_location = utils.misc.select_device(utils.env_detection.has_gpu())
+    map_location = utils.misc.select_device(on_gpu=utils.env_detection.has_gpu())
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
 

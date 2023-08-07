@@ -257,6 +257,7 @@ class MapDe(MicroNet):
     def infer_batch(
         model: torch.nn.Module,
         batch_data: np.ndarray,
+        *,
         on_gpu: bool,
     ) -> list[np.ndarray]:
         """Run inference on an input batch.
@@ -280,7 +281,7 @@ class MapDe(MicroNet):
         """
         patch_imgs = batch_data
 
-        device = select_device(on_gpu)
+        device = select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 

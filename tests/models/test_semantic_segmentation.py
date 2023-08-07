@@ -283,9 +283,14 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             WSIReader.open(mini_wsi_msk),
             np.array([1.0, 2.0]),
         )
-    semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", True)
+    semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", auto_get_mask=True)
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
-        semantic_segmentor.get_reader(mini_wsi_msk, "not_exist", "wsi", True)
+        semantic_segmentor.get_reader(
+            mini_wsi_msk,
+            "not_exist",
+            "wsi",
+            auto_get_mask=True,
+        )
 
     _rm_dir("output")  # default output dir test
     with pytest.raises(ValueError, match=r".*provide.*"):
@@ -302,7 +307,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             crash_on_exception=True,
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
-        semantic_segmentor.predict([], mode="tile", patch_input_shape=[2048, 2048])
+        semantic_segmentor.predict([], mode="tile", patch_input_shape=(2048, 2048))
     _rm_dir("output")  # default output dir test
 
     # * test not providing any io_config info when not using pretrained model
@@ -322,7 +327,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
     with pytest.raises(ValueError, match=r"Propagation Crash."):
         semantic_segmentor.predict(
             [mini_wsi_svs],
-            patch_input_shape=[2048, 2048],
+            patch_input_shape=(2048, 2048),
             mode="wsi",
             on_gpu=ON_GPU,
             crash_on_exception=True,
@@ -331,7 +336,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
     # test ignore crash
     semantic_segmentor.predict(
         [mini_wsi_svs],
-        patch_input_shape=[2048, 2048],
+        patch_input_shape=(2048, 2048),
         mode="wsi",
         on_gpu=ON_GPU,
         crash_on_exception=False,
@@ -487,7 +492,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         [mini_wsi_jpg],
         mode="tile",
         on_gpu=ON_GPU,
-        patch_input_shape=[512, 512],
+        patch_input_shape=(512, 512),
         resolution=1 / resolution,
         units="baseline",
         crash_on_exception=True,

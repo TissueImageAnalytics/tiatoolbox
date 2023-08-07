@@ -522,7 +522,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             # get the possible categories for given score_prop from store
             types = self.store.pquery(f"props[{self.renderer.score_prop!r}]")
             # make a random dictionary colour map
-            colors = random_colors(len(types))
+            colors = random_colors(len(types), bright=True)
             mapper = {key: (*color, 1) for key, color in zip(types, colors)}
             self.renderer.mapper = lambda x: mapper[x]
 
