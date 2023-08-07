@@ -56,9 +56,10 @@ class ConvBnRelu(nn.Module):
         num_output_channels: int,
         kernel_size: tuple[int, int] | np.ndarray = (3, 3),
         strides: tuple[int, int] | np.ndarray = (1, 1),
-        use_bias: bool = False,
         dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
         activation: str | None = "relu",
+        *,
+        use_bias: bool = False,
         do_batchnorm: bool = True,
     ) -> None:
         """Initialize :class:`ConvBnRelu`."""
@@ -188,6 +189,7 @@ class MultiscaleConvBlock(nn.Module):
         num_output_channels: int = 32,
         strides: tuple[int, int] | np.ndarray = (1, 1),
         activation: str = "relu",
+        *,
         use_bias: bool = False,
     ) -> None:
         """Initialize :class:`MultiscaleConvBlock`."""
@@ -628,7 +630,7 @@ class NuClick(ModelABC):
         return masks
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool):
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o

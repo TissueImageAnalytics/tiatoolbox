@@ -774,7 +774,7 @@ class HoVerNet(ModelABC):
         return pred_inst, nuc_inst_info_dict
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool):
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o

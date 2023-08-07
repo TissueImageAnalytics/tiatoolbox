@@ -350,6 +350,7 @@ class SCCNN(ModelABC):
     def infer_batch(
         model: nn.Module,
         batch_data: np.ndarray | torch.Tensor,
+        *,
         on_gpu: bool,
     ) -> list[np.ndarray]:
         """Run inference on an input batch.

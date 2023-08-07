@@ -1591,7 +1591,7 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
     if file_path.exists():
         file_path.unlink()
 
-    fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path)
+    fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=file_path)
     assert file_path.exists()
     assert file_path.stat().st_size > 0
 
