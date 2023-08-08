@@ -1,4 +1,6 @@
 """Unit test package for SCCNN."""
+from typing import Callable
+
 import numpy as np
 import torch
 
@@ -8,18 +10,18 @@ from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def _load_sccnn(name):
+def _load_sccnn(name: str) -> torch.nn.Module:
     """Loads SCCNN model with specified weights."""
     model = SCCNN()
     weights_path = fetch_pretrained_weights(name)
-    map_location = utils.misc.select_device(utils.env_detection.has_gpu())
+    map_location = utils.misc.select_device(on_gpu=utils.env_detection.has_gpu())
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
 
     return model
 
 
-def test_functionality(remote_sample):
+def test_functionality(remote_sample: Callable) -> None:
     """Functionality test for SCCNN.
 
     Test the functionality of SCCNN model for inference at the patch level.

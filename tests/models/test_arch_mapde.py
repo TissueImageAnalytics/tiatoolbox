@@ -1,4 +1,6 @@
 """Unit test package for SCCNN."""
+from typing import Callable
+
 import numpy as np
 import torch
 
@@ -11,18 +13,18 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 
 
-def _load_mapde(name):
+def _load_mapde(name: str) -> torch.nn.Module:
     """Loads MapDe model with specified weights."""
     model = MapDe()
     weights_path = fetch_pretrained_weights(name)
-    map_location = select_device(ON_GPU)
+    map_location = select_device(on_gpu=ON_GPU)
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
 
     return model
 
 
-def test_functionality(remote_sample):
+def test_functionality(remote_sample: Callable) -> None:
     """Functionality test for MapDe.
 
     Test the functionality of MapDe model for inference at the patch level.
@@ -42,7 +44,7 @@ def test_functionality(remote_sample):
     model = _load_mapde(name="mapde-conic")
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
-    model = model.to(select_device(ON_GPU))
+    model = model.to(select_device(on_gpu=ON_GPU))
     output = model.infer_batch(model, batch, on_gpu=ON_GPU)
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[19, 171], [53, 89]])

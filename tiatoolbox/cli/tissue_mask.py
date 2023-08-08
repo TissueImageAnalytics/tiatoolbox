@@ -1,5 +1,8 @@
 """Command line interface for tissue_mask."""
-import pathlib
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
@@ -15,8 +18,16 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.tools.tissuemask import TissueMasker
 
-def get_masker(method, kernel_size, units, resolution):
+
+def get_masker(
+    method: str,
+    kernel_size: tuple[int, int],
+    units: str,
+    resolution: float,
+) -> TissueMasker:
     """Get Tissue Masker."""
     from tiatoolbox.tools import tissuemask
 
@@ -51,15 +62,15 @@ def get_masker(method, kernel_size, units, resolution):
     help="kernel size for morphological dilation, default=1, 1",
 )
 def tissue_mask(
-    img_input,
-    output_path,
-    method,
-    resolution,
-    units,
-    kernel_size,
-    mode,
-    file_types,
-):
+    img_input: str,
+    output_path: str,
+    method: str,
+    resolution: float,
+    units: str,
+    kernel_size: [int, int],
+    mode: str,
+    file_types: str,
+) -> None:
     """Generate tissue mask for a WSI."""
     import numpy as np
     from PIL import Image
@@ -90,6 +101,6 @@ def tissue_mask(
 
         # Else, save (the only other option for mode)
         imwrite(
-            output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
+            output_path.joinpath(Path(curr_file).stem + ".png"),
             mask[0].astype(np.uint8) * 255,
         )

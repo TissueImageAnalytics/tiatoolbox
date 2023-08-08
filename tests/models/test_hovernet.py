@@ -1,5 +1,7 @@
 """Unit test package for HoVerNet."""
 
+from typing import Callable
+
 import numpy as np
 import pytest
 import torch
@@ -15,7 +17,7 @@ from tiatoolbox.models.architecture.hovernet import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_functionality(remote_sample):
+def test_functionality(remote_sample: Callable) -> None:
     """Functionality test."""
     sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
     reader = WSIReader.open(sample_wsi)
@@ -93,7 +95,7 @@ def test_functionality(remote_sample):
         model = HoVerNet(num_types=None, mode="super")
 
 
-def test_unit_blocks():
+def test_unit_blocks() -> None:
     """Test for blocks within HoVerNet."""
     # padding
     model = nn.Sequential(TFSamepaddingLayer(7, 1), nn.Conv2d(3, 3, 7, 1, padding=0))
