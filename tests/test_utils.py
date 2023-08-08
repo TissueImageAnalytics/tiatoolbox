@@ -642,18 +642,26 @@ def test_fuzz_sub_pixel_read(source_image) -> None:
     assert image_path.exists()
     test_image = utils.imread(image_path)
 
-    for _ in range(10000):
-        x = rng.integers(-5, 32 - 5)
-        y = rng.integers(-5, 32 - 5)
-        w = rng.random() * rng.integers(1, 32)
-        h = rng.random() * rng.integers(1, 32)
+    test_size = 10000
+    all_x = rng.integers(-5, 32 - 5, size=test_size)
+    all_y = rng.integers(-5, 32 - 5, size=test_size)
+    all_w = rng.random(size=test_size) * rng.integers(1, 32, size=test_size)
+    all_h = rng.random(size=test_size) * rng.integers(1, 32, size=test_size)
+    all_ow = rng.integers(4, 128, size=test_size)
+    all_oh = rng.integers(4, 128, size=test_size)
+
+    for i in range(test_size):
+        x = all_x[i]
+        y = all_y[i]
+        w = all_w[i]
+        h = all_h[i]
         bounds = (x, y, x + w, y + h)
-        ow = rng.integers(4, 128)
-        oh = rng.integers(4, 128)
+        ow = all_ow[i]
+        oh = all_oh[i]
         output = utils.image.sub_pixel_read(
             test_image,
             bounds,
-            (ow, oh),
+            output_size=(ow, oh),
             interpolation="linear",
             pad_at_baseline=False,
         )
