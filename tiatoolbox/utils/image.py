@@ -1,6 +1,8 @@
 """Miscellaneous utilities which operate on image data."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from PIL import Image
 
@@ -13,6 +15,9 @@ from tiatoolbox.utils.transforms import (
     locsize2bounds,
     pad_bounds,
 )
+
+if TYPE_CHECKING:
+    from tiatoolbox.typing import IntBounds
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """
@@ -54,8 +59,8 @@ def normalize_padding_size(padding: int | tuple[int, int]) -> np.ndarray:
             msg,
         )
     padding_size = np.size(padding)
-    if padding_size == 3:
-        msg = "Padding has invalid size 3. Valid sizes are 1, 2, or 4."
+    if padding_size not in [1, 2, 4]:
+        msg = f"Padding has invalid size {padding_size}. Valid sizes are 1, 2, or 4."
         raise ValueError(msg)
 
     if padding_size == 1:
@@ -104,7 +109,11 @@ def find_padding(
     return np.stack([before_padding[::-1], after_padding[::-1]], axis=1)
 
 
-def find_overlap(read_location, read_size, image_size):
+def find_overlap(
+    read_location: tuple[int],
+    read_size: tuple[int],
+    image_size: tuple[int],
+) -> IntBounds:
     """Find the part of a region which overlaps the image area.
 
     Args:
@@ -134,7 +143,7 @@ def find_overlap(read_location, read_size, image_size):
     stop = np.minimum(region_end, image_size)
 
     # Concatenate start and stop to make a bounds array (left, top, right, bottom)
-    return np.concatenate([start, stop])
+    return tuple(np.concatenate([start, stop]))
 
 
 def make_bounds_size_positive(bounds):
