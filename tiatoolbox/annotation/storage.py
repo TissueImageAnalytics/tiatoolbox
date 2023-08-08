@@ -631,14 +631,14 @@ class AnnotationStore(ABC, MutableMapping):
             return True
         if isinstance(predicate, str):
             return bool(
-                eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                     predicate,
                     PY_GLOBALS,
                     {"props": properties},
                 ),
             )
         if isinstance(predicate, bytes):
-            predicate = pickle.loads(predicate)  # skipcq: BAN-B301
+            predicate = pickle.loads(predicate)  # skipcq: BAN-B301  # noqa: S301
         return bool(predicate(properties))
 
     def query(
@@ -1099,13 +1099,15 @@ class AnnotationStore(ABC, MutableMapping):
 
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
-                return eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                return eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                     select,
                     PY_GLOBALS,
                     py_locals,
                 )
             if isinstance(select, bytes):
-                return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
+                return pickle.loads(select)(  # skipcq: BAN-B301  # noqa: S301
+                    annotation.properties,
+                )
 
             return select(annotation.properties)
 
@@ -1880,7 +1882,7 @@ class SQLiteStore(AnnotationStore):
 
         def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
             """Function to load and execute pickle bytes with a "properties" dict."""
-            fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
+            fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301  # noqa: S301
             properties = json.loads(properties)
             return fn(properties)
 
@@ -2200,7 +2202,7 @@ class SQLiteStore(AnnotationStore):
     ) -> tuple[str, dict[str, Any]]:
         """Initialises the query string and parameters."""
         query_string = (
-            "SELECT "  # skipcq: BAN-B608
+            "SELECT "  # skipcq: BAN-B608  # noqa: S608
             + columns  # skipcq: BAN-B608
             + """
                  FROM annotations, rtree
@@ -2266,7 +2268,7 @@ class SQLiteStore(AnnotationStore):
             query_parameters["where"] = where
         # Predicate is a string
         if isinstance(where, str):
-            sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+            sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                 where,
                 SQL_GLOBALS,
                 {},
@@ -2656,7 +2658,7 @@ class SQLiteStore(AnnotationStore):
 
         # Load a pickled select function
         if isinstance(select, bytes):
-            select = pickle.loads(select)  # skipcq: BAN-B301
+            select = pickle.loads(select)  # skipcq: BAN-B301  # noqa: S301
         if unique:
             # Create a dictionary of sets to store the unique properties
             # for each property key / name.
@@ -2875,7 +2877,7 @@ class SQLiteStore(AnnotationStore):
         if not unique:
             return_columns.append("[key]")
         if is_str_query and not is_star_query:
-            select_names = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+            select_names = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                 select,
                 SQL_GLOBALS,
                 {},
@@ -3294,7 +3296,7 @@ class SQLiteStore(AnnotationStore):
         if not isinstance(where, str):
             msg = f"Invalid type for `where` ({type(where)})."
             raise TypeError(msg)
-        sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+        sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
             where,
             SQL_GLOBALS,
         )

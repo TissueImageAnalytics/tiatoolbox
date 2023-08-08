@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import pickle
-import random
 import sqlite3
 import sys
 from itertools import repeat
@@ -175,9 +174,10 @@ def fill_store(cell_grid, points_grid):
         path: str | Path,
     ):
         """Private function to fill stores with data."""
+        rng = np.random.default_rng()
         store = store_class(path)
         annotations = [Annotation(cell) for cell in cell_grid] + [
-            Annotation(point, properties={"class": random.randint(0, 4)})
+            Annotation(point, properties={"class": int(rng.integers(0, 5))})
             for point in points_grid
         ]
         keys = store.append_many(annotations)
@@ -562,9 +562,10 @@ class TestStore:
     @staticmethod
     def test_append_many(cell_grid, tmp_path: Path, store_cls) -> None:
         """Test bulk append of annotations."""
+        rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = store.append_many(annotations)
         assert len(keys) == len(cell_grid)
@@ -572,9 +573,10 @@ class TestStore:
     @staticmethod
     def test_append_many_with_keys(cell_grid, tmp_path: Path, store_cls) -> None:
         """Test bulk append of annotations with keys."""
+        rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = [chr(n) for n, _ in enumerate(annotations)]
         returned_keys = store.append_many(annotations, keys=keys)
@@ -588,9 +590,10 @@ class TestStore:
         store_cls,
     ) -> None:
         """Test bulk append of annotations with keys of wrong length."""
+        rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = ["foo"]
         with pytest.raises(ValueError, match="equal"):
