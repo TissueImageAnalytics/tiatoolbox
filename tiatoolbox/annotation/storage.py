@@ -312,16 +312,16 @@ class Annotation:
                 multi-polygon.
 
         Examples:
-            >>> from tiatoolbox.annotation.storage import decode_wkb
+            >>> from tiatoolbox.annotation.storage import AnnotationStore
             >>> # Point(1, 2).wkb
             >>> wkb = (
             ...     b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             ...     b"\xf0?\x00\x00\x00\x00\x00\x00\x00@"
             ... )
-            >>> decode_wkb(wkb, 1)
+            >>> AnnotationStore.decode_wkb(wkb, 1)
             array([0., 0.])
 
-            >>> from tiatoolbox.annotation.storage import decode_wkb
+            >>> from tiatoolbox.annotation.storage import AnnotationStore
             >>> # Polygon([[0, 0], [1, 1], [1, 0]]).wkb
             >>> wkb = (
             ...     b"\x01\x03\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00"
@@ -331,7 +331,7 @@ class Annotation:
             ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             ...     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             ... )
-            >>> decode_wkb(wkb, 3)
+            >>> AnnotationStore.decode_wkb(wkb, 3)
             array([[0., 0.],
                 [1., 1.],
                 [1., 0.],
@@ -920,8 +920,6 @@ class AnnotationStore(ABC, MutableMapping):
         geometry_predicate: str = "intersects",
         min_area: float | None = None,
         distance: float = 0,
-        *,
-        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Query the store for annotations.
 
@@ -1392,8 +1390,6 @@ class AnnotationStore(ABC, MutableMapping):
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
         mode: str = "poly-poly",
-        *,
-        as_wkb: bool = False,
     ) -> dict[str, dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
@@ -2266,8 +2262,6 @@ class SQLiteStore(AnnotationStore):
         data: str | bytes,
         cx: float,
         cy: float,
-        *,
-        as_wkb: bool = False,
     ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
@@ -2766,8 +2760,6 @@ class SQLiteStore(AnnotationStore):
         geometry_predicate: str = "intersects",
         min_area=None,
         distance: float = 0,
-        *,
-        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Runs Query."""
         query_geometry = geometry
@@ -3211,7 +3203,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str, as_wkb=False) -> Annotation:  # noqa: FBT002
+    def __getitem__(self, key: str) -> Annotation:
         """Get an item from the store."""
         cur = self.con.cursor()
         cur.execute(
