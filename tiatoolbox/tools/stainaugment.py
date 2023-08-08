@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import copy
-import random
 
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
@@ -223,8 +222,9 @@ class StainAugmentor(ImageOnlyTransform):
 
     def get_params(self):
         """Return randomly generated parameters based on input arguments."""
-        self.alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
-        self.beta = random.uniform(-self.sigma2, self.sigma2)
+        rng = np.random.default_rng()
+        self.alpha = rng.uniform(1 - self.sigma1, 1 + self.sigma1)
+        self.beta = rng.uniform(-self.sigma2, self.sigma2)
         return {}
 
     def get_params_dependent_on_targets(self, params):  # skipcq: PYL-W0613, PYL-R0201
