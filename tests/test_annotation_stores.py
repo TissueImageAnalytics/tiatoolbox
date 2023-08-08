@@ -177,7 +177,7 @@ def fill_store(cell_grid, points_grid):
         rng = np.random.default_rng()
         store = store_class(path)
         annotations = [Annotation(cell) for cell in cell_grid] + [
-            Annotation(point, properties={"class": rng.integers(0, 4)})
+            Annotation(point, properties={"class": int(rng.integers(0, 5))})
             for point in points_grid
         ]
         keys = store.append_many(annotations)
@@ -565,7 +565,7 @@ class TestStore:
         rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": rng.integers(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = store.append_many(annotations)
         assert len(keys) == len(cell_grid)
@@ -576,7 +576,7 @@ class TestStore:
         rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": rng.integers(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = [chr(n) for n, _ in enumerate(annotations)]
         returned_keys = store.append_many(annotations, keys=keys)
@@ -593,7 +593,7 @@ class TestStore:
         rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": rng.integers(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = ["foo"]
         with pytest.raises(ValueError, match="equal"):
