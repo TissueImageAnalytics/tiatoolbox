@@ -2631,7 +2631,7 @@ class JP2WSIReader(WSIReader):
             """
             expected_len_box_id = 4
             msg = f"Box ID must be {expected_len_box_id} characters."
-            if not len(box_id) == expected_len_box_id:
+            if not len(box_id) == expected_len_box_id:  # pragma: no cover
                 raise ValueError(msg)
             if not box or not box.box:
                 return None
