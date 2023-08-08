@@ -2629,7 +2629,10 @@ class JP2WSIReader(WSIReader):
                     JP2 box with the given ID. If no box is found, returns
 
             """
-            assert len(box_id) == 4, "Box ID must be 4 characters"  # skipcq
+            expected_len_box_id = 4
+            msg = f"Box ID must be {expected_len_box_id} characters."
+            if not len(box_id) == expected_len_box_id:
+                raise ValueError(msg)
             if not box or not box.box:
                 return None
             for sub_box in box.box:

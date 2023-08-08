@@ -272,7 +272,10 @@ def pixman_versions() -> list[tuple[int, ...]]:
         # Using anaconda to check for pixman
         using = "conda"
         try:
-            conda_list = subprocess.Popen(("conda", "list"), stdout=subprocess.PIPE)
+            conda_list = subprocess.Popen(
+                ("conda", "list"),
+                stdout=subprocess.PIPE,
+            )
             conda_pixman = subprocess.check_output(
                 ("grep", "pixman"),
                 stdin=conda_list.stdout,
@@ -329,7 +332,10 @@ def pixman_versions() -> list[tuple[int, ...]]:
         # Using macports to check for pixman. Also checks the platform
         # is Darwin, as macports is only available on macOS.
         using = "port"
-        port_list = subprocess.Popen(("port", "installed"), stdout=subprocess.PIPE)
+        port_list = subprocess.Popen(
+            ("port", "installed"),
+            stdout=subprocess.PIPE,
+        )
         port_pixman = subprocess.check_output(
             ("grep", "pixman"),
             stdin=port_list.stdout,
