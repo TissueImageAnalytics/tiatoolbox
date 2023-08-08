@@ -375,9 +375,10 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        dataset_class: Callable = WSIStreamDataset,
+        *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        dataset_class: Callable = WSIStreamDataset,
     ) -> None:
         """Initialize :class:`NucleusInstanceSegmentor`."""
         super().__init__(
@@ -639,7 +640,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
-                self._on_gpu,
+                on_gpu=self._on_gpu,
             )
             # repackage so that it's a N list, each contains
             # L x etc. output
@@ -684,7 +685,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             wsi_path,
             mask_path,
             mode,
-            self.auto_generate_mask,
+            auto_get_mask=self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode

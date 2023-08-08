@@ -4,6 +4,7 @@ import gc
 import multiprocessing
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pytest
@@ -35,13 +36,13 @@ except NotImplementedError:
 # ----------------------------------------------------
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     if Path(path).exists():
         shutil.rmtree(path, ignore_errors=True)
 
 
-def _crash_func(x):
+def _crash_func(x) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
     raise ValueError(msg)
@@ -105,7 +106,7 @@ class _CNNTo1(ModelABC):
 # -------------------------------------------------------------------------------------
 
 
-def test_segmentor_ioconfig():
+def test_segmentor_ioconfig() -> None:
     """Test for IOConfig."""
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
@@ -161,7 +162,7 @@ def test_segmentor_ioconfig():
 # -------------------------------------------------------------------------------------
 
 
-def test_functional_wsi_stream_dataset(remote_sample):
+def test_functional_wsi_stream_dataset(remote_sample: Callable) -> None:
     """Functional test for WSIStreamDataset."""
     gc.collect()  # Force clean up everything on hold
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
@@ -219,7 +220,7 @@ def test_functional_wsi_stream_dataset(remote_sample):
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(remote_sample):
+def test_crash_segmentor(remote_sample: Callable) -> None:
     """Functional crash tests for segmentor."""
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
@@ -243,9 +244,14 @@ def test_crash_segmentor(remote_sample):
             WSIReader.open(mini_wsi_msk),
             np.array([1.0, 2.0]),
         )
-    semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", True)
+    semantic_segmentor.get_reader(mini_wsi_svs, None, "wsi", auto_get_mask=True)
     with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
-        semantic_segmentor.get_reader(mini_wsi_msk, "not_exist", "wsi", True)
+        semantic_segmentor.get_reader(
+            mini_wsi_msk,
+            "not_exist",
+            "wsi",
+            auto_get_mask=True,
+        )
 
     _rm_dir("output")  # default output dir test
     with pytest.raises(ValueError, match=r".*provide.*"):
@@ -315,7 +321,7 @@ def test_crash_segmentor(remote_sample):
     _rm_dir("output")
 
 
-def test_functional_segmentor_merging(tmp_path):
+def test_functional_segmentor_merging(tmp_path: Path) -> None:
     """Functional test for assmebling output."""
     save_dir = Path(tmp_path)
 
@@ -424,7 +430,7 @@ def test_functional_segmentor_merging(tmp_path):
     save_dir.mkdir()
 
 
-def test_functional_segmentor(remote_sample, tmp_path):
+def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     """Functional test for segmentor."""
     save_dir = Path(f"{tmp_path}/dump")
     # # convert to pathlib Path to prevent wsireader complaint
@@ -564,7 +570,7 @@ def test_functional_segmentor(remote_sample, tmp_path):
     _rm_dir(save_dir)
 
 
-def test_subclass(remote_sample, tmp_path):
+def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
     """Create subclass and test parallel processing setup."""
     save_dir = Path(tmp_path)
     mini_wsi_jpg = Path(remote_sample("wsi2_4k_4k_jpg"))
@@ -595,7 +601,7 @@ def test_subclass(remote_sample, tmp_path):
 
 
 # specifically designed for travis
-def test_functional_pretrained(remote_sample, tmp_path):
+def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for load up pretrained and over-writing tile mode ioconfig."""
     save_dir = Path(f"{tmp_path}/output")
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
@@ -639,7 +645,7 @@ def test_functional_pretrained(remote_sample, tmp_path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_tissue_mask_local(remote_sample, tmp_path):
+def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = Path(tmp_path)
     wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
@@ -681,7 +687,7 @@ def test_behavior_tissue_mask_local(remote_sample, tmp_path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_bcss_local(remote_sample, tmp_path):
+def test_behavior_bcss_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
     save_dir = Path(tmp_path)
 
@@ -712,7 +718,10 @@ def test_behavior_bcss_local(remote_sample, tmp_path):
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
+def test_cli_semantic_segment_out_exists_error(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for semantic segmentation if output path exists."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
@@ -740,7 +749,10 @@ def test_cli_semantic_segment_out_exists_error(remote_sample, tmp_path):
     assert isinstance(semantic_segment_result.exception, FileExistsError)
 
 
-def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
+def test_cli_semantic_segmentation_ioconfig(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for semantic segmentation single file custom ioconfig."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
@@ -788,7 +800,10 @@ def test_cli_semantic_segmentation_ioconfig(remote_sample, tmp_path):
     assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_semantic_segmentation_multi_file(remote_sample, tmp_path):
+def test_cli_semantic_segmentation_multi_file(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for models CLI multiple file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")

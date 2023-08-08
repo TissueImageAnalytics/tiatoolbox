@@ -2,6 +2,7 @@
 
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import torch
@@ -17,7 +18,7 @@ ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 # ----------------------------------------------------
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     if Path.exists(path):
         shutil.rmtree(path, ignore_errors=True)
@@ -28,7 +29,7 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_functional(remote_sample, tmp_path):
+def test_functional(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for feature extraction."""
     save_dir = Path(f"{tmp_path}/output/")
     # # convert to pathlib Path to prevent wsireader complaint

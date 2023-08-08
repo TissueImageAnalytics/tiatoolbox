@@ -74,7 +74,7 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 
-sqlite3.enable_callback_tracebacks(True)
+sqlite3.enable_callback_tracebacks(True)  # noqa: FBT003
 
 Geometry = Union[Point, Polygon, LineString]
 Properties = Dict[str, Union[Dict, List, Number, str]]
@@ -631,14 +631,14 @@ class AnnotationStore(ABC, MutableMapping):
             return True
         if isinstance(predicate, str):
             return bool(
-                eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                     predicate,
                     PY_GLOBALS,
                     {"props": properties},
                 ),
             )
         if isinstance(predicate, bytes):
-            predicate = pickle.loads(predicate)  # skipcq: BAN-B301
+            predicate = pickle.loads(predicate)  # skipcq: BAN-B301  # noqa: S301
         return bool(predicate(properties))
 
     def query(
@@ -648,6 +648,7 @@ class AnnotationStore(ABC, MutableMapping):
         geometry_predicate: str = "intersects",
         min_area: float | None = None,
         distance: float = 0,
+        *,
         as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Query the store for annotations.
@@ -969,6 +970,7 @@ class AnnotationStore(ABC, MutableMapping):
         select: Select,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
+        *,
         unique: bool = True,
         squeeze: bool = True,
     ) -> dict[str, Any] | set[Any]:
@@ -1097,22 +1099,24 @@ class AnnotationStore(ABC, MutableMapping):
 
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
-                return eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+                return eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                     select,
                     PY_GLOBALS,
                     py_locals,
                 )
             if isinstance(select, bytes):
-                return pickle.loads(select)(annotation.properties)  # skipcq: BAN-B301
+                return pickle.loads(select)(  # skipcq: BAN-B301  # noqa: S301
+                    annotation.properties,
+                )
 
             return select(annotation.properties)
 
         return self._handle_pquery_results(
-            select,
-            unique,
-            squeeze,
-            items,
-            select_values,
+            select=select,
+            items=items,
+            get_values=select_values,
+            unique=unique,
+            squeeze=squeeze,
         )
 
     def nquery(
@@ -1123,6 +1127,7 @@ class AnnotationStore(ABC, MutableMapping):
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
         mode: str = "poly-poly",
+        *,
         as_wkb: bool = False,
     ) -> dict[str, dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
@@ -1315,13 +1320,14 @@ class AnnotationStore(ABC, MutableMapping):
     @staticmethod
     def _handle_pquery_results(
         select: Select,
-        unique: bool,
-        squeeze: bool,
         items: Generator[tuple[str, Properties], None, None],
         get_values: Callable[
             [Select, Annotation],
             Properties | Any | tuple[Any, ...],
         ],
+        *,
+        unique: bool,
+        squeeze: bool,
     ):
         """Package the results of a pquery into the right output format.
 
@@ -1800,6 +1806,7 @@ class SQLiteStore(AnnotationStore):
         connection: Path | str | IO = ":memory:",
         compression: str = "zlib",
         compression_level: int = 9,
+        *,
         auto_commit: bool = True,
     ) -> None:
         """Initialize :class:`SQLiteStore`."""
@@ -1875,7 +1882,7 @@ class SQLiteStore(AnnotationStore):
 
         def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
             """Function to load and execute pickle bytes with a "properties" dict."""
-            fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
+            fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301  # noqa: S301
             properties = json.loads(properties)
             return fn(properties)
 
@@ -1892,6 +1899,7 @@ class SQLiteStore(AnnotationStore):
             name: str,
             nargs: int,
             fn: Callable,
+            *,
             deterministic: bool = False,
         ) -> None:
             """Register a custom SQLite function.
@@ -1997,6 +2005,7 @@ class SQLiteStore(AnnotationStore):
         data: str | bytes,
         cx: float,
         cy: float,
+        *,
         as_wkb: bool = False,
     ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
@@ -2092,7 +2101,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         with sqlite3.connect(":memory:") as conn:
-            conn.enable_load_extension(True)
+            conn.enable_load_extension(True)  # noqa: FBT003
             options = conn.execute("pragma compile_options").fetchall()
         return [opt for opt, in options]
 
@@ -2193,7 +2202,7 @@ class SQLiteStore(AnnotationStore):
     ) -> tuple[str, dict[str, Any]]:
         """Initialises the query string and parameters."""
         query_string = (
-            "SELECT "  # skipcq: BAN-B608
+            "SELECT "  # skipcq: BAN-B608  # noqa: S608
             + columns  # skipcq: BAN-B608
             + """
                  FROM annotations, rtree
@@ -2259,7 +2268,7 @@ class SQLiteStore(AnnotationStore):
             query_parameters["where"] = where
         # Predicate is a string
         if isinstance(where, str):
-            sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+            sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                 where,
                 SQL_GLOBALS,
                 {},
@@ -2275,11 +2284,12 @@ class SQLiteStore(AnnotationStore):
         callable_columns: str | None = None,
         geometry_predicate="intersects",
         where: Predicate | None = None,
+        min_area: float | None = None,
+        distance: float = 0,
+        *,
         unique: bool = False,
         no_constraints_ok: bool = False,
         index_warning: bool = False,
-        min_area: float | None = None,
-        distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -2476,6 +2486,7 @@ class SQLiteStore(AnnotationStore):
         geometry_predicate: str = "intersects",
         min_area=None,
         distance: float = 0,
+        *,
         as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Runs Query."""
@@ -2596,6 +2607,7 @@ class SQLiteStore(AnnotationStore):
         select: CallableSelect,
         where: CallablePredicate | None,
         cur: sqlite3.Cursor,
+        *,
         unique: bool,
     ) -> dict[str, set[Properties]] | dict[str, Properties]:
         """Package the results of a pquery into the right output format.
@@ -2646,7 +2658,7 @@ class SQLiteStore(AnnotationStore):
 
         # Load a pickled select function
         if isinstance(select, bytes):
-            select = pickle.loads(select)  # skipcq: BAN-B301
+            select = pickle.loads(select)  # skipcq: BAN-B301  # noqa: S301
         if unique:
             # Create a dictionary of sets to store the unique properties
             # for each property key / name.
@@ -2672,6 +2684,7 @@ class SQLiteStore(AnnotationStore):
     @staticmethod
     def _handle_str_pquery(
         cur: sqlite3.Cursor,
+        *,
         unique: bool,
         star_query: bool,
     ) -> dict[str, set[Properties]] | dict[str, Properties]:
@@ -2758,6 +2771,7 @@ class SQLiteStore(AnnotationStore):
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        *,
         unique: bool = True,
         squeeze: bool = True,
     ) -> dict[str, Any] | set[Any]:
@@ -2863,7 +2877,7 @@ class SQLiteStore(AnnotationStore):
         if not unique:
             return_columns.append("[key]")
         if is_str_query and not is_star_query:
-            select_names = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+            select_names = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                 select,
                 SQL_GLOBALS,
                 {},
@@ -2891,10 +2905,14 @@ class SQLiteStore(AnnotationStore):
                 select,
                 post_where,
                 cur,
-                unique,
+                unique=unique,
             )
         else:
-            result = self._handle_str_pquery(cur, unique, is_star_query)
+            result = self._handle_str_pquery(
+                cur,
+                unique=unique,
+                star_query=is_star_query,
+            )
 
         if unique and squeeze and len(result) == 1:
             return result[0]
@@ -2913,7 +2931,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str, as_wkb=False) -> Annotation:
+    def __getitem__(self, key: str, as_wkb=False) -> Annotation:  # noqa: FBT002
         """Get an item from the store."""
         cur = self.con.cursor()
         cur.execute(
@@ -3144,7 +3162,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.execute("PRAGMA table_info(annotations)")
         return [row[1] for row in cur.fetchall()]
 
-    def add_area_column(self, mk_index=True):
+    def add_area_column(self, *, mk_index=True):
         """Add a column to store the area of the geometry."""
         cur = self.con.cursor()
         cur.execute(
@@ -3248,6 +3266,7 @@ class SQLiteStore(AnnotationStore):
         self,
         name: str,
         where: str | bytes,
+        *,
         analyze: bool = True,
     ) -> None:
         """Create an SQLite expression index based on the provided predicate.
@@ -3277,7 +3296,7 @@ class SQLiteStore(AnnotationStore):
         if not isinstance(where, str):
             msg = f"Invalid type for `where` ({type(where)})."
             raise TypeError(msg)
-        sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001
+        sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
             where,
             SQL_GLOBALS,
         )
@@ -3308,7 +3327,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute(f"DROP INDEX {name}")
 
-    def optimize(self, vacuum: bool = True, limit: int = 1000) -> None:
+    def optimize(self, limit: int = 1000, *, vacuum: bool = True) -> None:
         """Optimize the database with VACUUM and ANALYZE.
 
         Args:

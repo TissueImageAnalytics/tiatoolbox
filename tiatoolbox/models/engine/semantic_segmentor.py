@@ -199,9 +199,10 @@ class SemanticSegmentor:
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        dataset_class: Callable = WSIStreamDataset,
+        *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        dataset_class: Callable = WSIStreamDataset,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
@@ -378,9 +379,10 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_reader(
-        img_path: str,
+        img_path: str | Path,
         mask_path: str | Path,
         mode: str,
+        *,
         auto_get_mask: bool,
     ):
         """Define how to get reader for mask and source image."""
@@ -437,7 +439,7 @@ class SemanticSegmentor:
             wsi_path,
             mask_path,
             mode,
-            self.auto_generate_mask,
+            auto_get_mask=self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -486,7 +488,7 @@ class SemanticSegmentor:
             sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
-                self._on_gpu,
+                on_gpu=self._on_gpu,
             )
             # repackage so that it's an N list, each contains
             # L x etc. output
@@ -916,7 +918,6 @@ class SemanticSegmentor:
         imgs,
         masks=None,
         mode="tile",
-        on_gpu=True,
         ioconfig=None,
         patch_input_shape=None,
         patch_output_shape=None,
@@ -924,6 +925,8 @@ class SemanticSegmentor:
         resolution=None,
         units=None,
         save_dir=None,
+        *,
+        on_gpu=True,
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.
@@ -1045,7 +1048,7 @@ class SemanticSegmentor:
 
         # use external for testing
         self._on_gpu = on_gpu
-        self._model = misc.model_to(on_gpu, self.model)
+        self._model = misc.model_to(model=self.model, on_gpu=on_gpu)
 
         # workers should be > 0 else Value Error will be thrown
         self._prepare_workers()
@@ -1169,9 +1172,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        dataset_class: Callable = WSIStreamDataset,
+        *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        dataset_class: Callable = WSIStreamDataset,
     ) -> None:
         """Initialize :class:`DeepFeatureExtractor`."""
         super().__init__(
@@ -1234,7 +1238,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
         imgs,
         masks=None,
         mode="tile",
-        on_gpu=True,
         ioconfig=None,
         patch_input_shape=None,
         patch_output_shape=None,
@@ -1242,6 +1245,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
         resolution=1.0,
         units="baseline",
         save_dir=None,
+        *,
+        on_gpu=True,
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.

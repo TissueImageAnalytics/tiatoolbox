@@ -73,7 +73,7 @@ def helper_logger_test(level: str) -> None:
     )
 
     proc = subprocess.Popen(
-        [
+        [  # noqa: S603, S607
             "python",
             "-c",
             run_statement,
@@ -107,7 +107,7 @@ def test_logger_output() -> None:
     helper_logger_test(level="critical")
 
 
-def test_duplicate_filter(caplog) -> None:
+def test_duplicate_filter(caplog: pytest.LogCaptureFixture) -> None:
     """Test DuplicateFilter for warnings."""
     for _ in range(2):
         logger.warning("Test duplicate filter warnings.")

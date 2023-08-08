@@ -244,10 +244,11 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
-        verbose: bool = True,
-        auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
         output_types: list | None = None,
+        *,
+        verbose: bool = True,
+        auto_generate_mask: bool = False,
     ) -> None:
         """Initialize :class:`MultiTaskSegmentor`."""
         super().__init__(
@@ -311,7 +312,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             wsi_path,
             mask_path,
             mode,
-            self.auto_generate_mask,
+            auto_get_mask=self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode

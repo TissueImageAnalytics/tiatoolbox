@@ -3,6 +3,7 @@
 import copy
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import cv2
 import numpy as np
@@ -27,7 +28,7 @@ ON_GPU = toolbox_env.has_gpu()
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     if Path(path).exists():
         shutil.rmtree(path, ignore_errors=True)
@@ -38,7 +39,7 @@ def _rm_dir(path):
 # -------------------------------------------------------------------------------------
 
 
-def test_patch_dataset_path_imgs(sample_patch1, sample_patch2):
+def test_patch_dataset_path_imgs(sample_patch1, sample_patch2) -> None:
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
@@ -51,7 +52,7 @@ def test_patch_dataset_path_imgs(sample_patch1, sample_patch2):
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_list_imgs(tmp_path):
+def test_patch_dataset_list_imgs(tmp_path: Path) -> None:
     """Test for patch dataset with a list of images as input."""
     save_dir_path = tmp_path
 
@@ -95,7 +96,7 @@ def test_patch_dataset_list_imgs(tmp_path):
     _rm_dir(save_dir_path)
 
 
-def test_patch_datasetarray_imgs():
+def test_patch_datasetarray_imgs() -> None:
     """Test for patch dataset with a numpy array of a list of images."""
     size = (5, 5, 3)
     img = RNG.integers(0, 255, size=size)
@@ -119,7 +120,7 @@ def test_patch_datasetarray_imgs():
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_crash(tmp_path):
+def test_patch_dataset_crash(tmp_path: Path) -> None:
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples should fail when input to PatchDataset
     save_dir_path = tmp_path
@@ -218,7 +219,7 @@ def test_patch_dataset_crash(tmp_path):
         predefined_preproc_func("secret-dataset")
 
 
-def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
+def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path) -> None:
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -412,7 +413,7 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path):
     assert np.min(correlation) > 0.9, correlation
 
 
-def test_patch_dataset_abc():
+def test_patch_dataset_abc() -> None:
     """Test for ABC methods.
 
     Test missing definition for abstract intentionally created to check error.
@@ -464,7 +465,7 @@ def test_patch_dataset_abc():
 # -------------------------------------------------------------------------------------
 
 
-def test_predictor_crash():
+def test_predictor_crash() -> None:
     """Test for crash when making predictor."""
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
@@ -498,7 +499,7 @@ def test_predictor_crash():
     _rm_dir("output")
 
 
-def test_io_config_delegation(remote_sample, tmp_path):
+def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
 
@@ -529,8 +530,8 @@ def test_io_config_delegation(remote_sample, tmp_path):
 
     # test providing config / full input info for not pretrained models
     ioconfig = IOPatchPredictorConfig(
-        patch_input_shape=[512, 512],
-        stride_shape=[256, 256],
+        patch_input_shape=(512, 512),
+        stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
         output_resolutions=[],
     )
@@ -556,22 +557,22 @@ def test_io_config_delegation(remote_sample, tmp_path):
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
     predictor.predict(
         [mini_wsi_svs],
-        patch_input_shape=[300, 300],
+        patch_input_shape=(300, 300),
         mode="wsi",
         on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
-    assert predictor._ioconfig.patch_input_shape == [300, 300]
+    assert predictor._ioconfig.patch_input_shape == (300, 300)
     _rm_dir(f"{tmp_path}/dump")
 
     predictor.predict(
         [mini_wsi_svs],
-        stride_shape=[300, 300],
+        stride_shape=(300, 300),
         mode="wsi",
         on_gpu=ON_GPU,
         save_dir=f"{tmp_path}/dump",
     )
-    assert predictor._ioconfig.stride_shape == [300, 300]
+    assert predictor._ioconfig.stride_shape == (300, 300)
     _rm_dir(f"{tmp_path}/dump")
 
     predictor.predict(
@@ -605,7 +606,7 @@ def test_io_config_delegation(remote_sample, tmp_path):
     _rm_dir(f"{tmp_path}/dump")
 
 
-def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
+def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> None:
     """Helper function to get the model output using API 1."""
     save_dir_path = tmp_path
 
@@ -693,7 +694,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path):
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
+def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     """Test normal run of wsi predictor."""
     save_dir_path = tmp_path
 
@@ -809,7 +810,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path):
     _rm_dir("output")
 
 
-def test_wsi_predictor_merge_predictions(sample_wsi_dict):
+def test_wsi_predictor_merge_predictions(sample_wsi_dict) -> None:
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent reader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -915,7 +916,7 @@ def _test_predictor_output(
     probabilities_check=None,
     predictions_check=None,
     on_gpu=ON_GPU,
-):
+) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = PatchPredictor(
         pretrained_model=pretrained_model,
@@ -949,7 +950,7 @@ def _test_predictor_output(
         )
 
 
-def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
+def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2) -> None:
     """Test the output of patch prediction models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
     pretrained_info = {
@@ -984,7 +985,7 @@ def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2):
             break
 
 
-def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
+def test_patch_predictor_pcam_output(sample_patch3, sample_patch4) -> None:
     """Test the output of patch prediction models on PCam dataset."""
     inputs = [Path(sample_patch3), Path(sample_patch4)]
     pretrained_info = {
@@ -1024,7 +1025,7 @@ def test_patch_predictor_pcam_output(sample_patch3, sample_patch4):
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_models_file_not_found(sample_svs, tmp_path):
+def test_command_line_models_file_not_found(sample_svs, tmp_path: Path) -> None:
     """Test for models CLI file not found error."""
     runner = CliRunner()
     model_file_not_found_result = runner.invoke(
@@ -1045,7 +1046,7 @@ def test_command_line_models_file_not_found(sample_svs, tmp_path):
     assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
 
 
-def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
+def test_command_line_models_incorrect_mode(sample_svs, tmp_path: Path) -> None:
     """Test for models CLI mode not in wsi, tile."""
     runner = CliRunner()
     mode_not_in_wsi_tile_result = runner.invoke(
@@ -1068,7 +1069,7 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path):
     assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
 
 
-def test_cli_model_single_file(sample_svs, tmp_path):
+def test_cli_model_single_file(sample_svs, tmp_path: Path) -> None:
     """Test for models CLI single file."""
     runner = CliRunner()
     models_wsi_result = runner.invoke(
@@ -1090,7 +1091,7 @@ def test_cli_model_single_file(sample_svs, tmp_path):
     assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_model_single_file_mask(remote_sample, tmp_path):
+def test_cli_model_single_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for models CLI single file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
@@ -1120,7 +1121,7 @@ def test_cli_model_single_file_mask(remote_sample, tmp_path):
     assert tmp_path.joinpath("output/results.json").exists()
 
 
-def test_cli_model_multiple_file_mask(remote_sample, tmp_path):
+def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for models CLI multiple file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
