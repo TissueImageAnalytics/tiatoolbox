@@ -1042,16 +1042,16 @@ def test_download_data() -> None:
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
     with Path.open(save_zip_path, "rb") as handle:
-        old_hash = hashlib.md5(handle.read()).hexdigest()
+        old_hash = hashlib.sha256(handle.read()).hexdigest()
     # modify the content
     with Path.open(save_zip_path, "wb") as fptr:
         fptr.write(b"dataXXX")  # random data
     with Path.open(save_zip_path, "rb") as handle:
-        bad_hash = hashlib.md5(handle.read()).hexdigest()
+        bad_hash = hashlib.sha256(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
     with Path.open(save_zip_path, "rb") as handle:
-        new_hash = hashlib.md5(handle.read()).hexdigest()
+        new_hash = hashlib.sha256(handle.read()).hexdigest()
     assert new_hash == old_hash
 
     # Test not overwriting
@@ -1059,11 +1059,11 @@ def test_download_data() -> None:
     with Path.open(save_zip_path, "wb") as handle:
         handle.write(b"dataXXX")  # random data
     with Path.open(save_zip_path, "rb") as handle:
-        bad_hash = hashlib.md5(handle.read()).hexdigest()
+        bad_hash = hashlib.sha256(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
     with Path.open(save_zip_path, "rb") as handle:
-        new_hash = hashlib.md5(handle.read()).hexdigest()
+        new_hash = hashlib.sha256(handle.read()).hexdigest()
     assert new_hash == bad_hash
 
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
