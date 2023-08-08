@@ -85,7 +85,7 @@ if TYPE_CHECKING:  # pragma: no cover
         Select,
     )
 
-sqlite3.enable_callback_tracebacks(True)
+sqlite3.enable_callback_tracebacks(True)  # noqa: FBT003
 
 WKB_POINT_STRUCT = struct.Struct("<BIdd")
 
@@ -920,6 +920,8 @@ class AnnotationStore(ABC, MutableMapping):
         geometry_predicate: str = "intersects",
         min_area: float | None = None,
         distance: float = 0,
+        *,
+        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Query the store for annotations.
 
@@ -1235,6 +1237,7 @@ class AnnotationStore(ABC, MutableMapping):
         select: Select,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
+        *,
         unique: bool = True,
         squeeze: bool = True,
     ) -> dict[str, Any] | set[Any]:
@@ -1374,11 +1377,11 @@ class AnnotationStore(ABC, MutableMapping):
             return select(annotation.properties)
 
         return self._handle_pquery_results(
-            select,
-            unique,
-            squeeze,
-            items,
-            select_values,
+            select=select,
+            items=items,
+            get_values=select_values,
+            unique=unique,
+            squeeze=squeeze,
         )
 
     def nquery(
@@ -1389,6 +1392,8 @@ class AnnotationStore(ABC, MutableMapping):
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
         mode: str = "poly-poly",
+        *,
+        as_wkb: bool = False,
     ) -> dict[str, dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
@@ -1576,13 +1581,14 @@ class AnnotationStore(ABC, MutableMapping):
     @staticmethod
     def _handle_pquery_results(
         select: Select,
-        unique: bool,
-        squeeze: bool,
         items: Generator[tuple[str, Properties], None, None],
         get_values: Callable[
             [Select, Annotation],
             Properties | Any | tuple[Any, ...],
         ],
+        *,
+        unique: bool,
+        squeeze: bool,
     ):
         """Package the results of a pquery into the right output format.
 
@@ -2061,6 +2067,7 @@ class SQLiteStore(AnnotationStore):
         connection: Path | str | IO = ":memory:",
         compression: str = "zlib",
         compression_level: int = 9,
+        *,
         auto_commit: bool = True,
     ) -> None:
         """Initialize :class:`SQLiteStore`."""
@@ -2153,6 +2160,7 @@ class SQLiteStore(AnnotationStore):
             name: str,
             nargs: int,
             fn: Callable,
+            *,
             deterministic: bool = False,
         ) -> None:
             """Register a custom SQLite function.
@@ -2258,6 +2266,8 @@ class SQLiteStore(AnnotationStore):
         data: str | bytes,
         cx: float,
         cy: float,
+        *,
+        as_wkb: bool = False,
     ) -> Geometry:
         """Return the geometry using WKB data and rtree bounds index.
 
@@ -2371,7 +2381,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         with sqlite3.connect(":memory:") as conn:
-            conn.enable_load_extension(True)
+            conn.enable_load_extension(True)  # noqa: FBT003
             options = conn.execute("pragma compile_options").fetchall()
         return [opt for opt, in options]
 
@@ -2554,11 +2564,12 @@ class SQLiteStore(AnnotationStore):
         callable_columns: str | None = None,
         geometry_predicate="intersects",
         where: Predicate | None = None,
+        min_area: float | None = None,
+        distance: float = 0,
+        *,
         unique: bool = False,
         no_constraints_ok: bool = False,
         index_warning: bool = False,
-        min_area: float | None = None,
-        distance: float = 0,
     ) -> sqlite3.Cursor:
         """Common query construction logic for `query` and `iquery`.
 
@@ -2755,6 +2766,8 @@ class SQLiteStore(AnnotationStore):
         geometry_predicate: str = "intersects",
         min_area=None,
         distance: float = 0,
+        *,
+        as_wkb: bool = False,
     ) -> dict[str, Annotation]:
         """Runs Query."""
         query_geometry = geometry
@@ -2874,6 +2887,7 @@ class SQLiteStore(AnnotationStore):
         select: CallableSelect,
         where: CallablePredicate | None,
         cur: sqlite3.Cursor,
+        *,
         unique: bool,
     ) -> dict[str, set[Properties]] | dict[str, Properties]:
         """Package the results of a pquery into the right output format.
@@ -2950,6 +2964,7 @@ class SQLiteStore(AnnotationStore):
     @staticmethod
     def _handle_str_pquery(
         cur: sqlite3.Cursor,
+        *,
         unique: bool,
         star_query: bool,
     ) -> dict[str, set[Properties]] | dict[str, Properties]:
@@ -3036,6 +3051,7 @@ class SQLiteStore(AnnotationStore):
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        *,
         unique: bool = True,
         squeeze: bool = True,
     ) -> dict[str, Any] | set[Any]:
@@ -3169,10 +3185,14 @@ class SQLiteStore(AnnotationStore):
                 select,
                 post_where,
                 cur,
-                unique,
+                unique=unique,
             )
         else:
-            result = self._handle_str_pquery(cur, unique, is_star_query)
+            result = self._handle_str_pquery(
+                cur,
+                unique=unique,
+                star_query=is_star_query,
+            )
 
         if unique and squeeze and len(result) == 1:
             return result[0]
@@ -3191,7 +3211,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str) -> Annotation:
+    def __getitem__(self, key: str, as_wkb=False) -> Annotation:  # noqa: FBT002
         """Get an item from the store."""
         cur = self.con.cursor()
         cur.execute(
@@ -3419,7 +3439,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.execute("PRAGMA table_info(annotations)")
         return [row[1] for row in cur.fetchall()]
 
-    def add_area_column(self, mk_index=True):
+    def add_area_column(self, *, mk_index=True):
         """Add a column to store the area of the geometry."""
         cur = self.con.cursor()
         cur.execute(
@@ -3523,6 +3543,7 @@ class SQLiteStore(AnnotationStore):
         self,
         name: str,
         where: str | bytes,
+        *,
         analyze: bool = True,
     ) -> None:
         """Create an SQLite expression index based on the provided predicate.
@@ -3583,7 +3604,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute(f"DROP INDEX {name}")
 
-    def optimize(self, vacuum: bool = True, limit: int = 1000) -> None:
+    def optimize(self, limit: int = 1000, *, vacuum: bool = True) -> None:
         """Optimize the database with VACUUM and ANALYZE.
 
         Args:

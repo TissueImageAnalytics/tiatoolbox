@@ -28,6 +28,7 @@ def slide_info(
     output_path: str,
     file_types: str,
     mode: str,
+    *,
     verbose: bool,
 ) -> None:
     """Displays or saves WSI metadata depending on the mode argument."""

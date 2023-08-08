@@ -49,23 +49,32 @@ def test_normalize_must_exist() -> None:
 
 def test_normalize_bytes() -> None:
     """Test that _normalize_binaryio() returns BytesIO for bytes."""
-    assert isinstance(_normalize_binaryio(b"test"), (BytesIO, BinaryIO))
+    assert isinstance(
+        _normalize_binaryio(b"test", must_exist=False),
+        (BytesIO, BinaryIO),
+    )
 
 
 def test_normalize_binaryio() -> None:
     """Test that _normalize_binaryio() returns BinaryIO for BinaryIO."""
-    assert isinstance(_normalize_binaryio(BytesIO(b"test")), (BytesIO, BinaryIO))
+    assert isinstance(
+        _normalize_binaryio(BytesIO(b"test"), must_exist=False),
+        (BytesIO, BinaryIO),
+    )
 
 
 def test_normalize_type_error() -> None:
     """Test that _normalize_binaryio() raises TypeError for invalid types."""
     with pytest.raises(TypeError):
-        _normalize_binaryio(1)
+        _normalize_binaryio(1, must_exist=False)
 
 
 def test_normalize_non_existent(tmp_path: Path) -> None:
     """Test that _normalize_binaryio() returns empty BinaryIO for non-existant file."""
-    assert isinstance(_normalize_binaryio(tmp_path / "foo"), (BytesIO, BinaryIO))
+    assert isinstance(
+        _normalize_binaryio(tmp_path / "foo", must_exist=False),
+        (BytesIO, BinaryIO),
+    )
 
 
 def test_is_sqlite3_dir(tmp_path: Path) -> None:

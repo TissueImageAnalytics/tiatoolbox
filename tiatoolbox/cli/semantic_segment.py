@@ -55,6 +55,7 @@ def semantic_segment(
     batch_size: int,
     yaml_config_path: str,
     num_loader_workers: int,
+    *,
     on_gpu: bool,
     verbose: bool,
 ) -> None:

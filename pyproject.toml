@@ -101,7 +101,7 @@ select = [
   "COM",   # flake8-commas
   "DTZ",   # flake8-datetimez
   "ERA",   # eradicate
-  # "FBT",   # flake8-boolean-trap
+  "FBT",   # flake8-boolean-trap
   "FIX",   # flake8-fixme
   "FLY",   # flynt
   "ICN",   # flake8-import-conventions

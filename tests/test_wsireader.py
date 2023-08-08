@@ -125,7 +125,7 @@ def read_rect_objective_power(wsi, location, size) -> None:
         assert im_region.shape == (*size[::-1], 3)
 
 
-def read_bounds_mpp(wsi, bounds, size, jp2=False) -> None:
+def read_bounds_mpp(wsi, bounds, size, *, jp2: bool) -> None:
     """Read bounds mpp helper."""
     slide_mpp = wsi.info.mpp
     for factor in range(1, 10):
@@ -145,7 +145,14 @@ def read_bounds_mpp(wsi, bounds, size, jp2=False) -> None:
         assert im_region.shape[2] == 3
 
 
-def read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=False) -> None:
+def read_bounds_objective_power(
+    wsi: WSIReader,
+    slide_power,
+    bounds,
+    size,
+    *,
+    jp2: bool,
+) -> None:
     """Read bounds objective power helper."""
     for objective_power in [20, 10, 5, 2.5, 1.25]:
         downsample = slide_power / objective_power
@@ -874,7 +881,7 @@ def test_read_bounds_openslide_mpp(sample_ndpi: Path) -> None:
     bounds = NDPI_TEST_TISSUE_BOUNDS
     size = NDPI_TEST_TISSUE_SIZE
 
-    read_bounds_mpp(wsi, bounds, size)
+    read_bounds_mpp(wsi, bounds, size, jp2=False)
 
 
 def test_read_bounds_jp2_mpp(sample_jp2: Path) -> None:
@@ -901,7 +908,7 @@ def test_read_bounds_openslide_objective_power(sample_ndpi: Path) -> None:
     size = NDPI_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
 
-    read_bounds_objective_power(wsi, slide_power, bounds, size)
+    read_bounds_objective_power(wsi, slide_power, bounds, size, jp2=False)
 
 
 def test_read_bounds_jp2_objective_power(sample_jp2: Path) -> None:
@@ -1551,7 +1558,8 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
         reader2,
         read_coord,
         read_cfg,
-        check_content=True,
+        *,
+        check_content: bool,
     ) -> None:
         """Correlation test to compare output of 2 readers."""
         requested_size = read_coord[2:] - read_coord[:2]
@@ -1631,7 +1639,13 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
     ]
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
         read_coord = requested_coords if read_coord is None else read_coord
-        compare_reader(msk_reader, bigger_msk_reader, read_coord, read_cfg)
+        compare_reader(
+            msk_reader,
+            bigger_msk_reader,
+            read_coord,
+            read_cfg,
+            check_content=True,
+        )
 
     # * check sync read between Virtual Reader and WSIReader (openslide) (reference)
     requested_coords = np.array([3500, 3000, 4500, 4000])  # XY, manually pick
@@ -1673,7 +1687,7 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
 
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
         read_coord = requested_coords if read_coord is None else read_coord
-        compare_reader(wsi_reader, vrt_reader, read_coord, read_cfg)
+        compare_reader(wsi_reader, vrt_reader, read_coord, read_cfg, check_content=True)
 
 
 # -------------------------------------------------------------------------------------
