@@ -5,7 +5,6 @@ import copy
 # ! The garbage collector
 import gc
 import multiprocessing
-import pathlib
 import shutil
 from pathlib import Path
 from typing import Callable
@@ -270,7 +269,7 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
 
     model = _CNNTo1()
 
-    save_dir = pathlib.Path(f"{tmp_path}/test_crash_segmentor")
+    save_dir = Path(f"{tmp_path}/test_crash_segmentor")
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
 
     # fake injection to trigger Segmentor to create parallel
