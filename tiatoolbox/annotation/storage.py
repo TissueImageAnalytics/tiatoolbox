@@ -595,13 +595,13 @@ class AnnotationStore(ABC, MutableMapping):
         for _, annotation in self.items():  # noqa: PERF102
             yield annotation
 
-    def __iter__(self) -> Iterable[str]:
+    def __iter__(self) -> Iterator[str]:
         """Return an iterable of keys in the store.
 
         An alias of `keys`.
 
         Returns:
-            Iterable[str]:
+            Iterator[str]:
                 An iterable of keys.
 
         """
@@ -1748,7 +1748,7 @@ class SQLiteMetadata(MutableMapping):
         cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
         return cursor.fetchone() is not None
 
-    def __setitem__(self, key: str, value: dict | list | int | float | str) -> None:
+    def __setitem__(self, key: str, value: dict | list | float | str) -> None:
         """Set a metadata value."""
         value = json.dumps(value)
         self.con.execute(
@@ -2965,7 +2965,7 @@ class SQLiteStore(AnnotationStore):
         """
         yield from self
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         """Return an iterator for the given object."""
         cur = self.con.cursor()
         cur.execute(
