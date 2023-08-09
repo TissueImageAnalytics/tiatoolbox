@@ -275,7 +275,7 @@ class Annotation:
         """
         return hash((self.geometry, json.dumps(self.properties, sort_keys=True)))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Compare this annotation to another.
 
         Args:
