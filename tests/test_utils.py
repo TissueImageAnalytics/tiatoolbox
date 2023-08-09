@@ -1546,7 +1546,7 @@ def test_fetch_pretrained_weights(tmp_path):
 
 
 def test_imwrite(tmp_path):
-    # Create a temporary file path
+    """Create a temporary file path."""
     image_path = tmp_path / "test_imwrite.jpg"
 
     # Create a test image
