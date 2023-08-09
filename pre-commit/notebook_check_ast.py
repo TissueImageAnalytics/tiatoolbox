@@ -20,7 +20,7 @@ def main(files: list[Path]) -> bool:
             source = "".join([x for x in cell["source"] if x[0] not in r"#%!"])
             try:
                 ast.parse(source)
-            except SyntaxError as e:  # noqa: PERF203
+            except SyntaxError as e:
                 passed = False
                 print(f"{path.name}: {e.msg} (cell {n}, line {e.lineno})")
                 break

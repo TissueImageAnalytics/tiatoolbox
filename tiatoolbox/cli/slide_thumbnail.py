@@ -1,5 +1,5 @@
 """Command line interface for slide_thumbnail."""
-import pathlib
+from pathlib import Path
 
 from tiatoolbox.cli.common import (
     cli_file_type,
@@ -19,7 +19,12 @@ from tiatoolbox.cli.common import (
 )
 @cli_file_type(default="*.ndpi, *.svs, *.mrxs, *.jp2")
 @cli_mode(default="save")
-def slide_thumbnail(img_input, output_path, file_types, mode):
+def slide_thumbnail(
+    img_input: str,
+    output_path: str,
+    file_types: str,
+    mode: str,
+) -> None:
     """Reads whole slide image thumbnail and shows or saves based on mode argument.
 
     The default inputs are:
@@ -51,4 +56,4 @@ def slide_thumbnail(img_input, output_path, file_types, mode):
             im_region.show()
 
         # the only other option left for mode is "save".
-        imwrite(output_path / (pathlib.Path(curr_file).stem + ".jpg"), slide_thumb)
+        imwrite(output_path / (Path(curr_file).stem + ".jpg"), slide_thumb)
