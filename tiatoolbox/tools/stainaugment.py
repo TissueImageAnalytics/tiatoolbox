@@ -203,9 +203,9 @@ class StainAugmentor(ImageOnlyTransform):
         return np.uint8(img_augmented)
 
     def apply(
-        self,
+        self,  # skipcq: PYL-W0613
         img,
-        **params,  # skipcq: PYL-W0613  # noqa: ARG002
+        **params,  # noqa: ARG002
     ):  # alpha=None, beta=None,
         """Call the `fit` and `augment` functions to generate a stain augmented image.
 
