@@ -17,7 +17,7 @@ from tiatoolbox.utils.env_detection import running_on_ci
 # -------------------------------------------------------------------------------------
 
 
-def pytest_configure(config) -> None:
+def pytest_configure() -> None:
     """Perform initial configuration for TIAToolbox tests."""
     logger.info(
         "🏁 Starting tests. TIAToolbox Version: %s. CI: %s",

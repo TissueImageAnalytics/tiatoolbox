@@ -380,7 +380,11 @@ class TestPredicate:
         assert bool(check(result)) is True
 
     @staticmethod
-    def test_has_key_exception(eval_globals, eval_locals, check):
+    def test_has_key_exception(
+        eval_globals,
+        eval_locals,
+        check,  # noqa: ARG004
+    ):
         """Test has_key function with exception."""
         query = "has_key(1, 'a')"
         with pytest.raises(TypeError, match="(not iterable)|(Unsupported type)"):

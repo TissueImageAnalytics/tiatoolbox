@@ -123,8 +123,8 @@ except ImportError:
 
             def __init__(
                 self: memray,
-                *args: list[Any],
-                **kwargs: dict[str, Any],
+                *args: list[Any],  # noqa: ARG002
+                **kwargs: dict[str, Any],  # noqa: ARG002
             ) -> None:
                 """Initialize :class:`Tracker`."""
                 warnings.warn("Memray not installed, skipping tracking.", stacklevel=2)

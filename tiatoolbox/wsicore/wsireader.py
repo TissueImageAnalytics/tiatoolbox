@@ -1644,7 +1644,7 @@ class OpenSlideWSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image at a location and size.
 
@@ -1885,7 +1885,7 @@ class OpenSlideWSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image within given bounds.
 
@@ -2185,7 +2185,7 @@ class JP2WSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image at a location and size.
 
@@ -2424,7 +2424,7 @@ class JP2WSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image within given bounds.
 
@@ -3684,7 +3684,7 @@ class TIFFWSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image at a location and size.
 
@@ -4147,7 +4147,7 @@ class DICOMWSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image at a location and size.
 
@@ -4402,7 +4402,7 @@ class DICOMWSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image within given bounds.
 
@@ -4717,7 +4717,7 @@ class NGFFWSIReader(WSIReader):
         pad_mode="constant",
         pad_constant_values=0,
         coord_space="baseline",
-        **kwargs,
+        **kwargs,  # noqa: ARG002
     ):
         """Read a region of the whole slide image at a location and size.
 
