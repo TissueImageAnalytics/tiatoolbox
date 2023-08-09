@@ -1748,7 +1748,7 @@ class SQLiteMetadata(MutableMapping):
         cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
         return cursor.fetchone() is not None
 
-    def __setitem__(self, key: str, value: dict | list | int | float | str) -> None:
+    def __setitem__(self, key: str, value: dict | list | float | str) -> None:
         """Set a metadata value."""
         value = json.dumps(value)
         self.con.execute(
