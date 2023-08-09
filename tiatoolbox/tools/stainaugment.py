@@ -202,7 +202,11 @@ class StainAugmentor(ImageOnlyTransform):
         img_augmented = np.clip(img_augmented, 0, 255)
         return np.uint8(img_augmented)
 
-    def apply(self, img, **params):  # alpha=None, beta=None,  # skipcq: PYL-W0613
+    def apply(
+        self,
+        img,
+        **params,  # skipcq: PYL-W0613  # noqa: ARG002
+    ):  # alpha=None, beta=None,
         """Call the `fit` and `augment` functions to generate a stain augmented image.
 
         Args:
@@ -227,11 +231,14 @@ class StainAugmentor(ImageOnlyTransform):
         self.beta = rng.uniform(-self.sigma2, self.sigma2)
         return {}
 
-    def get_params_dependent_on_targets(self, params):  # skipcq: PYL-W0613, PYL-R0201
+    def get_params_dependent_on_targets(
+        self,
+        params,  # skipcq: PYL-W0613, PYL-R0201  # noqa: ARG002
+    ):
         """Does nothing, added to resolve flake 8 error."""
         return {}
 
     @staticmethod
-    def get_transform_init_args_names(**kwargs):
+    def get_transform_init_args_names(**kwargs):  # noqa: ARG004
         """Return the argument names for albumentations use."""
         return "method", "stain_matrix", "sigma1", "sigma2", "augment_background"

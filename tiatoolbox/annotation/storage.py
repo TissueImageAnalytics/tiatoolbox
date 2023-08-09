@@ -160,7 +160,7 @@ class Annotation:
 class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):  # noqa: ARG003
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:
             msg = (
