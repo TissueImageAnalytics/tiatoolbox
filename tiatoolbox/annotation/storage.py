@@ -595,13 +595,13 @@ class AnnotationStore(ABC, MutableMapping):
         for _, annotation in self.items():  # noqa: PERF102
             yield annotation
 
-    def __iter__(self) -> Iterable[str]:
+    def __iter__(self) -> Iterator[str]:
         """Return an iterable of keys in the store.
 
         An alias of `keys`.
 
         Returns:
-            Iterable[str]:
+            Iterator[str]:
                 An iterable of keys.
 
         """
@@ -2965,7 +2965,7 @@ class SQLiteStore(AnnotationStore):
         """
         yield from self
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         """Return an iterator for the given object."""
         cur = self.con.cursor()
         cur.execute(
