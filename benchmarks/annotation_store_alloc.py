@@ -133,7 +133,7 @@ except ImportError:
                 """Dummy enter method."""
                 # Intentionally blank.
 
-            def __exit__(self: memray, *args: list[Any]) -> None:
+            def __exit__(self: memray, *args: object) -> None:
                 """Dummy exit method."""
                 # Intentionally blank.
 
