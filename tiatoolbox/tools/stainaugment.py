@@ -231,9 +231,9 @@ class StainAugmentor(ImageOnlyTransform):
         self.beta = rng.uniform(-self.sigma2, self.sigma2)
         return {}
 
-    def get_params_dependent_on_targets(
+    def get_params_dependent_on_targets(  # skipcq: PYL-R0201
         self,
-        params,  # skipcq: PYL-W0613, PYL-R0201  # noqa: ARG002
+        params,  # skipcq: PYL-W0613  # noqa: ARG002
     ):
         """Does nothing, added to resolve flake 8 error."""
         return {}
