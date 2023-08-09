@@ -236,7 +236,7 @@ class TileServer(Flask):
         self,
         layer: str,
         session_id: str,
-        tile_group: int,  # skipcq: PYL-w0613
+        tile_group: int,  # skipcq: PYL-W0613  #noqa: ARG002
         z: int,
         x: int,
         y: int,
