@@ -81,7 +81,7 @@ select = [
   "G",     # flake8-logging-format
   "I",     # Isort
   "N",     # pep8-naming
-  # "S",     # flake8-bandit
+  "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "Q",     # flake8-quotes
   "C4",    # flake8-comprehensions
@@ -96,7 +96,7 @@ select = [
   "T10",   # flake8-debugger
   "T20",   # flake8-print
   # "ANN",   # flake8-annotations
-  # "ARG",   # flake8-unused-arguments
+  "ARG",   # flake8-unused-arguments
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
   "DTZ",   # flake8-datetimez

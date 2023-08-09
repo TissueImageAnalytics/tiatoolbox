@@ -123,8 +123,8 @@ except ImportError:
 
             def __init__(
                 self: memray,
-                *args: list[Any],
-                **kwargs: dict[str, Any],
+                *args: list[Any],  # noqa: ARG002
+                **kwargs: dict[str, Any],  # noqa: ARG002
             ) -> None:
                 """Initialize :class:`Tracker`."""
                 warnings.warn("Memray not installed, skipping tracking.", stacklevel=2)
@@ -133,7 +133,7 @@ except ImportError:
                 """Dummy enter method."""
                 # Intentionally blank.
 
-            def __exit__(self: memray, *args: list[Any]) -> None:
+            def __exit__(self: memray, *args: object) -> None:
                 """Dummy exit method."""
                 # Intentionally blank.
 
@@ -307,7 +307,7 @@ def main(
             return
         regex = re.compile(r"Total memory allocated:\s*([\d.]+)MB")
         pipe = subprocess.Popen(
-            [
+            [  # noqa: S603
                 sys.executable,
                 "-m",
                 "memray",

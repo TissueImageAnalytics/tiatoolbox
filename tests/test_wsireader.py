@@ -4,7 +4,6 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import random
 import re
 import shutil
 from copy import deepcopy
@@ -2647,7 +2646,7 @@ def test_fuzz_read_region_baseline_size(wsi) -> None:
     - Bounds sizes are randomised between 1 and 512 in width and height.
 
     """
-    random.seed(123)
+    rng = np.random.default_rng(123)
     width, height = wsi.info.slide_dimensions
     iterations = 50
 
@@ -2655,10 +2654,10 @@ def test_fuzz_read_region_baseline_size(wsi) -> None:
         iterations = 5
 
     for _ in range(iterations):
-        size = (random.randint(1, 512), random.randint(1, 512))
+        size = (rng.integers(1, 512), rng.integers(1, 512))
         location = (
-            random.randint(0, width - size[0]),
-            random.randint(0, height - size[1]),
+            rng.integers(0, width - size[0]),
+            rng.integers(0, height - size[1]),
         )
         bounds = locsize2bounds(location, size)
         region = wsi.read_bounds(bounds, resolution=0, units="level")

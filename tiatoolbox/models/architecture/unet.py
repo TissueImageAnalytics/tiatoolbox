@@ -348,7 +348,12 @@ class UNetModel(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self, imgs: torch.Tensor, *args, **kwargs):
+    def forward(
+        self,
+        imgs: torch.Tensor,
+        *args,  # skipcq: PYL-W0613  # noqa: ARG002
+        **kwargs,  # skipcq: PYL-W0613  # noqa: ARG002
+    ):
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -357,9 +362,11 @@ class UNetModel(ModelABC):
             imgs (:class:`torch.Tensor`):
                 Input images, the tensor is of the shape NCHW.
             args (list):
-                List of input arguments.
+                List of input arguments. Not used here.
+                Provided for consistency with the API.
             kwargs (dict):
-                Key-word arguments.
+                Key-word arguments. Not used here.
+                Provided for consistency with the API.
 
         Returns:
             :class:`torch.Tensor`:

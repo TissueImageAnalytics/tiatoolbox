@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import random
 import shutil
 from pathlib import Path
 
@@ -307,16 +306,16 @@ def test_fuzz_safe_padded_read_edge_padding() -> None:
     The resulting image is checked for the correct number of 0 values.
 
     """
-    random.seed(0)
+    rng = np.random.default_rng(0)
     for _ in range(1000):
         data = np.repeat([range(1, 17)], 16, axis=0)
 
         # Create bounds to fit the image and shift off by one
         # randomly in x or y
         sign = (-1) ** RNG.integers(0, 1)
-        axis = random.randint(0, 1)
+        axis = rng.integers(0, 1)
         shift = np.tile([1 - axis, axis], 2)
-        shift_magnitude = random.randint(1, 16)
+        shift_magnitude = rng.integers(1, 16)
         bounds = np.array([0, 0, 16, 16]) + (shift * sign * shift_magnitude)
 
         region = utils.image.safe_padded_read(data, bounds)
@@ -326,11 +325,11 @@ def test_fuzz_safe_padded_read_edge_padding() -> None:
 
 def test_fuzz_safe_padded_read() -> None:
     """Fuzz test for safe_padded_read."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
     for _ in range(1000):
-        data = RNG.integers(0, 255, (16, 16))
+        data = rng.integers(0, 255, (16, 16))
 
-        loc = RNG.integers(0, 16, 2)
+        loc = rng.integers(0, 16, 2)
         size = (16, 16)
         bounds = locsize2bounds(loc, size)
         padding = RNG.integers(0, 16)
@@ -561,7 +560,7 @@ def test_sub_pixel_read_bad_read_func() -> None:
     out_size = data.shape
     bounds = (0, 0, 8, 8)
 
-    def bad_read_func(img, bounds, *kwargs):
+    def bad_read_func(img, bounds, *kwargs):  # noqa: ARG001
         return None
 
     with pytest.raises(ValueError, match="None"):
@@ -637,24 +636,32 @@ def test_sub_pixel_read_negative_size_bounds(source_image) -> None:
 
 def test_fuzz_sub_pixel_read(source_image) -> None:
     """Fuzz test for numpy sub-pixel image reads."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
 
     image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.imread(image_path)
 
-    for _ in range(10000):
-        x = random.randint(-5, 32 - 5)
-        y = random.randint(-5, 32 - 5)
-        w = random.random() * random.randint(1, 32)
-        h = random.random() * random.randint(1, 32)
+    test_size = 10000
+    all_x = rng.integers(-5, 32 - 5, size=test_size)
+    all_y = rng.integers(-5, 32 - 5, size=test_size)
+    all_w = rng.random(size=test_size) * rng.integers(1, 32, size=test_size)
+    all_h = rng.random(size=test_size) * rng.integers(1, 32, size=test_size)
+    all_ow = rng.integers(4, 128, size=test_size)
+    all_oh = rng.integers(4, 128, size=test_size)
+
+    for i in range(test_size):
+        x = all_x[i]
+        y = all_y[i]
+        w = all_w[i]
+        h = all_h[i]
         bounds = (x, y, x + w, y + h)
-        ow = random.randint(4, 128)
-        oh = random.randint(4, 128)
+        ow = all_ow[i]
+        oh = all_oh[i]
         output = utils.image.sub_pixel_read(
             test_image,
             bounds,
-            (ow, oh),
+            output_size=(ow, oh),
             interpolation="linear",
             pad_at_baseline=False,
         )
@@ -663,21 +670,21 @@ def test_fuzz_sub_pixel_read(source_image) -> None:
 
 def test_fuzz_padded_sub_pixel_read(source_image) -> None:
     """Fuzz test for numpy sub-pixel image reads with padding."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
 
     image_path = Path(source_image)
     assert image_path.exists()
     test_image = utils.imread(image_path)
 
     for _ in range(10000):
-        x = random.randint(-5, 32 - 5)
-        y = random.randint(-5, 32 - 5)
-        w = 4 + random.random() * random.randint(1, 32)
-        h = 4 + random.random() * random.randint(1, 32)
-        padding = random.randint(0, 2)
+        x = rng.integers(-5, 32 - 5)
+        y = rng.integers(-5, 32 - 5)
+        w = 4 + rng.random() * rng.integers(1, 32)
+        h = 4 + rng.random() * rng.integers(1, 32)
+        padding = rng.integers(0, 2)
         bounds = (x, y, x + w, y + h)
-        ow = random.randint(4, 128)
-        oh = random.randint(4, 128)
+        ow = rng.integers(4, 128)
+        oh = rng.integers(4, 128)
         output = utils.image.sub_pixel_read(
             test_image,
             bounds,
@@ -711,7 +718,7 @@ def test_sub_pixel_read_incorrect_read_func_return() -> None:
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
-    def read_func(*args, **kwargs):
+    def read_func(*args, **kwargs):  # noqa: ARG001
         return np.ones((5, 5))
 
     with pytest.raises(ValueError, match="incorrect size"):
@@ -729,7 +736,7 @@ def test_sub_pixel_read_empty_read_func_return() -> None:
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
-    def read_func(*args, **kwargs):
+    def read_func(*args, **kwargs):  # noqa: ARG001
         return np.ones((0, 0))
 
     with pytest.raises(ValueError, match="is empty"):
@@ -759,20 +766,20 @@ def test_sub_pixel_read_empty_bounds() -> None:
 
 def test_fuzz_bounds2locsize() -> None:
     """Fuzz test for bounds2size."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
     for _ in range(1000):
-        size = (random.randint(-1000, 1000), random.randint(-1000, 1000))
-        location = (random.randint(-1000, 1000), random.randint(-1000, 1000))
+        size = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
+        location = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
         bounds = (*location, *(sum(x) for x in zip(size, location)))
         assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
 def test_fuzz_bounds2locsize_lower() -> None:
     """Fuzz test for bounds2size with origin lower."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
     for _ in range(1000):
-        loc = (RNG.random(2) - 0.5) * 1000
-        size = (RNG.random(2) - 0.5) * 1000
+        loc = (rng.random(2) - 0.5) * 1000
+        size = (rng.random(2) - 0.5) * 1000
 
         fuzz_bounds = [0, *size[::-1], 0]  # L T R B
 
@@ -785,10 +792,10 @@ def test_fuzz_bounds2locsize_lower() -> None:
 
 def test_fuzz_roundtrip_bounds2size() -> None:
     """Fuzz roundtrip bounds2locsize and locsize2bounds."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
     for _ in range(1000):
-        loc = (RNG.random(2) - 0.5) * 1000
-        size = (RNG.random(2) - 0.5) * 1000
+        loc = (rng.random(2) - 0.5) * 1000
+        size = (rng.random(2) - 0.5) * 1000
         assert utils.transforms.bounds2locsize(
             utils.transforms.locsize2bounds(loc, size),
         )
@@ -1043,16 +1050,16 @@ def test_download_data() -> None:
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
     with Path.open(save_zip_path, "rb") as handle:
-        old_hash = hashlib.md5(handle.read()).hexdigest()
+        old_hash = hashlib.sha256(handle.read()).hexdigest()
     # modify the content
     with Path.open(save_zip_path, "wb") as fptr:
         fptr.write(b"dataXXX")  # random data
     with Path.open(save_zip_path, "rb") as handle:
-        bad_hash = hashlib.md5(handle.read()).hexdigest()
+        bad_hash = hashlib.sha256(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
     with Path.open(save_zip_path, "rb") as handle:
-        new_hash = hashlib.md5(handle.read()).hexdigest()
+        new_hash = hashlib.sha256(handle.read()).hexdigest()
     assert new_hash == old_hash
 
     # Test not overwriting
@@ -1060,11 +1067,11 @@ def test_download_data() -> None:
     with Path.open(save_zip_path, "wb") as handle:
         handle.write(b"dataXXX")  # random data
     with Path.open(save_zip_path, "rb") as handle:
-        bad_hash = hashlib.md5(handle.read()).hexdigest()
+        bad_hash = hashlib.sha256(handle.read()).hexdigest()
     assert old_hash != bad_hash
     misc.download_data(url, save_zip_path, overwrite=False)  # data already exists
     with Path.open(save_zip_path, "rb") as handle:
-        new_hash = hashlib.md5(handle.read()).hexdigest()
+        new_hash = hashlib.sha256(handle.read()).hexdigest()
     assert new_hash == bad_hash
 
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
@@ -1203,13 +1210,14 @@ def test_crop_and_pad_edges_common_fail_cases() -> None:
 
 def test_fuzz_crop_and_pad_edges_output_size() -> None:
     """Fuzz test crop and pad util function output size."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
+
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
 
     for _ in range(1000):
-        slide_dimensions = (random.randint(0, 50), random.randint(0, 50))
+        slide_dimensions = (rng.integers(0, 50), rng.integers(0, 50))
 
-        loc = tuple(random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2))
+        loc = tuple(rng.integers(-5, slide_dimensions[dim] + 5) for dim in range(2))
         size = (10, 10)
         bounds = utils.transforms.locsize2bounds(loc, size)
 
@@ -1225,13 +1233,13 @@ def test_fuzz_crop_and_pad_edges_output_size() -> None:
 
 def test_fuzz_crop_and_pad_edges_output_size_no_padding() -> None:
     """Fuzz test crop and pad util function output size with no padding."""
-    random.seed(0)
+    rng = np.random.default_rng(0)
 
     for _ in range(1000):
-        slide_dimensions = np.array([random.randint(5, 50) for _ in range(2)])
+        slide_dimensions = np.array([rng.integers(5, 50) for _ in range(2)])
 
         loc = np.array(
-            [random.randint(-5, slide_dimensions[dim] + 5) for dim in range(2)],
+            [rng.integers(-5, slide_dimensions[dim] + 5) for dim in range(2)],
         )
         size = np.array([10, 10])
         expected = np.maximum(
@@ -1245,9 +1253,8 @@ def test_fuzz_crop_and_pad_edges_output_size_no_padding() -> None:
             bounds=bounds,
             max_dimensions=slide_dimensions,
             region=region,
-            pad_mode=random.choice(["none", None]),
+            pad_mode=rng.choice(["none", None]),
         )
-
         assert output.shape == expected
 
 
