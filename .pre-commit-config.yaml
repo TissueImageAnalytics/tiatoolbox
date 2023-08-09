@@ -12,11 +12,6 @@ repos:
         require_serial: true
         language: system
         stages: [push]
-      - id: notebook-check-ast
-        name: check notebook ast
-        entry: python pre-commit/notebook_check_ast.py
-        types_or: [jupyter]
-        language: python
       - id: notebook-markdown-format
         name: notebook markdown format
         entry: python pre-commit/notebook_markdown_format.py
@@ -72,7 +67,8 @@ repos:
         language: python
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.0.281
+    rev: v0.0.283
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi, jupyter]
