@@ -13,7 +13,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest-16-cores	
+    runs-on: ubuntu-latest-16-cores
     strategy:
       fail-fast: true
       matrix:
