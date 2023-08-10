@@ -16,7 +16,7 @@ from tiatoolbox.utils.transforms import (
     pad_bounds,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import IntBounds
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
