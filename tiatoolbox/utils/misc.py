@@ -100,8 +100,8 @@ def save_yaml(
     input_dict: dict,
     output_path: os | PathLike = "output.yaml",
     *,
-    parents: bool | None = False,
-    exist_ok: bool | None = False,
+    parents: bool = False,
+    exist_ok: bool = False,
 ) -> None:
     """Save dictionary as yaml.
 
