@@ -150,7 +150,10 @@ def imwrite(image_path: os | PathLike, img: np.ndarray) -> None:
     """
     if isinstance(image_path, Path):
         image_path = str(image_path)
-    cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+
+    if not cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR)):
+        msg = "Could not write image."
+        raise OSError(msg)
 
 
 def imread(image_path: os | PathLike, as_uint8: bool | None = None) -> np.ndarray:

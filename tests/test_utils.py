@@ -1604,3 +1604,28 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="does not exist"):
         fetch_pretrained_weights("abc", file_path)
+
+
+def test_imwrite(tmp_path):
+    """Create a temporary file path."""
+    image_path = tmp_path / "test_imwrite.jpg"
+
+    # Create a test image
+    img = np.ones([100, 100, 3]).astype("uint8") * 255
+
+    # Write the image to file
+    utils.misc.imwrite(image_path, img)
+
+    # Check that the file was created
+    assert image_path.is_file()
+
+    # Check that the image can be read and has the correct shape
+    read_img = cv2.imread(str(image_path))
+    assert read_img is not None
+    assert read_img.shape == img.shape
+
+    with pytest.raises(IOError, match="Could not write image"):
+        utils.misc.imwrite(
+            tmp_path / "thisfolderdoesnotexist" / "test_imwrite.jpg",
+            img,
+        )
