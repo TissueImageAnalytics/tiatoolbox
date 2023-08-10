@@ -1,11 +1,13 @@
 """Engines to run models implemented in tiatoolbox."""
-from tiatoolbox.models.engine import (
+from . import (
+    engine_abc,
     nucleus_instance_segmentor,
     patch_predictor,
     semantic_segmentor,
 )
 
 __all__ = [
+    "engine_abc",
     "nucleus_instance_segmentor",
     "patch_predictor",
     "semantic_segmentor",

@@ -257,10 +257,6 @@ class PatchPredictor(EngineABC):
         """Post-process a WSI."""
         raise NotImplementedError
 
-    def run(self):
-        """Run engine."""
-        raise NotImplementedError
-
     @staticmethod
     def merge_predictions(
         img: str | Path | np.ndarray,
@@ -545,43 +541,6 @@ class PatchPredictor(EngineABC):
             output_resolutions=[],
         )
 
-    @staticmethod
-    def _prepare_save_dir(save_dir, imgs):
-        """Create directory if not defined and number of images is more than 1.
-
-        Args:
-            save_dir (str or pathlib.Path):
-                Path to output directory.
-            imgs (list, ndarray):
-                List of inputs to process.
-
-        Returns:
-            :class:`pathlib.Path`:
-                Path to output directory.
-
-        """
-        if save_dir is None and len(imgs) > 1:
-            logger.warning(
-                "More than 1 WSIs detected but there is no save directory set."
-                "All subsequent output will be saved to current runtime"
-                "location under folder 'output'. Overwriting may happen!",
-                stacklevel=2,
-            )
-            save_dir = Path.cwd() / "output"
-        elif save_dir is not None and len(imgs) > 1:
-            logger.warning(
-                "When providing multiple whole-slide images / tiles, "
-                "we save the outputs and return the locations "
-                "to the corresponding files.",
-                stacklevel=2,
-            )
-
-        if save_dir is not None:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=False)
-
-        return save_dir
-
     def _predict_patch(self, imgs, labels, return_probabilities, return_labels, on_gpu):
         """Process patch mode.
 
@@ -773,6 +732,10 @@ class PatchPredictor(EngineABC):
                 file_dict[str(img_path)] = save_info
 
         return file_dict if save_output else outputs
+
+    def run(self):
+        """Run engine."""
+        super().run()
 
     def predict(
         self,
