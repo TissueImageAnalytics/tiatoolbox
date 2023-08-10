@@ -16,7 +16,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterator
 
 import defusedxml
 import numpy as np
@@ -376,7 +376,7 @@ class TilePyramidGenerator:
             np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
         )
 
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> Iterator:
         """Return an iterator for the given object."""
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):

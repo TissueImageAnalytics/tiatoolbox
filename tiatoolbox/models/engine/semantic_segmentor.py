@@ -195,7 +195,7 @@ class SemanticSegmentor:
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,  # skipcq: PYL-W0613
+        num_postproc_workers: int = 0,
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
@@ -231,6 +231,7 @@ class SemanticSegmentor:
         self._on_gpu = None
         self._mp_shared_space = None
         self._postproc_workers = None
+        self.num_postproc_workers = num_postproc_workers
         self._futures = None
         self._outputs = []
         self.imgs = None
@@ -1194,10 +1195,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
     def _process_predictions(
         self,
         cum_batch_predictions: list,
-        wsi_reader: WSIReader,
+        wsi_reader: WSIReader,  # skipcq: PYL-W0613  # noqa: ARG002
         ioconfig: IOSegmentorConfig,
         save_path: str,
-        cache_dir: str,
+        cache_dir: str,  # skipcq: PYL-W0613  # noqa: ARG002
     ):
         """Define how the aggregated predictions are processed.
 
@@ -1210,6 +1211,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 should be of (location, patch_predictions).
             wsi_reader (:class:`WSIReader`):
                 A reader for the image where the predictions come from.
+                Not used here. Added for consistency with the API.
             ioconfig (:class:`IOSegmentorConfig`):
                 A configuration object contains input and output
                 information.
@@ -1217,6 +1219,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Root path to save current WSI predictions.
             cache_dir (str):
                 Root path to cache current WSI data.
+                Not used here. Added for consistency with the API.
 
         """
         # assume prediction_list is N, each item has L output elements

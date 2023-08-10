@@ -42,7 +42,7 @@ def _rm_dir(path) -> None:
         shutil.rmtree(path, ignore_errors=True)
 
 
-def _crash_func(x) -> None:
+def _crash_func(_x) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
     raise ValueError(msg)

@@ -654,14 +654,7 @@ class PointsPatchExtractor(PatchExtractor):
 
 def get_patch_extractor(
     method_name: str,
-    **kwargs: Path
-    | wsireader.WSIReader
-    | None
-    | str
-    | int
-    | tuple[int, int]
-    | float
-    | tuple[float, float],
+    **kwargs: Path | wsireader.WSIReader | None | str | float | tuple[float, float],
 ):
     """Return a patch extractor object as requested.
 
