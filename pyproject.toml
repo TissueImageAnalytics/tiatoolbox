@@ -88,7 +88,7 @@ select = [
   "FA",    # flake8-future-annotations
   "EM",    # flake8-errmsg
   "PD",    # pandas-vet
-  # "PL",  # Pylint
+  "PL",    # Pylint
   "PT",    # flake8-pytest-style
   "TD",    # flake8-todos
   "UP",    # pyupgrade
