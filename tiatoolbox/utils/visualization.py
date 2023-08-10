@@ -685,7 +685,7 @@ class AnnotationRenderer:
                 offset += n_points * 16
             return np.concatenate(lines)
 
-        def decode_polygon(offset=0):
+        def decode_polygon(offset: int = 0) -> tuple[list, int]:
             offset += 5  # byte order and geom type at start of each polygon
             n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
             offset += 4
@@ -712,7 +712,11 @@ class AnnotationRenderer:
         raise ValueError(msg)
 
     @staticmethod
-    def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):
+    def to_tile_coords(
+        coords: list,
+        top_left: tuple[float, float],
+        scale: float,
+    ) -> np.ndarray:
         """Return coords relative to top left of tile, as array suitable for cv2.
 
         Args:
@@ -730,7 +734,12 @@ class AnnotationRenderer:
         """
         return ((np.reshape(coords, (-1, 2)) - top_left) / scale).astype(np.int32)
 
-    def get_color(self, annotation: Annotation, *, edge: bool) -> tuple[int, ...]:
+    def get_color(
+        self: AnnotationRenderer,
+        annotation: Annotation,
+        *,
+        edge: bool,
+    ) -> tuple[int, ...]:
         """Get the color for an annotation.
 
         Args:
@@ -791,12 +800,12 @@ class AnnotationRenderer:
         return 0, 255, 0, 255  # default color if no score_prop given
 
     def render_poly(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render a polygon annotation onto a tile using cv2.
 
         Args:
@@ -832,7 +841,13 @@ class AnnotationRenderer:
             edge_col = self.get_color(annotation, edge=True)
             cv2.drawContours(tile, [cnt], 0, edge_col, 1, lineType=cv2.LINE_8)
 
-    def render_multipoly(self, tile, annotation, top_left, scale):
+    def render_multipoly(
+        self: AnnotationRenderer,
+        tile,
+        annotation,
+        top_left,
+        scale,
+    ) -> None:
         """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation, edge=False)
         geoms = self.decode_wkb(annotation.geometry, 6)
@@ -841,12 +856,12 @@ class AnnotationRenderer:
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
 
     def render_pt(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render a point annotation onto a tile using cv2.
 
         Args:
@@ -874,12 +889,12 @@ class AnnotationRenderer:
         )
 
     def render_line(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render a line annotation onto a tile using cv2.
 
         Args:
@@ -908,7 +923,11 @@ class AnnotationRenderer:
             thickness=3,
         )
 
-    def __setattr__(self, __name: str, __value) -> None:
+    def __setattr__(
+        self: AnnotationRenderer,
+        __name: str,
+        __value: str | list | dict | None,
+    ) -> None:
         """Set attribute each time an attribute is set."""
         if __name == "mapper":
             # save a more readable version of the mapper too
@@ -939,7 +958,7 @@ class AnnotationRenderer:
         self.__dict__[__name] = __value
 
     def render_annotations(
-        self,
+        self: AnnotationRenderer,
         store: AnnotationStore,
         bounds: tuple[float, float, float, float],
         scale: float,
@@ -1037,12 +1056,12 @@ class AnnotationRenderer:
         )
 
     def render_by_type(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render annotation appropriately to its geometry type.
 
         Args:

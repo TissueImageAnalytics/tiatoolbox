@@ -1,7 +1,7 @@
 """Miscellaneous utilities which operate on image data."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 from PIL import Image
@@ -146,7 +146,7 @@ def find_overlap(
     return tuple(np.concatenate([start, stop]))
 
 
-def make_bounds_size_positive(bounds):
+def make_bounds_size_positive(bounds: IntBounds) -> tuple:
     """Make bounds have positive size and get horizontal/vertical flip flags.
 
     Bounds with a negative size in either direction with have the
@@ -155,7 +155,7 @@ def make_bounds_size_positive(bounds):
     to reflect the swaps which occurred.
 
     Args:
-        bounds (:class:`numpy.ndarray`):
+        bounds (IntBounds):
             Length 4 array of bounds.
 
     Returns:
@@ -283,14 +283,14 @@ def crop_and_pad_edges(
 
 
 def safe_padded_read(
-    image,
-    bounds,
-    stride=1,
-    padding=0,
-    pad_mode="constant",
-    pad_constant_values=0,
-    pad_kwargs=None,
-):
+    image: np.ndarray,
+    bounds: IntBounds,
+    stride: int | tuple[int, int] = 1,
+    padding: int | tuple[int, int] = 0,
+    pad_mode: str = "constant",
+    pad_constant_values: int | tuple[int, int] = 0,
+    pad_kwargs: dict | None = None,
+) -> np.ndarray:
     """Read a region of a numpy array with padding applied to edges.
 
     Safely 'read' regions, even outside the image bounds. Accepts
@@ -429,17 +429,17 @@ def safe_padded_read(
 
 def sub_pixel_read(  # noqa: C901
     image: np.ndarray,
-    bounds,
-    output_size,
-    padding=0,
-    stride=1,
-    interpolation="nearest",
-    interpolation_padding=2,
-    read_func=None,
-    pad_mode="constant",
-    pad_constant_values=0,
-    read_kwargs=None,
-    pad_kwargs=None,
+    bounds: IntBounds,
+    output_size: tuple[int, int],
+    padding: int | tuple[int, int] = 0,
+    stride: int | tuple[int, int] = 1,
+    interpolation: str = "nearest",
+    interpolation_padding: int = 2,
+    read_func: Callable | None = None,
+    pad_mode: str = "constant",
+    pad_constant_values: int | tuple[int, int] = 0,
+    read_kwargs: dict | None = None,
+    pad_kwargs: dict | None = None,
     *,
     pad_at_baseline: bool,
 ) -> np.ndarray:
