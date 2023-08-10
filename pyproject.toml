@@ -165,6 +165,9 @@ target-version = "py38"
 max-complexity = 14
 
 # need to enable for docstrings check.
- [tool.ruff.pydocstyle]
+[tool.ruff.pydocstyle]
  # Use Google-style docstrings.
- convention = "google"
+convention = "google"
+
+[tool.ruff.pylint]
+max-args = 10
