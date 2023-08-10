@@ -92,7 +92,7 @@ class OtsuTissueMasker(TissueMasker):
         super().__init__()
         self.threshold = None
 
-    def fit(self, images: np.ndarray, masks=None) -> None:
+    def fit(self, images: np.ndarray, masks=None) -> None:  # noqa: ARG002
         """Find a binary threshold using Otsu's method.
 
         Args:

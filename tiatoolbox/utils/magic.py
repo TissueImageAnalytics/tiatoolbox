@@ -90,7 +90,7 @@ def is_sqlite3(file: str | Path | bytes | BinaryIO | BytesIO) -> bool:
         return io.read(16) == b"SQLite format 3\x00"
 
 
-def is_zip(file: str | Path | bytes | BytesIO | BytesIO) -> bool:
+def is_zip(file: str | Path | bytes | BytesIO) -> bool:
     """Check if a file is a ZIP archive.
 
     Args:
@@ -104,7 +104,7 @@ def is_zip(file: str | Path | bytes | BytesIO | BytesIO) -> bool:
         return zipfile.is_zipfile(io)
 
 
-def is_dcm(file: str | Path | bytes | BytesIO | BytesIO) -> bool:
+def is_dcm(file: str | Path | bytes | BytesIO) -> bool:
     """Determines whether the given file is a DICOM file.
 
     Checks if the first 128 bytes of the file contain the 'DICM'
