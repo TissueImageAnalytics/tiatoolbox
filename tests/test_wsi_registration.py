@@ -1,5 +1,5 @@
 """Test WSI Registration."""
-import pathlib
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -21,7 +21,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def test_extract_features(dfbr_features):
+def test_extract_features(dfbr_features) -> None:
     """Test for CNN based feature extraction function."""
     # dfbr (deep feature based registration).
     dfbr = DFBRegister()
@@ -51,7 +51,7 @@ def test_extract_features(dfbr_features):
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
 
 
-def test_feature_mapping(fixed_image, moving_image):
+def test_feature_mapping(fixed_image, moving_image) -> None:
     """Test for CNN based feature matching function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -72,7 +72,7 @@ def test_feature_mapping(fixed_image, moving_image):
     assert np.mean(output - expected) < 1.0e-6
 
 
-def test_dfbr_features():
+def test_dfbr_features() -> None:
     """Test for feature input to feature_mapping function."""
     dfbr = DFBRegister()
     fixed_img = np.repeat(
@@ -97,7 +97,7 @@ def test_dfbr_features():
         _, _, _ = dfbr.feature_mapping(features)
 
 
-def test_prealignment_mask():
+def test_prealignment_mask() -> None:
     """Test for mask inputs to prealignment function."""
     fixed_img = RNG.random((10, 10))
     moving_img = RNG.random((10, 10))
@@ -107,7 +107,7 @@ def test_prealignment_mask():
         _ = prealignment(fixed_img, moving_img, no_fixed_mask, no_moving_mask)
 
 
-def test_prealignment_input_shape():
+def test_prealignment_input_shape() -> None:
     """Test for inputs to prealignment function."""
     fixed_img = RNG.random((10, 10))
     moving_img = RNG.random((15, 10))
@@ -121,7 +121,7 @@ def test_prealignment_input_shape():
         _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask)
 
 
-def test_prealignment_rotation_step():
+def test_prealignment_rotation_step() -> None:
     """Test for rotation step input to prealignment function."""
     fixed_img = RNG.random((10, 10))
     moving_img = RNG.random((10, 10))
@@ -153,7 +153,12 @@ def test_prealignment_rotation_step():
         )
 
 
-def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask):
+def test_prealignment_output(
+    fixed_image,
+    moving_image,
+    fixed_mask,
+    moving_mask,
+) -> None:
     """Test for prealignment of an image pair."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -184,7 +189,7 @@ def test_prealignment_output(fixed_image, moving_image, fixed_mask, moving_mask)
     assert np.linalg.norm(expected - output) < 0.2
 
 
-def test_dice_overlap_range():
+def test_dice_overlap_range() -> None:
     """Test if the value of dice_overlap is within the range."""
     fixed_img = RNG.integers(20, size=(256, 256))
     moving_img = RNG.integers(20, size=(256, 256))
@@ -215,13 +220,13 @@ def test_warning(
     moving_image,
     fixed_mask,
     moving_mask,
-    caplog,
-):
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test for displaying warning in prealignment function."""
-    fixed_img = imread(pathlib.Path(fixed_image))
-    moving_img = imread(pathlib.Path(moving_image))
-    fixed_mask = imread(pathlib.Path(fixed_mask))
-    moving_mask = imread(pathlib.Path(moving_mask))
+    fixed_img = imread(Path(fixed_image))
+    moving_img = imread(Path(moving_image))
+    fixed_mask = imread(Path(fixed_mask))
+    moving_mask = imread(Path(moving_mask))
     fixed_img, moving_img = fixed_img[:, :, 0], moving_img[:, :, 0]
 
     _ = prealignment(fixed_img, moving_img, fixed_mask, moving_mask, dice_overlap=0.9)
@@ -229,7 +234,7 @@ def test_warning(
     assert "Not able to find the best transformation" in caplog.text
 
 
-def test_match_histogram_inputs():
+def test_match_histogram_inputs() -> None:
     """Test for inputs to match_histogram function."""
     image_a = RNG.integers(256, size=(256, 256, 3))
     image_b = RNG.integers(256, size=(256, 256, 3))
@@ -240,7 +245,7 @@ def test_match_histogram_inputs():
         _, _ = match_histograms(image_a, image_b)
 
 
-def test_match_histograms():
+def test_match_histograms() -> None:
     """Test for preprocessing/normalization of an image pair."""
     image_a = RNG.integers(256, size=(256, 256))
     image_b = np.zeros(shape=(256, 256), dtype=int)
@@ -290,7 +295,7 @@ def test_match_histograms():
     assert np.all(norm_image_b == image_b)
 
 
-def test_filtering_duplicate_matching_points():
+def test_filtering_duplicate_matching_points() -> None:
     """Test filtering_matching_points function with duplicate matching points."""
     fixed_mask = np.zeros((50, 50))
     fixed_mask[20:40, 20:40] = 255
@@ -315,7 +320,7 @@ def test_filtering_duplicate_matching_points():
     )
 
 
-def test_filtering_no_duplicate_matching_points():
+def test_filtering_no_duplicate_matching_points() -> None:
     """Test filtering_matching_points function with no duplicate matching points."""
     fixed_mask = np.zeros((50, 50))
     fixed_mask[20:40, 20:40] = 255
@@ -340,7 +345,7 @@ def test_filtering_no_duplicate_matching_points():
     )
 
 
-def test_register_input():
+def test_register_input() -> None:
     """Test for inputs to register function."""
     fixed_img = RNG.random((32, 32))
     moving_img = RNG.random((32, 32))
@@ -355,7 +360,7 @@ def test_register_input():
         _ = dfbr.register(fixed_img, moving_img, fixed_mask, moving_mask)
 
 
-def test_register_input_channels():
+def test_register_input_channels() -> None:
     """Test for checking inputs' number of channels for register function."""
     fixed_img = RNG.random((32, 32, 1))
     moving_img = RNG.random((32, 32, 1))
@@ -380,7 +385,7 @@ def test_register_output_with_initializer(
     moving_image,
     fixed_mask,
     moving_mask,
-):
+) -> None:
     """Test for register function with initializer."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -410,7 +415,7 @@ def test_register_output_without_initializer(
     moving_image,
     fixed_mask,
     moving_mask,
-):
+) -> None:
     """Test for register function without initializer."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -439,7 +444,12 @@ def test_register_output_without_initializer(
     )
 
 
-def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving_mask):
+def test_register_tissue_transform(
+    fixed_image,
+    moving_image,
+    fixed_mask,
+    moving_mask,
+) -> None:
     """Test for the estimated tissue and block-wise transform in register function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -458,7 +468,7 @@ def test_register_tissue_transform(fixed_image, moving_image, fixed_mask, moving
     )
 
 
-def test_estimate_bspline_transform_inputs():
+def test_estimate_bspline_transform_inputs() -> None:
     """Test input dimensions for estimate_bspline_transform function."""
     fixed_img = RNG.random((32, 32, 32, 3))
     moving_img = RNG.random((32, 32, 32, 3))
@@ -477,7 +487,7 @@ def test_estimate_bspline_transform_inputs():
         )
 
 
-def test_estimate_bspline_transform_rgb_input():
+def test_estimate_bspline_transform_rgb_input() -> None:
     """Test inputs' number of channels for estimate_bspline_transform function."""
     fixed_img = RNG.random((32, 32, 32))
     moving_img = RNG.random((32, 32, 32))
@@ -496,7 +506,7 @@ def test_estimate_bspline_transform_rgb_input():
         )
 
 
-def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
+def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask) -> None:
     """Test for estimate_bspline_transform function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -532,7 +542,7 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask):
     assert mask_overlap > 0.75
 
 
-def test_affine_wsi_transformer(sample_ome_tiff):
+def test_affine_wsi_transformer(sample_ome_tiff) -> None:
     """Test Affine WSI transformer."""
     test_locations = [(1001, 600), (1000, 500), (800, 701)]  # at base level 0
     resolution = 0

@@ -160,9 +160,10 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         stride_shape=None,
         resolution=None,
         units=None,
-        auto_get_mask=True,
         min_mask_ratio=0,
         preproc_func=None,
+        *,
+        auto_get_mask=True,
     ) -> None:
         """Create a WSI-level patch dataset.
 

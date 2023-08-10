@@ -99,9 +99,10 @@ def grab_files_from_dir(
 def save_yaml(
     input_dict: dict,
     output_path: os | PathLike = "output.yaml",
-    parents: bool = False,
-    exist_ok: bool = False,
-):
+    *,
+    parents: bool | None = False,
+    exist_ok: bool | None = False,
+) -> None:
     """Save dictionary as yaml.
 
     Args:
@@ -127,10 +128,7 @@ def save_yaml(
         raise FileExistsError(msg)
     if parents:
         path.parent.mkdir(parents=True, exist_ok=True)
-    with Path.open(
-        output_path,
-        "w+",
-    ) as yaml_file:
+    with Path(output_path).open("w+") as yaml_file:
         yaml.dump(input_dict, yaml_file)
 
 
@@ -158,7 +156,7 @@ def imwrite(image_path: os | PathLike, img: np.ndarray) -> None:
         raise OSError(msg)
 
 
-def imread(image_path, as_uint8=True):
+def imread(image_path: os | PathLike, as_uint8: bool | None = None) -> np.ndarray:
     """Read an image as numpy array.
 
     Args:
@@ -176,6 +174,9 @@ def imread(image_path, as_uint8=True):
         >>> img = utils.misc.imread('ImagePath.jpg')
 
     """
+    if as_uint8 is None:
+        as_uint8 = True  # default reading of images is in uint8 format.
+
     if not isinstance(image_path, (str, Path)):
         msg = "Please provide path to an image."
         raise TypeError(msg)
@@ -273,7 +274,7 @@ def get_luminosity_tissue_mask(img: np.ndarray, threshold: float) -> np.ndarray:
 def mpp2common_objective_power(
     mpp: float | tuple[float, float],
     common_powers: float
-    | tuple[float] = (
+    | tuple[float, ...] = (
         1,
         1.25,
         2,
@@ -295,7 +296,7 @@ def mpp2common_objective_power(
 
     Args:
         mpp (float or tuple(float)): Microns per-pixel.
-        common_powers (tuple or list of float): A sequence of objective
+        common_powers (tuple or tuple(float, ...)): A sequence of objective
             power values to round to. Defaults to
             (1, 1.25, 2, 2.5, 4, 5, 10, 20, 40, 60, 90, 100).
 
@@ -308,8 +309,8 @@ def mpp2common_objective_power(
         array(40)
 
         >>> mpp2common_objective_power(
-        ...     [0.253, 0.478],
-        ...     common_powers=(10, 20, 40),
+        ...     (0.253, 0.478),
+        ...     common_powers=(10.0, 20.0, 40.0),
         ... )
         array([40, 20])
 
@@ -655,6 +656,7 @@ def download_data(
     url: str,
     save_path: os | PathLike | None = None,
     save_dir: os | PathLike | None = None,
+    *,
     overwrite: bool = False,
     unzip: bool = False,
 ) -> Path:
@@ -724,7 +726,12 @@ def download_data(
     return save_path
 
 
-def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool = True):
+def unzip_data(
+    zip_path: os | PathLike,
+    save_path: os | PathLike,
+    *,
+    del_zip: bool = True,
+) -> None:
     """Extract data from zip file.
 
     Args:
@@ -742,7 +749,7 @@ def unzip_data(zip_path: os | PathLike, save_path: os | PathLike, del_zip: bool 
         Path.unlink(zip_path)
 
 
-def __walk_list_dict(in_list_dict):
+def __walk_list_dict(in_list_dict: dict | list[dict]) -> dict | list[dict]:
     """Recursive walk and jsonify in place.
 
     Args:
@@ -772,7 +779,7 @@ def __walk_list_dict(in_list_dict):
     return in_list_dict
 
 
-def __walk_list(lst: list):
+def __walk_list(lst: list) -> None:
     """Recursive walk and jsonify a list in place.
 
     Args:
@@ -783,7 +790,7 @@ def __walk_list(lst: list):
         lst[i] = __walk_list_dict(v)
 
 
-def __walk_dict(dct: dict):
+def __walk_dict(dct: dict) -> None:
     """Recursive walk and jsonify a dictionary in place.
 
     Args:
@@ -800,9 +807,10 @@ def __walk_dict(dct: dict):
 def save_as_json(
     data: dict | list,
     save_path: str | PathLike,
+    *,
     parents: bool = False,
     exist_ok: bool = False,
-):
+) -> None:
     """Save data to a json file.
 
     The function will deepcopy the `data` and then jsonify the content
@@ -842,7 +850,7 @@ def save_as_json(
         json.dump(shadow_data, handle)
 
 
-def select_device(on_gpu: bool) -> str:
+def select_device(*, on_gpu: bool) -> str:
     """Selects the appropriate device as requested.
 
     Args:
@@ -859,12 +867,12 @@ def select_device(on_gpu: bool) -> str:
     return "cpu"
 
 
-def model_to(on_gpu: bool, model: torch.nn.Module) -> torch.nn.Module:
+def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
     """Transfers model to cpu/gpu.
 
     Args:
-        on_gpu (bool): Transfers model to gpu if True otherwise to cpu
         model (torch.nn.Module): PyTorch defined model.
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
 
     Returns:
         torch.nn.Module:
@@ -952,11 +960,11 @@ def ppu2mpp(ppu: int, units: str | int) -> float:
     return 1 / ppu * microns_per_unit[units]
 
 
-def select_cv2_interpolation(scale_factor: int | float) -> str:
+def select_cv2_interpolation(scale_factor: float) -> str:
     """Return appropriate interpolation method for opencv based image resize.
 
     Args:
-        scale_factor (int or float):
+        scale_factor (float):
             Image resize scale factor.
 
     Returns:

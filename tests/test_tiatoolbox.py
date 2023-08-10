@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-
 """Pytests for `tiatoolbox` package."""
+from __future__ import annotations
+
 from click.testing import CliRunner
 
 from tiatoolbox import __version__, cli
@@ -10,7 +11,7 @@ from tiatoolbox import __version__, cli
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_help_interface():
+def test_command_line_help_interface() -> None:
     """Test the CLI help."""
     runner = CliRunner()
     result = runner.invoke(cli.main)
@@ -20,7 +21,7 @@ def test_command_line_help_interface():
     assert "Computational pathology toolbox by TIA Centre." in help_result.output
 
 
-def test_command_line_version():
+def test_command_line_version() -> None:
     """Test for version check."""
     runner = CliRunner()
     version_result = runner.invoke(cli.main, ["-v"])

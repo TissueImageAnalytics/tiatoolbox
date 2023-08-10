@@ -11,7 +11,7 @@ ON_GPU = False
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def test_functional():
+def test_functional() -> None:
     """Test for creating backbone."""
     backbones = [
         "alexnet",

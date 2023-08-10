@@ -27,7 +27,7 @@ def source_files(root_path):
     return generator()
 
 
-def test_validate_docstring_examples(source_files, root_path):
+def test_validate_docstring_examples(source_files, root_path) -> None:
     """Test that all docstring examples are valid.
 
     Validity checks are:
