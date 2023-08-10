@@ -113,7 +113,7 @@ def find_overlap(
     read_location: tuple[int],
     read_size: tuple[int],
     image_size: tuple[int],
-) -> IntBounds:
+) -> np.ndarray:
     """Find the part of a region which overlaps the image area.
 
     Args:
@@ -125,7 +125,7 @@ def find_overlap(
         The size of the image to read from.
 
     Returns:
-        tuple:
+        np.ndarray:
             Bounds of the overlapping region.
 
     Examples:
@@ -143,7 +143,7 @@ def find_overlap(
     stop = np.minimum(region_end, image_size)
 
     # Concatenate start and stop to make a bounds array (left, top, right, bottom)
-    return tuple(np.concatenate([start, stop]))
+    return np.concatenate([start, stop])
 
 
 def make_bounds_size_positive(bounds: IntBounds) -> tuple:
