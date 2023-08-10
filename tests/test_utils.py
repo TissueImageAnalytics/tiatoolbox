@@ -560,7 +560,7 @@ def test_sub_pixel_read_bad_read_func() -> None:
     out_size = data.shape
     bounds = (0, 0, 8, 8)
 
-    def bad_read_func(img, bounds, *kwargs):
+    def bad_read_func(img, bounds, *kwargs):  # noqa: ARG001
         return None
 
     with pytest.raises(ValueError, match="None"):
@@ -718,7 +718,7 @@ def test_sub_pixel_read_incorrect_read_func_return() -> None:
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
-    def read_func(*args, **kwargs):
+    def read_func(*args, **kwargs):  # noqa: ARG001
         return np.ones((5, 5))
 
     with pytest.raises(ValueError, match="incorrect size"):
@@ -736,7 +736,7 @@ def test_sub_pixel_read_empty_read_func_return() -> None:
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
-    def read_func(*args, **kwargs):
+    def read_func(*args, **kwargs):  # noqa: ARG001
         return np.ones((0, 0))
 
     with pytest.raises(ValueError, match="is empty"):
@@ -1604,3 +1604,28 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="does not exist"):
         fetch_pretrained_weights("abc", file_path)
+
+
+def test_imwrite(tmp_path):
+    """Create a temporary file path."""
+    image_path = tmp_path / "test_imwrite.jpg"
+
+    # Create a test image
+    img = np.ones([100, 100, 3]).astype("uint8") * 255
+
+    # Write the image to file
+    utils.misc.imwrite(image_path, img)
+
+    # Check that the file was created
+    assert image_path.is_file()
+
+    # Check that the image can be read and has the correct shape
+    read_img = cv2.imread(str(image_path))
+    assert read_img is not None
+    assert read_img.shape == img.shape
+
+    with pytest.raises(IOError, match="Could not write image"):
+        utils.misc.imwrite(
+            tmp_path / "thisfolderdoesnotexist" / "test_imwrite.jpg",
+            img,
+        )
