@@ -99,7 +99,7 @@ class StainAugmentor(ImageOnlyTransform):
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         method: str = "vahadane",
         stain_matrix: np.ndarray | None = None,

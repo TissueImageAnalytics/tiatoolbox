@@ -232,7 +232,7 @@ class TileServer(Flask):
 
         return layer
 
-    def zoomify(  # noqa: PLR0913
+    def zoomify(
         self,
         layer: str,
         session_id: str,

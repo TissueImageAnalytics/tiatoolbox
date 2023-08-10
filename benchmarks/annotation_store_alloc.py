@@ -153,7 +153,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
 
-def cell_polygon(  # noqa: PLR0913
+def cell_polygon(
     xy: tuple[Number, Number],
     n_points: int = 20,
     radius: Number = 8,
