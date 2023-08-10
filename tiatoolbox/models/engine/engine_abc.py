@@ -105,6 +105,7 @@ class EngineABC(ABC):
         model: nn.Module = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        *,
         verbose: bool = False,
     ) -> None:
         """Initialize Engine."""
