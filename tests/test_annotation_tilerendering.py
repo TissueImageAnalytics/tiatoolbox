@@ -257,8 +257,7 @@ def test_sub_tile_levels(fill_store, tmp_path: Path) -> None:
 
 
 def test_unknown_geometry(
-    fill_store,
-    tmp_path: Path,
+    fill_store,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test warning when unknown geometries cannot be rendered."""
@@ -428,7 +427,7 @@ def test_unfilled_polys(fill_store, tmp_path: Path) -> None:
     assert np.sum(tile_filled) > 2 * np.sum(tile_outline)
 
 
-def test_multipolygon_render(cell_grid, tmp_path: Path) -> None:
+def test_multipolygon_render(cell_grid) -> None:
     """Test multipolygon rendering."""
     renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
     tile = np.zeros((1024, 1024, 3), dtype=np.uint8)

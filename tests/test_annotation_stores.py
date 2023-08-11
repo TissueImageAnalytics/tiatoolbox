@@ -414,7 +414,9 @@ def test_annotation_coords_wkb_uknown_geometry() -> None:
         _ = ann.coords
 
 
-def test_annotation_coords_geometry_uknown_geometry(monkeypatch) -> None:
+def test_annotation_coords_geometry_uknown_geometry(
+    monkeypatch,  # noqa: ARG001
+) -> None:
     """Test generating coordinates from WKB for unknown geometry type."""
     ann = Annotation(geometry=GeometryCollection([Point(1, 2)]))
     with pytest.raises(ValueError, match="Unknown geometry type"):
@@ -1997,7 +1999,7 @@ class TestStore:
             assert path == Path(fh.name)
 
     @staticmethod
-    def test_nquery_boxpoint_boxpoint(store_cls, tmp_path) -> None:
+    def test_nquery_boxpoint_boxpoint(store_cls) -> None:
         """Test simple querying within a neighbourhood.
 
         Test that a neighbourhood query returns the correct results
