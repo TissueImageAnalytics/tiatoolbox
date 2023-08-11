@@ -566,11 +566,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         )
         if stride is None:
             self.stride = self.patch_size
+        elif isinstance(stride, (tuple, list)):
+            self.stride = (int(stride[0]), int(stride[1]))
         else:
-            if isinstance(stride, (tuple, list)):
-                self.stride = (int(stride[0]), int(stride[1]))
-            else:
-                self.stride = (int(stride), int(stride))
+            self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
 

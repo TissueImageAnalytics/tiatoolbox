@@ -712,12 +712,12 @@ class PatchPredictor:
             save_output = True
 
         for idx, img_path in enumerate(imgs):
-            img_path = Path(img_path)
+            img_path_ = Path(img_path)
             img_label = None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
             dataset = WSIPatchDataset(
-                img_path,
+                img_path_,
                 mode=mode,
                 mask_path=img_mask,
                 patch_input_shape=ioconfig.patch_input_shape,
@@ -742,7 +742,7 @@ class PatchPredictor:
             merged_prediction = None
             if merge_predictions:
                 merged_prediction = self.merge_predictions(
-                    img_path,
+                    img_path_,
                     output_model,
                     resolution=output_model["resolution"],
                     units=output_model["units"],
@@ -763,7 +763,7 @@ class PatchPredictor:
                     merged_file_path = f"{save_path}.merged.npy"
                     np.save(merged_file_path, merged_prediction)
                     save_info["merged"] = merged_file_path
-                file_dict[str(img_path)] = save_info
+                file_dict[str(img_path_)] = save_info
 
         return file_dict if save_output else outputs
 

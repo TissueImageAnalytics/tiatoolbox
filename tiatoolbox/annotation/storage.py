@@ -515,8 +515,8 @@ class AnnotationStore(ABC, MutableMapping):
         geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the store
         for key, geometry, properties in zip(keys, geometries, properties_iter):
-            properties = copy.deepcopy(properties)
-            self.patch(key, geometry, properties)
+            properties_ = copy.deepcopy(properties)
+            self.patch(key, geometry, properties_)
 
     def remove(self, key: str) -> None:
         """Remove annotation from the store with its unique key.
@@ -1824,12 +1824,11 @@ class SQLiteStore(AnnotationStore):
                 raise OSError(
                     msg,
                 )
-        else:
-            if not all(
-                ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options],
-            ):
-                msg = "RTREE and JSON1 sqlite3 compile options are required."
-                raise OSError(msg)
+        elif not all(
+            ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options],
+        ):
+            msg = "RTREE and JSON1 sqlite3 compile options are required."
+            raise OSError(msg)
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:

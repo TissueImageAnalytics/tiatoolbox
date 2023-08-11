@@ -531,16 +531,16 @@ def plot_graph(
         return tuple(int(v) for v in x)
 
     for idx, (src, dst) in enumerate(edges):
-        src = to_int_tuple(nodes[src])
-        dst = to_int_tuple(nodes[dst])
+        src_ = to_int_tuple(nodes[src])
+        dst_ = to_int_tuple(nodes[dst])
         color = to_int_tuple(edge_colors[idx])
-        cv2.line(canvas, src, dst, color, thickness=edge_size)
+        cv2.line(canvas, src_, dst_, color, thickness=edge_size)
 
     # draw the nodes
     for idx, node in enumerate(nodes):
-        node = to_int_tuple(node)
+        node_ = to_int_tuple(node)
         color = to_int_tuple(node_colors[idx])
-        cv2.circle(canvas, node, node_size, color, thickness=-1)
+        cv2.circle(canvas, node_, node_size, color, thickness=-1)
     return canvas
 
 

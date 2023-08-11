@@ -321,9 +321,10 @@ class UNetModel(ModelABC):
             next_up_ch = ch
             if ch_idx + 2 < len(down_ch_list):
                 next_up_ch = down_ch_list[ch_idx + 2]
+            ch_ = ch
             if self.skip_type == "concat":
-                ch *= 2
-            layers = create_block(pre_activation, decoder_block, ch, next_up_ch)
+                ch_ *= 2
+            layers = create_block(pre_activation, decoder_block, ch_, next_up_ch)
             self.uplist.append(nn.Sequential(*layers))
 
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)

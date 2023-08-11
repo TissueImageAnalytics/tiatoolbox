@@ -429,8 +429,8 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             for sem_id, tile in enumerate(tiles):
                 max_h, max_w = self.wsi_layers[sem_id].shape
                 x_end, y_end = min(x_end, max_w), min(y_end, max_h)
-                tile = tile[0 : y_end - y_start, 0 : x_end - x_start]
-                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile
+                tile_ = tile[0 : y_end - y_start, 0 : x_end - x_start]
+                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile_
             # !
 
         for future in self._futures:
