@@ -12,7 +12,6 @@ from shutil import rmtree
 from threading import Thread
 from typing import Any
 
-import matplotlib.cm as cm
 import numpy as np
 import requests
 import torch
@@ -53,6 +52,7 @@ from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
 from flask_cors import CORS
+from matplotlib import cm
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
