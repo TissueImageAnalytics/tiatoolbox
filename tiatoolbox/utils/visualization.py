@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import colorsys
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import matplotlib as mpl
@@ -16,6 +16,7 @@ from shapely.geometry import Polygon
 from tiatoolbox import DuplicateFilter, logger
 
 if TYPE_CHECKING:  # pragma: no cover
+    from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
     from tiatoolbox.annotation import Annotation, AnnotationStore
@@ -67,7 +68,7 @@ def colourise_image(img: np.ndarray, cmap: str = "viridis") -> np.ndarray:
     Returns:
         img(ndarray): An RGB image.
     """
-    if len(img.shape) == 2:
+    if len(img.shape) == 2:  # noqa: PLR2004
         # Single channel, make into rgb with colormap.
         c_map = colormaps[cmap]
         im_rgb = (c_map(img) * 255).astype(np.uint8)
@@ -82,10 +83,10 @@ def overlay_prediction_mask(
     alpha: float = 0.35,
     label_info: dict | None = None,
     min_val: float = 0.0,
-    ax=None,
+    ax: Axes | None = None,
     *,
     return_ax: bool,
-):
+) -> np.ndarray | Axes:
     """Generate an overlay, given a 2D prediction map.
 
     Args:
@@ -126,7 +127,7 @@ def overlay_prediction_mask(
             msg,
         )
     if np.issubdtype(img.dtype, np.floating):
-        if not (img.max() <= 1.0 and img.min() >= 0):
+        if not (img.max() <= 1.0 and img.min() >= 0):  # noqa: PLR2004
             msg = "Not support float `img` outside [0, 1]."
             raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
@@ -164,7 +165,7 @@ def overlay_prediction_mask(
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype(np.uint8)
 
-    if min_val > 0.0:
+    if min_val > 0.0:  # noqa: PLR2004
         overlay[~prediction_sel] = img[~prediction_sel]
 
     if ax is None and not return_ax:
@@ -200,7 +201,7 @@ def overlay_prediction_mask(
 
 def _validate_label_info(
     label_info: dict[int, tuple[str, ArrayLike]],
-    predicted_classes,
+    predicted_classes: list,
 ) -> list[int]:
     """Validate the label_info dictionary.
 
@@ -250,7 +251,7 @@ def _validate_label_info(
             raise TypeError(
                 msg,
             )
-        if len(label_colour) != 3:
+        if len(label_colour) != 3:  # noqa: PLR2004
             msg = (
                 f"Wrong `label_info` format: label_colour "
                 f"{[label_uid, (label_name, label_colour)]}"
@@ -268,10 +269,10 @@ def overlay_probability_map(
     alpha: float = 0.35,
     colour_map: str = "jet",
     min_val: float = 0.0,
-    ax=None,
+    ax: Axes | None = None,
     *,
     return_ax: bool,
-):
+) -> np.ndarray | Axes:
     """Generate an overlay, given a 2D prediction map.
 
     Args:
@@ -314,10 +315,10 @@ def overlay_probability_map(
 
     # Add the overlay
     overlay = (1 - alpha) * rgb_prediction + alpha * overlay
-    overlay[overlay > 255.0] = 255.0
+    overlay[overlay > 255.0] = 255.0  # noqa: PLR2004
     overlay = overlay.astype(np.uint8)
 
-    if min_val > 0.0:
+    if min_val > 0.0:  # noqa: PLR2004
         overlay[~prediction_sel] = img[~prediction_sel]
 
     if ax is None and not return_ax:
@@ -341,7 +342,11 @@ def overlay_probability_map(
     return ax
 
 
-def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
+def _validate_overlay_probability_map(
+    img: np.ndarray,
+    prediction: np.ndarray,
+    min_val: float,
+) -> np.ndarray:
     """Validate the input for the overlay_probability_map function.
 
     Args:
@@ -364,7 +369,7 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
             Input image. May be modified if `min_val` has dtype float.
 
     """
-    if prediction.ndim != 2:
+    if prediction.ndim != 2:  # noqa: PLR2004
         msg = "The input prediction must be 2-dimensional of the form HW."
         raise ValueError(msg)
 
@@ -377,7 +382,7 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
             msg,
         )
 
-    if prediction.max() > 1.0:
+    if prediction.max() > 1.0:  # noqa: PLR2004
         msg = "Not support float `prediction` outside [0, 1]."
         raise ValueError(msg)
     if prediction.min() < 0:
@@ -385,15 +390,15 @@ def _validate_overlay_probability_map(img, prediction, min_val) -> np.ndarray:
         raise ValueError(msg)
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
-    if min_val < 0.0:
+    if min_val < 0.0:  # noqa: PLR2004
         msg = f"`min_val={min_val}` is not between [0, 1]."
         raise ValueError(msg)
-    if min_val > 1.0:
+    if min_val > 1.0:  # noqa: PLR2004
         msg = f"`min_val={min_val}` is not between [0, 1]."
         raise ValueError(msg)
 
     if np.issubdtype(img.dtype, np.floating):
-        if img.max() > 1.0:
+        if img.max() > 1.0:  # noqa: PLR2004
             msg = "Not support float `img` outside [0, 1]."
             raise ValueError(msg)
         if img.min() < 0:
@@ -411,7 +416,7 @@ def overlay_prediction_contours(
     line_thickness: int = 2,
     *,
     draw_dot: bool,
-):
+) -> np.ndarray:
     """Overlaying instance contours on image.
 
     Internally, colours from `type_colours` are prioritized over
@@ -487,7 +492,7 @@ def plot_graph(
     node_size: int = 5,
     edge_colors: tuple[int] | np.ndarray = (0, 0, 0),
     edge_size: int = 5,
-):
+) -> np.ndarray:
     """Drawing a graph onto a canvas.
 
     Drawing a graph onto a canvas.
@@ -521,21 +526,21 @@ def plot_graph(
         edge_colors = [edge_colors] * len(edges)
 
     # draw the edges
-    def to_int_tuple(x):
+    def to_int_tuple(x: list | np.ndarray) -> tuple[int, ...]:
         """Helper to convert to tuple of int."""
         return tuple(int(v) for v in x)
 
     for idx, (src, dst) in enumerate(edges):
-        src = to_int_tuple(nodes[src])
-        dst = to_int_tuple(nodes[dst])
+        src_ = to_int_tuple(nodes[src])
+        dst_ = to_int_tuple(nodes[dst])
         color = to_int_tuple(edge_colors[idx])
-        cv2.line(canvas, src, dst, color, thickness=edge_size)
+        cv2.line(canvas, src_, dst_, color, thickness=edge_size)
 
     # draw the nodes
     for idx, node in enumerate(nodes):
-        node = to_int_tuple(node)
+        node_ = to_int_tuple(node)
         color = to_int_tuple(node_colors[idx])
-        cv2.circle(canvas, node, node_size, color, thickness=-1)
+        cv2.circle(canvas, node_, node_size, color, thickness=-1)
     return canvas
 
 
@@ -581,7 +586,7 @@ class AnnotationRenderer:
             contours.
         edge_thickness (int):
             line thickness of rendered edges.
-        secondary_cmap (dict [str, str, cmap])):
+        secondary_cmap (dict [str, str, cmap]):
             a dictionary of the form {"type": some_type,
             "score_prop": a property name, "mapper": a matplotlib cmap object}.
             For annotations of the specified type, the given secondary colormap
@@ -599,20 +604,20 @@ class AnnotationRenderer:
 
     """
 
-    def __init__(
-        self,
-        score_prop=None,
-        mapper=None,
-        where=None,
-        score_fn=lambda x: x,
-        max_scale=8,
-        zoomed_out_strat=10000,
-        thickness=-1,
-        edge_thickness=1,
-        secondary_cmap=None,
-        blur_radius=0,
-        score_prop_edge=None,
-        function_mapper=None,
+    def __init__(  # noqa: PLR0913
+        self: AnnotationRenderer,
+        score_prop: str | None = None,
+        mapper: str | dict | list | None = None,
+        where: str | Callable | None = None,
+        score_fn: Callable = lambda x: x,
+        max_scale: int = 8,
+        zoomed_out_strat: int | str = 10000,
+        thickness: int = -1,
+        edge_thickness: int = 1,
+        secondary_cmap: dict[str, str, str] | None = None,
+        blur_radius: int = 0,
+        score_prop_edge: str | None = None,
+        function_mapper: Callable | None = None,
     ) -> None:
         """Initialize :class:`AnnotationRenderer`."""
         self.raw_mapper = None
@@ -656,14 +661,14 @@ class AnnotationRenderer:
         if geom_type == 1:
             # point
             return np.frombuffer(geom, np.double, -1, 5)
-        if geom_type == 2:
+        if geom_type == 2:  # noqa: PLR2004
             # line
             return np.frombuffer(geom, np.double, -1, 9)
-        if geom_type == 3:
+        if geom_type == 3:  # noqa: PLR2004
             # polygon
             n_points = np.frombuffer(geom, np.int32, 1, 9)[0]
             return np.frombuffer(geom, np.double, n_points * 2, 13)  # do rings?
-        if geom_type == 4:
+        if geom_type == 4:  # noqa: PLR2004
             # multi-point
             n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
 
@@ -672,7 +677,7 @@ class AnnotationRenderer:
             ]  # each point is 21 bytes
 
             return np.concatenate(pts)
-        if geom_type == 5:
+        if geom_type == 5:  # noqa: PLR2004
             # multi-line
             n_lines = np.frombuffer(geom, np.int32, 1, 5)[0]
             lines = []
@@ -685,7 +690,7 @@ class AnnotationRenderer:
                 offset += n_points * 16
             return np.concatenate(lines)
 
-        def decode_polygon(offset=0):
+        def decode_polygon(offset: int = 0) -> tuple[list, int]:
             offset += 5  # byte order and geom type at start of each polygon
             n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
             offset += 4
@@ -698,7 +703,7 @@ class AnnotationRenderer:
                 offset += n_points * 16
             return rings, offset
 
-        if geom_type == 6:
+        if geom_type == 6:  # noqa: PLR2004
             # multi-polygon
             n_polygons = np.frombuffer(geom, np.int32, 1, 5)[0]
             polygons = []
@@ -712,7 +717,11 @@ class AnnotationRenderer:
         raise ValueError(msg)
 
     @staticmethod
-    def to_tile_coords(coords: list, top_left: tuple[float, float], scale: float):
+    def to_tile_coords(
+        coords: list,
+        top_left: tuple[float, float],
+        scale: float,
+    ) -> np.ndarray:
         """Return coords relative to top left of tile, as array suitable for cv2.
 
         Args:
@@ -730,7 +739,12 @@ class AnnotationRenderer:
         """
         return ((np.reshape(coords, (-1, 2)) - top_left) / scale).astype(np.int32)
 
-    def get_color(self, annotation: Annotation, *, edge: bool) -> tuple[int, ...]:
+    def get_color(
+        self: AnnotationRenderer,
+        annotation: Annotation,
+        *,
+        edge: bool,
+    ) -> tuple[int, ...]:
         """Get the color for an annotation.
 
         Args:
@@ -791,12 +805,12 @@ class AnnotationRenderer:
         return 0, 255, 0, 255  # default color if no score_prop given
 
     def render_poly(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render a polygon annotation onto a tile using cv2.
 
         Args:
@@ -832,21 +846,27 @@ class AnnotationRenderer:
             edge_col = self.get_color(annotation, edge=True)
             cv2.drawContours(tile, [cnt], 0, edge_col, 1, lineType=cv2.LINE_8)
 
-    def render_multipoly(self, tile, annotation, top_left, scale):
+    def render_multipoly(
+        self: AnnotationRenderer,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: tuple[float, float],
+        scale: float,
+    ) -> None:
         """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation, edge=False)
-        geoms = self.decode_wkb(annotation.geometry, 6)
+        geoms = self.decode_wkb(annotation.geometry, geom_type=6)
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
 
     def render_pt(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render a point annotation onto a tile using cv2.
 
         Args:
@@ -864,7 +884,7 @@ class AnnotationRenderer:
         cv2.circle(
             tile,
             self.to_tile_coords(
-                self.decode_wkb(annotation.geometry, 1),
+                self.decode_wkb(annotation.geometry, geom_type=1),
                 top_left,
                 scale,
             )[0],
@@ -874,12 +894,12 @@ class AnnotationRenderer:
         )
 
     def render_line(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render a line annotation onto a tile using cv2.
 
         Args:
@@ -898,7 +918,7 @@ class AnnotationRenderer:
             tile,
             [
                 self.to_tile_coords(
-                    list(self.decode_wkb(annotation.geometry, 2)),
+                    list(self.decode_wkb(annotation.geometry, geom_type=2)),
                     top_left,
                     scale,
                 ),
@@ -908,7 +928,11 @@ class AnnotationRenderer:
             thickness=3,
         )
 
-    def __setattr__(self, __name: str, __value) -> None:
+    def __setattr__(
+        self: AnnotationRenderer,
+        __name: str,
+        __value: str | list | dict | None,
+    ) -> None:
         """Set attribute each time an attribute is set."""
         if __name == "mapper":
             # save a more readable version of the mapper too
@@ -939,7 +963,7 @@ class AnnotationRenderer:
         self.__dict__[__name] = __value
 
     def render_annotations(
-        self,
+        self: AnnotationRenderer,
         store: AnnotationStore,
         bounds: tuple[float, float, float, float],
         scale: float,
@@ -1037,12 +1061,12 @@ class AnnotationRenderer:
         )
 
     def render_by_type(
-        self,
+        self: AnnotationRenderer,
         tile: np.ndarray,
         annotation: Annotation,
         top_left: tuple[float, float],
         scale: float,
-    ):
+    ) -> None:
         """Render annotation appropriately to its geometry type.
 
         Args:

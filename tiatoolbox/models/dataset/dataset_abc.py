@@ -47,7 +47,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             ValueError: If the shape is not valid.
 
         """
-        if any(len(v) != 3 for v in shapes):
+        if any(len(v) != 3 for v in shapes):  # noqa: PLR2004
             msg = "Each sample must be an array of the form HWC."
             raise ValueError(msg)
 
@@ -340,7 +340,7 @@ class WSIPatchDataset(PatchDatasetABC):
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         img_path,
         mode="wsi",
@@ -425,14 +425,14 @@ class WSIPatchDataset(PatchDatasetABC):
 
         if (
             not np.issubdtype(patch_input_shape.dtype, np.integer)
-            or np.size(patch_input_shape) > 2
+            or np.size(patch_input_shape) > 2  # noqa: PLR2004
             or np.any(patch_input_shape < 0)
         ):
             msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
             raise ValueError(msg)
         if (
             not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2
+            or np.size(stride_shape) > 2  # noqa: PLR2004
             or np.any(stride_shape < 0)
         ):
             msg = f"Invalid `stride_shape` value {stride_shape}."
