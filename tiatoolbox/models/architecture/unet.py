@@ -77,7 +77,7 @@ class ResNetEncoder(ResNet):
 
         """
         model = ResNetEncoder(ResNetBottleneck, downsampling_levels)
-        if num_input_channels != 3:
+        if num_input_channels != 3:  # noqa: PLR2004
             model.conv1 = nn.Conv2d(  # skipcq: PYL-W0201
                 num_input_channels,
                 64,

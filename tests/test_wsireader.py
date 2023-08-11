@@ -1543,7 +1543,9 @@ def test_read_rect_at_resolution(sample_wsi_dict) -> None:
         assert np.min(cc) > 0.90, reader_idx
 
 
-def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
+def test_read_bounds_location_in_requested_resolution(  # noqa: PLR0915
+    sample_wsi_dict: dict,
+) -> None:
     """Actually a duel test for sync read and read at requested."""
     # """Test synchronize read for VirtualReader"""
     # convert to pathlib Path to prevent wsireader complaint

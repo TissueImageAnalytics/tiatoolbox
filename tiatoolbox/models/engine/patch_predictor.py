@@ -622,7 +622,7 @@ class PatchPredictor:
             on_gpu=on_gpu,
         )
 
-    def _predict_tile_wsi(
+    def _predict_tile_wsi(  # noqa: PLR0913
         self,
         imgs,
         masks,
@@ -767,7 +767,7 @@ class PatchPredictor:
 
         return file_dict if save_output else outputs
 
-    def predict(
+    def predict(  # noqa: PLR0913
         self,
         imgs,
         masks=None,

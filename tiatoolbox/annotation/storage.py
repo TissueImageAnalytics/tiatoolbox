@@ -1801,7 +1801,7 @@ class SQLiteStore(AnnotationStore):
         """Opens :class:`SQLiteStore` from file pointer or path."""
         return SQLiteStore(fp)
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         connection: Path | str | IO = ":memory:",
         compression: str = "zlib",
@@ -2276,7 +2276,7 @@ class SQLiteStore(AnnotationStore):
 
         return query_string, query_parameters
 
-    def _query(
+    def _query(  # noqa: PLR0913
         self,
         columns: str,
         geometry: Geometry | None = None,
@@ -3288,7 +3288,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         _, minor, _ = sqlite3.sqlite_version_info
-        if minor < 9:
+        if minor < 9:  # noqa: PLR2004
             msg = "Requires sqlite version 3.9.0 or higher."
             raise OSError(msg)
         cur = self.con.cursor()
