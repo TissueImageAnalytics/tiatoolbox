@@ -774,7 +774,7 @@ class HoVerNet(ModelABC):
         return pred_inst, nuc_inst_info_dict
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool):
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o
@@ -799,7 +799,7 @@ class HoVerNet(ModelABC):
         """
         patch_imgs = batch_data
 
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 

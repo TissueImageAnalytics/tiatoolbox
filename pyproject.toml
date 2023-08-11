@@ -81,7 +81,7 @@ select = [
   "G",     # flake8-logging-format
   "I",     # Isort
   "N",     # pep8-naming
-  # "S",     # flake8-bandit
+  "S",     # flake8-bandit
   "W",     # pycodestyle - Warning
   "Q",     # flake8-quotes
   "C4",    # flake8-comprehensions
@@ -96,12 +96,12 @@ select = [
   "T10",   # flake8-debugger
   "T20",   # flake8-print
   # "ANN",   # flake8-annotations
-  # "ARG",   # flake8-unused-arguments
+  "ARG",   # flake8-unused-arguments
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
   "DTZ",   # flake8-datetimez
   "ERA",   # eradicate
-  # "FBT",   # flake8-boolean-trap
+  "FBT",   # flake8-boolean-trap
   "FIX",   # flake8-fixme
   "FLY",   # flynt
   "ICN",   # flake8-import-conventions
@@ -128,7 +128,7 @@ select = [
 ]
 ignore = []
 # Allow Ruff to discover `*.ipynb` files.
-include = ["*.py", "*.pyi", "**/pyproject.toml", "e*/*.ipynb"]
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]

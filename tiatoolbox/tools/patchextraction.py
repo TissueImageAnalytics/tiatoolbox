@@ -42,7 +42,7 @@ class PatchExtractor(PatchExtractorABC):
     """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, Path, :class:`numpy.ndarray`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
@@ -125,8 +125,9 @@ class PatchExtractor(PatchExtractorABC):
         units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
-        within_bound: bool = False,
         min_mask_ratio: float = 0,
+        *,
+        within_bound: bool = False,
     ) -> None:
         """Initialize :class:`PatchExtractor`."""
         if isinstance(patch_size, (tuple, list)):
@@ -350,6 +351,7 @@ class PatchExtractor(PatchExtractorABC):
         patch_input_shape: tuple[int, int] | np.ndarray | None = None,
         patch_output_shape: tuple[int, int] | np.ndarray | None = None,
         stride_shape: tuple[int, int] | np.ndarray | None = None,
+        *,
         input_within_bound: bool = False,
         output_within_bound: bool = False,
     ):
@@ -546,8 +548,9 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         stride: int | tuple[int, int] | None = None,
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
-        within_bound: bool = False,
         min_mask_ratio: float = 0,
+        *,
+        within_bound: bool = False,
     ) -> None:
         """Initialize :class:`SlidingWindowPatchExtractor`."""
         super().__init__(
@@ -626,6 +629,7 @@ class PointsPatchExtractor(PatchExtractor):
         units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
+        *,
         within_bound: bool = False,
     ) -> None:
         """Initialize :class:`PointsPatchExtractor`."""
@@ -650,14 +654,7 @@ class PointsPatchExtractor(PatchExtractor):
 
 def get_patch_extractor(
     method_name: str,
-    **kwargs: Path
-    | wsireader.WSIReader
-    | None
-    | str
-    | int
-    | tuple[int, int]
-    | float
-    | tuple[float, float],
+    **kwargs: Path | wsireader.WSIReader | None | str | float | tuple[float, float],
 ):
     """Return a patch extractor object as requested.
 

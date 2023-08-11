@@ -6,6 +6,7 @@ import copy
 import gc
 import shutil
 from pathlib import Path
+from typing import Callable
 
 import joblib
 import numpy as np
@@ -35,14 +36,14 @@ BATCH_SIZE = 1 if not ON_GPU else 16
 # ----------------------------------------------------
 
 
-def _rm_dir(path):
+def _rm_dir(path) -> None:
     """Helper func to remove directory."""
     shutil.rmtree(path, ignore_errors=True)
 
 
-def _crash_func(x):
+def _crash_func(_x) -> None:
     """Helper to induce crash."""
-    msg = "Propataion Crash."
+    msg = "Propagation Crash."
     raise ValueError(msg)
 
 
@@ -83,7 +84,7 @@ def helper_tile_info():
 # ----------------------------------------------------
 
 
-def test_get_tile_info():
+def test_get_tile_info() -> None:
     """Test for getting tile info."""
     info = helper_tile_info()
     _, flag = info[0]  # index 0 should be full grid, removal
@@ -120,7 +121,7 @@ def test_get_tile_info():
     ), "Fail Right"
 
 
-def test_vertical_boundary_boxes():
+def test_vertical_boundary_boxes() -> None:
     """Test for vertical boundary boxes."""
     info = helper_tile_info()
     _boxes = np.array(
@@ -160,7 +161,7 @@ def test_vertical_boundary_boxes():
     assert np.sum(flag - _flag) == 0, "Fail Vertical Flag"
 
 
-def test_horizontal_boundary_boxes():
+def test_horizontal_boundary_boxes() -> None:
     """Test for horizontal boundary boxes."""
     info = helper_tile_info()
     _boxes = np.array(
@@ -200,7 +201,7 @@ def test_horizontal_boundary_boxes():
     assert np.sum(flag - _flag) == 0, "Fail Horizontal Flag"
 
 
-def test_cross_section_boundary_boxes():
+def test_cross_section_boundary_boxes() -> None:
     """Test for cross-section boundary boxes."""
     info = helper_tile_info()
     _boxes = np.array(
@@ -234,7 +235,7 @@ def test_cross_section_boundary_boxes():
     assert np.sum(flag - _flag) == 0, "Fail Cross Section Flag"
 
 
-def test_crash_segmentor(remote_sample, tmp_path):
+def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     """Test engine crash when given malformed input."""
     root_save_dir = Path(tmp_path)
     sample_wsi_svs = Path(remote_sample("svs-1-small"))
@@ -266,10 +267,10 @@ def test_crash_segmentor(remote_sample, tmp_path):
         pretrained_model="hovernet_fast-pannuke",
     )
 
-    # * Test crash propagation when parallelize post processing
+    # * Test crash propagation when parallelize post-processing
     _rm_dir(save_dir)
     instance_segmentor.model.postproc_func = _crash_func
-    with pytest.raises(ValueError, match=r"Propataion Crash."):
+    with pytest.raises(ValueError, match=r"Propagation Crash."):
         instance_segmentor.predict(
             [sample_wsi_svs],
             masks=[sample_wsi_msk],
@@ -282,7 +283,7 @@ def test_crash_segmentor(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_ci(remote_sample, tmp_path):
+def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
     """Functionality test for nuclei instance segmentor."""
     gc.collect()
     root_save_dir = Path(tmp_path)
@@ -333,7 +334,10 @@ def test_functionality_ci(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_functionality_merge_tile_predictions_ci(remote_sample, tmp_path):
+def test_functionality_merge_tile_predictions_ci(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Functional tests for merging tile predictions."""
     gc.collect()  # Force clean up everything on hold
     save_dir = Path(f"{tmp_path}/output")
@@ -436,7 +440,7 @@ def test_functionality_merge_tile_predictions_ci(remote_sample, tmp_path):
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_functionality_local(remote_sample, tmp_path):
+def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Local functionality test for nuclei instance segmentor."""
     root_save_dir = Path(tmp_path)
     save_dir = Path(f"{tmp_path}/output")
@@ -509,7 +513,10 @@ def test_functionality_local(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
+def test_cli_nucleus_instance_segment_ioconfig(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
     """Test for nucleus segmentation with IOConfig."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
@@ -571,7 +578,7 @@ def test_cli_nucleus_instance_segment_ioconfig(remote_sample, tmp_path):
     _rm_dir(tmp_path)
 
 
-def test_cli_nucleus_instance_segment(remote_sample, tmp_path):
+def test_cli_nucleus_instance_segment(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for nucleus segmentation."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     output_path = tmp_path / "output"
