@@ -1,6 +1,8 @@
 """Miscellaneous utilities which operate on image data."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Callable
+
 import numpy as np
 from PIL import Image
 
@@ -14,6 +16,9 @@ from tiatoolbox.utils.transforms import (
     pad_bounds,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import IntBounds
+
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """
 Constant array which when multiplied with padding and added to bounds,
@@ -23,7 +28,7 @@ applies the padding to the bounds.
 PADDING_TO_BOUNDS.flags.writeable = False
 
 
-def normalize_padding_size(padding):
+def normalize_padding_size(padding: int | tuple[int, int]) -> np.ndarray:
     """Normalizes padding to be length 4 (left, top, right, bottom).
 
     Given a scalar value, this is assumed to apply to all sides and
@@ -54,8 +59,8 @@ def normalize_padding_size(padding):
             msg,
         )
     padding_size = np.size(padding)
-    if padding_size == 3:
-        msg = "Padding has invalid size 3. Valid sizes are 1, 2, or 4."
+    if padding_size not in [1, 2, 4]:
+        msg = f"Padding has invalid size {padding_size}. Valid sizes are 1, 2, or 4."
         raise ValueError(msg)
 
     if padding_size == 1:
@@ -65,7 +70,11 @@ def normalize_padding_size(padding):
     return np.array(padding)
 
 
-def find_padding(read_location, read_size, image_size):
+def find_padding(
+    read_location: tuple[int],
+    read_size: tuple[int],
+    image_size: tuple[int],
+) -> tuple[tuple[int, int], tuple[int, int]]:
     """Find the correct padding to add when reading a region of an image.
 
     Args:
@@ -100,7 +109,11 @@ def find_padding(read_location, read_size, image_size):
     return np.stack([before_padding[::-1], after_padding[::-1]], axis=1)
 
 
-def find_overlap(read_location, read_size, image_size):
+def find_overlap(
+    read_location: tuple[int],
+    read_size: tuple[int],
+    image_size: tuple[int],
+) -> np.ndarray:
     """Find the part of a region which overlaps the image area.
 
     Args:
@@ -112,7 +125,7 @@ def find_overlap(read_location, read_size, image_size):
         The size of the image to read from.
 
     Returns:
-        tuple:
+        np.ndarray:
             Bounds of the overlapping region.
 
     Examples:
@@ -133,7 +146,7 @@ def find_overlap(read_location, read_size, image_size):
     return np.concatenate([start, stop])
 
 
-def make_bounds_size_positive(bounds):
+def make_bounds_size_positive(bounds: IntBounds) -> tuple:
     """Make bounds have positive size and get horizontal/vertical flip flags.
 
     Bounds with a negative size in either direction with have the
@@ -142,7 +155,7 @@ def make_bounds_size_positive(bounds):
     to reflect the swaps which occurred.
 
     Args:
-        bounds (:class:`numpy.ndarray`):
+        bounds (IntBounds):
             Length 4 array of bounds.
 
     Returns:
@@ -270,14 +283,14 @@ def crop_and_pad_edges(
 
 
 def safe_padded_read(
-    image,
-    bounds,
-    stride=1,
-    padding=0,
-    pad_mode="constant",
-    pad_constant_values=0,
-    pad_kwargs=None,
-):
+    image: np.ndarray,
+    bounds: IntBounds,
+    stride: int | tuple[int, int] = 1,
+    padding: int | tuple[int, int] = 0,
+    pad_mode: str = "constant",
+    pad_constant_values: int | tuple[int, int] = 0,
+    pad_kwargs: dict | None = None,
+) -> np.ndarray:
     """Read a region of a numpy array with padding applied to edges.
 
     Safely 'read' regions, even outside the image bounds. Accepts
@@ -416,17 +429,17 @@ def safe_padded_read(
 
 def sub_pixel_read(  # noqa: C901
     image: np.ndarray,
-    bounds,
-    output_size,
-    padding=0,
-    stride=1,
-    interpolation="nearest",
-    interpolation_padding=2,
-    read_func=None,
-    pad_mode="constant",
-    pad_constant_values=0,
-    read_kwargs=None,
-    pad_kwargs=None,
+    bounds: IntBounds,
+    output_size: tuple[int, int],
+    padding: int | tuple[int, int] = 0,
+    stride: int | tuple[int, int] = 1,
+    interpolation: str = "nearest",
+    interpolation_padding: int = 2,
+    read_func: Callable | None = None,
+    pad_mode: str = "constant",
+    pad_constant_values: int | tuple[int, int] = 0,
+    read_kwargs: dict | None = None,
+    pad_kwargs: dict | None = None,
     *,
     pad_at_baseline: bool,
 ) -> np.ndarray:
