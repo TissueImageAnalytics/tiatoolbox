@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     import numpy as np
     from torch import nn
 
+    from tiatoolbox.annotation.storage import Annotation
+
     from .io_config import IOPatchPredictorConfig
 
 
@@ -25,7 +27,6 @@ class EngineABC(ABC):
             Use externally defined PyTorch model for prediction with.
             weights already loaded. Default is `None`. If provided,
             `pretrained_model` argument is ignored.
-        pretrained_model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. For a full list of pretrained models,
             refer to the `docs
@@ -34,12 +35,12 @@ class EngineABC(ABC):
             be downloaded. However, you can override with your own set
             of weights via the `pretrained_weights` argument. Argument
             is case-insensitive.
-        pretrained_weights (str):
+        weights (str):
             Path to the weight of the corresponding `pretrained_model`.
 
             >>> engine = EngineABC(
             ...    pretrained_model="pretrained-model-name",
-            ...    pretrained_weights="pretrained-local-weights.pth")
+            ...    weights="pretrained-local-weights.pth")
 
         batch_size (int):
             Number of images fed into the model each time.
@@ -57,9 +58,8 @@ class EngineABC(ABC):
         mode (str):
             Type of input to process. Choose from either `patch`, `tile`
             or `wsi`.
-        model (nn.Module):
+        model (str | nn.Module):
             Defined PyTorch model.
-        pretrained_model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. For a full list of pretrained models,
             refer to the `docs
@@ -106,12 +106,11 @@ class EngineABC(ABC):
 
     def __init__(
         self,
+        model: nn.Module,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_post_proc_workers: int = 0,
-        model: nn.Module = None,
-        pretrained_model: str | None = None,
-        pretrained_weights: str | None = None,
+        weights: str | None = None,
         *,
         verbose: bool = False,
     ) -> None:
@@ -121,20 +120,15 @@ class EngineABC(ABC):
         self.images = None
         self.mode = None
 
-        if model is None and pretrained_model is None:
-            msg = "Must provide either `model` or `pretrained_model`."
-            raise ValueError(msg)
-
         if model is not None:
             self.model = model
             ioconfig = None  # retrieve ioconfig from provided model.
         else:
-            model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
+            model, ioconfig = get_pretrained_model(model, weights)
 
         self.ioconfig = ioconfig  # for storing original
         self._ioconfig = self.ioconfig  # runtime ioconfig
         self.model = model  # for runtime, such as after wrapping with nn.DataParallel
-        self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
@@ -214,20 +208,22 @@ class EngineABC(ABC):
         self,
         images: list[os | Path] | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
-        labels: list | None = None,
-        mode: str = "patch",
+        labels: list | None = None,  # kwargs
         ioconfig: IOPatchPredictorConfig | None = None,
-        patch_input_shape: tuple[int, int] | None = None,
-        stride_shape: tuple[int, int] | None = None,
-        resolution=None,
-        units=None,
+        patch_input_shape: tuple[int, int] | None = None,  # kwargs (ioconfig)
+        stride_shape: tuple[int, int] | None = None,  # kwargs (ioconfig)
+        resolution=None,  # kwargs (pass to wsireader)
+        units=None,  # kwargs (pass to wsireader)
         *,
-        return_probabilities=False,
-        return_labels=False,
+        patch_mode: bool = False,
+        return_probabilities=False,  # kwargs
+        return_labels=False,  # kwargs
         on_gpu=True,
-        merge_predictions=False,
+        merge_predictions=False,  # kwargs
         save_dir=None,
-        save_output=False,
+        # None will not save output
+        # save_output can be np.ndarray
+        save_output: np.ndarray | Annotation | str | None = True,
         **kwargs: dict,
     ) -> np.ndarray | dict:
         """Run the engine on input images.
@@ -250,9 +246,9 @@ class EngineABC(ABC):
                 List of labels. If using `tile` or `wsi` mode, then only
                 a single label per image tile or whole-slide image is
                 supported.
-            mode (str):
-                Type of input to process. Choose from either `patch`,
-                `tile` or `wsi`.
+            patch_mode (bool):
+                Whether to treat input image as a patch or WSI.
+                default = False.
             return_probabilities (bool):
                 Whether to return per-class probabilities.
             return_labels (bool):
@@ -319,11 +315,11 @@ class EngineABC(ABC):
             ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
 
         """
-        if mode not in ["patch", "wsi"]:
-            msg = f"{mode} is not a valid mode. Use either `patch` or `wsi`."
-            raise ValueError(
-                msg,
-            )
+        self._update(kwargs)  # prefer kwargs as attribute and update if required.
+
+        # if mode not in ["patch", "wsi"]:
+        #     raise ValueError(
+        #         msg,
 
         save_dir = self._prepare_save_dir(save_dir, images)
 

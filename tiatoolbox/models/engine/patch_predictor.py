@@ -123,12 +123,12 @@ class PatchPredictor(EngineABC):
             be downloaded. However, you can override with your own set
             of weights via the `pretrained_weights` argument. Argument
             is case-insensitive.
-        pretrained_weights (str):
+        weights (str):
             Path to the weight of the corresponding `pretrained_model`.
 
           >>> predictor = PatchPredictor(
           ...    pretrained_model="resnet18-kather100k",
-          ...    pretrained_weights="resnet18_local_weight")
+          ...    weights="resnet18_local_weight")
 
         batch_size (int):
             Number of images fed into the model each time.
@@ -146,7 +146,7 @@ class PatchPredictor(EngineABC):
             or `wsi`.
         model (nn.Module):
             Defined PyTorch model.
-        pretrained_model (str):
+        model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. For a full list of pretrained models,
             refer to the `docs
@@ -206,7 +206,7 @@ class PatchPredictor(EngineABC):
         num_post_proc_workers: int = 0,
         model: torch.nn.Module = None,
         pretrained_model: str | None = None,
-        pretrained_weights: str | None = None,
+        weights: str | None = None,
         *,
         verbose=True,
     ) -> None:
@@ -217,7 +217,7 @@ class PatchPredictor(EngineABC):
             num_post_proc_workers=num_post_proc_workers,
             model=model,
             pretrained_model=pretrained_model,
-            pretrained_weights=pretrained_weights,
+            weights=weights,
             verbose=verbose,
         )
 
@@ -700,7 +700,7 @@ class PatchPredictor(EngineABC):
             )
             output_model["label"] = img_label
             # add extra information useful for downstream analysis
-            output_model["pretrained_model"] = self.pretrained_model
+            output_model["pretrained_model"] = self.model
             output_model["resolution"] = highest_input_resolution["resolution"]
             output_model["units"] = highest_input_resolution["units"]
 

@@ -674,7 +674,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
 
     _ = PatchPredictor(
         pretrained_model="resnet18-kather100k",
-        pretrained_weights=pretrained_weights,
+        weights=pretrained_weights,
         batch_size=1,
     )
 
