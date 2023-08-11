@@ -264,7 +264,7 @@ def prealignment(
         "Not able to find the best transformation for pre-alignment. "
         "Try changing the values for 'dice_overlap' and 'rotation_step'.",
     )
-    return np.eye(3), moving_img, moving_mask, dice_before
+    return np.eye(3), orig_moving_img, moving_mask, dice_before
 
 
 def match_histograms(
