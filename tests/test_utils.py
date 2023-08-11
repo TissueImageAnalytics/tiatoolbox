@@ -892,7 +892,7 @@ def test_get_luminosity_tissue_mask() -> None:
         utils.misc.get_luminosity_tissue_mask(img=np.zeros((100, 100, 3)), threshold=0)
 
 
-def test_read_point_annotations(
+def test_read_point_annotations(  # noqa: PLR0915
     tmp_path,
     patch_extr_csv,
     patch_extr_csv_noheader,

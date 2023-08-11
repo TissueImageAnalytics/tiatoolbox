@@ -65,7 +65,7 @@ def normalize_padding_size(padding: int | tuple[int, int]) -> np.ndarray:
 
     if padding_size == 1:
         return np.repeat(padding, 4)
-    if padding_size == 2:
+    if padding_size == 2:  # noqa: PLR2004
         return np.tile(padding, 2)
     return np.array(padding)
 
@@ -252,7 +252,7 @@ def crop_and_pad_edges(
         raise ValueError(msg)
 
     padding = find_padding(loc, size, max_dimensions)
-    if len(region.shape) > 2:
+    if len(region.shape) > 2:  # noqa: PLR2004
         padding = np.concatenate([padding, [[0, 0]]])
 
     # If no padding is required then return the original image unmodified
@@ -263,7 +263,7 @@ def crop_and_pad_edges(
     overlap = np.maximum(overlap - np.tile(loc, 2), 0)
 
     # Add extra padding dimension for colour channels
-    if len(region.shape) > 2:
+    if len(region.shape) > 2:  # noqa: PLR2004
         zero_tuple = (0, 0)
         padding = padding + zero_tuple
 
@@ -416,7 +416,7 @@ def safe_padded_read(
     edge_padding = np.abs(edge_padding)
     left, top, right, bottom = edge_padding
     pad_width = [(top, bottom), (left, right)]
-    if len(region.shape) == 3:
+    if len(region.shape) == 3:  # noqa: PLR2004
         pad_width += [(0, 0)]
     # Pad the image region at the edges
     return np.pad(
@@ -427,7 +427,7 @@ def safe_padded_read(
     )
 
 
-def sub_pixel_read(  # noqa: C901
+def sub_pixel_read(  # noqa: C901, PLR0912, PLR0913, PLR0915
     image: np.ndarray,
     bounds: IntBounds,
     output_size: tuple[int, int],
@@ -647,7 +647,7 @@ def sub_pixel_read(  # noqa: C901
     # Apply stride to padding
     pad_width = pad_width / stride
     # Add 0 padding to channels if required
-    if len(image.shape) > 2:
+    if len(image.shape) > 2:  # noqa: PLR2004
         pad_width = np.concatenate([pad_width, [(0, 0)]])
     # 1.7 Do the padding
     if pad_mode == "constant":
