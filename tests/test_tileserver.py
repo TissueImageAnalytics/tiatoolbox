@@ -400,7 +400,11 @@ def test_load_annotations_empty(
         assert len(json.loads(response.data)) == 2
 
 
-def test_change_overlay(empty_app, tmp_path: Path, remote_sample: Callable) -> None:
+def test_change_overlay(  # noqa: PLR0915
+    empty_app,
+    tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
     """Test changing overlay."""
     sample_store = Path(remote_sample("annotation_store_svs_1"))
     store = SQLiteStore(sample_store)

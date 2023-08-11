@@ -46,15 +46,15 @@ def parse_pip(
             lines = fh.readlines()
     packages = {}
     for line in lines:
-        line = line.strip()
+        line_ = line.strip()
         # Skip comment lines
-        if line.startswith("#"):
+        if line_.startswith("#"):
             continue
         # Skip blank lines
-        if not line:
+        if not line_:
             continue
         # Parse requirement
-        requirement = Requirement.parse(line)
+        requirement = Requirement.parse(line_)
         # Check for duplicate packages
         if requirement.key in packages:
             msg = f"Duplicate dependency: {requirement.name} in {file_path.name}"

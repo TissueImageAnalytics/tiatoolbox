@@ -88,7 +88,7 @@ select = [
   "FA",    # flake8-future-annotations
   "EM",    # flake8-errmsg
   "PD",    # pandas-vet
-  # "PL",  # Pylint
+  "PL",    # Pylint
   "PT",    # flake8-pytest-style
   "TD",    # flake8-todos
   "UP",    # pyupgrade
@@ -149,7 +149,7 @@ exclude = [
 ]
 
 # Ignore `F401` (import violations) in all `__init__.py` files.
-per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001", "S101"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"]}
+per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001", "S101", "PLR2004"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"], "tiatoolbox/cli/*" = ["PLR0913"]}
 
 # Same as Black.
 line-length = 88
@@ -165,6 +165,9 @@ target-version = "py38"
 max-complexity = 14
 
 # need to enable for docstrings check.
- [tool.ruff.pydocstyle]
+[tool.ruff.pydocstyle]
  # Use Google-style docstrings.
- convention = "google"
+convention = "google"
+
+[tool.ruff.pylint]
+max-args = 10
