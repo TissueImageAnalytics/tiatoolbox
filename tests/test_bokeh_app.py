@@ -1,5 +1,8 @@
 """Test the tiatoolbox visualization tool."""
+from __future__ import annotations
+
 import io
+import re
 import time
 
 import matplotlib.pyplot as plt
@@ -370,3 +373,18 @@ def test_clearing_doc(doc):
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
+
+
+def test_color_cycler():
+    """Test the color cycler."""
+    cycler = main.ColorCycler()
+    colors = cycler.colors
+    assert cycler.get_next() == colors[0]
+    assert cycler.get_next() == colors[1]
+
+    rand_color = cycler.get_random()
+    assert rand_color in colors
+
+    new_color = cycler.generate_random()
+    # should be a valid hex color
+    assert re.match(r"^#[0-9a-fA-F]{6}$", new_color)

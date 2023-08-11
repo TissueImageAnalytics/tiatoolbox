@@ -1,4 +1,6 @@
 """Main module for the tiatoolbox visualization bokeh app."""
+from __future__ import annotations
+
 import json
 import os
 import sys
@@ -8,6 +10,7 @@ from cmath import pi
 from pathlib import Path, PureWindowsPath
 from shutil import rmtree
 from threading import Thread
+from typing import Any
 
 import matplotlib.cm as cm
 import numpy as np
@@ -32,6 +35,7 @@ from bokeh.models import (
     Div,
     Dropdown,
     FuncTickFormatter,
+    Glyph,
     GraphRenderer,
     HoverTool,
     LinearColorMapper,
@@ -67,7 +71,7 @@ rng = np.random.default_rng()
 class DummyAttr:
     """Dummy class to enable triggering a callback independently of a widget."""
 
-    def __init__(self, val):
+    def __init__(self, val: Any) -> None:
         """Initialize the class."""
         self.item = val
 
@@ -75,16 +79,19 @@ class DummyAttr:
 class UIWrapper:
     """Wrapper class to access ui elements."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the class."""
         self.active = 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         """Gets active ui element."""
         return win_dicts[self.active][key]
 
 
-def get_view_bounds(dims, plot_size):
+def get_view_bounds(
+    dims: tuple[float, float],
+    plot_size: tuple[float, float],
+) -> tuple[float, float, float, float]:
     """Helper to get the current view bounds."""
     pad = int(np.mean(dims) / 10)
     aspect_ratio = plot_size[0] / plot_size[1]
@@ -109,7 +116,7 @@ def get_view_bounds(dims, plot_size):
     return x_range_start, x_range_end, y_range_start, y_range_end
 
 
-def to_num(x):
+def to_num(x: str) -> int | float | None:
     """Convert a str representation of a number to a numerical value."""
     if not isinstance(x, str):
         return x
@@ -121,8 +128,13 @@ def to_num(x):
         return float(x)
 
 
-def get_from_config(keys, default=None):
-    """Helper to get a value from a config dict."""
+def get_from_config(keys: dict, default: Any = None):
+    """Helper to get a value from a config dict.
+
+    Looks recursively in the dict values for keys.
+    The default value is returned if the key is not found.
+
+    """
     c_dict = doc_config.config
     for k in keys:
         if k in c_dict:
@@ -132,7 +144,7 @@ def get_from_config(keys, default=None):
     return c_dict
 
 
-def make_ts(route, z_levels, init_z=4):
+def make_ts(route: str, z_levels: int, init_z: int = 4):
     """Helper to make a tile source."""
     if init_z is None:
         init_z = UI["vstate"].init_z
@@ -153,17 +165,17 @@ def make_ts(route, z_levels, init_z=4):
     return ts
 
 
-def to_float_rgb(rgb):
+def to_float_rgb(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
     """Helper to convert from int to float rgb(a) tuple."""
     return tuple(v / 255 for v in rgb)
 
 
-def to_int_rgb(rgb):
+def to_int_rgb(rgb: tuple[float, float, float]) -> tuple[int, int, int]:
     """Helper to convert from float to int rgb(a) tuple."""
     return tuple(int(v * 255) for v in rgb)
 
 
-def name2type(name):
+def name2type(name: str) -> Any:
     """Helper to get original type from stringified version."""
     name = UI["vstate"].orig_types[name]
     if isinstance(name, str):
@@ -171,18 +183,18 @@ def name2type(name):
     return name
 
 
-def hex2rgb(hex_val):
+def hex2rgb(hex_val: str) -> tuple[float, float, float]:
     """Covert hex string to float rgb(a) tuple."""
     return tuple(int(hex_val[i : i + 2], 16) / 255 for i in (1, 3, 5))
 
 
-def rgb2hex(rgb):
+def rgb2hex(rgb: tuple[float, float, float]) -> str:
     """Covert float rgb(a) tuple to hex string."""
     int_rgb = to_int_rgb(rgb)
     return f"#{int_rgb[0]:02x}{int_rgb[1]:02x}{int_rgb[2]:02x}"
 
 
-def make_color_seq_from_cmap(cmap):
+def make_color_seq_from_cmap(cmap: str | None = None) -> list[str]:
     """Helper to make a color sequence from a colormap."""
     if cmap is None:
         return [
@@ -192,12 +204,12 @@ def make_color_seq_from_cmap(cmap):
     return [rgb2hex(cmap(v)) for v in np.linspace(0, 1, 50)]
 
 
-def make_safe_name(name):
+def make_safe_name(name: str) -> str:
     """Helper to make a name safe for use in a url."""
     return urllib.parse.quote(str(PureWindowsPath(name)), safe="")
 
 
-def make_color_dict(types):
+def make_color_dict(types: list[str]) -> dict[str, tuple[float, float, float]]:
     """Helper to make a color dict from a list of types."""
     colors = random_colors(len(types), bright=True)
     # grab colors out of doc_config["colour_dict"] if possible, otherwise use random
@@ -215,13 +227,13 @@ def make_color_dict(types):
     return type_colours
 
 
-def set_alpha_glyph(glyph, alpha):
+def set_alpha_glyph(glyph: Glyph, alpha: float):
     """Sets both fill and line alpha for a glyph."""
     glyph.fill_alpha = alpha
     glyph.line_alpha = alpha
 
 
-def get_mapper_for_prop(prop, mapper_type="auto"):
+def get_mapper_for_prop(prop: str, mapper_type: str = "auto"):
     """Helper to get appropriate mapper for a property."""
     # find out the unique values of the chosen property
     resp = UI["s"].get(f"http://{host2}:5000/tileserver/prop_values/{prop}/all")
@@ -246,7 +258,7 @@ def update_mapper():
         update_renderer("mapper", UI["vstate"].mapper)
 
 
-def update_renderer(prop, value):
+def update_renderer(prop: str, value: Any):
     """Helper to update a renderer property."""
     if prop == "mapper":
         if value == "dict":
@@ -398,7 +410,7 @@ def initialise_overlay():
     build_predicate()
 
 
-def add_layer(lname):
+def add_layer(lname: str):
     """Add a new layer to the visualization."""
     UI["type_column"].children.append(
         Toggle(
@@ -444,7 +456,7 @@ def add_layer(lname):
 class TileGroup:
     """Class to keep track of the current tile group."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialise the tile group."""
         self.group = 1
 
@@ -457,7 +469,7 @@ class TileGroup:
 class ColorCycler:
     """Class to cycle through a list of colors."""
 
-    def __init__(self, colors=None):
+    def __init__(self, colors=None) -> None:
         """Initialise the color cycler."""
         if colors is None:
             colors = ["red", "blue", "lime", "yellow", "cyan", "magenta", "orange"]
@@ -479,7 +491,7 @@ class ColorCycler:
         return rgb2hex(rng.choice(256, 3) / 255)
 
 
-def change_tiles(layer_name="overlay"):
+def change_tiles(layer_name: str = "overlay"):
     """Update tilesources.
 
     If a layer is updated/added, will update the tilesource to ensure
@@ -525,7 +537,7 @@ def change_tiles(layer_name="overlay"):
     logger.info("current layers: %s", UI["vstate"].layer_dict)
 
 
-def run_app():
+def run_app() -> None:
     """Helper function to launch a tileserver if running locally."""
     app = TileServer(
         title="Tiatoolbox TileServer",
@@ -538,7 +550,7 @@ def run_app():
 class ViewerState:
     """Class to keep track of the current state of the viewer."""
 
-    def __init__(self, slide_path=None):
+    def __init__(self, slide_path: str | Path | None = None) -> None:
         """Initialise the viewer state."""
         if slide_path is not None:
             self.wsi = WSIReader.open(slide_path)
@@ -598,7 +610,7 @@ class ViewerState:
 
 # Define UI callbacks
 # region
-def res_switch_cb(attr, old, new):
+def res_switch_cb(attr: str, old: int, new: int):
     """Callback to switch between resolutions."""
     if new == 0:
         UI["vstate"].res = 1
@@ -684,7 +696,7 @@ def filter_input_cb(attr, old, new):
     UI["vstate"].to_update.update(["overlay"])
 
 
-def cprop_input_cb(attr, old, new):
+def cprop_input_cb(attr, old, new: list[str]):
     """Change property to colour by."""
     if len(new) == 0:
         return
@@ -1767,7 +1779,7 @@ class DocConfig:
         """Get an item from the config."""
         return self.config[key]
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         """Check if a key is in the config."""
         return key in self.config
 
