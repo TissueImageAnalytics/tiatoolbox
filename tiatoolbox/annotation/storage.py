@@ -515,8 +515,8 @@ class AnnotationStore(ABC, MutableMapping):
         geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the store
         for key, geometry, properties in zip(keys, geometries, properties_iter):
-            properties = copy.deepcopy(properties)
-            self.patch(key, geometry, properties)
+            properties_ = copy.deepcopy(properties)
+            self.patch(key, geometry, properties_)
 
     def remove(self, key: str) -> None:
         """Remove annotation from the store with its unique key.
@@ -1801,7 +1801,7 @@ class SQLiteStore(AnnotationStore):
         """Opens :class:`SQLiteStore` from file pointer or path."""
         return SQLiteStore(fp)
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         connection: Path | str | IO = ":memory:",
         compression: str = "zlib",
@@ -1824,12 +1824,11 @@ class SQLiteStore(AnnotationStore):
                 raise OSError(
                     msg,
                 )
-        else:
-            if not all(
-                ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options],
-            ):
-                msg = "RTREE and JSON1 sqlite3 compile options are required."
-                raise OSError(msg)
+        elif not all(
+            ["ENABLE_JSON1" in compile_options, "ENABLE_RTREE" in compile_options],
+        ):
+            msg = "RTREE and JSON1 sqlite3 compile options are required."
+            raise OSError(msg)
 
         # Check that math functions are enabled
         if "ENABLE_MATH_FUNCTIONS" not in compile_options:
@@ -2277,7 +2276,7 @@ class SQLiteStore(AnnotationStore):
 
         return query_string, query_parameters
 
-    def _query(
+    def _query(  # noqa: PLR0913
         self,
         columns: str,
         geometry: Geometry | None = None,
@@ -3289,7 +3288,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         _, minor, _ = sqlite3.sqlite_version_info
-        if minor < 9:
+        if minor < 9:  # noqa: PLR2004
             msg = "Requires sqlite version 3.9.0 or higher."
             raise OSError(msg)
         cur = self.con.cursor()

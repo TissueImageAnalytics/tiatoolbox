@@ -24,6 +24,9 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import IntBounds, Resolution, Units
 
+RGB_IMAGE_DIM = 3
+BIN_MASK_DIM = 2
+
 
 def _check_dims(
     fixed_img: np.ndarray,
@@ -63,10 +66,10 @@ def _check_dims(
         msg = "Mismatch of shape between image and its corresponding mask."
         raise ValueError(msg)
 
-    if len(fixed_img.shape) == 3:
+    if len(fixed_img.shape) == RGB_IMAGE_DIM:
         fixed_img = cv2.cvtColor(fixed_img, cv2.COLOR_BGR2GRAY)
 
-    if len(moving_img.shape) == 3:
+    if len(moving_img.shape) == RGB_IMAGE_DIM:
         moving_img = cv2.cvtColor(moving_img, cv2.COLOR_BGR2GRAY)
 
     return fixed_img, moving_img
@@ -163,9 +166,9 @@ def prealignment(
     """
     orig_fixed_img, orig_moving_img = fixed_img, moving_img
 
-    if len(fixed_mask.shape) != 2:
+    if len(fixed_mask.shape) != BIN_MASK_DIM:
         fixed_mask = fixed_mask[:, :, 0]
-    if len(moving_mask.shape) != 2:
+    if len(moving_mask.shape) != BIN_MASK_DIM:
         moving_mask = moving_mask[:, :, 0]
 
     fixed_mask = np.uint8(fixed_mask > 0)
@@ -175,7 +178,7 @@ def prealignment(
     moving_img = np.squeeze(moving_img)
     fixed_img, moving_img = _check_dims(fixed_img, moving_img, fixed_mask, moving_mask)
 
-    if rotation_step < 10 or rotation_step > 20:
+    if rotation_step < 10 or rotation_step > 20:  # noqa: PLR2004
         msg = "Please select the rotation step in between 10 and 20."
         raise ValueError(msg)
 
@@ -295,7 +298,7 @@ def match_histograms(
 
     """
     image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
-    if len(image_a.shape) == 3 or len(image_b.shape) == 3:
+    if len(image_a.shape) == RGB_IMAGE_DIM or len(image_b.shape) == RGB_IMAGE_DIM:
         msg = "The input images should be grayscale images."
         raise ValueError(msg)
 
@@ -584,7 +587,7 @@ class DFBRegister:
                   quality of each matching point.
 
         """
-        if len(features) != 3:
+        if len(features) != 3:  # noqa: PLR2004
             msg = "The feature mapping step expects 3 blocks of features."
             raise ValueError(msg)
 
@@ -1082,19 +1085,22 @@ class DFBRegister:
                 An affine transformation matrix.
 
         """
-        if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
+        if (
+            len(fixed_img.shape) != RGB_IMAGE_DIM
+            or len(moving_img.shape) != RGB_IMAGE_DIM
+        ):
             msg = "The required shape for fixed and moving images is n x m x 3."
             raise ValueError(
                 msg,
             )
 
-        if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
+        if fixed_img.shape[2] != RGB_IMAGE_DIM or moving_img.shape[2] != RGB_IMAGE_DIM:
             msg = "The input images are expected to have 3 channels."
             raise ValueError(msg)
 
-        if len(fixed_mask.shape) > 2:
+        if len(fixed_mask.shape) > BIN_MASK_DIM:
             fixed_mask = fixed_mask[:, :, 0]
-        if len(moving_mask.shape) > 2:
+        if len(moving_mask.shape) > BIN_MASK_DIM:
             moving_mask = moving_mask[:, :, 0]
 
         fixed_mask = np.uint8(fixed_mask > 0)
@@ -1297,12 +1303,19 @@ def estimate_bspline_transform(
     bspline_params.update(kwargs)
 
     fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
-    if len(fixed_image.shape) > 3 or len(moving_image.shape) > 3:
+    if (
+        len(fixed_image.shape) > RGB_IMAGE_DIM
+        or len(moving_image.shape) > RGB_IMAGE_DIM
+    ):
         msg = "The input images can only be grayscale or RGB images."
         raise ValueError(msg)
 
-    if (len(fixed_image.shape) == 3 and fixed_image.shape[2] != 3) or (
-        len(moving_image.shape) == 3 and moving_image.shape[2] != 3
+    if (
+        len(fixed_image.shape) == RGB_IMAGE_DIM
+        and fixed_image.shape[2] != RGB_IMAGE_DIM
+    ) or (
+        len(moving_image.shape) == RGB_IMAGE_DIM
+        and moving_image.shape[2] != RGB_IMAGE_DIM
     ):
         msg = "The input images can only have 3 channels."
         raise ValueError(msg)
@@ -1311,9 +1324,9 @@ def estimate_bspline_transform(
     fixed_image_inv = np.invert(fixed_image)
     moving_image_inv = np.invert(moving_image)
 
-    if len(fixed_mask.shape) > 2:
+    if len(fixed_mask.shape) > BIN_MASK_DIM:
         fixed_mask = fixed_mask[:, :, 0]
-    if len(moving_mask.shape) > 2:
+    if len(moving_mask.shape) > BIN_MASK_DIM:
         moving_mask = moving_mask[:, :, 0]
     fixed_mask = np.array(fixed_mask != 0, dtype=np.uint8)
     moving_mask = np.array(moving_mask != 0, dtype=np.uint8)

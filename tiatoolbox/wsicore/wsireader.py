@@ -100,7 +100,7 @@ def is_zarr(path: Path) -> bool:
         return True
 
 
-def is_ngff(
+def is_ngff(  # noqa: PLR0911
     path: Path,
     min_version: Version = MIN_NGFF_VERSION,
     max_version: Version = MAX_NGFF_VERSION,
@@ -225,7 +225,7 @@ class WSIReader:
     """
 
     @staticmethod
-    def open(  # noqa: A003
+    def open(  # noqa: A003, PLR0911
         input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
@@ -381,7 +381,7 @@ class WSIReader:
         # Set a manual mpp value
         if mpp and isinstance(mpp, Number):
             mpp = (mpp, mpp)
-        if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):
+        if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):  # noqa: PLR2004
             msg = "`mpp` must be a number or iterable of length 2."
             raise TypeError(msg)
         self._manual_mpp = tuple(mpp) if mpp else None
@@ -3439,7 +3439,7 @@ class TIFFWSIReader(WSIReader):
 
             """
             pair = string.split("=")
-            if len(pair) != 2:
+            if len(pair) != 2:  # noqa: PLR2004
                 msg = "Invalid metadata. Expected string of the format 'key=value'."
                 raise ValueError(
                     msg,
@@ -5484,7 +5484,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:
+            if self.alpha < 1.0:  # noqa: PLR2004
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )
@@ -5677,7 +5677,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:
+            if self.alpha < 1.0:  # noqa: PLR2004
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )

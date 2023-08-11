@@ -43,7 +43,7 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
             Canvas Shape, Canvas Count and whether to add singleton dimension.
 
     """
-    if len(sample_prediction.shape) == 3:
+    if len(sample_prediction.shape) == 3:  # noqa: PLR2004
         num_output_ch = sample_prediction.shape[-1]
         canvas_cum_shape_ = (*tuple(canvas_shape), num_output_ch)
         canvas_count_shape_ = (*tuple(canvas_shape), 1)
@@ -1245,7 +1245,7 @@ class SemanticSegmentor:
                 raise err  # noqa: TRY201
             logging.exception("Crashed on %s", wsi_save_path)
 
-    def predict(
+    def predict(  # noqa: PLR0913
         self,
         imgs,
         masks=None,
@@ -1545,7 +1545,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             prediction_list = np.array(prediction_list)
             np.save(f"{save_path}.features.{idx}.npy", prediction_list)
 
-    def predict(
+    def predict(  # noqa: PLR0913
         self,
         imgs,
         masks=None,
