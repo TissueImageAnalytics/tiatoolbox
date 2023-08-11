@@ -118,7 +118,7 @@ def _process_instance_predictions(
         sel_boxes = [
             box
             for idx, box in enumerate(margin_boxes)
-            if tile_flag[idx] or tile_mode == 3
+            if tile_flag[idx] or tile_mode == 3  # noqa: PLR2004
         ]
 
         sel_indices = [
@@ -156,7 +156,7 @@ def _process_instance_predictions(
     # external removal only for tile at cross sections
     # this one should contain UUID with the reference database
     remove_insts_in_orig = []
-    if tile_mode == 3:
+    if tile_mode == 3:  # noqa: PLR2004
         inst_boxes = [v["box"] for v in ref_inst_dict.values()]
         inst_boxes = np.array(inst_boxes)
 

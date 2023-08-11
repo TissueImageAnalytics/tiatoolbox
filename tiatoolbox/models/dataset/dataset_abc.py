@@ -47,7 +47,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             ValueError: If the shape is not valid.
 
         """
-        if any(len(v) != 3 for v in shapes):
+        if any(len(v) != 3 for v in shapes):  # noqa: PLR2004
             msg = "Each sample must be an array of the form HWC."
             raise ValueError(msg)
 

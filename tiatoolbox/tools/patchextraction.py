@@ -297,7 +297,7 @@ class PatchExtractor(PatchExtractorABC):
         ):
             msg = "`coordinates_list` should be ndarray of integer type."
             raise ValueError(msg)
-        if coordinates_list.shape[-1] != 4:
+        if coordinates_list.shape[-1] != 4:  # noqa: PLR2004
             msg = "`coordinates_list` must be of shape [N, 4]."
             raise ValueError(msg)
 
@@ -414,7 +414,7 @@ class PatchExtractor(PatchExtractorABC):
             """Test if the shape is valid for an image."""
             return (
                 not np.issubdtype(shape.dtype, np.integer)
-                or np.size(shape) > 2
+                or np.size(shape) > 2  # noqa: PLR2004
                 or np.any(shape < 0)
             )
 
@@ -538,7 +538,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
@@ -566,11 +566,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         )
         if stride is None:
             self.stride = self.patch_size
+        elif isinstance(stride, (tuple, list)):
+            self.stride = (int(stride[0]), int(stride[1]))
         else:
-            if isinstance(stride, (tuple, list)):
-                self.stride = (int(stride[0]), int(stride[1]))
-            else:
-                self.stride = (int(stride), int(stride))
+            self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
 

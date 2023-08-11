@@ -139,7 +139,7 @@ class HoVerNetPlus(HoVerNet):
         min_size = 20000
         kernel_size = 20
 
-        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")
+        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")  # noqa: PLR2004
         mask = np.where(ls_map >= 1, 1, 0).astype("uint8")
         epith_all = epith_all > 0
         epith_mask = morphology.remove_small_objects(
