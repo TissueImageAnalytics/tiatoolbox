@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import pickle
-import random
 import sqlite3
 import sys
 from itertools import repeat
@@ -175,9 +174,10 @@ def fill_store(cell_grid, points_grid):
         path: str | Path,
     ):
         """Private function to fill stores with data."""
+        rng = np.random.default_rng()
         store = store_class(path)
         annotations = [Annotation(cell) for cell in cell_grid] + [
-            Annotation(point, properties={"class": random.randint(0, 4)})
+            Annotation(point, properties={"class": int(rng.integers(0, 5))})
             for point in points_grid
         ]
         keys = store.append_many(annotations)
@@ -201,11 +201,11 @@ def test_sqlite_store_compile_options_exception(monkeypatch) -> None:
     monkeypatch.setattr(
         SQLiteStore,
         "compile_options",
-        lambda x: ["ENABLE_RTREE", "ENABLE_JSON1"],
+        lambda _x: ["ENABLE_RTREE", "ENABLE_JSON1"],
         raising=True,
     )
     SQLiteStore()
-    monkeypatch.setattr(SQLiteStore, "compile_options", lambda x: [], raising=True)
+    monkeypatch.setattr(SQLiteStore, "compile_options", lambda _x: [], raising=True)
     with pytest.raises(EnvironmentError, match="RTREE and JSON1"):
         SQLiteStore()
 
@@ -216,7 +216,7 @@ def test_sqlite_store_compile_options_exception_v3_38(monkeypatch) -> None:
     monkeypatch.setattr(
         SQLiteStore,
         "compile_options",
-        lambda x: ["OMIT_JSON"],
+        lambda _x: ["OMIT_JSON"],
         raising=True,
     )
     with pytest.raises(EnvironmentError, match="JSON must not"):
@@ -231,7 +231,7 @@ def test_sqlite_store_compile_options_missing_math(
     monkeypatch.setattr(
         SQLiteStore,
         "compile_options",
-        lambda x: ["ENABLE_JSON1", "ENABLE_RTREE"],
+        lambda _x: ["ENABLE_JSON1", "ENABLE_RTREE"],
         raising=True,
     )
     SQLiteStore()
@@ -249,7 +249,7 @@ def test_sqlite_store_index_type_error() -> None:
     """Test adding an index of invalid type."""
     store = SQLiteStore()
     with pytest.raises(TypeError, match="where"):
-        store.create_index("foo", lambda g, p: "foo" in p)
+        store.create_index("foo", lambda _g, p: "foo" in p)
 
 
 def test_sqlite_store_index_version_error(monkeypatch) -> None:
@@ -562,9 +562,10 @@ class TestStore:
     @staticmethod
     def test_append_many(cell_grid, tmp_path: Path, store_cls) -> None:
         """Test bulk append of annotations."""
+        rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = store.append_many(annotations)
         assert len(keys) == len(cell_grid)
@@ -572,9 +573,10 @@ class TestStore:
     @staticmethod
     def test_append_many_with_keys(cell_grid, tmp_path: Path, store_cls) -> None:
         """Test bulk append of annotations with keys."""
+        rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = [chr(n) for n, _ in enumerate(annotations)]
         returned_keys = store.append_many(annotations, keys=keys)
@@ -588,9 +590,10 @@ class TestStore:
         store_cls,
     ) -> None:
         """Test bulk append of annotations with keys of wrong length."""
+        rng = np.random.default_rng()
         store = store_cls(tmp_path / "polygons")
         annotations = [
-            Annotation(cell, {"class": random.randint(0, 6)}) for cell in cell_grid
+            Annotation(cell, {"class": int(rng.integers(0, 7))}) for cell in cell_grid
         ]
         keys = ["foo"]
         with pytest.raises(ValueError, match="equal"):
@@ -1067,14 +1070,14 @@ class TestStore:
         assert len(results) == 1
 
     @staticmethod
-    def test_append_invalid_geometry(fill_store, store_cls) -> None:
+    def test_append_invalid_geometry(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that appending invalid geometry raises an exception."""
         store = store_cls()
         with pytest.raises((TypeError, AttributeError)):
             store.append("point", {})
 
     @staticmethod
-    def test_update_invalid_geometry(fill_store, store_cls) -> None:
+    def test_update_invalid_geometry(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that updating  a new key and None geometry raises an exception."""
         store = store_cls()
         key = "foo"
@@ -1091,7 +1094,7 @@ class TestStore:
         assert annotation not in store.values()
 
     @staticmethod
-    def test_pop_key_error(fill_store, store_cls) -> None:
+    def test_pop_key_error(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that popping a key that is not in the store raises an exception."""
         store = store_cls()
         with pytest.raises(KeyError):
@@ -1107,14 +1110,14 @@ class TestStore:
         assert annotation not in store.values()
 
     @staticmethod
-    def test_popitem_empty_error(fill_store, store_cls) -> None:
+    def test_popitem_empty_error(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that popping an empty store raises an exception."""
         store = store_cls()
         with pytest.raises(KeyError):
             store.popitem()
 
     @staticmethod
-    def test_setdefault(fill_store, store_cls, sample_triangle) -> None:
+    def test_setdefault(fill_store, store_cls, sample_triangle) -> None:  # noqa: ARG004
         """Test setting a default value for a key."""
         store = store_cls()
         default = Annotation(sample_triangle)
@@ -1124,7 +1127,11 @@ class TestStore:
         assert default in store.values()
 
     @staticmethod
-    def test_setdefault_error(fill_store, store_cls, sample_triangle) -> None:
+    def test_setdefault_error(
+        fill_store,  # noqa: ARG004
+        store_cls,
+        sample_triangle,  # noqa: ARG004
+    ) -> None:
         """Test setting a default value for a key with invalid type."""
         store = store_cls()
         with pytest.raises(TypeError):
@@ -1138,7 +1145,7 @@ class TestStore:
         assert store.get(keys[0]) == store[keys[0]]
 
     @staticmethod
-    def test_get_default(fill_store, store_cls) -> None:
+    def test_get_default(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test getting a default value for a key."""
         store = store_cls()
         assert "foo" not in store
@@ -1195,21 +1202,27 @@ class TestStore:
         assert store[keys[0]] in store_dict.values()
 
     @staticmethod
-    def test_query_invalid_geometry_predicate(fill_store, store_cls) -> None:
+    def test_query_invalid_geometry_predicate(
+        fill_store,  # noqa: ARG004
+        store_cls,
+    ) -> None:
         """Test that invalid geometry predicate raises an exception."""
         store = store_cls()
         with pytest.raises(ValueError, match="Invalid geometry predicate"):
             store.query((0, 0, 1024, 1024), geometry_predicate="foo")
 
     @staticmethod
-    def test_query_no_geometry_or_where(fill_store, store_cls) -> None:
+    def test_query_no_geometry_or_where(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that query raises exception when no geometry or predicate given."""
         store = store_cls()
         with pytest.raises(ValueError, match="At least one of"):
             store.query()
 
     @staticmethod
-    def test_iquery_invalid_geometry_predicate(fill_store, store_cls) -> None:
+    def test_iquery_invalid_geometry_predicate(
+        fill_store,  # noqa: ARG004
+        store_cls,
+    ) -> None:
         """Test that invalid geometry predicate raises an exception."""
         store = store_cls()
         with pytest.raises(ValueError, match="Invalid geometry predicate"):
@@ -1229,7 +1242,7 @@ class TestStore:
                 assert geometry.wkb == deserialised.wkb
 
     @staticmethod
-    def test_commit(fill_store, store_cls, tmp_path: Path) -> None:
+    def test_commit(fill_store, store_cls, tmp_path: Path) -> None:  # noqa: ARG004
         """Test committing a store."""
         store_path = tmp_path / "test_store"
         test_store = store_cls(store_path)
@@ -1242,21 +1255,26 @@ class TestStore:
         assert "foo" in test_store
 
     @staticmethod
-    def test_load_cases_error(fill_store, store_cls) -> None:
+    def test_load_cases_error(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that loading a store with an invalid file handle raises an exception."""
         store = store_cls()
         with pytest.raises(IOError, match="Invalid file handle or path"):
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py38_init(fill_store, store_cls, monkeypatch) -> None:
+    def test_py38_init(fill_store, store_cls, monkeypatch) -> None:  # noqa: ARG004
         """Test that __init__ is compatible with Python 3.8."""
         py38_version = (3, 8, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""
 
-            def create_function(self, name: str, num_params: int, func: Any) -> None:
+            def create_function(
+                self,
+                name: str,
+                num_params: int,
+                func: Any,  # noqa: ARG002
+            ) -> None:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 

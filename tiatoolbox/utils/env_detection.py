@@ -249,7 +249,107 @@ def has_network(
         return True
 
 
-def pixman_versions() -> list[tuple[int, ...]]:
+def check_pixman_using_anaconda(versions: list) -> tuple[list, str]:
+    """Using anaconda to check for pixman."""
+    using = "conda"
+    try:
+        conda_list = subprocess.Popen(
+            ("conda", "list"),  # noqa: S603
+            stdout=subprocess.PIPE,
+        )
+        conda_pixman = subprocess.check_output(
+            ("grep", "pixman"),  # noqa: S603
+            stdin=conda_list.stdout,
+        )
+        conda_list.wait()
+    except subprocess.SubprocessError:
+        conda_pixman = b""
+    matches = re.search(
+        r"^pixman\s*(\d+.\d+)*",
+        conda_pixman.decode("utf-8"),
+        flags=re.MULTILINE,
+    )
+    if matches:
+        versions = [version_to_tuple(matches.group(1))]
+
+    return versions, using
+
+
+def check_pixman_using_dpkg(versions: list) -> tuple[list, str]:
+    """Using dpkg to check for pixman."""
+    using = "dpkg"
+    try:
+        dkpg_output = subprocess.check_output(
+            ["/usr/bin/dpkg", "-s", "libpixman-1-0"],  # noqa: S603
+        )
+    except subprocess.SubprocessError:
+        dkpg_output = b""
+    matches = re.search(
+        r"^Version: ((?:\d+[._]+)+\d*)",
+        dkpg_output.decode("utf-8"),
+        flags=re.MULTILINE,
+    )
+    if matches:
+        versions = [version_to_tuple(matches.group(1))]
+
+    return versions, using
+
+
+def check_pixman_using_brew(versions: list) -> tuple[list, str]:
+    """Using homebrew to check for pixman."""
+    using = "brew"
+    try:
+        brew_list = subprocess.Popen(
+            ("brew", "list", "--versions"),  # noqa: S603
+            stdout=subprocess.PIPE,
+        )
+        brew_pixman = subprocess.check_output(
+            ("grep", "pixman"),  # noqa: S603
+            stdin=brew_list.stdout,
+        )
+        brew_list.wait()
+    except subprocess.SubprocessError:
+        brew_pixman = b""
+    matches = re.findall(
+        r"((?:\d+[._]+)+\d*)",
+        brew_pixman.decode("utf-8"),
+        flags=re.MULTILINE,
+    )
+    if matches:
+        versions = [version_to_tuple(match) for match in matches]
+
+    return versions, using
+
+
+def check_pixman_using_macports(versions: list) -> tuple[list, str]:
+    """Using macports to check for pixman.
+
+    Also checks the platform is Darwin,
+    as macports is only available on macOS.
+
+    """
+    using = "port"
+    port_list = subprocess.Popen(
+        ("port", "installed"),  # noqa: S603
+        stdout=subprocess.PIPE,
+    )
+    port_pixman = subprocess.check_output(
+        ("grep", "pixman"),  # noqa: S603
+        stdin=port_list.stdout,
+    )
+    port_list.wait()
+    matches = re.findall(
+        r"((?:\d+[._]+)+\d*)",
+        port_pixman.decode("utf-8"),
+        flags=re.MULTILINE,
+    )
+    if matches:
+        versions = [version_to_tuple(matches.group(1))]
+
+    return versions, using
+
+
+def pixman_versions() -> tuple[list, str]:
     """The version(s) of pixman that are installed.
 
     Some package managers (brew) may report multiple versions of pixman
@@ -269,79 +369,13 @@ def pixman_versions() -> list[tuple[int, ...]]:
     using = None
 
     if in_conda_env():
-        # Using anaconda to check for pixman
-        using = "conda"
-        try:
-            conda_list = subprocess.Popen(("conda", "list"), stdout=subprocess.PIPE)
-            conda_pixman = subprocess.check_output(
-                ("grep", "pixman"),
-                stdin=conda_list.stdout,
-            )
-            conda_list.wait()
-        except subprocess.SubprocessError:
-            conda_pixman = b""
-        matches = re.search(
-            r"^pixman\s*(\d+.\d+)*",
-            conda_pixman.decode("utf-8"),
-            flags=re.MULTILINE,
-        )
-        if matches:
-            versions = [version_to_tuple(matches.group(1))]
+        versions, using = check_pixman_using_anaconda(versions)
     if shutil.which("dpkg") and not versions:
-        # Using dpkg to check for pixman
-        using = "dpkg"
-        try:
-            dkpg_output = subprocess.check_output(
-                ["/usr/bin/dpkg", "-s", "libpixman-1-0"],
-            )
-        except subprocess.SubprocessError:
-            dkpg_output = b""
-        matches = re.search(
-            r"^Version: ((?:\d+[._]+)+\d*)",
-            dkpg_output.decode("utf-8"),
-            flags=re.MULTILINE,
-        )
-        if matches:
-            versions = [version_to_tuple(matches.group(1))]
+        versions, using = check_pixman_using_dpkg(versions)
     if shutil.which("brew") and not versions:
-        # Using homebrew to check for pixman
-        using = "brew"
-        try:
-            brew_list = subprocess.Popen(
-                ("brew", "list", "--versions"),
-                stdout=subprocess.PIPE,
-            )
-            brew_pixman = subprocess.check_output(
-                ("grep", "pixman"),
-                stdin=brew_list.stdout,
-            )
-            brew_list.wait()
-        except subprocess.SubprocessError:
-            brew_pixman = b""
-        matches = re.findall(
-            r"((?:\d+[._]+)+\d*)",
-            brew_pixman.decode("utf-8"),
-            flags=re.MULTILINE,
-        )
-        if matches:
-            versions = [version_to_tuple(match) for match in matches]
+        versions, using = check_pixman_using_brew(versions)
     if platform.system() == "Darwin" and shutil.which("port") and not versions:
-        # Using macports to check for pixman. Also checks the platform
-        # is Darwin, as macports is only available on macOS.
-        using = "port"
-        port_list = subprocess.Popen(("port", "installed"), stdout=subprocess.PIPE)
-        port_pixman = subprocess.check_output(
-            ("grep", "pixman"),
-            stdin=port_list.stdout,
-        )
-        port_list.wait()
-        matches = re.findall(
-            r"((?:\d+[._]+)+\d*)",
-            port_pixman.decode("utf-8"),
-            flags=re.MULTILINE,
-        )
-        if matches:
-            versions = [version_to_tuple(matches.group(1))]
+        versions, using = check_pixman_using_macports(versions)
     if versions:
         return versions, using
     msg = "Unable to detect pixman version(s)."

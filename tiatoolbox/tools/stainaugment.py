@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import copy
-import random
 
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
@@ -203,7 +202,11 @@ class StainAugmentor(ImageOnlyTransform):
         img_augmented = np.clip(img_augmented, 0, 255)
         return np.uint8(img_augmented)
 
-    def apply(self, img, **params):  # alpha=None, beta=None,  # skipcq: PYL-W0613
+    def apply(
+        self,  # skipcq: PYL-W0613
+        img,
+        **params,  # noqa: ARG002
+    ):  # alpha=None, beta=None,
         """Call the `fit` and `augment` functions to generate a stain augmented image.
 
         Args:
@@ -223,15 +226,19 @@ class StainAugmentor(ImageOnlyTransform):
 
     def get_params(self):
         """Return randomly generated parameters based on input arguments."""
-        self.alpha = random.uniform(1 - self.sigma1, 1 + self.sigma1)
-        self.beta = random.uniform(-self.sigma2, self.sigma2)
+        rng = np.random.default_rng()
+        self.alpha = rng.uniform(1 - self.sigma1, 1 + self.sigma1)
+        self.beta = rng.uniform(-self.sigma2, self.sigma2)
         return {}
 
-    def get_params_dependent_on_targets(self, params):  # skipcq: PYL-W0613, PYL-R0201
+    def get_params_dependent_on_targets(  # skipcq: PYL-R0201
+        self,
+        params,  # skipcq: PYL-W0613  # noqa: ARG002
+    ):
         """Does nothing, added to resolve flake 8 error."""
         return {}
 
     @staticmethod
-    def get_transform_init_args_names(**kwargs):
+    def get_transform_init_args_names(**kwargs):  # noqa: ARG004
         """Return the argument names for albumentations use."""
         return "method", "stain_matrix", "sigma1", "sigma2", "augment_background"

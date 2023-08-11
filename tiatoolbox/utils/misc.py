@@ -100,8 +100,8 @@ def save_yaml(
     input_dict: dict,
     output_path: os | PathLike = "output.yaml",
     *,
-    parents: bool | None = False,
-    exist_ok: bool | None = False,
+    parents: bool = False,
+    exist_ok: bool = False,
 ) -> None:
     """Save dictionary as yaml.
 
@@ -150,7 +150,10 @@ def imwrite(image_path: os | PathLike, img: np.ndarray) -> None:
     """
     if isinstance(image_path, Path):
         image_path = str(image_path)
-    cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+
+    if not cv2.imwrite(image_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR)):
+        msg = "Could not write image."
+        raise OSError(msg)
 
 
 def imread(image_path: os | PathLike, as_uint8: bool | None = None) -> np.ndarray:
@@ -957,11 +960,11 @@ def ppu2mpp(ppu: int, units: str | int) -> float:
     return 1 / ppu * microns_per_unit[units]
 
 
-def select_cv2_interpolation(scale_factor: int | float) -> str:
+def select_cv2_interpolation(scale_factor: float) -> str:
     """Return appropriate interpolation method for opencv based image resize.
 
     Args:
-        scale_factor (int or float):
+        scale_factor (float):
             Image resize scale factor.
 
     Returns:
