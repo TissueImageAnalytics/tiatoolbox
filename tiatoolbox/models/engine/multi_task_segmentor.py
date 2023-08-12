@@ -154,7 +154,9 @@ def _process_tile_predictions(
     inst_dicts = [out for out in out_dicts if type(out) is dict]
     sem_maps = [out for out in out_dicts if type(out) is np.ndarray]
     # Some output maps may not be aggregated into a single map - combine these
-    sem_maps = [np.argmax(s, axis=-1) if s.ndim == 3 else s for s in sem_maps]
+    sem_maps = [
+        np.argmax(s, axis=-1) if s.ndim == 3 else s for s in sem_maps  # noqa: PLR2004
+    ]
 
     new_inst_dicts, remove_insts_in_origs = [], []
     for inst_id, inst_dict in enumerate(inst_dicts):
@@ -237,7 +239,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
@@ -245,10 +247,11 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
-        verbose: bool = True,
-        auto_generate_mask: bool = False,
         dataset_class: Callable = WSIStreamDataset,
         output_types: list | None = None,
+        *,
+        verbose: bool = True,
+        auto_generate_mask: bool = False,
     ) -> None:
         """Initialize :class:`MultiTaskSegmentor`."""
         super().__init__(
@@ -308,7 +311,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             wsi_path,
             mask_path,
             mode,
-            self.auto_generate_mask,
+            auto_get_mask=self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -428,8 +431,8 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             for sem_id, tile in enumerate(tiles):
                 max_h, max_w = self.wsi_layers[sem_id].shape
                 x_end, y_end = min(x_end, max_w), min(y_end, max_h)
-                tile = tile[0 : y_end - y_start, 0 : x_end - x_start]
-                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile
+                tile_ = tile[0 : y_end - y_start, 0 : x_end - x_start]
+                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile_
             # !
 
         for future in self._futures:

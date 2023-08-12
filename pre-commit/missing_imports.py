@@ -59,7 +59,9 @@ def find_source_files(base_dir: Path) -> list[Path]:
     source_files = []
     for root, dirs, files in os.walk(base_dir):
         dirs[:] = [d for d in dirs if not (d in ignore or d[0] in (".", "_"))]
-        files = [f for f in files if f.endswith(".py") and f[0] not in (".",)]
+        files = [  # noqa: PLW2901
+            f for f in files if f.endswith(".py") and f[0] not in (".",)
+        ]
         source_files.extend(Path(root) / f for f in files)
     return source_files
 

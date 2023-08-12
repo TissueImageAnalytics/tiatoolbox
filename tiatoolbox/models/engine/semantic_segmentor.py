@@ -43,7 +43,7 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
             Canvas Shape, Canvas Count and whether to add singleton dimension.
 
     """
-    if len(sample_prediction.shape) == 3:
+    if len(sample_prediction.shape) == 3:  # noqa: PLR2004
         num_output_ch = sample_prediction.shape[-1]
         canvas_cum_shape_ = (*tuple(canvas_shape), num_output_ch)
         canvas_count_shape_ = (*tuple(canvas_shape), 1)
@@ -516,13 +516,14 @@ class SemanticSegmentor:
         self,
         batch_size: int = 8,
         num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,  # skipcq: PYL-W0613
+        num_postproc_workers: int = 0,
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        dataset_class: Callable = WSIStreamDataset,
+        *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        dataset_class: Callable = WSIStreamDataset,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
@@ -551,6 +552,7 @@ class SemanticSegmentor:
         self._on_gpu = None
         self._mp_shared_space = None
         self._postproc_workers = None
+        self.num_postproc_workers = num_postproc_workers
         self._futures = None
         self._outputs = []
         self.imgs = None
@@ -699,9 +701,10 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_reader(
-        img_path: str,
+        img_path: str | Path,
         mask_path: str | Path,
         mode: str,
+        *,
         auto_get_mask: bool,
     ):
         """Define how to get reader for mask and source image."""
@@ -758,7 +761,7 @@ class SemanticSegmentor:
             wsi_path,
             mask_path,
             mode,
-            self.auto_generate_mask,
+            auto_get_mask=self.auto_generate_mask,
         )
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -807,7 +810,7 @@ class SemanticSegmentor:
             sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
-                self._on_gpu,
+                on_gpu=self._on_gpu,
             )
             # repackage so that it's an N list, each contains
             # L x etc. output
@@ -1242,12 +1245,11 @@ class SemanticSegmentor:
                 raise err  # noqa: TRY201
             logging.exception("Crashed on %s", wsi_save_path)
 
-    def predict(
+    def predict(  # noqa: PLR0913
         self,
         imgs,
         masks=None,
         mode="tile",
-        on_gpu=True,
         ioconfig=None,
         patch_input_shape=None,
         patch_output_shape=None,
@@ -1255,6 +1257,8 @@ class SemanticSegmentor:
         resolution=1.0,
         units="baseline",
         save_dir=None,
+        *,
+        on_gpu=True,
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.
@@ -1354,7 +1358,7 @@ class SemanticSegmentor:
 
         # use external for testing
         self._on_gpu = on_gpu
-        self._model = misc.model_to(on_gpu, self.model)
+        self._model = misc.model_to(model=self.model, on_gpu=on_gpu)
 
         # workers should be > 0 else Value Error will be thrown
         self._prepare_workers()
@@ -1478,9 +1482,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
         model: torch.nn.Module | None = None,
         pretrained_model: str | None = None,
         pretrained_weights: str | None = None,
+        dataset_class: Callable = WSIStreamDataset,
+        *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        dataset_class: Callable = WSIStreamDataset,
     ) -> None:
         """Initialize :class:`DeepFeatureExtractor`."""
         super().__init__(
@@ -1499,10 +1504,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
     def _process_predictions(
         self,
         cum_batch_predictions: list,
-        wsi_reader: WSIReader,
+        wsi_reader: WSIReader,  # skipcq: PYL-W0613  # noqa: ARG002
         ioconfig: IOSegmentorConfig,
         save_path: str,
-        cache_dir: str,
+        cache_dir: str,  # skipcq: PYL-W0613  # noqa: ARG002
     ):
         """Define how the aggregated predictions are processed.
 
@@ -1515,6 +1520,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 should be of (location, patch_predictions).
             wsi_reader (:class:`WSIReader`):
                 A reader for the image where the predictions come from.
+                Not used here. Added for consistency with the API.
             ioconfig (:class:`IOSegmentorConfig`):
                 A configuration object contains input and output
                 information.
@@ -1522,6 +1528,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Root path to save current WSI predictions.
             cache_dir (str):
                 Root path to cache current WSI data.
+                Not used here. Added for consistency with the API.
 
         """
         # assume prediction_list is N, each item has L output elements
@@ -1538,12 +1545,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
             prediction_list = np.array(prediction_list)
             np.save(f"{save_path}.features.{idx}.npy", prediction_list)
 
-    def predict(
+    def predict(  # noqa: PLR0913
         self,
         imgs,
         masks=None,
         mode="tile",
-        on_gpu=True,
         ioconfig=None,
         patch_input_shape=None,
         patch_output_shape=None,
@@ -1551,6 +1557,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
         resolution=1.0,
         units="baseline",
         save_dir=None,
+        *,
+        on_gpu=True,
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.

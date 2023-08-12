@@ -151,7 +151,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         img_path,
         mode="wsi",
@@ -160,9 +160,10 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         stride_shape=None,
         resolution=None,
         units=None,
-        auto_get_mask=True,
         min_mask_ratio=0,
         preproc_func=None,
+        *,
+        auto_get_mask=True,
     ) -> None:
         """Create a WSI-level patch dataset.
 
@@ -235,14 +236,14 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         if (
             not np.issubdtype(patch_input_shape.dtype, np.integer)
-            or np.size(patch_input_shape) > 2
+            or np.size(patch_input_shape) > 2  # noqa: PLR2004
             or np.any(patch_input_shape < 0)
         ):
             msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
             raise ValueError(msg)
         if (
             not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2
+            or np.size(stride_shape) > 2  # noqa: PLR2004
             or np.any(stride_shape < 0)
         ):
             msg = f"Invalid `stride_shape` value {stride_shape}."

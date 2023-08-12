@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import json
-import pathlib
 import urllib
 from pathlib import Path, PureWindowsPath
+from typing import Callable
 
 import joblib
 import numpy as np
@@ -56,7 +56,7 @@ def fill_store(cell_grid, points_grid):
 
     def _fill_store(
         store_class: AnnotationStore,
-        path: str | pathlib.Path,
+        path: str | Path,
     ):
         """Fills store with random variety of annotations."""
         store = store_class(path)
@@ -84,7 +84,7 @@ def fill_store(cell_grid, points_grid):
 
 
 @pytest.fixture()
-def app(remote_sample, tmp_path) -> TileServer:
+def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     """Create a testing TileServer WSGI app."""
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.
@@ -165,7 +165,7 @@ def layer_get_tile(app, layer) -> None:
         assert response.content_type == "image/webp"
 
 
-def test_get_tile(app):
+def test_get_tile(app) -> None:
     """Test on each layer."""
     layer_get_tile(app, "slide")
     layer_get_tile(app, "tile")
@@ -184,7 +184,7 @@ def layer_get_tile_404(app, layer) -> None:
         assert response.get_data(as_text=True) == "Tile not found"
 
 
-def test_get_tile_404(app):
+def test_get_tile_404(app) -> None:
     """Test on each layer."""
     layer_get_tile_404(app, "slide")
     layer_get_tile_404(app, "tile")
@@ -211,7 +211,7 @@ def test_get_index(app) -> None:
         assert response.content_type == "text/html; charset=utf-8"
 
 
-def test_create_with_dict(sample_svs):
+def test_create_with_dict(sample_svs: Path) -> None:
     """Test initializing with layers dict."""
     wsi = WSIReader.open(Path(sample_svs))
 
@@ -228,7 +228,7 @@ def test_create_with_dict(sample_svs):
         assert response.content_type == "image/webp"
 
 
-def test_cli_name_multiple_flag():
+def test_cli_name_multiple_flag() -> None:
     """Test cli_name multiple flag."""
 
     @cli_name()
@@ -244,7 +244,7 @@ def test_cli_name_multiple_flag():
     assert "Multiple" in dummy_fn.__click_params__[0].help
 
 
-def test_get_session_id(app):
+def test_get_session_id(app) -> None:
     """Test session_id endpoint."""
     with app.test_client() as client:
         response = client.get("/tileserver/session_id")
@@ -252,7 +252,7 @@ def test_get_session_id(app):
         assert response.content_type == "text/html; charset=utf-8"
 
 
-def test_color_prop(app):
+def test_color_prop(app) -> None:
     """Test endpoint to change property to color by."""
     with app.test_client() as client:
         response = client.put(
@@ -274,7 +274,7 @@ def test_color_prop(app):
         assert app.pyramids["default"]["overlay"].renderer.score_prop is None
 
 
-def test_change_slide(app, remote_sample):
+def test_change_slide(app, remote_sample: Callable) -> None:
     """Test changing slide."""
     slide_path = remote_sample("svs-1-small")
     slide_path2 = remote_sample("wsi2_4k_4k_jpg")
@@ -305,7 +305,7 @@ def test_change_slide(app, remote_sample):
         assert response.get_json()["file_path"] == str(info["file_path"])
 
 
-def test_change_cmap(app):
+def test_change_cmap(app) -> None:
     """Test changing colormap."""
     with app.test_client() as client:
         response = client.put("/tileserver/cmap", data={"cmap": json.dumps("Reds")})
@@ -330,7 +330,7 @@ def test_change_cmap(app):
         assert response.json == cdict
 
 
-def test_load_save_annotations(app, tmp_path):
+def test_load_save_annotations(app, tmp_path: Path) -> None:
     """Test loading and saving annotations."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -359,7 +359,11 @@ def test_load_save_annotations(app, tmp_path):
     assert len(store) == num_annotations + 2
 
 
-def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
+def test_load_annotations_empty(
+    empty_app,
+    tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
     """Test loading annotations when no annotations are present."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -396,7 +400,11 @@ def test_load_annotations_empty(empty_app, tmp_path, remote_sample):
         assert len(json.loads(response.data)) == 2
 
 
-def test_change_overlay(empty_app, tmp_path, remote_sample):
+def test_change_overlay(  # noqa: PLR0915
+    empty_app,
+    tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
     """Test changing overlay."""
     sample_store = Path(remote_sample("annotation_store_svs_1"))
     store = SQLiteStore(sample_store)
@@ -509,7 +517,7 @@ def test_change_overlay(empty_app, tmp_path, remote_sample):
         assert layer.wsi.info.file_path == tiff_path
 
 
-def test_commit(empty_app, tmp_path, remote_sample):
+def test_commit(empty_app, tmp_path: Path, remote_sample: Callable) -> None:
     """Test committing annotations."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
@@ -546,7 +554,7 @@ def test_commit(empty_app, tmp_path, remote_sample):
     assert len(store) == 2
 
 
-def test_update_renderer(app):
+def test_update_renderer(app) -> None:
     """Test updating renderer."""
     with app.test_client() as client:
         response = client.put("/tileserver/renderer/edge_thickness", data={"val": 5})
@@ -577,7 +585,7 @@ def test_update_renderer(app):
         assert app.pyramids["default"]["overlay"].renderer.where is None
 
 
-def test_secondary_cmap(app):
+def test_secondary_cmap(app) -> None:
     """Test secondary cmap."""
     with app.test_client() as client:
         response = client.put(
@@ -617,7 +625,7 @@ def test_secondary_cmap(app):
         assert layer.renderer.secondary_cmap["mapper"]("type2") == [0, 1, 0]
 
 
-def test_get_props(app_alt):
+def test_get_props(app_alt) -> None:
     """Test getting props."""
     with app_alt.test_client() as client:
         response = client.get("/tileserver/prop_names/all")
@@ -629,7 +637,7 @@ def test_get_props(app_alt):
         assert set(json.loads(response.data)) == {"prob", "type"}
 
 
-def test_get_property_values(app):
+def test_get_property_values(app) -> None:
     """Test getting property values."""
     with app.test_client() as client:
         response = client.get("/tileserver/prop_values/type/all")
@@ -645,7 +653,7 @@ def test_get_property_values(app):
         assert set(json.loads(response.data)) == {1}
 
 
-def test_get_property_values_no_overlay(empty_app):
+def test_get_property_values_no_overlay(empty_app) -> None:
     """Test getting property values when no overlay is present."""
     with empty_app.test_client() as client:
         setup_app(client)
@@ -655,7 +663,7 @@ def test_get_property_values_no_overlay(empty_app):
         assert json.loads(response.data) == []
 
 
-def test_reset(app_alt):
+def test_reset(app_alt) -> None:
     """Test resetting tileserver."""
     with app_alt.test_client() as client:
         session_id = setup_app(client)
@@ -667,7 +675,7 @@ def test_reset(app_alt):
         assert app_alt.layers == {}
 
 
-def test_no_ann_layer(empty_app, remote_sample):
+def test_no_ann_layer(empty_app, remote_sample: Callable) -> None:
     """Test doing something needing annotation layer when none exists."""
     with empty_app.test_client() as client:
         setup_app(client)

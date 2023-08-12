@@ -53,7 +53,7 @@ class TileServer(Flask):
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         title: str,
         layers: dict[str, WSIReader | str] | list[WSIReader | str],
@@ -104,7 +104,7 @@ class TileServer(Flask):
             self.pyramids["default"] = {}
             self.renderers["default"] = copy.deepcopy(self.renderer)
         for i, (key, layer) in enumerate(layers.items()):
-            layer = self._get_layer_as_wsireader(layer, meta)
+            layer = self._get_layer_as_wsireader(layer, meta)  # noqa: PLW2901
 
             self.layers["default"][key] = layer
 
@@ -236,7 +236,7 @@ class TileServer(Flask):
         self,
         layer: str,
         session_id: str,
-        tile_group: int,  # skipcq: PYL-w0613
+        tile_group: int,  # skipcq: PYL-W0613  #noqa: ARG002
         z: int,
         x: int,
         y: int,

@@ -8,11 +8,16 @@ from PIL import Image
 from tiatoolbox.utils.misc import parse_cv2_interpolaton, select_cv2_interpolation
 
 
-def background_composite(image, fill=255, alpha=False):
+def background_composite(
+    image: np.ndarray | Image,
+    fill: int = 255,
+    *,
+    alpha: bool,
+) -> np.ndarray:
     """Image composite with specified background.
 
     Args:
-        image (ndarray or PIL.Image):
+        image (ndarray or :class:`Image`):
             Input image.
         fill (int):
             Fill value for the background, defaults to 255.
@@ -52,7 +57,12 @@ def background_composite(image, fill=255, alpha=False):
     return np.asarray(composite)
 
 
-def imresize(img, scale_factor=None, output_size=None, interpolation="optimise"):
+def imresize(
+    img: np.ndarray,
+    scale_factor: float | tuple[float, float] | None = None,
+    output_size: int | tuple[int, int] | None = None,
+    interpolation: str = "optimise",
+) -> np.ndarray:
     """Resize input image.
 
     Args:
@@ -100,7 +110,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
         scale_factor = img.shape[:2][::-1] / np.array(output_size)
 
     # Return original if scale factor is 1
-    if np.all(scale_factor == 1.0):
+    if np.all(scale_factor == 1.0):  # noqa: PLR2004
         return img
 
     # Get appropriate cv2 interpolation enum
@@ -144,7 +154,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     if img.shape[0] == img.shape[1] == 1:
         return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
 
-    if len(img.shape) == 3 and img.shape[-1] > 4:
+    if len(img.shape) == 3 and img.shape[-1] > 4:  # noqa: PLR2004
         img_channels = [
             cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
                 ...,
@@ -157,7 +167,7 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     return cv2.resize(img, tuple(output_size), interpolation=interpolation)
 
 
-def rgb2od(img):
+def rgb2od(img: np.ndarray) -> np.ndarray:
     r"""Convert from RGB to optical density (:math:`OD_{RGB}`) space.
 
     .. math::
@@ -182,7 +192,7 @@ def rgb2od(img):
     return np.maximum(-1 * np.log(img / 255), 1e-6)
 
 
-def od2rgb(od):
+def od2rgb(od: np.ndarray) -> np.ndarray:
     r"""Convert from optical density (:math:`OD_{RGB}`) to RGB.
 
     .. math::
@@ -207,7 +217,10 @@ def od2rgb(od):
     return (255 * np.exp(-1 * od)).astype(np.uint8)
 
 
-def bounds2locsize(bounds, origin="upper"):
+def bounds2locsize(
+    bounds: tuple[int, int, int, int],
+    origin: str = "upper",
+) -> np.ndarray:
     """Calculate the size of a tuple of bounds.
 
     Bounds are expected to be in the `(left, top, right, bottom)` or
@@ -222,16 +235,16 @@ def bounds2locsize(bounds, origin="upper"):
             Defaults to upper.
 
     Returns:
-        tuple:
-            A 2-tuple containing integer 2-tuples for location and size:
+        np.ndarray:
+            A set of two arrays containing integer for location and size:
 
-            - :py:obj:`tuple` - location tuple
-                - :py:obj:`int` - x
-                - :py:obj:`int` - y
+            - location array
+                - x location
+                - y location
 
-            - :py:obj:`size` - size tuple
-                - :py:obj:`int` - width
-                - :py:obj:`int` - height
+            - size array
+                - width
+                - height
 
     Examples:
         >>> from tiatoolbox.utils.transforms import bounds2locsize
@@ -252,7 +265,10 @@ def bounds2locsize(bounds, origin="upper"):
     raise ValueError(msg)
 
 
-def locsize2bounds(location, size):
+def locsize2bounds(
+    location: tuple[int, int],
+    size: tuple[int, int],
+) -> tuple[int, int, int, int]:
     """Convert a location and size to bounds.
 
     Args:
@@ -312,7 +328,7 @@ def bounds2slices(
         raise ValueError(msg)
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
-    elif np.size(stride) == 2:  # pragma: no cover
+    elif np.size(stride) == 2:  # pragma: no cover  # noqa: PLR2004
         stride = np.tile(stride, 2)
 
     start, stop = np.reshape(bounds, (2, -1)).astype(int)

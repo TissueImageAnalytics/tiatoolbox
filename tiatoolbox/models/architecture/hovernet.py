@@ -522,7 +522,7 @@ class HoVerNet(ModelABC):
         v_dir_raw = hv_map[..., 1]
 
         # processing
-        blb = np.array(blb_raw >= 0.5, dtype=np.int32)
+        blb = np.array(blb_raw >= 0.5, dtype=np.int32)  # noqa: PLR2004
 
         blb = ndimage.label(blb)[0]
         blb = remove_small_objects(blb, min_size=10)
@@ -581,7 +581,7 @@ class HoVerNet(ModelABC):
         # * nuclei values form mountains so inverse to get basins
         dist = -cv2.GaussianBlur(dist, (3, 3), 0)
 
-        overall = np.array(overall >= 0.4, dtype=np.int32)
+        overall = np.array(overall >= 0.4, dtype=np.int32)  # noqa: PLR2004
 
         marker = blb - overall
         marker[marker < 0] = 0
@@ -654,10 +654,10 @@ class HoVerNet(ModelABC):
 
             # < 3 points does not make a contour, so skip, likely artifact too
             # as the contours obtained via approximation => too small
-            if inst_contour.shape[0] < 3:  # pragma: no cover
+            if inst_contour.shape[0] < 3:  # pragma: no cover  # noqa: PLR2004
                 continue
             # ! check for trickery shape
-            if len(inst_contour.shape) != 2:  # pragma: no cover
+            if len(inst_contour.shape) != 2:  # pragma: no cover  # noqa: PLR2004
                 continue
 
             inst_centroid = [
@@ -761,7 +761,7 @@ class HoVerNet(ModelABC):
             >>> output = model.postproc(output)
 
         """
-        if len(raw_maps) == 3:
+        if len(raw_maps) == 3:  # noqa: PLR2004
             np_map, hv_map, tp_map = raw_maps
         else:
             tp_map = None
@@ -774,7 +774,7 @@ class HoVerNet(ModelABC):
         return pred_inst, nuc_inst_info_dict
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool):
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o
@@ -799,7 +799,7 @@ class HoVerNet(ModelABC):
         """
         patch_imgs = batch_data
 
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 

@@ -93,7 +93,7 @@ class WSIMeta:
 
     _valid_axes_characters = "YXSTZ"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         slide_dimensions: tuple[int, int],
         axes: str,
@@ -183,7 +183,7 @@ class WSIMeta:
 
     def level_downsample(
         self,
-        level: int | float,
+        level: float,
     ) -> float:
         """Get the downsample factor for a level.
 
@@ -192,7 +192,7 @@ class WSIMeta:
         level below and the level above.
 
         Args:
-            level (int or float):
+            level (float):
                 Level to get downsample factor for.
 
         Returns:

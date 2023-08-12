@@ -92,7 +92,7 @@ class OtsuTissueMasker(TissueMasker):
         super().__init__()
         self.threshold = None
 
-    def fit(self, images: np.ndarray, masks=None) -> None:
+    def fit(self, images: np.ndarray, masks=None) -> None:  # noqa: ARG002
         """Find a binary threshold using Otsu's method.
 
         Args:
@@ -104,7 +104,7 @@ class OtsuTissueMasker(TissueMasker):
 
         """
         images_shape = np.shape(images)
-        if len(images_shape) != 4:
+        if len(images_shape) != 4:  # noqa: PLR2004
             msg = (
                 f"Expected 4 dimensional input shape (N, height, width, 3) "
                 f"but received shape of {images_shape}."
@@ -115,7 +115,7 @@ class OtsuTissueMasker(TissueMasker):
 
         # Convert RGB images to greyscale
         grey_images = [x[..., 0] for x in images]
-        if images_shape[-1] == 3:
+        if images_shape[-1] == 3:  # noqa: PLR2004
             grey_images = np.zeros(images_shape[:-1], dtype=np.uint8)
             for n, image in enumerate(images):
                 grey_images[n] = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -146,7 +146,7 @@ class OtsuTissueMasker(TissueMasker):
         masks = []
         for image in images:
             grey = image[..., 0]
-            if len(image.shape) == 3 and image.shape[-1] == 3:
+            if len(image.shape) == 3 and image.shape[-1] == 3:  # noqa: PLR2004
                 grey = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             mask = (grey < self.threshold).astype(bool)
             masks.append(mask)
@@ -237,13 +237,13 @@ class MorphologicalMasker(OtsuTissueMasker):
         # Convert MPP to an integer kernel_size
         if mpp is not None:
             mpp = np.array(mpp)
-            if mpp.size != 2:
+            if mpp.size != 2:  # noqa: PLR2004
                 mpp = mpp.repeat(2)
             kernel_size = np.max([32 / mpp, [1, 1]], axis=0)
 
         # Ensure kernel_size is a length 2 numpy array
         kernel_size = np.array(kernel_size)
-        if kernel_size.size != 2:
+        if kernel_size.size != 2:  # noqa: PLR2004
             kernel_size = kernel_size.repeat(2)
 
         # Convert to an integer double/ pair
@@ -274,7 +274,7 @@ class MorphologicalMasker(OtsuTissueMasker):
 
         results = []
         for image in images:
-            if len(image.shape) == 3 and image.shape[-1] == 3:
+            if len(image.shape) == 3 and image.shape[-1] == 3:  # noqa: PLR2004
                 gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
             else:
                 gray = image

@@ -179,7 +179,7 @@ class PatchPredictor:
             is case insensitive.
         batch_size (int):
             Number of images fed into the model each time.
-        num_loader_workers (int):
+        num_loader_worker (int):
             Number of workers used in torch.utils.data.DataLoader.
         verbose (bool):
             Whether to output logging information.
@@ -228,6 +228,7 @@ class PatchPredictor:
         model=None,
         pretrained_model=None,
         pretrained_weights=None,
+        *,
         verbose=True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
@@ -261,6 +262,7 @@ class PatchPredictor:
         resolution: Resolution | None = None,
         units: Units | None = None,
         postproc_func: Callable | None = None,
+        *,
         return_raw: bool = False,
     ):
         """Merge patch level predictions to form a 2-dimensional prediction map.
@@ -374,6 +376,7 @@ class PatchPredictor:
     def _predict_engine(
         self,
         dataset,
+        *,
         return_probabilities=False,
         return_labels=False,
         return_coordinates=False,
@@ -420,7 +423,7 @@ class PatchPredictor:
             )
 
         # use external for testing
-        model = misc.model_to(on_gpu, self.model)
+        model = misc.model_to(model=self.model, on_gpu=on_gpu)
 
         cum_output = {
             "probabilities": [],
@@ -432,7 +435,7 @@ class PatchPredictor:
             batch_output_probabilities = self.model.infer_batch(
                 model,
                 batch_data["image"],
-                on_gpu,
+                on_gpu=on_gpu,
             )
             # We get the index of the class with the maximum probability
             batch_output_predictions = self.model.postproc_func(
@@ -613,13 +616,13 @@ class PatchPredictor:
         dataset = PatchDataset(imgs, labels)
         return self._predict_engine(
             dataset,
-            return_probabilities,
-            return_labels,
-            return_coordinates,
-            on_gpu,
+            return_probabilities=return_probabilities,
+            return_labels=return_labels,
+            return_coordinates=return_coordinates,
+            on_gpu=on_gpu,
         )
 
-    def _predict_tile_wsi(
+    def _predict_tile_wsi(  # noqa: PLR0913
         self,
         imgs,
         masks,
@@ -709,12 +712,12 @@ class PatchPredictor:
             save_output = True
 
         for idx, img_path in enumerate(imgs):
-            img_path = Path(img_path)
+            img_path_ = Path(img_path)
             img_label = None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
             dataset = WSIPatchDataset(
-                img_path,
+                img_path_,
                 mode=mode,
                 mask_path=img_mask,
                 patch_input_shape=ioconfig.patch_input_shape,
@@ -739,7 +742,7 @@ class PatchPredictor:
             merged_prediction = None
             if merge_predictions:
                 merged_prediction = self.merge_predictions(
-                    img_path,
+                    img_path_,
                     output_model,
                     resolution=output_model["resolution"],
                     units=output_model["units"],
@@ -760,24 +763,25 @@ class PatchPredictor:
                     merged_file_path = f"{save_path}.merged.npy"
                     np.save(merged_file_path, merged_prediction)
                     save_info["merged"] = merged_file_path
-                file_dict[str(img_path)] = save_info
+                file_dict[str(img_path_)] = save_info
 
         return file_dict if save_output else outputs
 
-    def predict(
+    def predict(  # noqa: PLR0913
         self,
         imgs,
         masks=None,
         labels=None,
         mode="patch",
-        return_probabilities=False,
-        return_labels=False,
-        on_gpu=True,
         ioconfig: IOPatchPredictorConfig | None = None,
         patch_input_shape: tuple[int, int] | None = None,
         stride_shape: tuple[int, int] | None = None,
         resolution=None,
         units=None,
+        *,
+        return_probabilities=False,
+        return_labels=False,
+        on_gpu=True,
         merge_predictions=False,
         save_dir=None,
         save_output=False,

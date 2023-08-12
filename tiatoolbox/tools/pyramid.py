@@ -16,7 +16,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterator
 
 import defusedxml
 import numpy as np
@@ -376,7 +376,7 @@ class TilePyramidGenerator:
             np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
         )
 
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> Iterator:
         """Return an iterator for the given object."""
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
@@ -522,7 +522,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             # get the possible categories for given score_prop from store
             types = self.store.pquery(f"props[{self.renderer.score_prop!r}]")
             # make a random dictionary colour map
-            colors = random_colors(len(types))
+            colors = random_colors(len(types), bright=True)
             mapper = {key: (*color, 1) for key, color in zip(types, colors)}
             self.renderer.mapper = lambda x: mapper[x]
 

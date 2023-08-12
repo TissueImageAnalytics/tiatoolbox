@@ -19,15 +19,15 @@ def source_files(root_path):
     def generator():
         """Generates path to files."""
         for root, dirs, files in os.walk(root_path):
-            files = [f for f in files if f.endswith(".py") and f[0] != "."]
+            files_ = [f for f in files if f.endswith(".py") and f[0] != "."]
             dirs[:] = [d for d in dirs if d not in ignore and d[0] != "."]
-            for file in files:
+            for file in files_:
                 yield Path(root, file)
 
     return generator()
 
 
-def test_validate_docstring_examples(source_files, root_path):
+def test_validate_docstring_examples(source_files, root_path) -> None:
     """Test that all docstring examples are valid.
 
     Validity checks are:
