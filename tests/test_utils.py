@@ -16,7 +16,7 @@ from requests import HTTPError
 from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
-from tiatoolbox import rcParam, utils
+from tiatoolbox import utils
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -1012,13 +1012,12 @@ def test_grab_files_from_dir(sample_visual_fields) -> None:
     assert len(out) == 0
 
 
-def test_download_unzip_data() -> None:
+def test_download_unzip_data(tmp_path) -> None:
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
-    if Path.exists(save_dir_path):
-        shutil.rmtree(save_dir_path, ignore_errors=True)
-    save_dir_path.mkdir(parents=True)
+    save_dir_path = tmp_path / "tmp/"
+
+    save_dir_path.mkdir()
     save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
     save_zip_path2 = misc.download_data(
         url,
@@ -1040,12 +1039,11 @@ def test_download_unzip_data() -> None:
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_download_data() -> None:
+def test_download_data(tmp_path) -> None:
     """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = rcParam["TIATOOLBOX_HOME"] / "tmp/"
-    if Path.exists(save_dir_path):
-        shutil.rmtree(save_dir_path, ignore_errors=True)
+
+    save_dir_path = tmp_path / "downloads/"
     save_zip_path = save_dir_path / "test_directory.zip"
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
