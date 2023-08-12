@@ -220,7 +220,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
         predefined_preproc_func("secret-dataset")
 
 
-def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path) -> None:
+def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path) -> None:  # noqa: PLR0915
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])

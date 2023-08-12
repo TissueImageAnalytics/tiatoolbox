@@ -1543,7 +1543,9 @@ def test_read_rect_at_resolution(sample_wsi_dict) -> None:
         assert np.min(cc) > 0.90, reader_idx
 
 
-def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
+def test_read_bounds_location_in_requested_resolution(  # noqa: PLR0915
+    sample_wsi_dict: dict,
+) -> None:
     """Actually a duel test for sync read and read at requested."""
     # """Test synchronize read for VirtualReader"""
     # convert to pathlib Path to prevent wsireader complaint
@@ -1637,11 +1639,11 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
         ({"resolution": 0.30, "units": "baseline"}, np.array([2000, 2000, 3000, 3000])),
     ]
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
-        read_coord = requested_coords if read_coord is None else read_coord
+        read_coord_ = requested_coords if read_coord is None else read_coord
         compare_reader(
             msk_reader,
             bigger_msk_reader,
-            read_coord,
+            read_coord_,
             read_cfg,
             check_content=True,
         )
@@ -1665,8 +1667,14 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
     vrt_reader.info = wsi_reader.info
 
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
-        read_coord = requested_coords if read_coord is None else read_coord
-        compare_reader(wsi_reader, vrt_reader, read_coord, read_cfg, check_content=True)
+        read_coord_ = requested_coords if read_coord is None else read_coord
+        compare_reader(
+            wsi_reader,
+            vrt_reader,
+            read_coord_,
+            read_cfg,
+            check_content=True,
+        )
 
     # * check sync read between Virtual Reader and WSIReader (jp2) (reference)
     requested_coords = np.array([2500, 2500, 4000, 4000])  # XY, manually pick
@@ -1685,8 +1693,14 @@ def test_read_bounds_location_in_requested_resolution(sample_wsi_dict) -> None:
     vrt_reader.info = wsi_reader.info
 
     for _, (read_cfg, read_coord) in enumerate(read_cfg_list):
-        read_coord = requested_coords if read_coord is None else read_coord
-        compare_reader(wsi_reader, vrt_reader, read_coord, read_cfg, check_content=True)
+        read_coord_ = requested_coords if read_coord is None else read_coord
+        compare_reader(
+            wsi_reader,
+            vrt_reader,
+            read_coord_,
+            read_cfg,
+            check_content=True,
+        )
 
 
 # -------------------------------------------------------------------------------------
