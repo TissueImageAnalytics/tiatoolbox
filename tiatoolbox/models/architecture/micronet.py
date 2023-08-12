@@ -446,7 +446,7 @@ class MicroNet(ModelABC):
     ) -> None:
         """Initialize :class:`MicroNet`."""
         super().__init__()
-        if num_output_channels < 2:
+        if num_output_channels < 2:  # noqa: PLR2004
             msg = "Number of classes should be >=2."
             raise ValueError(msg)
         self.__num_output_channels = num_output_channels
