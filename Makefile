@@ -62,7 +62,7 @@ test: ## run tests quickly with the default Python
 	pytest -n auto
 
 coverage: ## check code coverage quickly with the default Python
-	pytest  --cov=tiatoolbox --cov-report=term --cov-report=html --cov-report=xml
+	pytest  --cov=tiatoolbox --cov-report=term --cov-report=html --cov-report=xml -n auto
 	$(BROWSER) htmlcov/index.html
 
 docs: clean-docs ## generate Sphinx HTML documentation, including API docs
