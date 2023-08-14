@@ -1,12 +1,24 @@
 """Stain matrix extraction for stain normalization."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
 
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 from tiatoolbox.utils.transforms import rgb2od
 
+if TYPE_CHECKING:  # pragma: no cover
+    import sys
 
-def vectors_in_correct_direction(e_vectors):
+    if sys.version_info >= (3, 9):
+        from typing import Self
+    else:  # pragma: no cover
+        from typing_extensions import Self  # To support Python 3.8
+
+
+def vectors_in_correct_direction(e_vectors: np.ndarray) -> np.ndarray:
     """Points the eigen vectors in the right direction.
 
     Args:
@@ -26,7 +38,7 @@ def vectors_in_correct_direction(e_vectors):
     return e_vectors
 
 
-def h_and_e_in_right_order(v1, v2):
+def h_and_e_in_right_order(v1: np.ndarray, v2: np.ndarray) -> np.ndarray:
     """Rearrange input vectors for H&E in correct order with H as first output.
 
     Args:
@@ -46,7 +58,7 @@ def h_and_e_in_right_order(v1, v2):
     return np.array([v2, v1])
 
 
-def dl_output_for_h_and_e(dictionary):
+def dl_output_for_h_and_e(dictionary: np.ndarray) -> np.ndarray:
     """Return correct value for H and E from dictionary learning output.
 
     Args:
@@ -79,14 +91,14 @@ class CustomExtractor:
 
     """
 
-    def __init__(self, stain_matrix) -> None:
+    def __init__(self: Self, stain_matrix: np.ndarray) -> None:
         """Initialize :class:`CustomExtractor`."""
         self.stain_matrix = stain_matrix
         if self.stain_matrix.shape not in [(2, 3), (3, 3)]:
             msg = "Stain matrix must have shape (2, 3) or (3, 3)."
             raise ValueError(msg)
 
-    def get_stain_matrix(self, _):
+    def get_stain_matrix(self: Self, _: np.ndarray) -> np.ndarray:
         """Get the user defined stain matrix.
 
         Returns:
@@ -118,11 +130,11 @@ class RuifrokExtractor:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self: Self) -> None:
         """Initialize :class:`RuifrokExtractor`."""
         self.__stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
 
-    def get_stain_matrix(self, _):
+    def get_stain_matrix(self: Self, _: np.ndarray) -> np.ndarray:
         """Get the pre-defined stain matrix.
 
         Returns:
@@ -161,12 +173,16 @@ class MacenkoExtractor:
 
     """
 
-    def __init__(self, luminosity_threshold=0.8, angular_percentile=99) -> None:
+    def __init__(
+        self: Self,
+        luminosity_threshold: float = 0.8,
+        angular_percentile: float = 99,
+    ) -> None:
         """Initialize :class:`MacenkoExtractor`."""
         self.__luminosity_threshold = luminosity_threshold
         self.__angular_percentile = angular_percentile
 
-    def get_stain_matrix(self, img):
+    def get_stain_matrix(self: Self, img: np.ndarray) -> np.ndarray:
         """Stain matrix estimation.
 
         Args:
@@ -246,12 +262,16 @@ class VahadaneExtractor:
 
     """
 
-    def __init__(self, luminosity_threshold=0.8, regularizer=0.1) -> None:
+    def __init__(
+        self: Self,
+        luminosity_threshold: float = 0.8,
+        regularizer: float = 0.1,
+    ) -> None:
         """Initialize :class:`VahadaneExtractor`."""
         self.__luminosity_threshold = luminosity_threshold
         self.__regularizer = regularizer
 
-    def get_stain_matrix(self, img):
+    def get_stain_matrix(self: Self, img: np.ndarray) -> np.ndarray:
         """Stain matrix estimation.
 
         Args:

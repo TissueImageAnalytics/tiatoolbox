@@ -53,7 +53,7 @@ class TilePyramidGenerator:
     """
 
     def __init__(
-        self,
+        self: TilePyramidGenerator,
         wsi: WSIReader,
         tile_size: int = 256,
         downsample: int = 2,
@@ -66,7 +66,7 @@ class TilePyramidGenerator:
         self.downsample = downsample
 
     @property
-    def output_tile_size(self) -> int:
+    def output_tile_size(self: TilePyramidGenerator) -> int:
         r"""The size of the tile which will be returned.
 
         This is equivalent to :math:`\text{tile size} + 2*\text{overlay}`.
@@ -74,11 +74,11 @@ class TilePyramidGenerator:
         """
         return self.tile_size + 2 * self.overlap
 
-    def level_downsample(self, level: int) -> float:
+    def level_downsample(self: TilePyramidGenerator, level: int) -> float:
         """Find the downsample factor for a level."""
         return 2 ** (self.level_count - level - 1)
 
-    def level_dimensions(self, level: int) -> tuple[int, int]:
+    def level_dimensions(self: TilePyramidGenerator, level: int) -> tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
         Args:
@@ -92,7 +92,7 @@ class TilePyramidGenerator:
         ).astype(int)
         return tuple(level_dims)
 
-    def tile_grid_size(self, level: int) -> tuple[int, int]:
+    def tile_grid_size(self: TilePyramidGenerator, level: int) -> tuple[int, int]:
         """Width and height of the minimal grid of tiles to cover the slide.
 
         Args:
@@ -110,12 +110,12 @@ class TilePyramidGenerator:
         )
 
     @property
-    def sub_tile_level_count(self) -> int:
+    def sub_tile_level_count(self: TilePyramidGenerator) -> int:
         """The number of sub-tile levels in the pyramid."""
         return 0
 
     @property
-    def level_count(self) -> int:
+    def level_count(self: TilePyramidGenerator) -> int:
         """Number of levels in the tile pyramid.
 
         The number of levels is such that level_count - 1 is a 1:1 of
@@ -128,7 +128,7 @@ class TilePyramidGenerator:
         total_level_count = super_level_count + 1 + self.sub_tile_level_count
         return int(total_level_count)
 
-    def get_thumb_tile(self) -> Image:
+    def get_thumb_tile(self: TilePyramidGenerator) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
 
         The thumbnail output size has the longest edge equal to the tile
@@ -148,7 +148,7 @@ class TilePyramidGenerator:
         return Image.fromarray(thumb)
 
     def get_tile(
-        self,
+        self: TilePyramidGenerator,
         level: int,
         x: int,
         y: int,
@@ -238,7 +238,7 @@ class TilePyramidGenerator:
         logger.removeFilter(duplicate_filter)
         return Image.fromarray(tile)
 
-    def tile_path(self, level: int, x: int, y: int) -> Path:
+    def tile_path(self: TilePyramidGenerator, level: int, x: int, y: int) -> Path:
         """Generate the path for a specified tile.
 
         Args:
@@ -258,11 +258,11 @@ class TilePyramidGenerator:
         raise NotImplementedError
 
     def dump(
-        self,
+        self: TilePyramidGenerator,
         path: str | Path,
-        container=None,
-        compression=None,
-    ):
+        container: str | None = None,
+        compression: str | None = None,
+    ) -> None:
         """Write all tiles to disk.
 
         Arguments:
@@ -370,13 +370,13 @@ class TilePyramidGenerator:
         if container is not None:
             archive.close()
 
-    def __len__(self) -> int:
+    def __len__(self: TilePyramidGenerator) -> int:
         """Return length of instance attributes."""
         return sum(
             np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
         )
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self: TilePyramidGenerator) -> Iterator:
         """Return an iterator for the given object."""
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
@@ -411,7 +411,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
 
     """
 
-    def tile_group(self, level: int, x: int, y: int) -> int:
+    def tile_group(self: ZoomifyGenerator, level: int, x: int, y: int) -> int:
         """Find the tile group for a tile index.
 
         Tile groups are numbered from level 0 (tile 0-0-0) and increment
@@ -443,7 +443,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
         tile_index = cumulative_sum + index_in_level
         return tile_index // 256  # the tile group
 
-    def tile_path(self, level: int, x: int, y: int) -> Path:
+    def tile_path(self: ZoomifyGenerator, level: int, x: int, y: int) -> Path:
         """Generate the Zoomify path for a specified tile.
 
         Args:
@@ -494,7 +494,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
     """
 
     def __init__(
-        self,
+        self: AnnotationTileGenerator,
         info: WSIMeta,
         store: AnnotationStore,
         renderer: AnnotationRenderer | None = None,
@@ -526,7 +526,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             mapper = {key: (*color, 1) for key, color in zip(types, colors)}
             self.renderer.mapper = lambda x: mapper[x]
 
-    def get_thumb_tile(self) -> Image:
+    def get_thumb_tile(self: AnnotationTileGenerator) -> Image:
         """Return a thumbnail which fits the whole slide in one tile.
 
         The thumbnail output size has the longest edge equal to the tile
@@ -539,7 +539,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         thumb = self.renderer.render_annotations(self.store, bounds, scale)
         return Image.fromarray(thumb)
 
-    def level_dimensions(self, level: int) -> tuple[int, int]:
+    def level_dimensions(self: AnnotationTileGenerator, level: int) -> tuple[int, int]:
         """The total pixel dimensions of the tile pyramid at a given level.
 
         Args:
@@ -554,7 +554,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         return tuple(level_dims)
 
     @property
-    def level_count(self) -> int:
+    def level_count(self: AnnotationTileGenerator) -> int:
         """Number of levels in the tile pyramid.
 
         The number of levels is such that level_count - 1 is a 1:1 of
@@ -568,7 +568,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         return int(total_level_count)
 
     def get_tile(
-        self,
+        self: AnnotationTileGenerator,
         level: int,
         x: int,
         y: int,

@@ -46,7 +46,7 @@ class StainAugmentor(ImageOnlyTransform):
             Specifies whether to apply stain augmentation on the
             background or not. Default is False, which indicates that
             only tissue region will be stain augmented.
-        always_apply (False):
+        always_apply (bool):
             For use with 'albumentations' pipeline. Please refer to
             albumentations documentations for more information.
         p (float):
@@ -100,15 +100,15 @@ class StainAugmentor(ImageOnlyTransform):
     """
 
     def __init__(
-        self,
+        self: StainAugmentor,
         method: str = "vahadane",
         stain_matrix: np.ndarray | None = None,
         sigma1: float = 0.4,
         sigma2: float = 0.2,
-        p=0.5,
+        p: float = 0.5,
         *,
         augment_background: bool = False,
-        always_apply=False,
+        always_apply: bool = False,
     ) -> None:
         """Initialize :class:`StainAugmentor`."""
         super().__init__(always_apply=always_apply, p=p)
@@ -136,7 +136,7 @@ class StainAugmentor(ImageOnlyTransform):
         self.n_stains = None
         self.source_concentrations = None
 
-    def fit(self, img, threshold=0.85):
+    def fit(self: StainAugmentor, img: np.ndarray, threshold: float = 0.85) -> None:
         """Fit function to extract information needed for stain augmentation.
 
         The `fit` function uses either 'Macenko' or 'Vahadane' stain
@@ -172,7 +172,7 @@ class StainAugmentor(ImageOnlyTransform):
             ).ravel()
         self.img_shape = img.shape
 
-    def augment(self):
+    def augment(self: StainAugmentor) -> np.ndarray:
         """Return an augmented instance based on source stain concentrations.
 
         Stain concentrations of the source image are altered (scaled and
@@ -203,10 +203,10 @@ class StainAugmentor(ImageOnlyTransform):
         return np.uint8(img_augmented)
 
     def apply(
-        self,  # skipcq: PYL-W0613
-        img,
-        **params,  # noqa: ARG002
-    ):  # alpha=None, beta=None,
+        self: StainAugmentor,  # skipcq: PYL-W0613
+        img: np.ndarray,
+        **params: dict,  # noqa: ARG002
+    ) -> np.ndarray:  # alpha=None, beta=None,
         """Call the `fit` and `augment` functions to generate a stain augmented image.
 
         Args:
@@ -224,7 +224,7 @@ class StainAugmentor(ImageOnlyTransform):
         self.fit(img, threshold=0.85)
         return self.augment()
 
-    def get_params(self):
+    def get_params(self: StainAugmentor) -> dict:
         """Return randomly generated parameters based on input arguments."""
         rng = np.random.default_rng()
         self.alpha = rng.uniform(1 - self.sigma1, 1 + self.sigma1)
@@ -232,13 +232,15 @@ class StainAugmentor(ImageOnlyTransform):
         return {}
 
     def get_params_dependent_on_targets(  # skipcq: PYL-R0201
-        self,
-        params,  # skipcq: PYL-W0613  # noqa: ARG002
-    ):
+        self: StainAugmentor,
+        params: dict,  # skipcq: PYL-W0613  # noqa: ARG002
+    ) -> dict:
         """Does nothing, added to resolve flake 8 error."""
         return {}
 
     @staticmethod
-    def get_transform_init_args_names(**kwargs):  # noqa: ARG004
+    def get_transform_init_args_names(
+        **kwargs: dict,  # noqa: ARG004
+    ) -> tuple[str, ...]:
         """Return the argument names for albumentations use."""
         return "method", "stain_matrix", "sigma1", "sigma2", "augment_background"
