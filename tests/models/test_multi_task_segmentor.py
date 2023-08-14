@@ -32,11 +32,6 @@ except NotImplementedError:
 # ----------------------------------------------------
 
 
-def _rm_dir(path) -> None:
-    """Helper func to remove directory."""
-    shutil.rmtree(path, ignore_errors=True)
-
-
 def _crash_func(_) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
@@ -61,8 +56,8 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     gc.collect()
     root_save_dir = Path(tmp_path)
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
-    save_dir = f"{root_save_dir}/multitask/"
-    _rm_dir(save_dir)
+    save_dir = root_save_dir / "multitask"
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     # * generate full output w/o parallel post-processing worker first
     multi_segmentor = MultiTaskSegmentor(
@@ -82,7 +77,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
 
     # * then test run when using workers, will then compare results
     # * to ensure the predictions are the same
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
@@ -106,7 +101,6 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     inst_coords_b = np.array([v["centroid"] for v in inst_dict_b.values()])
     score = f1_detection(inst_coords_b, inst_coords_a, radius=1.0)
     assert score > 0.95, "Heavy loss of precision!"
-    _rm_dir(tmp_path)
 
 
 def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> None:
@@ -117,7 +111,7 @@ def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> 
     # above image is 512 x 512 at 0.252 mpp resolution. This is 258 x 258 at 0.500 mpp.
 
     save_dir = f"{root_save_dir}/multi/"
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
@@ -140,7 +134,6 @@ def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> 
     assert (
         layer_map.shape == required_dims
     ), "Output layer map dimensions must be same as the expected output shape"
-    _rm_dir(tmp_path)
 
 
 def test_functionality_hovernet(remote_sample: Callable, tmp_path: Path) -> None:
@@ -148,8 +141,8 @@ def test_functionality_hovernet(remote_sample: Callable, tmp_path: Path) -> None
     root_save_dir = Path(tmp_path)
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
-    save_dir = f"{root_save_dir}/multi/"
-    _rm_dir(save_dir)
+    save_dir = root_save_dir / "multi"
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernet_fast-pannuke",
@@ -167,7 +160,6 @@ def test_functionality_hovernet(remote_sample: Callable, tmp_path: Path) -> None
     inst_dict = joblib.load(f"{output[0][1]}.0.dat")
 
     assert len(inst_dict) > 0, "Must have some nuclei."
-    _rm_dir(tmp_path)
 
 
 def test_masked_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
@@ -215,7 +207,6 @@ def test_masked_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     inst_dict = joblib.load(f"{output[0][1]}.0.dat")
 
     assert len(inst_dict) > 0, "Must have some nuclei."
-    _rm_dir(tmp_path)
 
 
 def test_functionality_process_instance_predictions(
@@ -227,7 +218,7 @@ def test_functionality_process_instance_predictions(
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     save_dir = root_save_dir / "semantic"
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     semantic_segmentor = SemanticSegmentor(
         pretrained_model="hovernetplus-oed",
@@ -261,7 +252,6 @@ def test_functionality_process_instance_predictions(
     ]
     multi_segmentor._merge_post_process_results()
     assert len(multi_segmentor._wsi_inst_info[0]) == 0
-    _rm_dir(tmp_path)
 
 
 def test_empty_image(tmp_path: Path) -> None:
@@ -337,8 +327,8 @@ def test_functionality_semantic(remote_sample: Callable, tmp_path: Path) -> None
     """Functionality test for multitask segmentor."""
     root_save_dir = Path(tmp_path)
 
-    save_dir = f"{root_save_dir}/multi/"
-    _rm_dir(save_dir)
+    save_dir = root_save_dir / "multi"
+    shutil.rmtree(save_dir, ignore_errors=True)
     with pytest.raises(
         ValueError,
         match=r"Output type must be specified for instance or semantic segmentation.",
@@ -351,7 +341,6 @@ def test_functionality_semantic(remote_sample: Callable, tmp_path: Path) -> None
 
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     save_dir = f"{root_save_dir}/multi/"
-    _rm_dir(tmp_path)
 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="fcn_resnet50_unet-bcss",
@@ -385,7 +374,6 @@ def test_functionality_semantic(remote_sample: Callable, tmp_path: Path) -> None
     layer_map = np.load(f"{output[0][1]}.0.npy")
 
     assert layer_map is not None, "Must have some segmentations."
-    _rm_dir(tmp_path)
 
 
 def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
@@ -421,7 +409,7 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     )
 
     # * Test crash propagation when parallelize post-processing
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     multi_segmentor.model.postproc_func = _crash_func
     with pytest.raises(ValueError, match=r"Crash."):
         multi_segmentor.predict(
@@ -433,4 +421,3 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
             crash_on_exception=True,
             save_dir=save_dir,
         )
-    _rm_dir(tmp_path)

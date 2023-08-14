@@ -36,12 +36,6 @@ except NotImplementedError:
 # ----------------------------------------------------
 
 
-def _rm_dir(path) -> None:
-    """Helper func to remove directory."""
-    if Path(path).exists():
-        shutil.rmtree(path, ignore_errors=True)
-
-
 def _crash_func(_x) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
@@ -236,7 +230,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
     semantic_segmentor.num_postproc_workers = 1
 
     # * test basic crash
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
     with pytest.raises(TypeError, match=r".*`mask_reader`.*"):
         semantic_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
@@ -253,7 +247,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             auto_get_mask=True,
         )
 
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
     with pytest.raises(ValueError, match=r".*provide.*"):
         SemanticSegmentor()
     with pytest.raises(ValueError, match=r".*valid mode.*"):
@@ -269,7 +263,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
         semantic_segmentor.predict([], mode="tile", patch_input_shape=(2048, 2048))
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
 
     # * test not providing any io_config info when not using pretrained model
     with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
@@ -279,10 +273,9 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             on_gpu=ON_GPU,
             crash_on_exception=True,
         )
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
 
     # * Test crash propagation when parallelize post-processing
-    _rm_dir("output")
     semantic_segmentor.num_postproc_workers = 2
     semantic_segmentor.model.forward = _crash_func
     with pytest.raises(ValueError, match=r"Propagation Crash."):
@@ -306,8 +299,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             on_gpu=ON_GPU,
             crash_on_exception=True,
         )
-
-    _rm_dir("output")
+    shutil.rmtree("output", ignore_errors=True)
     # test ignore crash
     semantic_segmentor.predict(
         [mini_wsi_svs],
@@ -318,7 +310,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
         resolution=1.0,
         units="baseline",
     )
-    _rm_dir("output")
+    shutil.rmtree("output", ignore_errors=True)
 
 
 def test_functional_segmentor_merging(tmp_path: Path) -> None:
@@ -328,7 +320,7 @@ def test_functional_segmentor_merging(tmp_path: Path) -> None:
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     save_dir.mkdir()
     # predictions with HW
     _output = np.array(
@@ -362,7 +354,7 @@ def test_functional_segmentor_merging(tmp_path: Path) -> None:
     del canvas  # skipcq
 
     # * predictions with HWC
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     save_dir.mkdir()
     _ = semantic_segmentor.merge_prediction(
         [4, 4],
@@ -409,7 +401,7 @@ def test_functional_segmentor_merging(tmp_path: Path) -> None:
             cache_count_path=f"{save_dir}/count.1.py",
         )
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     save_dir.mkdir()
 
     # * with an out of bound location
@@ -426,13 +418,11 @@ def test_functional_segmentor_merging(tmp_path: Path) -> None:
     )
     assert np.sum(canvas - _output) < 1.0e-8
     del canvas  # skipcq
-    _rm_dir(save_dir)
-    save_dir.mkdir()
 
 
 def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     """Functional test for segmentor."""
-    save_dir = Path(f"{tmp_path}/dump")
+    save_dir = tmp_path / "dump"
     # # convert to pathlib Path to prevent wsireader complaint
     resolution = 2.0
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
@@ -444,7 +434,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     imwrite(mini_wsi_msk, (thumb > 0).astype(np.uint8))
 
     # preemptive clean up
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
@@ -464,7 +454,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         crash_on_exception=False,
     )
 
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
@@ -474,7 +464,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         units="baseline",
         crash_on_exception=True,
     )
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
 
     # * check exception bypass in the log
     # there should be no exception, but how to check the log?
@@ -489,7 +479,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         units="baseline",
         crash_on_exception=False,
     )
-    _rm_dir("output")  # default output dir test
+    shutil.rmtree("output", ignore_errors=True)  # default output dir test
 
     # * test basic running and merging prediction
     # * should dumping all 1 in the output
@@ -501,7 +491,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         stride_shape=[512, 512],
     )
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     file_list = [
         mini_wsi_jpg,
         mini_wsi_jpg,
@@ -521,7 +511,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     # due to overlapping merge and division, will not be
     # exactly 1, but should be approximately so
     assert np.sum((pred_1 - 1) > 1.0e-6) == 0
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     # * test running with mask and svs
     # * also test merging prediction at designated resolution
@@ -533,7 +523,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         patch_output_shape=[256, 256],
         stride_shape=[512, 512],
     )
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     output_list = semantic_segmentor.predict(
         [mini_wsi_svs],
         masks=[mini_wsi_msk],
@@ -550,7 +540,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     saved_shape = np.array(pred_1.shape[:2])
     assert np.sum(expected_shape - saved_shape) == 0
     assert np.sum((pred_1 - 1) > 1.0e-6) == 0
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     # check normal run with auto get mask
     semantic_segmentor = SemanticSegmentor(
@@ -567,7 +557,6 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
-    _rm_dir(save_dir)
 
 
 def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
@@ -585,7 +574,7 @@ def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
             self.num_postproc_worker = 2
 
     semantic_segmentor = XSegmentor()
-    _rm_dir(save_dir)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
@@ -596,7 +585,7 @@ def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
         resolution=1.0,
         units="baseline",
         crash_on_exception=False,
-        save_dir=f"{save_dir}/raw/",
+        save_dir=save_dir / "raw",
     )
 
 
@@ -615,7 +604,7 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
         pretrained_model="fcn-tissue_mask",
     )
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
@@ -624,7 +613,7 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{save_dir}/raw/",
     )
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     # mainly to test prediction on tile
     semantic_segmentor.predict(
@@ -638,8 +627,6 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
     assert save_dir.joinpath("raw/0.raw.0.npy").exists()
     assert save_dir.joinpath("raw/file_map.dat").exists()
 
-    _rm_dir(tmp_path)
-
 
 @pytest.mark.skipif(
     toolbox_env.running_on_ci() or not ON_GPU,
@@ -647,7 +634,7 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
 )
 def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
-    save_dir = Path(tmp_path)
+    save_dir = tmp_path
     wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
     mini_wsi_jpg = Path(remote_sample("wsi2_4k_4k_jpg"))
 
@@ -655,22 +642,22 @@ def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> 
         batch_size=BATCH_SIZE,
         pretrained_model="fcn-tissue_mask",
     )
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     semantic_segmentor.predict(
         [wsi_with_artifacts],
         mode="wsi",
         on_gpu=True,
         crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
+        save_dir=save_dir / "raw",
     )
     # load up the raw prediction and perform precision check
     _cache_pred = imread(Path(remote_sample("wsi3_20k_20k_pred")))
-    _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
+    _test_pred = np.load(str(save_dir / "raw" / "0.raw.0.npy"))
     _test_pred = (_test_pred[..., 1] > 0.75) * 255
     # divide 255 to binarize
     assert np.mean(_cache_pred[..., 0] == _test_pred) > 0.99
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     # mainly to test prediction on tile
     semantic_segmentor.predict(
         [mini_wsi_jpg],
@@ -680,8 +667,6 @@ def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> 
         save_dir=f"{save_dir}/raw/",
     )
 
-    _rm_dir(save_dir)
-
 
 @pytest.mark.skipif(
     toolbox_env.running_on_ci() or not ON_GPU,
@@ -689,9 +674,8 @@ def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> 
 )
 def test_behavior_bcss_local(remote_sample: Callable, tmp_path: Path) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
-    save_dir = Path(tmp_path)
+    save_dir = tmp_path
 
-    _rm_dir(save_dir)
     wsi_breast = Path(remote_sample("wsi4_4k_4k_svs"))
     semantic_segmentor = SemanticSegmentor(
         num_loader_workers=4,
@@ -703,14 +687,13 @@ def test_behavior_bcss_local(remote_sample: Callable, tmp_path: Path) -> None:
         mode="wsi",
         on_gpu=True,
         crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
+        save_dir=save_dir / "raw",
     )
     # load up the raw prediction and perform precision check
     _cache_pred = np.load(Path(remote_sample("wsi4_4k_4k_pred")))
     _test_pred = np.load(f"{save_dir}/raw/0.raw.0.npy")
     _test_pred = np.argmax(_test_pred, axis=-1)
     assert np.mean(np.abs(_cache_pred - _test_pred)) < 1.0e-2
-    _rm_dir(save_dir)
 
 
 # -------------------------------------------------------------------------------------
