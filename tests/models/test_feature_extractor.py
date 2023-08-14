@@ -17,15 +17,6 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 
-# ----------------------------------------------------
-
-
-def _rm_dir(path) -> None:
-    """Helper func to remove directory."""
-    if Path.exists(path):
-        shutil.rmtree(path, ignore_errors=True)
-
-
 # -------------------------------------------------------------------------------------
 # Engine
 # -------------------------------------------------------------------------------------
@@ -33,12 +24,12 @@ def _rm_dir(path) -> None:
 
 def test_functional(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for feature extraction."""
-    save_dir = Path(f"{tmp_path}/output/")
+    save_dir = tmp_path / "output"
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
 
     # * test providing pretrained from torch vs pretrained_model.yaml
-    _rm_dir(save_dir)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
     extractor = DeepFeatureExtractor(batch_size=1, pretrained_model="fcn-tissue_mask")
     output_list = extractor.predict(
         [mini_wsi_svs],
@@ -54,7 +45,7 @@ def test_functional(remote_sample: Callable, tmp_path: Path) -> None:
 
     # * test same output between full infer and engine
     # pre-emptive clean up
-    _rm_dir(save_dir)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
@@ -108,5 +99,3 @@ def test_functional(remote_sample: Callable, tmp_path: Path) -> None:
     # ! else the output values will not exactly be the same (still < 1.0e-4
     # ! of epsilon though)
     assert np.mean(np.abs(features[:4] - _features)) < 1.0e-1
-
-    _rm_dir(save_dir)
