@@ -289,8 +289,6 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             units="baseline",
         )
 
-    _rm_dir("output")
-
     with pytest.raises(ValueError, match=r"Invalid resolution.*"):
         semantic_segmentor.predict(
             [mini_wsi_svs],
