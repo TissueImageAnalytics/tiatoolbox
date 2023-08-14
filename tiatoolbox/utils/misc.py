@@ -4,6 +4,8 @@ from __future__ import annotations
 import copy
 import json
 import os
+import shutil
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import IO, TYPE_CHECKING
@@ -714,9 +716,13 @@ def download_data(
             # Raise an exception for status codes != 200
             response.raise_for_status()
             # Write the file in blocks of 1024 bytes to avoid running out of memory
-            with save_path.open("wb") as handle:
+
+            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as templ_file:
                 for block in response.iter_content(1024):
-                    handle.write(block)
+                    templ_file.write(block)
+
+            # Move the temporary file to the desired location
+            shutil.move(templ_file.name, save_path)
 
         if unzip:
             unzip_path = save_dir / save_path.stem
