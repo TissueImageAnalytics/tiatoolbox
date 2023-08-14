@@ -27,13 +27,6 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 RNG = np.random.default_rng()  # Numpy Random Generator
 
-
-def _rm_dir(path) -> None:
-    """Helper func to remove directory."""
-    if Path(path).exists():
-        shutil.rmtree(path, ignore_errors=True)
-
-
 # -------------------------------------------------------------------------------------
 # Dataloader
 # -------------------------------------------------------------------------------------
@@ -93,7 +86,6 @@ def test_patch_dataset_list_imgs(tmp_path: Path) -> None:
         save_dir_path / "sample2.npy",
     ]
     _ = PatchDataset(imgs)
-    _rm_dir(save_dir_path)
 
 
 def test_patch_datasetarray_imgs() -> None:
@@ -193,8 +185,9 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
     # ** test different extension parser
     # save dummy data to temporary location
     # remove prev generated data
-    _rm_dir(save_dir_path)
-    Path.mkdir(save_dir_path, parents=True)
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+    save_dir_path.mkdir(parents=True)
+
     torch.save({"a": "a"}, save_dir_path / "sample1.tar")
     np.save(
         str(save_dir_path / "sample2.npy"),
@@ -486,17 +479,17 @@ def test_predictor_crash() -> None:
         predictor.predict("aaa", mode="random")
     # remove previously generated data
     if Path.exists(Path("output")):
-        _rm_dir("output")
+        shutil.rmtree("output", ignore_errors=True)
     with pytest.raises(TypeError, match=r".*must be a list of file paths.*"):
         predictor.predict("aaa", mode="wsi")
     # remove previously generated data
-    _rm_dir("output")
+    shutil.rmtree("output", ignore_errors=True)
     with pytest.raises(ValueError, match=r".*masks.*!=.*imgs.*"):
         predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi")
     with pytest.raises(ValueError, match=r".*labels.*!=.*imgs.*"):
         predictor.predict([1, 2, 3], labels=[1, 2], mode="patch")
     # remove previously generated data
-    _rm_dir("output")
+    shutil.rmtree("output", ignore_errors=True)
 
 
 def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
@@ -507,8 +500,8 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     model = CNNModel("resnet50")
     predictor = PatchPredictor(model=model)
     with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):
-        predictor.predict([mini_wsi_svs], mode="wsi", save_dir=f"{tmp_path}/dump")
-    _rm_dir(f"{tmp_path}/dump")
+        predictor.predict([mini_wsi_svs], mode="wsi", save_dir=tmp_path / "dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     kwargs = {
         "patch_input_shape": [512, 512],
@@ -526,7 +519,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
                 on_gpu=ON_GPU,
                 **_kwargs,
             )
-        _rm_dir(f"{tmp_path}/dump")
+        shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     # test providing config / full input info for not pretrained models
     ioconfig = IOPatchPredictorConfig(
@@ -542,7 +535,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
         on_gpu=ON_GPU,
     )
-    _rm_dir(f"{tmp_path}/dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     predictor.predict(
         [mini_wsi_svs],
@@ -551,7 +544,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         on_gpu=ON_GPU,
         **kwargs,
     )
-    _rm_dir(f"{tmp_path}/dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
@@ -563,7 +556,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.patch_input_shape == (300, 300)
-    _rm_dir(f"{tmp_path}/dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     predictor.predict(
         [mini_wsi_svs],
@@ -573,7 +566,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.stride_shape == (300, 300)
-    _rm_dir(f"{tmp_path}/dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     predictor.predict(
         [mini_wsi_svs],
@@ -583,7 +576,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
-    _rm_dir(f"{tmp_path}/dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     predictor.predict(
         [mini_wsi_svs],
@@ -593,7 +586,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
-    _rm_dir(f"{tmp_path}/dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
     predictor.predict(
@@ -603,7 +596,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
         on_gpu=ON_GPU,
     )
-    _rm_dir(f"{tmp_path}/dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
 
 def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> None:
@@ -664,8 +657,8 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
     )
 
     # remove prev generated data
-    _rm_dir(save_dir_path)
-    Path.mkdir(save_dir_path, parents=True)
+    shutil.rmtree(save_dir_path, ignore_errors=True)
+    save_dir_path.mkdir(parents=True)
     pretrained_weights = (
         save_dir_path / "tmp_pretrained_weigths" / "resnet18-kather100k.pth"
     )
@@ -739,8 +732,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     assert accuracy > 0.9, np.nonzero(~diff)
 
     # remove previously generated data
-    save_dir = f"{save_dir_path}/model_wsi_output"
-    _rm_dir(save_dir)
+    save_dir = save_dir_path / "model_wsi_output"
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     kwargs = {
         "return_probabilities": True,
@@ -766,7 +759,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     for output_info in output.values():
         assert Path(output_info["raw"]).exists()
         assert "merged" not in output_info
-    _rm_dir(_kwargs["save_dir"])
+    shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
 
     # coverage test
     _kwargs = copy.deepcopy(kwargs)
@@ -787,8 +780,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
             **_kwargs,
         )
     # remove previously generated data
-    _rm_dir(_kwargs["save_dir"])
-    _rm_dir("output")
+    shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
+    shutil.rmtree("output", ignore_errors=True)
 
     # test reading of multiple whole-slide images
     _kwargs = copy.deepcopy(kwargs)
@@ -807,7 +800,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
         assert Path(output_info["merged"]).exists()
 
     # remove previously generated data
-    _rm_dir("output")
+    shutil.rmtree("output", ignore_errors=True)
 
 
 def test_wsi_predictor_merge_predictions(sample_wsi_dict) -> None:
