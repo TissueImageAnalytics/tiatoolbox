@@ -133,6 +133,14 @@ class EngineABC(ABC):
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.verbose = verbose
+        self.return_probabilities = False
+        self.return_labels = False
+        self.merge_predictions = False
+        self.units = "baseline"
+        self.resolution = 1.0
+        self.patch_input_shape = None
+        self.stride_shape = None
+        self.labels = None
 
     @abstractmethod
     def pre_process_patch(self):
@@ -208,21 +216,13 @@ class EngineABC(ABC):
         self,
         images: list[os | Path] | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
-        labels: list | None = None,  # kwargs
         ioconfig: IOPatchPredictorConfig | None = None,
-        patch_input_shape: tuple[int, int] | None = None,  # kwargs (ioconfig)
-        stride_shape: tuple[int, int] | None = None,  # kwargs (ioconfig)
-        resolution=None,  # kwargs (pass to wsireader)
-        units=None,  # kwargs (pass to wsireader)
         *,
         patch_mode: bool = False,
-        return_probabilities=False,  # kwargs
-        return_labels=False,  # kwargs
         on_gpu=True,
-        merge_predictions=False,  # kwargs
         save_dir=None,
         # None will not save output
-        # save_output can be np.ndarray
+        # save_output can be np.ndarray, Annotation or Json str
         save_output: np.ndarray | Annotation | str | None = True,
         **kwargs: dict,
     ) -> np.ndarray | dict:
@@ -242,41 +242,13 @@ class EngineABC(ABC):
                 tissue mask will be automatically generated for
                 whole-slide images or the entire image is processed for
                 image tiles.
-            labels:
-                List of labels. If using `tile` or `wsi` mode, then only
-                a single label per image tile or whole-slide image is
-                supported.
             patch_mode (bool):
                 Whether to treat input image as a patch or WSI.
                 default = False.
-            return_probabilities (bool):
-                Whether to return per-class probabilities.
-            return_labels (bool):
-                Whether to return the labels with the predictions.
             on_gpu (bool):
                 Whether to run model on the GPU.
             ioconfig (IOPatchPredictorConfig):
                 Patch Predictor IO configuration.
-            patch_input_shape (tuple):
-                Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to level 0,
-                and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. Stride is
-                at requested read resolution, not with respect to
-                level 0, and must be positive. If not provided,
-                `stride_shape=patch_input_shape`.
-            resolution (Resolution):
-                Resolution used for reading the image. Please see
-                :obj:`WSIReader` for details.
-            units (Units):
-                Units of resolution used for reading the image. Choose
-                from either `level`, `power` or `mpp`. Please see
-                :obj:`WSIReader` for details.
-            merge_predictions (bool):
-                Whether to merge the predictions to form a 2-dimensional
-                map. This is only applicable for `mode='wsi'` or
-                `mode='tile'`.
             save_dir (str or pathlib.Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
@@ -315,11 +287,8 @@ class EngineABC(ABC):
             ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
 
         """
-        self._update(kwargs)  # prefer kwargs as attribute and update if required.
-
-        # if mode not in ["patch", "wsi"]:
-        #     raise ValueError(
-        #         msg,
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
 
         save_dir = self._prepare_save_dir(save_dir, images)
 
