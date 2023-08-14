@@ -1,4 +1,5 @@
 """Methods of masking tissue and background."""
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
@@ -16,13 +17,17 @@ class TissueMasker(ABC):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self: TissueMasker) -> None:
         """Initialize :class:`TissueMasker`."""
         super().__init__()
         self.fitted = False
 
     @abstractmethod
-    def fit(self, images: np.ndarray, masks=None) -> None:
+    def fit(
+        self: TissueMasker,
+        images: np.ndarray,
+        masks: np.ndarray | None = None,
+    ) -> None:
         """Fit the masker to the images and parameters.
 
         Args:
@@ -36,7 +41,7 @@ class TissueMasker(ABC):
         """
 
     @abstractmethod
-    def transform(self, images: np.ndarray) -> np.ndarray:
+    def transform(self: TissueMasker, images: np.ndarray) -> np.ndarray:
         """Create and return a tissue mask.
 
         Args:
@@ -53,7 +58,11 @@ class TissueMasker(ABC):
             msg = "Fit must be called before transform."
             raise SyntaxError(msg)
 
-    def fit_transform(self, images: np.ndarray, **kwargs) -> np.ndarray:
+    def fit_transform(
+        self: TissueMasker,
+        images: np.ndarray,
+        **kwargs: dict,
+    ) -> np.ndarray:
         """Perform :func:`fit` then :func:`transform`.
 
         Sometimes it can be more optimal to perform both at the same
@@ -87,12 +96,16 @@ class OtsuTissueMasker(TissueMasker):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self: TissueMasker) -> None:
         """Initialize :class:`OtsuTissueMasker`."""
         super().__init__()
         self.threshold = None
 
-    def fit(self, images: np.ndarray, masks=None) -> None:  # noqa: ARG002
+    def fit(
+        self: TissueMasker,
+        images: np.ndarray,
+        masks: np.ndarray | None = None,  # noqa: ARG002
+    ) -> None:
         """Find a binary threshold using Otsu's method.
 
         Args:
@@ -127,7 +140,7 @@ class OtsuTissueMasker(TissueMasker):
 
         self.fitted = True
 
-    def transform(self, images: np.ndarray) -> np.ndarray:
+    def transform(self: TissueMasker, images: np.ndarray) -> np.ndarray:
         """Create masks using the threshold found during :func:`fit`.
 
         Args:
@@ -192,12 +205,12 @@ class MorphologicalMasker(OtsuTissueMasker):
     """
 
     def __init__(
-        self,
+        self: TissueMasker,
         *,
-        mpp=None,
-        power=None,
-        kernel_size=None,
-        min_region_size=None,
+        mpp: float | tuple[float, float] | None = None,
+        power: float | tuple[float, float] | None = None,
+        kernel_size: int | tuple[int, int] | None = None,
+        min_region_size: int | None = None,
     ) -> None:
         """Initialise a morphological masker.
 
@@ -256,7 +269,7 @@ class MorphologicalMasker(OtsuTissueMasker):
         if self.min_region_size is None:
             self.min_region_size = np.sum(self.kernel)
 
-    def transform(self, images: np.ndarray):
+    def transform(self: TissueMasker, images: np.ndarray) -> None:
         """Create masks using the found threshold followed by morphological operations.
 
         Args:
