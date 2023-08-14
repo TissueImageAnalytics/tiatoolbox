@@ -1,11 +1,21 @@
 """Stain matrix extraction for stain normalization."""
-from typing import Self
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
 
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 from tiatoolbox.utils.transforms import rgb2od
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sys
+
+    if sys.version_info >= (3, 9):
+        from typing import Self
+    else:  # pragma: no cover
+        from typing_extensions import Self  # To support Python 3.8
 
 
 def vectors_in_correct_direction(e_vectors: np.ndarray) -> np.ndarray:
