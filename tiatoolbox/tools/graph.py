@@ -416,7 +416,7 @@ class SlideGraphConstructor:
 
     @classmethod
     def visualise(
-        cls,
+        cls: SlideGraphConstructor,
         graph: dict[str, ArrayLike],
         color: ArrayLike | str | Callable | None = None,
         node_size: Number | ArrayLike | Callable = 25,
