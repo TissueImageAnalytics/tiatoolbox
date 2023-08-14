@@ -159,10 +159,11 @@ def cell_polygon(
     radius: Number = 8,
     noise: Number = 0.01,
     eccentricity: tuple[Number, Number] = (1, 3),
-    repeat_first: bool | None = None,
     direction: str = "CCW",
     seed: int = 0,
-    round_coords: bool | None = None,
+    *,
+    repeat_first: bool = True,
+    round_coords: bool = False,
 ) -> Polygon:
     """Generate a fake cell boundary polygon.
 
@@ -186,12 +187,6 @@ def cell_polygon(
 
     """
     from shapely import affinity
-
-    if repeat_first is None:
-        repeat_first = True
-
-    if round_coords is None:
-        round_coords = False
 
     rand_state = np.random.default_rng().__getstate__()
     rng = np.random.default_rng(seed)

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import IO, TYPE_CHECKING
@@ -438,12 +440,12 @@ def __numpy_array_to_table(input_table: np.ndarray) -> pd.DataFrame:
         ValueError: If the number of columns is not equal to 2 or 3.
 
     """
-    if input_table.shape[1] == 2:
+    if input_table.shape[1] == 2:  # noqa: PLR2004
         out_table = pd.DataFrame(input_table, columns=["x", "y"])
         out_table["class"] = None
         return out_table
 
-    if input_table.shape[1] == 3:
+    if input_table.shape[1] == 3:  # noqa: PLR2004
         return pd.DataFrame(input_table, columns=["x", "y", "class"])
 
     msg = "Numpy table should be of format `x, y` or `x, y, class`."
@@ -469,7 +471,7 @@ def __assign_unknown_class(input_table: np.ndarray | pd.DataFrame) -> pd.DataFra
         msg = "Input table must have 2 or 3 columns."
         raise ValueError(msg)
 
-    if input_table.shape[1] == 2:
+    if input_table.shape[1] == 2:  # noqa: PLR2004
         input_table["class"] = None
 
     return input_table
@@ -714,9 +716,13 @@ def download_data(
             # Raise an exception for status codes != 200
             response.raise_for_status()
             # Write the file in blocks of 1024 bytes to avoid running out of memory
-            with save_path.open("wb") as handle:
+
+            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as templ_file:
                 for block in response.iter_content(1024):
-                    handle.write(block)
+                    templ_file.write(block)
+
+            # Move the temporary file to the desired location
+            shutil.move(templ_file.name, save_path)
 
         if unzip:
             unzip_path = save_dir / save_path.stem
@@ -972,7 +978,7 @@ def select_cv2_interpolation(scale_factor: float) -> str:
             interpolation type
 
     """
-    if np.any(scale_factor > 1.0):
+    if np.any(scale_factor > 1.0):  # noqa: PLR2004
         return "cubic"
     return "area"
 

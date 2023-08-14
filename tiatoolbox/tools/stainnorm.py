@@ -102,7 +102,7 @@ class StainNormalizer:
         )
 
         # ensure between 0 and 255
-        trans[trans > 255] = 255
+        trans[trans > 255] = 255  # noqa: PLR2004
         trans[trans < 0] = 0
 
         return trans.reshape(img.shape).astype(np.uint8)

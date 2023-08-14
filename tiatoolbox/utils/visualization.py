@@ -59,7 +59,7 @@ def colourise_image(img: np.ndarray, cmap: str = "viridis") -> np.ndarray:
     Returns:
         img(ndarray): An RGB image.
     """
-    if len(img.shape) == 2:
+    if len(img.shape) == 2:  # noqa: PLR2004
         # Single channel, make into rgb with colormap.
         c_map = colormaps[cmap]
         im_rgb = (c_map(img) * 255).astype(np.uint8)
@@ -118,7 +118,7 @@ def overlay_prediction_mask(
             msg,
         )
     if np.issubdtype(img.dtype, np.floating):
-        if not (img.max() <= 1.0 and img.min() >= 0):
+        if not (img.max() <= 1.0 and img.min() >= 0):  # noqa: PLR2004
             msg = "Not support float `img` outside [0, 1]."
             raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
@@ -156,7 +156,7 @@ def overlay_prediction_mask(
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype(np.uint8)
 
-    if min_val > 0.0:
+    if min_val > 0.0:  # noqa: PLR2004
         overlay[~prediction_sel] = img[~prediction_sel]
 
     if ax is None and not return_ax:
@@ -242,7 +242,7 @@ def _validate_label_info(
             raise TypeError(
                 msg,
             )
-        if len(label_colour) != 3:
+        if len(label_colour) != 3:  # noqa: PLR2004
             msg = (
                 f"Wrong `label_info` format: label_colour "
                 f"{[label_uid, (label_name, label_colour)]}"
@@ -306,10 +306,10 @@ def overlay_probability_map(
 
     # Add the overlay
     overlay = (1 - alpha) * rgb_prediction + alpha * overlay
-    overlay[overlay > 255.0] = 255.0
+    overlay[overlay > 255.0] = 255.0  # noqa: PLR2004
     overlay = overlay.astype(np.uint8)
 
-    if min_val > 0.0:
+    if min_val > 0.0:  # noqa: PLR2004
         overlay[~prediction_sel] = img[~prediction_sel]
 
     if ax is None and not return_ax:
@@ -360,7 +360,7 @@ def _validate_overlay_probability_map(
             Input image. May be modified if `min_val` has dtype float.
 
     """
-    if prediction.ndim != 2:
+    if prediction.ndim != 2:  # noqa: PLR2004
         msg = "The input prediction must be 2-dimensional of the form HW."
         raise ValueError(msg)
 
@@ -373,7 +373,7 @@ def _validate_overlay_probability_map(
             msg,
         )
 
-    if prediction.max() > 1.0:
+    if prediction.max() > 1.0:  # noqa: PLR2004
         msg = "Not support float `prediction` outside [0, 1]."
         raise ValueError(msg)
     if prediction.min() < 0:
@@ -381,15 +381,15 @@ def _validate_overlay_probability_map(
         raise ValueError(msg)
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
-    if min_val < 0.0:
+    if min_val < 0.0:  # noqa: PLR2004
         msg = f"`min_val={min_val}` is not between [0, 1]."
         raise ValueError(msg)
-    if min_val > 1.0:
+    if min_val > 1.0:  # noqa: PLR2004
         msg = f"`min_val={min_val}` is not between [0, 1]."
         raise ValueError(msg)
 
     if np.issubdtype(img.dtype, np.floating):
-        if img.max() > 1.0:
+        if img.max() > 1.0:  # noqa: PLR2004
             msg = "Not support float `img` outside [0, 1]."
             raise ValueError(msg)
         if img.min() < 0:
@@ -522,16 +522,16 @@ def plot_graph(
         return tuple(int(v) for v in x)
 
     for idx, (src, dst) in enumerate(edges):
-        src = to_int_tuple(nodes[src])
-        dst = to_int_tuple(nodes[dst])
+        src_ = to_int_tuple(nodes[src])
+        dst_ = to_int_tuple(nodes[dst])
         color = to_int_tuple(edge_colors[idx])
-        cv2.line(canvas, src, dst, color, thickness=edge_size)
+        cv2.line(canvas, src_, dst_, color, thickness=edge_size)
 
     # draw the nodes
     for idx, node in enumerate(nodes):
-        node = to_int_tuple(node)
+        node_ = to_int_tuple(node)
         color = to_int_tuple(node_colors[idx])
-        cv2.circle(canvas, node, node_size, color, thickness=-1)
+        cv2.circle(canvas, node_, node_size, color, thickness=-1)
     return canvas
 
 
@@ -595,7 +595,7 @@ class AnnotationRenderer:
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self: AnnotationRenderer,
         score_prop: str | None = None,
         mapper: str | dict | list | None = None,
