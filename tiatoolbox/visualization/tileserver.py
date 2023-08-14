@@ -23,7 +23,7 @@ from tiatoolbox.utils.misc import add_from_dat, store_from_dat
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
 from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, WSIReader
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.colors import Colormap
 
     from tiatoolbox.wsicore import WSIMeta
