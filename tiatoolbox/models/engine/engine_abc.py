@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from tiatoolbox.annotation.storage import Annotation
 
-    from .io_config import IOPatchPredictorConfig
+    from .io_config import ModelIOConfigABC
 
 
 class EngineABC(ABC):
@@ -68,8 +68,39 @@ class EngineABC(ABC):
             be downloaded. However, you can override with your own set
             of weights via the `pretrained_weights` argument. Argument
             is case-insensitive.
+        ioconfig (ModelIOConfigABC):
+            Input IO configuration to run the Engine.
+        _ioconfig ():
+            Runtime ioconfig.
+        return_probabilities (bool):
+            Whether to return per-class probabilities.
+        return_labels (bool):
+            Whether to return the labels with the predictions.
+        merge_predictions (bool):
+            Whether to merge the predictions to form a 2-dimensional
+            map. This is only applicable `patch_mode` is False in inference.
+        resolution (Resolution):
+            Resolution used for reading the image. Please see
+            :obj:`WSIReader` for details.
+        units (Units):
+            Units of resolution used for reading the image. Choose
+            from either `level`, `power` or `mpp`. Please see
+            :obj:`WSIReader` for details.
+        patch_input_shape (tuple):
+            Size of patches input to the model. Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
+        stride_shape (tuple):
+            Stride using during tile and WSI processing. Stride is
+            at requested read resolution, not with respect to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
         batch_size (int):
             Number of images fed into the model each time.
+        labels:
+            List of labels. If using `tile` or `wsi` mode, then only
+            a single label per image tile or whole-slide image is
+            supported.
         num_loader_workers (int):
             Number of workers used in torch.utils.data.DataLoader.
         verbose (bool):
@@ -216,7 +247,7 @@ class EngineABC(ABC):
         self,
         images: list[os | Path] | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
-        ioconfig: IOPatchPredictorConfig | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = False,
         on_gpu=True,
@@ -248,7 +279,7 @@ class EngineABC(ABC):
             on_gpu (bool):
                 Whether to run model on the GPU.
             ioconfig (IOPatchPredictorConfig):
-                Patch Predictor IO configuration.
+                IO configuration.
             save_dir (str or pathlib.Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
