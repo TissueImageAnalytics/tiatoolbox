@@ -10,13 +10,13 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -369,12 +369,6 @@ def test_res_switch(doc):
     assert main.UI["vstate"].res == 2
 
 
-def test_clearing_doc(doc):
-    """Test that the doc can be cleared."""
-    doc.clear()
-    assert len(doc.roots) == 0
-
-
 def test_color_cycler():
     """Test the color cycler."""
     cycler = main.ColorCycler()
@@ -388,3 +382,25 @@ def test_color_cycler():
     new_color = cycler.generate_random()
     # should be a valid hex color
     assert re.match(r"^#[0-9a-fA-F]{6}$", new_color)
+
+
+def test_cmap_select(doc):
+    cmap_select = doc.get_model_by_name("cmap0")
+    # set the cmap to "viridis"
+    cmap_select.value = "viridis"
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    assert resp.json() == "viridis"
+    cmap_select.value = "dict"
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    # should now be the type mapping
+    for key in main.UI["vstate"].mapper:
+        assert str(key) in resp.json()
+        assert np.all(
+            np.array(resp.json()[str(key)]) == np.array(main.UI["vstate"].mapper[key]),
+        )
+
+
+def test_clearing_doc(doc):
+    """Test that the doc can be cleared."""
+    doc.clear()
+    assert len(doc.roots) == 0

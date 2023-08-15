@@ -16,6 +16,9 @@ import matplotlib.cm as cm
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
 # Bokeh stuff
 from bokeh.io import curdoc
@@ -52,10 +55,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -85,7 +84,7 @@ class UIWrapper:
         self.active = 0
 
     def __getitem__(self, key: str) -> Any:
-        """Gets active ui element."""
+        """Gets ui element for the active window."""
         return win_dicts[self.active][key]
 
 
@@ -93,7 +92,16 @@ def get_view_bounds(
     dims: tuple[float, float],
     plot_size: tuple[float, float],
 ) -> tuple[float, float, float, float]:
-    """Helper to get the current view bounds."""
+    """Helper to get the current view bounds.
+
+    Args:
+        dims: The dimensions of the image.
+        plot_size: The size of the plot.
+
+    Returns:
+        The view bounds.
+
+    """
     pad = int(np.mean(dims) / 10)
     aspect_ratio = plot_size[0] / plot_size[1]
     large_dim = np.argmax(np.array(dims) / plot_size)
@@ -185,7 +193,7 @@ def name2type(name: str) -> Any:
 
 
 def hex2rgb(hex_val: str) -> tuple[float, float, float]:
-    """Covert hex string to float rgb(a) tuple."""
+    """Covert hex rgb string to float rgb(a) tuple."""
     return tuple(int(hex_val[i : i + 2], 16) / 255 for i in (1, 3, 5))
 
 
