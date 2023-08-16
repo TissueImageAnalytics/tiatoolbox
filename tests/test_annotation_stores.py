@@ -407,17 +407,15 @@ def test_annotation_multi_line_string_wkb_coords() -> None:
     assert all(np.array_equal(a, b) for a, b in zip_longest(geom_coords, coords))
 
 
-def test_annotation_coords_wkb_uknown_geometry() -> None:
+def test_annotation_coords_wkb_unknown_geometry() -> None:
     """Test generating coordinates from WKB for unknown geometry type."""
     ann = Annotation(wkb=b"\x00\x07\x00\x00\x00")
     with pytest.raises(ValueError, match="Unknown geometry type"):
         _ = ann.coords
 
 
-def test_annotation_coords_geometry_uknown_geometry(
-    monkeypatch,  # noqa: ARG001
-) -> None:
-    """Test generating coordinates from WKB for unknown geometry type."""
+def test_annotation_coords_geometry_unknown_geometry() -> None:
+    """Test generating coordinates from geometry for unknown geometry type."""
     ann = Annotation(geometry=GeometryCollection([Point(1, 2)]))
     with pytest.raises(ValueError, match="Unknown geometry type"):
         _ = ann.coords
@@ -458,11 +456,11 @@ def test_annotation_eq_type_mismatch() -> None:
 
 
 def test_annotation_wkt() -> None:
-    """Test that the WKT is the same for two annotations with the same geometry."""
-    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
-    ann_2 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
-    assert isinstance(ann_1.to_wkt(), str)
-    assert ann_1.to_wkt() == ann_2.to_wkt()
+    """Test that Annotatoin.to_wkt() generates a valid WKT string."""
+    ann = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    assert isinstance(ann.to_wkt(), str)
+    assert ann.to_wkt().startswith("POLYGON")
+    assert shapely.wkt.loads(ann.to_wkt()) == ann.geometry
 
 
 def test_annotation_decode_unknown_wkb() -> None:
