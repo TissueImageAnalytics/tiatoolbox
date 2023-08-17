@@ -1012,7 +1012,7 @@ def test_grab_files_from_dir(sample_visual_fields) -> None:
     assert len(out) == 0
 
 
-def test_download_unzip_data(tmp_path) -> None:
+def test_download_unzip_data(tmp_path: Path) -> None:
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
     save_dir_path = tmp_path / "tmp"
