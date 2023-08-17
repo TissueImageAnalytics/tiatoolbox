@@ -479,7 +479,7 @@ def test_io_patch_predictor_config() -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_predictor_crash(tmp_path) -> None:
+def test_predictor_crash(tmp_path: Path) -> None:
     """Test for crash when making predictor."""
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
