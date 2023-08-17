@@ -1043,7 +1043,7 @@ def test_download_data(tmp_path) -> None:
     """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
 
-    save_dir_path = tmp_path / "downloads/"
+    save_dir_path = tmp_path / "downloads"
     save_zip_path = save_dir_path / "test_directory.zip"
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
