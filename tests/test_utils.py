@@ -1039,7 +1039,7 @@ def test_download_unzip_data(tmp_path) -> None:
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_download_data(tmp_path) -> None:
+def test_download_data(tmp_path: Path) -> None:
     """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
 
