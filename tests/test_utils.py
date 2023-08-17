@@ -1015,7 +1015,7 @@ def test_grab_files_from_dir(sample_visual_fields) -> None:
 def test_download_unzip_data(tmp_path) -> None:
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = tmp_path / "tmp/"
+    save_dir_path = tmp_path / "tmp"
 
     save_dir_path.mkdir()
     save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
