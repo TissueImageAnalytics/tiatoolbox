@@ -12,7 +12,7 @@ import tiatoolbox
 from tiatoolbox import DuplicateFilter, logger
 
 
-def test_set_root_dir(tmp_path) -> None:
+def test_set_root_dir(tmp_path: Path) -> None:
     """Test for setting new root dir."""
     # skipcq
     importlib.reload(tiatoolbox)
