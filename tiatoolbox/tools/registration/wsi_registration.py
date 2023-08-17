@@ -94,7 +94,11 @@ def compute_center_of_mass(mask: np.ndarray) -> tuple:
     return (x_coord_center, y_coord_center)
 
 
-def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
+def apply_affine_transformation(
+    fixed_img: np.ndarray,
+    moving_img: np.ndarray,
+    transform_initializer: np.ndarray,
+) -> np.ndarray:
     """Apply affine transformation using OpenCV.
 
     Args:
@@ -324,7 +328,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self: torch.nn.Module) -> None:
         """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
@@ -340,7 +344,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             for i, layer in enumerate(output_layers_id)
         ]
 
-    def forward_hook(self, layer_name: str) -> None:
+    def forward_hook(self: torch.nn.Module, layer_name: str) -> None:
         """Register a hook.
 
         Args:
@@ -375,7 +379,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self: torch.nn.Module, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -422,7 +426,7 @@ class DFBRegister:
 
     """
 
-    def __init__(self, patch_size: tuple[int, int] = (224, 224)) -> None:
+    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
@@ -430,7 +434,7 @@ class DFBRegister:
 
     # Make this function private when full pipeline is implemented.
     def extract_features(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
     ) -> dict[str, torch.Tensor]:
@@ -561,7 +565,7 @@ class DFBRegister:
         return feature_distance[row_ind, col_ind]
 
     def feature_mapping(
-        self,
+        self: DFBRegister,
         features: dict[str, torch.Tensor],
         num_matching_points: int = 128,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -786,7 +790,7 @@ class DFBRegister:
         )
 
     def filtering_matching_points(
-        self,
+        self: DFBRegister,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
         fixed_matched_points: np.ndarray,
@@ -871,7 +875,7 @@ class DFBRegister:
         return fixed_matched_points, moving_matched_points, quality
 
     def perform_dfbregister(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
@@ -936,7 +940,7 @@ class DFBRegister:
         return tissue_transform, moving_img, moving_mask
 
     def perform_dfbregister_block_wise(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
@@ -1056,7 +1060,7 @@ class DFBRegister:
         return block_transform, moving_img, moving_mask
 
     def register(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
@@ -1230,7 +1234,7 @@ def estimate_bspline_transform(
     moving_image: np.ndarray,
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
-    **kwargs,
+    **kwargs: dict,
 ) -> sitk.BSplineTransform:
     """Estimate B-spline transformation.
 
@@ -1447,7 +1451,11 @@ class AffineWSITransformer:
 
     """
 
-    def __init__(self, reader: WSIReader, transform: np.ndarray) -> None:
+    def __init__(
+        self: AffineWSITransformer,
+        reader: WSIReader,
+        transform: np.ndarray,
+    ) -> None:
         """Initialize object.
 
         Args:
@@ -1482,7 +1490,7 @@ class AffineWSITransformer:
         return points_warp[:, :-1]
 
     def get_patch_dimensions(
-        self,
+        self: AffineWSITransformer,
         size: tuple[int, int],
         transform: np.ndarray,
     ) -> tuple[int, int]:
@@ -1529,7 +1537,7 @@ class AffineWSITransformer:
         return (width, height)
 
     def get_transformed_location(
-        self,
+        self: AffineWSITransformer,
         location: tuple[int, int],
         size: tuple[int, int],
         level: int,
@@ -1575,7 +1583,11 @@ class AffineWSITransformer:
         )
         return transformed_location, transformed_size
 
-    def transform_patch(self, patch: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    def transform_patch(
+        self: AffineWSITransformer,
+        patch: np.ndarray,
+        size: tuple[int, int],
+    ) -> np.ndarray:
         """Apply transformation to the given patch.
 
         This function applies the transformation matrix after removing the translation.
@@ -1601,7 +1613,7 @@ class AffineWSITransformer:
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 
     def read_rect(
-        self,
+        self: AffineWSITransformer,
         location: tuple[int, int],
         size: tuple[int, int],
         resolution: Resolution,
