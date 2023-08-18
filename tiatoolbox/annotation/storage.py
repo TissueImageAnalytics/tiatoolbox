@@ -146,7 +146,9 @@ class Annotation:
         )
 
     @property
-    def coords(self) -> np.array | list[np.array] | list[list[np.array]]:
+    def coords(  # noqa: PLR0911 - 7 > 6 returns
+        self,
+    ) -> np.array | list[np.array] | list[list[np.array]]:
         """The annotation geometry as a flat array of 2D coordinates.
 
         Returns a numpy array of coordinates for point and line string.
@@ -376,16 +378,18 @@ class Annotation:
                 offset += n_points * 16
             return rings, offset
 
+        # Using magic numbers instead of GeometryType enums for future
+        # numba compilation (numba doesn't like enums).
         if geom_type == 1:
             # Point
             return np.frombuffer(wkb, np.double, -1, 5).reshape(1, 2)
-        if geom_type == 2:
+        if geom_type == 2:  # noqa: PLR2004 - Intentional magic number
             # Line
             return np.frombuffer(wkb, np.double, -1, 9).reshape(-1, 2)
-        if geom_type == 3:
+        if geom_type == 3:  # noqa: PLR2004 - Intentional magic number
             # Polygon
             return decode_polygon()[0]
-        if geom_type == 4:
+        if geom_type == 4:  # noqa: PLR2004 - Intentional magic number
             # Multi-point
             n_points = np.frombuffer(wkb, np.int32, 1, 5)[0]
             return [
@@ -393,7 +397,7 @@ class Annotation:
                 # each point is 21 bytes
                 for i in range(n_points)
             ]
-        if geom_type == 5:
+        if geom_type == 5:  # noqa: PLR2004 - Intentional magic number
             # Multi-line
             n_lines = np.frombuffer(wkb, np.int32, 1, 5)[0]
             lines = []
@@ -408,7 +412,7 @@ class Annotation:
                 offset += n_points * 16
             return lines
 
-        if geom_type == 6:
+        if geom_type == 6:  # noqa: PLR2004 - Intentional magic number
             # Multi-polygon
             n_polygons = np.frombuffer(wkb, np.int32, 1, 5)[0]
             polygons = []
