@@ -12,7 +12,6 @@ from shutil import rmtree
 from threading import Thread
 from typing import Any
 
-import matplotlib.cm as cm
 import numpy as np
 import requests
 import torch

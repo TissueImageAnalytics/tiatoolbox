@@ -110,7 +110,7 @@ def imresize(
         scale_factor = img.shape[:2][::-1] / np.array(output_size)
 
     # Return original if scale factor is 1
-    if np.all(scale_factor == 1.0):
+    if np.all(scale_factor == 1.0):  # noqa: PLR2004
         return img
 
     # Get appropriate cv2 interpolation enum
@@ -154,7 +154,7 @@ def imresize(
     if img.shape[0] == img.shape[1] == 1:
         return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
 
-    if len(img.shape) == 3 and img.shape[-1] > 4:
+    if len(img.shape) == 3 and img.shape[-1] > 4:  # noqa: PLR2004
         img_channels = [
             cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
                 ...,
@@ -328,7 +328,7 @@ def bounds2slices(
         raise ValueError(msg)
     if np.size(stride) == 1:
         stride = np.tile(stride, 4)
-    elif np.size(stride) == 2:  # pragma: no cover
+    elif np.size(stride) == 2:  # pragma: no cover  # noqa: PLR2004
         stride = np.tile(stride, 2)
 
     start, stop = np.reshape(bounds, (2, -1)).astype(int)

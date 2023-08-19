@@ -24,6 +24,9 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import IntBounds, Resolution, Units
 
+RGB_IMAGE_DIM = 3
+BIN_MASK_DIM = 2
+
 
 def _check_dims(
     fixed_img: np.ndarray,
@@ -63,10 +66,10 @@ def _check_dims(
         msg = "Mismatch of shape between image and its corresponding mask."
         raise ValueError(msg)
 
-    if len(fixed_img.shape) == 3:
+    if len(fixed_img.shape) == RGB_IMAGE_DIM:
         fixed_img = cv2.cvtColor(fixed_img, cv2.COLOR_BGR2GRAY)
 
-    if len(moving_img.shape) == 3:
+    if len(moving_img.shape) == RGB_IMAGE_DIM:
         moving_img = cv2.cvtColor(moving_img, cv2.COLOR_BGR2GRAY)
 
     return fixed_img, moving_img
@@ -91,7 +94,11 @@ def compute_center_of_mass(mask: np.ndarray) -> tuple:
     return (x_coord_center, y_coord_center)
 
 
-def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
+def apply_affine_transformation(
+    fixed_img: np.ndarray,
+    moving_img: np.ndarray,
+    transform_initializer: np.ndarray,
+) -> np.ndarray:
     """Apply affine transformation using OpenCV.
 
     Args:
@@ -163,9 +170,9 @@ def prealignment(
     """
     orig_fixed_img, orig_moving_img = fixed_img, moving_img
 
-    if len(fixed_mask.shape) != 2:
+    if len(fixed_mask.shape) != BIN_MASK_DIM:
         fixed_mask = fixed_mask[:, :, 0]
-    if len(moving_mask.shape) != 2:
+    if len(moving_mask.shape) != BIN_MASK_DIM:
         moving_mask = moving_mask[:, :, 0]
 
     fixed_mask = np.uint8(fixed_mask > 0)
@@ -175,7 +182,7 @@ def prealignment(
     moving_img = np.squeeze(moving_img)
     fixed_img, moving_img = _check_dims(fixed_img, moving_img, fixed_mask, moving_mask)
 
-    if rotation_step < 10 or rotation_step > 20:
+    if rotation_step < 10 or rotation_step > 20:  # noqa: PLR2004
         msg = "Please select the rotation step in between 10 and 20."
         raise ValueError(msg)
 
@@ -261,7 +268,7 @@ def prealignment(
         "Not able to find the best transformation for pre-alignment. "
         "Try changing the values for 'dice_overlap' and 'rotation_step'.",
     )
-    return np.eye(3), moving_img, moving_mask, dice_before
+    return np.eye(3), orig_moving_img, moving_mask, dice_before
 
 
 def match_histograms(
@@ -295,7 +302,7 @@ def match_histograms(
 
     """
     image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
-    if len(image_a.shape) == 3 or len(image_b.shape) == 3:
+    if len(image_a.shape) == RGB_IMAGE_DIM or len(image_b.shape) == RGB_IMAGE_DIM:
         msg = "The input images should be grayscale images."
         raise ValueError(msg)
 
@@ -321,7 +328,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self: torch.nn.Module) -> None:
         """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
@@ -337,7 +344,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             for i, layer in enumerate(output_layers_id)
         ]
 
-    def forward_hook(self, layer_name: str) -> None:
+    def forward_hook(self: torch.nn.Module, layer_name: str) -> None:
         """Register a hook.
 
         Args:
@@ -372,7 +379,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self: torch.nn.Module, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -419,7 +426,7 @@ class DFBRegister:
 
     """
 
-    def __init__(self, patch_size: tuple[int, int] = (224, 224)) -> None:
+    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
@@ -427,7 +434,7 @@ class DFBRegister:
 
     # Make this function private when full pipeline is implemented.
     def extract_features(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
     ) -> dict[str, torch.Tensor]:
@@ -558,7 +565,7 @@ class DFBRegister:
         return feature_distance[row_ind, col_ind]
 
     def feature_mapping(
-        self,
+        self: DFBRegister,
         features: dict[str, torch.Tensor],
         num_matching_points: int = 128,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -584,7 +591,7 @@ class DFBRegister:
                   quality of each matching point.
 
         """
-        if len(features) != 3:
+        if len(features) != 3:  # noqa: PLR2004
             msg = "The feature mapping step expects 3 blocks of features."
             raise ValueError(msg)
 
@@ -783,7 +790,7 @@ class DFBRegister:
         )
 
     def filtering_matching_points(
-        self,
+        self: DFBRegister,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
         fixed_matched_points: np.ndarray,
@@ -868,7 +875,7 @@ class DFBRegister:
         return fixed_matched_points, moving_matched_points, quality
 
     def perform_dfbregister(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
@@ -933,7 +940,7 @@ class DFBRegister:
         return tissue_transform, moving_img, moving_mask
 
     def perform_dfbregister_block_wise(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
@@ -1053,7 +1060,7 @@ class DFBRegister:
         return block_transform, moving_img, moving_mask
 
     def register(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
@@ -1082,19 +1089,22 @@ class DFBRegister:
                 An affine transformation matrix.
 
         """
-        if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
+        if (
+            len(fixed_img.shape) != RGB_IMAGE_DIM
+            or len(moving_img.shape) != RGB_IMAGE_DIM
+        ):
             msg = "The required shape for fixed and moving images is n x m x 3."
             raise ValueError(
                 msg,
             )
 
-        if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
+        if fixed_img.shape[2] != RGB_IMAGE_DIM or moving_img.shape[2] != RGB_IMAGE_DIM:
             msg = "The input images are expected to have 3 channels."
             raise ValueError(msg)
 
-        if len(fixed_mask.shape) > 2:
+        if len(fixed_mask.shape) > BIN_MASK_DIM:
             fixed_mask = fixed_mask[:, :, 0]
-        if len(moving_mask.shape) > 2:
+        if len(moving_mask.shape) > BIN_MASK_DIM:
             moving_mask = moving_mask[:, :, 0]
 
         fixed_mask = np.uint8(fixed_mask > 0)
@@ -1224,7 +1234,7 @@ def estimate_bspline_transform(
     moving_image: np.ndarray,
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
-    **kwargs,
+    **kwargs: dict,
 ) -> sitk.BSplineTransform:
     """Estimate B-spline transformation.
 
@@ -1297,12 +1307,19 @@ def estimate_bspline_transform(
     bspline_params.update(kwargs)
 
     fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
-    if len(fixed_image.shape) > 3 or len(moving_image.shape) > 3:
+    if (
+        len(fixed_image.shape) > RGB_IMAGE_DIM
+        or len(moving_image.shape) > RGB_IMAGE_DIM
+    ):
         msg = "The input images can only be grayscale or RGB images."
         raise ValueError(msg)
 
-    if (len(fixed_image.shape) == 3 and fixed_image.shape[2] != 3) or (
-        len(moving_image.shape) == 3 and moving_image.shape[2] != 3
+    if (
+        len(fixed_image.shape) == RGB_IMAGE_DIM
+        and fixed_image.shape[2] != RGB_IMAGE_DIM
+    ) or (
+        len(moving_image.shape) == RGB_IMAGE_DIM
+        and moving_image.shape[2] != RGB_IMAGE_DIM
     ):
         msg = "The input images can only have 3 channels."
         raise ValueError(msg)
@@ -1311,9 +1328,9 @@ def estimate_bspline_transform(
     fixed_image_inv = np.invert(fixed_image)
     moving_image_inv = np.invert(moving_image)
 
-    if len(fixed_mask.shape) > 2:
+    if len(fixed_mask.shape) > BIN_MASK_DIM:
         fixed_mask = fixed_mask[:, :, 0]
-    if len(moving_mask.shape) > 2:
+    if len(moving_mask.shape) > BIN_MASK_DIM:
         moving_mask = moving_mask[:, :, 0]
     fixed_mask = np.array(fixed_mask != 0, dtype=np.uint8)
     moving_mask = np.array(moving_mask != 0, dtype=np.uint8)
@@ -1434,7 +1451,11 @@ class AffineWSITransformer:
 
     """
 
-    def __init__(self, reader: WSIReader, transform: np.ndarray) -> None:
+    def __init__(
+        self: AffineWSITransformer,
+        reader: WSIReader,
+        transform: np.ndarray,
+    ) -> None:
         """Initialize object.
 
         Args:
@@ -1469,7 +1490,7 @@ class AffineWSITransformer:
         return points_warp[:, :-1]
 
     def get_patch_dimensions(
-        self,
+        self: AffineWSITransformer,
         size: tuple[int, int],
         transform: np.ndarray,
     ) -> tuple[int, int]:
@@ -1516,7 +1537,7 @@ class AffineWSITransformer:
         return (width, height)
 
     def get_transformed_location(
-        self,
+        self: AffineWSITransformer,
         location: tuple[int, int],
         size: tuple[int, int],
         level: int,
@@ -1562,7 +1583,11 @@ class AffineWSITransformer:
         )
         return transformed_location, transformed_size
 
-    def transform_patch(self, patch: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    def transform_patch(
+        self: AffineWSITransformer,
+        patch: np.ndarray,
+        size: tuple[int, int],
+    ) -> np.ndarray:
         """Apply transformation to the given patch.
 
         This function applies the transformation matrix after removing the translation.
@@ -1588,7 +1613,7 @@ class AffineWSITransformer:
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 
     def read_rect(
-        self,
+        self: AffineWSITransformer,
         location: tuple[int, int],
         size: tuple[int, int],
         resolution: Resolution,

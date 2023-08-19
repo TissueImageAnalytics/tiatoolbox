@@ -46,10 +46,10 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     if not isinstance(dthresh, Number):
         msg = "dthresh must be a number."
         raise TypeError(msg)
-    if len(points) < 4:
+    if len(points) < 4:  # noqa: PLR2004
         msg = "Points must have length >= 4."
         raise ValueError(msg)
-    if len(np.shape(points)) != 2:
+    if len(np.shape(points)) != 2:  # noqa: PLR2004
         msg = "Points must have an NxM shape."
         raise ValueError(msg)
     # Apply Delaunay triangulation to the coordinates to get a
@@ -133,7 +133,7 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
     """
     # Validate inputs
     edge_index_shape = np.shape(edge_index)
-    if edge_index_shape[0] != 2 or len(edge_index_shape) != 2:
+    if edge_index_shape[0] != 2 or len(edge_index_shape) != 2:  # noqa: PLR2004
         msg = "Input edge_index must be a 2xM matrix."
         raise ValueError(msg)
     nodes = np.unique(edge_index).tolist()
@@ -144,7 +144,7 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
         neighbours[a].add(b)
         neighbours[b].add(a)
     # Remove any nodes with less than two neighbours
-    nodes = [node for node in nodes if len(neighbours[node]) >= 2]
+    nodes = [node for node in nodes if len(neighbours[node]) >= 2]  # noqa: PLR2004
     # Find the triangles
     triangles = set()
     for node in nodes:
@@ -185,7 +185,7 @@ def affinity_to_edge_index(
     """
     # Validate inputs
     input_shape = np.shape(affinity_matrix)
-    if len(input_shape) != 2 or len(np.unique(input_shape)) != 1:
+    if len(input_shape) != 2 or len(np.unique(input_shape)) != 1:  # noqa: PLR2004
         msg = "Input affinity_matrix must be square (NxN)."
         raise ValueError(msg)
     # Handle cases for pytorch and numpy inputs
@@ -416,7 +416,7 @@ class SlideGraphConstructor:
 
     @classmethod
     def visualise(
-        cls,
+        cls: SlideGraphConstructor,
         graph: dict[str, ArrayLike],
         color: ArrayLike | str | Callable | None = None,
         node_size: Number | ArrayLike | Callable = 25,

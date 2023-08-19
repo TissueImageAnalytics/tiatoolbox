@@ -36,11 +36,6 @@ BATCH_SIZE = 1 if not ON_GPU else 16
 # ----------------------------------------------------
 
 
-def _rm_dir(path) -> None:
-    """Helper func to remove directory."""
-    shutil.rmtree(path, ignore_errors=True)
-
-
 def _crash_func(_x) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
@@ -268,7 +263,8 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     )
 
     # * Test crash propagation when parallelize post-processing
-    _rm_dir(save_dir)
+    shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(save_dir, ignore_errors=True)
     instance_segmentor.model.postproc_func = _crash_func
     with pytest.raises(ValueError, match=r"Propagation Crash."):
         instance_segmentor.predict(
@@ -280,7 +276,6 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
             crash_on_exception=True,
             save_dir=save_dir,
         )
-    _rm_dir(tmp_path)
 
 
 def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
@@ -313,7 +308,7 @@ def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
         stride_shape=[164, 164],
     )
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=1,
@@ -329,9 +324,6 @@ def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
         crash_on_exception=True,
         save_dir=save_dir,
     )
-
-    # clean up
-    _rm_dir(tmp_path)
 
 
 def test_functionality_merge_tile_predictions_ci(
@@ -365,7 +357,7 @@ def test_functionality_merge_tile_predictions_ci(
         pretrained_model="hovernet_fast-pannuke",
     )
 
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     semantic_segmentor = SemanticSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=BATCH_SIZE,
@@ -433,7 +425,6 @@ def test_functionality_merge_tile_predictions_ci(
             postproc=semantic_segmentor.model.postproc_func,
             merge_predictions=semantic_segmentor.merge_prediction,
         )
-    _rm_dir(tmp_path)
 
 
 @pytest.mark.skipif(
@@ -446,8 +437,8 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     save_dir = Path(f"{tmp_path}/output")
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
 
-    # * generate full output w/o parallel post processing worker first
-    _rm_dir(save_dir)
+    # * generate full output w/o parallel post-processing worker first
+    shutil.rmtree(save_dir, ignore_errors=True)
     inst_segmentor = NucleusInstanceSegmentor(
         batch_size=8,
         num_postproc_workers=0,
@@ -464,7 +455,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
 
     # * then test run when using workers, will then compare results
     # * to ensure the predictions are the same
-    _rm_dir(save_dir)
+    shutil.rmtree(save_dir, ignore_errors=True)
     inst_segmentor = NucleusInstanceSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=BATCH_SIZE,
@@ -485,12 +476,12 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     assert score > 0.95, "Heavy loss of precision!"
 
     # **
-    # To evaluate the precision of doing post processing on tile
+    # To evaluate the precision of doing post-processing on tile
     # then re-assemble without using full image prediction maps,
     # we compare its output with the output when doing
-    # post processing on the entire images
-    save_dir = f"{root_save_dir}/semantic/"
-    _rm_dir(save_dir)
+    # post-processing on the entire images.
+    save_dir = root_save_dir / "semantic"
+    shutil.rmtree(save_dir, ignore_errors=True)
     semantic_segmentor = SemanticSegmentor(
         pretrained_model="hovernet_fast-pannuke",
         batch_size=BATCH_SIZE,
@@ -510,7 +501,6 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     inst_coords_b = np.array([v["centroid"] for v in inst_dict_b.values()])
     score = f1_detection(inst_coords_b, inst_coords_a, radius=1.0)
     assert score > 0.9, "Heavy loss of precision!"
-    _rm_dir(tmp_path)
 
 
 def test_cli_nucleus_instance_segment_ioconfig(
@@ -575,7 +565,6 @@ def test_cli_nucleus_instance_segment_ioconfig(
     assert output_path.joinpath("0.dat").exists()
     assert output_path.joinpath("file_map.dat").exists()
     assert output_path.joinpath("results.json").exists()
-    _rm_dir(tmp_path)
 
 
 def test_cli_nucleus_instance_segment(remote_sample: Callable, tmp_path: Path) -> None:
@@ -605,4 +594,3 @@ def test_cli_nucleus_instance_segment(remote_sample: Callable, tmp_path: Path) -
     assert output_path.joinpath("0.dat").exists()
     assert output_path.joinpath("file_map.dat").exists()
     assert output_path.joinpath("results.json").exists()
-    _rm_dir(tmp_path)

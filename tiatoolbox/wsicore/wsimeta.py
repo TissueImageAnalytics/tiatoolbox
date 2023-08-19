@@ -93,7 +93,7 @@ class WSIMeta:
 
     _valid_axes_characters = "YXSTZ"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         slide_dimensions: tuple[int, int],
         axes: str,

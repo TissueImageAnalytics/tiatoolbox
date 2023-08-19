@@ -23,17 +23,17 @@ class PatchExtractorABC(ABC):
     """Abstract base class for Patch Extraction in tiatoolbox."""
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self: PatchExtractorABC) -> None:
         """Return an iterator for the given object."""
         raise NotImplementedError
 
     @abstractmethod
-    def __next__(self):
+    def __next__(self: PatchExtractorABC) -> None:
         """Return the next item for the iteration."""
         raise NotImplementedError
 
     @abstractmethod
-    def __getitem__(self, item: int):
+    def __getitem__(self: PatchExtractorABC, item: int) -> None:
         """Get an item from the dataset."""
         raise NotImplementedError
 
@@ -117,7 +117,7 @@ class PatchExtractor(PatchExtractorABC):
     """
 
     def __init__(
-        self,
+        self: PatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
         input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
@@ -167,16 +167,16 @@ class PatchExtractor(PatchExtractorABC):
             )
         self.within_bound = within_bound
 
-    def __iter__(self):
+    def __iter__(self: PatchExtractor) -> PatchExtractor:
         """Return an iterator for the given object."""
         self.n = 0
         return self
 
-    def __len__(self) -> int:
+    def __len__(self: PatchExtractor) -> int:
         """Return the number of patches in the extractor."""
         return self.locations_df.shape[0] if self.locations_df is not None else 0
 
-    def __next__(self):
+    def __next__(self: PatchExtractor) -> np.ndarray:
         """Return the next item for the iteration."""
         n = self.n
 
@@ -185,7 +185,7 @@ class PatchExtractor(PatchExtractorABC):
         self.n = n + 1
         return self[n]
 
-    def __getitem__(self, item: int):
+    def __getitem__(self: PatchExtractor, item: int) -> np.ndarray:
         """Get an item from the dataset."""
         if not isinstance(item, int):
             msg = "Index should be an integer."
@@ -207,7 +207,7 @@ class PatchExtractor(PatchExtractorABC):
             coord_space="resolution",
         )
 
-    def _generate_location_df(self):
+    def _generate_location_df(self: PatchExtractor) -> PatchExtractor:
         """Generate location list based on slide dimension.
 
         The slide dimension is calculated using units and resolution.
@@ -250,7 +250,7 @@ class PatchExtractor(PatchExtractorABC):
         wsi_shape: tuple[int, int],
         min_mask_ratio: float = 0,
         func: Callable | None = None,
-    ):
+    ) -> np.ndarray:
         """Validate patch extraction coordinates based on the input mask.
 
         This function indicates which coordinate is valid for mask-based
@@ -297,7 +297,7 @@ class PatchExtractor(PatchExtractorABC):
         ):
             msg = "`coordinates_list` should be ndarray of integer type."
             raise ValueError(msg)
-        if coordinates_list.shape[-1] != 4:
+        if coordinates_list.shape[-1] != 4:  # noqa: PLR2004
             msg = "`coordinates_list` must be of shape [N, 4]."
             raise ValueError(msg)
 
@@ -325,7 +325,10 @@ class PatchExtractor(PatchExtractorABC):
         )
         scaled_coords = list(np.int32(scaled_coords))
 
-        def default_sel_func(tissue_mask, coord):
+        def default_sel_func(
+            tissue_mask: np.ndarray,
+            coord: tuple[int, ...] | list[int, ...],
+        ) -> np.ndarray:
             """Default selection function to filter coordinates.
 
             This function selects a coordinate if the proportion of
@@ -354,7 +357,7 @@ class PatchExtractor(PatchExtractorABC):
         *,
         input_within_bound: bool = False,
         output_within_bound: bool = False,
-    ):
+    ) -> list:
         """Calculate patch tiling coordinates.
 
         Args:
@@ -410,11 +413,11 @@ class PatchExtractor(PatchExtractorABC):
         patch_output_shape = np.array(patch_output_shape)
         stride_shape = np.array(stride_shape)
 
-        def validate_shape(shape):
+        def validate_shape(shape: np.ndarray) -> bool:
             """Test if the shape is valid for an image."""
             return (
                 not np.issubdtype(shape.dtype, np.integer)
-                or np.size(shape) > 2
+                or np.size(shape) > 2  # noqa: PLR2004
                 or np.any(shape < 0)
             )
 
@@ -444,7 +447,7 @@ class PatchExtractor(PatchExtractorABC):
             msg = f"`stride_shape` value {stride_shape} must > 1."
             raise ValueError(msg)
 
-        def flat_mesh_grid_coord(x, y):
+        def flat_mesh_grid_coord(x: int, y: int) -> np.ndarray:
             """Helper function to obtain coordinate grid."""
             x, y = np.meshgrid(x, y)
             return np.stack([x.flatten(), y.flatten()], axis=-1)
@@ -538,8 +541,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     """
 
-    def __init__(
-        self,
+    def __init__(  # noqa: PLR0913
+        self: SlidingWindowPatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
         input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
@@ -566,11 +569,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         )
         if stride is None:
             self.stride = self.patch_size
+        elif isinstance(stride, (tuple, list)):
+            self.stride = (int(stride[0]), int(stride[1]))
         else:
-            if isinstance(stride, (tuple, list)):
-                self.stride = (int(stride[0]), int(stride[1]))
-            else:
-                self.stride = (int(stride), int(stride))
+            self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
 
@@ -621,7 +623,7 @@ class PointsPatchExtractor(PatchExtractor):
     """
 
     def __init__(
-        self,
+        self: PointsPatchExtractor,
         input_img: str | Path | np.ndarray,
         locations_list: np.ndarray | DataFrame | str | Path,
         patch_size: int | tuple[int, int] = (224, 224),
@@ -655,7 +657,7 @@ class PointsPatchExtractor(PatchExtractor):
 def get_patch_extractor(
     method_name: str,
     **kwargs: Path | wsireader.WSIReader | None | str | float | tuple[float, float],
-):
+) -> PatchExtractor:
     """Return a patch extractor object as requested.
 
     Args:

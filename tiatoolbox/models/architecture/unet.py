@@ -77,7 +77,7 @@ class ResNetEncoder(ResNet):
 
         """
         model = ResNetEncoder(ResNetBottleneck, downsampling_levels)
-        if num_input_channels != 3:
+        if num_input_channels != 3:  # noqa: PLR2004
             model.conv1 = nn.Conv2d(  # skipcq: PYL-W0201
                 num_input_channels,
                 64,
@@ -321,9 +321,10 @@ class UNetModel(ModelABC):
             next_up_ch = ch
             if ch_idx + 2 < len(down_ch_list):
                 next_up_ch = down_ch_list[ch_idx + 2]
+            ch_ = ch
             if self.skip_type == "concat":
-                ch *= 2
-            layers = create_block(pre_activation, decoder_block, ch, next_up_ch)
+                ch_ *= 2
+            layers = create_block(pre_activation, decoder_block, ch_, next_up_ch)
             self.uplist.append(nn.Sequential(*layers))
 
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
