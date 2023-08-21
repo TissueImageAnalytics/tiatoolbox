@@ -151,8 +151,8 @@ def _process_tile_predictions(
     else:
         out_dicts = postproc(head_raws)
 
-    inst_dicts = [out for out in out_dicts if type(out) is dict]
-    sem_maps = [out for out in out_dicts if type(out) is np.ndarray]
+    inst_dicts = [out for out in out_dicts if isinstance(out, dict)]
+    sem_maps = [out for out in out_dicts if isinstance(out, np.ndarray)]
     # Some output maps may not be aggregated into a single map - combine these
     sem_maps = [
         np.argmax(s, axis=-1) if s.ndim == 3 else s for s in sem_maps  # noqa: PLR2004
