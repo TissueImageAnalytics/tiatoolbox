@@ -17,8 +17,9 @@ from shapely.geometry import (
     Polygon,
 )
 
+from tiatoolbox.annotation.storage import Annotation
+from tiatoolbox.enums import GeometryType
 from tiatoolbox.utils.visualization import (
-    AnnotationRenderer,
     overlay_prediction_contours,
     overlay_prediction_mask,
     overlay_probability_map,
@@ -27,7 +28,7 @@ from tiatoolbox.utils.visualization import (
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_overlay_prediction_mask(sample_wsi_dict) -> None:
+def test_overlay_prediction_mask(sample_wsi_dict: dict) -> None:
     """Test for overlaying merged patch prediction of wsi."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_pred = Path(sample_wsi_dict["wsi2_4k_4k_pred"])
@@ -127,7 +128,7 @@ def test_overlay_prediction_mask(sample_wsi_dict) -> None:
     _ = overlay_prediction_mask(thumb_float, merged, min_val=0.5, return_ax=False)
 
 
-def test_overlay_probability_map(sample_wsi_dict) -> None:
+def test_overlay_probability_map(sample_wsi_dict: dict) -> None:
     """Test functional run for overlaying merged patch prediction of wsi."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     reader = WSIReader.open(mini_wsi_svs)
@@ -216,8 +217,9 @@ def test_overlay_instance_prediction() -> None:
         type_colours=type_colours,
         line_thickness=1,
     )
+    ref_value = -12
     assert np.sum(canvas[..., 0].astype(np.int32) - inst_map) == 0
-    assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == -12
+    assert np.sum(canvas[..., 1].astype(np.int32) - inst_map) == ref_value
     assert np.sum(canvas[..., 2].astype(np.int32) - inst_map) == 0
     canvas = overlay_prediction_contours(
         canvas,
@@ -276,8 +278,6 @@ def test_plot_graph() -> None:
 
 def test_decode_wkb() -> None:
     """Test decoding of WKB geometries."""
-    renderer = AnnotationRenderer()
-
     # Create some Shapely geometries of supported types
     point = Point(0, 0)
     line = LineString([(0, 0), (1, 1), (2, 0)])
@@ -289,9 +289,18 @@ def test_decode_wkb() -> None:
     polygon_wkb = polygon.wkb
 
     # Decode the WKB geometries
-    point_contours = renderer.decode_wkb(point_wkb, 1).reshape(-1, 2)
-    line_contours = renderer.decode_wkb(line_wkb, 2).reshape(-1, 2)
-    polygon_contours = renderer.decode_wkb(polygon_wkb, 3).reshape(-1, 2)
+    point_contours = Annotation.decode_wkb(
+        point_wkb,
+        GeometryType.POINT,
+    )
+    line_contours = Annotation.decode_wkb(
+        line_wkb,
+        GeometryType.LINE_STRING,
+    )
+    polygon_contours = Annotation.decode_wkb(
+        polygon_wkb,
+        GeometryType.POLYGON,
+    )
 
     # Check that the decoded contours are as expected
     assert np.all(point_contours == np.array([[0, 0]]))
@@ -314,9 +323,9 @@ def test_decode_wkb() -> None:
     multiline_wkb = multiline.wkb
     multipolygon_wkb = multipolygon.wkb
 
-    multipoint_contours = renderer.decode_wkb(multipoint_wkb, 4).reshape(3, -1, 2)
-    multiline_contours = renderer.decode_wkb(multiline_wkb, 5).reshape(2, -1, 2)
-    multipolygon_contours = renderer.decode_wkb(multipolygon_wkb, 6).reshape(2, -1, 2)
+    multipoint_contours = Annotation.decode_wkb(multipoint_wkb, 4)
+    multiline_contours = Annotation.decode_wkb(multiline_wkb, 5)
+    multipolygon_contours = Annotation.decode_wkb(multipolygon_wkb, 6)
 
     assert np.all(multipoint_contours == np.array([[[0, 0]], [[1, 1]], [[2, 0]]]))
     assert np.all(
@@ -335,4 +344,4 @@ def test_decode_wkb() -> None:
 
     # test unknown geometry type
     with pytest.raises(ValueError, match=r"Unknown geometry type"):
-        renderer.decode_wkb(multipolygon_wkb, 7)
+        Annotation.decode_wkb(multipolygon_wkb, 7)

@@ -14,22 +14,13 @@ from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
 from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
     from tiatoolbox.annotation import Annotation, AnnotationStore
-
-GEOMTYPES = {
-    1: "Point",
-    2: "LineString",
-    3: "Polygon",
-    4: "MultiPoint",
-    5: "MultiLineString",
-    6: "MultiPolygon",
-    7: "GeometryCollection",
-}
 
 
 def random_colors(num_colors: int, *, bright: bool) -> list:
@@ -641,82 +632,6 @@ class AnnotationRenderer:
             self.blur = None
 
     @staticmethod
-    def decode_wkb(geom: bytes, geom_type: int) -> np.array:
-        """Decode a geometry.
-
-        Decodes a geometry represented as raw wkb bytes
-        to an array of coordinates.
-
-        Args:
-            geom (bytes):
-                The raw wkb bytes representation of a geometry.
-            geom_type (GEOMTYPES):
-                The type of geometry.
-
-        Returns:
-            np.array:
-                An array of coordinates.
-
-        """
-        if geom_type == 1:
-            # point
-            return np.frombuffer(geom, np.double, -1, 5)
-        if geom_type == 2:  # noqa: PLR2004
-            # line
-            return np.frombuffer(geom, np.double, -1, 9)
-        if geom_type == 3:  # noqa: PLR2004
-            # polygon
-            n_points = np.frombuffer(geom, np.int32, 1, 9)[0]
-            return np.frombuffer(geom, np.double, n_points * 2, 13)  # do rings?
-        if geom_type == 4:  # noqa: PLR2004
-            # multi-point
-            n_points = np.frombuffer(geom, np.int32, 1, 5)[0]
-
-            pts = [
-                np.frombuffer(geom, np.double, 2, 14 + i * 21) for i in range(n_points)
-            ]  # each point is 21 bytes
-
-            return np.concatenate(pts)
-        if geom_type == 5:  # noqa: PLR2004
-            # multi-line
-            n_lines = np.frombuffer(geom, np.int32, 1, 5)[0]
-            lines = []
-            offset = 9
-            for _ in range(n_lines):
-                offset += 5
-                n_points = np.frombuffer(geom, np.int32, n_lines, offset)[0]
-                offset += 4
-                lines.append(np.frombuffer(geom, np.double, n_points * 2, offset))
-                offset += n_points * 16
-            return np.concatenate(lines)
-
-        def decode_polygon(offset: int = 0) -> tuple[list, int]:
-            offset += 5  # byte order and geom type at start of each polygon
-            n_rings = np.frombuffer(geom, np.int32, 1, offset)[0]
-            offset += 4
-
-            rings = []
-            for _ in range(n_rings):
-                n_points = np.frombuffer(geom, np.int32, 1, offset)[0]
-                offset += 4
-                rings.append(np.frombuffer(geom, np.double, n_points * 2, offset))
-                offset += n_points * 16
-            return rings, offset
-
-        if geom_type == 6:  # noqa: PLR2004
-            # multi-polygon
-            n_polygons = np.frombuffer(geom, np.int32, 1, 5)[0]
-            polygons = []
-            offset = 9
-            for _ in range(n_polygons):
-                rings, offset = decode_polygon(offset)
-                polygons.append(rings)
-            return np.concatenate(polygons)
-
-        msg = f"Unknown geometry type: {geom_type}"
-        raise ValueError(msg)
-
-    @staticmethod
     def to_tile_coords(
         coords: list,
         top_left: tuple[float, float],
@@ -827,7 +742,7 @@ class AnnotationRenderer:
         col = self.get_color(annotation, edge=False)
 
         cnt = self.to_tile_coords(
-            self.decode_wkb(annotation.geometry, 3),
+            annotation.coords,
             top_left,
             scale,
         )
@@ -855,7 +770,7 @@ class AnnotationRenderer:
     ) -> None:
         """Render a multipolygon annotation onto a tile using cv2."""
         col = self.get_color(annotation, edge=False)
-        geoms = self.decode_wkb(annotation.geometry, geom_type=6)
+        geoms = annotation.coords
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
             cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
@@ -884,7 +799,7 @@ class AnnotationRenderer:
         cv2.circle(
             tile,
             self.to_tile_coords(
-                self.decode_wkb(annotation.geometry, geom_type=1),
+                annotation.coords,
                 top_left,
                 scale,
             )[0],
@@ -918,7 +833,7 @@ class AnnotationRenderer:
             tile,
             [
                 self.to_tile_coords(
-                    list(self.decode_wkb(annotation.geometry, geom_type=2)),
+                    list(annotation.coords),
                     top_left,
                     scale,
                 ),
@@ -1020,7 +935,6 @@ class AnnotationRenderer:
                 bound_geom,
                 self.where,
                 geometry_predicate="bbox_intersects",
-                as_wkb=True,
             )
 
             for ann in anns.values():
@@ -1038,7 +952,7 @@ class AnnotationRenderer:
             for i, (key, box) in enumerate(bounding_boxes.items()):
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
-                    ann = store.__getitem__(key, True)  # noqa: FBT003
+                    ann = store[key]
                     self.render_by_type(tile, ann, top_left, scale / res)
         else:
             # Get only annotations > min_area. Plot them all
@@ -1047,7 +961,6 @@ class AnnotationRenderer:
                 self.where,
                 min_area=min_area,
                 geometry_predicate="bbox_intersects",
-                as_wkb=True,
             )
 
             for ann in anns.values():
@@ -1080,14 +993,12 @@ class AnnotationRenderer:
                 The scale at which we are rendering the tile.
 
         """
-        geom_type = GEOMTYPES[np.frombuffer(annotation.geometry, np.uint32, 1, 1)[0]]
-        if geom_type == "Point":
+        geom_type = annotation.geometry_type
+        if geom_type == GeometryType.POINT:
             self.render_pt(tile, annotation, top_left, scale)
-        elif geom_type == "Polygon":
+        elif geom_type == GeometryType.POLYGON:
             self.render_poly(tile, annotation, top_left, scale)
-        elif geom_type == "MultiPolygon":
-            self.render_multipoly(tile, annotation, top_left, scale)
-        elif geom_type == "LineString":
+        elif geom_type == GeometryType.LINE_STRING:
             self.render_line(tile, annotation, top_left, scale)
         else:
             logger.warning("Unknown geometry: %s", geom_type, stacklevel=3)
