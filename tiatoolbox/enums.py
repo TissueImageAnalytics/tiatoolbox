@@ -28,7 +28,7 @@ class GeometryType(enum.IntEnum):
     MULTI_POLYGON = 6
     GEOMETRY_COLLECTION = 7
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return the string representation of the GeometryType."""
         return self.name.title().replace("_", " ")
 
