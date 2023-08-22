@@ -4419,16 +4419,16 @@ class DICOMWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
-        self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: DICOMWSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
@@ -4622,7 +4622,7 @@ class NGFFWSIReader(WSIReader):
 
     """
 
-    def __init__(self, path, **kwargs) -> None:
+    def __init__(self: NGFFWSIReader, path: str | Path, **kwargs: dict) -> None:
         """Initialize :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs
