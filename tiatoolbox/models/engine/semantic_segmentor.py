@@ -1397,13 +1397,13 @@ class SemanticSegmentor:
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
             self._predict_wsi_handle_exception(
-                imgs,
-                wsi_idx,
-                img_path,
-                mode,
-                ioconfig,
-                save_dir,
-                crash_on_exception,
+                imgs=imgs,
+                wsi_idx=wsi_idx,
+                img_path=img_path,
+                mode=mode,
+                ioconfig=ioconfig,
+                save_dir=save_dir,
+                crash_on_exception=crash_on_exception,
             )
 
         # clean up the cache directories
