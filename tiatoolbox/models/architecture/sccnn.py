@@ -254,10 +254,10 @@ class SCCNN(ModelABC):
         """
         return image / 255.0
 
-    def forward(
+    def forward(  # skipcq: PYL-W0221
         self: SCCNN,
         input_tensor: torch.Tensor,
-    ) -> torch.Tensor:  # skipcq: PYL-W0221
+    ) -> torch.Tensor:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
