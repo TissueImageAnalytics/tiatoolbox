@@ -1,4 +1,6 @@
 """Define classes and methods for dataset information."""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -26,19 +28,19 @@ class DatasetInfoABC(ABC):
 
     @property
     @abstractmethod
-    def inputs(self):
+    def inputs(self: ABC) -> None:
         """A list of paths where each path points to a sample image."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def labels(self):
+    def labels(self: ABC) -> None:
         """A list of labels where each is the label of the sample at the same index."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def label_names(self):
+    def label_names(self: ABC) -> None:
         """A dict indicates the possible associate name of each label value."""
         raise NotImplementedError
 
@@ -71,8 +73,8 @@ class KatherPatchDataset(DatasetInfoABC):
     label_names = None
 
     def __init__(
-        self,
-        save_dir_path=None,
+        self: DatasetInfoABC,
+        save_dir_path: str | Path | None = None,
     ) -> None:
         """Initialize :class:`KatherPatchDataset`."""
         label_names = [
