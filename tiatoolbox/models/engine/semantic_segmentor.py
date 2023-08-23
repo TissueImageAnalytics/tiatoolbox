@@ -26,10 +26,13 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 if TYPE_CHECKING:  # pragma: no cover
     from multiprocessing.managers import Namespace
 
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.typing import IntPair, Resolution, Units
 
 
-def _estimate_canvas_parameters(sample_prediction, canvas_shape):
+def _estimate_canvas_parameters(
+    sample_prediction: np.ndarray,
+    canvas_shape: np.ndarray,
+) -> tuple[tuple, tuple, bool]:
     """Estimates canvas parameters.
 
     Args:
@@ -57,11 +60,11 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
 
 
 def _prepare_save_output(
-    save_path,
-    cache_count_path,
-    canvas_cum_shape_,
-    canvas_count_shape_,
-):
+    save_path: str | Path,
+    cache_count_path: str | Path,
+    canvas_cum_shape_: tuple[int, ...],
+    canvas_count_shape_: tuple[int, ...],
+) -> tuple:
     """Prepares for saving the cached output."""
     if save_path is not None:
         save_path = Path(save_path)
@@ -161,13 +164,13 @@ class IOSegmentorConfig(IOConfigABC):
     output_resolutions = None
 
     def __init__(
-        self,
+        self: IOSegmentorConfig,
         input_resolutions: list[dict],
         output_resolutions: list[dict],
-        patch_input_shape: list[int] | np.ndarray,
+        patch_input_shape: IntPair,
         patch_output_shape: list[int] | np.ndarray,
         save_resolution: dict | None = None,
-        **kwargs,
+        **kwargs: dict,
     ) -> None:
         """Initialize :class:`IOSegmentorConfig`."""
         self._kwargs = kwargs
@@ -196,7 +199,7 @@ class IOSegmentorConfig(IOConfigABC):
                 key=lambda x: x["resolution"],
             )
 
-    def _validate(self):
+    def _validate(self: IOSegmentorConfig) -> None:
         """Validate the data format."""
         resolutions = self.input_resolutions + self.output_resolutions
         units = [v["units"] for v in resolutions]
@@ -210,7 +213,7 @@ class IOSegmentorConfig(IOConfigABC):
             raise ValueError(msg)
 
     @staticmethod
-    def scale_to_highest(resolutions: list[dict], units: Units):
+    def scale_to_highest(resolutions: list[dict], units: Units) -> np.ndarray:
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
@@ -244,7 +247,7 @@ class IOSegmentorConfig(IOConfigABC):
             return np.min(old_val) / np.array(old_val)
         return np.array(old_val) / np.max(old_val)
 
-    def to_baseline(self):
+    def to_baseline(self: IOSegmentorConfig) -> IOSegmentorConfig:
         """Return a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
@@ -325,12 +328,12 @@ class WSIStreamDataset(torch_data.Dataset):
     """
 
     def __init__(
-        self,
+        self: WSIStreamDataset,
         ioconfig: IOSegmentorConfig,
         wsi_paths: list[str | Path],
         mp_shared_space: Namespace,
         preproc: Callable[[np.ndarray], np.ndarray] | None = None,
-        mode="wsi",
+        mode: str = "wsi",
     ) -> None:
         """Initialize :class:`WSIStreamDataset`."""
         super().__init__()
@@ -352,7 +355,7 @@ class WSIStreamDataset(torch_data.Dataset):
         self.wsi_idx = None  # to be received externally via thread communication
         self.reader = None
 
-    def _get_reader(self, img_path):
+    def _get_reader(self: WSIStreamDataset, img_path: str | Path) -> WSIReader:
         """Get appropriate reader for input path."""
         img_path = Path(img_path)
         if self.mode == "wsi":
@@ -373,12 +376,12 @@ class WSIStreamDataset(torch_data.Dataset):
             info=metadata,
         )
 
-    def __len__(self) -> int:
+    def __len__(self: WSIStreamDataset) -> int:
         """Return the length of the instance attributes."""
         return len(self.mp_shared_space.patch_inputs)
 
     @staticmethod
-    def collate_fn(batch):
+    def collate_fn(batch: list | np.ndarray) -> torch.Tensor:
         """Prototype to handle reading exception.
 
         This will exclude any sample with `None` from the batch. As
@@ -390,7 +393,7 @@ class WSIStreamDataset(torch_data.Dataset):
         batch = [v for v in batch if v is not None]
         return torch.utils.data.dataloader.default_collate(batch)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self: WSIStreamDataset, idx: int) -> tuple:
         """Get an item from the dataset."""
         # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
@@ -513,7 +516,7 @@ class SemanticSegmentor:
     """
 
     def __init__(
-        self,
+        self: SemanticSegmentor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
@@ -1071,7 +1074,7 @@ class SemanticSegmentor:
         self,
         ioconfig,
         mode,
-        patch_input_shape,
+        patch_input_shape: IntPair,
         patch_output_shape,
         stride_shape,
         resolution,
@@ -1246,21 +1249,21 @@ class SemanticSegmentor:
             logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(  # noqa: PLR0913
-        self,
-        imgs,
-        masks=None,
-        mode="tile",
-        ioconfig=None,
-        patch_input_shape=None,
-        patch_output_shape=None,
-        stride_shape=None,
-        resolution=1.0,
-        units="baseline",
-        save_dir=None,
+        self: SemanticSegmentor,
+        imgs: list,
+        masks: list | None = None,
+        mode: str = "tile",
+        ioconfig: IOSegmentorConfig = None,
+        patch_input_shape: IntPair = None,
+        patch_output_shape: IntPair = None,
+        stride_shape: IntPair = None,
+        resolution: Resolution = 1.0,
+        units: Units = "baseline",
+        save_dir: str | Path | None = None,
         *,
-        on_gpu=True,
-        crash_on_exception=False,
-    ):
+        on_gpu: bool = True,
+        crash_on_exception: bool = False,
+    ) -> list[tuple[Path, Path]]:
         """Make a prediction for a list of input data.
 
         By default, if the input model at the object instantiation time
@@ -1475,7 +1478,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
     """
 
     def __init__(
-        self,
+        self: DeepFeatureExtractor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
@@ -1502,7 +1505,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         self.process_prediction_per_batch = False
 
     def _process_predictions(
-        self,
+        self: DeepFeatureExtractor,
         cum_batch_predictions: list,
         wsi_reader: WSIReader,  # skipcq: PYL-W0613  # noqa: ARG002
         ioconfig: IOSegmentorConfig,
@@ -1546,21 +1549,21 @@ class DeepFeatureExtractor(SemanticSegmentor):
             np.save(f"{save_path}.features.{idx}.npy", prediction_list)
 
     def predict(  # noqa: PLR0913
-        self,
-        imgs,
-        masks=None,
-        mode="tile",
-        ioconfig=None,
-        patch_input_shape=None,
-        patch_output_shape=None,
-        stride_shape=None,
-        resolution=1.0,
-        units="baseline",
-        save_dir=None,
+        self: DeepFeatureExtractor,
+        imgs: list,
+        masks: list | None = None,
+        mode: str = "tile",
+        ioconfig: IOSegmentorConfig | None = None,
+        patch_input_shape: IntPair | None = None,
+        patch_output_shape: IntPair | None = None,
+        stride_shape: IntPair = None,
+        resolution: Resolution = 1.0,
+        units: Units = "baseline",
+        save_dir: str | Path | None = None,
         *,
-        on_gpu=True,
-        crash_on_exception=False,
-    ):
+        on_gpu: bool = True,
+        crash_on_exception: bool = False,
+    ) -> list[tuple[Path, Path]]:
         """Make a prediction for a list of input data.
 
         By default, if the input model at the time of object
@@ -1598,7 +1601,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 converted to a :class:`IOSegmentorConfig` object.
             on_gpu (bool):
                 Whether to run the model on the GPU.
-            patch_input_shape (tuple):
+            patch_input_shape (IntPair):
                 Size of patches input to the model. The values are at
                 requested read resolution and must be positive.
             patch_output_shape (tuple):
