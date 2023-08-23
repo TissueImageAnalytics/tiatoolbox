@@ -28,19 +28,19 @@ class DatasetInfoABC(ABC):
 
     @property
     @abstractmethod
-    def inputs(self: ABC) -> None:
+    def inputs(self: DatasetInfoABC) -> None:
         """A list of paths where each path points to a sample image."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def labels(self: ABC) -> None:
+    def labels(self: DatasetInfoABC) -> None:
         """A list of labels where each is the label of the sample at the same index."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def label_names(self: ABC) -> None:
+    def label_names(self: DatasetInfoABC) -> None:
         """A dict indicates the possible associate name of each label value."""
         raise NotImplementedError
 
@@ -73,7 +73,7 @@ class KatherPatchDataset(DatasetInfoABC):
     label_names = None
 
     def __init__(
-        self: DatasetInfoABC,
+        self: KatherPatchDataset,
         save_dir_path: str | Path | None = None,
     ) -> None:
         """Initialize :class:`KatherPatchDataset`."""
