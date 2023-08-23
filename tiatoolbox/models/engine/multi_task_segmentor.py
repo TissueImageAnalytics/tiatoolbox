@@ -42,23 +42,25 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 if TYPE_CHECKING:  # pragma: no cover
     import torch
 
+    from tiatoolbox.typing import IntBounds
+
 
 # Python is yet to be able to natively pickle Object method/static method.
 # Only top-level function is passable to multi-processing as caller.
 # May need 3rd party libraries to use method/static method otherwise.
 def _process_tile_predictions(
-    ioconfig,
-    tile_bounds,
-    tile_flag,
-    tile_mode,
-    tile_output,
+    ioconfig: IOSegmentorConfig,
+    tile_bounds: IntBounds,
+    tile_flag: list,
+    tile_mode: int,
+    tile_output: list,
     # this would be replaced by annotation store
     # in the future
-    ref_inst_dict,
-    postproc,
-    merge_predictions,
-    model_name,
-):
+    ref_inst_dict: dict,
+    postproc: Callable,
+    merge_predictions: Callable,
+    model_name: str,
+) -> tuple:
     """Process Tile Predictions.
 
     Function to merge new tile prediction with existing prediction,
@@ -240,7 +242,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
     """
 
     def __init__(  # noqa: PLR0913
-        self,
+        self: MultiTaskSegmentor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
@@ -287,12 +289,12 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             )
 
     def _predict_one_wsi(
-        self,
+        self: MultiTaskSegmentor,
         wsi_idx: int,
         ioconfig: IOSegmentorConfig,
         save_path: str,
         mode: str,
-    ):
+    ) -> None:
         """Make a prediction on tile/wsi.
 
         Args:
@@ -390,13 +392,13 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             # may need to chain it with parents
 
     def _process_tile_predictions(
-        self,
-        ioconfig,
-        tile_bounds,
-        tile_flag,
-        tile_mode,
-        tile_output,
-    ):
+        self: MultiTaskSegmentor,
+        ioconfig: IOSegmentorConfig,
+        tile_bounds: IntBounds,
+        tile_flag: list,
+        tile_mode: int,
+        tile_output: list,
+    ) -> None:
         """Function to dispatch parallel post processing."""
         args = [
             ioconfig,
@@ -415,10 +417,15 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             future = _process_tile_predictions(*args)
         self._futures.append(future)
 
-    def _merge_post_process_results(self):
+    def _merge_post_process_results(self: MultiTaskSegmentor) -> None:
         """Helper to aggregate results from parallel workers."""
 
-        def callback(new_inst_dicts, remove_uuid_lists, tiles, bounds):
+        def callback(
+            new_inst_dicts: dict,
+            remove_uuid_lists: list,
+            tiles: dict,
+            bounds: IntBounds,
+        ) -> None:
             """Helper to aggregate worker's results."""
             # ! DEPRECATION:
             # !     will be deprecated upon finalization of SQL annotation store
