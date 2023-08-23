@@ -80,7 +80,7 @@ class HoVerNetPlus(HoVerNet):
     """
 
     def __init__(
-        self,
+        self: HoVerNetPlus,
         num_input_channels: int = 3,
         num_types: int | None = None,
         num_layers: int | None = None,
@@ -118,7 +118,7 @@ class HoVerNetPlus(HoVerNet):
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def _proc_ls(ls_map: np.ndarray):
+    def _proc_ls(ls_map: np.ndarray) -> np.ndarray:
         """Extract Layer Segmentation map with LS Map.
 
         This function takes the layer segmentation map and applies various morphological
@@ -180,7 +180,7 @@ class HoVerNetPlus(HoVerNet):
         return ls_map.astype("uint8")
 
     @staticmethod
-    def _get_layer_info(pred_layer):
+    def _get_layer_info(pred_layer: np.ndarray) -> dict:
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
@@ -231,7 +231,7 @@ class HoVerNetPlus(HoVerNet):
 
     @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: list[np.ndarray]):
+    def postproc(raw_maps: list[np.ndarray]) -> tuple:
         """Post-processing script for image tiles.
 
         Args:
@@ -320,7 +320,7 @@ class HoVerNetPlus(HoVerNet):
         return pred_inst, nuc_inst_info_dict, pred_layer, layer_info_dict
 
     @staticmethod
-    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool) -> tuple:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o
