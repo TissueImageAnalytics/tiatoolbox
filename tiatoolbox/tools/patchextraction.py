@@ -357,7 +357,7 @@ class PatchExtractor(PatchExtractorABC):
         *,
         input_within_bound: bool = False,
         output_within_bound: bool = False,
-    ) -> list:
+    ) -> list | np.ndarray | tuple[np.ndarray, np.ndarray]:
         """Calculate patch tiling coordinates.
 
         Args:
