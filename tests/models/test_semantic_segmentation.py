@@ -29,7 +29,6 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread, imwrite
-from tiatoolbox.utils.misc import chdir
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
@@ -456,7 +455,11 @@ def test_functional_segmentor_merging(tmp_path: Path) -> None:
     del canvas  # skipcq
 
 
-def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functional_segmentor(
+    remote_sample: Callable,
+    tmp_path: Path,
+    chdir: Callable,
+) -> None:
     """Functional test for segmentor."""
     save_dir = tmp_path / "dump"
     # # convert to pathlib Path to prevent wsireader complaint

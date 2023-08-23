@@ -22,7 +22,6 @@ from tiatoolbox.models.dataset import (
 )
 from tiatoolbox.utils import download_data, imread, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import chdir
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
@@ -707,7 +706,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
+def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path, chdir: Callable) -> None:
     """Test normal run of wsi predictor."""
     save_dir_path = tmp_path
 

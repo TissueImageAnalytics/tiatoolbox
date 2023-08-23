@@ -1,5 +1,5 @@
 """pytest fixtures."""
-
+import os
 import shutil
 from pathlib import Path
 from typing import Callable
@@ -525,3 +525,36 @@ def moving_mask(remote_sample: Callable) -> Path:
     Download moving mask for pytest.
     """
     return remote_sample("moving_mask")
+
+
+@pytest.fixture(scope="session")
+def chdir() -> Callable:
+    """Return a context manager to change the current working directory.
+
+    Todo: switch to chdir from contextlib when Python 3.11 is required
+
+    """
+    try:
+        from contextlib import chdir
+    except ImportError:
+        from contextlib import AbstractContextManager
+
+        class chdir(AbstractContextManager):  # noqa: N801
+            """Non thread-safe context manager to change the current working directory.
+
+            See Also: https://github.com/python/cpython/blob/main/Lib/contextlib.py.
+
+            """
+
+            def __init__(self, path):
+                self.path = path
+                self._old_cwd = []
+
+            def __enter__(self):
+                self._old_cwd.append(os.getcwd())  # noqa: PTH109
+                os.chdir(self.path)
+
+            def __exit__(self, *excinfo):
+                os.chdir(self._old_cwd.pop())
+
+    return chdir
