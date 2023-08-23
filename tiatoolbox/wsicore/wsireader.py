@@ -93,7 +93,7 @@ def is_zarr(path: Path) -> bool:
     """
     path = Path(path)
     try:
-        _ = zarr.open(path, mode="r")
+        _ = zarr.open(str(path), mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     else:
@@ -124,7 +124,7 @@ def is_ngff(  # noqa: PLR0911
 
     """
     path = Path(path)
-    store = zarr.SQLiteStore(path) if path.is_file() and is_sqlite3(path) else path
+    store = zarr.SQLiteStore(str(path)) if path.is_file() and is_sqlite3(path) else path
     try:
         zarr_group = zarr.open(store, mode="r")
     except (zarr.errors.FSPathExistNotDir, zarr.errors.PathNotFoundError):
@@ -229,7 +229,7 @@ class WSIReader:
         input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
-        **kwargs,
+        **kwargs: dict,
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
 
@@ -304,8 +304,11 @@ class WSIReader:
                 return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
         # Handle homogeneous cases (based on final suffix)
-
-        def np_virtual_wsi(input_path: np.ndarray, *args, **kwargs) -> VirtualWSIReader:
+        def np_virtual_wsi(
+            input_path: np.ndarray,
+            *args: Number | tuple | str | WSIMeta | None,
+            **kwargs: dict,
+        ) -> VirtualWSIReader:
             """Create a virtual WSI from a numpy array."""
             return VirtualWSIReader(input_path, *args, **kwargs)
 
@@ -363,7 +366,7 @@ class WSIReader:
             )
 
     def __init__(
-        self,
+        self: WSIReader,
         input_img: str | Path | np.ndarray | AnnotationStore,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
@@ -393,7 +396,7 @@ class WSIReader:
         self._manual_power = power
 
     @property
-    def info(self) -> WSIMeta:
+    def info(self: WSIReader) -> WSIMeta:
         """WSI metadata property.
 
         This property is cached and only generated on the first call.
@@ -414,7 +417,7 @@ class WSIReader:
         return self._m_info
 
     @info.setter
-    def info(self, meta: WSIMeta) -> None:
+    def info(self: WSIReader, meta: WSIMeta) -> None:
         """WSI metadata setter.
 
         Args:
@@ -423,7 +426,7 @@ class WSIReader:
         """
         self._m_info = meta
 
-    def _info(self) -> WSIMeta:
+    def _info(self: WSIReader) -> WSIMeta:
         """WSI metadata internal getter used to update info property.
 
         Missing values for MPP and objective power are approximated and
@@ -440,7 +443,7 @@ class WSIReader:
         raise NotImplementedError
 
     def _find_optimal_level_and_downsample(
-        self,
+        self: WSIReader,
         resolution: Resolution,
         units: Units,
         precision: int = 3,
@@ -500,7 +503,7 @@ class WSIReader:
         return level, scale
 
     def find_read_rect_params(
-        self,
+        self: WSIReader,
         location: IntPair,
         size: IntPair,
         resolution: Resolution,
@@ -583,7 +586,7 @@ class WSIReader:
         )
 
     def _find_read_params_at_resolution(
-        self,
+        self: WSIReader,
         location: IntPair,
         size: IntPair,
         resolution: Resolution,
@@ -671,7 +674,7 @@ class WSIReader:
         return (read_level, read_level_to_resolution_scale_factor, *output)
 
     def _bounds_at_resolution_to_baseline(
-        self,
+        self: WSIReader,
         bounds: Bounds,
         resolution: Resolution,
         units: Units,
@@ -705,7 +708,7 @@ class WSIReader:
         return np.concatenate([tl_at_baseline, br_at_baseline])  # bounds at baseline
 
     def slide_dimensions(
-        self,
+        self: WSIReader,
         resolution: Resolution,
         units: Units,
         precision: int = 3,
@@ -748,7 +751,7 @@ class WSIReader:
         return wsi_shape_at_resolution
 
     def _find_read_bounds_params(
-        self,
+        self: WSIReader,
         bounds: Bounds,
         resolution: Resolution,
         units: Units,
@@ -805,11 +808,11 @@ class WSIReader:
 
     @staticmethod
     def _check_unit_conversion_integrity(
-        input_unit,
-        output_unit,
-        baseline_mpp,
-        baseline_power,
-    ):
+        input_unit: str,
+        output_unit: str,
+        baseline_mpp: Resolution,
+        baseline_power: Resolution,
+    ) -> None:
         """Checks integrity of units before unit conversion.
 
         Args:
@@ -863,11 +866,11 @@ class WSIReader:
             )
 
     def _prepare_output_dict(
-        self,
-        input_unit,
-        input_res,
-        baseline_mpp,
-        baseline_power,
+        self: WSIReader,
+        input_unit: Units,
+        input_res: Resolution,
+        baseline_mpp: Resolution,
+        baseline_power: Resolution,
     ) -> dict:
         """Calculate output_res as dictionary based on input_unit and resolution."""
         output_dict = {
@@ -902,7 +905,12 @@ class WSIReader:
 
         return output_dict
 
-    def convert_resolution_units(self, input_res, input_unit, output_unit=None):
+    def convert_resolution_units(
+        self: WSIReader,
+        input_res: Resolution,
+        input_unit: Units,
+        output_unit: Units | None = None,
+    ) -> Resolution:
         """Converts resolution value between different units.
 
         This function accepts a resolution and its units in the input
@@ -912,10 +920,10 @@ class WSIReader:
         information, respectively.
 
         Args:
-            input_res (float):
+            input_res (Resolution):
                 the resolution which we want to convert to the other
                 units.
-            input_unit (str):
+            input_unit (Units):
                 The unit of the input resolution (`input_res`).
                 Acceptable input_units are 'mpp', 'power', 'baseline',
                 and 'level'. output_unit (str): the desired unit to
@@ -924,7 +932,7 @@ class WSIReader:
                 'baseline'. If `output_unit` is not provided, all the
                 conversions to all the mentioned units will be
                 returned in a dictionary.
-            output_unit (str):
+            output_unit (Units):
                 Units of scale, Supported units are:
                 - microns per pixel ('mpp')
                 - objective power ('power')
@@ -933,7 +941,7 @@ class WSIReader:
 
 
         Returns:
-            output_res (float or dictionary):
+            output_res (Resolution):
                 Either a float which is the converted `input_res` to the
                 desired `output_unit` or a dictionary containing the
                 converted `input_res` to all acceptable units (`'mpp'`,
@@ -968,7 +976,7 @@ class WSIReader:
         return out_res
 
     def _find_tile_params(
-        self,
+        self: WSIReader,
         tile_objective_value: Number,
     ) -> tuple[int, IntPair, int, Number]:
         """Find the params for save tiles."""
@@ -1013,7 +1021,7 @@ class WSIReader:
         return level, slide_dimension, rescale, tile_objective_value
 
     def _read_rect_at_resolution(
-        self,
+        self: WSIReader,
         location: NumPair,
         size: NumPair,
         resolution: Resolution = 0,
@@ -1021,7 +1029,7 @@ class WSIReader:
         interpolation: str = "optimise",
         pad_mode: str = "constant",
         pad_constant_values: Number | Iterable[NumPair] = 0,
-        **kwargs,
+        **kwargs: dict,
     ) -> np.ndarray:
         """Internal helper to perform `read_rect` at resolution.
 
@@ -1045,7 +1053,7 @@ class WSIReader:
         )
 
     def read_rect(
-        self,
+        self: WSIReader,
         location: IntPair,
         size: IntPair,
         resolution: Resolution = 0,
@@ -1054,7 +1062,7 @@ class WSIReader:
         pad_mode: str = "constant",
         pad_constant_values: Number | Iterable[NumPair] = 0,
         coord_space: str = "baseline",
-        **kwargs,
+        **kwargs: dict,
     ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
@@ -1239,7 +1247,7 @@ class WSIReader:
         raise NotImplementedError
 
     def read_bounds(
-        self,
+        self: WSIReader,
         bounds: Bounds,
         resolution: Resolution = 0,
         units: Units = "level",
@@ -1247,7 +1255,7 @@ class WSIReader:
         pad_mode: str = "constant",
         pad_constant_values: Number | Iterable[NumPair] = 0,
         coord_space: str = "baseline",
-        **kwargs,
+        **kwargs: dict,
     ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
@@ -1351,7 +1359,12 @@ class WSIReader:
         """
         raise NotImplementedError
 
-    def read_region(self, location: IntPair, level: int, size: IntPair) -> np.ndarray:
+    def read_region(
+        self: WSIReader,
+        location: IntPair,
+        level: int,
+        size: IntPair,
+    ) -> np.ndarray:
         """Read a region of the whole slide image (OpenSlide format args).
 
         This function is to help with writing code which is backwards
@@ -1383,7 +1396,11 @@ class WSIReader:
             units="level",
         )
 
-    def slide_thumbnail(self, resolution: Resolution = 1.25, units: Units = "power"):
+    def slide_thumbnail(
+        self: WSIReader,
+        resolution: Resolution = 1.25,
+        units: Units = "power",
+    ) -> np.ndarray:
         """Read the whole slide image thumbnail (1.25x by default).
 
         For more information on resolution and units see
@@ -1411,11 +1428,11 @@ class WSIReader:
         return self.read_bounds(bounds, resolution=resolution, units=units)
 
     def tissue_mask(
-        self,
+        self: WSIReader,
         method: str = "otsu",
         resolution: Resolution = 1.25,
         units: Units = "power",
-        **masker_kwargs,
+        **masker_kwargs: dict,
     ) -> VirtualWSIReader:
         """Create a tissue mask and wrap it in a VirtualWSIReader.
 
@@ -1464,7 +1481,7 @@ class WSIReader:
         return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
     def save_tiles(
-        self,
+        self: WSIReader,
         output_dir: str | Path = "tiles",
         tile_objective_value: int = 20,
         tile_read_size: tuple[int, int] = (5000, 5000),
@@ -1625,7 +1642,7 @@ class OpenSlideWSIReader(WSIReader):
     """
 
     def __init__(
-        self,
+        self: OpenSlideWSIReader,
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
@@ -1635,17 +1652,17 @@ class OpenSlideWSIReader(WSIReader):
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(
-        self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: OpenSlideWSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
@@ -1877,16 +1894,16 @@ class OpenSlideWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
-        self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: OpenSlideWSIReader,
+        bounds: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
@@ -2062,7 +2079,7 @@ class OpenSlideWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     @staticmethod
-    def _estimate_mpp(props):
+    def _estimate_mpp(props: openslide.OpenSlide.properties) -> tuple:
         """Find microns per pixel (mpp).
 
         Args:
@@ -2102,7 +2119,7 @@ class OpenSlideWSIReader(WSIReader):
         # Return None value if metadata cannot be determined.
         return None
 
-    def _info(self):
+    def _info(self: OpenSlideWSIReader) -> WSIMeta:
         """Openslide WSI meta data reader.
 
         Returns:
@@ -2163,7 +2180,7 @@ class JP2WSIReader(WSIReader):
     """
 
     def __init__(
-        self,
+        self: JP2WSIReader,
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
@@ -2176,17 +2193,17 @@ class JP2WSIReader(WSIReader):
         self.glymur_jp2 = glymur.Jp2k(filename=str(self.input_path))
 
     def read_rect(
-        self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: JP2WSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
@@ -2416,16 +2433,16 @@ class JP2WSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
-        self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: JP2WSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
@@ -2657,7 +2674,7 @@ class JP2WSIReader(WSIReader):
             result["cres"] = capture_resolution_box
         return result
 
-    def _info(self):
+    def _info(self: JP2WSIReader) -> WSIMeta:
         """JP2 metadata reader.
 
         Returns:
@@ -2779,12 +2796,12 @@ class VirtualWSIReader(WSIReader):
     """
 
     def __init__(
-        self,
+        self: VirtualWSIReader,
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         info: WSIMeta | None = None,
-        mode="rgb",
+        mode: str = "rgb",
     ) -> None:
         """Initialize :class:`VirtualWSIReader`."""
         super().__init__(
@@ -2804,7 +2821,7 @@ class VirtualWSIReader(WSIReader):
         if info is not None:
             self._m_info = info
 
-    def _info(self):
+    def _info(self: VirtualWSIReader) -> WSIMeta:
         """Visual Field metadata getter.
 
         This generates a WSIMeta object for the slide if none exists.
@@ -2834,7 +2851,11 @@ class VirtualWSIReader(WSIReader):
             self._m_info = param
         return self._m_info
 
-    def _find_params_from_baseline(self, location, baseline_read_size):
+    def _find_params_from_baseline(
+        self: VirtualWSIReader,
+        location: IntPair,
+        baseline_read_size: IntPair,
+    ) -> tuple[IntPair, IntPair]:
         """Convert read parameters from (virtual) baseline coordinates.
 
         Args:
@@ -2845,6 +2866,10 @@ class VirtualWSIReader(WSIReader):
                 Size of the region to read in (virtual) baseline
                 coordinates.
 
+        Returns:
+            tuple(IntPair, IntPair):
+                Baseline image location and read size.
+
         """
         baseline_size = np.array(self.info.slide_dimensions)
         image_size = np.array(self.img.shape[:2][::-1])
@@ -2854,17 +2879,17 @@ class VirtualWSIReader(WSIReader):
         return image_location, read_size
 
     def read_rect(
-        self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,
-    ):
+        self: VirtualWSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
@@ -3097,16 +3122,16 @@ class VirtualWSIReader(WSIReader):
         return im_region
 
     def read_bounds(
-        self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,
-    ):
+        self: VirtualWSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
@@ -3281,7 +3306,7 @@ class ArrayView:
 
     """
 
-    def __init__(self, array: zarr.Array, axes: str) -> None:
+    def __init__(self: ArrayView, array: zarr.Array, axes: str) -> None:
         """Initialise the view object.
 
         Args:
@@ -3296,14 +3321,14 @@ class ArrayView:
         self._shape = dict(zip(self.axes, self.array.shape))
 
     @property
-    def shape(self):
+    def shape(self: ArrayView) -> tuple:
         """Return array shape."""
         try:
             return tuple(self._shape[c] for c in "YXC")
         except KeyError:
             return tuple(self._shape[c] for c in "YXS")
 
-    def __getitem__(self, index):
+    def __getitem__(self: ArrayView, index: int) -> np.ndarray:
         """Get an item from the dataset."""
         # Normalize to a tuple of length = len(self.axes)
         if not isinstance(index, tuple):
@@ -3325,12 +3350,12 @@ class TIFFWSIReader(WSIReader):
     """Define Tiff WSI Reader."""
 
     def __init__(
-        self,
+        self: TIFFWSIReader,
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
-        series="auto",
-        cache_size=2**28,
+        series: str = "auto",
+        cache_size: int = 2**28,
     ) -> None:
         """Initialize :class:`TIFFWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
@@ -3381,11 +3406,11 @@ class TIFFWSIReader(WSIReader):
             for key, array in self._zarr_group.items()
         }
 
-    def _canonical_shape(self, shape):
+    def _canonical_shape(self: TIFFWSIReader, shape: IntPair) -> tuple:
         """Make a level shape tuple in YXS order.
 
         Args:
-            shape (tuple(int)):
+            shape (IntPair):
                 Input shape tuple.
 
         Returns:
@@ -3400,7 +3425,7 @@ class TIFFWSIReader(WSIReader):
         msg = f"Unsupported axes `{self._axes}`."
         raise ValueError(msg)
 
-    def _parse_svs_metadata(self) -> dict:
+    def _parse_svs_metadata(self: TIFFWSIReader) -> dict:
         """Extract SVS specific metadata.
 
         Returns:
@@ -3482,7 +3507,7 @@ class TIFFWSIReader(WSIReader):
             "raw": raw,
         }
 
-    def _get_ome_xml(self) -> ElementTree.Element:
+    def _get_ome_xml(self: TIFFWSIReader) -> ElementTree.Element:
         """Parse OME-XML from the description of the first IFD (page).
 
         Returns:
@@ -3493,7 +3518,7 @@ class TIFFWSIReader(WSIReader):
         description = self.tiff.pages[0].description
         return ElementTree.fromstring(description)
 
-    def _parse_ome_metadata(self) -> dict:
+    def _parse_ome_metadata(self: TIFFWSIReader) -> dict:
         """Extract OME specific metadata.
 
         Returns:
@@ -3519,7 +3544,7 @@ class TIFFWSIReader(WSIReader):
         }
 
     def _get_ome_objective_power(
-        self,
+        self: TIFFWSIReader,
         xml: ElementTree.Element | None = None,
     ) -> float | None:
         """Get the objective power from the OME-XML.
@@ -3564,7 +3589,7 @@ class TIFFWSIReader(WSIReader):
             ) from e
 
     def _get_ome_mpp(
-        self,
+        self: TIFFWSIReader,
         xml: ElementTree.Element | None = None,
     ) -> list[float] | None:
         """Get the microns per pixel from the OME-XML.
@@ -3593,7 +3618,7 @@ class TIFFWSIReader(WSIReader):
 
         return None
 
-    def _parse_generic_tiff_metadata(self) -> dict:
+    def _parse_generic_tiff_metadata(self: TIFFWSIReader) -> dict:
         """Extract generic tiled metadata.
 
         Returns:
@@ -3627,7 +3652,7 @@ class TIFFWSIReader(WSIReader):
             "raw": raw,
         }
 
-    def _info(self):
+    def _info(self: TIFFWSIReader) -> WSIMeta:
         """TIFF metadata constructor.
 
         Returns:
@@ -3675,17 +3700,17 @@ class TIFFWSIReader(WSIReader):
         )
 
     def read_rect(
-        self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: TIFFWSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
@@ -3913,16 +3938,16 @@ class TIFFWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
-        self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,
-    ):
+        self: TIFFWSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
@@ -4091,7 +4116,7 @@ class DICOMWSIReader(WSIReader):
     wsidicom = None
 
     def __init__(
-        self,
+        self: DICOMWSIReader,
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
@@ -4102,7 +4127,7 @@ class DICOMWSIReader(WSIReader):
         super().__init__(input_img, mpp, power)
         self.wsi = WsiDicom.open(input_img)
 
-    def _info(self) -> WSIMeta:
+    def _info(self: DICOMWSIReader) -> WSIMeta:
         """WSI metadata constructor.
 
         Returns:
@@ -4138,17 +4163,17 @@ class DICOMWSIReader(WSIReader):
         )
 
     def read_rect(
-        self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: DICOMWSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
@@ -4394,16 +4419,16 @@ class DICOMWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
-        self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: DICOMWSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
@@ -4597,7 +4622,7 @@ class NGFFWSIReader(WSIReader):
 
     """
 
-    def __init__(self, path, **kwargs) -> None:
+    def __init__(self: NGFFWSIReader, path: str | Path, **kwargs: dict) -> None:
         """Initialize :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs
@@ -4644,7 +4669,7 @@ class NGFFWSIReader(WSIReader):
             for key, array in self._zarr_group.arrays()
         }
 
-    def _info(self):
+    def _info(self: NGFFWSIReader) -> WSIMeta:
         """WSI metadata constructor.
 
         Returns:
@@ -4665,7 +4690,7 @@ class NGFFWSIReader(WSIReader):
             mpp=self._get_mpp(),
         )
 
-    def _get_mpp(self) -> tuple[float, float] | None:
+    def _get_mpp(self: NGFFWSIReader) -> tuple[float, float] | None:
         """Get the microns-per-pixel (MPP) of the slide.
 
         Returns:
@@ -4708,17 +4733,17 @@ class NGFFWSIReader(WSIReader):
         return None
 
     def read_rect(
-        self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,  # noqa: ARG002
-    ):
+        self: NGFFWSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,  # noqa: ARG002
+    ) -> np.ndarray:
         """Read a region of the whole slide image at a location and size.
 
         Location is in terms of the baseline image (level 0  / maximum
@@ -4946,16 +4971,16 @@ class NGFFWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
-        self,
-        bounds,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,
-    ):
+        self: NGFFWSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
         """Read a region of the whole slide image within given bounds.
 
         Bounds are in terms of the baseline image (level 0  / maximum
@@ -5001,7 +5026,7 @@ class NGFFWSIReader(WSIReader):
                 Method to use when padding at the edges of the image.
                 Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
-            pad_constant_values (int, tuple(int)):
+            pad_constant_values (int, IntPair):
                 Constant values to use when padding with constant pad mode.
                 Passed to the :func:`numpy.pad` `constant_values` argument.
                 Default is 0.
@@ -5152,13 +5177,13 @@ class AnnotationStoreReader(WSIReader):
     """
 
     def __init__(
-        self,
+        self: AnnotationStoreReader,
         store: AnnotationStore | str | Path,
         info: WSIMeta | None = None,
         renderer: AnnotationRenderer | None = None,
         base_wsi: WSIReader | str | None = None,
-        alpha=1.0,
-        **kwargs,
+        alpha: float = 1.0,
+        **kwargs: dict,
     ) -> None:
         """Initialize :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
@@ -5199,22 +5224,22 @@ class AnnotationStoreReader(WSIReader):
             self.on_slide = True
         self.alpha = alpha
 
-    def _info(self):
+    def _info(self: AnnotationStoreReader) -> WSIMeta:
         """Get the metadata of the slide."""
         return self.info
 
     def read_rect(
-        self,
-        location,
-        size,
-        resolution=0,
-        units="level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,
-    ):
+        self: AnnotationStoreReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | tuple[int, int] = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
         """Read a region using start location and size (width, height).
 
         Read a region of the annotation mask, or annotated whole slide
@@ -5494,16 +5519,16 @@ class AnnotationStoreReader(WSIReader):
         return utils.transforms.background_composite(im_region, alpha=False)
 
     def read_bounds(
-        self,
-        bounds,
+        self: AnnotationStoreReader,
+        bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation="optimise",
-        pad_mode="constant",
-        pad_constant_values=0,
-        coord_space="baseline",
-        **kwargs,
-    ):
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | tuple[int, int] = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
         """Read a region by defining boundary locations.
 
         Read a region of the annotation mask, or annotated whole slide
