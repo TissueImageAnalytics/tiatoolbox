@@ -5,7 +5,7 @@ import json
 import pickle
 import sqlite3
 import sys
-from itertools import repeat
+from itertools import repeat, zip_longest
 from pathlib import Path
 from timeit import timeit
 from typing import TYPE_CHECKING, Any, ClassVar, Generator
@@ -13,9 +13,17 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generator
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
 from shapely import affinity
-from shapely.geometry import MultiPoint, Polygon
-from shapely.geometry.point import Point
+from shapely.geometry import (
+    GeometryCollection,
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 
 from tiatoolbox.annotation import (
     Annotation,
@@ -24,19 +32,24 @@ from tiatoolbox.annotation import (
     SQLiteStore,
 )
 from tiatoolbox.annotation.storage import SQLiteMetadata
+from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
 sqlite3.enable_callback_tracebacks(True)  # noqa: FBT003
 
+# ----------------------------------------------------------------------
 # Constants
+# ----------------------------------------------------------------------
 
 GRID_SIZE = (10, 10)
 FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
 RNG = np.random.default_rng(0)  # Numpy Random Generator
 
+# ----------------------------------------------------------------------
 # Helper Functions
+# ----------------------------------------------------------------------
 
 
 def cell_polygon(
@@ -144,7 +157,9 @@ def test_annotation_repr() -> None:
     assert repr(annotation).endswith(")")
 
 
+# ----------------------------------------------------------------------
 # Fixtures
+# ----------------------------------------------------------------------
 
 
 @pytest.fixture(scope="session")
@@ -186,7 +201,278 @@ def fill_store(cell_grid, points_grid):
     return _fill_store
 
 
-# Class Specific Tests
+# ----------------------------------------------------------------------
+# Annotation Tests
+# ----------------------------------------------------------------------
+
+
+def test_annotation_init_both_shapely_wkb() -> None:
+    """Init annotation with both wkb and geometry."""
+    with pytest.raises(ValueError, match="geometry and wkb"):
+        _ = Annotation(geometry=Point(0, 0), wkb=Point(0, 0).wkb)
+
+
+def test_annotation_init_neither_shapely_wkb() -> None:
+    """Init annotation with neither wkb nor geometry."""
+    with pytest.raises(ValueError, match="geometry or wkb"):
+        _ = Annotation()
+
+
+def test_polygon_annotation_from_wkb() -> None:
+    """Test creating a polygon annotation from wkb."""
+    coords = [[0, 0], [1, 1], [2, 0]]
+    wkb = Polygon(coords).wkb
+    ann = Annotation(wkb=wkb)
+    assert ann.geometry == shapely.from_wkb(wkb)
+    assert ann.properties == {}
+    assert ann.geometry.type == str(GeometryType.POLYGON)
+
+
+def test_polygon_annotation_from_shapely() -> None:
+    """Test creating an annotation from shapely polygon then accessing coords."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(geometry=polygon)
+    assert ann.geometry == polygon
+    assert ann.properties == {}
+    assert ann.geometry.type == str(GeometryType.POLYGON)
+
+
+def test_annotation_lazy_geometry() -> None:
+    """Test that the geometry is not created until it is accessed."""
+    ann = Annotation(wkb=Polygon([[0, 0], [1, 1], [2, 0]]).wkb)
+    assert ann._wkb is not None
+    assert ann._geometry is None
+    _ = ann.geometry
+    assert ann._geometry is not None
+
+
+def test_lazy_geometry_type() -> None:
+    """Test that getting geometry type from WKB does not create geometry."""
+    ann = Annotation(wkb=Polygon([[0, 0], [1, 1], [2, 0]]).wkb)
+    assert ann.geometry.type == str(GeometryType.POLYGON)
+    assert ann._geometry is not None
+
+
+def test_annotation_lazy_to_wkb() -> None:
+    """Test that the geometry is not created until it is accessed."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    _ = ann.to_wkb()
+    assert ann._geometry is None
+
+
+def test_annotation_lazy_wkb() -> None:
+    """Test that the geometry is not created by accessing WKB."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    _ = ann.wkb
+    assert ann._geometry is None
+
+
+def test_annotation_to_wkb_equals_wkb() -> None:
+    """Test that to_wkb() and wkb are equal."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    assert ann.to_wkb() == ann.wkb
+
+
+def test_annotation_point_wkb_coords() -> None:
+    """Test generating coordinates from WKB for Point.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    point = Point([1, 2])
+    ann = Annotation(wkb=point.wkb)
+    coords = ann.coords
+    assert ann._geometry is None
+    assert isinstance(coords, np.ndarray)
+    assert len(coords) == 1
+    assert len(coords.shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
+
+
+def test_annotation_polygon_wkb_coords() -> None:
+    """Test generating coordinates from WKB for Polygon.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=polygon.wkb)
+    coords = ann.coords
+    assert isinstance(coords, list)
+    assert isinstance(coords[0], np.ndarray)
+    assert ann._geometry is None
+    assert len(coords[0].shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
+
+
+def test_annotation_line_string_wkb_coords() -> None:
+    """Test generating coordinates from WKB for LineString.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    line = LineString([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(wkb=line.wkb)
+    coords = ann.coords
+    assert isinstance(coords, np.ndarray)
+    assert ann._geometry is None
+    assert len(coords.shape) == 2
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
+
+
+def test_annotation_multi_point_wkb_coords() -> None:
+    """Test generating coordinates from WKB for MultiPoint.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    multi_point = MultiPoint(
+        [
+            Point(0, 1),
+            Point(2, 3),
+        ],
+    )
+    ann = Annotation(wkb=multi_point.wkb)
+    coords = ann.coords
+    assert len(coords) == len(multi_point.geoms)
+    assert isinstance(coords[0], np.ndarray)
+    assert ann._geometry is None
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert np.array_equal(geom_coords, coords)
+
+
+def test_annotation_multi_polygon_wkb_coords() -> None:
+    """Test generating coordinates from WKB for MultiPolygon.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    multi_poly = MultiPolygon(
+        polygons=[
+            Polygon([[0, 0], [1, 1], [2, 0]]),
+            Polygon([[0, 0], [1, 1], [2, 2], [3, 3]]),
+        ],
+    )
+    ann = Annotation(wkb=multi_poly.wkb)
+    coords = ann.coords
+    assert len(coords) == len(multi_poly.geoms)
+    assert isinstance(coords[0], list)
+    assert ann._geometry is None
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert all(np.array_equal(a, b) for a, b in zip_longest(geom_coords, coords))
+
+
+def test_annotation_multi_line_string_wkb_coords() -> None:
+    """Test generating coordinates from WKB for MultiLineString.
+
+    This should produce coordinates without generating a Shapely
+    geometry.
+    """
+    multi_line_string = MultiLineString(
+        [
+            LineString([(0, 0), (1, 1)]),
+            LineString([(2, 2), (3, 3)]),
+        ],
+    )
+    ann = Annotation(wkb=multi_line_string.wkb)
+    coords = ann.coords
+    assert len(coords) == len(multi_line_string.geoms)
+    assert isinstance(coords[0], np.ndarray)
+    assert ann._geometry is None
+    # Check that coords are the same after creating geometry
+    _ = ann.geometry
+    assert ann._geometry is not None
+    geom_coords = ann.coords
+    assert all(np.array_equal(a, b) for a, b in zip_longest(geom_coords, coords))
+
+
+def test_annotation_coords_wkb_unknown_geometry() -> None:
+    """Test generating coordinates from WKB for unknown geometry type."""
+    ann = Annotation(wkb=b"\x00\x07\x00\x00\x00")
+    with pytest.raises(ValueError, match="Unknown geometry type"):
+        _ = ann.coords
+
+
+def test_annotation_coords_geometry_unknown_geometry() -> None:
+    """Test generating coordinates from geometry for unknown geometry type."""
+    ann = Annotation(geometry=GeometryCollection([Point(1, 2)]))
+    with pytest.raises(ValueError, match="Unknown geometry type"):
+        _ = ann.coords
+
+
+def test_annotation_geometry_wkb() -> None:
+    """Test generating WKB from geometry."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(geometry=polygon)
+    assert ann.wkb == polygon.wkb
+
+
+def test_annotation_geometry_geometry_type() -> None:
+    """Test getting GeometryType from Shapely geometry."""
+    polygon = Polygon([[0, 0], [1, 1], [2, 0]])
+    ann = Annotation(geometry=polygon)
+    assert ann.geometry_type == GeometryType.POLYGON
+
+
+def test_annotation_hash() -> None:
+    """Test that the hash is the same for two annotations with the same geometry."""
+    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    ann2 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    assert hash(ann_1) == hash(ann2)
+
+
+def test_annotation_eq_false() -> None:
+    """Test that two annotations with different geometries are not equal."""
+    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    ann_2 = Annotation(Polygon([[0, 0], [1, 1], [2, 0], [2, 2]]))
+    assert ann_1 != ann_2
+
+
+def test_annotation_eq_type_mismatch() -> None:
+    """Test equality with another type."""
+    ann_1 = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    assert ann_1 != "ann_2"
+
+
+def test_annotation_wkt() -> None:
+    """Test that Annotatoin.to_wkt() generates a valid WKT string."""
+    ann = Annotation(Polygon([[0, 0], [1, 1], [2, 0]]))
+    assert isinstance(ann.to_wkt(), str)
+    assert ann.to_wkt().startswith("POLYGON")
+    assert shapely.wkt.loads(ann.to_wkt()) == ann.geometry
+
+
+def test_annotation_decode_unknown_wkb() -> None:
+    """Test decoding an unknown WKB type."""
+    wkb = b"\x01\x08\x00\x00\x00"
+    with pytest.raises(ValueError, match="Unknown"):
+        _ = Annotation.decode_wkb(wkb, 7)
+
+
+# ----------------------------------------------------------------------
+# Class-Specific Tests
+# ----------------------------------------------------------------------
 
 
 def test_sqlite_store_compile_options() -> None:
@@ -440,6 +726,14 @@ def test_sqlite_optimize_no_vacuum(fill_store, tmp_path: Path) -> None:
     store.optimize(limit=0, vacuum=False)
 
 
+def test_sqlite_wkb(fill_store) -> None:
+    """Test that SQLiteStore returns annotations with WKB geometry."""
+    _, store = fill_store(SQLiteStore, ":memory:")
+    results = store.query((0, 0, 30, 30))
+    assert len(results) == 8
+    assert all(annotation._wkb is not None for annotation in results.values())
+
+
 def test_annotation_to_geojson() -> None:
     """Test converting an annotation to geojson."""
     annotation = Annotation(
@@ -468,7 +762,7 @@ def test_remove_area_column(fill_store) -> None:
 
 
 def test_remove_area_column_indexed(fill_store) -> None:
-    """Test removing an area column if theres an index on it."""
+    """Test removing an area column if there's an index on it."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.create_index("area", '"area"')
     store.remove_area_column()
@@ -539,7 +833,9 @@ def test_init_base_class_exception() -> None:
         AnnotationStore()  # skipcq: PYL-E0110
 
 
+# ----------------------------------------------------------------------
 # Annotation Store Interface Tests (AnnotationStoreABC)
+# ----------------------------------------------------------------------
 
 
 class TestStore:
@@ -1073,15 +1369,15 @@ class TestStore:
     def test_append_invalid_geometry(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that appending invalid geometry raises an exception."""
         store = store_cls()
-        with pytest.raises((TypeError, AttributeError)):
-            store.append("point", {})
+        with pytest.raises(TypeError, match="geometry"):
+            store.append(Annotation("point", {}))
 
     @staticmethod
     def test_update_invalid_geometry(fill_store, store_cls) -> None:  # noqa: ARG004
         """Test that updating  a new key and None geometry raises an exception."""
         store = store_cls()
         key = "foo"
-        with pytest.raises((TypeError, AttributeError)):
+        with pytest.raises((TypeError, ValueError)):
             store.patch(key, geometry=None, properties={"class": 123})
 
     @staticmethod
@@ -1710,8 +2006,8 @@ class TestStore:
         .. code-block:: text
 
              ^
-            3|--****-----C
-             |*      *   |
+            3|--****-----+
+             |*      *  C|
             2|         * |
              |     B    *|
             1|   A       *
@@ -2199,14 +2495,3 @@ class TestStore:
         _, store = fill_store(store_cls, ":memory:")
         result = store.query((0, 0, 1000, 1000), min_area=1)
         assert len(result) == 100  # should only get cells, pts are too small
-
-    @staticmethod
-    def test_as_wkb(fill_store, store_cls) -> None:
-        """Test that as_wkb returns annotations with wkb geometry."""
-        _, store = fill_store(store_cls, ":memory:")
-        wkb_results = store.query((0, 0, 25, 25), as_wkb=True)
-        results = store.query((0, 0, 30, 30))
-        assert len(results) == 8
-        assert len(wkb_results) == 8
-        for wkb_result, result in zip(wkb_results.values(), results.values()):
-            assert wkb_result.geometry == result.geometry.wkb
