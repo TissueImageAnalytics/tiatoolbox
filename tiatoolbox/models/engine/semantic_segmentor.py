@@ -168,7 +168,7 @@ class IOSegmentorConfig(IOConfigABC):
         input_resolutions: list[dict],
         output_resolutions: list[dict],
         patch_input_shape: IntPair,
-        patch_output_shape: list[int] | np.ndarray,
+        patch_output_shape: IntPair,
         save_resolution: dict | None = None,
         **kwargs: dict,
     ) -> None:
@@ -574,7 +574,7 @@ class SemanticSegmentor:
     def get_coordinates(
         image_shape: list[int] | np.ndarray,
         ioconfig: IOSegmentorConfig,
-    ):
+    ) -> tuple[list, list]:
         """Calculate patch tiling coordinates.
 
         By default, internally, it will call the
@@ -632,7 +632,7 @@ class SemanticSegmentor:
         bounds: np.ndarray,
         resolution: Resolution | None = None,
         units: Units | None = None,
-    ):
+    ) -> np.ndarray:
         """Indicates which coordinate is valid basing on the mask.
 
         To use your own approaches, either subclass to overwrite or
@@ -692,7 +692,7 @@ class SemanticSegmentor:
         scale_factor = mask_real_shape / mask_resolution_shape
         scale_factor = scale_factor[0]  # what if ratio x != y
 
-        def sel_func(coord: np.ndarray):
+        def sel_func(coord: np.ndarray) -> bool:
             """Accept coord as long as its box contains part of mask."""
             coord_in_real_mask = np.ceil(scale_factor * coord).astype(np.int32)
             start_x, start_y, end_x, end_y = coord_in_real_mask
@@ -709,7 +709,7 @@ class SemanticSegmentor:
         mode: str,
         *,
         auto_get_mask: bool,
-    ):
+    ) -> tuple[WSIReader, WSIReader]:
         """Define how to get reader for mask and source image."""
         img_path = Path(img_path)
         reader = WSIReader.open(img_path)
@@ -734,12 +734,12 @@ class SemanticSegmentor:
         return reader, mask_reader
 
     def _predict_one_wsi(
-        self,
+        self: SemanticSegmentor,
         wsi_idx: int,
         ioconfig: IOSegmentorConfig,
         save_path: str,
         mode: str,
-    ):
+    ) -> None:
         """Make a prediction on tile/wsi.
 
         Args:
@@ -850,13 +850,13 @@ class SemanticSegmentor:
         shutil.rmtree(cache_dir)
 
     def _process_predictions(
-        self,
+        self: SemanticSegmentor,
         cum_batch_predictions: list,
         wsi_reader: WSIReader,
         ioconfig: IOSegmentorConfig,
         save_path: str,
         cache_dir: str,
-    ):
+    ) -> None:
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also saving afterwards.
@@ -918,7 +918,7 @@ class SemanticSegmentor:
         locations: list | np.ndarray,
         save_path: str | Path | None = None,
         cache_count_path: str | Path | None = None,
-    ):
+    ) -> np.ndarray:
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
         When accumulating the raw prediction onto a same canvas (via
@@ -988,7 +988,7 @@ class SemanticSegmentor:
             canvas_count_shape_,
         )
 
-        def index(arr, tl, br):
+        def index(arr: np.ndarray, tl: np.ndarray, br: np.ndarray) -> np.ndarray:
             """Helper to shorten indexing."""
             return arr[tl[0] : br[0], tl[1] : br[1]]
 
@@ -1049,7 +1049,7 @@ class SemanticSegmentor:
         return cum_canvas
 
     @staticmethod
-    def _prepare_save_dir(save_dir):
+    def _prepare_save_dir(save_dir: str | Path | None) -> tuple[Path, Path]:
         """Prepare save directory and cache."""
         if save_dir is None:
             logger.warning(
@@ -1071,15 +1071,15 @@ class SemanticSegmentor:
         return save_dir, cache_dir
 
     def _update_ioconfig(
-        self,
-        ioconfig,
-        mode,
+        self: SemanticSegmentor,
+        ioconfig: IOSegmentorConfig,
+        mode: str,
         patch_input_shape: IntPair,
-        patch_output_shape,
-        stride_shape,
-        resolution,
-        units,
-    ):
+        patch_output_shape: IntPair,
+        stride_shape: IntPair,
+        resolution: Resolution,
+        units: Units,
+    ) -> IOSegmentorConfig:
         """Update ioconfig according to input parameters.
 
         Args:
@@ -1148,7 +1148,7 @@ class SemanticSegmentor:
 
         return ioconfig
 
-    def _prepare_workers(self):
+    def _prepare_workers(self: SemanticSegmentor) -> None:
         """Prepare number of workers."""
         self._postproc_workers = None
         if self.num_postproc_workers is not None:
@@ -1156,7 +1156,7 @@ class SemanticSegmentor:
                 max_workers=self.num_postproc_workers,
             )
 
-    def _memory_cleanup(self):
+    def _memory_cleanup(self: SemanticSegmentor) -> None:
         """Memory clean up."""
         self.imgs = None
         self.masks = None
@@ -1171,15 +1171,16 @@ class SemanticSegmentor:
         self._postproc_workers = None
 
     def _predict_wsi_handle_exception(
-        self,
-        imgs,
-        wsi_idx,
-        img_path,
-        mode,
-        ioconfig,
-        save_dir,
-        crash_on_exception,
-    ):
+        self: SemanticSegmentor,
+        imgs: list,
+        wsi_idx: int,
+        img_path: str | Path,
+        mode: str,
+        ioconfig: IOSegmentorConfig,
+        save_dir: str | Path,
+        *,
+        crash_on_exception: bool,
+    ) -> None:
         """Predict on multiple WSIs.
 
         Args:
@@ -1191,7 +1192,7 @@ class SemanticSegmentor:
                 of file paths.
             wsi_idx (int):
                 index of current WSI being processed.
-            img_path(str):
+            img_path(str or Path):
                 Path to current image.
             mode (str):
                 Type of input to process. Choose from either `tile` or
@@ -1203,7 +1204,7 @@ class SemanticSegmentor:
                 `stride_shape`, `resolution`, and `units` arguments are
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
-            save_dir (str or pathlib.Path):
+            save_dir (str or Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
@@ -1511,7 +1512,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         ioconfig: IOSegmentorConfig,
         save_path: str,
         cache_dir: str,  # skipcq: PYL-W0613  # noqa: ARG002
-    ):
+    ) -> None:
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also
