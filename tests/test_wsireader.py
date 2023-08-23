@@ -8,7 +8,6 @@ import re
 import shutil
 from copy import deepcopy
 from pathlib import Path
-from time import time
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
 from typing import Callable, Iterable
@@ -25,7 +24,7 @@ from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.morphology import binary_dilation, disk, remove_small_objects
 from skimage.registration import phase_cross_correlation
 
-from tiatoolbox import cli, rcParam, utils
+from tiatoolbox import cli, utils
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -75,11 +74,6 @@ RNG = np.random.default_rng()  # Numpy Random Generator
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
 # -------------------------------------------------------------------------------------
-
-
-def _get_temp_folder_path(prefix: str = "temp") -> Path:
-    """Return unique temp folder path."""
-    return rcParam["TIATOOLBOX_HOME"] / f"{prefix}-{int(time())}"
 
 
 def strictly_increasing(sequence: Iterable) -> bool:
@@ -1459,6 +1453,7 @@ def test_wsireader_open(
     sample_jp2: Path,
     sample_ome_tiff,
     source_image,
+    tmp_path,
 ) -> None:
     """Test WSIReader.open() to return correct object."""
     with pytest.raises(FileNotSupportedError):
@@ -1492,13 +1487,10 @@ def test_wsireader_open(
     assert isinstance(wsi_out, wsi_type)
 
     # test loading .npy
-    temp_dir = _get_temp_folder_path()
-    temp_dir.mkdir()
-    temp_file = f"{temp_dir}/sample.npy"
+    temp_file = str(tmp_path / "sample.npy")
     np.save(temp_file, RNG.integers(1, 255, [5, 5, 5]))
     wsi_out = WSIReader.open(temp_file)
     assert isinstance(wsi_out, VirtualWSIReader)
-    shutil.rmtree(temp_dir)
 
 
 def test_jp2_missing_cod(sample_jp2: Path, caplog: pytest.LogCaptureFixture) -> None:

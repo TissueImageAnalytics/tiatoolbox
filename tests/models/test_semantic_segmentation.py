@@ -253,7 +253,7 @@ def test_functional_wsi_stream_dataset(remote_sample: Callable) -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(remote_sample: Callable) -> None:
+def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     """Functional crash tests for segmentor."""
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
@@ -261,7 +261,10 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
     mini_wsi_msk = Path(remote_sample("wsi2_4k_4k_msk"))
 
     model = _CNNTo1()
+
+    save_dir = tmp_path / "test_crash_segmentor"
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
+
     # fake injection to trigger Segmentor to create parallel
     # post processing workers because baseline Semantic Segmentor does not support
     # post processing out of the box. It only contains condition to create it
@@ -269,7 +272,6 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
     semantic_segmentor.num_postproc_workers = 1
 
     # * test basic crash
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
     with pytest.raises(TypeError, match=r".*`mask_reader`.*"):
         semantic_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
     with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
@@ -286,7 +288,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             auto_get_mask=True,
         )
 
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
     with pytest.raises(ValueError, match=r".*provide.*"):
         SemanticSegmentor()
     with pytest.raises(ValueError, match=r".*valid mode.*"):
@@ -299,10 +301,16 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             mode="tile",
             on_gpu=ON_GPU,
             crash_on_exception=True,
+            save_dir=save_dir,
         )
     with pytest.raises(ValueError, match=r".*already exists.*"):
-        semantic_segmentor.predict([], mode="tile", patch_input_shape=(2048, 2048))
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
+        semantic_segmentor.predict(
+            [],
+            mode="tile",
+            patch_input_shape=(2048, 2048),
+            save_dir=save_dir,
+        )
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     # * test not providing any io_config info when not using pretrained model
     with pytest.raises(ValueError, match=r".*provide either `ioconfig`.*"):
@@ -311,8 +319,9 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             mode="tile",
             on_gpu=ON_GPU,
             crash_on_exception=True,
+            save_dir=save_dir,
         )
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     # * Test crash propagation when parallelize post-processing
     semantic_segmentor.num_postproc_workers = 2
@@ -324,8 +333,10 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             mode="wsi",
             on_gpu=ON_GPU,
             crash_on_exception=True,
+            save_dir=save_dir,
         )
-    shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(save_dir, ignore_errors=True)
+
     # test ignore crash
     semantic_segmentor.predict(
         [mini_wsi_svs],
@@ -333,8 +344,8 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
         mode="wsi",
         on_gpu=ON_GPU,
         crash_on_exception=False,
+        save_dir=save_dir,
     )
-    shutil.rmtree("output", ignore_errors=True)
 
 
 def test_functional_segmentor_merging(tmp_path: Path) -> None:
@@ -444,7 +455,11 @@ def test_functional_segmentor_merging(tmp_path: Path) -> None:
     del canvas  # skipcq
 
 
-def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functional_segmentor(
+    remote_sample: Callable,
+    tmp_path: Path,
+    chdir: Callable,
+) -> None:
     """Functional test for segmentor."""
     save_dir = tmp_path / "dump"
     # # convert to pathlib Path to prevent wsireader complaint
@@ -458,7 +473,7 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     imwrite(mini_wsi_msk, (thumb > 0).astype(np.uint8))
 
     # preemptive clean up
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
     # fake injection to trigger Segmentor to create parallel
@@ -476,9 +491,10 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         resolution=resolution,
         units="mpp",
         crash_on_exception=False,
+        save_dir=save_dir,
     )
 
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
@@ -487,23 +503,28 @@ def test_functional_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         resolution=1 / resolution,
         units="baseline",
         crash_on_exception=True,
+        save_dir=save_dir,
     )
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
+    shutil.rmtree(save_dir, ignore_errors=True)
 
-    # * check exception bypass in the log
-    # there should be no exception, but how to check the log?
-    semantic_segmentor.predict(
-        [mini_wsi_jpg],
-        mode="tile",
-        on_gpu=ON_GPU,
-        patch_input_shape=(512, 512),
-        patch_output_shape=(512, 512),
-        stride_shape=(512, 512),
-        resolution=1 / resolution,
-        units="baseline",
-        crash_on_exception=False,
-    )
-    shutil.rmtree("output", ignore_errors=True)  # default output dir test
+    with chdir(tmp_path):
+        # * check exception bypass in the log
+        # there should be no exception, but how to check the log?
+        semantic_segmentor.predict(
+            [mini_wsi_jpg],
+            mode="tile",
+            on_gpu=ON_GPU,
+            patch_input_shape=(512, 512),
+            patch_output_shape=(512, 512),
+            stride_shape=(512, 512),
+            resolution=1 / resolution,
+            units="baseline",
+            crash_on_exception=False,
+        )
+        shutil.rmtree(
+            tmp_path / "output",
+            ignore_errors=True,
+        )  # default output dir test
 
     # * test basic running and merging prediction
     # * should dumping all 1 in the output

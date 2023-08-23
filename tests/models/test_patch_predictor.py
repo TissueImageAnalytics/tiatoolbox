@@ -471,7 +471,7 @@ def test_io_patch_predictor_config() -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_predictor_crash() -> None:
+def test_predictor_crash(tmp_path: Path) -> None:
     """Test for crash when making predictor."""
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
@@ -489,20 +489,19 @@ def test_predictor_crash() -> None:
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     with pytest.raises(ValueError, match=r".*not a valid mode.*"):
-        predictor.predict("aaa", mode="random")
+        predictor.predict("aaa", mode="random", save_dir=tmp_path)
     # remove previously generated data
-    if Path.exists(Path("output")):
-        shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(tmp_path / "output", ignore_errors=True)
     with pytest.raises(TypeError, match=r".*must be a list of file paths.*"):
-        predictor.predict("aaa", mode="wsi")
+        predictor.predict("aaa", mode="wsi", save_dir=tmp_path)
     # remove previously generated data
-    shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(tmp_path / "output", ignore_errors=True)
     with pytest.raises(ValueError, match=r".*masks.*!=.*imgs.*"):
-        predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi")
+        predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi", save_dir=tmp_path)
     with pytest.raises(ValueError, match=r".*labels.*!=.*imgs.*"):
-        predictor.predict([1, 2, 3], labels=[1, 2], mode="patch")
+        predictor.predict([1, 2, 3], labels=[1, 2], mode="patch", save_dir=tmp_path)
     # remove previously generated data
-    shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(tmp_path / "output", ignore_errors=True)
 
 
 def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
@@ -622,27 +621,33 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
     output = predictor.predict(
         inputs,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == ["predictions"]
     assert len(output["predictions"]) == 2
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
     output = predictor.predict(
         inputs,
         labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions"])
     assert len(output["predictions"]) == len(output["labels"])
     assert output["labels"] == [1, "a"]
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
     output = predictor.predict(
         inputs,
         return_probabilities=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["probabilities"])
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
     output = predictor.predict(
         inputs,
@@ -650,6 +655,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
         labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["labels"])
@@ -693,13 +699,14 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
         labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["labels"])
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
+def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path, chdir: Callable) -> None:
     """Test normal run of wsi predictor."""
     save_dir_path = tmp_path
 
@@ -711,6 +718,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     patch_size = np.array([224, 224])
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
+    save_dir = f"{save_dir_path}/model_wsi_output"
+
     # wrapper to make this more clean
     kwargs = {
         "return_probabilities": True,
@@ -720,6 +729,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
         "stride_shape": patch_size,
         "resolution": 1.0,
         "units": "baseline",
+        "save_dir": save_dir,
     }
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
@@ -729,6 +739,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
         mode="wsi",
         **kwargs,
     )
+
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     tile_output = predictor.predict(
         [mini_wsi_jpg],
@@ -744,7 +756,6 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     assert accuracy > 0.9, np.nonzero(~diff)
 
     # remove previously generated data
-    save_dir = save_dir_path / "model_wsi_output"
     shutil.rmtree(save_dir, ignore_errors=True)
 
     kwargs = {
@@ -793,26 +804,26 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
         )
     # remove previously generated data
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
-    shutil.rmtree("output", ignore_errors=True)
 
-    # test reading of multiple whole-slide images
-    _kwargs = copy.deepcopy(kwargs)
-    _kwargs["save_dir"] = None  # default coverage
-    _kwargs["return_probabilities"] = False
-    output = predictor.predict(
-        [mini_wsi_svs, mini_wsi_svs],
-        masks=[mini_wsi_msk, mini_wsi_msk],
-        mode="wsi",
-        **_kwargs,
-    )
-    assert Path.exists(Path("output"))
-    for output_info in output.values():
-        assert Path(output_info["raw"]).exists()
-        assert "merged" in output_info
-        assert Path(output_info["merged"]).exists()
+    with chdir(save_dir_path):
+        # test reading of multiple whole-slide images
+        _kwargs = copy.deepcopy(kwargs)
+        _kwargs["save_dir"] = None  # default coverage
+        _kwargs["return_probabilities"] = False
+        output = predictor.predict(
+            [mini_wsi_svs, mini_wsi_svs],
+            masks=[mini_wsi_msk, mini_wsi_msk],
+            mode="wsi",
+            **_kwargs,
+        )
+        assert Path.exists(Path("output"))
+        for output_info in output.values():
+            assert Path(output_info["raw"]).exists()
+            assert "merged" in output_info
+            assert Path(output_info["merged"]).exists()
 
-    # remove previously generated data
-    shutil.rmtree("output", ignore_errors=True)
+        # remove previously generated data
+        shutil.rmtree("output", ignore_errors=True)
 
 
 def test_wsi_predictor_merge_predictions(sample_wsi_dict) -> None:
