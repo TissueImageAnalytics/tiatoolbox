@@ -85,7 +85,7 @@ class SCCNN(ModelABC):
     """
 
     def __init__(
-        self,
+        self: SCCNN,
         num_input_channels: int = 3,
         patch_output_shape: tuple[int, int] = (13, 13),
         radius: int = 12,
@@ -202,7 +202,7 @@ class SCCNN(ModelABC):
         self.layer = nn.ModuleDict(module_dict)
 
     def spatially_constrained_layer2(
-        self,
+        self: SCCNN,
         sc1_0: torch.Tensor,
         sc1_1: torch.Tensor,
         sc1_2: torch.Tensor,
@@ -254,7 +254,10 @@ class SCCNN(ModelABC):
         """
         return image / 255.0
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:  # skipcq: PYL-W0221
+    def forward(
+        self: SCCNN,
+        input_tensor: torch.Tensor,
+    ) -> torch.Tensor:  # skipcq: PYL-W0221
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -323,7 +326,7 @@ class SCCNN(ModelABC):
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
     #  skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
+    def postproc(self: SCCNN, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 
         Performs peak detection and extracts coordinates in x, y format.
