@@ -76,8 +76,8 @@ class PatchExtractor(PatchExtractorABC):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
         min_mask_ratio (float):
             Area in percentage that a patch needs to contain of positive
@@ -357,7 +357,7 @@ class PatchExtractor(PatchExtractorABC):
         *,
         input_within_bound: bool = False,
         output_within_bound: bool = False,
-    ) -> list:
+    ) -> list | np.ndarray | tuple[np.ndarray, np.ndarray]:
         """Calculate patch tiling coordinates.
 
         Args:
@@ -525,8 +525,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
         stride(int or tuple(int)):
             Stride in (x, y) direction for patch extraction, default =
@@ -616,8 +616,8 @@ class PointsPatchExtractor(PatchExtractor):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
 
     """

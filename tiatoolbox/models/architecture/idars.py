@@ -1,9 +1,15 @@
 """Define CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
+from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING
+
 from torchvision import transforms
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
+
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
+    import torch
 
 Transforms = [
     transforms.ToTensor(),
@@ -60,12 +66,12 @@ class IDaRS(CNNModel):
 
     """
 
-    def __init__(self, backbone, num_classes=1) -> None:
+    def __init__(self: IDaRS, backbone: str, num_classes: int = 1) -> None:
         """Initialize :class:`IDaRS`."""
         super().__init__(backbone, num_classes=num_classes)
 
     @staticmethod
-    def preproc(image: np.ndarray):
+    def preproc(image: np.ndarray) -> torch.Tensor:
         """Define preprocessing steps.
 
         Args:

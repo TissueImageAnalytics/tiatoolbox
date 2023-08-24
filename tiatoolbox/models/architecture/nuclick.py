@@ -7,6 +7,8 @@ Medical Image Analysis, 65, 101771.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import torch
 from skimage.morphology import (
@@ -20,6 +22,9 @@ from torch import nn
 from tiatoolbox import logger
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import IntPair
 
 bn_axis = 1
 
@@ -51,12 +56,12 @@ class ConvBnRelu(nn.Module):
     """
 
     def __init__(
-        self,
+        self: ConvBnRelu,
         num_input_channels: int,
         num_output_channels: int,
-        kernel_size: tuple[int, int] | np.ndarray = (3, 3),
-        strides: tuple[int, int] | np.ndarray = (1, 1),
-        dilation_rate: tuple[int, int] | np.ndarray = (1, 1),
+        kernel_size: int | tuple[int, int] = (3, 3),
+        strides: int | tuple[int, int] = (1, 1),
+        dilation_rate: tuple[int, int] = (1, 1),
         activation: str | None = "relu",
         *,
         use_bias: bool = False,
@@ -74,13 +79,13 @@ class ConvBnRelu(nn.Module):
             num_output_channels,
             kernel_size,
             strides,
-            use_bias,
             dilation_rate,
             activation,
-            do_batchnorm,
+            do_batchnorm=do_batchnorm,
+            use_bias=use_bias,
         )
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self: ConvBnRelu, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -99,15 +104,16 @@ class ConvBnRelu(nn.Module):
 
     @staticmethod
     def get_block(
-        in_channels,
-        out_channels,
-        kernel_size,
-        strides,
-        use_bias,
-        dilation_rate,
-        activation,
-        do_batchnorm,
-    ):
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int | tuple[int, int],
+        strides: IntPair,
+        dilation_rate: int or IntPair,
+        activation: str,
+        *,
+        do_batchnorm: bool,
+        use_bias: bool,
+    ) -> torch.nn.Sequential:
         """Function to acquire a convolutional block.
 
         Args:
@@ -182,10 +188,10 @@ class MultiscaleConvBlock(nn.Module):
     """
 
     def __init__(
-        self,
+        self: MultiscaleConvBlock,
         num_input_channels: int,
-        kernel_sizes: tuple[int, int] | np.ndarray,
-        dilation_rates: tuple[int, int] | np.ndarray,
+        kernel_sizes: int | tuple[int, int, int, int] | IntPair,
+        dilation_rates: int | tuple[int, int, int, int] | IntPair,
         num_output_channels: int = 32,
         strides: tuple[int, int] | np.ndarray = (1, 1),
         activation: str = "relu",
@@ -235,7 +241,7 @@ class MultiscaleConvBlock(nn.Module):
             dilation_rate=(dilation_rates[3], dilation_rates[3]),
         )
 
-    def forward(self, input_map):
+    def forward(self: MultiscaleConvBlock, input_map: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in MultiscaleConvBlock init.
 
         This method defines how layers are used in forward operation.
@@ -283,7 +289,7 @@ class ResidualConv(nn.Module):
     """
 
     def __init__(
-        self,
+        self: ResidualConv,
         num_input_channels: int,
         num_output_channels: int = 32,
         kernel_size: tuple[int, int] | np.ndarray = (3, 3),
@@ -318,7 +324,7 @@ class ResidualConv(nn.Module):
 
         self.activation = nn.ReLU()
 
-    def forward(self, input_tensor):
+    def forward(self: ResidualConv, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in ResidualConv init.
 
         This method defines how layers are used in forward operation.
@@ -360,7 +366,11 @@ class NuClick(ModelABC):
 
     """
 
-    def __init__(self, num_input_channels: int, num_output_channels: int) -> None:
+    def __init__(
+        self: NuClick,
+        num_input_channels: int,
+        num_output_channels: int,
+    ) -> None:
         """Initialize :class:`NuClick`."""
         super().__init__()
         self.net_name = "NuClick"
@@ -462,22 +472,22 @@ class NuClick(ModelABC):
         self.multiscale_block_1 = MultiscaleConvBlock(
             num_input_channels=128,
             num_output_channels=32,
-            kernel_sizes=[3, 3, 5, 5],
-            dilation_rates=[1, 3, 3, 6],
+            kernel_sizes=(3, 3, 5, 5),
+            dilation_rates=(1, 3, 3, 6),
         )
 
         self.multiscale_block_2 = MultiscaleConvBlock(
             num_input_channels=256,
             num_output_channels=64,
-            kernel_sizes=[3, 3, 5, 5],
-            dilation_rates=[1, 3, 2, 3],
+            kernel_sizes=(3, 3, 5, 5),
+            dilation_rates=(1, 3, 2, 3),
         )
 
         self.multiscale_block_3 = MultiscaleConvBlock(
             num_input_channels=64,
             num_output_channels=16,
-            kernel_sizes=[3, 3, 5, 7],
-            dilation_rates=[1, 3, 2, 6],
+            kernel_sizes=(3, 3, 5, 7),
+            dilation_rates=(1, 3, 2, 6),
         )
 
         # -------------Max Pooling blocks------------
@@ -524,7 +534,7 @@ class NuClick(ModelABC):
         )
 
     # pylint: disable=W0221
-    def forward(self, imgs: torch.Tensor):
+    def forward(self: NuClick, imgs: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in NuClick init.
 
         This method defines how layers are used in forward operation.
@@ -578,15 +588,15 @@ class NuClick(ModelABC):
 
     @staticmethod
     def postproc(
-        preds,
-        thresh=0.33,
-        min_size=10,
-        min_hole_size=30,
-        nuc_points=None,
+        preds: np.ndarray,
+        thresh: float = 0.33,
+        min_size: int = 10,
+        min_hole_size: int = 30,
+        nuc_points: np.ndarray = None,
         *,
-        do_reconstruction=False,
-    ):
-        """Post processing.
+        do_reconstruction: bool = False,
+    ) -> np.ndarray:
+        """Post-processing.
 
         Args:
             preds (ndarray): list of prediction output of each patch and
@@ -632,7 +642,12 @@ class NuClick(ModelABC):
         return masks
 
     @staticmethod
-    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool):
+    def infer_batch(
+        model: nn.Module,
+        batch_data: torch.Tensor,
+        *,
+        on_gpu: bool,
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o
@@ -640,7 +655,7 @@ class NuClick(ModelABC):
 
         Args:
             model (nn.Module): PyTorch defined model.
-            batch_data (ndarray): a batch of data generated by
+            batch_data (torch.Tensor): a batch of data generated by
                 torch.utils.data.DataLoader.
             on_gpu (bool): Whether to run inference on a GPU.
 
