@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
+from torch import nn
+
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 
@@ -12,11 +14,6 @@ if TYPE_CHECKING:
     import os
 
     import numpy as np
-    from torch import nn
-
-    from tiatoolbox.annotation.storage import Annotation
-
-    from .io_config import ModelIOConfigABC
 
 
 class EngineABC(ABC):
@@ -137,7 +134,7 @@ class EngineABC(ABC):
 
     def __init__(
         self: EngineABC,
-        model: nn.Module,
+        model: str | nn.Module,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_post_proc_workers: int = 0,
@@ -151,15 +148,22 @@ class EngineABC(ABC):
         self.images = None
         self.mode = None
 
-        if model is not None:
-            self.model = model
-            ioconfig = None  # retrieve ioconfig from provided model.
-        else:
-            model, ioconfig = get_pretrained_model(model, weights)
+        ioconfig = None  # retrieve ioconfig from provided model.
+
+        if not isinstance(model, (str, nn.Module)):
+            msg = "Input model must be a string or 'torch.nn.Module'."
+            raise TypeError(msg)
+
+        if isinstance(model, str):
+            self.model, ioconfig = get_pretrained_model(model, weights)
+
+        if isinstance(model, nn.Module):
+            self.model = (
+                model  # for runtime, such as after wrapping with nn.DataParallel
+            )
 
         self.ioconfig = ioconfig  # for storing original
         self._ioconfig = self.ioconfig  # runtime ioconfig
-        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
@@ -245,19 +249,18 @@ class EngineABC(ABC):
 
         return Path.cwd() / "output"
 
-    @abstractmethod
     def run(
         self: EngineABC,
         images: list[os | Path] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
+        # masks: list[os | Path] | np.ndarray | None = None,  # noqa: ERA001
+        # ioconfig: ModelIOConfigABC | None = None,  # noqa: ERA001
         *,
-        patch_mode: bool = False,
-        on_gpu: bool = True,
+        # patch_mode: bool = False,  # noqa: ERA001
+        # on_gpu: bool = True,  # noqa: ERA001
         save_dir: os | Path | None = None,
         # None will not save output
         # save_output can be np.ndarray, Annotation or Json str
-        save_output: np.ndarray | Annotation | str | None = True,
+        # save_output: np.ndarray | Annotation | str | None = True,  # noqa: ERA001
         **kwargs: dict,
     ) -> np.ndarray | dict:
         """Run the engine on input images.
