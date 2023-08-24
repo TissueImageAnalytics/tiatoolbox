@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
@@ -136,7 +136,7 @@ class EngineABC(ABC):
     """
 
     def __init__(
-        self,
+        self: EngineABC,
         model: nn.Module,
         batch_size: int = 8,
         num_loader_workers: int = 0,
@@ -174,37 +174,40 @@ class EngineABC(ABC):
         self.labels = None
 
     @abstractmethod
-    def pre_process_patch(self):
+    def pre_process_patch(self: EngineABC) -> NoReturn:
         """Pre-process an image patch."""
         raise NotImplementedError
 
     @abstractmethod
-    def pre_process_wsi(self):
+    def pre_process_wsi(self: EngineABC) -> NoReturn:
         """Pre-process a WSI."""
         raise NotImplementedError
 
     @abstractmethod
-    def infer_patch(self):
+    def infer_patch(self: EngineABC) -> NoReturn:
         """Model inference on an image patch."""
         raise NotImplementedError
 
     @abstractmethod
-    def infer_wsi(self):
+    def infer_wsi(self: EngineABC) -> NoReturn:
         """Model inference on a WSI."""
         raise NotImplementedError
 
     @abstractmethod
-    def post_process_patch(self):
+    def post_process_patch(self: EngineABC) -> NoReturn:
         """Post-process an image patch."""
         raise NotImplementedError
 
     @abstractmethod
-    def post_process_wsi(self):
+    def post_process_wsi(self: EngineABC) -> NoReturn:
         """Post-process a WSI."""
         raise NotImplementedError
 
     @staticmethod
-    def _prepare_save_dir(save_dir: os | Path, images: list | np.ndarray) -> Path:
+    def _prepare_save_dir(
+        save_dir: os | Path | None,
+        images: list | np.ndarray,
+    ) -> Path:
         """Create directory if not defined and number of images is more than 1.
 
         Args:
@@ -244,14 +247,14 @@ class EngineABC(ABC):
 
     @abstractmethod
     def run(
-        self,
+        self: EngineABC,
         images: list[os | Path] | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = False,
-        on_gpu=True,
-        save_dir=None,
+        on_gpu: bool = True,
+        save_dir: os | Path | None = None,
         # None will not save output
         # save_output can be np.ndarray, Annotation or Json str
         save_output: np.ndarray | Annotation | str | None = True,
