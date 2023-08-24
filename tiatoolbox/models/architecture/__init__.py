@@ -14,6 +14,8 @@ from tiatoolbox.utils import download_data
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
+    from tiatoolbox.models.models_abc import IOConfigABC
+
 
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
@@ -61,7 +63,7 @@ def get_pretrained_model(
     pretrained_weights: str | Path | None = None,
     *,
     overwrite: bool = False,
-):
+) -> tuple[torch.nn.Module, IOConfigABC]:
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
