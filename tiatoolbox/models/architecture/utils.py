@@ -11,20 +11,20 @@ def centre_crop(
     img: np.ndarray | torch.tensor,
     crop_shape: np.ndarray | torch.tensor,
     data_format: str = "NCHW",
-):
+) -> np.ndarray | torch.Tensor:
     """A function to center crop image with given crop shape.
 
     Args:
-        img (:class:`numpy.ndarray`, torch.tensor):
+        img (:class:`numpy.ndarray`, torch.Tensor):
             Input image, should be of 3 channels.
-        crop_shape (:class:`numpy.ndarray`, torch.tensor):
+        crop_shape (:class:`numpy.ndarray`, torch.Tensor):
             The subtracted amount in the form of `[subtracted height,
             subtracted width]`.
         data_format (str):
             Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (:class:`numpy.ndarray`, torch.tensor):
+        (:class:`numpy.ndarray`, torch.Tensor):
             Cropped image.
 
     """
@@ -46,23 +46,23 @@ def centre_crop_to_shape(
     x: np.ndarray | torch.tensor,
     y: np.ndarray | torch.tensor,
     data_format: str = "NCHW",
-):
+) -> np.ndarray | torch.Tensor:
     """A function to center crop image to shape.
 
     Centre crop `x` so that `x` has shape of `y` and `y` height and
     width must be smaller than `x` height width.
 
     Args:
-        x (:class:`numpy.ndarray`, torch.tensor):
+        x (:class:`numpy.ndarray`, torch.Tensor):
             Image to be cropped.
-        y (:class:`numpy.ndarray`, torch.tensor):
+        y (:class:`numpy.ndarray`, torch.Tensor):
             Reference image for getting cropping shape, should be of 3
             channels.
         data_format:
             Either `"NCHW"` or `"NHWC"`.
 
     Returns:
-        (:class:`numpy.ndarray`, torch.tensor):
+        (:class:`numpy.ndarray`, torch.Tensor):
             Cropped image.
 
     """
@@ -103,7 +103,7 @@ class UpSample2x(nn.Module):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self: UpSample2x) -> None:
         """Initialize :class:`UpSample2x`."""
         super().__init__()
         # correct way to create constant within module
@@ -113,7 +113,7 @@ class UpSample2x(nn.Module):
         )
         self.unpool_mat.unsqueeze(0)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self: UpSample2x, x: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
 
         Args:
