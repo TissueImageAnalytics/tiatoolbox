@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 class EngineABC(ABC):
     """Abstract base class for engines used in tiatoolbox."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Engine."""
         super().__init__()
 

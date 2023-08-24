@@ -546,7 +546,7 @@ def chdir() -> Callable:
 
             """
 
-            def __init__(self, path):
+            def __init__(self, path) -> None:
                 self.path = path
                 self._old_cwd = []
 
