@@ -1,6 +1,8 @@
 """Define a set of UNet variants to be used within tiatoolbox."""
 from __future__ import annotations
 
+from typing import Any
+
 import torch
 import torch.nn.functional as F  # noqa: N812
 from torch import nn
@@ -21,7 +23,7 @@ class ResNetEncoder(ResNet):
 
     """
 
-    def _forward_impl(self, x):
+    def _forward_impl(self: ResNetEncoder, x: torch.Tensor) -> list:
         """Overwriting default torch forward so that it returns features.
 
         Args:
@@ -46,7 +48,7 @@ class ResNetEncoder(ResNet):
         return [x0, x1, x2, x3, x4]
 
     @staticmethod
-    def resnet50(num_input_channels: int):
+    def resnet50(num_input_channels: int) -> torch.nn.Module:
         """Shortcut method to create ResNet50."""
         return ResNetEncoder.resnet(num_input_channels, [3, 4, 6, 3])
 
@@ -54,7 +56,7 @@ class ResNetEncoder(ResNet):
     def resnet(
         num_input_channels: int,
         downsampling_levels: list[int],
-    ):
+    ) -> torch.nn.Module:
         """Shortcut method to create customised ResNet.
 
         Args:
@@ -109,7 +111,7 @@ class UnetEncoder(nn.Module):
     """
 
     def __init__(
-        self,
+        self: UnetEncoder,
         num_input_channels: int,
         layer_output_channels: list[int],
     ) -> None:
@@ -150,7 +152,7 @@ class UnetEncoder(nn.Module):
             )
             input_channels = output_channels
 
-    def forward(self, input_tensor: torch.Tensor):
+    def forward(self: UnetEncoder, input_tensor: torch.Tensor) -> list:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -173,7 +175,13 @@ class UnetEncoder(nn.Module):
         return features
 
 
-def create_block(pre_activation, kernels, input_ch, output_ch):
+def create_block(
+    kernels: list,
+    input_ch: list,
+    output_ch: int,
+    *,
+    pre_activation: bool,
+) -> list:
     """Helper to create a block of Vanilla Convolution.
 
     This is in pre-activation style.
@@ -275,7 +283,7 @@ class UNetModel(ModelABC):
     """
 
     def __init__(
-        self,
+        self: UNetModel,
         num_input_channels: int = 2,
         num_output_channels: int = 2,
         encoder: str = "resnet50",
@@ -296,6 +304,7 @@ class UNetModel(ModelABC):
         if decoder_block is None:
             decoder_block = [3, 3]
 
+        pre_activation = None
         if encoder == "resnet50":
             pre_activation = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
@@ -317,6 +326,7 @@ class UNetModel(ModelABC):
         self.conv1x1 = nn.Conv2d(down_ch_list[0], down_ch_list[1], (1, 1), bias=False)
 
         self.uplist = nn.ModuleList()
+        next_up_ch = None
         for ch_idx, ch in enumerate(down_ch_list[1:]):
             next_up_ch = ch
             if ch_idx + 2 < len(down_ch_list):
@@ -324,7 +334,12 @@ class UNetModel(ModelABC):
             ch_ = ch
             if self.skip_type == "concat":
                 ch_ *= 2
-            layers = create_block(pre_activation, decoder_block, ch_, next_up_ch)
+            layers = create_block(
+                decoder_block,
+                ch_,
+                next_up_ch,
+                pre_activation=pre_activation,
+            )
             self.uplist.append(nn.Sequential(*layers))
 
         self.clf = nn.Conv2d(next_up_ch, num_output_channels, (1, 1), bias=True)
@@ -350,11 +365,11 @@ class UNetModel(ModelABC):
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
     def forward(
-        self,
+        self: UNetModel,
         imgs: torch.Tensor,
-        *args,  # skipcq: PYL-W0613  # noqa: ARG002
-        **kwargs,  # skipcq: PYL-W0613  # noqa: ARG002
-    ):
+        *args: tuple[Any, ...],  # skipcq: PYL-W0613  # noqa: ARG002
+        **kwargs: dict,  # skipcq: PYL-W0613  # noqa: ARG002
+    ) -> torch.Tensor:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -396,7 +411,12 @@ class UNetModel(ModelABC):
         return self.clf(x)
 
     @staticmethod
-    def infer_batch(model: nn.Module, batch_data: torch.Tensor, *, on_gpu: bool):
+    def infer_batch(
+        model: nn.Module,
+        batch_data: torch.Tensor,
+        *,
+        on_gpu: bool,
+    ) -> list:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as i/o

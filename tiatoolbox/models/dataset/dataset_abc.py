@@ -1,6 +1,9 @@
 """Define dataset abstract classes."""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import torch
@@ -12,7 +15,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     """Define abstract base class for patch dataset."""
 
     def __init__(
-        self,
+        self: PatchDatasetABC,
     ) -> None:
         """Initialize :class:`PatchDatasetABC`."""
         super().__init__()
@@ -22,7 +25,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         self.labels = []
 
     @staticmethod
-    def _check_shape_integrity(shapes):
+    def _check_shape_integrity(shapes: list | np.ndarray) -> None:
         """Checks the integrity of input shapes.
 
         Args:
@@ -42,7 +45,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             msg = "Images must have the same dimensions."
             raise ValueError(msg)
 
-    def _check_input_integrity(self, mode):
+    def _check_input_integrity(self: PatchDatasetABC, mode: str) -> None:
         """Check that variables received during init are valid.
 
         These checks include:
@@ -99,11 +102,15 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             raise ValueError(msg)
 
     @staticmethod
-    def load_img(path):
+    def load_img(path: str | Path) -> np.ndarray:
         """Load an image from a provided path.
 
         Args:
-            path (str): Path to an image file.
+            path (str or Path): Path to an image file.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Image as a numpy array.
 
         """
         path = Path(path)
@@ -115,12 +122,12 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         return imread(path, as_uint8=False)
 
     @staticmethod
-    def preproc(image):
+    def preproc(image: np.ndarray) -> np.ndarray:
         """Define the pre-processing of this class of loader."""
         return image
 
     @property
-    def preproc_func(self):
+    def preproc_func(self: PatchDatasetABC) -> Callable:
         """Return the current pre-processing function of this instance.
 
         The returned function is expected to behave as follows:
@@ -130,7 +137,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         return self._preproc
 
     @preproc_func.setter
-    def preproc_func(self, func):
+    def preproc_func(self: PatchDatasetABC, func: Callable) -> None:
         """Set the pre-processing function for this instance.
 
         If `func=None`, the method will default to `self.preproc`.
@@ -148,11 +155,11 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             msg = f"{func} is not callable!"
             raise ValueError(msg)
 
-    def __len__(self) -> int:
+    def __len__(self: PatchDatasetABC) -> int:
         """Return the length of the instance attributes."""
         return len(self.inputs)
 
     @abstractmethod
-    def __getitem__(self, idx):
+    def __getitem__(self: PatchDatasetABC, idx: int) -> None:
         """Get an item from the dataset."""
         ...  # pragma: no cover

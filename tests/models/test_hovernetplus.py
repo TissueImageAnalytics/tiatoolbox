@@ -1,6 +1,5 @@
 """Unit test package for HoVerNet+."""
 
-from pathlib import Path
 from typing import Callable
 
 import torch
@@ -11,9 +10,8 @@ from tiatoolbox.utils import imread
 from tiatoolbox.utils.transforms import imresize
 
 
-def test_functionality(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functionality(remote_sample: Callable) -> None:
     """Functionality test."""
-    tmp_path = str(tmp_path)
     sample_patch = str(remote_sample("stainnorm-source"))
     patch_pre = imread(sample_patch)
     patch_pre = imresize(patch_pre, scale_factor=0.5)
