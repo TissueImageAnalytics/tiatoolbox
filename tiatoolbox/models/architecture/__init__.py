@@ -1,18 +1,18 @@
 """Define a set of models to be used within tiatoolbox."""
 from __future__ import annotations
 
-import os
 from pydoc import locate
 from typing import TYPE_CHECKING, Optional, Union
 
-import torch
-
 from tiatoolbox import rcParam
+from tiatoolbox.models import load_torch_model
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
+
+    import torch
 
     from tiatoolbox.models.models_abc import IOConfigABC
 
@@ -143,10 +143,7 @@ def get_pretrained_model(
             overwrite=overwrite,
         )
 
-    # ! assume to be saved in single GPU mode
-    # always load on to the CPU
-    saved_state_dict = torch.load(weights, map_location="cpu")
-    model.load_state_dict(saved_state_dict, strict=True)
+    model = load_torch_model(model=model, weights=weights)
 
     # !
     io_info = info["ioconfig"]

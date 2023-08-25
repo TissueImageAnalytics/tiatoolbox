@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, NoReturn
 from torch import nn
 
 from tiatoolbox import logger
+from tiatoolbox.models import load_torch_model
 from tiatoolbox.models.architecture import get_pretrained_model
 
 if TYPE_CHECKING:
@@ -32,7 +33,7 @@ class EngineABC(ABC):
             be downloaded. However, you can override with your own set
             of weights via the `pretrained_weights` argument. Argument
             is case-insensitive.
-        weights (str):
+        weights (str or Path):
             Path to the weight of the corresponding `pretrained_model`.
 
             >>> engine = EngineABC(
@@ -138,7 +139,7 @@ class EngineABC(ABC):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_post_proc_workers: int = 0,
-        weights: str | None = None,
+        weights: str | Path | None = None,
         *,
         verbose: bool = False,
     ) -> None:
@@ -148,22 +149,6 @@ class EngineABC(ABC):
         self.images = None
         self.mode = None
 
-        ioconfig = None  # retrieve ioconfig from provided model.
-
-        if not isinstance(model, (str, nn.Module)):
-            msg = "Input model must be a string or 'torch.nn.Module'."
-            raise TypeError(msg)
-
-        if isinstance(model, str):
-            self.model, ioconfig = get_pretrained_model(model, weights)
-
-        if isinstance(model, nn.Module):
-            self.model = (
-                model  # for runtime, such as after wrapping with nn.DataParallel
-            )
-
-        self.ioconfig = ioconfig  # for storing original
-        self._ioconfig = self.ioconfig  # runtime ioconfig
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
@@ -176,6 +161,54 @@ class EngineABC(ABC):
         self.patch_input_shape = None
         self.stride_shape = None
         self.labels = None
+
+        # Initialize model with specified weights and ioconfig.
+        self._initialize_model_ioconfig(model=model, weights=weights)
+
+    def _initialize_model_ioconfig(
+        self: EngineABC,
+        model: str | nn.Module,
+        weights: str | Path | None,
+    ) -> NoReturn:
+        """Helper function to initialize model and ioconfig attributes.
+
+        If a pretrained model provided by the TIAToolbox is requested. The model
+        can be specified as a string otherwise torch.nn.Module is required.
+        This function also loads the :class:`ModelIOConfigABC` using the information
+        from the pretrained models in TIAToolbox. If ioconfig is not available then it
+        should be provided in the :func:`run` function.
+
+        Args:
+            model (str | nn.Module):
+                A torch model which should be run by the engine.
+
+            weights (str | Path | None):
+                Path to pretrained weights. If no pretrained weights are provided
+                and the model is provided by TIAToolbox, then pretrained weights will
+                be automatically loaded from the TIA servers.
+
+        """
+        if not isinstance(model, (str, nn.Module)):
+            msg = "Input model must be a string or 'torch.nn.Module'."
+            raise TypeError(msg)
+
+        if isinstance(model, nn.Module):
+            self.model = (
+                model  # for runtime, such as after wrapping with nn.DataParallel
+            )
+
+        if weights is not None:
+            self.model = load_torch_model(model=self.model, weights=weights)
+
+        ioconfig = None  # requires ioconfig to be provided in EngineABC.run().
+
+        if isinstance(model, str):
+            # ioconfig is retrieved from the pretrained model in the toolbox.
+            # no need to provide ioconfig in EngineABC.run() this case.
+            self.model, ioconfig = get_pretrained_model(model, weights)
+
+        self.ioconfig = ioconfig  # for storing original
+        self._ioconfig = self.ioconfig  # runtime ioconfig
 
     @abstractmethod
     def pre_process_patch(self: EngineABC) -> NoReturn:
