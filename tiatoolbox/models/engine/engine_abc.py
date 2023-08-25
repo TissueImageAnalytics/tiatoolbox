@@ -5,10 +5,12 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
+import torch
 from torch import nn
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.dataset.dataset_abc import PatchDataset
 from tiatoolbox.models.models_abc import load_torch_model, model_to
 
 if TYPE_CHECKING:
@@ -23,35 +25,39 @@ if TYPE_CHECKING:
 
 def _prepare_save_dir(
     save_dir: os | Path | None,
-    images: list | np.ndarray,
+    len_images: int,
+    *,
+    patch_mode: bool,
 ) -> Path:
     """Create directory if not defined and number of images is more than 1.
 
     Args:
         save_dir (str or Path):
             Path to output directory.
-        images (list, ndarray):
+        len_images (int):
             List of inputs to process.
+        patch_mode(bool):
+            Whether to treat input image as a patch or WSI.
 
     Returns:
         :class:`Path`:
             Path to output directory.
 
     """
-    if save_dir is None and len(images) > 1:
+    if patch_mode is False and save_dir is None and len_images > 1:
         logger.warning(
             "More than 1 WSIs detected but there is no save directory provided."
             "All subsequent output will be saved to current runtime"
-            "location under folder 'Path.cwd() / output'. Overwrite may happen!",
+            "location under folder 'Path.cwd() / output'. "
+            "The output might be overwritten!",
             stacklevel=2,
         )
         save_dir = Path.cwd() / "output"
-    elif save_dir is not None and len(images) > 1:
+    elif save_dir is not None and len_images > 1:
         logger.warning(
             "When providing multiple whole-slide images / tiles, "
             "the outputs will be saved and the locations of outputs"
-            "will be returned"
-            "to the calling function.",
+            "will be returned to the calling function.",
             stacklevel=2,
         )
 
@@ -93,6 +99,8 @@ class EngineABC(ABC):
             Please note that they will also perform preprocessing. default = 0
         num_post_proc_workers (int):
             Number of workers to postprocess the results of the model. default = 0
+        on_gpu (bool):
+
         verbose (bool):
             Whether to output logging information.
 
@@ -145,6 +153,8 @@ class EngineABC(ABC):
             List of labels. If using `tile` or `wsi` mode, then only
             a single label per image tile or whole-slide image is
             supported.
+        on_gpu (bool):
+            Whether to run model on the GPU. Default is False.
         num_loader_workers (int):
             Number of workers used in torch.utils.data.DataLoader.
         verbose (bool):
@@ -182,6 +192,7 @@ class EngineABC(ABC):
         num_post_proc_workers: int = 0,
         weights: str | Path | None = None,
         *,
+        on_gpu: bool = False,
         verbose: bool = False,
     ) -> None:
         """Initialize Engine."""
@@ -190,12 +201,14 @@ class EngineABC(ABC):
         self.masks = None
         self.images = None
         self.mode = None
+        self.on_gpu = on_gpu
 
         # Initialize model with specified weights and ioconfig.
         self.model, self.ioconfig = self._initialize_model_ioconfig(
             model=model,
             weights=weights,
         )
+        self.model = model_to(model=self.model, on_gpu=self.on_gpu)
         self._ioconfig = self.ioconfig  # runtime ioconfig
 
         self.batch_size = batch_size
@@ -257,9 +270,33 @@ class EngineABC(ABC):
         return model, None
 
     @abstractmethod
-    def pre_process_patch(self: EngineABC) -> NoReturn:
+    def pre_process_patch(
+        self: EngineABC,
+        images: np.ndarray | list,
+        labels: list,
+    ) -> torch.utils.data.DataLoader:
         """Pre-process an image patch."""
-        raise NotImplementedError
+        if labels:
+            # if a labels is provided, then return with the prediction
+            self.return_labels = bool(labels)
+
+        if labels and len(labels) != len(images):
+            msg = f"len(labels) != len(imgs) : {len(labels)} != {len(images)}"
+            raise ValueError(
+                msg,
+            )
+
+        dataset = PatchDataset(inputs=images, labels=labels)
+        dataset.preproc_func = self.model.preproc_func
+
+        # preprocessing must be defined with the dataset
+        return torch.utils.data.DataLoader(
+            dataset,
+            num_workers=self.num_loader_workers,
+            batch_size=self.batch_size,
+            drop_last=False,
+            shuffle=False,
+        )
 
     @abstractmethod
     def pre_process_wsi(self: EngineABC) -> NoReturn:
@@ -322,14 +359,14 @@ class EngineABC(ABC):
         self: EngineABC,
         images: list[os | Path] | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
+        labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
-        # patch_mode: bool = False,  # noqa: ERA001
-        on_gpu: bool = False,  # model runs on CPU by default.
+        patch_mode: bool = True,
         save_dir: os | Path | None = None,
         # None will not save output
         # output_type can be np.ndarray, Annotation or Json str
-        # output_type: np.ndarray | Annotation | str = Annotation,  # noqa: ERA001
+        # output_type: str = "Annotation",  # noqa: ERA001
         **kwargs: dict,
     ) -> AnnotationStore | np.ndarray | dict | str:
         """Run the engine on input images.
@@ -341,28 +378,30 @@ class EngineABC(ABC):
                 file paths or a numpy array of an image list. When using
                 `tile` or `wsi` mode, the input must be a list of file
                 paths.
-            masks (list):
+            masks (list | None):
                 List of masks. Only utilised when processing image tiles
                 and whole-slide images. Patches are only processed if
                 they are within a masked area. If not provided, then a
                 tissue mask will be automatically generated for
                 whole-slide images or the entire image is processed for
                 image tiles.
+            labels (list | None):
+                List of labels. If using `tile` or `wsi` mode, then only
+                a single label per image tile or whole-slide image is
+                supported.
             patch_mode (bool):
                 Whether to treat input image as a patch or WSI.
-                default = False.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+                default = True.
             ioconfig (IOPatchPredictorConfig):
                 IO configuration.
             save_dir (str or pathlib.Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
-            save_output (bool):
+            output_type (str):
                 Whether to save output for a single file. default=False
             **kwargs (dict):
-                Keyword Args for ...
+                Keyword Args to update :class:`EngineABC` attributes.
 
         Returns:
             (:class:`numpy.ndarray`, dict):
@@ -398,9 +437,17 @@ class EngineABC(ABC):
 
         self.images = images
         self.masks = masks
-        self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
-        self.model = model_to(model=self.model, on_gpu=on_gpu)
+        self.labels = labels
 
-        save_dir = _prepare_save_dir(save_dir, images)
+        self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
+        self.model = model_to(model=self.model, on_gpu=self.on_gpu)
+
+        save_dir = _prepare_save_dir(save_dir, len(self.images), patch_mode=patch_mode)
+
+        if patch_mode:
+            _ = self.pre_process_patch(
+                self.images,
+                self.labels,
+            )
 
         return {"save_dir": save_dir}

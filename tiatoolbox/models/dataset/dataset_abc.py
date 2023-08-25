@@ -566,7 +566,11 @@ class PatchDataset(PatchDatasetABC):
 
     """
 
-    def __init__(self, inputs, labels=None) -> None:
+    def __init__(
+        self: PatchDataset,
+        inputs: np.ndarray | list,
+        labels: list | None = None,
+    ) -> None:
         """Initialize :class:`PatchDataset`."""
         super().__init__()
 
@@ -578,7 +582,7 @@ class PatchDataset(PatchDatasetABC):
         # perform check on the input
         self._check_input_integrity(mode="patch")
 
-    def __getitem__(self, idx):
+    def __getitem__(self: PatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
         patch = self.inputs[idx]
 
