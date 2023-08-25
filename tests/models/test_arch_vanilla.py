@@ -5,7 +5,7 @@ import pytest
 import torch
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.utils.misc import model_to
+from tiatoolbox.models.models_abc import model_to
 
 ON_GPU = False
 RNG = np.random.default_rng()  # Numpy Random Generator

@@ -8,13 +8,15 @@ from typing import TYPE_CHECKING, NoReturn
 from torch import nn
 
 from tiatoolbox import logger
-from tiatoolbox.models import load_torch_model
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.models_abc import load_torch_model
 
 if TYPE_CHECKING:
     import os
 
     import numpy as np
+
+    from tiatoolbox.annotation import AnnotationStore
 
 
 class EngineABC(ABC):
@@ -292,10 +294,10 @@ class EngineABC(ABC):
         # on_gpu: bool = True,  # noqa: ERA001
         save_dir: os | Path | None = None,
         # None will not save output
-        # save_output can be np.ndarray, Annotation or Json str
-        # save_output: np.ndarray | Annotation | str | None = True,  # noqa: ERA001
+        # output_type can be np.ndarray, Annotation or Json str
+        # output_type: np.ndarray | Annotation | str = Annotation,  # noqa: ERA001
         **kwargs: dict,
-    ) -> np.ndarray | dict:
+    ) -> AnnotationStore | np.ndarray | dict | str:
         """Run the engine on input images.
 
         Args:

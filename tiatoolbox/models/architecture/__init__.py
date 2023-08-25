@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 from pydoc import locate
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 from tiatoolbox import rcParam
-from tiatoolbox.models import load_torch_model
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
+from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils import download_data
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -14,8 +14,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     import torch
 
-    from tiatoolbox.models.models_abc import IOConfigABC
-
+    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 __all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
@@ -63,7 +62,7 @@ def get_pretrained_model(
     weights: str | Path | None = None,
     *,
     overwrite: bool = False,
-) -> tuple[torch.nn.Module, IOConfigABC]:
+) -> tuple[torch.nn.Module, ModelIOConfigABC]:
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
@@ -107,14 +106,14 @@ def get_pretrained_model(
 
     Examples:
         >>> # get mobilenet pretrained on Kather100K dataset by the TIA team
-        >>> model = get_pretrained_model(model='mobilenet_v2-kather100k')
+        >>> model, ioconfig = get_pretrained_model(model='mobilenet_v2-kather100k')
         >>> # get mobilenet defined by TIA team, but loaded with user defined weights
-        >>> model = get_pretrained_model(
+        >>> model, ioconfig = get_pretrained_model(
         ...     model='mobilenet_v2-kather100k',
         ...     weights='/A/B/C/my_weights.tar',
         ... )
         >>> # get resnet34 pretrained on PCam dataset by TIA team
-        >>> model = get_pretrained_model(model='resnet34-pcam')
+        >>> model, ioconfig = get_pretrained_model(model='resnet34-pcam')
 
     """
     if not isinstance(model, str):

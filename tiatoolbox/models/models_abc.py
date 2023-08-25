@@ -1,8 +1,55 @@
 """Define Abstract Base Class for Models defined in tiatoolbox."""
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-import numpy as np
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+import torch
 from torch import nn
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pathlib import Path
+
+    import numpy as np
+
+
+def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
+    """Helper function to load a torch model.
+
+    Args:
+        model (torch.nn.Module):
+            A torch model.
+        weights (str or Path):
+            Path to pretrained weights.
+
+    Returns:
+        torch.nn.Module:
+            Torch model with pretrained weights loaded on CPU.
+
+    """
+    # ! assume to be saved in single GPU mode
+    # always load on to the CPU
+    saved_state_dict = torch.load(weights, map_location="cpu")
+    return model.load_state_dict(saved_state_dict, strict=True)
+
+
+def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
+    """Transfers model to cpu/gpu.
+
+    Args:
+        model (torch.nn.Module): PyTorch defined model.
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
+
+    Returns:
+        torch.nn.Module:
+            The model after being moved to cpu/gpu.
+
+    """
+    if on_gpu:  # DataParallel work only for cuda
+        model = torch.nn.DataParallel(model)
+        return model.to("cuda")
+
+    return model.to("cpu")
 
 
 class ModelABC(ABC, nn.Module):
@@ -67,7 +114,7 @@ class ModelABC(ABC, nn.Module):
             >>> # `func` is a user defined function
             >>> model = ModelABC()
             >>> model.preproc_func = func
-            >>> transformed_img = model.preproc_func(img)
+            >>> transformed_img = model.preproc_func(image=np.ndarray)
 
         """
         if func is not None and not callable(func):
@@ -98,7 +145,7 @@ class ModelABC(ABC, nn.Module):
             >>> # `func` is a user defined function
             >>> model = ModelABC()
             >>> model.postproc_func = func
-            >>> transformed_img = model.postproc_func(img)
+            >>> transformed_img = model.postproc_func(image=np.ndarray)
 
         """
         if func is not None and not callable(func):
