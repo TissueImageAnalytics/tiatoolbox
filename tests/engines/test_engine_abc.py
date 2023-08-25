@@ -66,4 +66,17 @@ def test_engine_abc_incorrect_model_type():
         match="Input model must be a string or 'torch.nn.Module'.",
     ):
         # Can't instantiate abstract class with abstract methods
-        TestEngineABC(model=1)  # skipcq
+        TestEngineABC(model=1)
+
+
+def test_incorrect_ioconfig():
+    """Test EngineABC initialization with incorrect ioconfig."""
+    import torchvision.models as torch_models
+
+    model = torch_models.resnet18()
+    engine = TestEngineABC(model=model)
+    with pytest.raises(
+        ValueError,
+        match=r".*provide a valid ModelIOConfigABC.*",
+    ):
+        engine.run(images=[], masks=[], ioconfig=None)
