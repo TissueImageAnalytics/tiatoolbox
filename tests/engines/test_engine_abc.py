@@ -20,27 +20,27 @@ class TestEngineABC(EngineABC):
 
     def infer_patch(self: EngineABC) -> NoReturn:
         """Test infer_patch."""
-        ...
+        ...  # dummy function for tests.
 
     def infer_wsi(self: EngineABC) -> NoReturn:
         """Test infer_wsi."""
-        ...
+        ...  # dummy function for tests.
 
     def post_process_patch(self: EngineABC) -> NoReturn:
         """Test post_process_patch."""
-        ...
+        ...  # dummy function for tests.
 
     def post_process_wsi(self: EngineABC) -> NoReturn:
         """Test post_process_wsi."""
-        ...
+        ...  # dummy function for tests.
 
     def pre_process_patch(self: EngineABC) -> NoReturn:
         """Test pre_process_patch."""
-        ...
+        ...  # dummy function for tests.
 
     def pre_process_wsi(self: EngineABC) -> NoReturn:
         """Test pre_process_wsi."""
-        ...
+        ...  # dummy function for tests.
 
 
 def test_engine_abc():

@@ -561,7 +561,8 @@ def test_sub_pixel_read_bad_read_func() -> None:
     bounds = (0, 0, 8, 8)
 
     def bad_read_func(img, bounds, *kwargs):  # noqa: ARG001
-        return None
+        """Dummy read function for tests."""
+        return
 
     with pytest.raises(ValueError, match="None"):
         utils.image.sub_pixel_read(
@@ -719,6 +720,7 @@ def test_sub_pixel_read_incorrect_read_func_return() -> None:
     image = np.ones((10, 10))
 
     def read_func(*args, **kwargs):  # noqa: ARG001
+        """Dummy read function for tests."""
         return np.ones((5, 5))
 
     with pytest.raises(ValueError, match="incorrect size"):
@@ -737,6 +739,7 @@ def test_sub_pixel_read_empty_read_func_return() -> None:
     image = np.ones((10, 10))
 
     def read_func(*args, **kwargs):  # noqa: ARG001
+        """Dummy read function for tests."""
         return np.ones((0, 0))
 
     with pytest.raises(ValueError, match="is empty"):
