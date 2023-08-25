@@ -18,7 +18,10 @@ if TYPE_CHECKING:
 
     from tiatoolbox.annotation import AnnotationStore
 
+    from .io_config import ModelIOConfigABC
 
+
+# noinspection PyUnreachableCode
 class EngineABC(ABC):
     """Abstract base class for engines used in tiatoolbox.
 
@@ -107,31 +110,26 @@ class EngineABC(ABC):
             Whether to output logging information.
 
     Examples:
-        >>> # list of 2 image patches as input
-        >>> data = ["path/to/image1.svs", "path/to/image2.svs"]
-        >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
-        >>> output = engine.run(data, mode='patch')
-
         >>> # array of list of 2 image patches as input
         >>> import numpy as np
-        >>> data = np.array([img1, img2])
+        >>> data = np.array([np.ndarray, np.ndarray])
         >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
-        >>> output = engine.run(data, mode='patch')
+        >>> output = engine.run(data, patch_mode=True)
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
         >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
-        >>> output = engine.run(data, mode='patch')
+        >>> output = engine.run(data, patch_mode=False)
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
         >>> engine = EngineABC(pretraind_model="resnet18-kather100k")
-        >>> output = engine.run(tile_file, mode='tile')
+        >>> output = engine.run(tile_file, patch_mode=False)
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> engine = EngineABC(pretraind_model="resnet18-kather100k")
-        >>> output = engine.run(wsi_file, mode='wsi')
+        >>> output = engine.run(wsi_file, patch_mode=True)
 
     """
 
@@ -148,9 +146,11 @@ class EngineABC(ABC):
         """Initialize Engine."""
         super().__init__()
 
+        self.masks = None
         self.images = None
         self.mode = None
-
+        self.ioconfig = None
+        self._ioconfig = None  # runtime ioconfig
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
@@ -284,11 +284,43 @@ class EngineABC(ABC):
 
         return Path.cwd() / "output"
 
+    def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
+        """Helper function to load ioconfig.
+
+        If the model is provided by TIAToolbox it will load the default ioconfig.
+        Otherwise, ioconfig must be specified.
+
+        Args:
+            ioconfig (ModelIOConfigABC):
+                IO configuration to run the engines.
+
+        Raises:
+             ValueError:
+                If no io configuration is provided or found in the pretrained TIAToolbox
+                models.
+
+        Returns:
+            ModelIOConfigABC:
+                The ioconfig used for the run.
+
+        """
+        if self.ioconfig is None and ioconfig is None:
+            msg = (
+                "Please provide a valid ModelIOConfigABC. "
+                "No default ModelIOConfigABC found."
+            )
+            raise ValueError(msg)
+
+        if ioconfig is not None:
+            self.ioconfig = ioconfig
+
+        return self.ioconfig
+
     def run(
         self: EngineABC,
         images: list[os | Path] | np.ndarray,
-        # masks: list[os | Path] | np.ndarray | None = None,  # noqa: ERA001
-        # ioconfig: ModelIOConfigABC | None = None,  # noqa: ERA001
+        masks: list[os | Path] | np.ndarray | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         *,
         # patch_mode: bool = False,  # noqa: ERA001
         # on_gpu: bool = True,  # noqa: ERA001
@@ -350,7 +382,7 @@ class EngineABC(ABC):
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
             >>> predictor = EngineABC(
             ...                 pretrained_model="resnet18-kather100k")
-            >>> output = predictor.run(wsis, mode="wsi")
+            >>> output = predictor.run(wsis, patch_mode=False)
             >>> output.keys()
             ... ['wsi1.svs', 'wsi2.svs']
             >>> output['wsi1.svs']
@@ -361,6 +393,10 @@ class EngineABC(ABC):
         """
         for key in kwargs:
             setattr(self, key, kwargs[key])
+
+        self.images = images
+        self.masks = masks
+        self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
 
         save_dir = self._prepare_save_dir(save_dir, images)
 
