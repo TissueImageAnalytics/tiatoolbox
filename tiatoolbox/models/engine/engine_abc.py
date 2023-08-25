@@ -9,7 +9,7 @@ from torch import nn
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.models_abc import load_torch_model
+from tiatoolbox.models.models_abc import load_torch_model, model_to
 
 if TYPE_CHECKING:
     import os
@@ -21,7 +21,48 @@ if TYPE_CHECKING:
     from .io_config import ModelIOConfigABC
 
 
-# noinspection PyUnreachableCode
+def _prepare_save_dir(
+    save_dir: os | Path | None,
+    images: list | np.ndarray,
+) -> Path:
+    """Create directory if not defined and number of images is more than 1.
+
+    Args:
+        save_dir (str or Path):
+            Path to output directory.
+        images (list, ndarray):
+            List of inputs to process.
+
+    Returns:
+        :class:`Path`:
+            Path to output directory.
+
+    """
+    if save_dir is None and len(images) > 1:
+        logger.warning(
+            "More than 1 WSIs detected but there is no save directory provided."
+            "All subsequent output will be saved to current runtime"
+            "location under folder 'Path.cwd() / output'. Overwrite may happen!",
+            stacklevel=2,
+        )
+        save_dir = Path.cwd() / "output"
+    elif save_dir is not None and len(images) > 1:
+        logger.warning(
+            "When providing multiple whole-slide images / tiles, "
+            "the outputs will be saved and the locations of outputs"
+            "will be returned"
+            "to the calling function.",
+            stacklevel=2,
+        )
+
+    if save_dir is not None:
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=False)
+        return save_dir
+
+    return Path.cwd() / "output"
+
+
 class EngineABC(ABC):
     """Abstract base class for engines used in tiatoolbox.
 
@@ -149,8 +190,14 @@ class EngineABC(ABC):
         self.masks = None
         self.images = None
         self.mode = None
-        self.ioconfig = None
-        self._ioconfig = None  # runtime ioconfig
+
+        # Initialize model with specified weights and ioconfig.
+        self.model, self.ioconfig = self._initialize_model_ioconfig(
+            model=model,
+            weights=weights,
+        )
+        self._ioconfig = self.ioconfig  # runtime ioconfig
+
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
@@ -164,14 +211,11 @@ class EngineABC(ABC):
         self.stride_shape = None
         self.labels = None
 
-        # Initialize model with specified weights and ioconfig.
-        self._initialize_model_ioconfig(model=model, weights=weights)
-
+    @staticmethod
     def _initialize_model_ioconfig(
-        self: EngineABC,
         model: str | nn.Module,
         weights: str | Path | None,
-    ) -> NoReturn:
+    ) -> tuple[nn.Module, ModelIOConfigABC | None]:
         """Helper function to initialize model and ioconfig attributes.
 
         If a pretrained model provided by the TIAToolbox is requested. The model
@@ -189,28 +233,28 @@ class EngineABC(ABC):
                 and the model is provided by TIAToolbox, then pretrained weights will
                 be automatically loaded from the TIA servers.
 
+        Returns:
+            nn.Module:
+                The requested PyTorch model.
+
+            ModelIOConfigABC | None:
+                The model io configuration for TIAToolbox pretrained models.
+                Otherwise, None.
+
         """
         if not isinstance(model, (str, nn.Module)):
             msg = "Input model must be a string or 'torch.nn.Module'."
             raise TypeError(msg)
 
-        if isinstance(model, nn.Module):
-            self.model = (
-                model  # for runtime, such as after wrapping with nn.DataParallel
-            )
-
-        if weights is not None:
-            self.model = load_torch_model(model=self.model, weights=weights)
-
-        ioconfig = None  # requires ioconfig to be provided in EngineABC.run().
-
         if isinstance(model, str):
             # ioconfig is retrieved from the pretrained model in the toolbox.
             # no need to provide ioconfig in EngineABC.run() this case.
-            self.model, ioconfig = get_pretrained_model(model, weights)
+            return get_pretrained_model(model, weights)
 
-        self.ioconfig = ioconfig  # for storing original
-        self._ioconfig = self.ioconfig  # runtime ioconfig
+        if weights is not None:
+            model = load_torch_model(model=model, weights=weights)
+
+        return model, None
 
     @abstractmethod
     def pre_process_patch(self: EngineABC) -> NoReturn:
@@ -241,48 +285,6 @@ class EngineABC(ABC):
     def post_process_wsi(self: EngineABC) -> NoReturn:
         """Post-process a WSI."""
         raise NotImplementedError
-
-    @staticmethod
-    def _prepare_save_dir(
-        save_dir: os | Path | None,
-        images: list | np.ndarray,
-    ) -> Path:
-        """Create directory if not defined and number of images is more than 1.
-
-        Args:
-            save_dir (str or Path):
-                Path to output directory.
-            images (list, ndarray):
-                List of inputs to process.
-
-        Returns:
-            :class:`Path`:
-                Path to output directory.
-
-        """
-        if save_dir is None and len(images) > 1:
-            logger.warning(
-                "More than 1 WSIs detected but there is no save directory set."
-                "All subsequent output will be saved to current runtime"
-                "location under folder 'output'. Overwriting may happen!",
-                stacklevel=2,
-            )
-            save_dir = Path.cwd() / "output"
-        elif save_dir is not None and len(images) > 1:
-            logger.warning(
-                "When providing multiple whole-slide images / tiles, "
-                "the outputs will be saved and the locations of outputs"
-                "will be returned"
-                "to the calling function.",
-                stacklevel=2,
-            )
-
-        if save_dir is not None:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=False)
-            return save_dir
-
-        return Path.cwd() / "output"
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
@@ -323,7 +325,7 @@ class EngineABC(ABC):
         ioconfig: ModelIOConfigABC | None = None,
         *,
         # patch_mode: bool = False,  # noqa: ERA001
-        # on_gpu: bool = True,  # noqa: ERA001
+        on_gpu: bool = False,  # model runs on CPU by default.
         save_dir: os | Path | None = None,
         # None will not save output
         # output_type can be np.ndarray, Annotation or Json str
@@ -397,7 +399,8 @@ class EngineABC(ABC):
         self.images = images
         self.masks = masks
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
+        self.model = model_to(model=self.model, on_gpu=on_gpu)
 
-        save_dir = self._prepare_save_dir(save_dir, images)
+        save_dir = _prepare_save_dir(save_dir, images)
 
         return {"save_dir": save_dir}
