@@ -23,7 +23,7 @@ repos:
         - mdformat-black
         - mdformat-myst
   - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.16
+    rev: 0.7.17
     hooks:
     - id: mdformat
       # Optionally add plugins
@@ -67,7 +67,7 @@ repos:
         language: python
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.0.285
+    rev: v0.0.286
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
