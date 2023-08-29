@@ -1,8 +1,14 @@
 """Define Abstract Base Class for Models defined in tiatoolbox."""
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-import numpy as np
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+import torch
 from torch import nn
+
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
 
 
 class ModelABC(ABC, nn.Module):
@@ -109,3 +115,22 @@ class ModelABC(ABC, nn.Module):
             self._postproc = self.postproc
         else:
             self._postproc = func
+
+
+def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
+    """Transfers model to cpu/gpu.
+
+    Args:
+        model (torch.nn.Module): PyTorch defined model.
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
+
+    Returns:
+        torch.nn.Module:
+            The model after being moved to cpu/gpu.
+
+    """
+    if on_gpu:  # DataParallel work only for cuda
+        model = torch.nn.DataParallel(model)
+        return model.to("cuda")
+
+    return model.to("cpu")

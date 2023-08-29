@@ -1,4 +1,6 @@
 """Models package for the models implemented in tiatoolbox."""
+from __future__ import annotations
+
 from . import architecture, dataset, engine, models_abc
 from .architecture.hovernet import HoVerNet
 from .architecture.hovernetplus import HoVerNetPlus

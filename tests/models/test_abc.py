@@ -1,8 +1,10 @@
 """Unit test package for ABC and __init__ ."""
+from __future__ import annotations
 
 import pytest
 
-from tiatoolbox import rcParam
+import tiatoolbox.models
+from tiatoolbox import rcParam, utils
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
@@ -105,3 +107,21 @@ def test_model_abc() -> None:
     # coverage setter check
     model.postproc_func = None  # skipcq: PYL-W0201
     assert model.postproc_func(2) == 0
+
+
+def test_model_to() -> None:
+    """Test for placing model on device."""
+    import torchvision.models as torch_models
+    from torch import nn
+
+    # Test on GPU
+    # no GPU on Travis so this will crash
+    if not utils.env_detection.has_gpu():
+        model = torch_models.resnet18()
+        with pytest.raises((AssertionError, RuntimeError)):
+            _ = tiatoolbox.models.models_abc.model_to(on_gpu=True, model=model)
+
+    # Test on CPU
+    model = torch_models.resnet18()
+    model = tiatoolbox.models.models_abc.model_to(on_gpu=False, model=model)
+    assert isinstance(model, nn.Module)

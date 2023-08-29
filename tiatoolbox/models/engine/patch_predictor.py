@@ -10,8 +10,9 @@ import numpy as np
 import torch
 import tqdm
 
+import tiatoolbox.models.models_abc
 from tiatoolbox import logger
-from tiatoolbox.utils import misc, save_as_json
+from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -402,7 +403,7 @@ class PatchPredictor:
             )
 
         # use external for testing
-        model = misc.model_to(model=self.model, on_gpu=on_gpu)
+        model = tiatoolbox.models.models_abc.model_to(model=self.model, on_gpu=on_gpu)
 
         cum_output = {
             "probabilities": [],
