@@ -13,6 +13,7 @@ import tqdm
 import tiatoolbox.models.models_abc
 from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
+
 from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 

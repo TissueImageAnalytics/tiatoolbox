@@ -288,6 +288,7 @@ def test_crash_segmentor(remote_sample: Callable) -> None:
             resolution=1.0,
             units="baseline",
         )
+    shutil.rmtree("output", ignore_errors=True)
 
     with pytest.raises(ValueError, match=r"Invalid resolution.*"):
         semantic_segmentor.predict(
