@@ -129,5 +129,7 @@ files:
     url: [ *testdata, "annotation/CMU-1-Small-Region_detections_gr.json"]
   config_1:
     url: [ *testdata, "annotation/test1_config.json"]
+  config_2:
+    url: [ *testdata, "annotation/test2_config.json"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]

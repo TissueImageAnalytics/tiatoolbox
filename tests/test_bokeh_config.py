@@ -8,10 +8,10 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
 from PIL import Image
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -100,3 +100,9 @@ def test_config_loaded(doc, data_path):
     for key in file_config:
         assert key in loaded_config
         assert loaded_config[key] == file_config[key]
+
+
+def test_clearing_doc(doc):
+    """Test that the doc can be cleared."""
+    doc.clear()
+    assert len(doc.roots) == 0

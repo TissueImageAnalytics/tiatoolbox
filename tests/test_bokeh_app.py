@@ -82,6 +82,26 @@ def doc(data_path):
     return app.create_document()
 
 
+# test some utility functions
+
+
+def test_to_num():
+    """Test the to_num function."""
+    assert main.to_num("1") == 1
+    assert main.to_num("1.0") == 1.0
+    assert main.to_num("1.0e-3") == 1.0e-3
+    assert main.to_num(2) == 2
+    assert main.to_num("None") is None
+
+
+def test_name2type():
+    """Test the name2type function."""
+    assert main.name2type("type") == '"type"'
+
+
+# test the bokeh app
+
+
 def test_roots(doc):
     """Test that the document has the correct number of roots."""
     # should be 2 roots, main window and controls
@@ -157,6 +177,16 @@ def test_cprop_input(doc):
     assert list(main.UI["vstate"].mapper.keys()) == list(
         main.UI["vstate"].orig_types.values(),
     )
+
+    # check update state
+    assert main.UI["vstate"].update_state == 1
+    # simulate server ticks
+    main.update()
+    # pending change so update state should be promoted to 2
+    assert main.UI["vstate"].update_state == 2
+    main.update()
+    # no more changes added so tile update has been triggered and update state reset
+    assert main.UI["vstate"].update_state == 0
 
 
 def test_type_cmap_select(doc):
@@ -398,6 +428,17 @@ def test_cmap_select(doc):
         assert np.all(
             np.array(resp.json()[str(key)]) == np.array(main.UI["vstate"].mapper[key]),
         )
+
+
+def test_load_geojson(doc, data_path):
+    """Test loading a geojson file."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["slide2"].name]
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    # trigger an event to select the geojson file
+    click = MenuItemClick(layer_drop, layer_drop.menu[2][1])
+    layer_drop._trigger_event(click)
+    assert main.UI["vstate"].types == ["annotation"]
 
 
 def test_clearing_doc(doc):

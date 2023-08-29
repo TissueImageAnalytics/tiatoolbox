@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 import tempfile
 import urllib
@@ -16,6 +15,7 @@ import numpy as np
 import requests
 import torch
 from flask_cors import CORS
+from matplotlib import colormaps
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
@@ -154,8 +154,7 @@ def get_from_config(keys: dict, default: Any = None):
 
 def make_ts(route: str, z_levels: int, init_z: int = 4):
     """Helper to make a tile source."""
-    if init_z is None:
-        init_z = UI["vstate"].init_z
+    # if init_z is None:
     sf = 2 ** (z_levels - init_z - 5)
     ts = WMTSTileSource(
         name="WSI provider",
@@ -262,8 +261,8 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto"):
 
 def update_mapper():
     """Helper to update the color mapper."""
-    if UI["vstate"].types is not None:
-        update_renderer("mapper", UI["vstate"].mapper)
+    # if UI["vstate"].types is not None:
+    update_renderer("mapper", UI["vstate"].mapper)
 
 
 def update_renderer(prop: str, value: Any):
@@ -280,7 +279,7 @@ def update_renderer(prop: str, value: Any):
             UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(None)
         if not isinstance(value, dict):
             UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(
-                cm.get_cmap(value),
+                colormaps[value],
             )
             UI["color_bar"].visible = True
         if isinstance(value, dict):
@@ -335,7 +334,7 @@ def initialise_slide():
     plot_size = np.array([UI["p"].width, UI["p"].height])
 
     UI["vstate"].micron_formatter.args["mpp"] = UI["vstate"].mpp[0]
-    if slide_name in doc_config["initial_views"]:
+    if slide_name in get_from_config(["initial_views"], {}):
         lims = doc_config["initial_views"][slide_name]
         UI["p"].x_range.start = lims[0]
         UI["p"].x_range.end = lims[2]
@@ -826,6 +825,7 @@ def slide_select_cb(attr, old, new):
     UI["type_column"].children = []
     logger.info("loading %s", slide_path)
     populate_layer_list(slide_path.stem, doc_config["overlay_folder"])
+    print(f"loading slide {slide_path}")
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
     fname = make_safe_name(str(slide_path))
@@ -848,7 +848,7 @@ def handle_graph_layer(attr):
     for k, v in graph_dict.items():
         if isinstance(v, list):
             graph_dict[k] = np.array(v)
-    node_cm = cm.get_cmap("viridis")
+    node_cm = colormaps["viridis"]
     num_nodes = graph_dict["coordinates"].shape[0]
     if "score" in graph_dict:
         UI["node_source"].data = {
@@ -1096,7 +1096,7 @@ def type_cmap_cb(attr, old, new):
         if new[0] == "graph_overlay":
             # adjust the node color in source if prop exists
             if new[1] in UI["node_source"].data:
-                node_cm = cm.get_cmap("viridis")
+                node_cm = colormaps["viridis"]
                 UI["node_source"].data["node_color_"] = [
                     rgb2hex(node_cm(to_num(v))) for v in UI["node_source"].data[new[1]]
                 ]
@@ -1112,7 +1112,7 @@ def type_cmap_cb(attr, old, new):
         )
 
         UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(
-            cm.get_cmap("viridis"),
+            colormaps["viridis"],
         )
         UI["color_bar"].visible = True
         UI["vstate"].update_state = 1
@@ -1314,7 +1314,7 @@ def make_window(vstate):
 
     color_bar = ColorBar(
         color_mapper=LinearColorMapper(
-            make_color_seq_from_cmap(cm.get_cmap("viridis")),
+            make_color_seq_from_cmap(colormaps["viridis"]),
         ),
         label_standoff=12,
     )
@@ -1529,7 +1529,7 @@ def make_window(vstate):
     node_source.selected.on_change("indices", node_select_cb)
     type_cmap_select.on_change("value", type_cmap_cb)
 
-    vstate.cprop = doc_config["default_cprop"]
+    vstate.cprop = get_from_config(["default_cprop"], "type")
 
     type_column = column(children=layer_boxes, name=f"type_column{win_num}")
     color_column = column(
@@ -1697,14 +1697,10 @@ is_deployed = False
 rand_id = token.generate_session_id()
 first_z = [1]
 
-if is_deployed:
-    host = os.environ.get("HOST")
-    host2 = os.environ.get("HOST2")
-    port = os.environ.get("PORT")
-else:
-    host = "127.0.0.1"
-    host2 = "127.0.0.1"
-    port = "5000"
+# set hosts and ports
+host = "127.0.0.1"
+host2 = "127.0.0.1"
+port = "5000"
 
 
 def update():
@@ -1738,12 +1734,12 @@ def control_tabs_cb(attr, old, new):
                     f"http://{host2}:5000/tileserver/color_prop/",
                     data={"prop": json.dumps(doc_config["default_cprop"])},
                 )
-        slide_select_cb(None, None, new=[UI["vstate"].slide_path])
         if "default_type_cprop" in doc_config:
             UI["type_cmap_select"].value = list(
                 doc_config["default_type_cprop"].values(),
             )
         populate_slide_list(doc_config["slide_folder"])
+        UI["slide_select"].value = [str(UI["vstate"].slide_path.name)]
         populate_layer_list(
             Path(UI["vstate"].slide_path).stem,
             doc_config["overlay_folder"],
@@ -1793,6 +1789,7 @@ class DocConfig:
 
     def set_sys_args(self, argv):
         """Set the system arguments."""
+        print(f"sys args: {argv}")
         self.sys_args = argv
 
     def _get_config(self):
@@ -1800,7 +1797,7 @@ class DocConfig:
         sys_args = self.sys_args
         if len(sys_args) > 1 and sys_args[1] != "None":
             base_folder = Path(sys_args[1])
-            if len(req_args) > 0:
+            if "demo" in req_args:
                 self.config["demo_name"] = str(req_args["demo"][0], "utf-8")
                 base_folder = base_folder.joinpath(str(req_args["demo"][0], "utf-8"))
             slide_folder = base_folder.joinpath("slides")
@@ -1828,6 +1825,7 @@ class DocConfig:
         config["demo_name"] = self.config["demo_name"]
 
         # get any extra info from query url
+        print(f"req_args: {req_args}")
         if "slide" in req_args:
             config["first_slide"] = str(req_args["slide"][0], "utf-8")
             if "window" in req_args:
@@ -1865,18 +1863,19 @@ class DocConfig:
         if "UI_settings" in self.config:
             for k in self.config["UI_settings"]:
                 update_renderer(k, self.config["UI_settings"][k])
-        if self.config["default_cprop"] is not None:
+        if "default_cprop" in self.config:
             UI["s"].put(
                 f"http://{host2}:5000/tileserver/color_prop",
                 data={"prop": json.dumps(self.config["default_cprop"])},
             )
         # open up initial slide
-        slide_select_cb(None, None, new=[UI["vstate"].slide_path])
         if "default_type_cprop" in self.config:
             UI["type_cmap_select"].value = list(
                 doc_config["default_type_cprop"].values(),
             )
         populate_slide_list(self.config["slide_folder"])
+        UI["slide_select"].value = [str(UI["vstate"].slide_path.name)]
+        slide_select_cb(None, None, new=[UI["vstate"].slide_path.name])
         populate_layer_list(
             Path(UI["vstate"].slide_path).stem,
             doc_config["overlay_folder"],
