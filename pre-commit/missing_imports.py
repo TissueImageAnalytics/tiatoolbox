@@ -14,6 +14,7 @@ import os
 import sys
 import tokenize
 from pathlib import Path
+from typing import NoReturn
 
 from requirements_consistency import parse_requirements
 
@@ -135,7 +136,7 @@ def stems(node: ast.Import | ast.ImportFrom) -> list[tuple[str, str]]:
     )
 
 
-def main():
+def main() -> NoReturn:
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Static analysis of requirements files and import statements.",
@@ -219,13 +220,13 @@ def find_bad_imports(
     return result
 
 
-def find_comments(path, line_num: int):
+def find_comments(path: str | Path, line_num: int) -> list:
     """Find comments on the given line.
 
     Args:
-        path:
+        path (str | Path):
             Path to the file.
-        line_num:
+        line_num (int):
             Line number to find comments on.
 
     Returns:
