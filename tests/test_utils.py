@@ -1312,24 +1312,6 @@ def test_select_device() -> None:
     assert device == "cpu"
 
 
-def test_model_to() -> None:
-    """Test for placing model on device."""
-    import torchvision.models as torch_models
-    from torch import nn
-
-    # Test on GPU
-    # no GPU on Travis so this will crash
-    if not utils.env_detection.has_gpu():
-        model = torch_models.resnet18()
-        with pytest.raises((AssertionError, RuntimeError)):
-            _ = misc.model_to(on_gpu=True, model=model)
-
-    # Test on CPU
-    model = torch_models.resnet18()
-    model = misc.model_to(on_gpu=False, model=model)
-    assert isinstance(model, nn.Module)
-
-
 def test_save_as_json(tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!

@@ -16,11 +16,12 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
+import tiatoolbox.models.models_abc
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils import imread, misc
+from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 from .io_config import IOSegmentorConfig
@@ -1049,7 +1050,10 @@ class SemanticSegmentor:
 
         # use external for testing
         self._on_gpu = on_gpu
-        self._model = misc.model_to(model=self.model, on_gpu=on_gpu)
+        self._model = tiatoolbox.models.models_abc.model_to(
+            model=self.model,
+            on_gpu=on_gpu,
+        )
 
         # workers should be > 0 else Value Error will be thrown
         self._prepare_workers()
