@@ -555,6 +555,7 @@ def chdir() -> Callable:
             See Also: https://github.com/python/cpython/blob/main/Lib/contextlib.py.
 
             """
+
             def __init__(self: chdir, path: Path) -> None:
                 self.path = path
                 self._old_cwd = []
