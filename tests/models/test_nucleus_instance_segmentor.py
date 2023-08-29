@@ -36,13 +36,13 @@ BATCH_SIZE = 1 if not ON_GPU else 16
 # ----------------------------------------------------
 
 
-def _crash_func(_x) -> None:
+def _crash_func(_x: object) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
     raise ValueError(msg)
 
 
-def helper_tile_info():
+def helper_tile_info() -> list:
     """Helper function for tile information."""
     predictor = NucleusInstanceSegmentor(model="A")
     # ! assuming the tiles organized as follows (coming out from
