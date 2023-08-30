@@ -59,7 +59,7 @@ lint: ## check style with flake8
 	flake8 tiatoolbox tests
 
 test: ## run tests quickly with the default Python
-	pytest
+	pytest -n auto
 
 coverage: ## check code coverage quickly with the default Python
 	pytest  --cov=tiatoolbox --cov-report=term --cov-report=html --cov-report=xml

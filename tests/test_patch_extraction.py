@@ -1,6 +1,9 @@
 """Test for code related to patch extraction."""
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -15,15 +18,18 @@ from tiatoolbox.wsicore.wsireader import (
     VirtualWSIReader,
 )
 
+if TYPE_CHECKING:
+    from tiatoolbox.typing import IntPair, Resolution, Units
+
 
 def read_points_patches(
-    input_img,
-    locations_list,
-    patch_size=(20, 20),
-    units="level",
-    resolution=0.0,
-    item=2,
-):
+    input_img: str | Path,
+    locations_list: str | Path | float,
+    patch_size: IntPair = (20, 20),
+    units: Units = "level",
+    resolution: Resolution = 0.0,
+    item: int = 2,
+) -> np.ndarray:
     """Read patches with the help of PointsPatchExtractor using different formats."""
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
@@ -65,7 +71,7 @@ def read_points_patches(
     return data
 
 
-def test_patch_extractor(source_image) -> None:
+def test_patch_extractor(source_image: Path) -> None:
     """Test base class patch extractor."""
     input_img = misc.imread(Path(source_image))
     patches = patchextraction.PatchExtractor(input_img=input_img, patch_size=(20, 20))
@@ -73,7 +79,7 @@ def test_patch_extractor(source_image) -> None:
     assert next_patches.n == 0
 
 
-def test_get_patch_extractor(source_image, patch_extr_csv) -> None:
+def test_get_patch_extractor(source_image: Path, patch_extr_csv: Path) -> None:
     """Test get_patch_extractor returns the right object."""
     input_img = misc.imread(Path(source_image))
     locations_list = Path(patch_extr_csv)
@@ -102,8 +108,8 @@ def test_get_patch_extractor(source_image, patch_extr_csv) -> None:
 def test_points_patch_extractor_image_format(
     sample_svs: Path,
     sample_jp2: Path,
-    source_image,
-    patch_extr_csv,
+    source_image: Path,
+    patch_extr_csv: Path,
 ) -> None:
     """Test PointsPatchExtractor returns the right object."""
     file_parent_dir = Path(__file__).parent
@@ -147,13 +153,13 @@ def test_points_patch_extractor_image_format(
 
 
 def test_points_patch_extractor(
-    patch_extr_vf_image,
-    patch_extr_npy_read,
-    patch_extr_csv,
-    patch_extr_npy,
-    patch_extr_2col_npy,
-    patch_extr_json,
-    patch_extr_csv_noheader,
+    patch_extr_vf_image: Path,
+    patch_extr_npy_read: Path,
+    patch_extr_csv: Path,
+    patch_extr_npy: Path,
+    patch_extr_2col_npy: Path,
+    patch_extr_json: Path,
+    patch_extr_csv_noheader: Path,
 ) -> None:
     """Test PointsPatchExtractor for VirtualWSIReader."""
     input_img = Path(patch_extr_vf_image)
@@ -187,9 +193,9 @@ def test_points_patch_extractor(
 
 
 def test_points_patch_extractor_svs(
-    sample_svs,
-    patch_extr_svs_csv,
-    patch_extr_svs_npy_read,
+    sample_svs: Path,
+    patch_extr_svs_csv: Path,
+    patch_extr_svs_npy_read: Path,
 ) -> None:
     """Test PointsPatchExtractor for svs image."""
     locations_list = Path(patch_extr_svs_csv)
@@ -209,8 +215,8 @@ def test_points_patch_extractor_svs(
 
 def test_points_patch_extractor_jp2(
     sample_jp2: Path,
-    patch_extr_svs_csv,
-    patch_extr_jp2_read,
+    patch_extr_svs_csv: Path,
+    patch_extr_jp2_read: Path,
 ) -> None:
     """Test PointsPatchExtractor for jp2 image."""
     locations_list = Path(patch_extr_svs_csv)
@@ -228,7 +234,7 @@ def test_points_patch_extractor_jp2(
     assert np.all(data == saved_data)
 
 
-def test_sliding_windowpatch_extractor(patch_extr_vf_image) -> None:
+def test_sliding_windowpatch_extractor(patch_extr_vf_image: Path) -> None:
     """Test SlidingWindowPatchExtractor for VF."""
     input_img = Path(patch_extr_vf_image)
 

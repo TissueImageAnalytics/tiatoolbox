@@ -1,4 +1,5 @@
 """Test for Patch Predictor."""
+from __future__ import annotations
 
 import copy
 import shutil
@@ -32,7 +33,10 @@ RNG = np.random.default_rng()  # Numpy Random Generator
 # -------------------------------------------------------------------------------------
 
 
-def test_patch_dataset_path_imgs(sample_patch1, sample_patch2) -> None:
+def test_patch_dataset_path_imgs(
+    sample_patch1: str | Path,
+    sample_patch2: str | Path,
+) -> None:
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
@@ -212,18 +216,21 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
         predefined_preproc_func("secret-dataset")
 
 
-def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path) -> None:  # noqa: PLR0915
+def test_wsi_patch_dataset(  # noqa: PLR0915
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+) -> None:
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_jpg = Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
-    def reuse_init(img_path=mini_wsi_svs, **kwargs):
+    def reuse_init(img_path: Path = mini_wsi_svs, **kwargs: dict) -> WSIPatchDataset:
         """Testing function."""
         return WSIPatchDataset(img_path=img_path, **kwargs)
 
-    def reuse_init_wsi(**kwargs):
+    def reuse_init_wsi(**kwargs: dict) -> WSIPatchDataset:
         """Testing function."""
         return reuse_init(mode="wsi", **kwargs)
 
@@ -231,13 +238,13 @@ def test_wsi_patch_dataset(sample_wsi_dict, tmp_path: Path) -> None:  # noqa: PL
     # intentionally created to check error
     # skipcq
     class Proto(PatchDatasetABC):
-        def __init__(self) -> None:
+        def __init__(self: Proto) -> None:
             super().__init__()
             self.inputs = "CRASH"
             self._check_input_integrity("wsi")
 
         # skipcq
-        def __getitem__(self, idx):
+        def __getitem__(self: Proto, idx: int) -> object:
             """Get an item from the dataset."""
 
     with pytest.raises(
@@ -416,7 +423,7 @@ def test_patch_dataset_abc() -> None:
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq
-        def __init__(self) -> None:
+        def __init__(self: Proto) -> None:
             super().__init__()
 
     # crash due to undefined __getitem__
@@ -426,11 +433,11 @@ def test_patch_dataset_abc() -> None:
     # skipcq
     class Proto(PatchDatasetABC):
         # skipcq
-        def __init__(self) -> None:
+        def __init__(self: Proto) -> None:
             super().__init__()
 
         # skipcq
-        def __getitem__(self, idx):
+        def __getitem__(self: Proto, idx: int) -> None:
             """Get an item from the dataset."""
 
     ds = Proto()  # skipcq
@@ -471,7 +478,7 @@ def test_io_patch_predictor_config() -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_predictor_crash() -> None:
+def test_predictor_crash(tmp_path: Path) -> None:
     """Test for crash when making predictor."""
     # without providing any model
     with pytest.raises(ValueError, match=r"Must provide.*"):
@@ -489,20 +496,19 @@ def test_predictor_crash() -> None:
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
     with pytest.raises(ValueError, match=r".*not a valid mode.*"):
-        predictor.predict("aaa", mode="random")
+        predictor.predict("aaa", mode="random", save_dir=tmp_path)
     # remove previously generated data
-    if Path.exists(Path("output")):
-        shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(tmp_path / "output", ignore_errors=True)
     with pytest.raises(TypeError, match=r".*must be a list of file paths.*"):
-        predictor.predict("aaa", mode="wsi")
+        predictor.predict("aaa", mode="wsi", save_dir=tmp_path)
     # remove previously generated data
-    shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(tmp_path / "output", ignore_errors=True)
     with pytest.raises(ValueError, match=r".*masks.*!=.*imgs.*"):
-        predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi")
+        predictor.predict([1, 2, 3], masks=[1, 2], mode="wsi", save_dir=tmp_path)
     with pytest.raises(ValueError, match=r".*labels.*!=.*imgs.*"):
-        predictor.predict([1, 2, 3], labels=[1, 2], mode="patch")
+        predictor.predict([1, 2, 3], labels=[1, 2], mode="patch", save_dir=tmp_path)
     # remove previously generated data
-    shutil.rmtree("output", ignore_errors=True)
+    shutil.rmtree(tmp_path / "output", ignore_errors=True)
 
 
 def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
@@ -611,7 +617,11 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
 
-def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> None:
+def test_patch_predictor_api(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    tmp_path: Path,
+) -> None:
     """Helper function to get the model output using API 1."""
     save_dir_path = tmp_path
 
@@ -622,27 +632,33 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
     output = predictor.predict(
         inputs,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == ["predictions"]
     assert len(output["predictions"]) == 2
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
     output = predictor.predict(
         inputs,
         labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions"])
     assert len(output["predictions"]) == len(output["labels"])
     assert output["labels"] == [1, "a"]
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
     output = predictor.predict(
         inputs,
         return_probabilities=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["probabilities"])
+    shutil.rmtree(save_dir_path, ignore_errors=True)
 
     output = predictor.predict(
         inputs,
@@ -650,6 +666,7 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
         labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["labels"])
@@ -693,13 +710,18 @@ def test_patch_predictor_api(sample_patch1, sample_patch2, tmp_path: Path) -> No
         labels=[1, "a"],
         return_labels=True,
         on_gpu=ON_GPU,
+        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["predictions"]) == len(output["labels"])
     assert len(output["predictions"]) == len(output["probabilities"])
 
 
-def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
+def test_wsi_predictor_api(
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+    chdir: Callable,
+) -> None:
     """Test normal run of wsi predictor."""
     save_dir_path = tmp_path
 
@@ -711,6 +733,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     patch_size = np.array([224, 224])
     predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
 
+    save_dir = f"{save_dir_path}/model_wsi_output"
+
     # wrapper to make this more clean
     kwargs = {
         "return_probabilities": True,
@@ -720,6 +744,7 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
         "stride_shape": patch_size,
         "resolution": 1.0,
         "units": "baseline",
+        "save_dir": save_dir,
     }
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
@@ -729,6 +754,8 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
         mode="wsi",
         **kwargs,
     )
+
+    shutil.rmtree(save_dir, ignore_errors=True)
 
     tile_output = predictor.predict(
         [mini_wsi_jpg],
@@ -744,7 +771,6 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
     assert accuracy > 0.9, np.nonzero(~diff)
 
     # remove previously generated data
-    save_dir = save_dir_path / "model_wsi_output"
     shutil.rmtree(save_dir, ignore_errors=True)
 
     kwargs = {
@@ -793,29 +819,29 @@ def test_wsi_predictor_api(sample_wsi_dict, tmp_path: Path) -> None:
         )
     # remove previously generated data
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
-    shutil.rmtree("output", ignore_errors=True)
 
-    # test reading of multiple whole-slide images
-    _kwargs = copy.deepcopy(kwargs)
-    _kwargs["save_dir"] = None  # default coverage
-    _kwargs["return_probabilities"] = False
-    output = predictor.predict(
-        [mini_wsi_svs, mini_wsi_svs],
-        masks=[mini_wsi_msk, mini_wsi_msk],
-        mode="wsi",
-        **_kwargs,
-    )
-    assert Path.exists(Path("output"))
-    for output_info in output.values():
-        assert Path(output_info["raw"]).exists()
-        assert "merged" in output_info
-        assert Path(output_info["merged"]).exists()
+    with chdir(save_dir_path):
+        # test reading of multiple whole-slide images
+        _kwargs = copy.deepcopy(kwargs)
+        _kwargs["save_dir"] = None  # default coverage
+        _kwargs["return_probabilities"] = False
+        output = predictor.predict(
+            [mini_wsi_svs, mini_wsi_svs],
+            masks=[mini_wsi_msk, mini_wsi_msk],
+            mode="wsi",
+            **_kwargs,
+        )
+        assert Path.exists(Path("output"))
+        for output_info in output.values():
+            assert Path(output_info["raw"]).exists()
+            assert "merged" in output_info
+            assert Path(output_info["merged"]).exists()
 
-    # remove previously generated data
-    shutil.rmtree("output", ignore_errors=True)
+        # remove previously generated data
+        shutil.rmtree("output", ignore_errors=True)
 
 
-def test_wsi_predictor_merge_predictions(sample_wsi_dict) -> None:
+def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:
     """Test normal run of wsi predictor with merge predictions option."""
     # convert to pathlib Path to prevent reader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -916,11 +942,12 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict) -> None:
 
 
 def _test_predictor_output(
-    inputs,
-    pretrained_model,
-    probabilities_check=None,
-    predictions_check=None,
-    on_gpu=ON_GPU,
+    inputs: list,
+    pretrained_model: str,
+    probabilities_check: list | None = None,
+    predictions_check: list | None = None,
+    *,
+    on_gpu: bool = ON_GPU,
 ) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = PatchPredictor(
@@ -955,7 +982,10 @@ def _test_predictor_output(
         )
 
 
-def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2) -> None:
+def test_patch_predictor_kather100k_output(
+    sample_patch1: Path,
+    sample_patch2: Path,
+) -> None:
     """Test the output of patch prediction models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
     pretrained_info = {
@@ -990,7 +1020,7 @@ def test_patch_predictor_kather100k_output(sample_patch1, sample_patch2) -> None
             break
 
 
-def test_patch_predictor_pcam_output(sample_patch3, sample_patch4) -> None:
+def test_patch_predictor_pcam_output(sample_patch3: Path, sample_patch4: Path) -> None:
     """Test the output of patch prediction models on PCam dataset."""
     inputs = [Path(sample_patch3), Path(sample_patch4)]
     pretrained_info = {
@@ -1030,7 +1060,7 @@ def test_patch_predictor_pcam_output(sample_patch3, sample_patch4) -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_models_file_not_found(sample_svs, tmp_path: Path) -> None:
+def test_command_line_models_file_not_found(sample_svs: Path, tmp_path: Path) -> None:
     """Test for models CLI file not found error."""
     runner = CliRunner()
     model_file_not_found_result = runner.invoke(
@@ -1051,7 +1081,7 @@ def test_command_line_models_file_not_found(sample_svs, tmp_path: Path) -> None:
     assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
 
 
-def test_command_line_models_incorrect_mode(sample_svs, tmp_path: Path) -> None:
+def test_command_line_models_incorrect_mode(sample_svs: Path, tmp_path: Path) -> None:
     """Test for models CLI mode not in wsi, tile."""
     runner = CliRunner()
     mode_not_in_wsi_tile_result = runner.invoke(
@@ -1074,7 +1104,7 @@ def test_command_line_models_incorrect_mode(sample_svs, tmp_path: Path) -> None:
     assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
 
 
-def test_cli_model_single_file(sample_svs, tmp_path: Path) -> None:
+def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
     """Test for models CLI single file."""
     runner = CliRunner()
     models_wsi_result = runner.invoke(

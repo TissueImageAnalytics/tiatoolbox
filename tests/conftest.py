@@ -1,11 +1,12 @@
 """pytest fixtures."""
+from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 from typing import Callable
 
 import pytest
-from _pytest.tmpdir import TempPathFactory
 
 import tiatoolbox
 from tiatoolbox import logger
@@ -26,7 +27,7 @@ def pytest_configure() -> None:
     )
 
 
-def pytest_generate_tests(metafunc) -> None:
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     """Generate (parameterize) test scenarios.
 
     Adapted from pytest documentation. For more information on
@@ -40,6 +41,7 @@ def pytest_generate_tests(metafunc) -> None:
         return
     idlist = []
     argvalues = []
+    argnames = None
     for scenario in metafunc.cls.scenarios:
         idlist.append(scenario[0])
         items = scenario[1].items()
@@ -54,13 +56,13 @@ def pytest_generate_tests(metafunc) -> None:
 
 
 @pytest.fixture(scope="session")
-def root_path(request) -> Path:
+def root_path(request: pytest.FixtureRequest) -> Path:
     """Return the root path of the project."""
     return Path(request.config.rootdir) / "tiatoolbox"
 
 
 @pytest.fixture(scope="session")
-def tmp_samples_path(tmp_path_factory: TempPathFactory) -> Path:
+def tmp_samples_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Return a temporary path."""
     return tmp_path_factory.mktemp("data")
 
@@ -132,7 +134,7 @@ def sample_all_wsis(
     sample_ndpi: Path,
     sample_svs: Path,
     sample_jp2: Path,
-    tmpdir_factory,
+    tmpdir_factory: pytest.TempdirFactory,
 ) -> Path:
     """Sample wsi(s) of all types supported by tiatoolbox."""
     dir_path = Path(tmpdir_factory.mktemp("data"))
@@ -152,9 +154,9 @@ def sample_all_wsis(
 @pytest.fixture(scope="session")
 def sample_all_wsis2(
     sample_ndpi2: Path,
-    sample_svs,
+    sample_svs: Path,
     sample_jp2: Path,
-    tmpdir_factory,
+    tmpdir_factory: pytest.TempdirFactory,
 ) -> Path:
     """Sample wsi(s) of all types supported by tiatoolbox.
 
@@ -176,7 +178,11 @@ def sample_all_wsis2(
 
 
 @pytest.fixture(scope="session")
-def sample_svs_ndpi_wsis(sample_ndpi2: Path, sample_svs: Path, tmpdir_factory) -> Path:
+def sample_svs_ndpi_wsis(
+    sample_ndpi2: Path,
+    sample_svs: Path,
+    tmpdir_factory: pytest.TempdirFactory,
+) -> Path:
     """Sample SVS and NDPI wsi(s).
 
     Uses sample fluorescence ndpi image.
@@ -246,12 +252,12 @@ def norm_vahadane(remote_sample: Callable) -> Path:
 
 @pytest.fixture(scope="session")
 def sample_visual_fields(
-    source_image,
-    norm_ruifrok,
-    norm_reinhard,
-    norm_macenko,
-    norm_vahadane,
-    tmpdir_factory,
+    source_image: Path,
+    norm_ruifrok: Path,
+    norm_reinhard: Path,
+    norm_macenko: Path,
+    norm_vahadane: Path,
+    tmpdir_factory: pytest.TempdirFactory,
 ) -> Path:
     """Sample visual fields(s) of all types supported by tiatoolbox."""
     dir_path = Path(tmpdir_factory.mktemp("data"))
@@ -443,7 +449,11 @@ def sample_patch4(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
-def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory) -> Path:
+def dir_sample_patches(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    tmpdir_factory: pytest.TempdirFactory,
+) -> Path:
     """Directory of sample image patches for testing."""
     dir_path = Path(tmpdir_factory.mktemp("data"))
 
@@ -525,3 +535,36 @@ def moving_mask(remote_sample: Callable) -> Path:
     Download moving mask for pytest.
     """
     return remote_sample("moving_mask")
+
+
+@pytest.fixture(scope="session")
+def chdir() -> Callable:
+    """Return a context manager to change the current working directory.
+
+    Todo: switch to chdir from contextlib when Python 3.11 is required
+
+    """
+    try:
+        from contextlib import chdir
+    except ImportError:
+        from contextlib import AbstractContextManager
+
+        class chdir(AbstractContextManager):  # noqa: N801
+            """Non thread-safe context manager to change the current working directory.
+
+            See Also: https://github.com/python/cpython/blob/main/Lib/contextlib.py.
+
+            """
+
+            def __init__(self: chdir, path: Path) -> None:
+                self.path = path
+                self._old_cwd = []
+
+            def __enter__(self: chdir) -> None:
+                self._old_cwd.append(os.getcwd())  # noqa: PTH109
+                os.chdir(self.path)
+
+            def __exit__(self: chdir, *excinfo: object) -> None:
+                os.chdir(self._old_cwd.pop())
+
+    return chdir

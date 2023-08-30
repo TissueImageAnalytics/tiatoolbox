@@ -26,10 +26,13 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 if TYPE_CHECKING:  # pragma: no cover
     from multiprocessing.managers import Namespace
 
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.typing import IntPair, Resolution, Units
 
 
-def _estimate_canvas_parameters(sample_prediction, canvas_shape):
+def _estimate_canvas_parameters(
+    sample_prediction: np.ndarray,
+    canvas_shape: np.ndarray,
+) -> tuple[tuple, tuple, bool]:
     """Estimates canvas parameters.
 
     Args:
@@ -57,11 +60,11 @@ def _estimate_canvas_parameters(sample_prediction, canvas_shape):
 
 
 def _prepare_save_output(
-    save_path,
-    cache_count_path,
-    canvas_cum_shape_,
-    canvas_count_shape_,
-):
+    save_path: str | Path,
+    cache_count_path: str | Path,
+    canvas_cum_shape_: tuple[int, ...],
+    canvas_count_shape_: tuple[int, ...],
+) -> tuple:
     """Prepares for saving the cached output."""
     if save_path is not None:
         save_path = Path(save_path)
@@ -161,13 +164,13 @@ class IOSegmentorConfig(IOConfigABC):
     output_resolutions = None
 
     def __init__(
-        self,
+        self: IOSegmentorConfig,
         input_resolutions: list[dict],
         output_resolutions: list[dict],
-        patch_input_shape: list[int] | np.ndarray,
-        patch_output_shape: list[int] | np.ndarray,
+        patch_input_shape: IntPair,
+        patch_output_shape: IntPair,
         save_resolution: dict | None = None,
-        **kwargs,
+        **kwargs: dict,
     ) -> None:
         """Initialize :class:`IOSegmentorConfig`."""
         self._kwargs = kwargs
@@ -196,7 +199,7 @@ class IOSegmentorConfig(IOConfigABC):
                 key=lambda x: x["resolution"],
             )
 
-    def _validate(self):
+    def _validate(self: IOSegmentorConfig) -> None:
         """Validate the data format."""
         resolutions = self.input_resolutions + self.output_resolutions
         units = [v["units"] for v in resolutions]
@@ -210,7 +213,7 @@ class IOSegmentorConfig(IOConfigABC):
             raise ValueError(msg)
 
     @staticmethod
-    def scale_to_highest(resolutions: list[dict], units: Units):
+    def scale_to_highest(resolutions: list[dict], units: Units) -> np.ndarray:
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
@@ -244,7 +247,7 @@ class IOSegmentorConfig(IOConfigABC):
             return np.min(old_val) / np.array(old_val)
         return np.array(old_val) / np.max(old_val)
 
-    def to_baseline(self):
+    def to_baseline(self: IOSegmentorConfig) -> IOSegmentorConfig:
         """Return a new config object converted to baseline form.
 
         This will return a new :class:`IOSegmentorConfig` where
@@ -325,12 +328,12 @@ class WSIStreamDataset(torch_data.Dataset):
     """
 
     def __init__(
-        self,
+        self: WSIStreamDataset,
         ioconfig: IOSegmentorConfig,
         wsi_paths: list[str | Path],
         mp_shared_space: Namespace,
         preproc: Callable[[np.ndarray], np.ndarray] | None = None,
-        mode="wsi",
+        mode: str = "wsi",
     ) -> None:
         """Initialize :class:`WSIStreamDataset`."""
         super().__init__()
@@ -352,7 +355,7 @@ class WSIStreamDataset(torch_data.Dataset):
         self.wsi_idx = None  # to be received externally via thread communication
         self.reader = None
 
-    def _get_reader(self, img_path):
+    def _get_reader(self: WSIStreamDataset, img_path: str | Path) -> WSIReader:
         """Get appropriate reader for input path."""
         img_path = Path(img_path)
         if self.mode == "wsi":
@@ -373,12 +376,12 @@ class WSIStreamDataset(torch_data.Dataset):
             info=metadata,
         )
 
-    def __len__(self) -> int:
+    def __len__(self: WSIStreamDataset) -> int:
         """Return the length of the instance attributes."""
         return len(self.mp_shared_space.patch_inputs)
 
     @staticmethod
-    def collate_fn(batch):
+    def collate_fn(batch: list | np.ndarray) -> torch.Tensor:
         """Prototype to handle reading exception.
 
         This will exclude any sample with `None` from the batch. As
@@ -390,7 +393,7 @@ class WSIStreamDataset(torch_data.Dataset):
         batch = [v for v in batch if v is not None]
         return torch.utils.data.dataloader.default_collate(batch)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self: WSIStreamDataset, idx: int) -> tuple:
         """Get an item from the dataset."""
         # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
@@ -513,7 +516,7 @@ class SemanticSegmentor:
     """
 
     def __init__(
-        self,
+        self: SemanticSegmentor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
@@ -571,7 +574,7 @@ class SemanticSegmentor:
     def get_coordinates(
         image_shape: list[int] | np.ndarray,
         ioconfig: IOSegmentorConfig,
-    ):
+    ) -> tuple[list, list]:
         """Calculate patch tiling coordinates.
 
         By default, internally, it will call the
@@ -629,7 +632,7 @@ class SemanticSegmentor:
         bounds: np.ndarray,
         resolution: Resolution | None = None,
         units: Units | None = None,
-    ):
+    ) -> np.ndarray:
         """Indicates which coordinate is valid basing on the mask.
 
         To use your own approaches, either subclass to overwrite or
@@ -689,7 +692,7 @@ class SemanticSegmentor:
         scale_factor = mask_real_shape / mask_resolution_shape
         scale_factor = scale_factor[0]  # what if ratio x != y
 
-        def sel_func(coord: np.ndarray):
+        def sel_func(coord: np.ndarray) -> bool:
             """Accept coord as long as its box contains part of mask."""
             coord_in_real_mask = np.ceil(scale_factor * coord).astype(np.int32)
             start_x, start_y, end_x, end_y = coord_in_real_mask
@@ -706,7 +709,7 @@ class SemanticSegmentor:
         mode: str,
         *,
         auto_get_mask: bool,
-    ):
+    ) -> tuple[WSIReader, WSIReader]:
         """Define how to get reader for mask and source image."""
         img_path = Path(img_path)
         reader = WSIReader.open(img_path)
@@ -731,12 +734,12 @@ class SemanticSegmentor:
         return reader, mask_reader
 
     def _predict_one_wsi(
-        self,
+        self: SemanticSegmentor,
         wsi_idx: int,
         ioconfig: IOSegmentorConfig,
         save_path: str,
         mode: str,
-    ):
+    ) -> None:
         """Make a prediction on tile/wsi.
 
         Args:
@@ -847,13 +850,13 @@ class SemanticSegmentor:
         shutil.rmtree(cache_dir)
 
     def _process_predictions(
-        self,
+        self: SemanticSegmentor,
         cum_batch_predictions: list,
         wsi_reader: WSIReader,
         ioconfig: IOSegmentorConfig,
         save_path: str,
         cache_dir: str,
-    ):
+    ) -> None:
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also saving afterwards.
@@ -915,7 +918,7 @@ class SemanticSegmentor:
         locations: list | np.ndarray,
         save_path: str | Path | None = None,
         cache_count_path: str | Path | None = None,
-    ):
+    ) -> np.ndarray:
         """Merge patch-level predictions to form a 2-dimensional prediction map.
 
         When accumulating the raw prediction onto a same canvas (via
@@ -985,7 +988,7 @@ class SemanticSegmentor:
             canvas_count_shape_,
         )
 
-        def index(arr, tl, br):
+        def index(arr: np.ndarray, tl: np.ndarray, br: np.ndarray) -> np.ndarray:
             """Helper to shorten indexing."""
             return arr[tl[0] : br[0], tl[1] : br[1]]
 
@@ -1046,7 +1049,7 @@ class SemanticSegmentor:
         return cum_canvas
 
     @staticmethod
-    def _prepare_save_dir(save_dir):
+    def _prepare_save_dir(save_dir: str | Path | None) -> tuple[Path, Path]:
         """Prepare save directory and cache."""
         if save_dir is None:
             logger.warning(
@@ -1068,15 +1071,15 @@ class SemanticSegmentor:
         return save_dir, cache_dir
 
     def _update_ioconfig(
-        self,
-        ioconfig,
-        mode,
-        patch_input_shape,
-        patch_output_shape,
-        stride_shape,
-        resolution,
-        units,
-    ):
+        self: SemanticSegmentor,
+        ioconfig: IOSegmentorConfig,
+        mode: str,
+        patch_input_shape: IntPair,
+        patch_output_shape: IntPair,
+        stride_shape: IntPair,
+        resolution: Resolution,
+        units: Units,
+    ) -> IOSegmentorConfig:
         """Update ioconfig according to input parameters.
 
         Args:
@@ -1145,7 +1148,7 @@ class SemanticSegmentor:
 
         return ioconfig
 
-    def _prepare_workers(self):
+    def _prepare_workers(self: SemanticSegmentor) -> None:
         """Prepare number of workers."""
         self._postproc_workers = None
         if self.num_postproc_workers is not None:
@@ -1153,7 +1156,7 @@ class SemanticSegmentor:
                 max_workers=self.num_postproc_workers,
             )
 
-    def _memory_cleanup(self):
+    def _memory_cleanup(self: SemanticSegmentor) -> None:
         """Memory clean up."""
         self.imgs = None
         self.masks = None
@@ -1168,15 +1171,16 @@ class SemanticSegmentor:
         self._postproc_workers = None
 
     def _predict_wsi_handle_exception(
-        self,
-        imgs,
-        wsi_idx,
-        img_path,
-        mode,
-        ioconfig,
-        save_dir,
-        crash_on_exception,
-    ):
+        self: SemanticSegmentor,
+        imgs: list,
+        wsi_idx: int,
+        img_path: str | Path,
+        mode: str,
+        ioconfig: IOSegmentorConfig,
+        save_dir: str | Path,
+        *,
+        crash_on_exception: bool,
+    ) -> None:
         """Predict on multiple WSIs.
 
         Args:
@@ -1188,7 +1192,7 @@ class SemanticSegmentor:
                 of file paths.
             wsi_idx (int):
                 index of current WSI being processed.
-            img_path(str):
+            img_path(str or Path):
                 Path to current image.
             mode (str):
                 Type of input to process. Choose from either `tile` or
@@ -1200,7 +1204,7 @@ class SemanticSegmentor:
                 `stride_shape`, `resolution`, and `units` arguments are
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
-            save_dir (str or pathlib.Path):
+            save_dir (str or Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
@@ -1246,21 +1250,21 @@ class SemanticSegmentor:
             logging.exception("Crashed on %s", wsi_save_path)
 
     def predict(  # noqa: PLR0913
-        self,
-        imgs,
-        masks=None,
-        mode="tile",
-        ioconfig=None,
-        patch_input_shape=None,
-        patch_output_shape=None,
-        stride_shape=None,
-        resolution=1.0,
-        units="baseline",
-        save_dir=None,
+        self: SemanticSegmentor,
+        imgs: list,
+        masks: list | None = None,
+        mode: str = "tile",
+        ioconfig: IOSegmentorConfig = None,
+        patch_input_shape: IntPair = None,
+        patch_output_shape: IntPair = None,
+        stride_shape: IntPair = None,
+        resolution: Resolution = 1.0,
+        units: Units = "baseline",
+        save_dir: str | Path | None = None,
         *,
-        on_gpu=True,
-        crash_on_exception=False,
-    ):
+        on_gpu: bool = True,
+        crash_on_exception: bool = False,
+    ) -> list[tuple[Path, Path]]:
         """Make a prediction for a list of input data.
 
         By default, if the input model at the object instantiation time
@@ -1393,13 +1397,13 @@ class SemanticSegmentor:
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
             self._predict_wsi_handle_exception(
-                imgs,
-                wsi_idx,
-                img_path,
-                mode,
-                ioconfig,
-                save_dir,
-                crash_on_exception,
+                imgs=imgs,
+                wsi_idx=wsi_idx,
+                img_path=img_path,
+                mode=mode,
+                ioconfig=ioconfig,
+                save_dir=save_dir,
+                crash_on_exception=crash_on_exception,
             )
 
         # clean up the cache directories
@@ -1475,7 +1479,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
     """
 
     def __init__(
-        self,
+        self: DeepFeatureExtractor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
@@ -1502,13 +1506,13 @@ class DeepFeatureExtractor(SemanticSegmentor):
         self.process_prediction_per_batch = False
 
     def _process_predictions(
-        self,
+        self: DeepFeatureExtractor,
         cum_batch_predictions: list,
         wsi_reader: WSIReader,  # skipcq: PYL-W0613  # noqa: ARG002
         ioconfig: IOSegmentorConfig,
         save_path: str,
         cache_dir: str,  # skipcq: PYL-W0613  # noqa: ARG002
-    ):
+    ) -> None:
         """Define how the aggregated predictions are processed.
 
         This includes merging the prediction if necessary and also
@@ -1546,21 +1550,21 @@ class DeepFeatureExtractor(SemanticSegmentor):
             np.save(f"{save_path}.features.{idx}.npy", prediction_list)
 
     def predict(  # noqa: PLR0913
-        self,
-        imgs,
-        masks=None,
-        mode="tile",
-        ioconfig=None,
-        patch_input_shape=None,
-        patch_output_shape=None,
-        stride_shape=None,
-        resolution=1.0,
-        units="baseline",
-        save_dir=None,
+        self: DeepFeatureExtractor,
+        imgs: list,
+        masks: list | None = None,
+        mode: str = "tile",
+        ioconfig: IOSegmentorConfig | None = None,
+        patch_input_shape: IntPair | None = None,
+        patch_output_shape: IntPair | None = None,
+        stride_shape: IntPair = None,
+        resolution: Resolution = 1.0,
+        units: Units = "baseline",
+        save_dir: str | Path | None = None,
         *,
-        on_gpu=True,
-        crash_on_exception=False,
-    ):
+        on_gpu: bool = True,
+        crash_on_exception: bool = False,
+    ) -> list[tuple[Path, Path]]:
         """Make a prediction for a list of input data.
 
         By default, if the input model at the time of object
@@ -1598,7 +1602,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 converted to a :class:`IOSegmentorConfig` object.
             on_gpu (bool):
                 Whether to run the model on the GPU.
-            patch_input_shape (tuple):
+            patch_input_shape (IntPair):
                 Size of patches input to the model. The values are at
                 requested read resolution and must be positive.
             patch_output_shape (tuple):
