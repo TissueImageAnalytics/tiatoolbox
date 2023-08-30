@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 import yaml
 from pkg_resources import Requirement
@@ -100,7 +101,7 @@ def parse_conda(file_path: Path) -> dict[str, Requirement]:
     return packages
 
 
-def parse_setup_py(file_path) -> dict[str, Requirement]:
+def parse_setup_py(file_path: Path) -> dict[str, Requirement]:
     """Parse a setup.py file.
 
     Args:
@@ -233,7 +234,7 @@ def in_common_consistent(all_requirements: dict[Path, dict[str, Requirement]]) -
     return consistent
 
 
-def main():
+def main() -> NoReturn:
     """Main entry point for the hook."""
     root = Path(__file__).parent.parent
     test_files_exist(root)

@@ -1,6 +1,8 @@
 """Unit test package for ABC and __init__ ."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import tiatoolbox.models
@@ -8,6 +10,9 @@ from tiatoolbox import rcParam, utils
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 @pytest.mark.skipif(
@@ -32,7 +37,7 @@ def test_model_abc() -> None:
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self) -> None:
+        def __init__(self: Proto) -> None:
             super().__init__()
 
         @staticmethod
@@ -49,7 +54,7 @@ def test_model_abc() -> None:
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def forward(self) -> None:
+        def forward(self: Proto) -> None:
             pass  # base class definition pass
 
         @staticmethod
@@ -65,16 +70,16 @@ def test_model_abc() -> None:
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self) -> None:
+        def __init__(self: Proto) -> None:
             super().__init__()
 
         @staticmethod
         # skipcq
-        def postproc(image) -> None:
+        def postproc(image: np.ndarray) -> None:
             return image - 2
 
         # skipcq
-        def forward(self) -> None:
+        def forward(self: Proto) -> None:
             pass  # base class definition pass
 
         @staticmethod

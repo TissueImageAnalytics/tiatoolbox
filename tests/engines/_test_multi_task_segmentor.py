@@ -32,13 +32,13 @@ except NotImplementedError:
 # ----------------------------------------------------
 
 
-def _crash_func(_) -> None:
+def _crash_func(_: object) -> None:
     """Helper to induce crash."""
     msg = "Propagation Crash."
     raise ValueError(msg)
 
 
-def semantic_postproc_func(raw_output):
+def semantic_postproc_func(raw_output: np.ndarray) -> np.ndarray:
     """Function to post process semantic segmentations.
 
     Post processes semantic segmentation to form one map output.
