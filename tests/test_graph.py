@@ -1,7 +1,7 @@
 """Test for graph construction tools."""
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, NoReturn
 
 import numpy as np
 import pytest
@@ -210,7 +210,7 @@ class TestConstructor:
     ]
 
     @staticmethod
-    def test_build(graph_constructor):
+    def test_build(graph_constructor: SlideGraphConstructor) -> NoReturn:
         """Test that build outputs are in an expected format.
 
         Check the lengths and ranges of outputs with random data as input.
@@ -235,7 +235,7 @@ class TestConstructor:
         assert 0 <= m <= n**2
 
     @staticmethod
-    def test_visualise(graph_constructor):
+    def test_visualise(graph_constructor: SlideGraphConstructor) -> NoReturn:
         """Test visualising a graph."""
         rng = np.random.default_rng(123)
         points = np.concatenate(
@@ -249,7 +249,7 @@ class TestConstructor:
         plt.close()
 
     @staticmethod
-    def test_visualise_ax(graph_constructor):
+    def test_visualise_ax(graph_constructor: SlideGraphConstructor) -> NoReturn:
         """Test visualising a graph on a given axis."""
         rng = np.random.default_rng(123)
         points = np.concatenate(
@@ -264,7 +264,9 @@ class TestConstructor:
         plt.close()
 
     @staticmethod
-    def test_visualise_custom_color_function(graph_constructor):
+    def test_visualise_custom_color_function(
+        graph_constructor: SlideGraphConstructor,
+    ) -> NoReturn:
         """Test visualising a graph with a custom color function."""
         rng = np.random.default_rng(123)
         points = np.concatenate(
@@ -282,7 +284,9 @@ class TestConstructor:
         plt.close()
 
     @staticmethod
-    def test_visualise_static_color(graph_constructor):
+    def test_visualise_static_color(
+        graph_constructor: SlideGraphConstructor,
+    ) -> NoReturn:
         """Test visualising a graph with a custom color function."""
         rng = np.random.default_rng(123)
         points = np.concatenate(
@@ -296,7 +300,9 @@ class TestConstructor:
         plt.close()
 
     @staticmethod
-    def test_visualise_invalid_input(graph_constructor):
+    def test_visualise_invalid_input(
+        graph_constructor: SlideGraphConstructor,
+    ) -> NoReturn:
         """Test visualising a graph with invalid input."""
         with pytest.raises(ValueError, match="must contain key `x`"):
             graph_constructor.visualise({})
