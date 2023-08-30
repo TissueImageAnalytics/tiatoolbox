@@ -1,4 +1,5 @@
 """Test for predefined dataset within toolbox."""
+from __future__ import annotations
 
 import shutil
 from pathlib import Path
@@ -16,7 +17,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 class Proto1(DatasetInfoABC):
     """Intentionally created to check error with new attribute a."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto1) -> None:
         """Proto1 initialization."""
         self.a = "a"
 
@@ -24,7 +25,7 @@ class Proto1(DatasetInfoABC):
 class Proto2(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto2) -> None:
         """Proto2 initialization."""
         self.inputs = "a"
 
@@ -32,7 +33,7 @@ class Proto2(DatasetInfoABC):
 class Proto3(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and labels."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto3) -> None:
         """Proto3 initialization."""
         self.inputs = "a"
         self.labels = "a"
@@ -41,7 +42,7 @@ class Proto3(DatasetInfoABC):
 class Proto4(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and label names."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto4) -> None:
         """Proto4 initialization."""
         self.inputs = "a"
         self.label_names = "a"
