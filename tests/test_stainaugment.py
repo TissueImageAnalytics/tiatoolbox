@@ -12,7 +12,7 @@ from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils import imread
 
 
-def test_stainaugment(source_image, norm_vahadane) -> None:
+def test_stainaugment(source_image: Path, norm_vahadane: Path) -> None:
     """Test functionality of the StainAugmentor class."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()

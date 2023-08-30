@@ -5,6 +5,7 @@ import hashlib
 import os
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING, NoReturn
 
 import cv2
 import joblib
@@ -22,10 +23,19 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
 
+if TYPE_CHECKING:
+    from tiatoolbox.typing import IntBounds
+
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh) -> None:
+def sub_pixel_read(
+    test_image: np.ndarray,
+    pillow_test_image: Image,
+    bounds: IntBounds,
+    ow: int,
+    oh: int,
+) -> None:
     """sub_pixel_read test helper function."""
     output = utils.image.sub_pixel_read(
         test_image,
@@ -242,7 +252,7 @@ def test_safe_padded_read_padding_formats() -> None:
         assert region.shape == (8 + 2, 8 + 2)
 
 
-def test_safe_padded_read_pad_kwargs(source_image) -> None:
+def test_safe_padded_read_pad_kwargs(source_image: Path) -> None:
     """Test passing extra kwargs to safe_padded_read for np.pad."""
     data = utils.imread(str(source_image))
     bounds = (0, 0, 8, 8)
@@ -355,7 +365,7 @@ def test_safe_padded_read_stride_shape() -> None:
         utils.image.safe_padded_read(data, bounds, stride=(1, 1, 1))
 
 
-def test_sub_pixel_read(source_image) -> None:
+def test_sub_pixel_read(source_image: Path) -> None:
     """Test sub-pixel numpy image reads with known tricky parameters."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -383,7 +393,7 @@ def test_sub_pixel_read(source_image) -> None:
     sub_pixel_read(test_image, pillow_test_image, bounds, ow, oh)
 
 
-def test_aligned_padded_sub_pixel_read(source_image) -> None:
+def test_aligned_padded_sub_pixel_read(source_image: Path) -> None:
     """Test sub-pixel numpy image reads with pixel-aligned bounds."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -407,7 +417,7 @@ def test_aligned_padded_sub_pixel_read(source_image) -> None:
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_sub_pixel_read_with_pad_kwargs(source_image) -> None:
+def test_sub_pixel_read_with_pad_kwargs(source_image: Path) -> None:
     """Test sub-pixel numpy image reads with pad kwargs."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -433,7 +443,7 @@ def test_sub_pixel_read_with_pad_kwargs(source_image) -> None:
     assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_aligned_padded_sub_pixel_read(source_image) -> None:
+def test_non_aligned_padded_sub_pixel_read(source_image: Path) -> None:
     """Test sub-pixel numpy image reads with non-pixel-aligned bounds."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -458,7 +468,7 @@ def test_non_aligned_padded_sub_pixel_read(source_image) -> None:
         assert (ow + 2 * padding, oh + 2 * padding) == tuple(output.shape[:2][::-1])
 
 
-def test_non_baseline_padded_sub_pixel_read(source_image) -> None:
+def test_non_baseline_padded_sub_pixel_read(source_image: Path) -> None:
     """Test sub-pixel numpy image reads with baseline padding."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -560,8 +570,13 @@ def test_sub_pixel_read_bad_read_func() -> None:
     out_size = data.shape
     bounds = (0, 0, 8, 8)
 
-    def bad_read_func(img, bounds, *kwargs):  # noqa: ARG001
-        return None
+    def bad_read_func(
+        img: np.ndarray,  # noqa: ARG001
+        bounds: IntBounds,  # noqa: ARG001
+        *kwargs: dict,  # noqa: ARG001
+    ) -> None:
+        """Dummy function for a failing test."""
+        return
 
     with pytest.raises(ValueError, match="None"):
         utils.image.sub_pixel_read(
@@ -597,7 +612,7 @@ def test_sub_pixel_read_padding_formats() -> None:
         assert region.shape == (16 + 2, 16 + 2)
 
 
-def test_sub_pixel_read_negative_size_bounds(source_image) -> None:
+def test_sub_pixel_read_negative_size_bounds(source_image: Path) -> None:
     """Test sub_pixel_read with different padding argument formats."""
     image_path = Path(source_image)
     assert image_path.exists()
@@ -634,7 +649,7 @@ def test_sub_pixel_read_negative_size_bounds(source_image) -> None:
     assert np.all(np.fliplr(np.flipud(flipped_output)) == output)
 
 
-def test_fuzz_sub_pixel_read(source_image) -> None:
+def test_fuzz_sub_pixel_read(source_image: Path) -> None:
     """Fuzz test for numpy sub-pixel image reads."""
     rng = np.random.default_rng(0)
 
@@ -668,7 +683,7 @@ def test_fuzz_sub_pixel_read(source_image) -> None:
         assert (ow, oh) == tuple(output.shape[:2][::-1])
 
 
-def test_fuzz_padded_sub_pixel_read(source_image) -> None:
+def test_fuzz_padded_sub_pixel_read(source_image: Path) -> None:
     """Fuzz test for numpy sub-pixel image reads with padding."""
     rng = np.random.default_rng(0)
 
@@ -718,7 +733,7 @@ def test_sub_pixel_read_incorrect_read_func_return() -> None:
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
-    def read_func(*args, **kwargs):  # noqa: ARG001
+    def read_func(*args: tuple, **kwargs: dict) -> np.ndarray:  # noqa: ARG001
         return np.ones((5, 5))
 
     with pytest.raises(ValueError, match="incorrect size"):
@@ -736,7 +751,7 @@ def test_sub_pixel_read_empty_read_func_return() -> None:
     bounds = (0, 0, 8, 8)
     image = np.ones((10, 10))
 
-    def read_func(*args, **kwargs):  # noqa: ARG001
+    def read_func(*args: tuple, **kwargs: dict) -> np.ndarray:  # noqa: ARG001
         return np.ones((0, 0))
 
     with pytest.raises(ValueError, match="is empty"):
@@ -893,14 +908,14 @@ def test_get_luminosity_tissue_mask() -> None:
 
 
 def test_read_point_annotations(  # noqa: PLR0915
-    tmp_path,
-    patch_extr_csv,
-    patch_extr_csv_noheader,
-    patch_extr_svs_csv,
-    patch_extr_svs_header,
-    patch_extr_npy,
-    patch_extr_json,
-    patch_extr_2col_json,
+    tmp_path: Path,
+    patch_extr_csv: Path,
+    patch_extr_csv_noheader: Path,
+    patch_extr_svs_csv: Path,
+    patch_extr_svs_header: Path,
+    patch_extr_npy: Path,
+    patch_extr_json: Path,
+    patch_extr_2col_json: Path,
 ) -> None:
     """Test read point annotations reads csv, ndarray, npy and json correctly."""
     labels = Path(patch_extr_csv)
@@ -987,7 +1002,7 @@ def test_read_point_annotations(  # noqa: PLR0915
         _ = utils.misc.read_locations(["a", "b", "c"])
 
 
-def test_grab_files_from_dir(sample_visual_fields) -> None:
+def test_grab_files_from_dir(sample_visual_fields: Path) -> None:
     """Test grab files from dir utils.misc."""
     file_parent_dir = Path(__file__).parent
     input_path = file_parent_dir.joinpath("data")
@@ -1466,7 +1481,7 @@ def test_detect_gpu() -> None:
     _ = utils.env_detection.has_gpu()
 
 
-def make_simple_dat(centroids=((0, 0), (100, 100))):
+def make_simple_dat(centroids: tuple[tuple, tuple] = ((0, 0), (100, 100))) -> dict:
     """Make a simple dat file with cells at provided centroids."""
     polys = [cell_polygon(cent) for cent in centroids]
     return {
@@ -1586,7 +1601,7 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
         fetch_pretrained_weights("abc", file_path)
 
 
-def test_imwrite(tmp_path):
+def test_imwrite(tmp_path: Path) -> NoReturn:
     """Create a temporary file path."""
     image_path = tmp_path / "test_imwrite.jpg"
 

@@ -1,4 +1,6 @@
 """Test for tile pyramid generation."""
+from __future__ import annotations
+
 import re
 from pathlib import Path
 
@@ -174,12 +176,17 @@ def test_sub_tile_levels() -> None:
     class MockTileGenerator(pyramid.TilePyramidGenerator):
         """Mock Tile Generator class for tests."""
 
-        def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
+        def tile_path(
+            self: MockTileGenerator,
+            level: int,
+            x: int,
+            y: int,
+        ) -> Path:  # skipcq: PYL-R0201
             """Return path to mock tile."""
             return Path(level, x, y)
 
         @property
-        def sub_tile_level_count(self):
+        def sub_tile_level_count(self: MockTileGenerator) -> int:
             return 1
 
     dz = MockTileGenerator(wsi, tile_size=224)
