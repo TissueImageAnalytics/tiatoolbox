@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import enum
-from typing import Any
 
 
 class GeometryType(enum.IntEnum):
@@ -28,12 +27,12 @@ class GeometryType(enum.IntEnum):
     MULTI_POLYGON = 6
     GEOMETRY_COLLECTION = 7
 
-    def __str__(self) -> str:
+    def __str__(self: GeometryType) -> str:
         """Return the string representation of the GeometryType."""
         return self.name.title().replace("_", " ")
 
     @classmethod
-    def _missing_(cls, value: object) -> Any:
+    def _missing_(cls: GeometryType, value: object) -> object:
         """Return the GeometryType corresponding to the value."""
         if isinstance(value, str):
             with contextlib.suppress(KeyError):
