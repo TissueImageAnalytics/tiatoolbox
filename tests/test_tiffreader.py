@@ -7,7 +7,10 @@ from defusedxml import ElementTree
 from tiatoolbox.wsicore import wsireader
 
 
-def test_ome_missing_instrument_ref(monkeypatch, remote_sample: Callable) -> None:
+def test_ome_missing_instrument_ref(
+    monkeypatch: pytest.MonkeyPatch,
+    remote_sample: Callable,
+) -> None:
     """Test that an OME-TIFF can be read without instrument reference."""
     sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
@@ -28,7 +31,10 @@ def test_ome_missing_instrument_ref(monkeypatch, remote_sample: Callable) -> Non
     assert wsi.info.objective_power is None
 
 
-def test_ome_missing_physicalsize(monkeypatch, remote_sample: Callable) -> None:
+def test_ome_missing_physicalsize(
+    monkeypatch: pytest.MonkeyPatch,
+    remote_sample: Callable,
+) -> None:
     """Test that an OME-TIFF can be read without physical size."""
     sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
@@ -50,7 +56,7 @@ def test_ome_missing_physicalsize(monkeypatch, remote_sample: Callable) -> None:
 
 
 def test_ome_missing_physicalsizey(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
     remote_sample: Callable,
 ) -> None:
@@ -74,7 +80,10 @@ def test_ome_missing_physicalsizey(
     assert "Only one MPP value found. Using it for both X  and Y" in caplog.text
 
 
-def test_tiffreader_non_tiled_metadata(monkeypatch, remote_sample: Callable) -> None:
+def test_tiffreader_non_tiled_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    remote_sample: Callable,
+) -> None:
     """Test that fetching metadata for non-tiled TIFF works."""
     sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
