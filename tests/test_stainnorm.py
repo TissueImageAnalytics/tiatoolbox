@@ -68,7 +68,7 @@ def test_dl_output_for_h_and_e() -> None:
     assert np.all(dictionary2 == dictionary[[1, 0], :])
 
 
-def test_reinhard_normalize(source_image, norm_reinhard) -> None:
+def test_reinhard_normalize(source_image: Path, norm_reinhard: Path) -> None:
     """Test for Reinhard colour normalization."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -82,7 +82,7 @@ def test_reinhard_normalize(source_image, norm_reinhard) -> None:
     assert np.mean(np.absolute(reinhard_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_custom_normalize(source_image, norm_ruifrok) -> None:
+def test_custom_normalize(source_image: Path, norm_ruifrok: Path) -> None:
     """Test for stain normalization with user-defined stain matrix."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -108,7 +108,7 @@ def test_get_normalizer_assertion() -> None:
         _ = get_normalizer("ruifrok", stain_matrix)
 
 
-def test_ruifrok_normalize(source_image, norm_ruifrok) -> None:
+def test_ruifrok_normalize(source_image: Path, norm_ruifrok: Path) -> None:
     """Test for stain normalization with stain matrix from Ruifrok and Johnston."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -123,7 +123,7 @@ def test_ruifrok_normalize(source_image, norm_ruifrok) -> None:
     assert np.mean(np.absolute(ruifrok_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_macenko_normalize(source_image, norm_macenko) -> None:
+def test_macenko_normalize(source_image: Path, norm_macenko: Path) -> None:
     """Test for stain normalization with stain matrix from Macenko et al."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -138,7 +138,7 @@ def test_macenko_normalize(source_image, norm_macenko) -> None:
     assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_vahadane_normalize(source_image, norm_vahadane) -> None:
+def test_vahadane_normalize(source_image: Path, norm_vahadane: Path) -> None:
     """Test for stain normalization with stain matrix from Vahadane et al."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -158,7 +158,7 @@ def test_vahadane_normalize(source_image, norm_vahadane) -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_stainnorm(source_image, tmp_path: Path) -> None:
+def test_command_line_stainnorm(source_image: Path, tmp_path: Path) -> None:
     """Test for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = _local_sample_path("target_image.png")
@@ -232,7 +232,7 @@ def test_command_line_stainnorm(source_image, tmp_path: Path) -> None:
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_dir(source_image, tmp_path: Path) -> None:
+def test_cli_stainnorm_dir(source_image: Path, tmp_path: Path) -> None:
     """Test directory input for the stain normalization CLI."""
     source_img = source_image.parent
     target_img = _local_sample_path("target_image.png")
@@ -255,7 +255,7 @@ def test_cli_stainnorm_dir(source_image, tmp_path: Path) -> None:
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_file_not_found_error(source_image, tmp_path: Path) -> None:
+def test_cli_stainnorm_file_not_found_error(source_image: Path, tmp_path: Path) -> None:
     """Test file not found error for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = stain_norm_target()
@@ -280,7 +280,7 @@ def test_cli_stainnorm_file_not_found_error(source_image, tmp_path: Path) -> Non
     assert isinstance(stainnorm_result.exception, FileNotFoundError)
 
 
-def test_cli_stainnorm_method_not_supported(source_image, tmp_path: Path) -> None:
+def test_cli_stainnorm_method_not_supported(source_image: Path, tmp_path: Path) -> None:
     """Test method not supported for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = stain_norm_target()
