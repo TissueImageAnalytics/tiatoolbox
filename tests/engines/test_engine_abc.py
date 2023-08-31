@@ -4,12 +4,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
+import numpy as np
 import pytest
 
+from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
 
 if TYPE_CHECKING:
-    import numpy as np
     import torch.nn
     from torch.utils.data import DataLoader
 
@@ -103,6 +104,13 @@ def test_prepare_engines_save_dir(
     assert out_dir == tmp_path / "patch_output"
     assert out_dir.exists()
 
+    out_dir = prepare_engines_save_dir(
+        save_dir=None,
+        patch_mode=True,
+        len_images=1,
+    )
+    assert out_dir is None
+
     with pytest.raises(
         OSError,
         match=r".*More than 1 WSIs detected but there is no save directory provided.*",
@@ -144,5 +152,22 @@ def test_prepare_engines_save_dir(
 
 def test_engine_initalization() -> NoReturn:
     """Test engine initialization."""
+    with pytest.raises(
+        TypeError,
+        match="Input model must be a string or 'torch.nn.Module'.",
+    ):
+        _ = TestEngineABC(model=0)
+
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
+    model = CNNModel("alexnet", num_classes=1)
+    eng = TestEngineABC(model=model)
+    assert isinstance(eng, EngineABC)
+
+
+def test_engine_run() -> NoReturn:
+    """Test engine run."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    assert isinstance(eng, EngineABC)
+
+    eng.run(images=np.zeros((10, 10, 10, 10)), on_gpu=False)

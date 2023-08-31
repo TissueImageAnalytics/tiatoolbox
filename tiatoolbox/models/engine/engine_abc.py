@@ -47,7 +47,8 @@ def prepare_engines_save_dir(
 
     """
     if patch_mode is True:
-        save_dir.mkdir(parents=True, exist_ok=False)
+        if save_dir is not None:
+            save_dir.mkdir(parents=True, exist_ok=False)
         return save_dir
 
     if save_dir is None:

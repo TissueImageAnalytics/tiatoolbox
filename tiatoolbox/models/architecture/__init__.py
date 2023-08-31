@@ -58,15 +58,15 @@ def fetch_pretrained_weights(
 
 
 def get_pretrained_model(
-    model: str | None = None,
-    weights: str | Path | None = None,
+    requested_model: str | None = None,
+    pretrained_weights: str | Path | None = None,
     *,
     overwrite: bool = False,
 ) -> tuple[torch.nn.Module, ModelIOConfigABC]:
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
-        model (str):
+        requested_model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. The models currently supported:
 
@@ -98,7 +98,7 @@ def get_pretrained_model(
             downloaded. However, you can override with your own set of
             weights via the `pretrained_weights` argument. Argument is case-insensitive.
 
-        weights (str):
+        pretrained_weights (str):
             Path to the weight of the corresponding `pretrained_model`.
 
         overwrite (bool):
@@ -106,25 +106,25 @@ def get_pretrained_model(
 
     Examples:
         >>> # get mobilenet pretrained on Kather100K dataset by the TIA team
-        >>> model, ioconfig = get_pretrained_model(model='mobilenet_v2-kather100k')
+        >>> model = get_pretrained_model(requested_model='mobilenet_v2-kather100k')
         >>> # get mobilenet defined by TIA team, but loaded with user defined weights
-        >>> model, ioconfig = get_pretrained_model(
-        ...     model='mobilenet_v2-kather100k',
-        ...     weights='/A/B/C/my_weights.tar',
+        >>> model = get_pretrained_model(
+        ...     requested_model='mobilenet_v2-kather100k',
+        ...     pretrained_weights='/A/B/C/my_weights.tar',
         ... )
         >>> # get resnet34 pretrained on PCam dataset by TIA team
-        >>> model, ioconfig = get_pretrained_model(model='resnet34-pcam')
+        >>> model = get_pretrained_model(requested_model='resnet34-pcam')
 
     """
-    if not isinstance(model, str):
-        msg = "Input model must be a string."
+    if not isinstance(requested_model, str):
+        msg = "pretrained_model must be a string."
         raise TypeError(msg)
 
-    if model not in PRETRAINED_INFO:
-        msg = f"Pretrained model `{model}` does not exist."
+    if requested_model not in PRETRAINED_INFO:
+        msg = f"Pretrained model `{requested_model}` does not exist."
         raise ValueError(msg)
 
-    info = PRETRAINED_INFO[model]
+    info = PRETRAINED_INFO[requested_model]
 
     arch_info = info["architecture"]
     creator = locate(f"tiatoolbox.models.architecture.{arch_info['class']}")
@@ -136,13 +136,13 @@ def get_pretrained_model(
         # ! associated pre-processing coming from dataset (Kumar, Kather, etc.)
         model.preproc_func = predefined_preproc_func(info["dataset"])
 
-    if weights is None:
-        weights = fetch_pretrained_weights(
-            model,
+    if pretrained_weights is None:
+        pretrained_weights = fetch_pretrained_weights(
+            requested_model,
             overwrite=overwrite,
         )
 
-    model = load_torch_model(model=model, weights=weights)
+    model = load_torch_model(model=model, weights=pretrained_weights)
 
     # !
     io_info = info["ioconfig"]
