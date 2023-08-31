@@ -278,7 +278,6 @@ class EngineABC(ABC):
 
         return model, None
 
-    @abstractmethod
     def pre_process_patches(
         self: EngineABC,
         images: np.ndarray | list,
@@ -307,7 +306,6 @@ class EngineABC(ABC):
             shuffle=False,
         )
 
-    @abstractmethod
     def infer_patches(
         self: EngineABC,
         data_loader: DataLoader,

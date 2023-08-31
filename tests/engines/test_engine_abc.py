@@ -12,7 +12,6 @@ from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_
 
 if TYPE_CHECKING:
     import torch.nn
-    from torch.utils.data import DataLoader
 
 
 class TestEngineABC(EngineABC):
@@ -21,10 +20,6 @@ class TestEngineABC(EngineABC):
     def __init__(self: TestEngineABC, model: str | torch.nn.Module) -> NoReturn:
         """Test EngineABC init."""
         super().__init__(model=model)
-
-    def infer_patches(self: EngineABC, data_loader: DataLoader) -> NoReturn:
-        """Test infer_patch."""
-        ...  # dummy function for tests.
 
     def infer_wsi(self: EngineABC) -> NoReturn:
         """Test infer_wsi."""
@@ -36,14 +31,6 @@ class TestEngineABC(EngineABC):
 
     def post_process_wsi(self: EngineABC) -> NoReturn:
         """Test post_process_wsi."""
-        ...  # dummy function for tests.
-
-    def pre_process_patches(
-        self: EngineABC,
-        images: np.ndarray,
-        labels: list,
-    ) -> NoReturn:
-        """Test pre_process_patch."""
         ...  # dummy function for tests.
 
     def pre_process_wsi(self: EngineABC) -> NoReturn:
@@ -170,4 +157,4 @@ def test_engine_run() -> NoReturn:
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
 
-    eng.run(images=np.zeros((10, 10, 10, 10)), on_gpu=False)
+    eng.run(images=np.zeros((10, 3, 224, 224)), on_gpu=False)
