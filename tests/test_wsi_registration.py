@@ -21,7 +21,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def test_extract_features(dfbr_features) -> None:
+def test_extract_features(dfbr_features: Path) -> None:
     """Test for CNN based feature extraction function."""
     # dfbr (deep feature based registration).
     dfbr = DFBRegister()
@@ -51,7 +51,7 @@ def test_extract_features(dfbr_features) -> None:
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
 
 
-def test_feature_mapping(fixed_image, moving_image) -> None:
+def test_feature_mapping(fixed_image: Path, moving_image: Path) -> None:
     """Test for CNN based feature matching function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -154,10 +154,10 @@ def test_prealignment_rotation_step() -> None:
 
 
 def test_prealignment_output(
-    fixed_image,
-    moving_image,
-    fixed_mask,
-    moving_mask,
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
 ) -> None:
     """Test for prealignment of an image pair."""
     fixed_img = imread(fixed_image)
@@ -216,10 +216,10 @@ def test_dice_overlap_range() -> None:
 
 
 def test_warning(
-    fixed_image,
-    moving_image,
-    fixed_mask,
-    moving_mask,
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for displaying warning in prealignment function."""
@@ -381,10 +381,10 @@ def test_register_input_channels() -> None:
 
 
 def test_register_output_with_initializer(
-    fixed_image,
-    moving_image,
-    fixed_mask,
-    moving_mask,
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
 ) -> None:
     """Test for register function with initializer."""
     fixed_img = imread(fixed_image)
@@ -411,10 +411,10 @@ def test_register_output_with_initializer(
 
 
 def test_register_output_without_initializer(
-    fixed_image,
-    moving_image,
-    fixed_mask,
-    moving_mask,
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
 ) -> None:
     """Test for register function without initializer."""
     fixed_img = imread(fixed_image)
@@ -445,10 +445,10 @@ def test_register_output_without_initializer(
 
 
 def test_register_tissue_transform(
-    fixed_image,
-    moving_image,
-    fixed_mask,
-    moving_mask,
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
 ) -> None:
     """Test for the estimated tissue and block-wise transform in register function."""
     fixed_img = imread(fixed_image)
@@ -506,7 +506,12 @@ def test_estimate_bspline_transform_rgb_input() -> None:
         )
 
 
-def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask) -> None:
+def test_bspline_transform(
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
+) -> None:
     """Test for estimate_bspline_transform function."""
     fixed_img = imread(fixed_image)
     moving_img = imread(moving_image)
@@ -542,7 +547,7 @@ def test_bspline_transform(fixed_image, moving_image, fixed_mask, moving_mask) -
     assert mask_overlap > 0.75
 
 
-def test_affine_wsi_transformer(sample_ome_tiff) -> None:
+def test_affine_wsi_transformer(sample_ome_tiff: Path) -> None:
     """Test Affine WSI transformer."""
     test_locations = [(1001, 600), (1000, 500), (800, 701)]  # at base level 0
     resolution = 0

@@ -1,16 +1,25 @@
 """Define vanilla CNNs with torch backbones, mainly for patch classification."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 import torchvision.models as torch_models
 from torch import nn
-from torchvision.models import WeightsEnum
 
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import select_device
 
+if TYPE_CHECKING:  # pragma: no cover
+    from torchvision.models import WeightsEnum
 
-def _get_architecture(arch_name, weights: str or WeightsEnum = "DEFAULT", **kwargs):
+
+def _get_architecture(
+    arch_name: str,
+    weights: str or WeightsEnum = "DEFAULT",
+    **kwargs: dict,
+) -> list[nn.Sequential, ...] | nn.Sequential:
     """Get a model.
 
     Model architectures are either already defined within torchvision or
@@ -91,7 +100,7 @@ class CNNModel(ModelABC):
 
     """
 
-    def __init__(self, backbone, num_classes=1) -> None:
+    def __init__(self: CNNModel, backbone: str, num_classes: int = 1) -> None:
         """Initialize :class:`CNNModel`."""
         super().__init__()
         self.num_classes = num_classes
@@ -105,7 +114,7 @@ class CNNModel(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self, imgs):
+    def forward(self: CNNModel, imgs: torch.Tensor) -> torch.Tensor:
         """Pass input data through the model.
 
         Args:
@@ -120,7 +129,7 @@ class CNNModel(ModelABC):
         return torch.softmax(logit, -1)
 
     @staticmethod
-    def postproc(image):
+    def postproc(image: np.ndarray) -> np.ndarray:
         """Define the post-processing of this class of model.
 
         This simply applies argmax along last axis of the input.
@@ -129,7 +138,12 @@ class CNNModel(ModelABC):
         return np.argmax(image, axis=-1)
 
     @staticmethod
-    def infer_batch(model: nn.Module, batch_data: torch.Tensor, *, on_gpu: bool):
+    def infer_batch(
+        model: nn.Module,
+        batch_data: torch.Tensor,
+        *,
+        on_gpu: bool,
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -200,7 +214,7 @@ class CNNBackbone(ModelABC):
 
     """
 
-    def __init__(self, backbone) -> None:
+    def __init__(self: CNNBackbone, backbone: str) -> None:
         """Initialize :class:`CNNBackbone`."""
         super().__init__()
         self.feat_extract = _get_architecture(backbone)
@@ -208,7 +222,7 @@ class CNNBackbone(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self, imgs):
+    def forward(self: CNNBackbone, imgs: torch.Tensor) -> torch.Tensor:
         """Pass input data through the model.
 
         Args:
@@ -221,7 +235,12 @@ class CNNBackbone(ModelABC):
         return torch.flatten(gap_feat, 1)
 
     @staticmethod
-    def infer_batch(model: nn.Module, batch_data: torch.Tensor, *, on_gpu: bool):
+    def infer_batch(
+        model: nn.Module,
+        batch_data: torch.Tensor,
+        *,
+        on_gpu: bool,
+    ) -> list[np.ndarray, ...]:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.

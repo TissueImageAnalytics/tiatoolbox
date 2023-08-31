@@ -94,7 +94,7 @@ class WSIMeta:
     _valid_axes_characters = "YXSTZ"
 
     def __init__(  # noqa: PLR0913
-        self,
+        self: WSIMeta,
         slide_dimensions: tuple[int, int],
         axes: str,
         level_dimensions: Sequence[tuple[int, int]] | None = None,
@@ -130,7 +130,7 @@ class WSIMeta:
 
         self.validate()
 
-    def validate(self):
+    def validate(self: WSIMeta) -> bool:
         """Validate passed values and cast to Python types.
 
         Metadata values are often given as strings and must be
@@ -182,7 +182,7 @@ class WSIMeta:
         return passed
 
     def level_downsample(
-        self,
+        self: WSIMeta,
         level: float,
     ) -> float:
         """Get the downsample factor for a level.
@@ -212,7 +212,7 @@ class WSIMeta:
         return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
 
     def relative_level_scales(
-        self,
+        self: WSIMeta,
         resolution: Resolution,
         units: Units,
     ) -> list[np.ndarray]:
@@ -307,7 +307,7 @@ class WSIMeta:
             (base_scale * downsample) / resolution for downsample in level_downsamples
         ]
 
-    def as_dict(self):
+    def as_dict(self: WSIMeta) -> dict:
         """Convert WSIMeta to dictionary of Python types.
 
         Returns:
