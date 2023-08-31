@@ -28,7 +28,7 @@ def _prepare_save_dir(
     len_images: int,
     *,
     patch_mode: bool,
-) -> Path:
+) -> Path | None:
     """Create directory if not defined and number of images is more than 1.
 
     Args:
@@ -44,29 +44,34 @@ def _prepare_save_dir(
             Path to output directory.
 
     """
-    if patch_mode is False and save_dir is None and len_images > 1:
-        logger.warning(
-            "More than 1 WSIs detected but there is no save directory provided."
-            "All subsequent output will be saved to current runtime"
-            "location under folder 'Path.cwd() / output'. "
-            "The output might be overwritten!",
-            stacklevel=2,
-        )
-        save_dir = Path.cwd() / "output"
-    elif save_dir is not None and len_images > 1:
-        logger.warning(
+    if patch_mode is True:
+        return save_dir
+
+    if save_dir is None:
+        if len_images > 1:
+            msg = (
+                "More than 1 WSIs detected but there is no save directory provided."
+                "Please provide a 'save_dir'."
+                "All subsequent output will be saved to current runtime"
+                "location under folder 'Path.cwd() / output'. "
+                "The output might be overwritten!",
+            )
+            raise OSError(msg)
+        return (
+            Path.cwd()
+        )  # save the output to current working directory and return save_dir
+
+    if len_images > 1:
+        logger.info(
             "When providing multiple whole-slide images / tiles, "
             "the outputs will be saved and the locations of outputs"
             "will be returned to the calling function.",
-            stacklevel=2,
         )
 
-    if save_dir is not None:
-        save_dir = Path(save_dir)
-        save_dir.mkdir(parents=True, exist_ok=False)
-        return save_dir
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=False)
 
-    return Path.cwd() / "output"
+    return save_dir
 
 
 class EngineABC(ABC):
@@ -276,15 +281,15 @@ class EngineABC(ABC):
         labels: list,
     ) -> torch.utils.data.DataLoader:
         """Pre-process an image patch."""
-        if labels:
-            # if a labels is provided, then return with the prediction
-            self.return_labels = bool(labels)
-
         if labels and len(labels) != len(images):
             msg = f"len(labels) != len(imgs) : {len(labels)} != {len(images)}"
             raise ValueError(
                 msg,
             )
+
+        if labels:
+            # if a labels is provided, then return with the prediction
+            self.return_labels = bool(labels)
 
         dataset = PatchDataset(inputs=images, labels=labels)
         dataset.preproc_func = self.model.preproc_func
@@ -363,8 +368,7 @@ class EngineABC(ABC):
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
-        save_dir: os | Path | None = None,
-        # None will not save output
+        save_dir: os | Path | None = None,  # None will not save output
         # output_type can be np.ndarray, Annotation or Json str
         # output_type: str = "Annotation",  # noqa: ERA001
         **kwargs: dict,
@@ -439,6 +443,7 @@ class EngineABC(ABC):
         self.masks = masks
         self.labels = labels
 
+        # if necessary Move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
         self.model = model_to(model=self.model, on_gpu=self.on_gpu)
 
