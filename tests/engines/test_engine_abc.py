@@ -157,4 +157,56 @@ def test_engine_run() -> NoReturn:
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
 
-    eng.run(images=np.zeros((10, 3, 224, 224)), on_gpu=False)
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(
+        ValueError,
+        match=r".*The input numpy array should be four dimensional.*",
+    ):
+        eng.run(images=np.zeros((10, 10)))
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(
+        TypeError,
+        match=r"Input must be a list of file paths or a numpy array.",
+    ):
+        eng.run(images=1)
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(ValueError, match=r".* is not equal to len(imgs)*"):
+        eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            labels=list(range(1)),
+            on_gpu=False,
+        )
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False)
+    assert "probabilities" not in out
+    assert "labels" not in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        on_gpu=False,
+        verbose=False,
+    )
+    assert "probabilities" not in out
+    assert "labels" not in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        on_gpu=False,
+    )
+    assert "probabilities" not in out
+    assert "labels" in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        return_probabilities=True,
+        on_gpu=False,
+    )
+    assert "probabilities" in out
+    assert "labels" not in out

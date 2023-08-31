@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
+import numpy as np
 import torch
 import tqdm
 from torch import nn
@@ -17,7 +18,6 @@ from tiatoolbox.models.models_abc import load_torch_model, model_to
 if TYPE_CHECKING:  # pragma: no cover
     import os
 
-    import numpy as np
     from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
@@ -115,7 +115,7 @@ class EngineABC(ABC):
 
     Attributes:
         images (str or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
-            A HWC image or a path to WSI.
+            A NHWC image or a path to WSI.
         mode (str):
             Type of input to process. Choose from either `patch`, `tile`
             or `wsi`.
@@ -285,7 +285,10 @@ class EngineABC(ABC):
     ) -> torch.utils.data.DataLoader:
         """Pre-process an image patch."""
         if labels and len(labels) != len(images):
-            msg = f"len(labels) != len(imgs) : {len(labels)} != {len(images)}"
+            msg = (
+                f"len(labels) is not equal to len(imgs) "
+                f": {len(labels)} != {len(images)}"
+            )
             raise ValueError(
                 msg,
             )
@@ -323,10 +326,12 @@ class EngineABC(ABC):
             )
         output = {
             "predictions": [],
-            "labels": [],
         }
         if self.return_probabilities:
             output["probabilities"] = []
+
+        if self.return_labels:
+            output["labels"] = []
 
         for _, batch_data in enumerate(data_loader):
             batch_output_probabilities = self.model.infer_batch(
@@ -410,6 +415,24 @@ class EngineABC(ABC):
 
         return self.ioconfig
 
+    @staticmethod
+    def _validate_images(images: list | np.ndarray) -> NoReturn:
+        """Validate input images for a run."""
+        if not isinstance(images, (list, np.ndarray)):
+            msg = "Input must be a list of file paths or a numpy array."
+            raise TypeError(
+                msg,
+            )
+
+        if isinstance(images, np.ndarray) and images.ndim != 4:  # noqa: PLR2004
+            msg = (
+                "The input numpy array should be four dimensional."
+                "The shape of the numpy array should be NHWC."
+            )
+            raise ValueError(msg)
+
+        return images
+
     def run(
         self: EngineABC,
         images: list[os | Path] | np.ndarray,
@@ -489,7 +512,7 @@ class EngineABC(ABC):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
-        self.images = images
+        self.images = self._validate_images(images=images)
         self.masks = masks
         self.labels = labels
 
