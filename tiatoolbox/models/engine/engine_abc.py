@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import torch
+import tqdm
 from torch import nn
 
 from tiatoolbox import logger
@@ -13,17 +14,18 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset
 from tiatoolbox.models.models_abc import load_torch_model, model_to
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import os
 
     import numpy as np
+    from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
 
     from .io_config import ModelIOConfigABC
 
 
-def _prepare_save_dir(
+def prepare_engines_save_dir(
     save_dir: os | Path | None,
     len_images: int,
     *,
@@ -45,6 +47,7 @@ def _prepare_save_dir(
 
     """
     if patch_mode is True:
+        save_dir.mkdir(parents=True, exist_ok=False)
         return save_dir
 
     if save_dir is None:
@@ -64,7 +67,7 @@ def _prepare_save_dir(
     if len_images > 1:
         logger.info(
             "When providing multiple whole-slide images / tiles, "
-            "the outputs will be saved and the locations of outputs"
+            "the outputs will be saved and the locations of outputs "
             "will be returned to the calling function.",
         )
 
@@ -275,7 +278,7 @@ class EngineABC(ABC):
         return model, None
 
     @abstractmethod
-    def pre_process_patch(
+    def pre_process_patches(
         self: EngineABC,
         images: np.ndarray | list,
         labels: list,
@@ -309,9 +312,57 @@ class EngineABC(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def infer_patch(self: EngineABC) -> NoReturn:
+    def infer_patches(
+        self: EngineABC,
+        data_loader: DataLoader,
+    ) -> AnnotationStore | np.ndarray | dict | str:
         """Model inference on an image patch."""
-        raise NotImplementedError
+        progress_bar = None
+
+        if self.verbose:
+            progress_bar = tqdm.tqdm(
+                total=int(len(data_loader)),
+                leave=True,
+                ncols=80,
+                ascii=True,
+                position=0,
+            )
+        output = {
+            "predictions": [],
+            "labels": [],
+        }
+        if self.return_probabilities:
+            output["probabilities"] = []
+
+        for _, batch_data in enumerate(data_loader):
+            batch_output_probabilities = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                on_gpu=self.on_gpu,
+            )
+            # We get the index of the class with the maximum probability
+            batch_output_predictions = self.model.postproc_func(
+                batch_output_probabilities,
+            )
+
+            output["predictions"].extend(batch_output_predictions.tolist())
+
+            # tolist might be very expensive
+            if self.return_probabilities:
+                output["probabilities"].extend(batch_output_probabilities.tolist())
+
+            if self.return_labels:  # be careful of `s`
+                # We do not use tolist here because label may be of mixed types
+                # and hence collated as list by torch
+                output["labels"].extend(list(batch_data["label"]))
+
+            if progress_bar:
+                progress_bar.update()
+
+        if progress_bar:
+            progress_bar.close()
+
+        return output
 
     @abstractmethod
     def infer_wsi(self: EngineABC) -> NoReturn:
@@ -447,12 +498,19 @@ class EngineABC(ABC):
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
         self.model = model_to(model=self.model, on_gpu=self.on_gpu)
 
-        save_dir = _prepare_save_dir(save_dir, len(self.images), patch_mode=patch_mode)
+        save_dir = prepare_engines_save_dir(
+            save_dir,
+            len(self.images),
+            patch_mode=patch_mode,
+        )
 
         if patch_mode:
-            _ = self.pre_process_patch(
+            data_loader = self.pre_process_patches(
                 self.images,
                 self.labels,
+            )
+            return self.infer_patches(
+                data_loader=data_loader,
             )
 
         return {"save_dir": save_dir}

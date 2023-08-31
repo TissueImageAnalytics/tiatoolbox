@@ -222,7 +222,7 @@ class PatchPredictor(EngineABC):
             verbose=verbose,
         )
 
-    def pre_process_patch(self):
+    def pre_process_patches(self):
         """Pre-process an image patch."""
         raise NotImplementedError
 
@@ -234,7 +234,7 @@ class PatchPredictor(EngineABC):
         """Pre-process a WSI."""
         raise NotImplementedError
 
-    def infer_patch(self):
+    def infer_patches(self):
         """Model inference on an image patch."""
         raise NotImplementedError
 
