@@ -307,11 +307,6 @@ class EngineABC(ABC):
         )
 
     @abstractmethod
-    def pre_process_wsi(self: EngineABC) -> NoReturn:
-        """Pre-process a WSI."""
-        raise NotImplementedError
-
-    @abstractmethod
     def infer_patches(
         self: EngineABC,
         data_loader: DataLoader,
@@ -363,6 +358,11 @@ class EngineABC(ABC):
             progress_bar.close()
 
         return output
+
+    @abstractmethod
+    def pre_process_wsi(self: EngineABC) -> NoReturn:
+        """Pre-process a WSI."""
+        raise NotImplementedError
 
     @abstractmethod
     def infer_wsi(self: EngineABC) -> NoReturn:

@@ -1,6 +1,7 @@
 """Test tiatoolbox.models.engine.engine_abc."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import pytest
@@ -113,6 +114,14 @@ def test_prepare_engines_save_dir(
         )
 
     out_dir = prepare_engines_save_dir(
+        save_dir=None,
+        patch_mode=False,
+        len_images=1,
+    )
+
+    assert out_dir == Path.cwd()
+
+    out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_single_output",
         patch_mode=False,
         len_images=1,
@@ -131,3 +140,9 @@ def test_prepare_engines_save_dir(
     assert out_dir == tmp_path / "wsi_multiple_output"
     assert out_dir.exists()
     assert r"When providing multiple whole-slide images / tiles" in caplog.text
+
+
+def test_engine_initalization() -> NoReturn:
+    """Test engine initialization."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    assert isinstance(eng, EngineABC)
