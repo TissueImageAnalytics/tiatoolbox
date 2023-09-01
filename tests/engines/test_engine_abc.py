@@ -86,6 +86,17 @@ def test_prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output",
         patch_mode=True,
         len_images=1,
+        overwrite=False,
+    )
+
+    assert out_dir == tmp_path / "patch_output"
+    assert out_dir.exists()
+
+    out_dir = prepare_engines_save_dir(
+        save_dir=tmp_path / "patch_output",
+        patch_mode=True,
+        len_images=1,
+        overwrite=True,
     )
 
     assert out_dir == tmp_path / "patch_output"
@@ -95,6 +106,7 @@ def test_prepare_engines_save_dir(
         save_dir=None,
         patch_mode=True,
         len_images=1,
+        overwrite=False,
     )
     assert out_dir is None
 
@@ -106,12 +118,14 @@ def test_prepare_engines_save_dir(
             save_dir=None,
             patch_mode=False,
             len_images=2,
+            overwrite=False,
         )
 
     out_dir = prepare_engines_save_dir(
         save_dir=None,
         patch_mode=False,
         len_images=1,
+        overwrite=False,
     )
 
     assert out_dir == Path.cwd()
@@ -120,6 +134,7 @@ def test_prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_single_output",
         patch_mode=False,
         len_images=1,
+        overwrite=False,
     )
 
     assert out_dir == tmp_path / "wsi_single_output"
@@ -130,6 +145,7 @@ def test_prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_multiple_output",
         patch_mode=False,
         len_images=2,
+        overwrite=False,
     )
 
     assert out_dir == tmp_path / "wsi_multiple_output"

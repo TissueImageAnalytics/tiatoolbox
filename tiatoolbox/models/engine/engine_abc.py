@@ -53,7 +53,7 @@ def prepare_engines_save_dir(
     """
     if patch_mode is True:
         if save_dir is not None:
-            save_dir.mkdir(parents=True, exist_ok=False)
+            save_dir.mkdir(parents=True, exist_ok=overwrite)
         return save_dir
 
     if save_dir is None:
