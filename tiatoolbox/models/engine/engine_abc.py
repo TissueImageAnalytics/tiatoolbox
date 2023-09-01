@@ -1,11 +1,13 @@
 """Defines Abstract Base Class for TIAToolbox Model Engines."""
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
+import pandas as pd
 import torch
 import tqdm
 from torch import nn
@@ -30,6 +32,7 @@ def prepare_engines_save_dir(
     len_images: int,
     *,
     patch_mode: bool,
+    overwrite: bool,
 ) -> Path | None:
     """Create directory if not defined and number of images is more than 1.
 
@@ -40,6 +43,8 @@ def prepare_engines_save_dir(
             List of inputs to process.
         patch_mode(bool):
             Whether to treat input image as a patch or WSI.
+        overwrite (bool):
+                Whether to overwrite the results. Default = False.
 
     Returns:
         :class:`Path`:
@@ -56,9 +61,6 @@ def prepare_engines_save_dir(
             msg = (
                 "More than 1 WSIs detected but there is no save directory provided."
                 "Please provide a 'save_dir'."
-                "All subsequent output will be saved to current runtime"
-                "location under folder 'Path.cwd() / output'. "
-                "The output might be overwritten!",
             )
             raise OSError(msg)
         return (
@@ -73,7 +75,7 @@ def prepare_engines_save_dir(
         )
 
     save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=False)
+    save_dir.mkdir(parents=True, exist_ok=overwrite)
 
     return save_dir
 
@@ -209,7 +211,7 @@ class EngineABC(ABC):
 
         self.masks = None
         self.images = None
-        self.mode = None
+        self.patch_mode = None
         self.on_gpu = on_gpu
 
         # Initialize model with specified weights and ioconfig.
@@ -284,15 +286,6 @@ class EngineABC(ABC):
         labels: list,
     ) -> torch.utils.data.DataLoader:
         """Pre-process an image patch."""
-        if labels and len(labels) != len(images):
-            msg = (
-                f"len(labels) is not equal to len(imgs) "
-                f": {len(labels)} != {len(images)}"
-            )
-            raise ValueError(
-                msg,
-            )
-
         if labels:
             # if a labels is provided, then return with the prediction
             self.return_labels = bool(labels)
@@ -309,10 +302,29 @@ class EngineABC(ABC):
             shuffle=False,
         )
 
+    @staticmethod
+    def _convert_output_to_requested_type(
+        output: dict,
+        output_type: str,
+    ) -> AnnotationStore | np.ndarray | pd.DataFrame | dict | str:
+        """Converts inference output to requested type."""
+        # function convert output to output_type
+        if output_type.lower() == "array":
+            return np.array(output["predictions"])
+
+        if output_type.lower() == "json":
+            return json.dumps(output, indent=4)
+
+        if output_type.lower() == "dataframe":
+            return pd.DataFrame.from_dict(data=output)
+
+        return output
+
     def infer_patches(
         self: EngineABC,
         data_loader: DataLoader,
-    ) -> AnnotationStore | np.ndarray | dict | str:
+        output_type: str,
+    ) -> AnnotationStore | np.ndarray | pd.DataFrame | dict | str:
         """Model inference on an image patch."""
         progress_bar = None
 
@@ -361,7 +373,10 @@ class EngineABC(ABC):
         if progress_bar:
             progress_bar.close()
 
-        return output
+        return self._convert_output_to_requested_type(
+            output=output,
+            output_type=output_type,
+        )
 
     @abstractmethod
     def pre_process_wsi(self: EngineABC) -> NoReturn:
@@ -416,7 +431,7 @@ class EngineABC(ABC):
         return self.ioconfig
 
     @staticmethod
-    def _validate_images(images: list | np.ndarray) -> NoReturn:
+    def _validate_images_masks(images: list | np.ndarray) -> list | np.ndarray:
         """Validate input images for a run."""
         if not isinstance(images, (list, np.ndarray)):
             msg = "Input must be a list of file paths or a numpy array."
@@ -433,6 +448,37 @@ class EngineABC(ABC):
 
         return images
 
+    @staticmethod
+    def _validate_input_numbers(
+        images: list | np.ndarray,
+        masks: list[os | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+    ) -> NoReturn:
+        """Validates number of input images, masks and labels."""
+        if masks is None and labels is None:
+            return
+
+        len_images = len(images)
+
+        if masks is not None and len_images != len(masks):
+            msg = (
+                f"len(masks) is not equal to len(images) "
+                f": {len(masks)} != {len(images)}"
+            )
+            raise ValueError(
+                msg,
+            )
+
+        if labels is not None and len_images != len(labels):
+            msg = (
+                f"len(labels) is not equal to len(images) "
+                f": {len(labels)} != {len(images)}"
+            )
+            raise ValueError(
+                msg,
+            )
+        return
+
     def run(
         self: EngineABC,
         images: list[os | Path] | np.ndarray,
@@ -442,10 +488,10 @@ class EngineABC(ABC):
         *,
         patch_mode: bool = True,
         save_dir: os | Path | None = None,  # None will not save output
-        # output_type can be np.ndarray, Annotation or Json str
-        # output_type: str = "Annotation",  # noqa: ERA001
+        overwrite: bool = False,
+        output_type: str = "dict",
         **kwargs: dict,
-    ) -> AnnotationStore | np.ndarray | dict | str:
+    ) -> AnnotationStore | np.ndarray | pd.DataFrame | dict | str:
         """Run the engine on input images.
 
         Args:
@@ -475,8 +521,12 @@ class EngineABC(ABC):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
+            overwrite (bool):
+                Whether to overwrite the results. Default = False.
             output_type (str):
-                Whether to save output for a single file. default=False
+                The format of the output type. "output_type" can be
+                "dict", "array", "AnnotationStore", "DataFrame" or "json".
+                Default is "AnnotationStore".
             **kwargs (dict):
                 Keyword Args to update :class:`EngineABC` attributes.
 
@@ -512,8 +562,12 @@ class EngineABC(ABC):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
-        self.images = self._validate_images(images=images)
-        self.masks = masks
+        self._validate_input_numbers(images=images, masks=masks, labels=labels)
+        self.images = self._validate_images_masks(images=images)
+
+        if masks is not None:
+            self.masks = self._validate_images_masks(images=masks)
+
         self.labels = labels
 
         # if necessary Move model parameters to "cpu" or "gpu" and update ioconfig
@@ -524,6 +578,7 @@ class EngineABC(ABC):
             save_dir,
             len(self.images),
             patch_mode=patch_mode,
+            overwrite=overwrite,
         )
 
         if patch_mode:
@@ -533,6 +588,7 @@ class EngineABC(ABC):
             )
             return self.infer_patches(
                 data_loader=data_loader,
+                output_type=output_type,
             )
 
         return {"save_dir": save_dir}

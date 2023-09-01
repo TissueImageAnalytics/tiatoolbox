@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 from collections import OrderedDict
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, NoReturn
 
 import numpy as np
 import torch
@@ -222,41 +222,21 @@ class PatchPredictor(EngineABC):
             verbose=verbose,
         )
 
-    def pre_process_patches(self):
-        """Pre-process an image patch."""
-        raise NotImplementedError
-
-    def pre_process_tile(self):
-        """Pre-process an image tile."""
-        raise NotImplementedError
-
-    def pre_process_wsi(self):
+    def pre_process_wsi(self: PatchPredictor) -> NoReturn:
         """Pre-process a WSI."""
-        raise NotImplementedError
+        ...
 
-    def infer_patches(self):
-        """Model inference on an image patch."""
-        raise NotImplementedError
-
-    def infer_tile(self):
-        """Model inference on an image tile."""
-        raise NotImplementedError
-
-    def infer_wsi(self):
+    def infer_wsi(self: PatchPredictor) -> NoReturn:
         """Model inference on a WSI."""
-        raise NotImplementedError
+        ...
 
-    def post_process_patch(self):
+    def post_process_patch(self: PatchPredictor) -> NoReturn:
         """Post-process an image patch."""
-        raise NotImplementedError
+        ...
 
-    def post_process_tile(self):
-        """Post-process an image tile."""
-        raise NotImplementedError
-
-    def post_process_wsi(self):
+    def post_process_wsi(self: PatchPredictor) -> NoReturn:
         """Post-process a WSI."""
-        raise NotImplementedError
+        ...
 
     @staticmethod
     def merge_predictions(

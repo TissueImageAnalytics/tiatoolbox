@@ -172,10 +172,33 @@ def test_engine_run() -> NoReturn:
         eng.run(images=1)
 
     eng = TestEngineABC(model="alexnet-kather100k")
-    with pytest.raises(ValueError, match=r".* is not equal to len(imgs)*"):
+    with pytest.raises(
+        ValueError,
+        match=r".*len\(labels\) is not equal to len(images)*",
+    ):
         eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(1)),
+            on_gpu=False,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r".*len\(masks\) is not equal to len(images)*",
+    ):
+        eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            masks=np.zeros((1, 224, 224, 3)),
+            on_gpu=False,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r".*The shape of the numpy array should be NHWC*",
+    ):
+        eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            masks=np.zeros((10, 3)),
             on_gpu=False,
         )
 
