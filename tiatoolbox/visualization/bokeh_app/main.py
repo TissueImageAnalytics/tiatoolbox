@@ -825,7 +825,6 @@ def slide_select_cb(attr, old, new):
     UI["type_column"].children = []
     logger.info("loading %s", slide_path)
     populate_layer_list(slide_path.stem, doc_config["overlay_folder"])
-    print(f"loading slide {slide_path}")
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
     fname = make_safe_name(str(slide_path))
@@ -1789,7 +1788,6 @@ class DocConfig:
 
     def set_sys_args(self, argv):
         """Set the system arguments."""
-        print(f"sys args: {argv}")
         self.sys_args = argv
 
     def _get_config(self):
@@ -1825,7 +1823,6 @@ class DocConfig:
         config["demo_name"] = self.config["demo_name"]
 
         # get any extra info from query url
-        print(f"req_args: {req_args}")
         if "slide" in req_args:
             config["first_slide"] = str(req_args["slide"][0], "utf-8")
             if "window" in req_args:
