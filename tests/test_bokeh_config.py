@@ -88,7 +88,7 @@ def test_roots(doc):
     assert len(doc.roots) == 2
 
 
-def test_config_loaded(doc, data_path):
+def test_config_loaded(data_path):
     """Test that the config is loaded correctly."""
     # config should be loaded
     loaded_config = main.doc_config.config
@@ -100,6 +100,18 @@ def test_config_loaded(doc, data_path):
     for key in file_config:
         assert key in loaded_config
         assert loaded_config[key] == file_config[key]
+
+
+def test_slide_select(doc, data_path):
+    """Test slide selection."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    # check there are two available slides
+    assert len(slide_select.options) == 2
+    assert slide_select.options[0][0] == data_path["slide1"].name
+
+    # select a slide and check it is loaded
+    slide_select.value = ["CMU-1-Small-Region.svs"]
+    assert main.UI["vstate"].slide_path == data_path["slide1"]
 
 
 def test_clearing_doc(doc):

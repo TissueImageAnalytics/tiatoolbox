@@ -347,6 +347,8 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         """Get an item from the dataset."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image
+        if isinstance(self.reader, Path):
+            self.reader = WSIReader.open(self.reader)
         patch = self.reader.read_bounds(
             coords,
             resolution=self.resolution,

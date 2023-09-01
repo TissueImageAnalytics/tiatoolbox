@@ -70,6 +70,14 @@ def annotation_path(data_path):
         "graph_svs_1",
         data_path["base_path"] / "overlays",
     )
+    data_path["graph_feats"] = _fetch_remote_sample(
+        "graph_svs_1_feats",
+        data_path["base_path"] / "overlays",
+    )
+    data_path["geojson_anns"] = _fetch_remote_sample(
+        "geojson_cmu_1",
+        data_path["base_path"] / "overlays",
+    )
     return data_path
 
 
@@ -92,11 +100,6 @@ def test_to_num():
     assert main.to_num("1.0e-3") == 1.0e-3
     assert main.to_num(2) == 2
     assert main.to_num("None") is None
-
-
-def test_name2type():
-    """Test the name2type function."""
-    assert main.name2type("type") == '"type"'
 
 
 # test the bokeh app
@@ -147,7 +150,7 @@ def test_remove_dual_window(doc, data_path):
 def test_add_annotation_layer(doc):
     """Test adding an annotation layer."""
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 2
+    assert len(layer_drop.menu) == 3
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
     # trigger an event to select the annotation .db file
     click = MenuItemClick(layer_drop, layer_drop.menu[0][0])
@@ -202,7 +205,7 @@ def test_type_cmap_select(doc):
     assert len(np.unique(im.sum(axis=2))) > 10
 
 
-def test_load_graph(doc, data_path):
+def test_load_graph(doc):
     """Test loading a graph."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .db file
@@ -415,6 +418,7 @@ def test_color_cycler():
 
 
 def test_cmap_select(doc):
+    """Test changing the cmap."""
     cmap_select = doc.get_model_by_name("cmap0")
     # set the cmap to "viridis"
     cmap_select.value = "viridis"
@@ -436,9 +440,25 @@ def test_load_geojson(doc, data_path):
     slide_select.value = [data_path["slide2"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the geojson file
-    click = MenuItemClick(layer_drop, layer_drop.menu[2][1])
+    click = MenuItemClick(layer_drop, layer_drop.menu[-1][1])
     layer_drop._trigger_event(click)
     assert main.UI["vstate"].types == ["annotation"]
+
+
+def test_name2type():
+    """Test the name2type function."""
+    assert main.name2type("annotation") == '"annotation"'
+
+
+def test_graph_with_feats(doc):
+    """Test loading a graph with features."""
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    # trigger an event to select the graph .db file
+    click = MenuItemClick(layer_drop, layer_drop.menu[2][1])
+    layer_drop._trigger_event(click)
+    # we should have keys for the features in node data source now
+    for i in range(10):
+        assert f"feat_{i}" in main.UI["node_source"].data
 
 
 def test_clearing_doc(doc):
