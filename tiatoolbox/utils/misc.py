@@ -17,6 +17,7 @@ import requests
 import yaml
 from filelock import FileLock
 from shapely.affinity import translate
+from shapely.geometry import box
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 
@@ -1174,3 +1175,34 @@ def add_from_dat(
 
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
+
+
+def patch_pred_store(patch_output: dict) -> AnnotationStore:
+    """Create an SQLiteStore containing Annotations for each patch.
+
+    Args:
+        patch_output (dict): A dictionary of patch prediction information. Important keys are
+            "probabilities", "predictions", "coordinates", and "labels".
+
+    Returns:
+        SQLiteStore: An SQLiteStore containing Annotations for each patch.
+    """
+    store = SQLiteStore()
+    annotations = []
+    # find what keys we need to save
+    keys = ["predictions"]
+    if "coordinates" not in patch_output:
+        # we cant create annotations without coordinates
+        msg = "Patch output must contain coordinates."
+        raise ValueError(msg)
+    keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
+
+    for idx, coordinate in enumerate(patch_output["coordinates"]):
+        properties = {key: patch_output[key][idx] for key in keys}
+        # Create a square annotation for the patch
+        annotations.append(Annotation(geometry=box(*coordinate), properties=properties))
+
+    # Add annotations to store
+    store.append_many(annotations)
+
+    return store

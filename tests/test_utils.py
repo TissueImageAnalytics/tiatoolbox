@@ -18,6 +18,7 @@ from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import utils
+from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -1626,3 +1627,29 @@ def test_imwrite(tmp_path: Path) -> NoReturn:
             tmp_path / "thisfolderdoesnotexist" / "test_imwrite.jpg",
             img,
         )
+
+
+def test_patch_pred_store():
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [0.9, 0.1, 0.8],
+        "labels": [1, 0, 1],
+        "other": "other",
+    }
+
+    store = misc.patch_pred_store(patch_output)
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 1
+        assert annotation.properties["label"] in [0, 1]
+        assert "other" not in annotation.properties
+
+    patch_output.pop("coordinates")
+    # check correct error is raised if coordinates are missing
+    with pytest.raises(ValueError, match="coordinates"):
+        misc.patch_pred_store(patch_output)
