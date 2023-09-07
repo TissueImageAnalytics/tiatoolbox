@@ -12,4 +12,4 @@ def on_session_destroyed(session_context):
     if host is None:
         host = "127.0.0.1"
         sys.exit()
-    requests.get(f"http://{host}:5000/tileserver/reset/{user}")
+    requests.get(f"http://{host}:5000/tileserver/reset/{user}", timeout=100)

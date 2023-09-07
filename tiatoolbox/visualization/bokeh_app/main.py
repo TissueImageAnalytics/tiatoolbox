@@ -19,7 +19,6 @@ from matplotlib import colormaps
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
-# Bokeh stuff
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
