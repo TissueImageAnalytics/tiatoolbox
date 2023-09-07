@@ -8,10 +8,10 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
 from PIL import Image
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -24,7 +24,7 @@ def get_tile(layer, x, y, z, *, show: bool):
     url = source.url
     # replace {x}, {y}, {z} with tile coordinates
     url = url.replace("{x}", str(x)).replace("{y}", str(y)).replace("{z}", str(z))
-    im = io.BytesIO(requests.get(url).content)
+    im = io.BytesIO(requests.get(url, timeout=100).content)
     if show:
         plt.imshow(np.array(Image.open(im)))
         plt.show()

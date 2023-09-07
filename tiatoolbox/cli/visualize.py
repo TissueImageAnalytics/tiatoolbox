@@ -51,4 +51,4 @@ def visualize(img_input, port):
         "--args",
         *img_input,
     ]
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True)  # noqa S603

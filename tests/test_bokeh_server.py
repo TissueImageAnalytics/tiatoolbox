@@ -4,12 +4,12 @@ from threading import Thread
 
 import pkg_resources
 import pytest
+
 from bokeh.application import Application
 from bokeh.application.handlers import DirectoryHandler
 from bokeh.client.session import pull_session
 from bokeh.events import MenuItemClick
 from bokeh.server.server import Server
-
 from tiatoolbox.data import _fetch_remote_sample
 
 BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
@@ -52,7 +52,10 @@ def annotation_path(data_path):
 
 @pytest.fixture(scope="module")
 def bk_session(data_path):
+    """Create a bokeh session."""
+
     def run_app() -> None:
+        """Start a server to run the bokeh app."""
         handler = DirectoryHandler(
             filename=BOKEH_PATH,
             argv=[str(data_path["base_path"])],
@@ -68,15 +71,11 @@ def bk_session(data_path):
     return pull_session(
         url="http://localhost:5006/bkapp",
         arguments={"slide": "CMU-1.ndpi"},
-    )  # , arguments={"demo": "TTB_vis_folder"})# as session:
-    # customize session here
+    )
 
 
 def test_slide_in_req_args(bk_session):
     """Test that the slide is in the required arguments."""
-    # slide should be in the required arguments
-    # assert "slide" in bk_session.document.session_context.request.arguments
-
     slide_select = bk_session.document.get_model_by_name("slide_select0")
     # check there are two available slides
     assert len(slide_select.options) == 2

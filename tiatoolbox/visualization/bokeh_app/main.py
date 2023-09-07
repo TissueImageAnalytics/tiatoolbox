@@ -14,6 +14,10 @@ from typing import Any
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
 # Bokeh stuff
 from bokeh.io import curdoc
@@ -50,11 +54,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -64,6 +63,7 @@ from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 rng = np.random.default_rng()
+MAX_CAT = 10
 
 
 # Define helper functions/classes
@@ -155,7 +155,6 @@ def get_from_config(keys: dict, default: Any = None):
 
 def make_ts(route: str, z_levels: int, init_z: int = 4):
     """Helper to make a tile source."""
-    # if init_z is None:
     sf = 2 ** (z_levels - init_z - 5)
     ts = WMTSTileSource(
         name="WSI provider",
@@ -248,7 +247,7 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto"):
     prop_vals = json.loads(resp.text)
     # if auto, guess what cmap should be
     if (
-        (len(prop_vals) > 10 or len(prop_vals) == 0)
+        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0)
         and mapper_type == "auto"
         or mapper_type == "continuous"
     ):
@@ -262,7 +261,6 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto"):
 
 def update_mapper():
     """Helper to update the color mapper."""
-    # if UI["vstate"].types is not None:
     update_renderer("mapper", UI["vstate"].mapper)
 
 
@@ -347,7 +345,7 @@ def initialise_slide():
         or win_dicts[1]["vstate"].slide_path.stem
         in win_dicts[0]["vstate"].slide_path.stem
         or win_dicts[1]["vstate"].dims == win_dicts[0]["vstate"].dims
-    ):
+    ):  # PLR2004
         # view should already be correct, pass
         pass
     else:
@@ -618,7 +616,7 @@ class ViewerState:
 
 # Define UI callbacks
 # region
-def res_switch_cb(attr: str, old: int, new: int):
+def res_switch_cb(attr: str, old: int, new: int):  # noqa ARG001
     """Callback to switch between resolutions."""
     if new == 0:
         UI["vstate"].res = 1
@@ -631,7 +629,7 @@ def res_switch_cb(attr: str, old: int, new: int):
     UI["vstate"].to_update.update(["overlay", "slide"])
 
 
-def slide_toggle_cb(attr):
+def slide_toggle_cb(attr):  # noqa ARG001
     """Callback to toggle the slide on/off."""
     if UI["p"].renderers[0].alpha == 0:
         UI["p"].renderers[0].alpha = UI["slide_alpha"].value
@@ -639,12 +637,12 @@ def slide_toggle_cb(attr):
         UI["p"].renderers[0].alpha = 0.0
 
 
-def node_select_cb(attr, old, new):
+def node_select_cb(attr, old, new):  # noqa ARG001
     """Placeholder callback to do something on node selection."""
     # do something on node select if desired
 
 
-def overlay_toggle_cb(attr):
+def overlay_toggle_cb(attr):  # noqa ARG001
     """Callback to toggle the overlay on/off."""
     for i in range(5, len(UI["p"].renderers)):
         if isinstance(UI["p"].renderers[i], GraphRenderer):
@@ -697,14 +695,14 @@ def populate_slide_list(slide_folder, search_txt=None):
     UI["slide_select"].options = file_list
 
 
-def filter_input_cb(attr, old, new):
+def filter_input_cb(attr, old, new):  # noqa ARG001
     """Change predicate to be used to filter annotations."""
     build_predicate()
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
-def cprop_input_cb(attr, old, new: list[str]):
+def cprop_input_cb(attr, old, new: list[str]):  # noqa ARG001
     """Change property to colour by."""
     if len(new) == 0:
         return
@@ -726,12 +724,12 @@ def set_graph_alpha(g_renderer, value):
     g_renderer.edge_renderer.glyph.line_alpha = value
 
 
-def slide_alpha_cb(attr, old, new):
+def slide_alpha_cb(attr, old, new):  # noqa ARG001
     """Callback to change the alpha of the slide."""
     UI["p"].renderers[0].alpha = new
 
 
-def overlay_alpha_cb(attr, old, new):
+def overlay_alpha_cb(attr, old, new):  # noqa ARG001
     """Callback to change the alpha of all overlay layers."""
     for i in range(5, len(UI["p"].renderers)):
         if isinstance(UI["p"].renderers[i], GraphRenderer):
@@ -740,19 +738,19 @@ def overlay_alpha_cb(attr, old, new):
             UI["p"].renderers[i].alpha = new
 
 
-def pt_size_cb(attr, old, new):
+def pt_size_cb(attr, old, new):  # noqa ARG001
     """Callback to change the size of the points."""
     UI["vstate"].graph_node.size = 2 * new
 
 
-def edge_size_cb(attr, old, new):
+def edge_size_cb(attr, old, new):  # noqa ARG001
     """Callback to change the size of the edges."""
     update_renderer("edge_thickness", new)
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
-def opt_buttons_cb(attr, old, new):
+def opt_buttons_cb(attr, old, new):  # noqa ARG001
     """Callback to handle options changes in the ui widget."""
     old_thickness = UI["vstate"].thickness
     if 0 in new:
@@ -780,21 +778,21 @@ def opt_buttons_cb(attr, old, new):
         UI["p"].xgrid.grid_line_alpha = 0
 
 
-def cmap_select_cb(attr, old, new):
+def cmap_select_cb(attr, old, new):  # noqa ARG001
     """Callback to change the colour map."""
     update_renderer("mapper", new)
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
-def blur_spinner_cb(attr, old, new):
+def blur_spinner_cb(attr, old, new):  # noqa ARG001
     """Callback to change the blur radius."""
     update_renderer("blur_radius", new)
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
-def scale_spinner_cb(attr, old, new):
+def scale_spinner_cb(attr, old, new):  # noqa ARG001
     """Callback to change the max scale.
 
     This defines a scale above which small annotations are
@@ -806,7 +804,7 @@ def scale_spinner_cb(attr, old, new):
     UI["vstate"].to_update.update(["overlay"])
 
 
-def slide_select_cb(attr, old, new):
+def slide_select_cb(attr, old, new):  # noqa ARG001
     """Setup the newly chosen slide."""
     if len(new) == 0:
         return
@@ -920,7 +918,7 @@ def handle_graph_layer(attr):
         UI["hover"].tooltips = tooltips
 
 
-def layer_drop_cb(attr):
+def layer_drop_cb(attr):  # ARG001
     """Setup the newly chosen overlay."""
     if Path(attr.item).suffix == ".json":
         # its a graph
@@ -965,14 +963,14 @@ def layer_drop_cb(attr):
         change_tiles(resp)
 
 
-def layer_select_cb(attr):
+def layer_select_cb(attr):  # noqa ARG001
     """Callback to handle toggling specific annotation types on and off."""
     build_predicate()
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
-def fixed_layer_select_cb(obj, attr):
+def fixed_layer_select_cb(obj, attr):  # noqa ARG001
     """Callback to handle togglingnon-annotation layers on and off."""
     key = UI["vstate"].layer_dict[obj.label]
     if obj.label == "edges":
@@ -995,7 +993,7 @@ def fixed_layer_select_cb(obj, attr):
             UI["p"].renderers[key].alpha = 0.0
 
 
-def layer_slider_cb(obj, attr, old, new):
+def layer_slider_cb(obj, attr, old, new):  # noqa ARG001
     """Callback to handle changing the alpha of a layer."""
     if obj.name.split("_")[0] == "nodes":
         set_alpha_glyph(
@@ -1010,7 +1008,7 @@ def layer_slider_cb(obj, attr, old, new):
         UI["p"].renderers[UI["vstate"].layer_dict[obj.name.split("_")[0]]].alpha = new
 
 
-def color_input_cb(obj, attr, old, new):
+def color_input_cb(obj, attr, old, new):  # noqa ARG001
     """Callback to handle changing the color of an annotation type."""
     UI["vstate"].mapper[UI["vstate"].orig_types[obj.name]] = (*hex2rgb(new), 1)
     if UI["vstate"].cprop == "type":
@@ -1039,12 +1037,12 @@ def bind_cb_obj_tog(cb_obj, cb):
     return wrapped
 
 
-def model_drop_cb(attr):
+def model_drop_cb(attr):  # noqa ARG001
     """Callback to handle model selection."""
     UI["vstate"].current_model = attr.item
 
 
-def to_model_cb(attr):
+def to_model_cb(attr):  # noqa ARG001
     """Callback to run currently selected model."""
     if UI["vstate"].current_model == "hovernet":
         segment_on_box()
@@ -1055,7 +1053,7 @@ def to_model_cb(attr):
         logger.warning("unknown model")
 
 
-def type_cmap_cb(attr, old, new):
+def type_cmap_cb(attr, old, new):  # noqa ARG001
     """Callback to handle changing a type-specific color property."""
     if len(new) == 0:
         UI["type_cmap_select"].options = [*UI["vstate"].types, "graph_overlay"]
@@ -1119,7 +1117,7 @@ def type_cmap_cb(attr, old, new):
         UI["vstate"].to_update.update(["overlay"])
 
 
-def save_cb(attr):
+def save_cb(attr):  # noqa ARG001
     """Callback to handle saving annotations."""
     if doc_config["overlay_folder"] is None:
         # save in slide folder instead
@@ -1715,7 +1713,7 @@ def update():
         UI["vstate"].update_state = 2
 
 
-def control_tabs_cb(attr, old, new):
+def control_tabs_cb(attr, old, new):  # noqa ARG001
     """Callback to handle selecting active window."""
     if new == 1 and len(slide_wins.children) == 1:
         # make new window
@@ -1752,7 +1750,7 @@ def control_tabs_cb(attr, old, new):
         UI.active = new
 
 
-def control_tabs_remove_cb(attr, old, new):
+def control_tabs_remove_cb(attr, old, new):  # noqa ARG001
     """Callback to handle removing a window."""
     if len(new) == 1:
         # remove the second window
