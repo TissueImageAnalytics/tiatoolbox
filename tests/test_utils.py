@@ -1630,26 +1630,66 @@ def test_imwrite(tmp_path: Path) -> NoReturn:
 
 
 def test_patch_pred_store():
+    """Test patch_pred_store."""
     # Define a mock patch_output
     patch_output = {
         "predictions": [1, 0, 1],
         "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "probabilities": [0.9, 0.1, 0.8],
-        "labels": [1, 0, 1],
         "other": "other",
     }
 
-    store = misc.patch_pred_store(patch_output)
+    store = misc.patch_pred_store(patch_output, (1.0, 1.0))
 
     # Check that its an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
         assert annotation.geometry.area == 1
-        assert annotation.properties["label"] in [0, 1]
+        assert annotation.properties["type"] in [0, 1]
         assert "other" not in annotation.properties
 
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.patch_pred_store(patch_output)
+        misc.patch_pred_store(patch_output, (1.0, 1.0))
+
+
+def test_patch_pred_store_cdict():
+    """Test patch_pred_store with a class dict."""
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+        "other": "other",
+    }
+    class_dict = {0: "class0", 1: "class1"}
+    store = misc.patch_pred_store(patch_output, (1.0, 1.0), class_dict=class_dict)
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 1
+        assert annotation.properties["label"] in ["class0", "class1"]
+        assert annotation.properties["type"] in ["class0", "class1"]
+        assert "other" not in annotation.properties
+
+
+def test_patch_pred_store_sf():
+    """Test patch_pred_store with scale factor."""
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+    }
+    store = misc.patch_pred_store(patch_output, (2.0, 2.0))
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 4
