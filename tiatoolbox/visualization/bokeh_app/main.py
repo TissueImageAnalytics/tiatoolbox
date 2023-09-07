@@ -908,7 +908,7 @@ def handle_graph_layer(attr):
             UI["node_source"].data[key] = graph_dict[key]
 
     if do_feats:
-        for i in range(max(graph_dict["feats"].shape[1], MAX_FEATS)):
+        for i in range(min(graph_dict["feats"].shape[1], MAX_FEATS)):
             # more than 10 wont really fit in hover, ignore rest
             UI["node_source"].data[graph_feat_names[i]] = graph_dict["feats"][:, i]
 
