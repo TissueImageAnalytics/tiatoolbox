@@ -63,7 +63,17 @@ from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 rng = np.random.default_rng()
+
+# Define some constants
 MAX_CAT = 10
+FILLED = 0
+MICRON_FORMATTER = 1
+GRIDLINES = 2
+MAX_FEATS = 10
+N_PERMANENT_RENDERERS = 5
+NO_UPDATE = 0
+PENDING_UPDATE = 1
+DO_UPDATE = 2
 
 
 # Define helper functions/classes
@@ -340,7 +350,7 @@ def initialise_slide():
         UI["p"].y_range.start = -lims[3]
         UI["p"].y_range.end = -lims[1]
     # if two windows open and new slide is 'related' to the other, use the same view
-    elif len(win_dicts) == 2 and (
+    elif len(win_dicts) == 2 and (  # noqa: PLR2004
         win_dicts[0]["vstate"].slide_path.stem in win_dicts[1]["vstate"].slide_path.stem
         or win_dicts[1]["vstate"].slide_path.stem
         in win_dicts[0]["vstate"].slide_path.stem
@@ -753,7 +763,7 @@ def edge_size_cb(attr, old, new):  # noqa: ARG001
 def opt_buttons_cb(attr, old, new):  # noqa: ARG001
     """Callback to handle options changes in the ui widget."""
     old_thickness = UI["vstate"].thickness
-    if 0 in new:
+    if FILLED in new:
         UI["vstate"].thickness = -1
         update_renderer("thickness", -1)
     else:
@@ -762,13 +772,13 @@ def opt_buttons_cb(attr, old, new):  # noqa: ARG001
     if old_thickness != UI["vstate"].thickness:
         UI["vstate"].update_state = 1
         UI["vstate"].to_update.update(["overlay"])
-    if 1 in new:
+    if MICRON_FORMATTER in new:
         UI["p"].xaxis[0].formatter = UI["vstate"].micron_formatter
         UI["p"].yaxis[0].formatter = UI["vstate"].micron_formatter
     else:
         UI["p"].xaxis[0].formatter = BasicTickFormatter()
         UI["p"].yaxis[0].formatter = BasicTickFormatter()
-    if 2 in new:
+    if GRIDLINES in new:
         UI["p"].ygrid.grid_line_color = "gray"
         UI["p"].xgrid.grid_line_color = "gray"
         UI["p"].ygrid.grid_line_alpha = 0.6
@@ -815,8 +825,8 @@ def slide_select_cb(attr, old, new):  # noqa: ARG001
     UI["node_source"].data = {"x_": [], "y_": [], "node_color_": []}
     UI["edge_source"].data = {"x0_": [], "y0_": [], "x1_": [], "y1_": []}
     UI["hover"].tooltips = None
-    if len(UI["p"].renderers) > 5:
-        for r in UI["p"].renderers[5:].copy():
+    if len(UI["p"].renderers) > N_PERMANENT_RENDERERS:
+        for r in UI["p"].renderers[N_PERMANENT_RENDERERS:].copy():
             UI["p"].renderers.remove(r)
     UI["vstate"].layer_dict = {"slide": 0, "rect": 1, "pts": 2, "nodes": 3, "edges": 4}
     UI["vstate"].slide_path = slide_path
@@ -889,20 +899,17 @@ def handle_graph_layer(attr):
         if key == "feat_names":
             graph_feat_names = graph_dict[key]
             do_feats = True
-        try:
-            if (
-                key in ["edge_index", "coordinates"]
-                or len(graph_dict[key]) != num_nodes
-            ):
-                continue
-        except TypeError:
-            continue  # not arraylike, cant add to node data
-        UI["node_source"].data[key] = graph_dict[key]
+        if (
+            key not in ["edge_index", "coordinates"]
+            and hasattr(graph_dict[key], "__len__")
+            and len(graph_dict[key]) == num_nodes
+        ):
+            # valid form to add to node data
+            UI["node_source"].data[key] = graph_dict[key]
 
     if do_feats:
-        for i in range(graph_dict["feats"].shape[1]):
-            if i > 9:
-                break  # more than 10 wont really fit, ignore rest
+        for i in range(max(graph_dict["feats"].shape[1], MAX_FEATS)):
+            # more than 10 wont really fit in hover, ignore rest
             UI["node_source"].data[graph_feat_names[i]] = graph_dict["feats"][:, i]
 
         tooltips = [
@@ -985,12 +992,11 @@ def fixed_layer_select_cb(obj, attr):  # noqa: ARG001
         else:
             UI["p"].renderers[key].glyph.fill_alpha = 0.0
             UI["p"].renderers[key].glyph.line_alpha = 0.0
+    elif UI["p"].renderers[key].alpha == 0:
+        UI["p"].renderers[key].alpha = float(obj.name)
     else:
-        if UI["p"].renderers[key].alpha == 0:
-            UI["p"].renderers[key].alpha = float(obj.name)
-        else:
-            obj.name = str(UI["p"].renderers[key].alpha)  # save old alpha
-            UI["p"].renderers[key].alpha = 0.0
+        obj.name = str(UI["p"].renderers[key].alpha)  # save old alpha
+        UI["p"].renderers[key].alpha = 0.0
 
 
 def layer_slider_cb(obj, attr, old, new):  # noqa: ARG001
@@ -1037,7 +1043,7 @@ def bind_cb_obj_tog(cb_obj, cb):
     return wrapped
 
 
-def model_drop_cb(attr):  # noqa: ARG001
+def model_drop_cb(attr):
     """Callback to handle model selection."""
     UI["vstate"].current_model = attr.item
 
@@ -1216,110 +1222,13 @@ slide_wins = row(
 control_tabs = Tabs(tabs=[], name="ui_layout")
 
 
-def make_window(vstate):
-    """Make a new window for a slide."""
-    win_num = str(len(windows))
-    if len(windows) == 1:
-        slide_wins.children[0].width = 800
-        p = figure(
-            x_range=slide_wins.children[0].x_range,
-            y_range=slide_wins.children[0].y_range,
-            x_axis_type="linear",
-            y_axis_type="linear",
-            width=800,
-            height=1000,
-            tools=tool_str,
-            active_scroll="wheel_zoom",
-            output_backend="webgl",
-            hidpi=True,
-            match_aspect=False,
-            lod_factor=200000,
-            sizing_mode="stretch_both",
-            name=f"slide_window{win_num}",
-        )
-        init_z = first_z[0]
-    else:
-        p = figure(
-            x_range=(0, vstate.dims[0]),
-            y_range=(0, vstate.dims[1]),
-            x_axis_type="linear",
-            y_axis_type="linear",
-            width=1700,
-            height=1000,
-            tools=tool_str,
-            active_scroll="wheel_zoom",
-            output_backend="webgl",
-            hidpi=True,
-            match_aspect=False,
-            lod_factor=200000,
-            sizing_mode="stretch_both",
-            name=f"slide_window{win_num}",
-        )
-        init_z = get_level_by_extent((0, p.y_range.start, p.x_range.end, 0))
-        first_z[0] = init_z
-    p.axis.visible = False
-    p.toolbar.tools[1].zoom_on_axis = False
+def gather_ui_elements(vstate, win_num):  # noqa: PLR0915
+    """Gather all the ui elements into a dict.
 
-    s = requests.Session()
+    Defines and gathers the main UI elements for a window, excluding any
+    elements that have been deactivated in the config file.
 
-    retries = Retry(
-        total=5,
-        backoff_factor=0.1,
-    )
-    s.mount("http://", HTTPAdapter(max_retries=retries))
-
-    resp = s.get(f"http://{host2}:5000/tileserver/session_id")
-    user = resp.cookies.get("session_id")
-    if curdoc().session_context:
-        curdoc().session_context.request.arguments["user"] = user
-    vstate.init_z = init_z
-    ts1 = make_ts(
-        f"http://{host}:{port}/tileserver/layer/slide/{user}/zoomify/TileGroup1"
-        r"/{z}-{x}-{y}"
-        f"@{vstate.res}x.jpg",
-        vstate.num_zoom_levels,
-    )
-    p.add_tile(ts1, smoothing=True, level="image", render_parents=True)
-
-    p.grid.grid_line_color = None
-    box_source = ColumnDataSource({"x": [], "y": [], "width": [], "height": []})
-    pt_source = ColumnDataSource({"x": [], "y": []})
-    r = p.rect("x", "y", "width", "height", source=box_source, fill_alpha=0)
-    c = p.circle("x", "y", source=pt_source, color="red", size=5)
-    p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
-    p.add_tools(PointDrawTool(renderers=[c]))
-    p.add_tools(TapTool())
-    if get_from_config(["opts", "hover_on"], 0) == 0:
-        p.toolbar.active_inspect = None
-
-    p.renderers[0].tile_source.max_zoom = 10
-
-    node_source = ColumnDataSource({"x_": [], "y_": [], "node_color_": []})
-    edge_source = ColumnDataSource({"x0_": [], "y0_": [], "x1_": [], "y1_": []})
-    vstate.graph_node = Circle(x="x_", y="y_", fill_color="node_color_", size=5)
-    vstate.graph_edge = Segment(x0="x0_", y0="y0_", x1="x1_", y1="y1_")
-    p.add_glyph(node_source, vstate.graph_node)
-    if not get_from_config(["opts", "nodes_on"], default=True):
-        p.renderers[-1].glyph.fill_alpha = 0
-        p.renderers[-1].glyph.line_alpha = 0
-    p.add_glyph(edge_source, vstate.graph_edge)
-    if not get_from_config(["opts", "edges_on"], default=False):
-        p.renderers[-1].visible = False
-    vstate.layer_dict["nodes"] = len(p.renderers) - 2
-    vstate.layer_dict["edges"] = len(p.renderers) - 1
-    hover = HoverTool(renderers=[p.renderers[-2]])
-    p.add_tools(hover)
-
-    color_bar = ColorBar(
-        color_mapper=LinearColorMapper(
-            make_color_seq_from_cmap(colormaps["viridis"]),
-        ),
-        label_standoff=12,
-    )
-    if get_from_config(["opts", "colorbar_on"], 1) == 1:
-        p.add_layout(color_bar, "below")
-
-    # Define UI elements
+    """
     res_switch = RadioButtonGroup(labels=["1x", "2x"], active=1, name=f"res{win_num}")
 
     slide_alpha = Slider(
@@ -1524,7 +1433,6 @@ def make_window(vstate):
     overlay_toggle.on_click(overlay_toggle_cb)
     filter_input.on_change("value", filter_input_cb)
     cprop_input.on_change("value", cprop_input_cb)
-    node_source.selected.on_change("indices", node_select_cb)
     type_cmap_select.on_change("value", type_cmap_cb)
 
     vstate.cprop = get_from_config(["default_cprop"], "type")
@@ -1625,6 +1533,127 @@ def make_window(vstate):
             list(ui_elements_2.values()),
         )
 
+    elements_dict = {
+        **ui_elements_1,
+        **ui_elements_2,
+        "color_column": color_column,
+        "type_column": type_column,
+        "overlay_alpha": overlay_alpha,
+        "cmap_select": cmap_select,
+        "slide_alpha": slide_alpha,
+    }
+
+    return ui_layout, extra_options, elements_dict
+
+
+def make_window(vstate):  # noqa: PLR0915
+    """Make a new window for a slide."""
+    win_num = str(len(windows))
+    if len(windows) == 1:
+        slide_wins.children[0].width = 800
+        p = figure(
+            x_range=slide_wins.children[0].x_range,
+            y_range=slide_wins.children[0].y_range,
+            x_axis_type="linear",
+            y_axis_type="linear",
+            width=800,
+            height=1000,
+            tools=tool_str,
+            active_scroll="wheel_zoom",
+            output_backend="webgl",
+            hidpi=True,
+            match_aspect=False,
+            lod_factor=200000,
+            sizing_mode="stretch_both",
+            name=f"slide_window{win_num}",
+        )
+        init_z = first_z[0]
+    else:
+        p = figure(
+            x_range=(0, vstate.dims[0]),
+            y_range=(0, vstate.dims[1]),
+            x_axis_type="linear",
+            y_axis_type="linear",
+            width=1700,
+            height=1000,
+            tools=tool_str,
+            active_scroll="wheel_zoom",
+            output_backend="webgl",
+            hidpi=True,
+            match_aspect=False,
+            lod_factor=200000,
+            sizing_mode="stretch_both",
+            name=f"slide_window{win_num}",
+        )
+        init_z = get_level_by_extent((0, p.y_range.start, p.x_range.end, 0))
+        first_z[0] = init_z
+    p.axis.visible = False
+    p.toolbar.tools[1].zoom_on_axis = False
+
+    s = requests.Session()
+
+    retries = Retry(
+        total=5,
+        backoff_factor=0.1,
+    )
+    s.mount("http://", HTTPAdapter(max_retries=retries))
+
+    resp = s.get(f"http://{host2}:5000/tileserver/session_id")
+    user = resp.cookies.get("session_id")
+    if curdoc().session_context:
+        curdoc().session_context.request.arguments["user"] = user
+    vstate.init_z = init_z
+    ts1 = make_ts(
+        f"http://{host}:{port}/tileserver/layer/slide/{user}/zoomify/TileGroup1"
+        r"/{z}-{x}-{y}"
+        f"@{vstate.res}x.jpg",
+        vstate.num_zoom_levels,
+    )
+    p.add_tile(ts1, smoothing=True, level="image", render_parents=True)
+
+    p.grid.grid_line_color = None
+    box_source = ColumnDataSource({"x": [], "y": [], "width": [], "height": []})
+    pt_source = ColumnDataSource({"x": [], "y": []})
+    r = p.rect("x", "y", "width", "height", source=box_source, fill_alpha=0)
+    c = p.circle("x", "y", source=pt_source, color="red", size=5)
+    p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
+    p.add_tools(PointDrawTool(renderers=[c]))
+    p.add_tools(TapTool())
+    if get_from_config(["opts", "hover_on"], 0) == 0:
+        p.toolbar.active_inspect = None
+
+    p.renderers[0].tile_source.max_zoom = 10
+
+    # add graph stuff
+    node_source = ColumnDataSource({"x_": [], "y_": [], "node_color_": []})
+    edge_source = ColumnDataSource({"x0_": [], "y0_": [], "x1_": [], "y1_": []})
+    vstate.graph_node = Circle(x="x_", y="y_", fill_color="node_color_", size=5)
+    vstate.graph_edge = Segment(x0="x0_", y0="y0_", x1="x1_", y1="y1_")
+    p.add_glyph(node_source, vstate.graph_node)
+    node_source.selected.on_change("indices", node_select_cb)
+    if not get_from_config(["opts", "nodes_on"], default=True):
+        p.renderers[-1].glyph.fill_alpha = 0
+        p.renderers[-1].glyph.line_alpha = 0
+    p.add_glyph(edge_source, vstate.graph_edge)
+    if not get_from_config(["opts", "edges_on"], default=False):
+        p.renderers[-1].visible = False
+    vstate.layer_dict["nodes"] = len(p.renderers) - 2
+    vstate.layer_dict["edges"] = len(p.renderers) - 1
+    hover = HoverTool(renderers=[p.renderers[-2]])
+    p.add_tools(hover)
+
+    color_bar = ColorBar(
+        color_mapper=LinearColorMapper(
+            make_color_seq_from_cmap(colormaps["viridis"]),
+        ),
+        label_standoff=12,
+    )
+    if get_from_config(["opts", "colorbar_on"], 1) == 1:
+        p.add_layout(color_bar, "below")
+
+    # Define UI elements
+    ui_layout, extra_options, elements_dict = gather_ui_elements(vstate, win_num)
+
     if len(windows) == 0:
         controls.append(
             TabPanel(
@@ -1653,8 +1682,7 @@ def make_window(vstate):
         slide_wins.children.append(p)
 
     return {
-        **ui_elements_1,
-        **ui_elements_2,
+        **elements_dict,
         "p": p,
         "vstate": vstate,
         "s": s,
@@ -1664,12 +1692,7 @@ def make_window(vstate):
         "edge_source": edge_source,
         "hover": hover,
         "user": user,
-        "color_column": color_column,
-        "type_column": type_column,
-        "overlay_alpha": overlay_alpha,
-        "cmap_select": cmap_select,
         "color_bar": color_bar,
-        "slide_alpha": slide_alpha,
     }
 
 
@@ -1703,14 +1726,14 @@ port = "5000"
 
 def update():
     """Callback to ensure tiles are updated when needed."""
-    if UI["vstate"].update_state == 2:
+    if UI["vstate"].update_state == DO_UPDATE:
         for layer in UI["vstate"].to_update:
             if layer in UI["vstate"].layer_dict:
                 change_tiles(layer)
-        UI["vstate"].update_state = 0
+        UI["vstate"].update_state = NO_UPDATE
         UI["vstate"].to_update = set()
-    if UI["vstate"].update_state == 1:
-        UI["vstate"].update_state = 2
+    if UI["vstate"].update_state == PENDING_UPDATE:
+        UI["vstate"].update_state = DO_UPDATE
 
 
 def control_tabs_cb(attr, old, new):  # noqa: ARG001
@@ -1801,7 +1824,8 @@ class DocConfig:
             overlay_folder = base_folder.joinpath("overlays")
             if not overlay_folder.exists():
                 overlay_folder = None
-        if len(sys_args) == 3:
+        # separate slide and overlay folders given
+        if len(sys_args) == 3:  # noqa: PLR2004
             slide_folder = Path(sys_args[1])
             overlay_folder = Path(sys_args[2])
 
