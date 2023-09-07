@@ -868,6 +868,16 @@ nuclick_original-pannuke:
         kwargs:
             num_input_channels: 5
             num_output_channels: 1
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'baseline', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'baseline', 'resolution': 0.25}
+            patch_input_shape: [128, 128]
+            patch_output_shape: [128, 128]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
 nuclick_light-pannuke:
     url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_unet-pannuke.pth
@@ -878,5 +888,15 @@ nuclick_light-pannuke:
             num_output_channels: 1
             encoder: "unet"
             encoder_levels: [32, 64, 128, 256]
-            decoder_block: (3,)
-            skip_type: 'concat'
+            decoder_block: [3,3]
+            skip_type: "add"
+    ioconfig:
+        class: semantic_segmentor.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'baseline', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'baseline', 'resolution': 0.25}
+            patch_input_shape: [128, 128]
+            patch_output_shape: [128, 128]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
