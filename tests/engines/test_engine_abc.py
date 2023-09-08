@@ -25,7 +25,7 @@ class TestEngineABC(EngineABC):
         """Test infer_wsi."""
         ...  # dummy function for tests.
 
-    def post_process_patch(self: EngineABC) -> NoReturn:
+    def post_process_patches(self: EngineABC) -> NoReturn:
         """Test post_process_patch."""
         ...  # dummy function for tests.
 

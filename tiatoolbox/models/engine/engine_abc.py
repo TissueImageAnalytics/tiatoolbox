@@ -323,8 +323,7 @@ class EngineABC(ABC):
     def infer_patches(
         self: EngineABC,
         data_loader: DataLoader,
-        output_type: str,
-    ) -> AnnotationStore | np.ndarray | pd.DataFrame | dict | str:
+    ) -> dict:
         """Model inference on an image patch."""
         progress_bar = None
 
@@ -336,36 +335,26 @@ class EngineABC(ABC):
                 ascii=True,
                 position=0,
             )
-        output = {
+        raw_predictions = {
             "predictions": [],
         }
-        if self.return_probabilities:
-            output["probabilities"] = []
 
         if self.return_labels:
-            output["labels"] = []
+            raw_predictions["labels"] = []
 
         for _, batch_data in enumerate(data_loader):
-            batch_output_probabilities = self.model.infer_batch(
+            batch_output_predictions = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
                 on_gpu=self.on_gpu,
             )
-            # We get the index of the class with the maximum probability
-            batch_output_predictions = self.model.postproc_func(
-                batch_output_probabilities,
-            )
 
-            output["predictions"].extend(batch_output_predictions.tolist())
-
-            # tolist might be very expensive
-            if self.return_probabilities:
-                output["probabilities"].extend(batch_output_probabilities.tolist())
+            raw_predictions["predictions"].extend(batch_output_predictions.tolist())
 
             if self.return_labels:  # be careful of `s`
                 # We do not use tolist here because label may be of mixed types
                 # and hence collated as list by torch
-                output["labels"].extend(list(batch_data["label"]))
+                raw_predictions["labels"].extend(list(batch_data["label"]))
 
             if progress_bar:
                 progress_bar.update()
@@ -373,10 +362,7 @@ class EngineABC(ABC):
         if progress_bar:
             progress_bar.close()
 
-        return self._convert_output_to_requested_type(
-            output=output,
-            output_type=output_type,
-        )
+        return raw_predictions
 
     @abstractmethod
     def pre_process_wsi(self: EngineABC) -> NoReturn:
@@ -388,10 +374,16 @@ class EngineABC(ABC):
         """Model inference on a WSI."""
         raise NotImplementedError
 
-    @abstractmethod
-    def post_process_patch(self: EngineABC) -> NoReturn:
-        """Post-process an image patch."""
-        raise NotImplementedError
+    def post_process_patches(
+        self: EngineABC,
+        raw_predictions: dict,
+        output_type: str,
+    ) -> AnnotationStore | np.ndarray | pd.DataFrame | dict | str:
+        """Post-process an image patches."""
+        return self._convert_output_to_requested_type(
+            output=raw_predictions,
+            output_type=output_type,
+        )
 
     @abstractmethod
     def post_process_wsi(self: EngineABC) -> NoReturn:
@@ -453,7 +445,7 @@ class EngineABC(ABC):
         images: list | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
         labels: list | None = None,
-    ) -> NoReturn:
+    ) -> None:
         """Validates number of input images, masks and labels."""
         if masks is None and labels is None:
             return
@@ -586,8 +578,11 @@ class EngineABC(ABC):
                 self.images,
                 self.labels,
             )
-            return self.infer_patches(
+            raw_predictions = self.infer_patches(
                 data_loader=data_loader,
+            )
+            return self.post_process_patches(
+                raw_predictions=raw_predictions,
                 output_type=output_type,
             )
 

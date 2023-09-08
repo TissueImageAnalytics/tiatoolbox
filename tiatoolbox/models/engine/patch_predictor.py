@@ -230,7 +230,7 @@ class PatchPredictor(EngineABC):
         """Model inference on a WSI."""
         ...
 
-    def post_process_patch(self: PatchPredictor) -> NoReturn:
+    def post_process_patches(self: PatchPredictor) -> NoReturn:
         """Post-process an image patch."""
         ...
 
