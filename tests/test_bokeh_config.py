@@ -1,4 +1,4 @@
-"""Test the bokeh app with a config.json file."""
+"""Test the bokeh app with config.json file."""
 import io
 import json
 from pathlib import Path

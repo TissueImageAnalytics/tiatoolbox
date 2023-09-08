@@ -1,4 +1,4 @@
-"""Test the tiatoolbox bokeh visualization tool."""
+"""Test the tiatoolbox visualization tool."""
 from __future__ import annotations
 
 import io
