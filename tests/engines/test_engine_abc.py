@@ -25,10 +25,6 @@ class TestEngineABC(EngineABC):
         """Test infer_wsi."""
         ...  # dummy function for tests.
 
-    def post_process_patches(self: EngineABC) -> NoReturn:
-        """Test post_process_patch."""
-        ...  # dummy function for tests.
-
     def post_process_wsi(self: EngineABC) -> NoReturn:
         """Test post_process_wsi."""
         ...  # dummy function for tests.
@@ -220,7 +216,7 @@ def test_engine_run() -> NoReturn:
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False)
-    assert "probabilities" not in out
+    assert "predictions" in out
     assert "labels" not in out
 
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -229,7 +225,7 @@ def test_engine_run() -> NoReturn:
         on_gpu=False,
         verbose=False,
     )
-    assert "probabilities" not in out
+    assert "predictions" in out
     assert "labels" not in out
 
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -238,14 +234,5 @@ def test_engine_run() -> NoReturn:
         labels=list(range(10)),
         on_gpu=False,
     )
-    assert "probabilities" not in out
+    assert "predictions" in out
     assert "labels" in out
-
-    eng = TestEngineABC(model="alexnet-kather100k")
-    out = eng.run(
-        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        return_probabilities=True,
-        on_gpu=False,
-    )
-    assert "probabilities" in out
-    assert "labels" not in out

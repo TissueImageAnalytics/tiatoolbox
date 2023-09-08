@@ -135,8 +135,6 @@ class EngineABC(ABC):
             Input IO configuration to run the Engine.
         _ioconfig ():
             Runtime ioconfig.
-        return_probabilities (bool):
-            Whether to return per-class probabilities.
         return_labels (bool):
             Whether to return the labels with the predictions.
         merge_predictions (bool):
@@ -226,7 +224,6 @@ class EngineABC(ABC):
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.verbose = verbose
-        self.return_probabilities = False
         self.return_labels = False
         self.merge_predictions = False
         self.units = "baseline"
@@ -364,16 +361,6 @@ class EngineABC(ABC):
 
         return raw_predictions
 
-    @abstractmethod
-    def pre_process_wsi(self: EngineABC) -> NoReturn:
-        """Pre-process a WSI."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def infer_wsi(self: EngineABC) -> NoReturn:
-        """Model inference on a WSI."""
-        raise NotImplementedError
-
     def post_process_patches(
         self: EngineABC,
         raw_predictions: dict,
@@ -384,6 +371,16 @@ class EngineABC(ABC):
             output=raw_predictions,
             output_type=output_type,
         )
+
+    @abstractmethod
+    def pre_process_wsi(self: EngineABC) -> NoReturn:
+        """Pre-process a WSI."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def infer_wsi(self: EngineABC) -> NoReturn:
+        """Model inference on a WSI."""
+        raise NotImplementedError
 
     @abstractmethod
     def post_process_wsi(self: EngineABC) -> NoReturn:
