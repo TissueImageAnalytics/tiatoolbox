@@ -51,6 +51,7 @@ repos:
         files: whitelist.txt
       - id: debug-statements        # Checks for debugger imports and py37+ `breakpoint()` calls in python source.
       - id: pretty-format-json      # Sets a standard for formatting JSON files.
+        exclude_types: [jupyter]
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0
     hooks:
