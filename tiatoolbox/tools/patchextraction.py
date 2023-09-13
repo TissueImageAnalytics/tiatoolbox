@@ -452,13 +452,9 @@ class PatchExtractor(PatchExtractorABC):
             x, y = np.meshgrid(x, y)
             return np.stack([x.flatten(), y.flatten()], axis=-1)
 
-        output_x_end = (
-            np.ceil(image_shape[0] / patch_output_shape[0]) * patch_output_shape[0]
-        )
+        output_x_end = np.ceil(image_shape[0] / stride_shape[0]) * stride_shape[0]
         output_x_list = np.arange(0, int(output_x_end), stride_shape[0])
-        output_y_end = (
-            np.ceil(image_shape[1] / patch_output_shape[1]) * patch_output_shape[1]
-        )
+        output_y_end = np.ceil(image_shape[1] / stride_shape[1]) * stride_shape[1]
         output_y_list = np.arange(0, int(output_y_end), stride_shape[1])
         output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
         output_br_list = output_tl_list + patch_output_shape[None]
