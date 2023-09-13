@@ -340,7 +340,16 @@ def test_get_coordinates() -> None:
         input_within_bound=True,
     )
     assert len(output) == 0
-
+    # test with stride allowing extra patch
+    output = PatchExtractor.get_coordinates(
+        image_shape=(9, 6),
+        patch_input_shape=(4, 6),
+        stride_shape=(2, 6),
+        input_within_bound=False,
+    )
+    assert len(output) == 5
+    # shouldnt give any patch with top-left corner out of bound
+    assert np.all(np.max(output[:, :2], axis=0) < np.array([9, 6]))
     # test error input form
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
