@@ -56,7 +56,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 import shapely
-from shapely import BaseGeometry
 from shapely import wkb as shapely_wkb
 from shapely import wkt as shapely_wkt
 from shapely.affinity import scale, translate
@@ -1770,7 +1769,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
 
-        def transform_geometry(geom: BaseGeometry) -> BaseGeometry:
+        def transform_geometry(geom: Geometry) -> Geometry:
             """Helper function to transform a geometry if needed."""
             if origin != (0, 0):
                 # transform coords to be relative to given origin.
