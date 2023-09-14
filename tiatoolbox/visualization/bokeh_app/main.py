@@ -565,20 +565,14 @@ def run_app() -> None:
 class ViewerState:
     """Class to keep track of the current state of the viewer."""
 
-    def __init__(self, slide_path: str | Path | None = None) -> None:
+    def __init__(self, slide_path: str | Path) -> None:
         """Initialise the viewer state."""
-        if slide_path is not None:
-            self.wsi = WSIReader.open(slide_path)
-            self.slide_path = slide_path
-            self.mpp = self.wsi.info.mpp
-            if self.mpp is None:
-                self.mpp = [1, 1]
-            self.dims = self.wsi.info.slide_dimensions
-        else:
-            self.dims = [30000, 20000]
-            self.mpp = None
-            self.slide_path = None
-            self.num_zoom_levels = 0
+        self.wsi = WSIReader.open(slide_path)
+        self.slide_path = slide_path
+        self.mpp = self.wsi.info.mpp
+        if self.mpp is None:
+            self.mpp = [1, 1]
+        self.dims = self.wsi.info.slide_dimensions
         self.mapper = {}
         self.colors = list(self.mapper.values())
         self.cprop = None
@@ -631,9 +625,6 @@ def res_switch_cb(attr: str, old: int, new: int):  # noqa: ARG001
         UI["vstate"].res = 1
     elif new == 1:
         UI["vstate"].res = 2
-    else:
-        msg = "Invalid resolution"
-        raise ValueError(msg)
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay", "slide"])
 
@@ -664,8 +655,6 @@ def overlay_toggle_cb(attr):  # noqa: ARG001
 
 def populate_layer_list(slide_name, overlay_path: Path):
     """Populate the layer list with the available overlays."""
-    if overlay_path is None:
-        return
     file_list = []
     for ext in [
         "*.db",
@@ -724,13 +713,6 @@ def cprop_input_cb(attr, old, new: list[str]):  # noqa: ARG001
     )
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
-
-
-def set_graph_alpha(g_renderer, value):
-    """Set all components of graph to given alpha value."""
-    g_renderer.node_renderer.glyph.fill_alpha = value
-    g_renderer.node_renderer.glyph.line_alpha = value
-    g_renderer.edge_renderer.glyph.line_alpha = value
 
 
 def slide_alpha_cb(attr, old, new):  # noqa: ARG001
@@ -977,7 +959,7 @@ def layer_select_cb(attr):  # noqa: ARG001
 
 
 def fixed_layer_select_cb(obj, attr):  # noqa: ARG001
-    """Callback to handle togglingnon-annotation layers on and off."""
+    """Callback to handle toggling non-annotation layers on and off."""
     key = UI["vstate"].layer_dict[obj.label]
     if obj.label == "edges":
         if not UI["p"].renderers[key].visible:
@@ -1051,10 +1033,8 @@ def to_model_cb(attr):  # noqa: ARG001
     """Callback to run currently selected model."""
     if UI["vstate"].current_model == "hovernet":
         segment_on_box()
-    elif UI["vstate"].current_model == "nuclick":
-        # can we keep this? no interactive_segmentor in ttb for now
-        pass  # nuclick_on_pts(attr)
-    else:
+    # add other models here
+    else:  # pragma: no cover
         logger.warning("unknown model")
 
 

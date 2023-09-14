@@ -14,15 +14,21 @@ from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
+# constants
 BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
+FILLED = 0
+MICRON_FORMATTER = 1
+GRIDLINES = 2
 
 
+# helper functions and fixtures
 def get_tile(layer, x, y, z, *, show: bool):
     """Get a tile from the server."""
     source = main.UI["p"].renderers[main.UI["vstate"].layer_dict[layer]].tile_source
@@ -53,13 +59,22 @@ def data_path(tmp_path_factory):
 
 @pytest.fixture(scope="module", autouse=True)
 def annotation_path(data_path):
-    """Set up a dictionary defining the paths to the annotation files."""
+    """Download some testing slides and overlays.
+
+    Sets up a dictionary defining the paths to the files
+    that can be grabbed as a fixture to refer to during tests.
+
+    """
     data_path["slide1"] = _fetch_remote_sample(
         "svs-1-small",
         data_path["base_path"] / "slides",
     )
     data_path["slide2"] = _fetch_remote_sample(
         "ndpi-1",
+        data_path["base_path"] / "slides",
+    )
+    data_path["slide3"] = _fetch_remote_sample(
+        "wsi2_4k_4k_jpg",
         data_path["base_path"] / "slides",
     )
     data_path["annotations"] = _fetch_remote_sample(
@@ -114,9 +129,13 @@ def test_roots(doc):
 def test_slide_select(doc, data_path):
     """Test slide selection."""
     slide_select = doc.get_model_by_name("slide_select0")
-    # check there are two available slides
-    assert len(slide_select.options) == 2
+    # check there are three available slides
+    assert len(slide_select.options) == 3
     assert slide_select.options[0][0] == data_path["slide1"].name
+
+    # select a slide and check it is loaded
+    slide_select.value = ["wsi2_4k_4k.jpg"]
+    assert main.UI["vstate"].slide_path == data_path["slide3"]
 
     # select a slide and check it is loaded
     slide_select.value = ["CMU-1.ndpi"]
@@ -129,7 +148,7 @@ def test_dual_window(doc, data_path):
     doc.get_model_by_name("slide_windows")
     control_tabs.active = 1
     slide_select = doc.get_model_by_name("slide_select1")
-    assert len(slide_select.options) == 2
+    assert len(slide_select.options) == 3
     assert slide_select.options[0][0] == data_path["slide1"].name
 
 
@@ -147,8 +166,22 @@ def test_remove_dual_window(doc, data_path):
     assert main.UI["vstate"].slide_path == data_path["slide1"]
 
 
-def test_add_annotation_layer(doc):
-    """Test adding an annotation layer."""
+def test_add_annotation_layer(doc, data_path):
+    """Test adding annotation layers."""
+    # test loading a geojson file.
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["slide2"].name]
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    # trigger an event to select the geojson file
+    click = MenuItemClick(layer_drop, layer_drop.menu[-1][1])
+    layer_drop._trigger_event(click)
+    assert main.UI["vstate"].types == ["annotation"]
+
+    # test the name2type function.
+    assert main.name2type("annotation") == '"annotation"'
+
+    # test loading an annotation store
+    slide_select.value = [data_path["slide1"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
     assert len(layer_drop.menu) == 3
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
@@ -195,6 +228,8 @@ def test_cprop_input(doc):
 def test_type_cmap_select(doc):
     """Test changing the type cmap."""
     cmap_select = doc.get_model_by_name("type_cmap0")
+    cmap_select.value = ["prob"]
+    # select a type to assign the cmap to
     cmap_select.value = ["prob", "0"]
     # set edge thicknes to 0 so the edges don't add an extra colour
     spinner = doc.get_model_by_name("edge_size0")
@@ -203,6 +238,11 @@ def test_type_cmap_select(doc):
     # check there are more than just num_types unique colors in the image,
     # as we have mapped type 0 to a continuous cmap on prob
     assert len(np.unique(im.sum(axis=2))) > 10
+
+    # remove the type cmap
+    cmap_select.value = []
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/secondary_cmap")
+    assert resp.json()["score_prop"] == "None"
 
 
 def test_load_graph(doc):
@@ -213,6 +253,27 @@ def test_load_graph(doc):
     layer_drop._trigger_event(click)
     # we should have 2144 nodes in the node_source now
     assert len(main.UI["node_source"].data["x_"]) == 2144
+
+
+def test_graph_with_feats(doc):
+    """Test loading a graph with features."""
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    # trigger an event to select the graph .db file
+    click = MenuItemClick(layer_drop, layer_drop.menu[2][1])
+    layer_drop._trigger_event(click)
+    # we should have keys for the features in node data source now
+    for i in range(10):
+        assert f"feat_{i}" in main.UI["node_source"].data
+
+    # test setting a node feat to color by
+    cmap_select = doc.get_model_by_name("type_cmap0")
+    cmap_select.value = ["graph_overlay"]
+    cmap_select.value = ["graph_overlay", "feat_0"]
+
+    node_cm = colormaps["viridis"]
+    assert main.UI["node_source"].data["node_color_"][0] == main.rgb2hex(
+        node_cm(main.UI["node_source"].data["feat_0"][0]),
+    )
 
 
 def test_hovernet_on_box(doc, data_path):
@@ -242,6 +303,17 @@ def test_hovernet_on_box(doc, data_path):
     # check there are multiple cells being detected
     assert len(main.UI["color_column"].children) > 3
     assert num > 10
+
+    # test save functionality
+    save_button = doc.get_model_by_name("save_button0")
+    click = ButtonClick(save_button)
+    save_button._trigger_event(click)
+    saved_path = (
+        data_path["base_path"]
+        / "overlays"
+        / (data_path["slide1"].stem + "_saved_anns.db")
+    )
+    assert saved_path.exists()
 
 
 def test_alpha_sliders(doc):
@@ -346,6 +418,13 @@ def test_node_and_edge_alpha(doc):
         main.UI["p"].renderers[main.UI["vstate"].layer_dict["edges"]].glyph.line_alpha
         == 0.3
     )
+    # check changing overlay alpha doesnt affect graph alpha
+    overlay_alpha = doc.get_model_by_name("overlay_alpha0")
+    overlay_alpha.value = 0.5
+    assert (
+        main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.fill_alpha
+        == 0.4
+    )
 
 
 def test_filter_box(doc):
@@ -416,10 +495,16 @@ def test_color_cycler():
     # should be a valid hex color
     assert re.match(r"^#[0-9a-fA-F]{6}$", new_color)
 
+    # test instantiate with custom colors
+    custom_cycler = main.ColorCycler(["#ff0000", "#00ff00"])
+    assert len(custom_cycler.colors) == 2
+    assert custom_cycler.get_next() == "#ff0000"
+
 
 def test_cmap_select(doc):
     """Test changing the cmap."""
     cmap_select = doc.get_model_by_name("cmap0")
+    main.UI["cprop_input"].value = ["type"]
     # set the cmap to "viridis"
     cmap_select.value = "viridis"
     resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
@@ -434,31 +519,34 @@ def test_cmap_select(doc):
         )
 
 
-def test_load_geojson(doc, data_path):
-    """Test loading a geojson file."""
+def test_option_buttons():
+    """Test the option buttons."""
+    # default will be [FILLED]
+    # test outline only
+    assert get_renderer_prop("thickness") == -1
+    main.opt_buttons_cb(None, None, [])
+    assert get_renderer_prop("thickness") == 1
+    # test micron formatter
+    assert isinstance(main.UI["p"].xaxis[0].formatter, bkmodels.BasicTickFormatter)
+    main.opt_buttons_cb(None, None, [MICRON_FORMATTER])
+    assert isinstance(main.UI["p"].xaxis[0].formatter, bkmodels.CustomJSTickFormatter)
+    # test gridlines
+    assert main.UI["p"].xgrid.grid_line_alpha == 0
+    main.opt_buttons_cb(None, None, [GRIDLINES, MICRON_FORMATTER])
+    assert main.UI["p"].xgrid.grid_line_alpha == 0.6
+    # test removing above options
+    main.opt_buttons_cb(None, None, [FILLED])
+    assert main.UI["p"].xgrid.grid_line_alpha == 0
+    assert isinstance(main.UI["p"].xaxis[0].formatter, bkmodels.BasicTickFormatter)
+    assert get_renderer_prop("thickness") == -1
+
+
+def test_populate_slide_list(doc, data_path):
+    """Test populating the slide list."""
     slide_select = doc.get_model_by_name("slide_select0")
-    slide_select.value = [data_path["slide2"].name]
-    layer_drop = doc.get_model_by_name("layer_drop0")
-    # trigger an event to select the geojson file
-    click = MenuItemClick(layer_drop, layer_drop.menu[-1][1])
-    layer_drop._trigger_event(click)
-    assert main.UI["vstate"].types == ["annotation"]
-
-
-def test_name2type():
-    """Test the name2type function."""
-    assert main.name2type("annotation") == '"annotation"'
-
-
-def test_graph_with_feats(doc):
-    """Test loading a graph with features."""
-    layer_drop = doc.get_model_by_name("layer_drop0")
-    # trigger an event to select the graph .db file
-    click = MenuItemClick(layer_drop, layer_drop.menu[2][1])
-    layer_drop._trigger_event(click)
-    # we should have keys for the features in node data source now
-    for i in range(10):
-        assert f"feat_{i}" in main.UI["node_source"].data
+    assert len(slide_select.options) == 3
+    main.populate_slide_list(data_path["base_path"] / "slides", search_txt="wsi2_4k")
+    assert len(slide_select.options) == 1
 
 
 def test_clearing_doc(doc):
