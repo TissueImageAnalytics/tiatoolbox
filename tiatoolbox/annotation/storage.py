@@ -597,7 +597,7 @@ class AnnotationStore(ABC, MutableMapping):
 
     @classmethod
     @abstractmethod
-    def open(cls: type[AnnotationStore], fp: Path | str | IO) -> ABC:  # noqa: A003
+    def open(cls: type[AnnotationStore], fp: Path | str | IO) -> ABC:
         """Load a store object from a path or file-like object.
 
         Args:
@@ -824,7 +824,9 @@ class AnnotationStore(ABC, MutableMapping):
             self.remove(key)
 
     def setdefault(
-        self: AnnotationStore, key: str, default: Annotation | None = None,
+        self: AnnotationStore,
+        key: str,
+        default: Annotation | None = None,
     ) -> Annotation:
         """Return the value of the annotation with the given key.
 
@@ -1802,7 +1804,8 @@ class AnnotationStore(ABC, MutableMapping):
         self.append_many(annotations)
 
     def to_geojson(
-        self: AnnotationStore, fp: IO | str | Path | None = None,
+        self: AnnotationStore,
+        fp: IO | str | Path | None = None,
     ) -> str | None:
         """Serialise the store to geoJSON.
 
@@ -1964,7 +1967,8 @@ class AnnotationStore(ABC, MutableMapping):
         return pd.json_normalize(features).set_index("key")
 
     def transform(
-        self: AnnotationStore, transform: Callable[[Geometry], Geometry],
+        self: AnnotationStore,
+        transform: Callable[[Geometry], Geometry],
     ) -> None:
         """Transform all annotations in the store using provided function.
 
@@ -2026,7 +2030,9 @@ class SQLiteMetadata(MutableMapping):
         return cursor.fetchone() is not None
 
     def __setitem__(
-        self: SQLiteMetadata, key: str, value: dict | list | float | str,
+        self: SQLiteMetadata,
+        key: str,
+        value: dict | list | float | str,
     ) -> None:
         """Set a metadata value."""
         value = json.dumps(value)
@@ -2076,7 +2082,7 @@ class SQLiteStore(AnnotationStore):
     """
 
     @classmethod
-    def open(cls: type[SQLiteStore], fp: Path | str) -> SQLiteStore:  # noqa: A003
+    def open(cls: type[SQLiteStore], fp: Path | str) -> SQLiteStore:
         """Opens :class:`SQLiteStore` from file pointer or path."""
         return SQLiteStore(fp)
 
@@ -2450,7 +2456,10 @@ class SQLiteStore(AnnotationStore):
         return result
 
     def _append(
-        self: SQLiteStore, key: str, annotation: Annotation, cur: sqlite3.Cursor,
+        self: SQLiteStore,
+        key: str,
+        annotation: Annotation,
+        cur: sqlite3.Cursor,
     ) -> None:
         """Append without starting a transaction.
 
@@ -3643,7 +3652,8 @@ class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
 
     def __init__(
-        self: DictionaryStore, connection: Path | str | IO = ":memory:",
+        self: DictionaryStore,
+        connection: Path | str | IO = ":memory:",
     ) -> None:
         """Initialize :class:`DictionaryStore`."""
         super().__init__()
@@ -3758,8 +3768,7 @@ class DictionaryStore(AnnotationStore):
 
     # flake8: noqa: A003
     @classmethod
-    def open(cls: type[DictionaryStore],
-             fp: Path | str | IO) -> AnnotationStore:
+    def open(cls: type[DictionaryStore], fp: Path | str | IO) -> AnnotationStore:
         """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)
 
