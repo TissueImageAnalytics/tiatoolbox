@@ -463,11 +463,14 @@ class AnnotationStore(ABC, MutableMapping):
         """
         return np.dot(np.subtract(a, b), np.subtract(b, c)) == 0
 
-    def _is_rectangle(self: ABC,
-                      a: list[float],
-                      b: list[float],
-                      c: list[float],
-                      d: list[float], *args: str) -> bool:
+    def _is_rectangle(
+        self: ABC,
+        a: list[float],
+        b: list[float],
+        c: list[float],
+        d: list[float],
+        *args: str,
+    ) -> bool:
         """Determine if a set of coordinates form a rectangle.
 
         Used for optimising queries. If more than five points are given,
@@ -594,8 +597,7 @@ class AnnotationStore(ABC, MutableMapping):
 
     @classmethod
     @abstractmethod
-    def open(cls: type[AnnotationStore], # noqa: A003
-             fp: Path | str | IO) -> ABC:
+    def open(cls: type[AnnotationStore], fp: Path | str | IO) -> ABC:  # noqa: A003
         """Load a store object from a path or file-like object.
 
         Args:
@@ -821,9 +823,9 @@ class AnnotationStore(ABC, MutableMapping):
         for key in keys:
             self.remove(key)
 
-    def setdefault(self: AnnotationStore,
-                   key: str,
-                   default: Annotation | None = None) -> Annotation:
+    def setdefault(
+        self: AnnotationStore, key: str, default: Annotation | None = None,
+    ) -> Annotation:
         """Return the value of the annotation with the given key.
 
         If the key does not exist, insert the default value and return
@@ -1799,8 +1801,9 @@ class AnnotationStore(ABC, MutableMapping):
         logger.info("Adding %d annotations.", len(annotations))
         self.append_many(annotations)
 
-    def to_geojson(self: AnnotationStore,
-                   fp: IO | str | Path | None = None) -> str | None:
+    def to_geojson(
+        self: AnnotationStore, fp: IO | str | Path | None = None,
+    ) -> str | None:
         """Serialise the store to geoJSON.
 
         For more information on the geoJSON format see:
@@ -1960,8 +1963,9 @@ class AnnotationStore(ABC, MutableMapping):
         )
         return pd.json_normalize(features).set_index("key")
 
-    def transform(self: AnnotationStore,
-                  transform: Callable[[Geometry], Geometry]) -> None:
+    def transform(
+        self: AnnotationStore, transform: Callable[[Geometry], Geometry],
+    ) -> None:
         """Transform all annotations in the store using provided function.
 
         Useful for transforming coordinates from slide space into
@@ -2021,9 +2025,9 @@ class SQLiteMetadata(MutableMapping):
         cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
         return cursor.fetchone() is not None
 
-    def __setitem__(self: SQLiteMetadata,
-                    key: str,
-                    value: dict | list | float | str) -> None:
+    def __setitem__(
+        self: SQLiteMetadata, key: str, value: dict | list | float | str,
+    ) -> None:
         """Set a metadata value."""
         value = json.dumps(value)
         self.con.execute(
@@ -2445,9 +2449,9 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
         return result
 
-    def _append(self: SQLiteStore,
-                key: str, annotation: Annotation,
-                cur: sqlite3.Cursor) -> None:
+    def _append(
+        self: SQLiteStore, key: str, annotation: Annotation, cur: sqlite3.Cursor,
+    ) -> None:
         """Append without starting a transaction.
 
         Args:
@@ -3638,8 +3642,9 @@ class SQLiteStore(AnnotationStore):
 class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
 
-    def __init__(self: DictionaryStore,
-                 connection: Path | str | IO = ":memory:") -> None:
+    def __init__(
+        self: DictionaryStore, connection: Path | str | IO = ":memory:",
+    ) -> None:
         """Initialize :class:`DictionaryStore`."""
         super().__init__()
         self._rows = {}
@@ -3752,8 +3757,9 @@ class DictionaryStore(AnnotationStore):
         return len(self._rows)
 
     @classmethod
-    def open(cls: type[DictionaryStore],  # noqa: A003
-             fp: Path | str | IO) -> DictionaryStore:
+    def open(
+        cls: type[DictionaryStore], fp: Path | str | IO,
+    ) -> DictionaryStore:
         """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)
 

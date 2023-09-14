@@ -1561,7 +1561,7 @@ class TestStore:
 
     @staticmethod
     def test_append_invalid_geometry(
-        fill_store: callable,   # noqa: ARG004
+        fill_store: callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that appending invalid geometry raises an exception."""

@@ -321,7 +321,7 @@ def py_is_none(x: Any) -> bool:  # noqa: ANN401
     return x is None
 
 
-def py_is_not_none(x: Any) -> bool: # noqa: ANN401
+def py_is_not_none(x: Any) -> bool:  # noqa: ANN401
     """Check if x is not None."""
     return x is not None
 

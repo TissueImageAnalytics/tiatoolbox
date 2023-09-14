@@ -46,7 +46,7 @@ def points_grid(spacing: float = 60) -> list[Point]:
 def fill_store(
     cell_grid: list[Polygon],
     points_grid: list[Point],
-    ) -> Callable[list[str], AnnotationStore]:
+) -> Callable[list[str], AnnotationStore]:
     """Factory fixture to fill stores with test data."""
 
     def _fill_store(
@@ -161,8 +161,9 @@ def test_filter_by_expression(fill_store: callable, tmp_path: Path) -> None:
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(
-        where='props["type"] == "cell"', edge_thickness=0,
-        )
+        where='props["type"] == "cell"',
+        edge_thickness=0,
+    )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
@@ -248,10 +249,10 @@ def test_sub_tile_levels(fill_store: callable, tmp_path: Path) -> None:
         """Mock generator with specific subtile_level."""
 
         def tile_path(
-                self: MockTileGenerator,
-                level: int,
-                x: int,
-                y: int,
+            self: MockTileGenerator,
+            level: int,
+            x: int,
+            y: int,
         ) -> Path:  # skipcq: PYL-R0201
             """Tile path."""
             return Path(level, x, y)
