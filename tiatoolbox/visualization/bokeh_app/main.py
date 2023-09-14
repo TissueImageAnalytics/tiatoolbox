@@ -366,7 +366,7 @@ def initialise_slide():
 
     init_z = get_level_by_extent((0, UI["p"].y_range.start, UI["p"].x_range.end, 0))
     UI["vstate"].init_z = init_z
-    logger.info(UI["vstate"].wsi.info.as_dict())
+    logger.warning("slide info: %s", UI["vstate"].wsi.info.as_dict(), stacklevel=2)
 
 
 def initialise_overlay():
@@ -452,7 +452,7 @@ def add_layer(lname: str):
         Slider(
             start=0,
             end=1,
-            value=0.5,
+            value=0.75,
             step=0.01,
             title=lname,
             height=40,
@@ -623,7 +623,7 @@ def res_switch_cb(attr: str, old: int, new: int):  # noqa: ARG001
     """Callback to switch between resolutions."""
     if new == 0:
         UI["vstate"].res = 1
-    elif new == 1:
+    else:
         UI["vstate"].res = 2
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay", "slide"])
@@ -813,7 +813,7 @@ def slide_select_cb(attr, old, new):  # noqa: ARG001
     UI["vstate"].slide_path = slide_path
     UI["color_column"].children = []
     UI["type_column"].children = []
-    logger.info("loading %s", slide_path)
+    logger.warning("loading %s", slide_path, stacklevel=2)
     populate_layer_list(slide_path.stem, doc_config["overlay_folder"])
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
@@ -828,7 +828,7 @@ def slide_select_cb(attr, old, new):  # noqa: ARG001
             layer_drop_cb(dummy_attr)
 
 
-def handle_graph_layer(attr):
+def handle_graph_layer(attr):  # noqa: PY-R1000
     """Handle adding a graph layer."""
     do_feats = False
     with Path(attr.item).open("rb") as f:
@@ -880,7 +880,7 @@ def handle_graph_layer(attr):
         if key == "feat_names":
             graph_feat_names = graph_dict[key]
             do_feats = True
-        if (
+        elif (
             key not in ["edge_index", "coordinates"]
             and hasattr(graph_dict[key], "__len__")
             and len(graph_dict[key]) == num_nodes

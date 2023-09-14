@@ -89,6 +89,10 @@ def annotation_path(data_path):
         "graph_svs_1_feats",
         data_path["base_path"] / "overlays",
     )
+    data_path["img_overlay"] = _fetch_remote_sample(
+        "rendered_annotations_svs_1",
+        data_path["base_path"] / "overlays",
+    )
     data_path["geojson_anns"] = _fetch_remote_sample(
         "geojson_cmu_1",
         data_path["base_path"] / "overlays",
@@ -183,7 +187,7 @@ def test_add_annotation_layer(doc, data_path):
     # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 3
+    assert len(layer_drop.menu) == 4
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
     # trigger an event to select the annotation .db file
     click = MenuItemClick(layer_drop, layer_drop.menu[0][0])
@@ -258,7 +262,7 @@ def test_load_graph(doc):
 def test_graph_with_feats(doc):
     """Test loading a graph with features."""
     layer_drop = doc.get_model_by_name("layer_drop0")
-    # trigger an event to select the graph .db file
+    # trigger an event to select the graph .json file
     click = MenuItemClick(layer_drop, layer_drop.menu[2][1])
     layer_drop._trigger_event(click)
     # we should have keys for the features in node data source now
@@ -274,6 +278,36 @@ def test_graph_with_feats(doc):
     assert main.UI["node_source"].data["node_color_"][0] == main.rgb2hex(
         node_cm(main.UI["node_source"].data["feat_0"][0]),
     )
+
+    # test graph overlay option remains on loading new overlay
+    click = MenuItemClick(layer_drop, layer_drop.menu[0][1])
+    layer_drop._trigger_event(click)
+    assert "graph_overlay" in cmap_select.options
+
+
+def test_load_img_overlay(doc):
+    """Test loading an image overlay."""
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    # trigger an event to select the image overlay
+    click = MenuItemClick(layer_drop, layer_drop.menu[3][1])
+    layer_drop._trigger_event(click)
+    layer_slider = doc.get_model_by_name("layer2_slider")
+    assert layer_slider is not None
+
+    # check alpha controls
+    type_column_list = doc.get_model_by_name("type_column0").children
+    # last one will be image overlay controls
+    assert type_column_list[-1].active
+    # toggle off and check alpha is 0
+    type_column_list[-1].active = False
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0
+    # toggle back on and check alpha is back to default 0.75
+    type_column_list[-1].active = True
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0.75
+    # set alpha to 0.4
+    layer_slider.value = 0.4
+    # check that the alpha values have been set correctly
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0.4
 
 
 def test_hovernet_on_box(doc, data_path):
@@ -417,6 +451,11 @@ def test_node_and_edge_alpha(doc):
     assert (
         main.UI["p"].renderers[main.UI["vstate"].layer_dict["edges"]].glyph.line_alpha
         == 0.3
+    )
+    # turn edges back off and check
+    type_column_list[-2].active = False
+    assert (
+        main.UI["p"].renderers[main.UI["vstate"].layer_dict["edges"]].visible is False
     )
     # check changing overlay alpha doesnt affect graph alpha
     overlay_alpha = doc.get_model_by_name("overlay_alpha0")
