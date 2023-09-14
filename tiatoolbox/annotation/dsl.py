@@ -69,11 +69,11 @@ from typing import Any, Callable
 class SQLNone:
     """Sentinel object for SQL NULL within expressions."""
 
-    def __str__(self) -> str:
+    def __str__(self: SQLNone) -> str:
         """Return a human-readable, or informal, string representation of an object."""
         return "NULL"
 
-    def __repr__(self) -> str:
+    def __repr__(self: SQLNone) -> str:
         """Return a string representation of the object."""
         return str(self)  # pragma: no cover
 
@@ -83,115 +83,115 @@ class SQLExpression:
 
     __hash__ = None
 
-    def __repr__(self) -> str:
+    def __repr__(self: SQLExpression) -> str:
         """Return a string representation of the object."""
         return str(self)  # pragma: no cover
 
-    def __add__(self, other):
+    def __add__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Adds two objects and returns a new object as a resultant object."""
         return SQLTriplet(self, operator.add, other)
 
-    def __radd__(self, other):
+    def __radd__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Adds two objects if the left operand does not support the operation."""
         return SQLTriplet(other, operator.add, self)
 
-    def __mul__(self, other):
+    def __mul__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements the arithmetic multiplication operation."""
         return SQLTriplet(self, operator.mul, other)
 
-    def __rmul__(self, other):
+    def __rmul__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Multiplies two objects if the left operand does not support the operation."""
         return SQLTriplet(other, operator.mul, self)
 
-    def __sub__(self, other):
+    def __sub__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Return the difference of two objects."""
         return SQLTriplet(other, operator.sub, self)
 
-    def __rsub__(self, other):
+    def __rsub__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements the reverse subtraction operation."""
         return SQLTriplet(self, operator.sub, other)
 
-    def __truediv__(self, other):
+    def __truediv__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements normal division operation."""
         return SQLTriplet(self, operator.truediv, other)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements reverse normal division."""
         return SQLTriplet(other, operator.truediv, self)
 
-    def __floordiv__(self, other):
+    def __floordiv__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements integer division operation."""
         return SQLTriplet(self, operator.floordiv, other)
 
-    def __rfloordiv__(self, other):
+    def __rfloordiv__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements reverse integer division operation."""
         return SQLTriplet(other, operator.floordiv, self)
 
-    def __mod__(self, other):
+    def __mod__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements Modulo (%) operator."""
         return SQLTriplet(self, operator.mod, other)
 
-    def __rmod__(self, other):
+    def __rmod__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements reverse Modulo (%) operator."""
         return SQLTriplet(other, operator.mod, self)
 
-    def __gt__(self, other):
+    def __gt__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Return a value when comparing two objects (x>y)."""
         return SQLTriplet(self, operator.gt, other)
 
-    def __ge__(self, other):
+    def __ge__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Return a value when comparing two objects (x>=y)."""
         return SQLTriplet(self, operator.ge, other)
 
-    def __lt__(self, other):
+    def __lt__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Return a value when comparing two objects (x<y)."""
         return SQLTriplet(self, operator.lt, other)
 
-    def __le__(self, other):
+    def __le__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Return a value when comparing two objects (x<=y)."""
         return SQLTriplet(self, operator.le, other)
 
-    def __abs__(self):
+    def __abs__(self: SQLExpression) -> SQLTriplet:
         """Return the absolute value of the object."""
         return SQLTriplet(self, operator.abs)
 
-    def __eq__(self, other):
+    def __eq__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Define how the object is compared for equality."""
         return SQLTriplet(self, operator.eq, other)
 
-    def __ne__(self, other: object):
+    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:
         """Define how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.ne, other)
 
-    def __neg__(self):
+    def __neg__(self: SQLExpression) -> SQLTriplet:
         """Define how the object is compared for negation (not equal to)."""
         return SQLTriplet(self, operator.neg)
 
-    def __contains__(self, other) -> bool:
+    def __contains__(self: SQLExpression, other: object) -> bool:
         """Test whether the object contains the specified object or not."""
         return SQLTriplet(self, "contains", other)
 
-    def __pow__(self, x):
+    def __pow__(self: SQLExpression, x: SQLTriplet | str) -> SQLTriplet:
         """Implements exponentiation operation."""
         return SQLTriplet(self, operator.pow, x)
 
-    def __rpow__(self, x):
+    def __rpow__(self: SQLExpression, x: SQLTriplet | str) -> SQLTriplet:
         """Implements reverse exponentiation operation."""
         return SQLTriplet(x, operator.pow, self)
 
-    def __and__(self, other):
+    def __and__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements logical AND operation."""
         return SQLTriplet(self, operator.and_, other)
 
-    def __rand__(self, other):
+    def __rand__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements reverse logical AND operation."""
         return SQLTriplet(other, operator.and_, self)
 
-    def __or__(self, other):
+    def __or__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements logical OR operation."""
         return SQLTriplet(self, operator.or_, other)
 
-    def __ror__(self, other):
+    def __ror__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements reverse logical OR operation."""
         return SQLTriplet(other, operator.or_, self)
 
@@ -207,7 +207,7 @@ class SQLTriplet(SQLExpression):
     """
 
     def __init__(
-        self,
+        self: SQLExpression,
         lhs: SQLTriplet | str,
         op: Callable | str | None = None,
         rhs: SQLTriplet | str | None = None,
@@ -243,7 +243,7 @@ class SQLTriplet(SQLExpression):
             "bool": lambda x, _: f"({x} != 0)",
         }
 
-    def __str__(self) -> str:
+    def __str__(self: SQLExpression) -> str:
         """Return a human-readable, or informal, string representation of an object."""
         lhs = self.lhs
         rhs = self.rhs
@@ -259,22 +259,26 @@ class SQLTriplet(SQLExpression):
 class SQLJSONDictionary(SQLExpression):
     """Representation of an SQL expression to access JSON properties."""
 
-    def __init__(self, acc: str | None = None) -> None:
+    def __init__(self: SQLJSONDictionary, acc: str | None = None) -> None:
         """Initialize :class:`SQLJSONDictionary`."""
         self.acc = acc or ""
 
-    def __str__(self) -> str:
+    def __str__(self: SQLJSONDictionary) -> str:
         """Return a human-readable, or informal, string representation of an object."""
         return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
 
-    def __getitem__(self, key: str) -> SQLJSONDictionary:
+    def __getitem__(self: SQLJSONDictionary, key: str) -> SQLJSONDictionary:
         """Get an item from the dataset."""
         key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
 
         joiner = "." if self.acc and not isinstance(key, int) else ""
         return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
 
-    def get(self, key, default=None):
+    def get(
+        self: SQLJSONDictionary,
+        key: str,
+        default: str | None = None,
+    ) -> SQLTriplet:
         """Return SQLTriplet specified by key."""
         return SQLTriplet(self[key], "if_null", default or SQLNone())
 
@@ -282,13 +286,13 @@ class SQLJSONDictionary(SQLExpression):
 class SQLRegex(SQLExpression):
     """Representation of an SQL expression to match a string against a regex."""
 
-    def __init__(self, pattern: str, string: str, flags: int = 0) -> None:
+    def __init__(self: SQLRegex, pattern: str, string: str, flags: int = 0) -> None:
         """Initialize :class:`SQLRegex`."""
         self.pattern = pattern
         self.string = string
         self.flags = flags
 
-    def __str__(self) -> str:
+    def __str__(self: SQLRegex) -> str:
         """Return a human-readable, or informal, string representation of an object."""
         string = self.string
         pattern = self.pattern
@@ -302,17 +306,22 @@ class SQLRegex(SQLExpression):
         return f"({string} REGEXP {pattern})"
 
     @classmethod
-    def search(cls, pattern: str, string: str, flags: int = 0) -> SQLRegex:
+    def search(
+        cls: type[SQLRegex],
+        pattern: str,
+        string: str,
+        flags: int = 0,
+    ) -> SQLRegex:
         """Return an SQL expression to match a string against a pattern."""
         return SQLRegex(pattern, string, int(flags))
 
 
-def py_is_none(x: Any) -> bool:
+def py_is_none(x: Any) -> bool:  # noqa: ANN401
     """Check if x is None."""
     return x is None
 
 
-def py_is_not_none(x: Any) -> bool:
+def py_is_not_none(x: Any) -> bool: # noqa: ANN401
     """Check if x is not None."""
     return x is not None
 

@@ -95,7 +95,7 @@ select = [
   "C90",   # mccabe
   "T10",   # flake8-debugger
   "T20",   # flake8-print
-  # "ANN",   # flake8-annotations
+  "ANN",   # flake8-annotations
   "ARG",   # flake8-unused-arguments
   "BLE",   # flake8-blind-except
   "COM",   # flake8-commas
