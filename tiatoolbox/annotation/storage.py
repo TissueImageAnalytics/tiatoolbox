@@ -3756,10 +3756,10 @@ class DictionaryStore(AnnotationStore):
         """Return the length of the instance attributes."""
         return len(self._rows)
 
+    # flake8: noqa: A003
     @classmethod
-    def open(
-        cls: type[DictionaryStore], fp: Path | str | IO,
-    ) -> DictionaryStore:
+    def open(cls: type[DictionaryStore],
+             fp: Path | str | IO) -> AnnotationStore:
         """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)
 
@@ -3772,7 +3772,7 @@ class DictionaryStore(AnnotationStore):
             self.path.touch()
         self.dump(self.connection)
 
-    def dump(self: DictionaryStore, fp: Path | str | IO) -> None:
+    def dump(self: DictionaryStore, fp: Path | str | IO) -> str:
         """Serialise a copy of the whole store to a file-like object.
 
         Args:
