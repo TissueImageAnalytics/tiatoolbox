@@ -14,6 +14,11 @@ from typing import Any
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -48,11 +53,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -277,7 +277,7 @@ def update_renderer(prop: str, value: Any):
     """Helper to update a renderer property."""
     if prop == "mapper":
         if value == "dict":
-            if UI["cprop_input"].value == "type":
+            if UI["cprop_input"].value[0] == "type":
                 value = UI["vstate"].mapper  # put the type mapper dict back
             else:
                 value = get_mapper_for_prop(
@@ -828,7 +828,7 @@ def slide_select_cb(attr, old, new):  # noqa: ARG001
             layer_drop_cb(dummy_attr)
 
 
-def handle_graph_layer(attr):  # noqa: PY-R1000
+def handle_graph_layer(attr):  # skipcq: PY-R1000
     """Handle adding a graph layer."""
     do_feats = False
     with Path(attr.item).open("rb") as f:

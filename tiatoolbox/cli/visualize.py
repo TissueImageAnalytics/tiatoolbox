@@ -18,7 +18,7 @@ from tiatoolbox.cli.common import cli_img_input, tiatoolbox_cli
     multiple=True,
 )
 @click.option("--port", type=int)
-def visualize(img_input, port):
+def visualize(img_input, port) -> None:  # pragma: no cover
     """Launches the visualization tool for the given directory(s).
 
     If only one path is given, Slides and overlays to be visualized are expected in

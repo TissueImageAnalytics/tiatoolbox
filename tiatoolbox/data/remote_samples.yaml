@@ -123,6 +123,8 @@ files:
     url: [ *testdata, "registration/HE_2_level8_mask.png" ]
   annotation_store_svs_1:
     url: [ *testdata, "annotation/CMU-1-Small-Region_detections.db"]
+  annotation_dat_svs_1:
+    url: [ *testdata, "annotation/CMU-1-Small-Region_anns.dat"]
   rendered_annotations_svs_1:
     url: [ *testdata, "annotation/CMU-1-Small-Region_rendered_annotations.jpg"]
   graph_svs_1:

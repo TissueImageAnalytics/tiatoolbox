@@ -5,19 +5,19 @@ import io
 import re
 import time
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -74,7 +74,7 @@ def annotation_path(data_path):
         data_path["base_path"] / "slides",
     )
     data_path["slide3"] = _fetch_remote_sample(
-        "wsi2_4k_4k_jpg",
+        "patch-extraction-vf",
         data_path["base_path"] / "slides",
     )
     data_path["annotations"] = _fetch_remote_sample(
@@ -95,6 +95,10 @@ def annotation_path(data_path):
     )
     data_path["geojson_anns"] = _fetch_remote_sample(
         "geojson_cmu_1",
+        data_path["base_path"] / "overlays",
+    )
+    data_path["dat_anns"] = _fetch_remote_sample(
+        "annotation_dat_svs_1",
         data_path["base_path"] / "overlays",
     )
     return data_path
@@ -138,7 +142,7 @@ def test_slide_select(doc, data_path):
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     # select a slide and check it is loaded
-    slide_select.value = ["wsi2_4k_4k.jpg"]
+    slide_select.value = ["TCGA-HE-7130-01Z-00-DX1.png"]
     assert main.UI["vstate"].slide_path == data_path["slide3"]
 
     # select a slide and check it is loaded
@@ -177,7 +181,7 @@ def test_add_annotation_layer(doc, data_path):
     slide_select.value = [data_path["slide2"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the geojson file
-    click = MenuItemClick(layer_drop, layer_drop.menu[-1][1])
+    click = MenuItemClick(layer_drop, str(data_path["geojson_anns"]))
     layer_drop._trigger_event(click)
     assert main.UI["vstate"].types == ["annotation"]
 
@@ -187,10 +191,10 @@ def test_add_annotation_layer(doc, data_path):
     # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 4
+    assert len(layer_drop.menu) == 5
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
     # trigger an event to select the annotation .db file
-    click = MenuItemClick(layer_drop, layer_drop.menu[0][0])
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
     layer_drop._trigger_event(click)
     # should be one more renderer now
     assert len(doc.get_model_by_name("slide_windows").children[0].renderers) == (
@@ -249,21 +253,21 @@ def test_type_cmap_select(doc):
     assert resp.json()["score_prop"] == "None"
 
 
-def test_load_graph(doc):
+def test_load_graph(doc, data_path):
     """Test loading a graph."""
     layer_drop = doc.get_model_by_name("layer_drop0")
-    # trigger an event to select the graph .db file
-    click = MenuItemClick(layer_drop, layer_drop.menu[1][1])
+    # trigger an event to select the graph file
+    click = MenuItemClick(layer_drop, str(data_path["graph"]))
     layer_drop._trigger_event(click)
     # we should have 2144 nodes in the node_source now
     assert len(main.UI["node_source"].data["x_"]) == 2144
 
 
-def test_graph_with_feats(doc):
+def test_graph_with_feats(doc, data_path):
     """Test loading a graph with features."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .json file
-    click = MenuItemClick(layer_drop, layer_drop.menu[2][1])
+    click = MenuItemClick(layer_drop, str(data_path["graph_feats"]))
     layer_drop._trigger_event(click)
     # we should have keys for the features in node data source now
     for i in range(10):
@@ -280,16 +284,16 @@ def test_graph_with_feats(doc):
     )
 
     # test graph overlay option remains on loading new overlay
-    click = MenuItemClick(layer_drop, layer_drop.menu[0][1])
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
     layer_drop._trigger_event(click)
     assert "graph_overlay" in cmap_select.options
 
 
-def test_load_img_overlay(doc):
+def test_load_img_overlay(doc, data_path):
     """Test loading an image overlay."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the image overlay
-    click = MenuItemClick(layer_drop, layer_drop.menu[3][1])
+    click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
     layer_drop._trigger_event(click)
     layer_slider = doc.get_model_by_name("layer2_slider")
     assert layer_slider is not None
@@ -349,6 +353,15 @@ def test_hovernet_on_box(doc, data_path):
     )
     assert saved_path.exists()
 
+    # load an overlay with different types
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    click = MenuItemClick(layer_drop, str(data_path["dat_anns"]))
+    layer_drop._trigger_event(click)
+    assert main.UI["vstate"].types == ["annotation"]
+    # check the per-type ui controls have been updated
+    assert len(main.UI["color_column"].children) == 1
+    assert len(main.UI["type_column"].children) == 1
+
 
 def test_alpha_sliders(doc):
     """Test sliders for adjusting slide and overlay alpha."""
@@ -380,11 +393,11 @@ def test_alpha_buttons(doc):
     assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["overlay"]].alpha == 0.5
 
 
-def test_type_select(doc):
+def test_type_select(doc, data_path):
     """Test selecting/deselecting specific types."""
     # load annotation layer
     layer_drop = doc.get_model_by_name("layer_drop0")
-    click = MenuItemClick(layer_drop, layer_drop.menu[0][0])
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
     layer_drop._trigger_event(click)
     time.sleep(1)
     im = get_tile("overlay", 4, 8, 4, show=False)
@@ -418,11 +431,11 @@ def test_color_boxes(doc):
     assert main.UI["vstate"].mapper[1] == (0, 0, 1, 1)
 
 
-def test_node_and_edge_alpha(doc):
+def test_node_and_edge_alpha(doc, data_path):
     """Test sliders for adjusting graph node and edge alpha."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .db file
-    click = MenuItemClick(layer_drop, layer_drop.menu[1][1])
+    click = MenuItemClick(layer_drop, str(data_path["graph"]))
     layer_drop._trigger_event(click)
 
     type_column_list = doc.get_model_by_name("type_column0").children
@@ -584,7 +597,10 @@ def test_populate_slide_list(doc, data_path):
     """Test populating the slide list."""
     slide_select = doc.get_model_by_name("slide_select0")
     assert len(slide_select.options) == 3
-    main.populate_slide_list(data_path["base_path"] / "slides", search_txt="wsi2_4k")
+    main.populate_slide_list(
+        data_path["base_path"] / "slides",
+        search_txt="TCGA-HE-7130-01Z-00-DX1",
+    )
     assert len(slide_select.options) == 1
 
 
