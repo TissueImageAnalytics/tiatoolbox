@@ -187,7 +187,7 @@ def sample_triangle() -> Polygon:
 def fill_store(
     cell_grid: list[Polygon],
     points_grid: list[Point],
-) -> Callable[list[str], AnnotationStore]:
+) -> Callable[[list[str]], AnnotationStore]:
     """Factory fixture to fill stores with test data."""
 
     def _fill_store(
@@ -552,7 +552,7 @@ def test_sqlite_store_index_version_error(monkeypatch: object) -> None:
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
-def test_sqlite_store_index_str(fill_store: callable, tmp_path: Path) -> None:
+def test_sqlite_store_index_str(fill_store: Callable, tmp_path: Path) -> None:
     """Test that adding an index improves performance."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
 
@@ -579,7 +579,7 @@ def test_sqlite_store_index_str(fill_store: callable, tmp_path: Path) -> None:
     assert t2 < t1
 
 
-def test_sqlite_create_index_no_analyze(fill_store: callable, tmp_path: Path) -> None:
+def test_sqlite_create_index_no_analyze(fill_store: Callable, tmp_path: Path) -> None:
     """Test that creating an index without ANALYZE."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     properties_predicate = "props['class']"
@@ -588,7 +588,7 @@ def test_sqlite_create_index_no_analyze(fill_store: callable, tmp_path: Path) ->
 
 
 def test_sqlite_pquery_warn_no_index(
-    fill_store: callable,
+    fill_store: Callable,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that querying without an index warns."""
@@ -602,14 +602,14 @@ def test_sqlite_pquery_warn_no_index(
         assert len(record) == 0
 
 
-def test_sqlite_store_indexes(fill_store: callable, tmp_path: Path) -> None:
+def test_sqlite_store_indexes(fill_store: Callable, tmp_path: Path) -> None:
     """Test getting a list of index names."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     store.create_index("test_index", "props['class']")
     assert "test_index" in store.indexes()
 
 
-def test_sqlite_drop_index_error(fill_store: callable, tmp_path: Path) -> None:
+def test_sqlite_drop_index_error(fill_store: Callable, tmp_path: Path) -> None:
     """Test dropping an index that does not exist."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     with pytest.raises(sqlite3.OperationalError, match="no such index"):
@@ -623,7 +623,7 @@ def test_sqlite_store_unsupported_compression(sample_triangle: Polygon) -> None:
         _ = store.serialise_geometry(sample_triangle)
 
 
-def test_sqlite_optimize(fill_store: callable, tmp_path: Path) -> None:
+def test_sqlite_optimize(fill_store: Callable, tmp_path: Path) -> None:
     """Test optimizing the database."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     store.optimize()
@@ -726,7 +726,7 @@ def test_sqlite_drop_index_fail() -> None:
         store.drop_index("foo")
 
 
-def test_sqlite_optimize_no_vacuum(fill_store: callable, tmp_path: Path) -> None:
+def test_sqlite_optimize_no_vacuum(fill_store: Callable, tmp_path: Path) -> None:
     """Test running the optimize function on an SQLiteStore without VACUUM."""
     _, store = fill_store(SQLiteStore, tmp_path / "polygon.db")
     store.optimize(limit=0, vacuum=False)
@@ -806,7 +806,7 @@ def test_query_min_area_no_area_column(fill_store: callable) -> None:
         store.query((0, 0, 1000, 1000), min_area=1)
 
 
-def test_auto_commit(fill_store: callable, tmp_path: Path) -> None:
+def test_auto_commit(fill_store: Callable, tmp_path: Path) -> None:
     """Test auto commit.
 
     Check that if auto-commit is False, the changes are not committed until
@@ -854,7 +854,7 @@ class TestStore:
 
     @staticmethod
     def test_open_close(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -915,7 +915,7 @@ class TestStore:
 
     @staticmethod
     def test_query_bbox(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -926,7 +926,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_bbox(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -938,7 +938,7 @@ class TestStore:
 
     @staticmethod
     def test_query_polygon(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -950,7 +950,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_polygon(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -962,7 +962,7 @@ class TestStore:
 
     @staticmethod
     def test_patch(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -982,7 +982,7 @@ class TestStore:
 
     @staticmethod
     def test_patch_append(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -994,7 +994,7 @@ class TestStore:
 
     @staticmethod
     def test_patch_many(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1016,7 +1016,7 @@ class TestStore:
 
     @staticmethod
     def test_patch_many_no_properies(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1031,7 +1031,7 @@ class TestStore:
 
     @staticmethod
     def test_patch_many_no_geometry(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1048,7 +1048,7 @@ class TestStore:
 
     @staticmethod
     def test_patch_many_no_geometry_no_properties(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1059,7 +1059,7 @@ class TestStore:
 
     @staticmethod
     def test_patch_many_append(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1072,7 +1072,7 @@ class TestStore:
 
     @staticmethod
     def test_patch_many_len_mismatch(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1084,7 +1084,7 @@ class TestStore:
 
     @staticmethod
     def test_keys(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1096,7 +1096,7 @@ class TestStore:
 
     @staticmethod
     def test_remove(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1108,7 +1108,7 @@ class TestStore:
 
     @staticmethod
     def test_delitem(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1120,7 +1120,7 @@ class TestStore:
 
     @staticmethod
     def test_remove_many(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1131,7 +1131,7 @@ class TestStore:
 
     @staticmethod
     def test_len(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1141,7 +1141,7 @@ class TestStore:
 
     @staticmethod
     def test_contains(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1152,7 +1152,7 @@ class TestStore:
 
     @staticmethod
     def test_iter(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1163,7 +1163,7 @@ class TestStore:
 
     @staticmethod
     def test_getitem(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         sample_triangle: Polygon,
         store_cls: type[AnnotationStore],
@@ -1177,7 +1177,7 @@ class TestStore:
 
     @staticmethod
     def test_setitem(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         sample_triangle: Polygon,
         store_cls: type[AnnotationStore],
@@ -1192,7 +1192,7 @@ class TestStore:
 
     @staticmethod
     def test_getitem_setitem_cycle(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         sample_triangle: Polygon,
         store_cls: type[AnnotationStore],
@@ -1226,7 +1226,7 @@ class TestStore:
 
     @staticmethod
     def test_to_dataframe(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1241,7 +1241,7 @@ class TestStore:
 
     @staticmethod
     def test_features(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1258,7 +1258,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geodict(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1273,7 +1273,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_str(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1285,7 +1285,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_file(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1298,7 +1298,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_path(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1310,7 +1310,7 @@ class TestStore:
 
     @staticmethod
     def test_from_geojson_path_transform(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1331,7 +1331,7 @@ class TestStore:
 
     @staticmethod
     def test_transform(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1350,7 +1350,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_str(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1366,7 +1366,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_file(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1384,7 +1384,7 @@ class TestStore:
 
     @staticmethod
     def test_to_geojson_path(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1401,7 +1401,7 @@ class TestStore:
 
     @staticmethod
     def test_to_ndjson_str(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1417,7 +1417,7 @@ class TestStore:
 
     @staticmethod
     def test_to_ndjson_file(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1436,7 +1436,7 @@ class TestStore:
 
     @staticmethod
     def test_to_ndjson_path(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1454,7 +1454,7 @@ class TestStore:
 
     @staticmethod
     def test_dump(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1465,7 +1465,7 @@ class TestStore:
 
     @staticmethod
     def test_dump_file_handle(
-        fill_store: callable,
+        fill_store: Callable,
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
@@ -1476,7 +1476,7 @@ class TestStore:
         assert (tmp_path / "dump_test.db").stat().st_size > 0
 
     @staticmethod
-    def test_dumps(fill_store: callable, store_cls: type[AnnotationStore]) -> None:
+    def test_dumps(fill_store: Callable, store_cls: type[AnnotationStore]) -> None:
         """Test dumping by returning a string."""
         _, store = fill_store(store_cls, ":memory:")
         string = store.dumps()
@@ -1484,7 +1484,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_predicate_str(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test iquering with a predicate string."""
@@ -1496,7 +1496,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_predicate_callable(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test iquering with a predicate function."""
@@ -1511,7 +1511,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_predicate_pickle(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test iquering with a pickled predicate function."""
@@ -1523,7 +1523,7 @@ class TestStore:
 
     @staticmethod
     def test_query_predicate_str(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test quering with a predicate string."""
@@ -1534,7 +1534,7 @@ class TestStore:
 
     @staticmethod
     def test_query_predicate_callable(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test quering with a predicate function."""
@@ -1549,7 +1549,7 @@ class TestStore:
 
     @staticmethod
     def test_query_predicate_pickle(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test quering with a pickled predicate function."""
@@ -1561,7 +1561,7 @@ class TestStore:
 
     @staticmethod
     def test_append_invalid_geometry(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that appending invalid geometry raises an exception."""
@@ -1571,7 +1571,7 @@ class TestStore:
 
     @staticmethod
     def test_update_invalid_geometry(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that updating  a new key and None geometry raises an exception."""
@@ -1581,7 +1581,7 @@ class TestStore:
             store.patch(key, geometry=None, properties={"class": 123})
 
     @staticmethod
-    def test_pop_key(fill_store: callable, store_cls: type[AnnotationStore]) -> None:
+    def test_pop_key(fill_store: Callable, store_cls: type[AnnotationStore]) -> None:
         """Test popping an annotation by key."""
         keys, store = fill_store(store_cls, ":memory:")
         assert keys[0] in store
@@ -1591,7 +1591,7 @@ class TestStore:
 
     @staticmethod
     def test_pop_key_error(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that popping a key that is not in the store raises an exception."""
@@ -1600,7 +1600,7 @@ class TestStore:
             store.pop("foo")
 
     @staticmethod
-    def test_popitem(fill_store: callable, store_cls: type[AnnotationStore]) -> None:
+    def test_popitem(fill_store: Callable, store_cls: type[AnnotationStore]) -> None:
         """Test popping a key and annotation by key."""
         keys, store = fill_store(store_cls, ":memory:")
         key, annotation = store.popitem()
@@ -1610,7 +1610,7 @@ class TestStore:
 
     @staticmethod
     def test_popitem_empty_error(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that popping an empty store raises an exception."""
@@ -1620,7 +1620,7 @@ class TestStore:
 
     @staticmethod
     def test_setdefault(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
         sample_triangle: list[Polygon],
     ) -> None:
@@ -1634,7 +1634,7 @@ class TestStore:
 
     @staticmethod
     def test_setdefault_error(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
         sample_triangle: Polygon,  # noqa: ARG004
     ) -> None:
@@ -1644,7 +1644,7 @@ class TestStore:
             store.setdefault("foo", {})
 
     @staticmethod
-    def test_get(fill_store: callable, store_cls: type[AnnotationStore]) -> None:
+    def test_get(fill_store: Callable, store_cls: type[AnnotationStore]) -> None:
         """Test getting an annotation by key."""
         keys, store = fill_store(store_cls, ":memory:")
         assert keys[0] in store
@@ -1652,7 +1652,7 @@ class TestStore:
 
     @staticmethod
     def test_get_default(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test getting a default value for a key."""
@@ -1662,7 +1662,7 @@ class TestStore:
 
     @staticmethod
     def test_eq(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test comparing two stores for equality."""
@@ -1679,7 +1679,7 @@ class TestStore:
 
     @staticmethod
     def test_ne(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test comparing two stores for inequality."""
@@ -1688,7 +1688,7 @@ class TestStore:
         assert store1 != store2
 
     @staticmethod
-    def test_clear(fill_store: callable, store_cls: type[AnnotationStore]) -> None:
+    def test_clear(fill_store: Callable, store_cls: type[AnnotationStore]) -> None:
         """Test clearing a store."""
         keys, store = fill_store(store_cls, ":memory:")
         store.clear()
@@ -1698,7 +1698,7 @@ class TestStore:
 
     @staticmethod
     def test_update(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
         sample_triangle: Polygon,
     ) -> None:
@@ -1713,7 +1713,7 @@ class TestStore:
         assert store["foo"] == annotations["foo"]
 
     @staticmethod
-    def test_cast_dict(fill_store: callable, store_cls: type[AnnotationStore]) -> None:
+    def test_cast_dict(fill_store: Callable, store_cls: type[AnnotationStore]) -> None:
         """Test casting a store to a dictionary."""
         keys, store = fill_store(store_cls, ":memory:")
         store_dict = dict(store)
@@ -1722,7 +1722,7 @@ class TestStore:
 
     @staticmethod
     def test_query_invalid_geometry_predicate(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that invalid geometry predicate raises an exception."""
@@ -1732,7 +1732,7 @@ class TestStore:
 
     @staticmethod
     def test_query_no_geometry_or_where(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that query raises exception when no geometry or predicate given."""
@@ -1742,7 +1742,7 @@ class TestStore:
 
     @staticmethod
     def test_iquery_invalid_geometry_predicate(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that invalid geometry predicate raises an exception."""
@@ -1752,7 +1752,7 @@ class TestStore:
 
     @staticmethod
     def test_serialise_deseialise_geometry(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that geometry can be serialised and deserialised."""
@@ -1768,7 +1768,7 @@ class TestStore:
 
     @staticmethod
     def test_commit(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
         tmp_path: Path,
     ) -> None:
@@ -1785,7 +1785,7 @@ class TestStore:
 
     @staticmethod
     def test_load_cases_error(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test that loading a store with an invalid file handle raises an exception."""
@@ -1795,7 +1795,7 @@ class TestStore:
 
     @staticmethod
     def test_py38_init(
-        fill_store: callable,  # noqa: ARG004
+        fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
         monkeypatch: object,
     ) -> None:
@@ -1809,7 +1809,7 @@ class TestStore:
                 self: Connection,
                 name: str,
                 num_params: int,
-                func: Any,  # noqa: ARG002, ANN401
+                func: object,  # noqa: ARG002
             ) -> None:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
@@ -1820,7 +1820,7 @@ class TestStore:
 
     @staticmethod
     def test_bquery(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying a store with a bounding box."""
@@ -1831,7 +1831,7 @@ class TestStore:
 
     @staticmethod
     def test_bquery_polygon(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying a store with a polygon."""
@@ -1842,7 +1842,7 @@ class TestStore:
 
     @staticmethod
     def test_bquery_callable(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying a store with a bounding box and a callable where."""
@@ -1857,7 +1857,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_all(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for all properties."""
@@ -1869,7 +1869,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_all_unique_exception(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for all properties."""
@@ -1879,7 +1879,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_unique(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties."""
@@ -1890,7 +1890,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_unique_with_geometry(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a geometry intersection."""
@@ -1904,7 +1904,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_unique_with_where(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a where predicate."""
@@ -1918,7 +1918,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_unique_with_geometry_and_where(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a geometry and where predicate."""
@@ -1933,7 +1933,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable_unique(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a callable select and where."""
@@ -1948,7 +1948,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable_unique_no_squeeze(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a callable select and where."""
@@ -1964,7 +1964,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable_unique_multi_select(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying unique properties with a callable select and where."""
@@ -1979,7 +1979,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a callable select and where."""
@@ -1994,7 +1994,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_callable_no_where(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with callable select, no where."""
@@ -2009,7 +2009,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_pickled(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a pickled select and where."""
@@ -2024,7 +2024,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_pickled_no_squeeze(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a pickled select and where."""
@@ -2040,7 +2040,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_pickled_multi_select(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a pickled select and where."""
@@ -2055,7 +2055,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_invalid_expression_type(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with an invalid expression type."""
@@ -2065,7 +2065,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_non_matching_type(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying with a non-matching type for select and where."""
@@ -2075,7 +2075,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_dict(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties."""
@@ -2087,7 +2087,7 @@ class TestStore:
 
     @staticmethod
     def test_pquery_dict_with_geometry(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying for properties with a geometry intersection."""
@@ -2269,7 +2269,7 @@ class TestStore:
 
     @staticmethod
     def test_bquery_bounds(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying a store with a bounding box iterable."""
@@ -2816,7 +2816,7 @@ class TestStore:
 
     @staticmethod
     def test_query_min_area(
-        fill_store: callable,
+        fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
         """Test querying with a minimum area."""

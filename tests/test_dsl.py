@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from numbers import Number
-from typing import ClassVar, Mapping
+from typing import Callable, ClassVar, Mapping
 
 import pytest
 
@@ -134,9 +134,9 @@ class TestPredicate:
 
     @staticmethod
     def test_number_binary_operations(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Check that binary operations between ints does not error."""
         for op in BINARY_OP_STRINGS:
@@ -150,9 +150,9 @@ class TestPredicate:
 
     @staticmethod
     def test_property_binary_operations(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Check that binary operations between properties does not error."""
         for op in BINARY_OP_STRINGS:
@@ -166,9 +166,9 @@ class TestPredicate:
 
     @staticmethod
     def test_r_binary_operations(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test right hand binary operations between numbers and properties."""
         for op in BINARY_OP_STRINGS:
@@ -182,9 +182,9 @@ class TestPredicate:
 
     @staticmethod
     def test_number_prefix_operations(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test prefix operations on numbers."""
         for op in PREFIX_OP_STRINGS:
@@ -198,9 +198,9 @@ class TestPredicate:
 
     @staticmethod
     def test_property_prefix_operations(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test prefix operations on properties."""
         for op in PREFIX_OP_STRINGS:
@@ -214,9 +214,9 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_nested_props(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test regex on nested properties."""
         query = "props['nesting']['fib'][4]"
@@ -229,9 +229,9 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_str_props(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test regex on string properties."""
         query = "regexp('Hello', props['string'])"
@@ -244,9 +244,9 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_str_str(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test regex on string and string."""
         query = "regexp('Hello', 'Hello world!')"
@@ -259,9 +259,9 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_props_str(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test regex on property and string."""
         query = "regexp(props['string'], 'Hello world!')"
@@ -274,9 +274,9 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_ignore_case(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test regex with ignorecase flag."""
         query = "regexp('hello', props['string'], re.IGNORECASE)"
@@ -289,9 +289,9 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_no_match(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test regex with no match."""
         query = "regexp('Yello', props['string'])"
@@ -304,9 +304,9 @@ class TestPredicate:
 
     @staticmethod
     def test_has_key(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test has_key function."""
         query = "has_key(props, 'foo')"
@@ -319,9 +319,9 @@ class TestPredicate:
 
     @staticmethod
     def test_is_none(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test is_none function."""
         query = "is_none(props['null'])"
@@ -334,9 +334,9 @@ class TestPredicate:
 
     @staticmethod
     def test_is_not_none(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test is_not_none function."""
         query = "is_not_none(props['int'])"
@@ -349,9 +349,9 @@ class TestPredicate:
 
     @staticmethod
     def test_nested_has_key(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test nested has_key function."""
         query = "has_key(props['dict'], 'a')"
@@ -364,9 +364,9 @@ class TestPredicate:
 
     @staticmethod
     def test_list_sum(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test sum function on a list."""
         query = "sum(props['list'])"
@@ -379,9 +379,9 @@ class TestPredicate:
 
     @staticmethod
     def test_abs(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test abs function."""
         query = "abs(props['neg'])"
@@ -394,9 +394,9 @@ class TestPredicate:
 
     @staticmethod
     def test_not(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test not operator."""
         query = "not props['bool']"
@@ -409,9 +409,9 @@ class TestPredicate:
 
     @staticmethod
     def test_props_int_keys(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test props with int keys."""
         query = "props['list'][1]"
@@ -424,9 +424,9 @@ class TestPredicate:
 
     @staticmethod
     def test_props_get(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test props.get function."""
         query = "is_none(props.get('foo'))"
@@ -439,9 +439,9 @@ class TestPredicate:
 
     @staticmethod
     def test_props_get_default(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test props.get function with default."""
         query = "props.get('foo', 42)"
@@ -454,9 +454,9 @@ class TestPredicate:
 
     @staticmethod
     def test_in_list(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test in operator for list."""
         query = "1 in props.get('list')"
@@ -469,9 +469,9 @@ class TestPredicate:
 
     @staticmethod
     def test_has_key_exception(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,  # noqa: ARG004
+        check: Callable,  # noqa: ARG004
     ) -> None:
         """Test has_key function with exception."""
         query = "has_key(1, 'a')"
@@ -484,9 +484,9 @@ class TestPredicate:
 
     @staticmethod
     def test_logical_and(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test logical and operator."""
         query = "props['bool'] & is_none(props['null'])"
@@ -499,9 +499,9 @@ class TestPredicate:
 
     @staticmethod
     def test_logical_or(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test logical or operator."""
         query = "props['bool'] | (props['int'] < 2)"
@@ -514,9 +514,9 @@ class TestPredicate:
 
     @staticmethod
     def test_nested_logic(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test nested logical operators."""
         query = "(props['bool'] | (props['int'] < 2)) & abs(props['neg'])"
@@ -529,9 +529,9 @@ class TestPredicate:
 
     @staticmethod
     def test_contains_list(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test contains operator for list."""
         query = "1 in props['list']"
@@ -544,9 +544,9 @@ class TestPredicate:
 
     @staticmethod
     def test_contains_dict(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test contains operator for dict."""
         query = "'a' in props['dict']"
@@ -559,9 +559,9 @@ class TestPredicate:
 
     @staticmethod
     def test_contains_str(
-        eval_globals: dict[str, Any],  # noqa: F821
+        eval_globals: dict[str, object],
         eval_locals: Mapping[str, object],
-        check: callable,
+        check: Callable,
     ) -> None:
         """Test contains operator for str."""
         query = "'Hello' in props['string']"
