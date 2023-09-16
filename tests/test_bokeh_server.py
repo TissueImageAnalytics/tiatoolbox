@@ -3,9 +3,9 @@ from threading import Thread
 
 import pkg_resources
 import pytest
+from bokeh.client.session import pull_session
 from click.testing import CliRunner
 
-from bokeh.client.session import pull_session
 from tiatoolbox import cli
 from tiatoolbox.data import _fetch_remote_sample
 
