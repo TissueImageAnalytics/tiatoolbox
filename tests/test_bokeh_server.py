@@ -1,4 +1,5 @@
 """Test the bokeh app from command line."""
+import time
 from threading import Thread
 
 import pkg_resources
@@ -60,7 +61,7 @@ def bk_session(data_path):
                 "visualize",
                 "--noshow",
                 "--img-input",
-                str(data_path["base_path"]),
+                str(data_path["base_path"].parent),
             ],
         )
 
@@ -69,10 +70,34 @@ def bk_session(data_path):
 
     session = pull_session(
         url="http://localhost:5006/bokeh_app",
-        arguments={"slide": "CMU-1.ndpi"},
+        arguments={
+            "demo": str(data_path["base_path"].parts[-1]),
+            "slide": "CMU-1.ndpi",
+            "window": "[0, 0, 1000, 1000]",
+        },
     )
     yield session
     session.close()
+
+
+def test_slides_available(bk_session):
+    """Test that the slides and overlays are available."""
+    doc = bk_session.document
+    slide_select = doc.get_model_by_name("slide_select0")
+    # check there are two available slides
+    assert len(slide_select.options) == 2
+    assert slide_select.value[0] == "CMU-1.ndpi"
+
+    # check that the overlays are available.
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = ["CMU-1-Small-region.svs"]
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    assert len(layer_drop.menu) == 2
+
+    bk_session.document.clear()
+    assert len(bk_session.document.roots) == 0
+    bk_session.close()
+    time.sleep(10)  # allow time for hooks to trigger
 
 
 def test_cli_errors(data_path):
@@ -103,26 +128,3 @@ def test_cli_errors(data_path):
     )
     assert result.exit_code == 1
     assert result.exc_info[1].args[0] == "non_existent_folder does not exist"
-
-
-def test_slides_available(bk_session):
-    """Test that the slides are available."""
-    slide_select = bk_session.document.get_model_by_name("slide_select0")
-    # check there are two available slides
-    assert len(slide_select.options) == 2
-    assert slide_select.value[0] == "CMU-1.ndpi"
-
-
-def test_overlays_available(bk_session):
-    """Test that the overlays are available."""
-    doc = bk_session.document
-    slide_select = doc.get_model_by_name("slide_select0")
-    slide_select.value = ["CMU-1-Small_region.svs"]
-    layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 2
-
-
-def test_clearing_doc(bk_session):
-    """Test that the doc can be cleared."""
-    bk_session.document.clear()
-    assert len(bk_session.document.roots) == 0

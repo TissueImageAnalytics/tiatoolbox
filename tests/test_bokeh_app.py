@@ -5,19 +5,19 @@ import io
 import re
 import time
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -142,12 +142,16 @@ def test_slide_select(doc, data_path):
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     # select a slide and check it is loaded
-    slide_select.value = ["TCGA-HE-7130-01Z-00-DX1.png"]
-    assert main.UI["vstate"].slide_path == data_path["slide3"]
-
-    # select a slide and check it is loaded
     slide_select.value = ["CMU-1.ndpi"]
     assert main.UI["vstate"].slide_path == data_path["slide2"]
+
+    # check selecting nothing has no effect
+    slide_select.value = []
+    assert main.UI["vstate"].slide_path == data_path["slide2"]
+
+    # select a slide and check it is loaded
+    slide_select.value = ["TCGA-HE-7130-01Z-00-DX1.png"]
+    assert main.UI["vstate"].slide_path == data_path["slide3"]
 
 
 def test_dual_window(doc, data_path):
@@ -158,6 +162,9 @@ def test_dual_window(doc, data_path):
     slide_select = doc.get_model_by_name("slide_select1")
     assert len(slide_select.options) == 3
     assert slide_select.options[0][0] == data_path["slide1"].name
+
+    control_tabs.active = 0
+    assert main.UI.active == 0
 
 
 def test_remove_dual_window(doc, data_path):
@@ -203,6 +210,10 @@ def test_add_annotation_layer(doc, data_path):
     # we should have got the types of annotations back from the server too
     assert main.UI["vstate"].types == ["0", "1", "2", "3", "4"]
 
+    # test get_mapper function
+    cmap_dict = main.get_mapper_for_prop("type")
+    assert set(cmap_dict.keys()) == {0, 1, 2, 3, 4}
+
 
 def test_cprop_input(doc):
     """Test changing the color property."""
@@ -214,6 +225,10 @@ def test_cprop_input(doc):
     assert main.UI["color_bar"].color_mapper.palette[0] == main.rgb2hex(
         colormaps[cmap_select.value](0),
     )
+
+    # check deselecting has no effect
+    cprop_input.value = []
+    assert main.UI["vstate"].cprop == "prob"
 
     cprop_input.value = ["type"]
     # as type is discrete, cmap should be a dict mapping types to colors
@@ -251,6 +266,12 @@ def test_type_cmap_select(doc):
     cmap_select.value = []
     resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/secondary_cmap")
     assert resp.json()["score_prop"] == "None"
+
+    # check callback works regardless of order
+    cmap_select.value = ["0"]
+    cmap_select.value = ["0", "prob"]
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/secondary_cmap")
+    assert resp.json()["score_prop"] == "prob"
 
 
 def test_load_graph(doc, data_path):
@@ -354,6 +375,8 @@ def test_hovernet_on_box(doc, data_path):
     assert saved_path.exists()
 
     # load an overlay with different types
+    cprop_select = doc.get_model_by_name("cprop0")
+    cprop_select.value = ["prob"]
     layer_drop = doc.get_model_by_name("layer_drop0")
     click = MenuItemClick(layer_drop, str(data_path["dat_anns"]))
     layer_drop._trigger_event(click)
@@ -430,6 +453,12 @@ def test_color_boxes(doc):
     assert main.UI["vstate"].mapper[0] == (1, 0, 0, 1)
     assert main.UI["vstate"].mapper[1] == (0, 0, 1, 1)
 
+    cprop_select = doc.get_model_by_name("cprop0")
+    cprop_select.value = ["prob"]
+    # set type 1 to green
+    color_column_list[1].color = "#00ff00"
+    assert main.UI["vstate"].mapper[1] == (0, 1, 0, 1)
+
 
 def test_node_and_edge_alpha(doc, data_path):
     """Test sliders for adjusting graph node and edge alpha."""
@@ -476,6 +505,25 @@ def test_node_and_edge_alpha(doc, data_path):
     assert (
         main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.fill_alpha
         == 0.4
+    )
+    # same with overlay toggle
+    overlay_toggle = doc.get_model_by_name("overlay_toggle0")
+    overlay_toggle.active = False
+    assert (
+        main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.fill_alpha
+        == 0.4
+    )
+
+
+def test_pt_size_spinner(doc):
+    """Test setting point size for graph nodes."""
+    pt_size_spinner = doc.get_model_by_name("pt_size0")
+    # set the point size to 10
+    pt_size_spinner.value = 10
+    # check that the point size has been set correctly
+    assert (
+        main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.size
+        == 2 * 10
     )
 
 
@@ -569,6 +617,11 @@ def test_cmap_select(doc):
         assert np.all(
             np.array(resp.json()[str(key)]) == np.array(main.UI["vstate"].mapper[key]),
         )
+
+    main.UI["cprop_input"].value = ["prob"]
+    cmap_select.value = "dict"
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    assert len(resp.json()) > 10
 
 
 def test_option_buttons():

@@ -14,6 +14,11 @@ from typing import Any
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -29,7 +34,6 @@ from bokeh.models import (
     Dropdown,
     FuncTickFormatter,
     Glyph,
-    GraphRenderer,
     HoverTool,
     LinearColorMapper,
     MultiChoice,
@@ -48,11 +52,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -645,8 +644,6 @@ def node_select_cb(attr, old, new):  # noqa: ARG001
 def overlay_toggle_cb(attr):  # noqa: ARG001
     """Callback to toggle the overlay on/off."""
     for i in range(5, len(UI["p"].renderers)):
-        if isinstance(UI["p"].renderers[i], GraphRenderer):
-            continue
         if UI["p"].renderers[i].alpha == 0:
             UI["p"].renderers[i].alpha = UI["overlay_alpha"].value
         else:
@@ -723,10 +720,7 @@ def slide_alpha_cb(attr, old, new):  # noqa: ARG001
 def overlay_alpha_cb(attr, old, new):  # noqa: ARG001
     """Callback to change the alpha of all overlay layers."""
     for i in range(5, len(UI["p"].renderers)):
-        if isinstance(UI["p"].renderers[i], GraphRenderer):
-            pass
-        else:
-            UI["p"].renderers[i].alpha = new
+        UI["p"].renderers[i].alpha = new
 
 
 def pt_size_cb(attr, old, new):  # noqa: ARG001
@@ -906,6 +900,34 @@ def handle_graph_layer(attr):  # skipcq: PY-R1000
         UI["hover"].tooltips = tooltips
 
 
+def update_ui_on_new_annotations(resp):
+    """Update the UI when new annotations are added."""
+    UI["vstate"].types = resp
+    props = UI["s"].get(f"http://{host2}:5000/tileserver/prop_names/all")
+    UI["vstate"].props = json.loads(props.text)
+    # update the color type by prop menu
+    UI["type_cmap_select"].options = list(UI["vstate"].types)
+    if len(UI["node_source"].data["x_"]) > 0:
+        UI["type_cmap_select"].options.append("graph_overlay")
+    # update the color type by prop menu
+    UI["type_cmap_select"].options = list(UI["vstate"].types)
+    if len(UI["node_source"].data["x_"]) > 0:
+        UI["type_cmap_select"].options.append("graph_overlay")
+    UI["cprop_input"].options = UI["vstate"].props
+    UI["cprop_input"].options.append("None")
+    if UI["vstate"].props != UI["vstate"].props_old:
+        # if color by prop no longer exists, reset to type
+        if (
+            len(UI["cprop_input"].value) == 0
+            or UI["cprop_input"].value[0] not in UI["vstate"].props
+        ):
+            UI["cprop_input"].value = ["type"]
+            update_mapper()
+        UI["vstate"].props_old = UI["vstate"].props
+    initialise_overlay()
+    change_tiles("overlay")
+
+
 def layer_drop_cb(attr):
     """Setup the newly chosen overlay."""
     if Path(attr.item).suffix == ".json":
@@ -922,30 +944,7 @@ def layer_drop_cb(attr):
     resp = json.loads(resp.text)
 
     if Path(attr.item).suffix in [".db", ".dat", ".geojson"]:
-        UI["vstate"].types = resp
-        props = UI["s"].get(f"http://{host2}:5000/tileserver/prop_names/all")
-        UI["vstate"].props = json.loads(props.text)
-        # update the color type by prop menu
-        UI["type_cmap_select"].options = list(UI["vstate"].types)
-        if len(UI["node_source"].data["x_"]) > 0:
-            UI["type_cmap_select"].options.append("graph_overlay")
-        # update the color type by prop menu
-        UI["type_cmap_select"].options = list(UI["vstate"].types)
-        if len(UI["node_source"].data["x_"]) > 0:
-            UI["type_cmap_select"].options.append("graph_overlay")
-        UI["cprop_input"].options = UI["vstate"].props
-        UI["cprop_input"].options.append("None")
-        if UI["vstate"].props != UI["vstate"].props_old:
-            # if color by prop no longer exists, reset to type
-            if (
-                len(UI["cprop_input"].value) == 0
-                or UI["cprop_input"].value[0] not in UI["vstate"].props
-            ):
-                UI["cprop_input"].value = ["type"]
-                update_mapper()
-            UI["vstate"].props_old = UI["vstate"].props
-        initialise_overlay()
-        change_tiles("overlay")
+        update_ui_on_new_annotations(resp)
     else:
         add_layer(resp)
         change_tiles(resp)
@@ -1064,7 +1063,7 @@ def type_cmap_cb(attr, old, new):  # noqa: ARG001
                 ] + [new[0]]
             else:
                 UI["type_cmap_select"].options = [*UI["vstate"].props, new[0]]
-        elif new[0] in UI["vstate"].props:
+        else:
             UI["type_cmap_select"].options = [
                 *UI["vstate"].types,
                 new[0],
@@ -1088,7 +1087,7 @@ def type_cmap_cb(attr, old, new):  # noqa: ARG001
         UI["s"].put(
             f"http://{host2}:5000/tileserver/secondary_cmap",
             data={
-                "type_id": json.dumps(UI["vstate"].orig_types[new[0]]),
+                "type_id": json.dumps(UI["vstate"].orig_types.get(new[0], new[0])),
                 "prop": new[1],
                 "cmap": json.dumps(cmap),
             },
@@ -1104,21 +1103,12 @@ def type_cmap_cb(attr, old, new):  # noqa: ARG001
 
 def save_cb(attr):  # noqa: ARG001
     """Callback to handle saving annotations."""
-    if doc_config["overlay_folder"] is None:
-        # save in slide folder instead
-        save_path = make_safe_name(
-            str(
-                doc_config["slide_folder"]
-                / (UI["vstate"].slide_path.stem + "_saved_anns.db"),
-            ),
-        )
-    else:
-        save_path = make_safe_name(
-            str(
-                doc_config["overlay_folder"]
-                / (UI["vstate"].slide_path.stem + "_saved_anns.db"),
-            ),
-        )
+    save_path = make_safe_name(
+        str(
+            doc_config["overlay_folder"]
+            / (UI["vstate"].slide_path.stem + "_saved_anns.db"),
+        ),
+    )
     UI["s"].post(
         f"http://{host2}:5000/tileserver/commit",
         data={"save_path": save_path},
@@ -1171,20 +1161,12 @@ def segment_on_box():
         f"http://{host2}:5000/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
     )
-    UI["vstate"].types = json.loads(resp.text)
+    resp = json.loads(resp.text)
+    update_ui_on_new_annotations(resp)
 
-    # update the props options if needed
-    props = UI["s"].get(f"http://{host2}:5000/tileserver/prop_names/all")
-    UI["vstate"].props = json.loads(props.text)
-    UI["cprop_input"].options = UI["vstate"].props
-    if UI["vstate"].props != UI["vstate"].props_old:
-        update_mapper()
-        UI["vstate"].props_old = UI["vstate"].props
-
+    # clean up temp files
     rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
-    initialise_overlay()
-    change_tiles("overlay")
 
     return tile_output
 
@@ -1726,24 +1708,7 @@ def control_tabs_cb(attr, old, new):  # noqa: ARG001
             np.array([UI["p"].width, UI["p"].height]),
         )
         UI.active = new
-        if "UI_settings" in doc_config:
-            for k in doc_config["UI_settings"]:
-                update_renderer(k, doc_config["UI_settings"][k])
-            if doc_config["default_cprop"] is not None:
-                UI["s"].put(
-                    f"http://{host2}:5000/tileserver/color_prop/",
-                    data={"prop": json.dumps(doc_config["default_cprop"])},
-                )
-        if "default_type_cprop" in doc_config:
-            UI["type_cmap_select"].value = list(
-                doc_config["default_type_cprop"].values(),
-            )
-        populate_slide_list(doc_config["slide_folder"])
-        UI["slide_select"].value = [str(UI["vstate"].slide_path.name)]
-        populate_layer_list(
-            Path(UI["vstate"].slide_path).stem,
-            doc_config["overlay_folder"],
-        )
+        setup_config_ui_settings(doc_config)
         win_dicts[0]["vstate"].init_z = get_level_by_extent(
             (0, bounds[2], bounds[1], 0),
         )
@@ -1761,6 +1726,30 @@ def control_tabs_remove_cb(attr, old, new):  # noqa: ARG001
         control_tabs.tabs.append(TabPanel(child=Div(), title="window 2"))
         win_dicts.pop()
         UI.active = 0
+
+
+def setup_config_ui_settings(config):
+    """Set up the UI settings from the config file."""
+    if "UI_settings" in config:
+        for k in config["UI_settings"]:
+            update_renderer(k, config["UI_settings"][k])
+        if "default_cprop" in config and config["default_cprop"] is not None:
+            UI["s"].put(
+                f"http://{host2}:5000/tileserver/color_prop",
+                data={"prop": json.dumps(config["default_cprop"])},
+            )
+    # open up initial slide
+    if "default_type_cprop" in config:
+        UI["type_cmap_select"].value = list(
+            doc_config["default_type_cprop"].values(),
+        )
+    populate_slide_list(config["slide_folder"])
+    UI["slide_select"].value = [str(UI["vstate"].slide_path.name)]
+    slide_select_cb(None, None, new=[UI["vstate"].slide_path.name])
+    populate_layer_list(
+        Path(UI["vstate"].slide_path).stem,
+        doc_config["overlay_folder"],
+    )
 
 
 class DocConfig:
@@ -1794,30 +1783,28 @@ class DocConfig:
     def _get_config(self):
         """Get config info from config.json and/or request args."""
         sys_args = self.sys_args
-        if len(sys_args) > 1 and sys_args[1] != "None":
+        if len(sys_args) == 2 and sys_args[1] != "None":  # noqa: PLR2004
+            # only base folder given
             base_folder = Path(sys_args[1])
             if "demo" in req_args:
                 self.config["demo_name"] = str(req_args["demo"][0], "utf-8")
                 base_folder = base_folder.joinpath(str(req_args["demo"][0], "utf-8"))
-            slide_folder = base_folder.joinpath("slides")
-            overlay_folder = base_folder.joinpath("overlays")
-            if not overlay_folder.exists():
-                overlay_folder = None
-        # separate slide and overlay folders given
-        if len(sys_args) == 3:  # noqa: PLR2004
-            slide_folder = Path(sys_args[1])
-            overlay_folder = Path(sys_args[2])
+            sys_args[1] = base_folder.joinpath("slides")
+            sys_args.append(base_folder.joinpath("overlays"))
+
+        slide_folder = Path(sys_args[1])
+        base_folder = slide_folder.parent
+        overlay_folder = Path(sys_args[2])
 
         # load a color_dict and/or slide initial view windows from a json file
         config_file = list(overlay_folder.glob("*config.json"))
         config = self.config
         if len(config_file) > 0:
             config_file = config_file[0]
-            if (config_file).exists():
-                with config_file.open() as f:
-                    config = json.load(f)
-                    if not is_deployed:
-                        logger.info("loaded config: %s", config)
+            with config_file.open() as f:
+                config = json.load(f)
+                if not is_deployed:
+                    logger.info("loaded config: %s", config)
 
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder
@@ -1829,8 +1816,8 @@ class DocConfig:
             config["first_slide"] = str(req_args["slide"][0], "utf-8")
             if "window" in req_args:
                 if "initial_views" not in config:
-                    doc_config["initial_views"] = {}
-                doc_config["initial_views"][Path(doc_config["first_slide"]).stem] = [
+                    config["initial_views"] = {}
+                config["initial_views"][Path(config["first_slide"]).stem] = [
                     int(s) for s in str(req_args["window"][0], "utf-8")[1:-1].split(",")
                 ]
         self.config = config
@@ -1859,26 +1846,7 @@ class DocConfig:
         # make initial window
         win_dicts.append(make_window(ViewerState(first_slide_path)))
         # set up any initial ui settings from config file
-        if "UI_settings" in self.config:
-            for k in self.config["UI_settings"]:
-                update_renderer(k, self.config["UI_settings"][k])
-        if "default_cprop" in self.config:
-            UI["s"].put(
-                f"http://{host2}:5000/tileserver/color_prop",
-                data={"prop": json.dumps(self.config["default_cprop"])},
-            )
-        # open up initial slide
-        if "default_type_cprop" in self.config:
-            UI["type_cmap_select"].value = list(
-                doc_config["default_type_cprop"].values(),
-            )
-        populate_slide_list(self.config["slide_folder"])
-        UI["slide_select"].value = [str(UI["vstate"].slide_path.name)]
-        slide_select_cb(None, None, new=[UI["vstate"].slide_path.name])
-        populate_layer_list(
-            Path(UI["vstate"].slide_path).stem,
-            doc_config["overlay_folder"],
-        )
+        setup_config_ui_settings(self.config)
         UI["vstate"].init = False
 
         # set up main window

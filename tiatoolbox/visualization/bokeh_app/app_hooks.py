@@ -2,6 +2,6 @@
 import sys
 
 
-def on_session_destroyed(session_context):  # noqa: ARG001
+def on_session_destroyed(session_context):  # noqa: ARG001, skipcq: PYL-W0613
     """Hook to be executed when a session is destroyed."""
     sys.exit()
