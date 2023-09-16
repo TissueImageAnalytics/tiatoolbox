@@ -906,7 +906,7 @@ def handle_graph_layer(attr):  # skipcq: PY-R1000
         UI["hover"].tooltips = tooltips
 
 
-def layer_drop_cb(attr):  # ARG001
+def layer_drop_cb(attr):
     """Setup the newly chosen overlay."""
     if Path(attr.item).suffix == ".json":
         # its a graph
