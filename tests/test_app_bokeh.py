@@ -5,21 +5,22 @@ import io
 import re
 import time
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
+from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
 # constants
 BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
@@ -123,6 +124,13 @@ def test_to_num():
     assert main.to_num("1.0e-3") == 1.0e-3
     assert main.to_num(2) == 2
     assert main.to_num("None") is None
+
+
+def test_get_level_by_extent():
+    """Test the get_level_by_extent function."""
+    max_lev = 10
+    assert get_level_by_extent([1000, 1000, 1100, 1100]) == max_lev
+    assert get_level_by_extent([1000, 1000, 1000000, 1000000]) == 0
 
 
 # test the bokeh app
@@ -346,8 +354,8 @@ def test_hovernet_on_box(doc, data_path):
     main.UI["box_source"].data = {
         "x": [1200],
         "y": [-2000],
-        "width": [800],
-        "height": [800],
+        "width": [500],
+        "height": [500],
     }
 
     # select hovernet model and run it on box

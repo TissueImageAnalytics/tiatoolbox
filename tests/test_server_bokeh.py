@@ -4,9 +4,9 @@ from threading import Thread
 
 import pkg_resources
 import pytest
-from bokeh.client.session import pull_session
 from click.testing import CliRunner
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox import cli
 from tiatoolbox.data import _fetch_remote_sample
 
@@ -49,7 +49,7 @@ def annotation_path(data_path):
 
 
 @pytest.fixture()
-def bk_session(data_path):
+def bk_session(data_path) -> ClientSession:
     """Create a bokeh session."""
 
     def run_app() -> None:

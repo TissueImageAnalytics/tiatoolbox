@@ -9,11 +9,16 @@ from cmath import pi
 from pathlib import Path, PureWindowsPath
 from shutil import rmtree
 from threading import Thread
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import requests
 import torch
+from flask_cors import CORS
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -47,11 +52,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
@@ -59,6 +59,9 @@ from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
+
+if TYPE_CHECKING:
+    from bokeh.document import Document
 
 rng = np.random.default_rng()
 
@@ -1823,7 +1826,7 @@ class DocConfig:
         self.config = config
         self.config["auto_load"] = get_from_config(["auto_load"], 0) == 1
 
-    def setup_doc(self, base_doc):
+    def setup_doc(self: DocConfig, base_doc: Document):
         """Set up the document."""
         self._get_config()
 
