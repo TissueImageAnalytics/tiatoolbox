@@ -1,6 +1,8 @@
 """Test the bokeh app with config.json file."""
 import io
 import json
+import time
+from contextlib import suppress
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -8,10 +10,10 @@ import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
 from PIL import Image
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 
@@ -118,3 +120,7 @@ def test_clearing_doc(doc):
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
+    with suppress(requests.exceptions.ConnectionError):
+        # may not respond if already shutdown
+        main.UI["s"].post(f"http://{main.host2}:5000/tileserver/shutdown", timeout=5)
+    time.sleep(5)
