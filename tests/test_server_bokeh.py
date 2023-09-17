@@ -1,4 +1,5 @@
 """Test the bokeh app from command line."""
+import os
 import time
 from threading import Thread
 
@@ -63,6 +64,7 @@ def bk_session(data_path) -> ClientSession:
                 "--img-input",
                 str(data_path["base_path"].parent),
             ],
+            env=os.environ,
         )
 
     proc = Thread(target=run_app, daemon=True)
