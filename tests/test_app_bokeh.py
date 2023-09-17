@@ -4,20 +4,21 @@ from __future__ import annotations
 import io
 import re
 import time
+from contextlib import suppress
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
@@ -663,9 +664,17 @@ def test_populate_slide_list(doc, data_path):
         search_txt="TCGA-HE-7130-01Z-00-DX1",
     )
     assert len(slide_select.options) == 1
+    main.populate_slide_list(
+        data_path["base_path"] / "slides",
+    )
+    assert len(slide_select.options) == 3
 
 
 def test_clearing_doc(doc):
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
+    with suppress(requests.exceptions.ConnectionError):
+        # may not respond if already shutdown
+        main.UI["s"].post(f"http://{main.host2}:5000/tileserver/shutdown", timeout=5)
+    time.sleep(5)
