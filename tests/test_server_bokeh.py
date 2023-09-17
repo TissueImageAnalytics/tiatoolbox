@@ -4,9 +4,9 @@ from threading import Thread
 
 import pkg_resources
 import pytest
-from bokeh.client.session import ClientSession, pull_session
 from click.testing import CliRunner
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox import cli
 from tiatoolbox.data import _fetch_remote_sample
 
@@ -67,6 +67,7 @@ def bk_session(data_path) -> ClientSession:
 
     proc = Thread(target=run_app, daemon=True)
     proc.start()
+    time.sleep(5)  # allow time for server to start
 
     session = pull_session(
         url="http://localhost:5006/bokeh_app",
