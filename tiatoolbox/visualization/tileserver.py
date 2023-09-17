@@ -638,10 +638,12 @@ class TileServer(Flask):
         mapper["mapper"] = mapper["mapper"].__class__.__name__
         return jsonify(mapper)
 
-    def shutdown(self: TileServer):
+    @staticmethod
+    def shutdown() -> str:
         """Shutdown the server."""
 
         def terminate_app():
+            """Terminate the server."""
             time.sleep(1)  # Allow the response to be sent before shutting down
             sys.exit()
 
