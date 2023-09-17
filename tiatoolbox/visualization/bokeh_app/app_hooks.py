@@ -1,13 +1,11 @@
 """Hooks to be executed upon specific events in bokeh app."""
 import sys
 
-from tiatoolbox import logger
+import requests
 
 
 def on_session_destroyed(session_context):
     """Hook to be executed when a session is destroyed."""
-    logger.info(
-        "Session destroyed for user %s.",
-        session_context.request.arguments["user"],
-    )
+    user = session_context.request.arguments["user"]
+    requests.get(f"http://127.0.0.1:5000/tileserver/reset/{user}", timeout=100)
     sys.exit()
