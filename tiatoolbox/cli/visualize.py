@@ -1,7 +1,7 @@
 """Command line interface for visualization tool."""
 import os
-import pathlib
 import subprocess
+from pathlib import Path
 from threading import Thread
 
 import click
@@ -50,7 +50,7 @@ def run_bokeh(img_input, port, noshow):
         "--args",
         *img_input,
     ]
-    subprocess.run(cmd, check=True, env=os.environ)  # noqa: S603
+    subprocess.run(cmd, check=True, cwd=str(Path.cwd()), env=os.environ)  # noqa: S603
 
 
 @tiatoolbox_cli.command()
@@ -82,7 +82,7 @@ def visualize(img_input, port, noshow) -> None:
         msg = "No input directory specified."
         raise ValueError(msg)
     for input_path in img_input:
-        if not pathlib.Path(input_path).exists():
+        if not Path(input_path).exists():
             msg = f"{input_path} does not exist"
             raise FileNotFoundError(msg)
 
