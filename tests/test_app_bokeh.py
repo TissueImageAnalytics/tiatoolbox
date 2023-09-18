@@ -284,6 +284,7 @@ def test_cprop_input(doc):
         main.UI["vstate"].orig_types.values(),
     )
 
+    main.UI["vstate"].to_update.add("layer_1")
     # check update state
     assert main.UI["vstate"].update_state == 1
     # simulate server ticks
@@ -347,6 +348,12 @@ def test_graph_with_feats(doc, data_path):
     cmap_select.value = ["graph_overlay", "feat_0"]
 
     node_cm = colormaps["viridis"]
+    assert main.UI["node_source"].data["node_color_"][0] == main.rgb2hex(
+        node_cm(main.UI["node_source"].data["feat_0"][0]),
+    )
+
+    # test prop that doesnt exist in graph has no effect
+    cmap_select.value = ["graph_overlay", "prob"]
     assert main.UI["node_source"].data["node_color_"][0] == main.rgb2hex(
         node_cm(main.UI["node_source"].data["feat_0"][0]),
     )

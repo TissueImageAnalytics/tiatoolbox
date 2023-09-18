@@ -60,7 +60,7 @@ def bk_session(data_path) -> ClientSession:
 
     session = pull_session(
         url="http://localhost:5006/bokeh_app",
-        arguments={},
+        arguments={"slide": "CMU-1-Small-Region.svs"},
     )
     yield session
     session.close()

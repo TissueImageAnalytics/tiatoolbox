@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -46,9 +50,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger  # noqa: E402
@@ -1802,13 +1803,13 @@ class DocConfig:
         config["slide_folder"] = slide_folder
         config["overlay_folder"] = overlay_folder
         config["demo_name"] = self.config["demo_name"]
+        if "initial_views" not in config:
+            config["initial_views"] = {}
 
         # get any extra info from query url
         if "slide" in req_args:
             config["first_slide"] = str(req_args["slide"][0], "utf-8")
             if "window" in req_args:
-                if "initial_views" not in config:
-                    config["initial_views"] = {}
                 config["initial_views"][Path(config["first_slide"]).stem] = [
                     int(s) for s in str(req_args["window"][0], "utf-8")[1:-1].split(",")
                 ]
