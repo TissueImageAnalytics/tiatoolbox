@@ -1,4 +1,5 @@
 """Command line interface for visualization tool."""
+import os
 import pathlib
 import subprocess
 from threading import Thread
@@ -17,6 +18,7 @@ def run_tileserver() -> None:
     """Helper function to launch a tileserver."""
 
     def run_app() -> None:
+        """Run the tileserver app."""
         app = TileServer(
             title="Tiatoolbox TileServer",
             layers={},
@@ -48,7 +50,7 @@ def run_bokeh(img_input, port, noshow):
         "--args",
         *img_input,
     ]
-    subprocess.run(cmd, check=True)  # noqa: S603
+    subprocess.run(cmd, check=True, env=os.environ)  # noqa: S603
 
 
 @tiatoolbox_cli.command()
