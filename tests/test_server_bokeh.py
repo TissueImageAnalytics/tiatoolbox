@@ -1,5 +1,5 @@
 """Test the bokeh app from command line."""
-import os
+import subprocess
 import time
 from threading import Thread
 
@@ -55,21 +55,18 @@ def bk_session(data_path) -> ClientSession:
 
     def run_app() -> None:
         """Start a server to run the bokeh app."""
-        runner = CliRunner()
-        runner.invoke(
-            cli.main,
-            [
-                "visualize",
-                "--noshow",
-                "--img-input",
-                str(data_path["base_path"].parent),
-            ],
-            env=os.environ,
-        )
+        cmd = [
+            "tiatoolbox",
+            "visualize",
+            "--noshow",
+            "--img-input",
+            str(data_path["base_path"].parent),
+        ]
+        subprocess.run(cmd, check=True)  # noqa: S603
 
     proc = Thread(target=run_app, daemon=True)
     proc.start()
-    time.sleep(5)  # allow time for server to start
+    time.sleep(10)  # allow time for server to start
 
     session = pull_session(
         url="http://localhost:5006/bokeh_app",
@@ -100,7 +97,7 @@ def test_slides_available(bk_session):
     bk_session.document.clear()
     assert len(bk_session.document.roots) == 0
     bk_session.close()
-    time.sleep(10)  # allow time for hooks to trigger
+    time.sleep(5)  # allow time for hooks to trigger
 
 
 def test_cli_errors(data_path):
