@@ -21,8 +21,7 @@ def get_level_by_extent(extent):
         if resolution > r:
             if i == 0:
                 return 0
-            if i > 0:
-                return i - 1
+            return i - 1
         i += 1
 
     # otherwise return the highest available resolution

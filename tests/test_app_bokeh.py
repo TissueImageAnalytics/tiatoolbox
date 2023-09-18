@@ -8,20 +8,20 @@ import re
 import time
 from pathlib import Path
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -580,13 +580,23 @@ def test_filter_box(doc):
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_before = label(np.any(im[:, :, :3], axis=2))
     # filter for cells of type 0
-    filter_input.value = "props['type'] == 0"
+    filter_input.value = "(props['type'] == 0) | (props['type'] == 1)"
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     # should be less than without the filter
     assert num_after < num_before
+
+    # check type toggles in combo with filter
+    type_column_list = doc.get_model_by_name("type_column0").children
+    type_column_list[0].active = False
+    im = get_tile("overlay", 4, 8, 4, show=False)
+    _, num_final = label(np.any(im[:, :, :3], axis=2))
+    # should be even less
+    assert num_final < num_after
+
     # set no filter
     filter_input.value = ""
+    type_column_list[0].active = True
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     # should be back to original number

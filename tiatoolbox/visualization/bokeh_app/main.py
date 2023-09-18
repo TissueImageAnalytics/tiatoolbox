@@ -61,7 +61,7 @@ from tiatoolbox.utils.visualization import random_colors  # noqa: E402
 from tiatoolbox.visualization.ui_utils import get_level_by_extent  # noqa: E402
 from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: E402
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bokeh.document import Document
 
 rng = np.random.default_rng()
@@ -318,7 +318,7 @@ def build_predicate():
         for layer in UI["type_column"].children
         if layer.active and layer.label in UI["vstate"].types
     ]
-    if len(preds) == len(UI["type_column"].children):
+    if len(preds) == len(UI["vstate"].types):
         preds = []
     combo = "None"
     if len(preds) > 0:
@@ -1797,8 +1797,7 @@ class DocConfig:
             config_file = config_file[0]
             with config_file.open() as f:
                 config = json.load(f)
-                if not is_deployed:
-                    logger.info("loaded config: %s", config)
+                logger.info("loaded config: %s", config)
 
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder

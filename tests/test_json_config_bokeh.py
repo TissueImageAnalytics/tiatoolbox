@@ -3,8 +3,8 @@ import time
 from threading import Thread
 
 import pytest
-from bokeh.client.session import ClientSession, pull_session
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
 
@@ -47,7 +47,10 @@ def bk_session(data_path) -> ClientSession:
     time.sleep(1)  # allow time for server to start
 
     args = [
-        [str(data_path["base_path"])],
+        [
+            str(data_path["base_path"] / "slides"),
+            str(data_path["base_path"] / "overlays"),
+        ],
         5006,
         True,
     ]
@@ -69,10 +72,12 @@ def test_slides_available(bk_session):
     slide_select = doc.get_model_by_name("slide_select0")
     # check there are two available slides
     assert len(slide_select.options) == 2
+    assert slide_select.value[0] == "CMU-1-Small-Region.svs"
 
-    # check that the overlays are available.
-    slide_select.value = ["CMU-1-Small-region.svs"]
     layer_drop = doc.get_model_by_name("layer_drop0")
+    assert len(layer_drop.menu) == 2
+    # check that the overlays are available.
+    slide_select.value = ["CMU-1.ndpi"]
     assert len(layer_drop.menu) == 2
 
     bk_session.document.clear()
