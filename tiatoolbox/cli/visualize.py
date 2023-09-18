@@ -1,11 +1,14 @@
 """Command line interface for visualization tool."""
 import pathlib
 import subprocess
+from threading import Thread
 
 import click
+from flask_cors import CORS
 
 import tiatoolbox.visualization as vis
 from tiatoolbox.cli.common import cli_img_input, tiatoolbox_cli
+from tiatoolbox.visualization.tileserver import TileServer
 
 
 @tiatoolbox_cli.command()
@@ -40,6 +43,19 @@ def visualize(img_input, port, noshow) -> None:
         if not pathlib.Path(input_path).exists():
             msg = f"{input_path} does not exist"
             raise FileNotFoundError(msg)
+
+    def run_app() -> None:
+        """Helper function to launch a tileserver."""
+        app = TileServer(
+            title="Tiatoolbox TileServer",
+            layers={},
+        )
+        CORS(app, send_wildcard=True)
+        app.run(host="127.0.0.1", threaded=False)
+
+    # start tile server
+    proc = Thread(target=run_app, daemon=True)
+    proc.start()
 
     cmd = [
         "bokeh",

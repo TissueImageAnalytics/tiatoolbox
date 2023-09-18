@@ -8,12 +8,15 @@ import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
 from shutil import rmtree
-from threading import Thread
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -47,16 +50,10 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from flask_cors import CORS
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.visualization import random_colors
-from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
@@ -552,16 +549,6 @@ def change_tiles(layer_name: str = "overlay"):
         UI["vstate"].layer_dict[layer_name] = len(UI["p"].renderers) - 1
 
     logger.info("current layers: %s", UI["vstate"].layer_dict)
-
-
-def run_app() -> None:
-    """Helper function to launch a tileserver if running locally."""
-    app = TileServer(
-        title="Tiatoolbox TileServer",
-        layers={},
-    )
-    CORS(app, send_wildcard=True)
-    app.run(host="127.0.0.1", threaded=False)
 
 
 class ViewerState:
@@ -1829,11 +1816,6 @@ class DocConfig:
     def setup_doc(self: DocConfig, base_doc: Document):
         """Set up the document."""
         self._get_config()
-
-        # start tile server
-        if not is_deployed:
-            proc = Thread(target=run_app, daemon=True)
-            proc.start()
 
         # set initial slide to first one in base folder
         slide_list = []

@@ -2,25 +2,29 @@
 from __future__ import annotations
 
 import io
+import json
+import multiprocessing
 import re
 import time
-from contextlib import suppress
+from pathlib import Path
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
+from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
+from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
 # constants
@@ -103,16 +107,36 @@ def annotation_path(data_path):
         "annotation_dat_svs_1",
         data_path["base_path"] / "overlays",
     )
+    data_path["config"] = _fetch_remote_sample(
+        "config_2",
+        data_path["base_path"] / "overlays",
+    )
     return data_path
+
+
+def run_app() -> None:
+    """Helper function to launch a tileserver."""
+    app = TileServer(
+        title="Tiatoolbox TileServer",
+        layers={},
+    )
+    CORS(app, send_wildcard=True)
+    app.run(host="127.0.0.1", threaded=False)
 
 
 @pytest.fixture(scope="module")
 def doc(data_path):
     """Create a test document for the visualization tool."""
+    # start tile server
+    p = multiprocessing.Process(target=run_app, daemon=True)
+    p.start()
+    time.sleep(2)  # allow time for server to start
+
     main.doc_config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
     handler = FunctionHandler(main.doc_config.setup_doc)
     app = Application(handler)
-    return app.create_document()
+    yield app.create_document()
+    p.terminate()
 
 
 # test some utility functions
@@ -141,6 +165,20 @@ def test_roots(doc):
     """Test that the document has the correct number of roots."""
     # should be 2 roots, main window and controls
     assert len(doc.roots) == 2
+
+
+def test_config_loaded(data_path):
+    """Test that the config is loaded correctly."""
+    # config should be loaded
+    loaded_config = main.doc_config.config
+    with Path(data_path["config"]).open() as f:
+        file_config = json.load(f)
+
+    # check that all keys in file_config are in doc_config
+    # and that the values are the same
+    for key in file_config:
+        assert key in loaded_config
+        assert loaded_config[key] == file_config[key]
 
 
 def test_slide_select(doc, data_path):
@@ -674,7 +712,3 @@ def test_clearing_doc(doc):
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
-    with suppress(requests.exceptions.ConnectionError):
-        # may not respond if already shutdown
-        main.UI["s"].post(f"http://{main.host2}:5000/tileserver/shutdown", timeout=5)
-    time.sleep(5)

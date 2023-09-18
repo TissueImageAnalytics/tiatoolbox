@@ -5,9 +5,9 @@ from threading import Thread
 
 import pkg_resources
 import pytest
-from bokeh.client.session import ClientSession, pull_session
 from click.testing import CliRunner
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox import cli
 from tiatoolbox.data import _fetch_remote_sample
 
@@ -43,7 +43,7 @@ def annotation_path(data_path):
         data_path["base_path"] / "overlays",
     )
     data_path["config"] = _fetch_remote_sample(
-        "config_2",
+        "config_1",
         data_path["base_path"] / "overlays",
     )
     return data_path
