@@ -6,8 +6,8 @@ from threading import Thread
 
 import pkg_resources
 import pytest
-
 from bokeh.client.session import ClientSession, pull_session
+
 from tiatoolbox.data import _fetch_remote_sample
 
 BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
