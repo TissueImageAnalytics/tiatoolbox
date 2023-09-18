@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -46,16 +50,16 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
-from tiatoolbox import logger
-from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
-from tiatoolbox.tools.pyramid import ZoomifyGenerator
-from tiatoolbox.utils.visualization import random_colors
-from tiatoolbox.visualization.ui_utils import get_level_by_extent
-from tiatoolbox.wsicore.wsireader import WSIReader
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+from tiatoolbox import logger  # noqa: E402
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (  # noqa: E402
+    NucleusInstanceSegmentor,
+)
+from tiatoolbox.tools.pyramid import ZoomifyGenerator  # noqa: E402
+from tiatoolbox.utils.visualization import random_colors  # noqa: E402
+from tiatoolbox.visualization.ui_utils import get_level_by_extent  # noqa: E402
+from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: E402
 
 if TYPE_CHECKING:
     from bokeh.document import Document
