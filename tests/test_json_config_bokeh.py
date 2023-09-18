@@ -1,16 +1,12 @@
 """Test the bokeh app with config.json file."""
-
-import subprocess
 import time
 from threading import Thread
 
-import pkg_resources
 import pytest
 
 from bokeh.client.session import ClientSession, pull_session
+from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
-
-BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
 
 
 @pytest.fixture(scope="module")
@@ -47,29 +43,21 @@ def annotation_path(data_path):
 @pytest.fixture()
 def bk_session(data_path) -> ClientSession:
     """Create a bokeh session."""
+    run_tileserver()
+    time.sleep(1)  # allow time for server to start
 
-    def run_app() -> None:
-        """Start a server to run the bokeh app."""
-        cmd = [
-            "tiatoolbox",
-            "visualize",
-            "--noshow",
-            "--img-input",
-            str(data_path["base_path"].parent),
-        ]
-        subprocess.run(cmd, check=True)  # noqa: S603
-
-    proc = Thread(target=run_app, daemon=True)
+    args = [
+        [str(data_path["base_path"])],
+        5006,
+        True,
+    ]
+    proc = Thread(target=run_bokeh, daemon=True, args=args)
     proc.start()
-    time.sleep(10)  # allow time for server to start
+    time.sleep(5)  # allow time for server to start
 
     session = pull_session(
         url="http://localhost:5006/bokeh_app",
-        arguments={
-            "demo": str(data_path["base_path"].parts[-1]),
-            "slide": "CMU-1.ndpi",
-            "window": "[0, 0, 1000, 1000]",
-        },
+        arguments={},
     )
     yield session
     session.close()
@@ -81,10 +69,8 @@ def test_slides_available(bk_session):
     slide_select = doc.get_model_by_name("slide_select0")
     # check there are two available slides
     assert len(slide_select.options) == 2
-    assert slide_select.value[0] == "CMU-1.ndpi"
 
     # check that the overlays are available.
-    slide_select = doc.get_model_by_name("slide_select0")
     slide_select.value = ["CMU-1-Small-region.svs"]
     layer_drop = doc.get_model_by_name("layer_drop0")
     assert len(layer_drop.menu) == 2

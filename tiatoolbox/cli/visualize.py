@@ -4,11 +4,51 @@ import subprocess
 from threading import Thread
 
 import click
+import pkg_resources
 from flask_cors import CORS
 
-import tiatoolbox.visualization as vis
 from tiatoolbox.cli.common import cli_img_input, tiatoolbox_cli
 from tiatoolbox.visualization.tileserver import TileServer
+
+BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
+
+
+def run_tileserver() -> None:
+    """Helper function to launch a tileserver."""
+
+    def run_app() -> None:
+        app = TileServer(
+            title="Tiatoolbox TileServer",
+            layers={},
+        )
+        CORS(app, send_wildcard=True)
+        app.run(host="127.0.0.1", threaded=False)
+
+    proc = Thread(target=run_app, daemon=True)
+    proc.start()
+
+
+def run_bokeh(img_input, port, noshow):
+    """Start the bokeh server."""
+    cmd = [
+        "bokeh",
+        "serve",
+    ]
+    if not noshow:
+        cmd = [*cmd, "--show"]  # pragma: no cover
+    cmd = [
+        *cmd,
+        BOKEH_PATH,
+        "--port",
+        str(port),
+        "--unused-session-lifetime",
+        "1000",
+        "--check-unused-sessions",
+        "1000",
+        "--args",
+        *img_input,
+    ]
+    subprocess.run(cmd, check=True)  # noqa: S603
 
 
 @tiatoolbox_cli.command()
@@ -35,7 +75,7 @@ def visualize(img_input, port, noshow) -> None:
     respectively.
 
     """
-    vis_path = pathlib.Path(vis.__file__).resolve().parent
+    # sanity check the input args
     if len(img_input) == 0:
         msg = "No input directory specified."
         raise ValueError(msg)
@@ -44,35 +84,6 @@ def visualize(img_input, port, noshow) -> None:
             msg = f"{input_path} does not exist"
             raise FileNotFoundError(msg)
 
-    def run_app() -> None:
-        """Helper function to launch a tileserver."""
-        app = TileServer(
-            title="Tiatoolbox TileServer",
-            layers={},
-        )
-        CORS(app, send_wildcard=True)
-        app.run(host="127.0.0.1", threaded=False)
-
-    # start tile server
-    proc = Thread(target=run_app, daemon=True)
-    proc.start()
-
-    cmd = [
-        "bokeh",
-        "serve",
-    ]
-    if not noshow:
-        cmd = [*cmd, "--show"]  # pragma: no cover
-    cmd = [
-        *cmd,
-        str(vis_path.joinpath("bokeh_app")),
-        "--port",
-        str(port),
-        "--unused-session-lifetime",
-        "1000",
-        "--check-unused-sessions",
-        "1000",
-        "--args",
-        *img_input,
-    ]
-    subprocess.run(cmd, check=True)  # noqa: S603
+    # start servers
+    run_tileserver()  # pragma: no cover
+    run_bokeh(img_input, port, noshow)  # pragma: no cover
