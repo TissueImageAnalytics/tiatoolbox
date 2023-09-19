@@ -1,11 +1,13 @@
 """Test the bokeh app from command line."""
 import time
+from contextlib import suppress
 from threading import Thread
 
 import pytest
-from bokeh.client.session import ClientSession, pull_session
+import requests
 from click.testing import CliRunner
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox import cli
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
@@ -71,6 +73,8 @@ def bk_session(data_path) -> ClientSession:
     )
     yield session
     session.close()
+    with suppress(requests.exceptions.ConnectionError):
+        requests.post("http://localhost:5000/tileserver/shutdown", timeout=2)
 
 
 def test_slides_available(bk_session):

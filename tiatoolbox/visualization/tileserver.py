@@ -6,6 +6,7 @@ import io
 import json
 import os
 import secrets
+import sys
 import urllib
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -158,6 +159,7 @@ class TileServer(Flask):
         self.route("/tileserver/secondary_cmap", methods=["GET"])(
             self.get_secondary_cmap,
         )
+        self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
 
     def _get_session_id(self: TileServer) -> str:
         """Get the session_id from the request.
@@ -633,3 +635,8 @@ class TileServer(Flask):
         mapper = self.renderers[session_id].secondary_cmap
         mapper["mapper"] = mapper["mapper"].__class__.__name__
         return jsonify(mapper)
+
+    @staticmethod
+    def shutdown() -> None:
+        """Shutdown the tileserver."""
+        sys.exit()

@@ -1,3 +1,5 @@
+.. _visualization:
+
 Visualization interface
 =======================
 
@@ -14,14 +16,16 @@ alternatively just one path can be provided; in this case it is assumed that sli
 
 In the folder(s) that your command pointed to, should be the things that you want to visualize, following the conventions in the next section.
 
-Data format conventions/filestructure
--------------------------------------
+.. _data_format:
+
+Data Format Conventions and File Structure
+------------------------------------------
 
 in the slides folder should be all the slides you want to use, and the overlays folder should contain whatever graphs, segmentations, heatmaps etc you are interesting in overlaying over the slides.
 
 When a slide is selected in the interface, any valid overlay file that can be found that *contains the same name* (not including extension) will be available to overlay upon it.
 
-Segmentation:
+Segmentation
 ^^^^^^^^^^^^^
 
 The best way of getting segmentations (in the form of contours) into the visualization is by putting them in an AnnotationStore (more information about hte tiatoolbox annotation store can be found at :obj:`storage <tiatoolbox.annotation.storage>`.  The other options are .geojson, or a hovernet -style .dat, both of which can usually be loaded within the interface but will incur a small delay while the data in converted internally into an AnnotationStore.
@@ -56,19 +60,19 @@ If your data is not in one of these formats, it is usually fairly straightforwar
 A small script of 6-10 lines is usually all that is required. There are example code snippets illustrating how to create an annotation store in a variety of common scenarios in the examples section.
 Most use-cases should be covered in there, or something close enough that a few tweaks to a snippet will do what is needed.
 
-Heatmaps:
+Heatmaps
 ^^^^^^^^
 
 will display a low-res heatmap in .jpg or .png format. Should be the same aspect ratio as the WSI it will be overlaid on. When creating the image, keep in mind that white regions (255,255,255) will be made transparent.
 
 Single channel images can also be used but are not recommended; they should take values between 0 and 255 and will simply be put through a viridis colormap. 0 values will become white background.
 
-Whole Slide Overlays:
+Whole Slide Overlays
 ^^^^^^^^^^^^^^^^^^^^
 
 Can overlay multiple WSI's on top of eachother as separate layers
 
-Graphs:
+Graphs
 ^^^^^^
 
 Graphs can also be overlaid. These should be provided in a dictionary format, saved as a .json file.
@@ -93,10 +97,13 @@ Additional features can be added to nodes by adding extra keys to the dictionary
 It will be possible to colour the nodes by these features in the interface, and the top 10 will appear in a tooltip when hovering over a node (you will have to turn on the hovertool in the small toolbar to the right of the main window to enable this, it is disabled by default.)
 The display of nodes and edges can be toggled on/off independently in the right hand panel of the interface (note, edges will be turned off by default).
 
-Annotation Store examples:
---------------------------
 
-patch predictions
+.. _examples:
+
+Annotation Store examples
+-------------------------
+
+Patch Predictions
 ^^^^^^^^^^^^^^^^^
 
 lets say you have patch level predictions for a model. The top left corner
@@ -178,7 +185,7 @@ and associated node properties. The following example demonstrates how to packag
         json.dump(graph_dict, f)
 
 Modifying an existing annotation store
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you have an existing annotation store and want to add/change
 properties of annotations (or can also do similarly for geometry)
@@ -240,10 +247,12 @@ Lets say you have some annotations that were created on a slide, and you want to
     SQ2.transform(translate_geom)  # translate so coordinates relative to top left of tile
     SQ2.dump("path/to/tile_annotations.db")
 
-General UI controls/options:
-------------
+.. _interface:
 
-Colormaps/colouring by score:
+General UI Controls and Options
+-------------------------------
+
+Colormaps/colouring by score
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once you have selected a slide with the slide dropdown, you can overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colors can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
@@ -253,26 +262,26 @@ There is also the option for the special case 'color' to be used - if your annot
 
 The 'colour type by property' box allows annotations of the specified type to be coloured by a different property to the 'global' one. For example, this could be used to have all detections coloured according to their type, but for Glands, colour by some feature describing them instead (their area, for example)
 
-Running models:
-^^^^^^^^^^^^^^^
+Running models
+^^^^^^^^^^^^^^
 
 Regions of the image can be selected, using either a box select or points, which can be sent to a model via selecting the model in the drop-down menu and then clicking go. Available so far are hovernet and nuclick.
 
 To save the annotations resulting from a model, or loaded from a .geojson or .dat (will be saved as a SQLiteStore .db file which will be far quicker to load) use the save button (for the moment it is just saved in a file '{slide_name}\_saved_anns.db' in the overlays folder).
 
-Dual window mode:
-^^^^^^^^^^^^^^^^^
+Dual window mode
+^^^^^^^^^^^^^^^^
 
 A second window can be opened by selecting the 'window 2' tab in the top right. This will open the currently selected slide in a second window. The overlay shown in each window can be controlled independently to allow comparison of different overlays, or viewing of a model output side-by-side with the unoverlaid slide, or ground truth annotations. Slide navigation will be linked between both windows.
 Two different slides can also be opened in the two windows, although this will only be useful in cases where the two slides are registered so that a shared coordinate space/slide navigation makes sense.
 
-Zoomed out plotting:
-^^^^^^^^^^^^^^^^^^^^
+Zoomed out plotting
+^^^^^^^^^^^^^^^^^^^
 
 By default, the interface is set up to show only larger annotations while zoomed out. Smaller annotations which would be too small to see clearly while zoomed out will not be displayed. The 'max-scale' value can be changed to control the zoom level at which this happens. A larger value will mean smaller annotations remain visible at more zoomed out scale. If you want all annotations to be displayed always regardless of zoom, just type in a large value (1000+) to set it to its max. In the case of very many annotations, this may result in some loading lag when zoomed out.
 
-Other options:
-^^^^^^^^^^^^^^
+Other options
+^^^^^^^^^^^^^
 
 There are a few options for how annotations are displayed. You can change the colourmap used in the colormap field if you are colouring objects according to a continuous property (should be between 0-1) - by entering the text of a matplotlib cmap.
 The buttons 'filled', 'mpp', 'grid', respectively toggle between filled and outline only rendering of annotations, using mpp or baseline pixels as the scale for the plot, and showing a grid overlay.
@@ -280,29 +289,43 @@ The buttons 'filled', 'mpp', 'grid', respectively toggle between filled and outl
 A filter can be applied to annotations using the filter box. For example, entering props\['score'\]>0.5 would show only annotations for which the 'score' property  is greater than 0.5.
 See the annotation store documentation on valid 'where' statements for more details.
 
-Config files
-^^^^^^^^^^^^
+.. _config:
 
-A json config file can be placed in the overlays folder, to customize various aspects of the UI and annotation display when visualizing overlays in that location. This is especially useful for customising online demos. An example .json explaining all the fields available is below:
+Config files
+------------
+
+A json config file can be placed in the overlays folder, to customize various aspects of the UI and annotation display when visualizing overlays in that location. This is especially useful for customising online demos. An example .json explaining all the fields is shown below.
+
+There are settings to control how slides are loaded:
 
 ::
 
     {
-    "colour_dict": {
-        "typeA": [252, 161, 3, 255],   # annotations whose 'type' property matches these, will display in the specified color
-        "typeB": [3, 252, 40, 255]
-    },
     "initial_views": {
         "slideA": [0,19000,35000,44000],    # if a slide with specified name is opened, initial view window will be set to this
         "slideB": [44200,59100,69700,76600]
             },
     "auto_load": 1,     # if 1, upon opening a slide will also load all annotations associated with it
+    "first_slide": "slideA.svs",            # initial slide to open upon launching viewer
+
+Settings to control how annotations are displayed, including default colours for specific types, and default properties to colour by:
+
+::
+
+    "colour_dict": {
+        "typeA": [252, 161, 3, 255],   # annotations whose 'type' property matches these, will display in the specified color
+        "typeB": [3, 252, 40, 255]
+    },
     "default_cprop": "some_property",     # default property to color annotations by
     "default_type_cprop": {               # a property to colour a specific type by
     "type": "Gland",
     "cprop": "Explanation"
     },
-    "first_slide": "slideA.svs",            # initial slide to open upon launching viewer
+
+There are settings to control the initial values of some UI settings:
+
+::
+
     "UI_settings": {
         "blur_radius": 0,           # applies a blur to rendererd annotations
         "edge_thickness": 0,        # thickness of boundaries drawn around annotation geometries (0=off)
@@ -315,6 +338,11 @@ A json config file can be placed in the overlays folder, to customize various as
         "colorbar_on": 1,           # whether colorbar is shown below main window
         "hover_on": 1
     },
+
+and the ability to toggle on or off specific UI elements:
+
+::
+
     "UI_elements_1": {              # controls which UI elements are visible
         "slide_select": 1,          # slide select box
         "layer_drop": 1,            # overlay select drop down
@@ -327,6 +355,9 @@ A json config file can be placed in the overlays folder, to customize various as
         "model_row": 0,             # UI elements to chose and run a model
         "type_select_row": 1        # buttom group for toggling specific types of annotations on/off
     },
+
+::
+
     "UI_elements_2": {              # controls visible UI elements on second tab in UI
         "opt_buttons": 1,           # UI elements providing a few options including if annotations should be filled/outline only
         "pt_size_spinner": 1,       # control for point size and graph node size
