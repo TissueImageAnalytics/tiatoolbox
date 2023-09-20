@@ -252,6 +252,11 @@ Lets say you have some annotations that were created on a slide, and you want to
 General UI Controls and Options
 -------------------------------
 
+.. image:: images/visualize_interface.png
+    :width: 100%
+    :align: center
+    :alt: visualize interface
+
 Colormaps/colouring by score
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
