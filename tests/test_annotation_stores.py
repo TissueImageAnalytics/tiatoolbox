@@ -8,7 +8,7 @@ import sys
 from itertools import repeat, zip_longest
 from pathlib import Path
 from timeit import timeit
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generator
+from typing import TYPE_CHECKING, Callable, ClassVar, Generator
 
 import numpy as np
 import pandas as pd
@@ -109,7 +109,7 @@ def cell_polygon(
     return affinity.rotate(polygon, angle, origin="centroid")
 
 
-def sample_where_1(props: dict[str, Any]) -> bool:
+def sample_where_1(props: dict[str, object]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 1.
@@ -118,7 +118,7 @@ def sample_where_1(props: dict[str, Any]) -> bool:
     return props.get("class") == 1
 
 
-def sample_where_123(props: dict[str, Any]) -> bool:
+def sample_where_123(props: dict[str, object]) -> bool:
     """Simple example predicate function for tests.
 
     Checks for a class = 123.
@@ -127,7 +127,7 @@ def sample_where_123(props: dict[str, Any]) -> bool:
     return props.get("class") == 123
 
 
-def sample_select(props: dict[str, Any]) -> tuple[Any]:
+def sample_select(props: dict[str, object]) -> tuple[object]:
     """Simple example select expression for tests.
 
     Gets the class value.
@@ -136,7 +136,7 @@ def sample_select(props: dict[str, Any]) -> tuple[Any]:
     return props.get("class")
 
 
-def sample_multi_select(props: dict[str, Any]) -> tuple[Any]:
+def sample_multi_select(props: dict[str, object]) -> tuple[object]:
     """Simple example select expression for tests.
 
     Gets the class value and the class mod 2.
@@ -732,7 +732,7 @@ def test_sqlite_optimize_no_vacuum(fill_store: Callable, tmp_path: Path) -> None
     store.optimize(limit=0, vacuum=False)
 
 
-def test_sqlite_wkb(fill_store: callable) -> None:
+def test_sqlite_wkb(fill_store: Callable) -> None:
     """Test that SQLiteStore returns annotations with WKB geometry."""
     _, store = fill_store(SQLiteStore, ":memory:")
     results = store.query((0, 0, 30, 30))
@@ -752,7 +752,7 @@ def test_annotation_to_geojson() -> None:
     assert geojson["properties"] == {"foo": "bar", "baz": "qux"}
 
 
-def test_remove_area_column(fill_store: callable) -> None:
+def test_remove_area_column(fill_store: Callable) -> None:
     """Test removing an area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
@@ -767,7 +767,7 @@ def test_remove_area_column(fill_store: callable) -> None:
     assert "area" not in store.indexes()
 
 
-def test_remove_area_column_indexed(fill_store: callable) -> None:
+def test_remove_area_column_indexed(fill_store: Callable) -> None:
     """Test removing an area column if there's an index on it."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.create_index("area", '"area"')
@@ -777,7 +777,7 @@ def test_remove_area_column_indexed(fill_store: callable) -> None:
     assert len(result) == 200
 
 
-def test_add_area_column(fill_store: callable) -> None:
+def test_add_area_column(fill_store: Callable) -> None:
     """Test adding an area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
@@ -798,7 +798,7 @@ def test_add_area_column(fill_store: callable) -> None:
     assert "area" not in store.indexes()
 
 
-def test_query_min_area_no_area_column(fill_store: callable) -> None:
+def test_query_min_area_no_area_column(fill_store: Callable) -> None:
     """Test querying with a minimum area when there is no area column."""
     _, store = fill_store(SQLiteStore, ":memory:")
     store.remove_area_column()
@@ -1845,7 +1845,7 @@ class TestStore:
         fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
-        """Test querying a store with a bounding box and a callable where."""
+        """Test querying a store with a bounding box and a Callable where."""
         keys, store = fill_store(store_cls, ":memory:")
         store.patch(keys[0], properties={"class": 123})
         dictionary = store.bquery(
@@ -1936,7 +1936,7 @@ class TestStore:
         fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
-        """Test querying for properties with a callable select and where."""
+        """Test querying for properties with a Callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=lambda props: (props.get("class"),),
@@ -1951,7 +1951,7 @@ class TestStore:
         fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
-        """Test querying for properties with a callable select and where."""
+        """Test querying for properties with a Callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=sample_select,
@@ -1967,7 +1967,7 @@ class TestStore:
         fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
-        """Test querying unique properties with a callable select and where."""
+        """Test querying unique properties with a Callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=sample_multi_select,
@@ -1982,7 +1982,7 @@ class TestStore:
         fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
-        """Test querying for properties with a callable select and where."""
+        """Test querying for properties with a Callable select and where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=lambda props: props.get("class"),
@@ -1997,7 +1997,7 @@ class TestStore:
         fill_store: Callable,
         store_cls: type[AnnotationStore],
     ) -> None:
-        """Test querying for properties with callable select, no where."""
+        """Test querying for properties with Callable select, no where."""
         _, store = fill_store(store_cls, ":memory:")
         result_set = store.pquery(
             select=lambda props: props.get("class"),

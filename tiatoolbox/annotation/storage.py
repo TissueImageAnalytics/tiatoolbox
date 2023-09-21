@@ -45,7 +45,6 @@ from pathlib import Path
 from typing import (
     IO,
     TYPE_CHECKING,
-    Any,
     Callable,
     ClassVar,
     Generator,
@@ -281,7 +280,7 @@ class Annotation:
         """Compare this annotation to another.
 
         Args:
-            other (Any):
+            other (object):
                 The object to compare to.
 
         Returns:
@@ -737,7 +736,7 @@ class AnnotationStore(ABC, MutableMapping):
         self: AnnotationStore,
         key: str,
         geometry: Geometry | None = None,
-        properties: dict[str, Any] | None = None,
+        properties: dict[str, object] | None = None,
     ) -> None:
         """Patch an annotation at given key.
 
@@ -897,14 +896,14 @@ class AnnotationStore(ABC, MutableMapping):
     @staticmethod
     def _eval_where(
         predicate: Predicate | None,
-        properties: dict[str, Any],
+        properties: dict[str, object],
     ) -> bool:
         """Evaluate properties predicate against properties.
 
         Args:
             predicate (str or bytes or Callable):
                 The predicate to evaluate on properties. The predicate may be a
-                string, pickled bytes, or a callable (e.g. a function).
+                string, pickled bytes, or a Callable (e.g. a function).
             properties (dict):
                 A dictionary of JSON serializable
                 properties on which to evaluate the predicate.
@@ -947,7 +946,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1099,7 +1098,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1188,7 +1187,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1253,7 +1252,7 @@ class AnnotationStore(ABC, MutableMapping):
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, Any] | set[Any]:
+    ) -> dict[str, object] | set[object]:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -1275,7 +1274,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned the
                 from annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1333,8 +1332,8 @@ class AnnotationStore(ABC, MutableMapping):
         if where is not None and type(select) is not type(where):
             msg = "select and where must be of the same type"
             raise TypeError(msg)
-        if not isinstance(select, (str, bytes)) and not callable(select):
-            msg = f"select must be str, bytes, or callable, not {type(select)}"
+        if not isinstance(select, (str, bytes)) and not Callable(select):
+            msg = f"select must be str, bytes, or Callable, not {type(select)}"
             raise TypeError(
                 msg,
             )
@@ -1345,7 +1344,7 @@ class AnnotationStore(ABC, MutableMapping):
         def select_values(
             select: Select,
             annotation: Annotation,
-        ) -> Properties | Any | tuple[Any, ...]:  # noqa: ANN401
+        ) -> Properties | object | tuple[object, ...]:
             """Get the value(s) to return from an annotation via a select.
 
             Args:
@@ -1362,7 +1361,7 @@ class AnnotationStore(ABC, MutableMapping):
                     If arguments have incompatible values.
 
             Returns:
-                Union[Properties, Any, Tuple[Any, ...]]:
+                Union[Properties, object, Tuple[object, ...]]:
                     The value(s) to return from the annotation. This
                     will be a dictionary if unique is False. Otherwise,
                     it will be a list of sets. If squeeze and unique are
@@ -1420,7 +1419,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will be
                 returned. Defaults to None (assume always true). This may
-                be a string, callable, or pickled function as bytes.
+                be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned the
                 annotation store backend in python before being returned
                 to the user. A pickle object is, where possible, hooked
@@ -1597,12 +1596,12 @@ class AnnotationStore(ABC, MutableMapping):
         items: Generator[tuple[str, Properties], None, None],
         get_values: Callable[
             [Select, Annotation],
-            Properties | Any | tuple[Any, ...],
+            Properties | object | tuple[object, ...],
         ],
         *,
         unique: bool,
         squeeze: bool,
-    ) -> dict[str, Any] | dict:
+    ) -> dict[str, object] | dict:
         """Package the results of a pquery into the right output format.
 
         Args:
@@ -1646,7 +1645,7 @@ class AnnotationStore(ABC, MutableMapping):
             result = result[0]
         return result  # CCR001
 
-    def features(self: AnnotationStore) -> Generator[dict[str, Any], None, None]:
+    def features(self: AnnotationStore) -> Generator[dict[str, object], None, None]:
         """Return annotations as a list of geoJSON features.
 
         Returns:
@@ -1657,7 +1656,7 @@ class AnnotationStore(ABC, MutableMapping):
         for a in self.values():
             yield a.to_feature()
 
-    def to_geodict(self: AnnotationStore) -> dict[str, Any]:
+    def to_geodict(self: AnnotationStore) -> dict[str, object]:
         """Return annotations as a dictionary in geoJSON format.
 
         Returns:
@@ -1687,7 +1686,7 @@ class AnnotationStore(ABC, MutableMapping):
                 The function to call when fp is None.
 
         Returns:
-            Any:
+            str | bytes | None:
                 The result of dump. Depends on the provided functions.
 
         """
@@ -1704,9 +1703,9 @@ class AnnotationStore(ABC, MutableMapping):
     @staticmethod
     def _load_cases(
         fp: IO | str | Path,
-        string_fn: Callable[[str | bytes], Any],
-        file_fn: Callable[[IO], Any],
-    ) -> Any:  # noqa: ANN401
+        string_fn: Callable[[str | bytes], object],
+        file_fn: Callable[[IO], object],
+    ) -> object:
         """Loads cases for an input file handle or path."""
         with contextlib.suppress(OSError):
             if isinstance(fp, (Path, str)) and Path(fp).exists():
@@ -1975,7 +1974,7 @@ class AnnotationStore(ABC, MutableMapping):
         patch/tile/core space, or to a different resolution, for example.
 
         Args:
-            transform (callable[Geometry, Geometry]):
+            transform (Callable[Geometry, Geometry]):
                 A function that takes a geometry and returns a new
                 transformed geometry.
 
@@ -2499,12 +2498,12 @@ class SQLiteStore(AnnotationStore):
     @staticmethod
     def _initialize_query_string_parameters(
         query_geometry: Geometry | None,
-        query_parameters: dict[str, Any],
+        query_parameters: dict[str, object],
         geometry_predicate: str | None,
         columns: str,
         where: bytes | str,
         distance: float = 0,
-    ) -> tuple[str, dict[str, Any]]:
+    ) -> tuple[str, dict[str, object]]:
         """Initialises the query string and parameters."""
         query_string = (
             "SELECT "  # skipcq: BAN-B608  # noqa: S608
@@ -2604,7 +2603,7 @@ class SQLiteStore(AnnotationStore):
             geometry(tuple or Geometry):
                 The geometry being queried against.
             callable_columns(str):
-                The columns to select when a callable is given to
+                The columns to select when a Callable is given to
                 `where`.
             geometry_predicate(str):
                 A string which define which binary geometry predicate to
@@ -2728,7 +2727,7 @@ class SQLiteStore(AnnotationStore):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -2848,7 +2847,7 @@ class SQLiteStore(AnnotationStore):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -2915,14 +2914,14 @@ class SQLiteStore(AnnotationStore):
     ) -> dict[str, set[Properties]] | dict[str, Properties]:
         """Package the results of a pquery into the right output format.
 
-        This variant is used when select and where are callable or
+        This variant is used when select and where are Callable or
         pickle objects.
 
         Args:
             select (Union[str, bytes, Callable]):
-                A callable to select the properties to return.
+                A Callable to select the properties to return.
             where (CallablePredicate):
-                A callable predicate to filter the rows with. Maybe
+                A Callable predicate to filter the rows with. Maybe
                 None for no-op (no filtering).
             cur (sqlite3.Cursor):
                 The cursor for the query.
@@ -2939,14 +2938,14 @@ class SQLiteStore(AnnotationStore):
 
         def add_props_to_result(
             result: defaultdict[str, set],
-            properties: dict[str, Any],
+            properties: dict[str, object],
         ) -> None:
             """Add the properties to the appropriate set in result.
 
             Args:
                 result (DefaultDict[str, set]):
                     The result dictionary to add the properties to.
-                properties (Dict[str, Any]):
+                properties (Dict[str, object]):
                     The properties to add to the result.
 
             """
@@ -3026,13 +3025,13 @@ class SQLiteStore(AnnotationStore):
         """Determine boolean flags for the kind of pquery this is.
 
         If either one of `select` or `where` is a str, bytes, or
-        callable, then is_callable_query, is_pickle_query, and
+        Callable, then is_callable_query, is_pickle_query, and
         is_str_query respectively will be set to True.
 
         Returns:
             tuple:
                 A tuple of bools:
-                - True if select or where are callable (functions).
+                - True if select or where are Callable (functions).
                 - True if select or where are bytes (pickle expressions).
                 - True if select or where are str (SQL expressions).
 
@@ -3051,19 +3050,19 @@ class SQLiteStore(AnnotationStore):
         """Validate that select and where are valid types.
 
         1. Check that select and where are the same type if where is given.
-        2. Check that select is in (str, bytes, callable).
+        2. Check that select is in (str, bytes, Callable).
 
         Raises:
             TypeError:
                 If select and where are not the same type or not in
-                (str, bytes, callable).
+                (str, bytes, Callable).
 
         """
         if where is not None and type(select) is not type(where):
             msg = "select and where must be of the same type"
             raise TypeError(msg)
-        if not isinstance(select, (str, bytes)) and not callable(select):
-            msg = f"select must be str, bytes, or callable, not {type(select)}"
+        if not isinstance(select, (str, bytes)) and not Callable(select):
+            msg = f"select must be str, bytes, or Callable, not {type(select)}"
             raise TypeError(
                 msg,
             )
@@ -3077,7 +3076,7 @@ class SQLiteStore(AnnotationStore):
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, Any] | set[Any]:
+    ) -> dict[str, object] | set[object]:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -3099,7 +3098,7 @@ class SQLiteStore(AnnotationStore):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned the
                 from annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -3202,7 +3201,7 @@ class SQLiteStore(AnnotationStore):
 
         if is_pickle_query or is_callable_query:
             # Where to apply after database query
-            # only done for callable where.
+            # only done for Callable where.
             post_where = where if is_callable_query else None
             result = self._handle_pickle_callable_pquery(
                 select,
@@ -3510,7 +3509,7 @@ class SQLiteStore(AnnotationStore):
         store_to_df = pd.concat([store_to_df, pd.json_normalize(df_rows)])
         return store_to_df.set_index("key")
 
-    def features(self: SQLiteStore) -> Generator[dict[str, Any], None, None]:
+    def features(self: SQLiteStore) -> Generator[dict[str, object], None, None]:
         """Return annotations as a list of geoJSON features.
 
         Returns:
@@ -3702,7 +3701,7 @@ class DictionaryStore(AnnotationStore):
         self: DictionaryStore,
         key: str,
         geometry: Geometry | None = None,
-        properties: dict[str, Any] | None = None,
+        properties: dict[str, object] | None = None,
     ) -> None:
         """Patch an annotation at given key.
 

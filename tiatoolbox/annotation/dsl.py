@@ -62,7 +62,7 @@ import operator
 import re
 from dataclasses import dataclass
 from numbers import Number
-from typing import Any, Callable
+from typing import Callable
 
 
 @dataclass
@@ -316,12 +316,12 @@ class SQLRegex(SQLExpression):
         return SQLRegex(pattern, string, int(flags))
 
 
-def py_is_none(x: Any) -> bool:  # noqa: ANN401
+def py_is_none(x: object) -> bool:
     """Check if x is None."""
     return x is None
 
 
-def py_is_not_none(x: Any) -> bool:  # noqa: ANN401
+def py_is_not_none(x: object) -> bool:
     """Check if x is not None."""
     return x is not None
 
