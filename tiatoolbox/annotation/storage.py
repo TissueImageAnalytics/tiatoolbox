@@ -1332,7 +1332,7 @@ class AnnotationStore(ABC, MutableMapping):
         if where is not None and type(select) is not type(where):
             msg = "select and where must be of the same type"
             raise TypeError(msg)
-        if not isinstance(select, (str, bytes)) and not Callable(select):
+        if not isinstance(select, (str, bytes)) and not callable(select):
             msg = f"select must be str, bytes, or Callable, not {type(select)}"
             raise TypeError(
                 msg,
@@ -3061,7 +3061,7 @@ class SQLiteStore(AnnotationStore):
         if where is not None and type(select) is not type(where):
             msg = "select and where must be of the same type"
             raise TypeError(msg)
-        if not isinstance(select, (str, bytes)) and not Callable(select):
+        if not isinstance(select, (str, bytes)) and not callable(select):
             msg = f"select must be str, bytes, or Callable, not {type(select)}"
             raise TypeError(
                 msg,
