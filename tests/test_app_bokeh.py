@@ -21,7 +21,7 @@ from scipy.ndimage import label
 import bokeh.models as bkmodels
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, MenuItemClick
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -163,8 +163,8 @@ def test_get_level_by_extent():
 
 def test_roots(doc):
     """Test that the document has the correct number of roots."""
-    # should be 2 roots, main window and controls
-    assert len(doc.roots) == 2
+    # should be 3 roots: main window, controls, and popup table
+    assert len(doc.roots) == 3
 
 
 def test_config_loaded(data_path):
@@ -260,6 +260,22 @@ def test_add_annotation_layer(doc, data_path):
     # test get_mapper function
     cmap_dict = main.get_mapper_for_prop("type")
     assert set(cmap_dict.keys()) == {0, 1, 2, 3, 4}
+
+
+def test_tap_query():
+    """Test the double tap query functionality."""
+    # trigger a tap event
+    assert len(main.popup_table.source.data["property"]) == 0
+    main.UI["p"]._trigger_event(
+        DoubleTap(
+            main.UI["p"],
+            x=1138.52,
+            y=-1881.5,
+        ),
+    )
+    # the tapped annotation has 2 properties
+    assert len(main.popup_table.source.data["property"]) == 2
+    assert len(main.popup_table.source.data["value"]) == 2
 
 
 def test_cprop_input(doc):

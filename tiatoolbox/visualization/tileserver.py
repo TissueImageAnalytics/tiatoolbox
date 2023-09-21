@@ -16,6 +16,7 @@ from flask import Flask, Response, jsonify, make_response, request, send_file
 from flask.templating import render_template
 from matplotlib import colormaps
 from PIL import Image
+from shapely.geometry import Point
 
 from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -159,6 +160,7 @@ class TileServer(Flask):
         self.route("/tileserver/secondary_cmap", methods=["GET"])(
             self.get_secondary_cmap,
         )
+        self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
 
     def _get_session_id(self: TileServer) -> str:
@@ -635,6 +637,18 @@ class TileServer(Flask):
         mapper = self.renderers[session_id].secondary_cmap
         mapper["mapper"] = mapper["mapper"].__class__.__name__
         return jsonify(mapper)
+
+    def tap_query(self, x, y):
+        """Query annotations at a point."""
+        session_id = self._get_session_id()
+        x = float(x)
+        y = float(y)
+        anns = self.get_ann_layer(session_id).store.query(
+            Point(x, y),
+        )
+        if len(anns) == 0:
+            return json.dumps({})
+        return json.dumps(list(anns.values())[-1].properties)
 
     @staticmethod
     def shutdown() -> None:

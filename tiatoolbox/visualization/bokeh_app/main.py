@@ -13,6 +13,11 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
+from bokeh import events
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -24,11 +29,14 @@ from bokeh.models import (
     ColorBar,
     ColorPicker,
     ColumnDataSource,
+    CustomJS,
+    DataTable,
     Div,
     Dropdown,
     FuncTickFormatter,
     Glyph,
     HoverTool,
+    HTMLTemplateFormatter,
     LinearColorMapper,
     MultiChoice,
     PointDrawTool,
@@ -37,6 +45,7 @@ from bokeh.models import (
     Select,
     Slider,
     Spinner,
+    TableColumn,
     TabPanel,
     Tabs,
     TapTool,
@@ -46,9 +55,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger  # noqa: E402
@@ -1108,6 +1114,17 @@ def save_cb(attr):  # noqa: ARG001
     )
 
 
+def tap_event_cb(event):
+    """Callback to handle tap events to inspect annotations."""
+    resp = UI["s"].get(f"http://{host2}:5000/tileserver/tap_query/{event.x}/{-event.y}")
+    data_dict = json.loads(resp.text)
+
+    popup_table.source.data = {
+        "property": list(data_dict.keys()),
+        "value": list(data_dict.values()),
+    }
+
+
 # run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
 def segment_on_box():
     """Callback to run hovernet on a region of the slide."""
@@ -1544,6 +1561,16 @@ def make_window(vstate):  # noqa: PLR0915
     p.axis.visible = False
     p.toolbar.tools[1].zoom_on_axis = False
 
+    # tap query popup callbacks
+    js_popup_code = """
+        var popupContent = document.querySelector('.popup-content');
+        if (popupContent.classList.contains('hidden')) {
+            popupContent.classList.remove('hidden');
+            }
+    """
+    p.on_event(events.DoubleTap, tap_event_cb)
+    p.js_on_event(events.DoubleTap, CustomJS(code=js_popup_code))
+
     s = requests.Session()
 
     retries = Retry(
@@ -1655,6 +1682,35 @@ UI = UIWrapper()
 windows = []
 controls = []
 win_dicts = []
+
+# popup for annotation viewing on double click
+popup_div = Div(
+    width=300,
+    height=300,
+    name="popup_div",
+    text="test popup",
+)
+template_str = r"""<% if (typeof value === 'number' || !isNaN(parseFloat(value)))
+                    { %> <%= parseFloat(value).toFixed(3) %> <% }
+                    else { %> <%= value %> <% } %>"""
+formatter = HTMLTemplateFormatter(
+    template=template_str,
+)
+popup_table = DataTable(
+    source=ColumnDataSource({"property": [], "value": []}),
+    columns=[
+        TableColumn(field="property", title="Property"),
+        TableColumn(
+            field="value",
+            title="Value",
+            formatter=formatter,
+        ),
+    ],
+    index_position=None,
+    width=300,
+    height=300,
+    name="popup_window",
+)
 
 color_cycler = ColorCycler()
 tg = TileGroup()
@@ -1848,6 +1904,7 @@ class DocConfig:
         base_doc.add_periodic_callback(update, 220)
         base_doc.add_root(slide_wins)
         base_doc.add_root(control_tabs)
+        base_doc.add_root(popup_table)
         base_doc.title = "Tiatoolbox Visualization Tool"
         return slide_wins, control_tabs
 

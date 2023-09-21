@@ -280,6 +280,11 @@ Dual window mode
 A second window can be opened by selecting the 'window 2' tab in the top right. This will open the currently selected slide in a second window. The overlay shown in each window can be controlled independently to allow comparison of different overlays, or viewing of a model output side-by-side with the unoverlaid slide, or ground truth annotations. Slide navigation will be linked between both windows.
 Two different slides can also be opened in the two windows, although this will only be useful in cases where the two slides are registered so that a shared coordinate space/slide navigation makes sense.
 
+Inspecting annotations
+^^^^^^^^^^^^^^^^^^^^^^
+
+Annotations can be inspected by double clicking on them. This will open a popup showing the annotation in more detail, and allowing the properties to be viewed in a sortable table.
+
 Zoomed out plotting
 ^^^^^^^^^^^^^^^^^^^
 
