@@ -200,7 +200,7 @@ class EngineABC(ABC):
         num_post_proc_workers: int = 0,
         weights: str | Path | None = None,
         *,
-        device: str = "str",
+        device: str = "cpu",
         verbose: bool = False,
     ) -> None:
         """Initialize Engine."""
@@ -342,7 +342,7 @@ class EngineABC(ABC):
             batch_output_predictions = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
-                on_gpu=self.device,
+                device=self.device,
             )
 
             raw_predictions["predictions"].extend(batch_output_predictions.tolist())
@@ -509,8 +509,13 @@ class EngineABC(ABC):
                 Whether to overwrite the results. Default = False.
             output_type (str):
                 The format of the output type. "output_type" can be
-                "dict", "array", "AnnotationStore", "DataFrame" or "json".
-                Default is "AnnotationStore".
+                "zarr", "AnnotationStore". Default is "zarr".
+                When saving in the zarr format the output is saved using the
+                `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
+                as a zarr group. If the required output type is an "AnnotationStore"
+                then the output will be intermediately saved as zarr but converted
+                to :class:`AnnotationStore` and saved as a `.db` file
+                at the end of the loop.
             **kwargs (dict):
                 Keyword Args to update :class:`EngineABC` attributes.
 

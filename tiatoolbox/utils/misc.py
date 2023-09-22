@@ -860,7 +860,8 @@ def select_device(*, on_gpu: bool) -> str:
     """Selects the appropriate device as requested.
 
     Args:
-        on_gpu (bool): Selects gpu if True.
+        on_gpu (bool):
+            Selects gpu if True.
 
     Returns:
         str:

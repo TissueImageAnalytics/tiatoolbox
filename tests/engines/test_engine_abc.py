@@ -146,7 +146,7 @@ def test_prepare_engines_save_dir(
 
     assert out_dir == tmp_path / "wsi_multiple_output"
     assert out_dir.exists()
-    assert r"When providing multiple whole-slide images / tiles" in caplog.text
+    assert r"When providing multiple whole slide images" in caplog.text
 
 
 def test_engine_initalization() -> NoReturn:
