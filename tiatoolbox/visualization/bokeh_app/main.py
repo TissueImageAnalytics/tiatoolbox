@@ -1746,7 +1746,7 @@ def update():
         UI["vstate"].update_state = DO_UPDATE
 
 
-def control_tabs_cb(attr, old, new):  # noqa: ARG001
+def control_tabs_cb(attr: str, old: int, new: int):  # noqa: ARG001
     """Callback to handle selecting active window."""
     if new == 1 and len(slide_wins.children) == 1:
         # make new window

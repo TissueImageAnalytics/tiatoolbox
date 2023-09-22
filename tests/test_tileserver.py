@@ -689,3 +689,21 @@ def test_no_ann_layer(empty_app: TileServer, remote_sample: Callable) -> None:
         )
         with pytest.raises(ValueError, match="No annotation layer found."):
             client.get("/tileserver/prop_names/all")
+
+
+def test_point_query(app: TileServer) -> None:
+    """Test point query."""
+    with app.test_client() as client:
+        response = client.get(f"/tileserver/tap_query/{1138.52}/{1881.5}")
+
+    assert response.status_code == 200
+    props = json.loads(response.data)
+    assert props["type"] == 0
+    assert props["prob"] == pytest.approx(0.988, abs=0.001)
+
+    # test tap where no annotation exists
+    with app.test_client() as client:
+        response = client.get(f"/tileserver/tap_query/{-100}/{-100}")
+
+    assert response.status_code == 200
+    assert json.loads(response.data) == {}
