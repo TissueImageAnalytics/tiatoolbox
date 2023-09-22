@@ -58,7 +58,7 @@ def fetch_pretrained_weights(
 
 
 def get_pretrained_model(
-    requested_model: str | None = None,
+    pretrained_model: str | None = None,
     pretrained_weights: str | Path | None = None,
     *,
     overwrite: bool = False,
@@ -66,7 +66,7 @@ def get_pretrained_model(
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
-        requested_model (str):
+        pretrained_model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. The models currently supported:
 
@@ -106,25 +106,25 @@ def get_pretrained_model(
 
     Examples:
         >>> # get mobilenet pretrained on Kather100K dataset by the TIA team
-        >>> model = get_pretrained_model(requested_model='mobilenet_v2-kather100k')
+        >>> model = get_pretrained_model(pretrained_model='mobilenet_v2-kather100k')
         >>> # get mobilenet defined by TIA team, but loaded with user defined weights
         >>> model = get_pretrained_model(
-        ...     requested_model='mobilenet_v2-kather100k',
+        ...     pretrained_model='mobilenet_v2-kather100k',
         ...     pretrained_weights='/A/B/C/my_weights.tar',
         ... )
         >>> # get resnet34 pretrained on PCam dataset by TIA team
-        >>> model = get_pretrained_model(requested_model='resnet34-pcam')
+        >>> model = get_pretrained_model(pretrained_model='resnet34-pcam')
 
     """
-    if not isinstance(requested_model, str):
+    if not isinstance(pretrained_model, str):
         msg = "pretrained_model must be a string."
         raise TypeError(msg)
 
-    if requested_model not in PRETRAINED_INFO:
-        msg = f"Pretrained model `{requested_model}` does not exist."
+    if pretrained_model not in PRETRAINED_INFO:
+        msg = f"Pretrained model `{pretrained_model}` does not exist."
         raise ValueError(msg)
 
-    info = PRETRAINED_INFO[requested_model]
+    info = PRETRAINED_INFO[pretrained_model]
 
     arch_info = info["architecture"]
     creator = locate(f"tiatoolbox.models.architecture.{arch_info['class']}")
@@ -138,7 +138,7 @@ def get_pretrained_model(
 
     if pretrained_weights is None:
         pretrained_weights = fetch_pretrained_weights(
-            requested_model,
+            pretrained_model,
             overwrite=overwrite,
         )
 
