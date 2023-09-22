@@ -10,6 +10,7 @@ import torch
 from tiatoolbox.models import NuClick
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import imread
+from tiatoolbox.utils.misc import select_device
 
 ON_GPU = False
 
@@ -53,7 +54,7 @@ def test_functional_nuclick(
     model = NuClick(num_input_channels=5, num_output_channels=1)
     pretrained = torch.load(weights_path, map_location="cpu")
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=ON_GPU)
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     postproc_masks = model.postproc(
         output,
         do_reconstruction=True,
