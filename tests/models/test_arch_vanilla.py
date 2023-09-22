@@ -6,6 +6,7 @@ import torch
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.models_abc import model_to
+from tiatoolbox.utils.misc import select_device
 
 ON_GPU = False
 RNG = np.random.default_rng()  # Numpy Random Generator
@@ -45,7 +46,7 @@ def test_functional() -> None:
         for backbone in backbones:
             model = CNNModel(backbone, num_classes=1)
             model_ = model_to(device=device, model=model)
-            model.infer_batch(model_, samples, on_gpu=ON_GPU)
+            model.infer_batch(model_, samples, device=select_device(on_gpu=ON_GPU))
     except ValueError as exc:
         msg = f"Model {backbone} failed."
         raise AssertionError(msg) from exc
