@@ -124,9 +124,9 @@ def test_model_to() -> None:
     if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
         with pytest.raises((AssertionError, RuntimeError)):
-            _ = tiatoolbox.models.models_abc.model_to(on_gpu=True, model=model)
+            _ = tiatoolbox.models.models_abc.model_to(device="cuda", model=model)
 
     # Test on CPU
     model = torch_models.resnet18()
-    model = tiatoolbox.models.models_abc.model_to(on_gpu=False, model=model)
+    model = tiatoolbox.models.models_abc.model_to(device="cpu", model=model)
     assert isinstance(model, nn.Module)

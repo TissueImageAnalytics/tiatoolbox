@@ -23,6 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.wsicore.wsireader import WSIReader
 
     from .io_config import ModelIOConfigABC
 
@@ -69,7 +70,7 @@ def prepare_engines_save_dir(
 
     if len_images > 1:
         logger.info(
-            "When providing multiple whole-slide images / tiles, "
+            "When providing multiple whole slide images, "
             "the outputs will be saved and the locations of outputs "
             "will be returned to the calling function.",
         )
@@ -110,17 +111,17 @@ class EngineABC(ABC):
             Please note that they will also perform preprocessing. default = 0
         num_post_proc_workers (int):
             Number of workers to postprocess the results of the model. default = 0
-        on_gpu (bool):
-
+        device (str):
+            Select the device to run the model. Default is "cpu".
         verbose (bool):
             Whether to output logging information.
 
     Attributes:
         images (str or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
             A NHWC image or a path to WSI.
-        mode (str):
-            Type of input to process. Choose from either `patch`, `tile`
-            or `wsi`.
+        patch_mode (str):
+            Whether to treat input image as a patch or WSI.
+            default = True.
         model (str | nn.Module):
             Defined PyTorch model.
             Name of the existing models support by tiatoolbox for
@@ -152,18 +153,16 @@ class EngineABC(ABC):
             requested read resolution, not with respect to level 0,
             and must be positive.
         stride_shape (tuple):
-            Stride using during tile and WSI processing. Stride is
+            Stride used during WSI processing. Stride is
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
         batch_size (int):
             Number of images fed into the model each time.
-        labels:
-            List of labels. If using `tile` or `wsi` mode, then only
-            a single label per image tile or whole-slide image is
-            supported.
-        on_gpu (bool):
-            Whether to run model on the GPU. Default is False.
+        labels (list | None):
+                List of labels. Only a single label per image is supported.
+        device (str):
+            Select the device to run the model. Default is "cpu".
         num_loader_workers (int):
             Number of workers used in torch.utils.data.DataLoader.
         verbose (bool):
@@ -181,10 +180,10 @@ class EngineABC(ABC):
         >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=False)
 
-        >>> # list of 2 image tile files as input
-        >>> tile_file = ['path/tile1.png', 'path/tile2.png']
+        >>> # list of 2 image files as input
+        >>> image = ['path/image1.png', 'path/image2.png']
         >>> engine = EngineABC(pretraind_model="resnet18-kather100k")
-        >>> output = engine.run(tile_file, patch_mode=False)
+        >>> output = engine.run(image, patch_mode=False)
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
@@ -201,7 +200,7 @@ class EngineABC(ABC):
         num_post_proc_workers: int = 0,
         weights: str | Path | None = None,
         *,
-        on_gpu: bool = False,
+        device: str = "str",
         verbose: bool = False,
     ) -> None:
         """Initialize Engine."""
@@ -210,14 +209,14 @@ class EngineABC(ABC):
         self.masks = None
         self.images = None
         self.patch_mode = None
-        self.on_gpu = on_gpu
+        self.device = device
 
         # Initialize model with specified weights and ioconfig.
         self.model, self.ioconfig = self._initialize_model_ioconfig(
             model=model,
             weights=weights,
         )
-        self.model = model_to(model=self.model, on_gpu=self.on_gpu)
+        self.model = model_to(model=self.model, device=self.device)
         self._ioconfig = self.ioconfig  # runtime ioconfig
 
         self.batch_size = batch_size
@@ -343,7 +342,7 @@ class EngineABC(ABC):
             batch_output_predictions = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
-                on_gpu=self.on_gpu,
+                on_gpu=self.device,
             )
 
             raw_predictions["predictions"].extend(batch_output_predictions.tolist())
@@ -470,7 +469,7 @@ class EngineABC(ABC):
 
     def run(
         self: EngineABC,
-        images: list[os | Path] | np.ndarray,
+        images: list[os | Path | WSIReader] | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
@@ -487,29 +486,25 @@ class EngineABC(ABC):
             images (list, ndarray):
                 List of inputs to process. when using `patch` mode, the
                 input must be either a list of images, a list of image
-                file paths or a numpy array of an image list. When using
-                `tile` or `wsi` mode, the input must be a list of file
-                paths.
+                file paths or a numpy array of an image list.
             masks (list | None):
-                List of masks. Only utilised when processing image tiles
-                and whole-slide images. Patches are only processed if
-                they are within a masked area. If not provided, then a
-                tissue mask will be automatically generated for
-                whole-slide images or the entire image is processed for
-                image tiles.
+                List of masks. Only utilised when patch_mode is False.
+                Patches are only generated within a masked area.
+                If not provided, then a tissue mask will be automatically
+                generated for whole slide images.
             labels (list | None):
-                List of labels. If using `tile` or `wsi` mode, then only
-                a single label per image tile or whole-slide image is
-                supported.
+                List of labels. Only a single label per image is supported.
             patch_mode (bool):
                 Whether to treat input image as a patch or WSI.
                 default = True.
             ioconfig (IOPatchPredictorConfig):
                 IO configuration.
             save_dir (str or pathlib.Path):
-                Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output`
-                where the running script is invoked.
+                Output directory to save the results.
+                If save_dir is not provided when patch_mode is False,
+                then for a single image the output is created in the current directory.
+                If there are multiple WSIs as input then the user must provide
+                path to save directory otherwise an OSError will be raised.
             overwrite (bool):
                 Whether to overwrite the results. Default = False.
             output_type (str):
@@ -522,7 +517,7 @@ class EngineABC(ABC):
         Returns:
             (:class:`numpy.ndarray`, dict):
                 Model predictions of the input dataset. If multiple
-                image tiles or whole-slide images are provided as input,
+                whole slide images are provided as input,
                 or save_output is True, then results are saved to
                 `save_dir` and a dictionary indicating save location for
                 each input is returned.
@@ -561,7 +556,7 @@ class EngineABC(ABC):
 
         # if necessary Move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
-        self.model = model_to(model=self.model, on_gpu=self.on_gpu)
+        self.model = model_to(model=self.model, device=self.device)
 
         save_dir = prepare_engines_save_dir(
             save_dir,

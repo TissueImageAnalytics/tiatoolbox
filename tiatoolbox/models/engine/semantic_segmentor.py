@@ -928,7 +928,7 @@ class SemanticSegmentor:
         units=None,
         save_dir=None,
         *,
-        on_gpu=True,
+        device="cpu",
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.
@@ -966,8 +966,8 @@ class SemanticSegmentor:
                 `stride_shape`, `resolution`, and `units` arguments are
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
-            on_gpu (bool):
-                Whether to run the model on the GPU.
+            device (str):
+                Select the device to run the model. Default is "cpu".
             patch_input_shape (tuple):
                 Size of patches input to the model. The values
                 are at requested read resolution and must be positive.
@@ -1049,10 +1049,10 @@ class SemanticSegmentor:
         )
 
         # use external for testing
-        self._on_gpu = on_gpu
+        self._device = device
         self._model = tiatoolbox.models.models_abc.model_to(
             model=self.model,
-            on_gpu=on_gpu,
+            device=device,
         )
 
         # workers should be > 0 else Value Error will be thrown
@@ -1253,7 +1253,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         units="baseline",
         save_dir=None,
         *,
-        on_gpu=True,
+        device=True,
         crash_on_exception=False,
     ):
         """Make a prediction for a list of input data.
@@ -1291,8 +1291,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 `stride_shape`, `resolution`, and `units` arguments are
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
-            on_gpu (bool):
-                Whether to run the model on the GPU.
+            device (str):
+                Select the device to run the model. Default is "cpu".
             patch_input_shape (tuple):
                 Size of patches input to the model. The values are at
                 requested read resolution and must be positive.
@@ -1348,7 +1348,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             imgs=imgs,
             masks=masks,
             mode=mode,
-            on_gpu=on_gpu,
+            device=device,
             ioconfig=ioconfig,
             patch_input_shape=patch_input_shape,
             patch_output_shape=patch_output_shape,

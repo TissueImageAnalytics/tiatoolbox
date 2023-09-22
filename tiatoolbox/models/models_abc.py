@@ -34,23 +34,24 @@ def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     return model
 
 
-def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
+def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
     """Transfers model to cpu/gpu.
 
     Args:
         model (torch.nn.Module): PyTorch defined model.
-        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
+        device (str): Transfers model to the specified device. Default is "cpu".
 
     Returns:
         torch.nn.Module:
             The model after being moved to cpu/gpu.
 
     """
-    if on_gpu:  # DataParallel work only for cuda
+    if device != "cpu":
+        # DataParallel work only for cuda
         model = torch.nn.DataParallel(model)
-        return model.to("cuda")
 
-    return model.to("cpu")
+    device = torch.device(device)
+    return model.to(device)
 
 
 class ModelABC(ABC, nn.Module):

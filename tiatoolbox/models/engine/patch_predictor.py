@@ -363,7 +363,7 @@ class PatchPredictor(EngineABC):
         return_probabilities=False,
         return_labels=False,
         return_coordinates=False,
-        on_gpu=True,
+        device="cpu",
     ):
         """Make a prediction on a dataset. The dataset may be mutated.
 
@@ -377,8 +377,8 @@ class PatchPredictor(EngineABC):
                 Whether to return labels.
             return_coordinates (bool):
                 Whether to return patch coordinates.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                Select the device to run the model. Default is "cpu".
 
         Returns:
             :class:`numpy.ndarray`:
@@ -406,7 +406,7 @@ class PatchPredictor(EngineABC):
             )
 
         # use external for testing
-        model = tiatoolbox.models.models_abc.model_to(model=self.model, on_gpu=on_gpu)
+        model = tiatoolbox.models.models_abc.model_to(model=self.model, device=device)
 
         cum_output = {
             "probabilities": [],
@@ -418,7 +418,7 @@ class PatchPredictor(EngineABC):
             batch_output_probabilities = self.model.infer_batch(
                 model,
                 batch_data["image"],
-                on_gpu=on_gpu,
+                device=device,
             )
             # We get the index of the class with the maximum probability
             batch_output_predictions = self.model.postproc_func(
