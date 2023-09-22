@@ -85,20 +85,16 @@ class EngineABC(ABC):
     """Abstract base class for engines used in tiatoolbox.
 
     Args:
-        model (nn.Module):
-            Use externally defined PyTorch model for prediction with.
-            weights already loaded. Default is `None`. If provided,
-            `pretrained_model` argument is ignored.
-            Name of the existing models support by tiatoolbox for
-            processing the data. For a full list of pretrained models,
-            refer to the `docs
+        model (str | nn.Module):
+            A PyTorch model. Default is `None`.
+            The user can request pretrained models from the toolbox using
+            the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
-            of weights via the `pretrained_weights` argument. Argument
-            is case-insensitive.
+            of weights.
         weights (str or Path):
-            Path to the weight of the corresponding `pretrained_model`.
+            Path to the weight of the corresponding `model`.
 
             >>> engine = EngineABC(
             ...    pretrained_model="pretrained-model-name",
@@ -124,13 +120,13 @@ class EngineABC(ABC):
             default = True.
         model (str | nn.Module):
             Defined PyTorch model.
-            Name of the existing models support by tiatoolbox for
+            Name of the existing models supported by the TIAToolbox for
             processing the data. For a full list of pretrained models,
             refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
-            of weights via the `pretrained_weights` argument. Argument
+            of weights via the `weights` argument. Argument
             is case-insensitive.
         ioconfig (ModelIOConfigABC):
             Input IO configuration to run the Engine.
