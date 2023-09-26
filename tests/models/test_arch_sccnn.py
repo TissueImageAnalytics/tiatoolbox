@@ -40,7 +40,11 @@ def test_functionality(remote_sample: Callable) -> None:
     )
     batch = torch.from_numpy(patch)[None]
     model = _load_sccnn(name="sccnn-crchisto")
-    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.infer_batch(
+        model,
+        batch,
+        select_device(on_gpu=env_detection.has_gpu()),
+    )
     output = model.postproc(output[0])
     assert np.all(output == [[8, 7]])
 
