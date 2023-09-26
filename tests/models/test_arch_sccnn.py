@@ -43,7 +43,7 @@ def test_functionality(remote_sample: Callable) -> None:
     output = model.infer_batch(
         model,
         batch,
-        select_device(on_gpu=env_detection.has_gpu()),
+        device=select_device(on_gpu=env_detection.has_gpu()),
     )
     output = model.postproc(output[0])
     assert np.all(output == [[8, 7]])
