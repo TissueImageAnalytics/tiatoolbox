@@ -1,10 +1,12 @@
 """Test WSI Registration."""
+import logging
 from pathlib import Path
 
 import cv2
 import numpy as np
 import pytest
 
+from tiatoolbox import logger
 from tiatoolbox.tools.registration.wsi_registration import (
     AffineWSITransformer,
     DFBRegister,
@@ -16,10 +18,22 @@ from tiatoolbox.tools.registration.wsi_registration import (
 )
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.metrics import dice
+from tiatoolbox.utils.misc import timed
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 RNG = np.random.default_rng()  # Numpy Random Generator
 
+def test_extract_features_time(dfbr_features: Path) -> None:
+    """Compute time test for CNN based feature extraction function."""
+    test_count = 10
+    compile_time = 0.0
+    for i in range(test_count):
+        _, _compile_time = timed(lambda: test_extract_features(dfbr_features))
+        compile_time += _compile_time
+    compile_time /= test_count
+    # caplog.set_level(logging.INFO)
+    logger.info("Time taken for feature extraction: %f", compile_time)
+    assert compile_time is not None
 
 def test_extract_features(dfbr_features: Path) -> None:
     """Test for CNN based feature extraction function."""

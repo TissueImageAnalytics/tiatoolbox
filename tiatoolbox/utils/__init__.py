@@ -9,7 +9,15 @@ from tiatoolbox.utils import (
     visualization,
 )
 
-from .misc import download_data, imread, imwrite, save_as_json, save_yaml, unzip_data
+from .misc import (
+    download_data,
+    imread,
+    imwrite,
+    save_as_json,
+    save_yaml,
+    timed,
+    unzip_data,
+)
 
 __all__ = [
     "imread",
@@ -18,4 +26,5 @@ __all__ = [
     "save_as_json",
     "download_data",
     "unzip_data",
+    "timed",
 ]
