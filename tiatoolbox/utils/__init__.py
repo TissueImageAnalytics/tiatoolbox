@@ -15,7 +15,6 @@ from .misc import (
     imwrite,
     save_as_json,
     save_yaml,
-    timed,
     unzip_data,
 )
 
@@ -26,5 +25,4 @@ __all__ = [
     "save_as_json",
     "download_data",
     "unzip_data",
-    "timed",
 ]

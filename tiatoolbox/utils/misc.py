@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Callable
+from typing import IO, TYPE_CHECKING
 
 import cv2
 import joblib
@@ -1194,22 +1194,3 @@ def add_from_dat(
 
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
-
-
-def timed(fn: Callable) -> (Callable, float):
-    """A decorator that times the execution of a function.
-
-    Args:
-        fn (Callable): The function to be timed.
-
-    Returns:
-        A tuple containing the result of the function
-        and the time taken to execute it in seconds.
-    """
-    start = torch.cuda.Event(enable_timing=True)
-    end = torch.cuda.Event(enable_timing=True)
-    start.record()
-    result = fn()
-    end.record()
-    torch.cuda.synchronize()
-    return result, start.elapsed_time(end) / 1000

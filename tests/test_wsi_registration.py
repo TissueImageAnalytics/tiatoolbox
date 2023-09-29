@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import pytest
 
+from tests.conftest import timed
 from tiatoolbox import logger
 from tiatoolbox.tools.registration.wsi_registration import (
     AffineWSITransformer,
@@ -17,7 +18,6 @@ from tiatoolbox.tools.registration.wsi_registration import (
 )
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.metrics import dice
-from tiatoolbox.utils.misc import timed
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 RNG = np.random.default_rng()  # Numpy Random Generator
