@@ -4,8 +4,10 @@ from contextlib import suppress
 
 import requests
 
+from bokeh.application.application import SessionContext
 
-def on_session_destroyed(session_context):
+
+def on_session_destroyed(session_context: SessionContext):
     """Hook to be executed when a session is destroyed."""
     user = session_context.request.arguments["user"]
     with suppress(requests.exceptions.ReadTimeout):

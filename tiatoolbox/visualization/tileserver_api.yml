@@ -394,3 +394,31 @@ paths:
       responses:
         '200':
           description: Successful response
+
+  /tileserver/tap_query/{x}/{y}:
+    get:
+      summary: Query annotation at a point
+      parameters:
+        - name: x
+          in: path
+          description: X coordinate of the point
+          required: true
+          schema:
+            type: number
+        - name: y
+          in: path
+          description: Y coordinate of the point
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type: string
+                  description: JSONified dictionary of annotation properties
+                  example: '{"type": 0, "prob": 0.988}'

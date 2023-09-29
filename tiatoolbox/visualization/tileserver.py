@@ -160,7 +160,7 @@ class TileServer(Flask):
         self.route("/tileserver/secondary_cmap", methods=["GET"])(
             self.get_secondary_cmap,
         )
-        self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
+        self.route("/tileserver/tap_query/<float:x>/<float:y>")(self.tap_query)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
 
     def _get_session_id(self: TileServer) -> str:
@@ -638,17 +638,15 @@ class TileServer(Flask):
         mapper["mapper"] = mapper["mapper"].__class__.__name__
         return jsonify(mapper)
 
-    def tap_query(self, x, y):
+    def tap_query(self, x: float, y: float) -> Response:
         """Query annotations at a point."""
         session_id = self._get_session_id()
-        x = float(x)
-        y = float(y)
         anns = self.get_ann_layer(session_id).store.query(
             Point(x, y),
         )
         if len(anns) == 0:
             return json.dumps({})
-        return json.dumps(list(anns.values())[-1].properties)
+        return jsonify(list(anns.values())[-1].properties)
 
     @staticmethod
     def shutdown() -> None:
