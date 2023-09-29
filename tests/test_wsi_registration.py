@@ -1,5 +1,4 @@
 """Test WSI Registration."""
-import logging
 from pathlib import Path
 
 import cv2
@@ -23,22 +22,35 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 RNG = np.random.default_rng()  # Numpy Random Generator
 
-def test_extract_features_time(dfbr_features: Path) -> None:
+
+def test_extract_features_time(dfbr_features: Path,
+                               test_count: int = 25) -> None:
     """Compute time test for CNN based feature extraction function."""
-    test_count = 10
     compile_time = 0.0
-    for i in range(test_count):
+    eager_compile_time = 0.0
+    for _ in range(test_count):
         _, _compile_time = timed(lambda: test_extract_features(dfbr_features))
         compile_time += _compile_time
+    for _ in range(test_count):
+        _, _compile_time = timed(lambda: test_extract_features(
+                dfbr_features,
+                compiled=False),
+        )
+        eager_compile_time += _compile_time
     compile_time /= test_count
-    # caplog.set_level(logging.INFO)
-    logger.info("Time taken for feature extraction: %f", compile_time)
-    assert compile_time is not None
+    eager_compile_time /= test_count
+    logger.info("Time taken for feature extraction (torch.compile): %f",
+                compile_time)
+    logger.info("Time taken for feature extraction (eager execution): %f",
+                eager_compile_time)
+    assert compile_time < eager_compile_time
 
-def test_extract_features(dfbr_features: Path) -> None:
+
+def test_extract_features(dfbr_features: Path, *,
+                          compiled: bool = True) -> None:
     """Test for CNN based feature extraction function."""
     # dfbr (deep feature based registration).
-    dfbr = DFBRegister()
+    dfbr = DFBRegister(compiled=compiled)
     fixed_img = np.repeat(
         np.expand_dims(
             np.repeat(

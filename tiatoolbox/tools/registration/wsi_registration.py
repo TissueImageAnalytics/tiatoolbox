@@ -328,15 +328,18 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self: torch.nn.Module) -> None:
+    def __init__(self: torch.nn.Module, *, compiled: bool = True) -> None:
         """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
         self.features: dict = dict.fromkeys(output_layers_key, None)
-        self.pretrained: torch.nn.Sequential = torch.compile(torchvision.models.vgg16(
-            weights=VGG16_Weights.IMAGENET1K_V1,
-        )).features
+        self.compiled = compiled
+        self.pretrained: torch.nn.Sequential = torch.compile(
+            torchvision.models.vgg16(
+                weights=VGG16_Weights.IMAGENET1K_V1,
+            ),
+            disable=not compiled).features
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
                 self.forward_hook(output_layers_key[i]),
@@ -344,7 +347,6 @@ class DFBRFeatureExtractor(torch.nn.Module):
             for i, layer in enumerate(output_layers_id)
         ]
 
-    @torch.compile
     def forward_hook(self: torch.nn.Module, layer_name: str) -> None:
         """Register a hook.
 
@@ -356,7 +358,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             None
 
         """
-
+        @torch.compile(disable=not self.compiled)
         def hook(
             _module: torch.nn.MaxPool2d,
             _module_input: tuple[torch.Tensor],
@@ -427,11 +429,16 @@ class DFBRegister:
 
     """
 
-    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
+    def __init__(self: DFBRegister,
+                 patch_size: tuple[int, int] = (224, 224),
+                 *, compiled: bool = True) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
-        self.feature_extractor = DFBRFeatureExtractor()
+        self.compiled = compiled
+        self.feature_extractor = DFBRFeatureExtractor(
+                                        compiled=compiled,
+                                    )
 
     # Make this function private when full pipeline is implemented.
     def extract_features(
