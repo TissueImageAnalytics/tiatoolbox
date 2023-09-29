@@ -23,8 +23,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def test_extract_features_time(dfbr_features: Path,
-                               test_count: int = 25) -> None:
+def test_extract_features_time(dfbr_features: Path, test_count: int = 25) -> None:
     """Compute time test for CNN based feature extraction function."""
     compile_time = 0.0
     eager_compile_time = 0.0
@@ -32,22 +31,20 @@ def test_extract_features_time(dfbr_features: Path,
         _, _compile_time = timed(lambda: test_extract_features(dfbr_features))
         compile_time += _compile_time
     for _ in range(test_count):
-        _, _compile_time = timed(lambda: test_extract_features(
-                dfbr_features,
-                compiled=False),
+        _, _compile_time = timed(
+            lambda: test_extract_features(dfbr_features, compiled=False),
         )
         eager_compile_time += _compile_time
     compile_time /= test_count
     eager_compile_time /= test_count
-    logger.info("Time taken for feature extraction (torch.compile): %f",
-                compile_time)
-    logger.info("Time taken for feature extraction (eager execution): %f",
-                eager_compile_time)
+    logger.info("Time taken for feature extraction (torch.compile): %f", compile_time)
+    logger.info(
+        "Time taken for feature extraction (eager execution): %f", eager_compile_time,
+    )
     assert compile_time < eager_compile_time
 
 
-def test_extract_features(dfbr_features: Path, *,
-                          compiled: bool = True) -> None:
+def test_extract_features(dfbr_features: Path, *, compiled: bool = True) -> None:
     """Test for CNN based feature extraction function."""
     # dfbr (deep feature based registration).
     dfbr = DFBRegister(compiled=compiled)

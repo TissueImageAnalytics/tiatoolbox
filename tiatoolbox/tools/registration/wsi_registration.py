@@ -339,7 +339,8 @@ class DFBRFeatureExtractor(torch.nn.Module):
             torchvision.models.vgg16(
                 weights=VGG16_Weights.IMAGENET1K_V1,
             ),
-            disable=not compiled).features
+            disable=not compiled,
+        ).features
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
                 self.forward_hook(output_layers_key[i]),
@@ -358,6 +359,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             None
 
         """
+
         @torch.compile(disable=not self.compiled)
         def hook(
             _module: torch.nn.MaxPool2d,
@@ -429,16 +431,19 @@ class DFBRegister:
 
     """
 
-    def __init__(self: DFBRegister,
-                 patch_size: tuple[int, int] = (224, 224),
-                 *, compiled: bool = True) -> None:
+    def __init__(
+        self: DFBRegister,
+        patch_size: tuple[int, int] = (224, 224),
+        *,
+        compiled: bool = True,
+    ) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
         self.compiled = compiled
         self.feature_extractor = DFBRFeatureExtractor(
-                                        compiled=compiled,
-                                    )
+            compiled=compiled,
+        )
 
     # Make this function private when full pipeline is implemented.
     def extract_features(
