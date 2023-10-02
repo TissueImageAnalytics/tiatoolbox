@@ -7,6 +7,7 @@ import multiprocessing
 import re
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING, Generator
 
 import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
@@ -27,6 +28,9 @@ from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
+if TYPE_CHECKING:
+    from bokeh.document import Document
+
 # constants
 BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
 FILLED = 0
@@ -35,7 +39,7 @@ GRIDLINES = 2
 
 
 # helper functions and fixtures
-def get_tile(layer, x, y, z, *, show: bool):
+def get_tile(layer: str, x: float, y: float, z: float, *, show: bool) -> np.ndarray:
     """Get a tile from the server."""
     source = main.UI["p"].renderers[main.UI["vstate"].layer_dict[layer]].tile_source
     url = source.url
@@ -48,14 +52,14 @@ def get_tile(layer, x, y, z, *, show: bool):
     return np.array(Image.open(im))
 
 
-def get_renderer_prop(prop):
+def get_renderer_prop(prop: str) -> json:
     """Get a renderer property from the server."""
     resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/renderer/{prop}")
     return resp.json()
 
 
 @pytest.fixture(scope="module")
-def data_path(tmp_path_factory):
+def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
     """Set up a temporary data directory."""
     tmp_path = tmp_path_factory.mktemp("data")
     (tmp_path / "slides").mkdir()
@@ -64,7 +68,7 @@ def data_path(tmp_path_factory):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def annotation_path(data_path):
+def annotation_path(data_path: dict[str, object]) -> dict[str, object]:
     """Download some testing slides and overlays.
 
     Sets up a dictionary defining the paths to the files
@@ -125,7 +129,7 @@ def run_app() -> None:
 
 
 @pytest.fixture(scope="module")
-def doc(data_path):
+def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     """Create a test document for the visualization tool."""
     # start tile server
     p = multiprocessing.Process(target=run_app, daemon=True)
@@ -142,7 +146,7 @@ def doc(data_path):
 # test some utility functions
 
 
-def test_to_num():
+def test_to_num() -> None:
     """Test the to_num function."""
     assert main.to_num("1") == 1
     assert main.to_num("1.0") == 1.0
@@ -151,7 +155,7 @@ def test_to_num():
     assert main.to_num("None") is None
 
 
-def test_get_level_by_extent():
+def test_get_level_by_extent() -> None:
     """Test the get_level_by_extent function."""
     max_lev = 10
     assert get_level_by_extent([1000, 1000, 1100, 1100]) == max_lev
@@ -161,13 +165,13 @@ def test_get_level_by_extent():
 # test the bokeh app
 
 
-def test_roots(doc):
+def test_roots(doc: Document) -> None:
     """Test that the document has the correct number of roots."""
     # should be 3 roots: main window, controls, and popup table
     assert len(doc.roots) == 3
 
 
-def test_config_loaded(data_path):
+def test_config_loaded(data_path: pytest.TempPathFactory) -> None:
     """Test that the config is loaded correctly."""
     # config should be loaded
     loaded_config = main.doc_config.config
@@ -181,7 +185,7 @@ def test_config_loaded(data_path):
         assert loaded_config[key] == file_config[key]
 
 
-def test_slide_select(doc, data_path):
+def test_slide_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test slide selection."""
     slide_select = doc.get_model_by_name("slide_select0")
     # check there are three available slides
@@ -201,7 +205,7 @@ def test_slide_select(doc, data_path):
     assert main.UI["vstate"].slide_path == data_path["slide3"]
 
 
-def test_dual_window(doc, data_path):
+def test_dual_window(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding a second window."""
     control_tabs = doc.get_model_by_name("ui_layout")
     doc.get_model_by_name("slide_windows")
@@ -214,7 +218,7 @@ def test_dual_window(doc, data_path):
     assert main.UI.active == 0
 
 
-def test_remove_dual_window(doc, data_path):
+def test_remove_dual_window(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test removing a second window."""
     control_tabs = doc.get_model_by_name("ui_layout")
     slide_wins = doc.get_model_by_name("slide_windows")
@@ -228,7 +232,7 @@ def test_remove_dual_window(doc, data_path):
     assert main.UI["vstate"].slide_path == data_path["slide1"]
 
 
-def test_add_annotation_layer(doc, data_path):
+def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding annotation layers."""
     # test loading a geojson file.
     slide_select = doc.get_model_by_name("slide_select0")
@@ -262,7 +266,7 @@ def test_add_annotation_layer(doc, data_path):
     assert set(cmap_dict.keys()) == {0, 1, 2, 3, 4}
 
 
-def test_tap_query():
+def test_tap_query() -> None:
     """Test the double tap query functionality."""
     # trigger a tap event
     assert len(main.popup_table.source.data["property"]) == 0
@@ -278,7 +282,7 @@ def test_tap_query():
     assert len(main.popup_table.source.data["value"]) == 2
 
 
-def test_cprop_input(doc):
+def test_cprop_input(doc: Document) -> None:
     """Test changing the color property."""
     cprop_input = doc.get_model_by_name("cprop0")
     cmap_select = doc.get_model_by_name("cmap0")
@@ -312,7 +316,7 @@ def test_cprop_input(doc):
     assert main.UI["vstate"].update_state == 0
 
 
-def test_type_cmap_select(doc):
+def test_type_cmap_select(doc: Document) -> None:
     """Test changing the type cmap."""
     cmap_select = doc.get_model_by_name("type_cmap0")
     cmap_select.value = ["prob"]
@@ -338,7 +342,7 @@ def test_type_cmap_select(doc):
     assert resp.json()["score_prop"] == "prob"
 
 
-def test_load_graph(doc, data_path):
+def test_load_graph(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test loading a graph."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph file
@@ -348,7 +352,7 @@ def test_load_graph(doc, data_path):
     assert len(main.UI["node_source"].data["x_"]) == 2144
 
 
-def test_graph_with_feats(doc, data_path):
+def test_graph_with_feats(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test loading a graph with features."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .json file
@@ -380,7 +384,7 @@ def test_graph_with_feats(doc, data_path):
     assert "graph_overlay" in cmap_select.options
 
 
-def test_load_img_overlay(doc, data_path):
+def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test loading an image overlay."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the image overlay
@@ -405,7 +409,7 @@ def test_load_img_overlay(doc, data_path):
     assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0.4
 
 
-def test_hovernet_on_box(doc, data_path):
+def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test running hovernet on a box."""
     slide_select = doc.get_model_by_name("slide_select0")
     slide_select.value = [data_path["slide2"].name]
@@ -456,7 +460,7 @@ def test_hovernet_on_box(doc, data_path):
     assert len(main.UI["type_column"].children) == 1
 
 
-def test_alpha_sliders(doc):
+def test_alpha_sliders(doc: Document) -> None:
     """Test sliders for adjusting slide and overlay alpha."""
     slide_alpha = doc.get_model_by_name("slide_alpha0")
     overlay_alpha = doc.get_model_by_name("overlay_alpha0")
@@ -469,7 +473,7 @@ def test_alpha_sliders(doc):
     assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["overlay"]].alpha == 0.5
 
 
-def test_alpha_buttons(doc):
+def test_alpha_buttons(doc: Document) -> None:
     """Test buttons for toggling slide and overlay alpha."""
     slide_toggle = doc.get_model_by_name("slide_toggle0")
     overlay_toggle = doc.get_model_by_name("overlay_toggle0")
@@ -486,7 +490,7 @@ def test_alpha_buttons(doc):
     assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["overlay"]].alpha == 0.5
 
 
-def test_type_select(doc, data_path):
+def test_type_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test selecting/deselecting specific types."""
     # load annotation layer
     layer_drop = doc.get_model_by_name("layer_drop0")
@@ -512,7 +516,7 @@ def test_type_select(doc, data_path):
     assert num_after == num_before
 
 
-def test_color_boxes(doc):
+def test_color_boxes(doc: Document) -> None:
     """Test color boxes for setting type colors."""
     color_column_list = doc.get_model_by_name("color_column0").children
     # set type 0 to red
@@ -530,7 +534,7 @@ def test_color_boxes(doc):
     assert main.UI["vstate"].mapper[1] == (0, 1, 0, 1)
 
 
-def test_node_and_edge_alpha(doc, data_path):
+def test_node_and_edge_alpha(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test sliders for adjusting graph node and edge alpha."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .db file
@@ -585,7 +589,7 @@ def test_node_and_edge_alpha(doc, data_path):
     )
 
 
-def test_pt_size_spinner(doc):
+def test_pt_size_spinner(doc: Document) -> None:
     """Test setting point size for graph nodes."""
     pt_size_spinner = doc.get_model_by_name("pt_size0")
     # set the point size to 10
@@ -597,7 +601,7 @@ def test_pt_size_spinner(doc):
     )
 
 
-def test_filter_box(doc):
+def test_filter_box(doc: Document) -> None:
     """Test annotation filter box."""
     filter_input = doc.get_model_by_name("filter0")
     im = get_tile("overlay", 4, 8, 4, show=False)
@@ -632,7 +636,7 @@ def test_filter_box(doc):
     assert num_after == 0
 
 
-def test_scale_spinner(doc):
+def test_scale_spinner(doc: Document) -> None:
     """Test setting scale for rendering small annotations."""
     scale_spinner = doc.get_model_by_name("scale0")
     # set the scale to 0.5
@@ -641,7 +645,7 @@ def test_scale_spinner(doc):
     assert get_renderer_prop("max_scale") == 8
 
 
-def test_blur_spinner(doc):
+def test_blur_spinner(doc: Document) -> None:
     """Test setting blur for annotation layer."""
     blur_spinner = doc.get_model_by_name("blur0")
     # set the blur to 4
@@ -650,7 +654,7 @@ def test_blur_spinner(doc):
     assert get_renderer_prop("blur_radius") == 4
 
 
-def test_res_switch(doc):
+def test_res_switch(doc: Document) -> None:
     """Test resolution switch."""
     res_switch = doc.get_model_by_name("res0")
     # set the resolution to 0
@@ -661,7 +665,7 @@ def test_res_switch(doc):
     assert main.UI["vstate"].res == 2
 
 
-def test_color_cycler():
+def test_color_cycler() -> None:
     """Test the color cycler."""
     cycler = main.ColorCycler()
     colors = cycler.colors
@@ -681,7 +685,7 @@ def test_color_cycler():
     assert custom_cycler.get_next() == "#ff0000"
 
 
-def test_cmap_select(doc):
+def test_cmap_select(doc: Document) -> None:
     """Test changing the cmap."""
     cmap_select = doc.get_model_by_name("cmap0")
     main.UI["cprop_input"].value = ["type"]
@@ -704,7 +708,7 @@ def test_cmap_select(doc):
     assert len(resp.json()) > 10
 
 
-def test_option_buttons():
+def test_option_buttons() -> None:
     """Test the option buttons."""
     # default will be [FILLED]
     # test outline only
@@ -726,7 +730,7 @@ def test_option_buttons():
     assert get_renderer_prop("thickness") == -1
 
 
-def test_populate_slide_list(doc, data_path):
+def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test populating the slide list."""
     slide_select = doc.get_model_by_name("slide_select0")
     assert len(slide_select.options) == 3
@@ -741,7 +745,7 @@ def test_populate_slide_list(doc, data_path):
     assert len(slide_select.options) == 3
 
 
-def test_clearing_doc(doc):
+def test_clearing_doc(doc: Document) -> None:
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
