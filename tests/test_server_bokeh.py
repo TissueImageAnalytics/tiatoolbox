@@ -1,7 +1,10 @@
 """Test the bokeh app from command line."""
+from __future__ import annotations
+
 import time
 from contextlib import suppress
 from threading import Thread
+from typing import TYPE_CHECKING
 
 import pytest
 import requests
@@ -12,9 +15,12 @@ from tiatoolbox import cli
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 @pytest.fixture(scope="module")
-def data_path(tmp_path_factory):
+def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     """Set up a temporary data directory."""
     tmp_path = tmp_path_factory.mktemp("data")
     (tmp_path / "slides").mkdir()
@@ -23,7 +29,7 @@ def data_path(tmp_path_factory):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def annotation_path(data_path):
+def annotation_path(data_path: dict[str, Path]) -> dict[str, Path]:
     """Set up a dictionary defining the paths to the annotation files."""
     data_path["slide1"] = _fetch_remote_sample(
         "svs-1-small",
@@ -49,7 +55,7 @@ def annotation_path(data_path):
 
 
 @pytest.fixture()
-def bk_session(data_path) -> ClientSession:
+def bk_session(data_path: dict[str, Path]) -> ClientSession:
     """Create a bokeh session."""
     run_tileserver()
     time.sleep(1)  # allow time for server to start
@@ -77,7 +83,7 @@ def bk_session(data_path) -> ClientSession:
         requests.post("http://localhost:5000/tileserver/shutdown", timeout=2)
 
 
-def test_slides_available(bk_session):
+def test_slides_available(bk_session: ClientSession) -> None:
     """Test that the slides and overlays are available."""
     doc = bk_session.document
     slide_select = doc.get_model_by_name("slide_select0")
@@ -95,7 +101,7 @@ def test_slides_available(bk_session):
     time.sleep(5)  # allow time for hooks to trigger
 
 
-def test_cli_errors(data_path):
+def test_cli_errors(data_path: dict[str, Path]) -> None:
     """Test that the cli raises errors when expected."""
     runner = CliRunner()
     # test with no input folder
