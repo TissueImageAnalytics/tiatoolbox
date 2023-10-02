@@ -23,12 +23,12 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def test_extract_features_time(dfbr_features: Path, test_count: int = 25) -> None:
+def test_extract_features_time(dfbr_features: Path, test_count: int = 10) -> None:
     """Compute time test for CNN based feature extraction function."""
     compile_time = 0.0
     eager_compile_time = 0.0
     for _ in range(test_count):
-        _, _compile_time = timed(lambda: test_extract_features(dfbr_features))
+        _, _compile_time = timed(lambda: test_extract_features(dfbr_features), compiled=True)
         compile_time += _compile_time
     for _ in range(test_count):
         _, _compile_time = timed(

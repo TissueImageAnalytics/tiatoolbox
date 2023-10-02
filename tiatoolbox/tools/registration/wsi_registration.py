@@ -339,6 +339,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             torchvision.models.vgg16(
                 weights=VGG16_Weights.IMAGENET1K_V1,
             ),
+            mode="reduce-overhead",
             disable=not compiled,
         ).features
         self.f_hooks = [
@@ -360,7 +361,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         """
 
-        @torch.compile(disable=not self.compiled)
+        @torch.compile(mode="reduce-overhead", disable=not self.compiled)
         def hook(
             _module: torch.nn.MaxPool2d,
             _module_input: tuple[torch.Tensor],
