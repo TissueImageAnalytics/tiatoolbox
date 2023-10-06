@@ -14,10 +14,10 @@ import joblib
 import numpy as np
 import pandas as pd
 import requests
-import torch
 import yaml
 from filelock import FileLock
 from shapely.affinity import translate
+from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 
@@ -860,7 +860,8 @@ def select_device(*, on_gpu: bool) -> str:
     """Selects the appropriate device as requested.
 
     Args:
-        on_gpu (bool): Selects gpu if True.
+        on_gpu (bool):
+            Selects gpu if True.
 
     Returns:
         str:
@@ -871,25 +872,6 @@ def select_device(*, on_gpu: bool) -> str:
         return "cuda"
 
     return "cpu"
-
-
-def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
-    """Transfers model to cpu/gpu.
-
-    Args:
-        model (torch.nn.Module): PyTorch defined model.
-        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
-
-    Returns:
-        torch.nn.Module:
-            The model after being moved to cpu/gpu.
-
-    """
-    if on_gpu:  # DataParallel work only for cuda
-        model = torch.nn.DataParallel(model)
-        return model.to("cuda")
-
-    return model.to("cpu")
 
 
 def get_bounding_box(img: np.ndarray) -> np.ndarray:
@@ -1194,3 +1176,65 @@ def add_from_dat(
 
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
+
+
+def patch_pred_store(
+    patch_output: dict,
+    scale_factor: tuple[int, int],
+    class_dict: dict | None = None,
+) -> AnnotationStore:
+    """Create an SQLiteStore containing Annotations for each patch.
+
+    Args:
+        patch_output (dict): A dictionary of patch prediction information. Important
+            keys are "probabilities", "predictions", "coordinates", and "labels".
+        scale_factor (tuple[int, int]): The scale factor to use when loading the
+            annotations. All coordinates will be multiplied by this factor to allow
+            conversion of annotations saved at non-baseline resolution to baseline.
+            Should be model_mpp/slide_mpp.
+        class_dict (dict): Optional dictionary mapping class indices to class names.
+
+    Returns:
+        SQLiteStore: An SQLiteStore containing Annotations for each patch.
+    """
+    if "coordinates" not in patch_output:
+        # we cant create annotations without coordinates
+        msg = "Patch output must contain coordinates."
+        raise ValueError(msg)
+    # get relevant keys
+    class_probs = patch_output.get("probabilities", [])
+    preds = patch_output.get("predictions", [])
+    patch_coords = np.array(patch_output.get("coordinates", []))
+    if not np.all(scale_factor == 1):
+        patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
+    labels = patch_output.get("labels", [])
+    # get classes to consider
+    if len(class_probs) == 0:
+        classes_predicted = np.unique(preds).tolist()
+    else:
+        classes_predicted = range(len(class_probs[0]))
+    if class_dict is None:
+        # if no class dict create a default one
+        class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+    annotations = []
+    # find what keys we need to save
+    keys = ["predictions"]
+    keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
+
+    # put patch predictions into a store
+    annotations = []
+    for i in range(len(preds)):
+        if "probabilities" in keys:
+            props = {
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+            }
+        else:
+            props = {}
+        if "labels" in keys:
+            props["label"] = class_dict[labels[i]]
+        props["type"] = class_dict[preds[i]]
+        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
+    store = SQLiteStore()
+    keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+
+    return store
