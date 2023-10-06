@@ -6,6 +6,7 @@ Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerat
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,19 +37,22 @@ def cell_grid() -> list[Polygon]:
 
 
 @pytest.fixture(scope="session")
-def points_grid(spacing=60) -> list[Point]:
+def points_grid(spacing: float = 60) -> list[Point]:
     """Generate a grid of fake point annotations."""
     return [Point((600 + i * spacing, 600 + j * spacing)) for i, j in np.ndindex(7, 7)]
 
 
 @pytest.fixture(scope="session")
-def fill_store(cell_grid, points_grid):
+def fill_store(
+    cell_grid: list[Polygon],
+    points_grid: list[Point],
+) -> Callable[[list[str]], AnnotationStore]:
     """Factory fixture to fill stores with test data."""
 
     def _fill_store(
         store_class: AnnotationStore,
         path: str | Path,
-    ):
+    ) -> tuple[list[str], AnnotationStore]:
         """Fills store with random variety of annotations."""
         store = store_class(path)
 
@@ -80,7 +84,7 @@ def fill_store(cell_grid, points_grid):
     return _fill_store
 
 
-def test_tile_generator_len(fill_store, tmp_path: Path) -> None:
+def test_tile_generator_len(fill_store: Callable, tmp_path: Path) -> None:
     """Test __len__ for AnnotationTileGenerator."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -89,7 +93,7 @@ def test_tile_generator_len(fill_store, tmp_path: Path) -> None:
     assert len(tg) == (4 * 4) + (2 * 2) + 1
 
 
-def test_tile_generator_iter(fill_store, tmp_path: Path) -> None:
+def test_tile_generator_iter(fill_store: Callable, tmp_path: Path) -> None:
     """Test __iter__ for AnnotationTileGenerator."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -101,7 +105,7 @@ def test_tile_generator_iter(fill_store, tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(running_on_travis(), reason="no display on travis.")
-def test_show_generator_iter(fill_store, tmp_path: Path) -> None:
+def test_show_generator_iter(fill_store: Callable, tmp_path: Path) -> None:
     """Show tiles with example annotations (if not travis)."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -117,7 +121,7 @@ def test_show_generator_iter(fill_store, tmp_path: Path) -> None:
         plt.show(block=False)
 
 
-def test_correct_number_rendered(fill_store, tmp_path: Path) -> None:
+def test_correct_number_rendered(fill_store: Callable, tmp_path: Path) -> None:
     """Test that the expected number of annotations are rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -130,7 +134,7 @@ def test_correct_number_rendered(fill_store, tmp_path: Path) -> None:
     assert num == 75  # expect 75 rendered objects
 
 
-def test_correct_colour_rendered(fill_store, tmp_path: Path) -> None:
+def test_correct_colour_rendered(fill_store: Callable, tmp_path: Path) -> None:
     """Test colour mapping."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -151,19 +155,22 @@ def test_correct_colour_rendered(fill_store, tmp_path: Path) -> None:
     assert num == 1  # expect 1 blue objects
 
 
-def test_filter_by_expression(fill_store, tmp_path: Path) -> None:
+def test_filter_by_expression(fill_store: Callable, tmp_path: Path) -> None:
     """Test filtering using a where expression."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(where='props["type"] == "cell"', edge_thickness=0)
+    renderer = AnnotationRenderer(
+        where='props["type"] == "cell"',
+        edge_thickness=0,
+    )
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
     assert num == 25  # expect 25 cell objects, as the added one is too small
 
 
-def test_zoomed_out_rendering(fill_store, tmp_path: Path) -> None:
+def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
     """Test that the expected number of annotations are rendered."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -185,7 +192,7 @@ def test_zoomed_out_rendering(fill_store, tmp_path: Path) -> None:
     assert num == 25  # expect 25 cells in top left quadrant
 
 
-def test_decimation(fill_store, tmp_path: Path) -> None:
+def test_decimation(fill_store: Callable, tmp_path: Path) -> None:
     """Test decimation."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -200,7 +207,7 @@ def test_decimation(fill_store, tmp_path: Path) -> None:
     assert num == 17  # expect 17 pts in bottom right quadrant
 
 
-def test_get_tile_negative_level(fill_store, tmp_path: Path) -> None:
+def test_get_tile_negative_level(fill_store: Callable, tmp_path: Path) -> None:
     """Test for IndexError on negative levels."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -211,7 +218,7 @@ def test_get_tile_negative_level(fill_store, tmp_path: Path) -> None:
         tg.get_tile(-1, 0, 0)
 
 
-def test_get_tile_large_level(fill_store, tmp_path: Path) -> None:
+def test_get_tile_large_level(fill_store: Callable, tmp_path: Path) -> None:
     """Test for IndexError on too large a level."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -222,7 +229,7 @@ def test_get_tile_large_level(fill_store, tmp_path: Path) -> None:
         tg.get_tile(100, 0, 0)
 
 
-def test_get_tile_large_xy(fill_store, tmp_path: Path) -> None:
+def test_get_tile_large_xy(fill_store: Callable, tmp_path: Path) -> None:
     """Test for IndexError on too large an xy index."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -233,7 +240,7 @@ def test_get_tile_large_xy(fill_store, tmp_path: Path) -> None:
         tg.get_tile(0, 100, 100)
 
 
-def test_sub_tile_levels(fill_store, tmp_path: Path) -> None:
+def test_sub_tile_levels(fill_store: Callable, tmp_path: Path) -> None:
     """Test sub-tile level generation."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -241,12 +248,17 @@ def test_sub_tile_levels(fill_store, tmp_path: Path) -> None:
     class MockTileGenerator(AnnotationTileGenerator):
         """Mock generator with specific subtile_level."""
 
-        def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
+        def tile_path(
+            self: MockTileGenerator,
+            level: int,
+            x: int,
+            y: int,
+        ) -> Path:  # skipcq: PYL-R0201
             """Tile path."""
             return Path(level, x, y)
 
         @property
-        def sub_tile_level_count(self):
+        def sub_tile_level_count(self: MockTileGenerator) -> int:
             return 1
 
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -257,7 +269,7 @@ def test_sub_tile_levels(fill_store, tmp_path: Path) -> None:
 
 
 def test_unknown_geometry(
-    fill_store,  # noqa: ARG001
+    fill_store: Callable,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test warning when unknown geometries cannot be rendered."""
@@ -272,7 +284,7 @@ def test_unknown_geometry(
 
 
 def test_interp_pad_warning(
-    fill_store,
+    fill_store: Callable,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -285,7 +297,7 @@ def test_interp_pad_warning(
     assert "interpolation, pad_mode are unused" in caplog.text
 
 
-def test_user_provided_cm(fill_store, tmp_path: Path) -> None:
+def test_user_provided_cm(fill_store: Callable, tmp_path: Path) -> None:
     """Test correct color mapping for user-provided cm name."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -319,7 +331,7 @@ def test_random_mapper() -> None:
             assert 0 <= val <= 1
 
 
-def test_categorical_mapper(fill_store, tmp_path: Path) -> None:
+def test_categorical_mapper(fill_store: Callable, tmp_path: Path) -> None:
     """Test categorical mapper option to ease cli usage."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -336,7 +348,7 @@ def test_categorical_mapper(fill_store, tmp_path: Path) -> None:
 
 
 def test_colour_prop_warnings(
-    fill_store,
+    fill_store: Callable,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -360,7 +372,7 @@ def test_colour_prop_warnings(
     assert "property value type incompatable" in caplog.text
 
 
-def test_blur(fill_store, tmp_path: Path) -> None:
+def test_blur(fill_store: Callable, tmp_path: Path) -> None:
     """Test blur."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -376,7 +388,7 @@ def test_blur(fill_store, tmp_path: Path) -> None:
     assert np.allclose(tile_blurred, tile.filter(blur_filter), atol=1)
 
 
-def test_direct_color(fill_store, tmp_path: Path) -> None:
+def test_direct_color(fill_store: Callable, tmp_path: Path) -> None:
     """Test direct color."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -392,7 +404,7 @@ def test_direct_color(fill_store, tmp_path: Path) -> None:
     assert num == 1  # expect 1 blue objects
 
 
-def test_secondary_cmap(fill_store, tmp_path: Path) -> None:
+def test_secondary_cmap(fill_store: Callable, tmp_path: Path) -> None:
     """Test secondary cmap."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -413,7 +425,7 @@ def test_secondary_cmap(fill_store, tmp_path: Path) -> None:
     )  # expect rendered color to be viridis(0.75)
 
 
-def test_unfilled_polys(fill_store, tmp_path: Path) -> None:
+def test_unfilled_polys(fill_store: Callable, tmp_path: Path) -> None:
     """Test unfilled polygons."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
@@ -427,7 +439,7 @@ def test_unfilled_polys(fill_store, tmp_path: Path) -> None:
     assert np.sum(tile_filled) > 2 * np.sum(tile_outline)
 
 
-def test_multipolygon_render(cell_grid) -> None:
+def test_multipolygon_render(cell_grid: list[Polygon]) -> None:
     """Test multipolygon rendering."""
     renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
     tile = np.zeros((1024, 1024, 3), dtype=np.uint8)
@@ -441,14 +453,15 @@ def test_multipolygon_render(cell_grid) -> None:
     assert num == 25  # expect 25 red objects
 
 
-def test_function_mapper(fill_store, tmp_path: Path) -> None:
+def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     """Test function mapper."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
 
-    def color_fn(props):
+    def color_fn(props: dict[str, str]) -> tuple[int, int, int]:
         """Tests Red for cells, otherwise green."""
+        # simple test function that returns red for cells, otherwise green.
         if props["type"] == "cell":
             return 1, 0, 0
         return 0, 1, 0

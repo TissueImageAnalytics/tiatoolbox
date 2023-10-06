@@ -45,7 +45,6 @@ from pathlib import Path
 from typing import (
     IO,
     TYPE_CHECKING,
-    Any,
     Callable,
     ClassVar,
     Generator,
@@ -115,7 +114,7 @@ class Annotation:
     _wkb: bytes | None = field(default=None, hash=False)
 
     @property
-    def geometry(self) -> Geometry:
+    def geometry(self: Annotation) -> Geometry:
         """Return the shapely geometry of the annotation."""
         if self._geometry is None:
             # Lazy creation of Shapely object when first requested. This
@@ -127,14 +126,14 @@ class Annotation:
         return self._geometry
 
     @property
-    def wkb(self) -> bytes:
+    def wkb(self: Annotation) -> bytes:
         """Return the WKB representation of the annotation."""
         if self._wkb is None:
             object.__setattr__(self, "_wkb", self.geometry.wkb)
         return self._wkb
 
     @property
-    def geometry_type(self) -> GeometryType:
+    def geometry_type(self: Annotation) -> GeometryType:
         """Return the geometry type of the annotation."""
         if self._geometry:
             return GeometryType(self.geometry.type)
@@ -147,7 +146,7 @@ class Annotation:
 
     @property
     def coords(  # noqa: PLR0911 - 7 > 6 returns
-        self,
+        self: Annotation,
     ) -> np.array | list[np.array] | list[list[np.array]]:
         """The annotation geometry as a flat array of 2D coordinates.
 
@@ -182,7 +181,7 @@ class Annotation:
         msg = f"Unknown geometry type: {self.geometry_type}"
         raise ValueError(msg)
 
-    def to_feature(self) -> dict:
+    def to_feature(self: Annotation) -> dict:
         """Return a feature representation of this annotation.
 
         A feature representation is a Python dictionary with the
@@ -198,7 +197,7 @@ class Annotation:
             "properties": self.properties,
         }
 
-    def to_geojson(self) -> str:
+    def to_geojson(self: Annotation) -> str:
         """Return a GeoJSON string representation of this annotation.
 
         Returns:
@@ -208,7 +207,7 @@ class Annotation:
         """
         return json.dumps(self.to_feature())
 
-    def to_wkb(self) -> bytes:
+    def to_wkb(self: Annotation) -> bytes:
         """Returns the geometry as Well-Known Binary (WKB).
 
         Returns:
@@ -218,7 +217,7 @@ class Annotation:
         """
         return copy.copy(self.wkb)
 
-    def to_wkt(self) -> str:
+    def to_wkt(self: Annotation) -> str:
         """Returns the geometry as Well-Know Text (WKT).
 
         Returns:
@@ -229,7 +228,7 @@ class Annotation:
         return self.geometry.wkt
 
     def __init__(
-        self,
+        self: Annotation,
         geometry: Geometry | int | str | None = None,
         properties: Properties | None = None,
         wkb: bytes | None = None,
@@ -263,11 +262,11 @@ class Annotation:
             object.__setattr__(self, "_geometry", geometry)
         object.__setattr__(self, "properties", properties or {})
 
-    def __repr__(self) -> str:
+    def __repr__(self: Annotation) -> str:
         """Return a string representation of the object."""
         return f"Annotation({self.geometry}, {self.properties})"
 
-    def __hash__(self) -> int:
+    def __hash__(self: Annotation) -> int:
         """Compute the hash value of the object.
 
         Returns:
@@ -277,11 +276,11 @@ class Annotation:
         """
         return hash((self.geometry, json.dumps(self.properties, sort_keys=True)))
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self: Annotation, other: object) -> bool:
         """Compare this annotation to another.
 
         Args:
-            other (Any):
+            other (object):
                 The object to compare to.
 
         Returns:
@@ -429,11 +428,11 @@ class Annotation:
 class AnnotationStore(ABC, MutableMapping):
     """Annotation store abstract base class."""
 
-    def __new__(cls, *args, **kwargs):  # noqa: ARG003
+    def __new__(cls: ABC, *args: str, **kwargs: int) -> ABC:  # noqa: ARG003
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:
             msg = (
-                "AnnotationStore is an abstract class and cannot be instantiated. "
+                "AnnotationStore is an abstract class and cannot be instantiated."
                 "Use a subclass such as DictionaryStore or SQLiteStore instead."
             )
             raise TypeError(
@@ -442,7 +441,7 @@ class AnnotationStore(ABC, MutableMapping):
         return super().__new__(cls)
 
     @staticmethod
-    def _is_right_angle(a, b, c) -> bool:
+    def _is_right_angle(a: list[float], b: list[float], c: list[float]) -> bool:
         """Return True if three points make a right angle.
 
         Used for optimising queries.
@@ -462,7 +461,14 @@ class AnnotationStore(ABC, MutableMapping):
         """
         return np.dot(np.subtract(a, b), np.subtract(b, c)) == 0
 
-    def _is_rectangle(self, a, b, c, d, *args) -> bool:
+    def _is_rectangle(
+        self: ABC,
+        a: list[float],
+        b: list[float],
+        c: list[float],
+        d: list[float],
+        *args: str,
+    ) -> bool:
         """Determine if a set of coordinates form a rectangle.
 
         Used for optimising queries. If more than five points are given,
@@ -538,7 +544,7 @@ class AnnotationStore(ABC, MutableMapping):
         return Path(connection)
 
     @staticmethod
-    def _validate_equal_lengths(*args):
+    def _validate_equal_lengths(*args: str) -> None:
         """Validate that all given args are either None or have the same length."""
         lengths = [len(v) for v in args if v is not None]
         if lengths and any(length != lengths[0] for length in lengths):
@@ -589,7 +595,7 @@ class AnnotationStore(ABC, MutableMapping):
 
     @classmethod
     @abstractmethod
-    def open(cls, fp: Path | str | IO) -> AnnotationStore:  # noqa: A003
+    def open(cls: type[AnnotationStore], fp: Path | str | IO) -> ABC:
         """Load a store object from a path or file-like object.
 
         Args:
@@ -643,11 +649,11 @@ class AnnotationStore(ABC, MutableMapping):
         )
 
     @abstractmethod
-    def commit(self) -> None:
+    def commit(self: AnnotationStore) -> None:
         """Commit any in-memory changes to disk."""
 
     @abstractmethod
-    def dump(self, fp: Path | str | IO) -> None:
+    def dump(self: AnnotationStore, fp: Path | str | IO) -> None:
         """Serialise a copy of the whole store to a file-like object.
 
         Args:
@@ -657,7 +663,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
 
     @abstractmethod
-    def dumps(self) -> str | bytes:
+    def dumps(self: AnnotationStore) -> str | bytes:
         """Serialise and return a copy of store as a string or bytes.
 
         Returns:
@@ -667,10 +673,10 @@ class AnnotationStore(ABC, MutableMapping):
         """
 
     def append(
-        self,
+        self: AnnotationStore,
         annotation: Annotation,
         key: str | None = None,
-    ) -> int:
+    ) -> str:
         """Insert a new annotation, returning the key.
 
         Args:
@@ -693,7 +699,7 @@ class AnnotationStore(ABC, MutableMapping):
         return self.append_many([annotation], keys)[0]
 
     def append_many(
-        self,
+        self: AnnotationStore,
         annotations: Iterable[Annotation],
         keys: Iterable[str] | None = None,
     ) -> list[str]:
@@ -727,10 +733,10 @@ class AnnotationStore(ABC, MutableMapping):
         return result
 
     def patch(
-        self,
+        self: AnnotationStore,
         key: str,
         geometry: Geometry | None = None,
-        properties: dict[str, Any] | None = None,
+        properties: dict[str, object] | None = None,
     ) -> None:
         """Patch an annotation at given key.
 
@@ -758,7 +764,7 @@ class AnnotationStore(ABC, MutableMapping):
         self.patch_many([key], geometry, properties)
 
     def patch_many(
-        self,
+        self: AnnotationStore,
         keys: Iterable[int],
         geometries: Iterable[Geometry] | None = None,
         properties_iter: Iterable[Properties] | None = None,
@@ -794,7 +800,7 @@ class AnnotationStore(ABC, MutableMapping):
             properties_ = copy.deepcopy(properties)
             self.patch(key, geometry, properties_)
 
-    def remove(self, key: str) -> None:
+    def remove(self: AnnotationStore, key: str) -> None:
         """Remove annotation from the store with its unique key.
 
         Args:
@@ -804,7 +810,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         self.remove_many([key])
 
-    def remove_many(self, keys: Iterable[str]) -> None:
+    def remove_many(self: AnnotationStore, keys: Iterable[str]) -> None:
         """Bulk removal of annotations by keys.
 
         Args:
@@ -815,7 +821,11 @@ class AnnotationStore(ABC, MutableMapping):
         for key in keys:
             self.remove(key)
 
-    def setdefault(self, key: str, default: Annotation | None = None) -> Annotation:
+    def setdefault(
+        self: AnnotationStore,
+        key: str,
+        default: Annotation | None = None,
+    ) -> Annotation:
         """Return the value of the annotation with the given key.
 
         If the key does not exist, insert the default value and return
@@ -837,7 +847,7 @@ class AnnotationStore(ABC, MutableMapping):
             raise TypeError(msg)
         return super().setdefault(key, default)
 
-    def __delitem__(self, key: str) -> None:
+    def __delitem__(self: AnnotationStore, key: str) -> None:
         """Delete an annotation by key.
 
         An alias of `remove`.
@@ -849,7 +859,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         self.remove(key)
 
-    def keys(self) -> Iterable[str]:
+    def keys(self: AnnotationStore) -> Iterable[str]:
         """Return an iterable (usually generator) of all keys in the store.
 
         Returns:
@@ -860,7 +870,7 @@ class AnnotationStore(ABC, MutableMapping):
         for key, _ in self.items():  # noqa: PERF102
             yield key
 
-    def values(self) -> Iterable[Annotation]:
+    def values(self: AnnotationStore) -> Iterable[Annotation]:
         """Return an iterable of all annotation in the store.
 
         Returns:
@@ -871,7 +881,7 @@ class AnnotationStore(ABC, MutableMapping):
         for _, annotation in self.items():  # noqa: PERF102
             yield annotation
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self: AnnotationStore) -> Iterator[str]:
         """Return an iterable of keys in the store.
 
         An alias of `keys`.
@@ -886,14 +896,14 @@ class AnnotationStore(ABC, MutableMapping):
     @staticmethod
     def _eval_where(
         predicate: Predicate | None,
-        properties: dict[str, Any],
+        properties: dict[str, object],
     ) -> bool:
         """Evaluate properties predicate against properties.
 
         Args:
             predicate (str or bytes or Callable):
                 The predicate to evaluate on properties. The predicate may be a
-                string, pickled bytes, or a callable (e.g. a function).
+                string, pickled bytes, or a Callable (e.g. a function).
             properties (dict):
                 A dictionary of JSON serializable
                 properties on which to evaluate the predicate.
@@ -918,7 +928,7 @@ class AnnotationStore(ABC, MutableMapping):
         return bool(predicate(properties))
 
     def query(
-        self,
+        self: AnnotationStore,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
@@ -936,7 +946,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1069,7 +1079,7 @@ class AnnotationStore(ABC, MutableMapping):
         }
 
     def iquery(
-        self,
+        self: AnnotationStore,
         geometry: QueryGeometry,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
@@ -1088,7 +1098,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1149,7 +1159,7 @@ class AnnotationStore(ABC, MutableMapping):
         ]
 
     def bquery(
-        self,
+        self: AnnotationStore,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
     ) -> dict[str, tuple[float, float, float, float]]:
@@ -1177,7 +1187,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1235,14 +1245,14 @@ class AnnotationStore(ABC, MutableMapping):
         }
 
     def pquery(
-        self,
+        self: AnnotationStore,
         select: Select,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, Any] | set[Any]:
+    ) -> dict[str, object] | set[object]:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -1264,7 +1274,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned the
                 from annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -1323,7 +1333,7 @@ class AnnotationStore(ABC, MutableMapping):
             msg = "select and where must be of the same type"
             raise TypeError(msg)
         if not isinstance(select, (str, bytes)) and not callable(select):
-            msg = f"select must be str, bytes, or callable, not {type(select)}"
+            msg = f"select must be str, bytes, or Callable, not {type(select)}"
             raise TypeError(
                 msg,
             )
@@ -1334,7 +1344,7 @@ class AnnotationStore(ABC, MutableMapping):
         def select_values(
             select: Select,
             annotation: Annotation,
-        ) -> Properties | Any | tuple[Any, ...]:
+        ) -> Properties | object | tuple[object, ...]:
             """Get the value(s) to return from an annotation via a select.
 
             Args:
@@ -1351,7 +1361,7 @@ class AnnotationStore(ABC, MutableMapping):
                     If arguments have incompatible values.
 
             Returns:
-                Union[Properties, Any, Tuple[Any, ...]]:
+                Union[Properties, object, Tuple[object, ...]]:
                     The value(s) to return from the annotation. This
                     will be a dictionary if unique is False. Otherwise,
                     it will be a list of sets. If squeeze and unique are
@@ -1389,7 +1399,7 @@ class AnnotationStore(ABC, MutableMapping):
         )
 
     def nquery(
-        self,
+        self: AnnotationStore,
         geometry: Geometry | None = None,
         where: Predicate | None = None,
         n_where: Predicate | None = None,
@@ -1409,7 +1419,7 @@ class AnnotationStore(ABC, MutableMapping):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will be
                 returned. Defaults to None (assume always true). This may
-                be a string, callable, or pickled function as bytes.
+                be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned the
                 annotation store backend in python before being returned
                 to the user. A pickle object is, where possible, hooked
@@ -1586,12 +1596,12 @@ class AnnotationStore(ABC, MutableMapping):
         items: Generator[tuple[str, Properties], None, None],
         get_values: Callable[
             [Select, Annotation],
-            Properties | Any | tuple[Any, ...],
+            Properties | object | tuple[object, ...],
         ],
         *,
         unique: bool,
         squeeze: bool,
-    ):
+    ) -> dict[str, object] | dict:
         """Package the results of a pquery into the right output format.
 
         Args:
@@ -1635,7 +1645,7 @@ class AnnotationStore(ABC, MutableMapping):
             result = result[0]
         return result  # CCR001
 
-    def features(self) -> Generator[dict[str, Any], None, None]:
+    def features(self: AnnotationStore) -> Generator[dict[str, object], None, None]:
         """Return annotations as a list of geoJSON features.
 
         Returns:
@@ -1646,7 +1656,7 @@ class AnnotationStore(ABC, MutableMapping):
         for a in self.values():
             yield a.to_feature()
 
-    def to_geodict(self) -> dict[str, Any]:
+    def to_geodict(self: AnnotationStore) -> dict[str, object]:
         """Return annotations as a dictionary in geoJSON format.
 
         Returns:
@@ -1676,7 +1686,7 @@ class AnnotationStore(ABC, MutableMapping):
                 The function to call when fp is None.
 
         Returns:
-            Any:
+            str | bytes | None:
                 The result of dump. Depends on the provided functions.
 
         """
@@ -1693,9 +1703,9 @@ class AnnotationStore(ABC, MutableMapping):
     @staticmethod
     def _load_cases(
         fp: IO | str | Path,
-        string_fn: Callable[[str | bytes], Any],
-        file_fn: Callable[[IO], Any],
-    ) -> Any:
+        string_fn: Callable[[str | bytes], object],
+        file_fn: Callable[[IO], object],
+    ) -> object:
         """Loads cases for an input file handle or path."""
         with contextlib.suppress(OSError):
             if isinstance(fp, (Path, str)) and Path(fp).exists():
@@ -1710,7 +1720,7 @@ class AnnotationStore(ABC, MutableMapping):
 
     @classmethod
     def from_geojson(
-        cls,
+        cls: type[AnnotationStore],
         fp: IO | str,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
@@ -1737,7 +1747,7 @@ class AnnotationStore(ABC, MutableMapping):
         return store
 
     def add_from_geojson(
-        self,
+        self: AnnotationStore,
         fp: IO | str,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
@@ -1758,7 +1768,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
 
-        def transform_geometry(geom):
+        def transform_geometry(geom: Geometry) -> Geometry:
             """Helper function to transform a geometry if needed."""
             if origin != (0, 0):
                 # transform coords to be relative to given origin.
@@ -1791,7 +1801,10 @@ class AnnotationStore(ABC, MutableMapping):
         logger.info("Adding %d annotations.", len(annotations))
         self.append_many(annotations)
 
-    def to_geojson(self, fp: IO | str | Path | None = None) -> str | None:
+    def to_geojson(
+        self: AnnotationStore,
+        fp: IO | str | Path | None = None,
+    ) -> str | None:
         """Serialise the store to geoJSON.
 
         For more information on the geoJSON format see:
@@ -1810,7 +1823,7 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
 
-        def write_geojson_to_file_handle(file_handle: IO):
+        def write_geojson_to_file_handle(file_handle: IO) -> str / bytes / None:
             """Write the store to a GeoJson file give a handle.
 
             This replaces the naive method which uses a lot of memory::
@@ -1836,7 +1849,7 @@ class AnnotationStore(ABC, MutableMapping):
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
 
-    def to_ndjson(self, fp: IO | None = None) -> str | None:
+    def to_ndjson(self: AnnotationStore, fp: IO | None = None) -> str | None:
         """Serialise to New Line Delimited JSON.
 
         Each line contains a JSON object with the following format:
@@ -1886,7 +1899,7 @@ class AnnotationStore(ABC, MutableMapping):
         )
 
     @classmethod
-    def from_ndjson(cls, fp: IO | str) -> AnnotationStore:
+    def from_ndjson(cls: type[AnnotationStore], fp: IO | str) -> AnnotationStore:
         """Load annotations from NDJSON.
 
         Expects each line to be a JSON object with the following format:
@@ -1930,7 +1943,7 @@ class AnnotationStore(ABC, MutableMapping):
         return store
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame) -> AnnotationStore:
+    def from_dataframe(cls: type[AnnotationStore], df: pd.DataFrame) -> AnnotationStore:
         """Converts to AnnotationStore from :class:`pandas.DataFrame`."""
         store = cls()
         for key, row in df.iterrows():
@@ -1939,7 +1952,7 @@ class AnnotationStore(ABC, MutableMapping):
             store.append(Annotation(geometry, properties), str(key))
         return store
 
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self: AnnotationStore) -> pd.DataFrame:
         """Converts AnnotationStore to :class:`pandas.DataFrame`."""
         features = (
             {
@@ -1951,14 +1964,17 @@ class AnnotationStore(ABC, MutableMapping):
         )
         return pd.json_normalize(features).set_index("key")
 
-    def transform(self, transform: Callable[[Geometry], Geometry]) -> None:
+    def transform(
+        self: AnnotationStore,
+        transform: Callable[[Geometry], Geometry],
+    ) -> None:
         """Transform all annotations in the store using provided function.
 
         Useful for transforming coordinates from slide space into
         patch/tile/core space, or to a different resolution, for example.
 
         Args:
-            transform (callable[Geometry, Geometry]):
+            transform (Callable[Geometry, Geometry]):
                 A function that takes a geometry and returns a new
                 transformed geometry.
 
@@ -1968,7 +1984,7 @@ class AnnotationStore(ABC, MutableMapping):
         }
         self.patch_many(transformed_geoms.keys(), transformed_geoms.values())
 
-    def __del__(self) -> None:
+    def __del__(self: AnnotationStore) -> None:
         """Implements destructor method.
 
         This should be called when all references to the object have been deleted
@@ -1977,7 +1993,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         self.close()
 
-    def clear(self) -> None:
+    def clear(self: AnnotationStore) -> None:
         """Remove all annotations from the store.
 
         This is a naive implementation, it simply iterates over all annotations
@@ -1998,7 +2014,7 @@ class SQLiteMetadata(MutableMapping):
 
     """
 
-    def __init__(self, con: sqlite3.Connection) -> None:
+    def __init__(self: SQLiteMetadata, con: sqlite3.Connection) -> None:
         """Initialize :class:`SQLiteMetadata`."""
         self.con = con
         self.con.execute(
@@ -2006,12 +2022,16 @@ class SQLiteMetadata(MutableMapping):
         )
         self.con.commit()
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self: SQLiteMetadata, key: str) -> bool:
         """Test whether the object contains the specified object or not."""
         cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
         return cursor.fetchone() is not None
 
-    def __setitem__(self, key: str, value: dict | list | float | str) -> None:
+    def __setitem__(
+        self: SQLiteMetadata,
+        key: str,
+        value: dict | list | float | str,
+    ) -> None:
         """Set a metadata value."""
         value = json.dumps(value)
         self.con.execute(
@@ -2020,7 +2040,7 @@ class SQLiteMetadata(MutableMapping):
         )
         self.con.commit()
 
-    def __getitem__(self, key: str) -> dict | list | int | float | str:
+    def __getitem__(self: SQLiteMetadata, key: str) -> dict | list | int | float | str:
         """Get a metadata value."""
         cursor = self.con.execute("SELECT value FROM metadata WHERE [key] = ?", (key,))
         result = cursor.fetchone()
@@ -2028,19 +2048,19 @@ class SQLiteMetadata(MutableMapping):
             raise KeyError(key)
         return json.loads(result[0])
 
-    def __delitem__(self, key: str) -> None:
+    def __delitem__(self: SQLiteMetadata, key: str) -> None:
         """Delete a metadata value."""
         if key not in self:
             raise KeyError(key)
         self.con.execute("DELETE FROM metadata WHERE [key] = ?", (key,))
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self: SQLiteMetadata) -> Iterator[str]:
         """Iterate over all keys."""
         cursor = self.con.execute("SELECT [key] FROM metadata")
         for row in cursor:
             yield row[0]
 
-    def __len__(self) -> int:
+    def __len__(self: SQLiteMetadata) -> int:
         """Return the number of metadata entries."""
         cursor = self.con.execute("SELECT COUNT(*) FROM metadata")
         return cursor.fetchone()[0]
@@ -2060,12 +2080,12 @@ class SQLiteStore(AnnotationStore):
     """
 
     @classmethod
-    def open(cls, fp: Path | str) -> SQLiteStore:  # noqa: A003
+    def open(cls: type[SQLiteStore], fp: Path | str) -> SQLiteStore:
         """Opens :class:`SQLiteStore` from file pointer or path."""
         return SQLiteStore(fp)
 
     def __init__(  # noqa: PLR0915
-        self,
+        self: SQLiteStore,
         connection: Path | str | IO = ":memory:",
         compression: str = "zlib",
         compression_level: int = 9,
@@ -2237,7 +2257,7 @@ class SQLiteStore(AnnotationStore):
         self.table_columns = self._get_table_columns()
 
     def serialise_geometry(  # skipcq: PYL-W0221
-        self,
+        self: SQLiteStore,
         geometry: Geometry,
     ) -> str | bytes:
         """Serialise a geometry to WKB with optional compression.
@@ -2263,7 +2283,7 @@ class SQLiteStore(AnnotationStore):
         raise ValueError(msg)
 
     def _unpack_geometry(
-        self,
+        self: SQLiteStore,
         data: str | bytes,
         cx: float,
         cy: float,
@@ -2291,7 +2311,7 @@ class SQLiteStore(AnnotationStore):
         return Point(cx, cy) if data is None else self.deserialize_geometry(data)
 
     def _unpack_wkb(
-        self,
+        self: SQLiteStore,
         data: bytes,
         cx: float,
         cy: float,
@@ -2318,7 +2338,7 @@ class SQLiteStore(AnnotationStore):
         )
 
     def deserialize_geometry(  # skipcq: PYL-W0221
-        self,
+        self: SQLiteStore,
         data: str | bytes,
     ) -> Geometry:
         """Deserialize a geometry from a string or bytes.
@@ -2337,7 +2357,7 @@ class SQLiteStore(AnnotationStore):
             return shapely_wkt.loads(data)
         return shapely_wkb.loads(data)
 
-    def _decompress_data(self, data: bytes) -> bytes:
+    def _decompress_data(self: SQLiteStore, data: bytes) -> bytes:
         """Decompresses geometry data.
 
         Args:
@@ -2399,14 +2419,14 @@ class SQLiteStore(AnnotationStore):
             options = conn.execute("pragma compile_options").fetchall()
         return [opt for opt, in options]
 
-    def close(self) -> None:
+    def close(self: SQLiteStore) -> None:
         """Closes :class:`SQLiteStore` from file pointer or path."""
         if self.auto_commit:
             self.con.commit()
         self.optimize(vacuum=False, limit=1000)
         self.con.close()
 
-    def _make_token(self, annotation: Annotation, key: str | None) -> dict:
+    def _make_token(self: SQLiteStore, annotation: Annotation, key: str | None) -> dict:
         """Create token data dict for tokenized SQL transaction."""
         key = key or str(uuid.uuid4())
         geometry = annotation.geometry
@@ -2429,7 +2449,7 @@ class SQLiteStore(AnnotationStore):
         }
 
     def append_many(
-        self,
+        self: SQLiteStore,
         annotations: Iterable[Annotation],
         keys: Iterable[str] | None = None,
     ) -> list[str]:
@@ -2448,7 +2468,12 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
         return result
 
-    def _append(self, key: str, annotation: Annotation, cur: sqlite3.Cursor) -> None:
+    def _append(
+        self: SQLiteStore,
+        key: str,
+        annotation: Annotation,
+        cur: sqlite3.Cursor,
+    ) -> None:
         """Append without starting a transaction.
 
         Args:
@@ -2488,12 +2513,12 @@ class SQLiteStore(AnnotationStore):
     @staticmethod
     def _initialize_query_string_parameters(
         query_geometry: Geometry | None,
-        query_parameters: dict[str, Any],
+        query_parameters: dict[str, object],
         geometry_predicate: str | None,
         columns: str,
         where: bytes | str,
         distance: float = 0,
-    ) -> tuple[str, dict[str, Any]]:
+    ) -> tuple[str, dict[str, object]]:
         """Initialises the query string and parameters."""
         query_string = (
             "SELECT "  # skipcq: BAN-B608  # noqa: S608
@@ -2572,11 +2597,11 @@ class SQLiteStore(AnnotationStore):
         return query_string, query_parameters
 
     def _query(  # noqa: PLR0913
-        self,
+        self: SQLiteStore,
         columns: str,
         geometry: Geometry | None = None,
         callable_columns: str | None = None,
-        geometry_predicate="intersects",
+        geometry_predicate: str = "intersects",
         where: Predicate | None = None,
         min_area: float | None = None,
         distance: float = 0,
@@ -2593,7 +2618,7 @@ class SQLiteStore(AnnotationStore):
             geometry(tuple or Geometry):
                 The geometry being queried against.
             callable_columns(str):
-                The columns to select when a callable is given to
+                The columns to select when a Callable is given to
                 `where`.
             geometry_predicate(str):
                 A string which define which binary geometry predicate to
@@ -2697,10 +2722,10 @@ class SQLiteStore(AnnotationStore):
         return cur
 
     def iquery(
-        self,
+        self: SQLiteStore,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
-        geometry_predicate="intersects",
+        geometry_predicate: str = "intersects",
         distance: float = 0,
     ) -> list[str]:
         """Query the store for annotation keys.
@@ -2717,7 +2742,7 @@ class SQLiteStore(AnnotationStore):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -2774,11 +2799,11 @@ class SQLiteStore(AnnotationStore):
         return [key for key, in cur.fetchall()]
 
     def query(
-        self,
+        self: SQLiteStore,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
-        min_area=None,
+        min_area: float / None = None,
         distance: float = 0,
     ) -> dict[str, Annotation]:
         """Runs Query."""
@@ -2809,7 +2834,7 @@ class SQLiteStore(AnnotationStore):
         }
 
     def bquery(
-        self,
+        self: SQLiteStore,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
     ) -> dict[str, tuple[float, float, float, float]]:
@@ -2837,7 +2862,7 @@ class SQLiteStore(AnnotationStore):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned
                 from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -2904,14 +2929,14 @@ class SQLiteStore(AnnotationStore):
     ) -> dict[str, set[Properties]] | dict[str, Properties]:
         """Package the results of a pquery into the right output format.
 
-        This variant is used when select and where are callable or
+        This variant is used when select and where are Callable or
         pickle objects.
 
         Args:
             select (Union[str, bytes, Callable]):
-                A callable to select the properties to return.
+                A Callable to select the properties to return.
             where (CallablePredicate):
-                A callable predicate to filter the rows with. Maybe
+                A Callable predicate to filter the rows with. Maybe
                 None for no-op (no filtering).
             cur (sqlite3.Cursor):
                 The cursor for the query.
@@ -2928,14 +2953,14 @@ class SQLiteStore(AnnotationStore):
 
         def add_props_to_result(
             result: defaultdict[str, set],
-            properties: dict[str, Any],
+            properties: dict[str, object],
         ) -> None:
             """Add the properties to the appropriate set in result.
 
             Args:
                 result (DefaultDict[str, set]):
                     The result dictionary to add the properties to.
-                properties (Dict[str, Any]):
+                properties (Dict[str, object]):
                     The properties to add to the result.
 
             """
@@ -3015,13 +3040,13 @@ class SQLiteStore(AnnotationStore):
         """Determine boolean flags for the kind of pquery this is.
 
         If either one of `select` or `where` is a str, bytes, or
-        callable, then is_callable_query, is_pickle_query, and
+        Callable, then is_callable_query, is_pickle_query, and
         is_str_query respectively will be set to True.
 
         Returns:
             tuple:
                 A tuple of bools:
-                - True if select or where are callable (functions).
+                - True if select or where are Callable (functions).
                 - True if select or where are bytes (pickle expressions).
                 - True if select or where are str (SQL expressions).
 
@@ -3040,25 +3065,25 @@ class SQLiteStore(AnnotationStore):
         """Validate that select and where are valid types.
 
         1. Check that select and where are the same type if where is given.
-        2. Check that select is in (str, bytes, callable).
+        2. Check that select is in (str, bytes, Callable).
 
         Raises:
             TypeError:
                 If select and where are not the same type or not in
-                (str, bytes, callable).
+                (str, bytes, Callable).
 
         """
         if where is not None and type(select) is not type(where):
             msg = "select and where must be of the same type"
             raise TypeError(msg)
         if not isinstance(select, (str, bytes)) and not callable(select):
-            msg = f"select must be str, bytes, or callable, not {type(select)}"
+            msg = f"select must be str, bytes, or Callable, not {type(select)}"
             raise TypeError(
                 msg,
             )
 
     def pquery(
-        self,
+        self: SQLiteStore,
         select: Select,
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
@@ -3066,7 +3091,7 @@ class SQLiteStore(AnnotationStore):
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, Any] | set[Any]:
+    ) -> dict[str, object] | set[object]:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -3088,7 +3113,7 @@ class SQLiteStore(AnnotationStore):
                 A statement which should evaluate to a boolean value.
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
-                may be a string, callable, or pickled function as bytes.
+                may be a string, Callable, or pickled function as bytes.
                 Callables are called to filter each result returned the
                 from annotation store backend in python before being
                 returned to the user. A pickle object is, where
@@ -3191,7 +3216,7 @@ class SQLiteStore(AnnotationStore):
 
         if is_pickle_query or is_callable_query:
             # Where to apply after database query
-            # only done for callable where.
+            # only done for Callable where.
             post_where = where if is_callable_query else None
             result = self._handle_pickle_callable_pquery(
                 select,
@@ -3210,20 +3235,20 @@ class SQLiteStore(AnnotationStore):
             return result[0]
         return result
 
-    def __len__(self) -> int:
+    def __len__(self: SQLiteStore) -> int:
         """Return number of annotations in the store."""
         cur = self.con.cursor()
         cur.execute("SELECT COUNT(*) FROM annotations")
         (count,) = cur.fetchone()
         return count
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self: SQLiteStore, key: str) -> bool:
         """Test whether the object contains the specified object or not."""
         cur = self.con.cursor()
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
         return cur.fetchone()[0] == 1
 
-    def __getitem__(self, key: str) -> Annotation:
+    def __getitem__(self: SQLiteStore, key: str) -> Annotation:
         """Get an item from the store."""
         cur = self.con.cursor()
         cur.execute(
@@ -3244,7 +3269,7 @@ class SQLiteStore(AnnotationStore):
             wkb=self._unpack_wkb(serialised_geometry, cx, cy),
         )
 
-    def keys(self) -> Iterable[int]:
+    def keys(self: SQLiteStore) -> Iterable[int]:
         """Return an iterable (usually generator) of all keys in the store.
 
         Returns:
@@ -3254,7 +3279,7 @@ class SQLiteStore(AnnotationStore):
         """
         yield from self
 
-    def __iter__(self) -> Iterator[int]:
+    def __iter__(self: SQLiteStore) -> Iterator[int]:
         """Return an iterator for the given object."""
         cur = self.con.cursor()
         cur.execute(
@@ -3269,7 +3294,7 @@ class SQLiteStore(AnnotationStore):
                 break
             yield row[0]  # The key
 
-    def values(self) -> Iterable[tuple[int, Annotation]]:
+    def values(self: SQLiteStore) -> Iterable[tuple[int, Annotation]]:
         """Return an iterable of all annotation in the store.
 
         Returns:
@@ -3280,7 +3305,7 @@ class SQLiteStore(AnnotationStore):
         for _, value in self.items():  # noqa: PERF102
             yield value
 
-    def items(self) -> Iterable[tuple[int, Annotation]]:
+    def items(self: SQLiteStore) -> Iterable[tuple[int, Annotation]]:
         """Return iterable (generator) over key and annotations."""
         cur = self.con.cursor()
         cur.execute(
@@ -3302,7 +3327,7 @@ class SQLiteStore(AnnotationStore):
             yield key, Annotation(geometry, properties)
 
     def patch_many(
-        self,
+        self: SQLiteStore,
         keys: Iterable[int],
         geometries: Iterable[Geometry] | None = None,
         properties_iter: Iterable[Properties] | None = None,
@@ -3362,7 +3387,7 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
 
     def _patch_geometry(
-        self,
+        self: SQLiteStore,
         key: str,
         geometry: Geometry,
         cur: sqlite3.Cursor,
@@ -3408,7 +3433,7 @@ class SQLiteStore(AnnotationStore):
             query_parameters,
         )
 
-    def remove_many(self, keys: Iterable[str]) -> None:
+    def remove_many(self: SQLiteStore, keys: Iterable[str]) -> None:
         """Bulk removal of annotations by keys.
 
         Args:
@@ -3439,19 +3464,19 @@ class SQLiteStore(AnnotationStore):
         if self.auto_commit:
             self.con.commit()
 
-    def __setitem__(self, key: str, annotation: Annotation) -> None:
+    def __setitem__(self: SQLiteStore, key: str, annotation: Annotation) -> None:
         """Implements a method to assign a value to an item."""
         if key in self:
             self.patch(key, annotation.geometry, annotation.properties)
             return
         self.append(annotation, key)
 
-    def _get_table_columns(self):
+    def _get_table_columns(self: SQLiteStore) -> list[str]:
         """Get a list of columns in the annotations table."""
         cur = self.con.execute("PRAGMA table_info(annotations)")
         return [row[1] for row in cur.fetchall()]
 
-    def add_area_column(self, *, mk_index=True):
+    def add_area_column(self: SQLiteStore, *, mk_index: bool = True) -> None:
         """Add a column to store the area of the geometry."""
         cur = self.con.cursor()
         cur.execute(
@@ -3471,7 +3496,7 @@ class SQLiteStore(AnnotationStore):
         self.con.commit()
         self.table_columns.append("area")
 
-    def remove_area_column(self):
+    def remove_area_column(self: SQLiteStore) -> None:
         """Remove the area column from the store."""
         if "area" in self.indexes():
             self.drop_index("area")
@@ -3485,7 +3510,7 @@ class SQLiteStore(AnnotationStore):
         self.con.commit()
         self.table_columns.remove("area")
 
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self: SQLiteStore) -> pd.DataFrame:
         """Converts AnnotationStore to :class:`pandas.DataFrame`."""
         store_to_df = pd.DataFrame()
         df_rows = (
@@ -3499,7 +3524,7 @@ class SQLiteStore(AnnotationStore):
         store_to_df = pd.concat([store_to_df, pd.json_normalize(df_rows)])
         return store_to_df.set_index("key")
 
-    def features(self) -> Generator[dict[str, Any], None, None]:
+    def features(self: SQLiteStore) -> Generator[dict[str, object], None, None]:
         """Return annotations as a list of geoJSON features.
 
         Returns:
@@ -3516,11 +3541,11 @@ class SQLiteStore(AnnotationStore):
             for annotation in self.values()
         )
 
-    def commit(self) -> None:
+    def commit(self: SQLiteStore) -> None:
         """Commit any in-memory changes to disk."""
         self.con.commit()
 
-    def dump(self, fp: Path | str | IO) -> None:
+    def dump(self: SQLiteStore, fp: Path | str | IO) -> None:
         """Serialise a copy of the whole store to a file-like object.
 
         Args:
@@ -3533,7 +3558,7 @@ class SQLiteStore(AnnotationStore):
         target = sqlite3.connect(fp)
         self.con.backup(target)
 
-    def dumps(self) -> str:
+    def dumps(self: SQLiteStore) -> str:
         """Serialise and return a copy of store as a string or bytes.
 
         Returns:
@@ -3543,7 +3568,7 @@ class SQLiteStore(AnnotationStore):
         """
         return "\n".join(self.con.iterdump())
 
-    def clear(self) -> None:
+    def clear(self: SQLiteStore) -> None:
         """Remove all annotations from the store."""
         cur = self.con.cursor()
         cur.execute("DELETE FROM rtree")
@@ -3552,7 +3577,7 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
 
     def create_index(
-        self,
+        self: SQLiteStore,
         name: str,
         where: str | bytes,
         *,
@@ -3593,7 +3618,7 @@ class SQLiteStore(AnnotationStore):
         if analyze:
             cur.execute(f"ANALYZE {name}")
 
-    def indexes(self) -> list[str]:
+    def indexes(self: SQLiteStore) -> list[str]:
         """Return a list of the names of all indexes in the store.
 
         Returns:
@@ -3605,7 +3630,7 @@ class SQLiteStore(AnnotationStore):
         cur.execute("SELECT name FROM sqlite_master WHERE TYPE = 'index'")
         return [row[0] for row in cur.fetchall()]
 
-    def drop_index(self, name: str) -> None:
+    def drop_index(self: SQLiteStore, name: str) -> None:
         """Drop an index from the store.
 
         Args:
@@ -3616,7 +3641,7 @@ class SQLiteStore(AnnotationStore):
         cur = self.con.cursor()
         cur.execute(f"DROP INDEX {name}")
 
-    def optimize(self, limit: int = 1000, *, vacuum: bool = True) -> None:
+    def optimize(self: SQLiteStore, limit: int = 1000, *, vacuum: bool = True) -> None:
         """Optimize the database with VACUUM and ANALYZE.
 
         Args:
@@ -3639,7 +3664,10 @@ class SQLiteStore(AnnotationStore):
 class DictionaryStore(AnnotationStore):
     """Pure python dictionary backed annotation store."""
 
-    def __init__(self, connection: Path | str | IO = ":memory:") -> None:
+    def __init__(
+        self: DictionaryStore,
+        connection: Path | str | IO = ":memory:",
+    ) -> None:
         """Initialize :class:`DictionaryStore`."""
         super().__init__()
         self._rows = {}
@@ -3658,7 +3686,7 @@ class DictionaryStore(AnnotationStore):
                 self.append(Annotation(geometry, properties), key=key)
 
     def append(
-        self,
+        self: DictionaryStore,
         annotation: Annotation,
         key: str | None = None,
     ) -> str:
@@ -3685,10 +3713,10 @@ class DictionaryStore(AnnotationStore):
         return key
 
     def patch(
-        self,
+        self: DictionaryStore,
         key: str,
         geometry: Geometry | None = None,
-        properties: dict[str, Any] | None = None,
+        properties: dict[str, object] | None = None,
     ) -> None:
         """Patch an annotation at given key.
 
@@ -3718,7 +3746,7 @@ class DictionaryStore(AnnotationStore):
         new_properties.update(properties)
         self[key] = Annotation(geometry, new_properties)
 
-    def remove(self, key: str) -> None:
+    def remove(self: DictionaryStore, key: str) -> None:
         """Remove annotation from the store with its unique key.
 
         Args:
@@ -3728,35 +3756,36 @@ class DictionaryStore(AnnotationStore):
         """
         del self._rows[key]
 
-    def __getitem__(self, key: str) -> Annotation:
+    def __getitem__(self: DictionaryStore, key: str) -> Annotation:
         """Get an item from the store."""
         return self._rows[key]["annotation"]
 
-    def __setitem__(self, key: str, annotation: Annotation) -> None:
+    def __setitem__(self: DictionaryStore, key: str, annotation: Annotation) -> None:
         """Implements a method to assign a value to an item."""
         if key in self._rows:
             self._rows[key]["annotation"] = annotation
         self._rows[key] = {"annotation": annotation}
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self: DictionaryStore, key: str) -> bool:
         """Test whether the object contains the specified object or not."""
         return key in self._rows
 
-    def items(self) -> Generator[tuple[str, Annotation], None, None]:
+    def items(self: DictionaryStore) -> Generator[tuple[str, Annotation], None, None]:
         """Return iterable (generator) over key and annotations."""
         for key, row in self._rows.items():
             yield key, row["annotation"]
 
-    def __len__(self) -> int:
+    def __len__(self: DictionaryStore) -> int:
         """Return the length of the instance attributes."""
         return len(self._rows)
 
+    # flake8: noqa: A003
     @classmethod
-    def open(cls, fp: Path | str | IO) -> DictionaryStore:  # noqa: A003
+    def open(cls: type[DictionaryStore], fp: Path | str | IO) -> AnnotationStore:
         """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)
 
-    def commit(self) -> None:
+    def commit(self: DictionaryStore) -> None:
         """Commit any in-memory changes to disk."""
         if str(self.connection) == ":memory:":
             logger.warning("In-memory store. Nothing to commit.", stacklevel=2)
@@ -3765,7 +3794,7 @@ class DictionaryStore(AnnotationStore):
             self.path.touch()
         self.dump(self.connection)
 
-    def dump(self, fp: Path | str | IO) -> None:
+    def dump(self: DictionaryStore, fp: Path | str | IO) -> str:
         """Serialise a copy of the whole store to a file-like object.
 
         Args:
@@ -3775,7 +3804,7 @@ class DictionaryStore(AnnotationStore):
         """
         return self.to_ndjson(fp)
 
-    def dumps(self) -> str:
+    def dumps(self: DictionaryStore) -> str:
         """Serialise and return a copy of store as a string or bytes.
 
         Returns:
@@ -3785,7 +3814,7 @@ class DictionaryStore(AnnotationStore):
         """
         return self.to_ndjson()
 
-    def close(self) -> None:
+    def close(self: DictionaryStore) -> None:
         """Closes :class:`DictionaryStore` from file pointer or path."""
         duplicate_filter = DuplicateFilter()
         logger.addFilter(duplicate_filter)
