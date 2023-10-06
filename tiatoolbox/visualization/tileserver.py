@@ -638,7 +638,7 @@ class TileServer(Flask):
         mapper["mapper"] = mapper["mapper"].__class__.__name__
         return jsonify(mapper)
 
-    def tap_query(self, x: float, y: float) -> Response:
+    def tap_query(self: TileServer, x: float, y: float) -> Response:
         """Query annotations at a point."""
         session_id = self._get_session_id()
         anns = self.get_ann_layer(session_id).store.query(

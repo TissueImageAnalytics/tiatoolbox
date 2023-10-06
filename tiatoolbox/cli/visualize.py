@@ -1,4 +1,6 @@
 """Command line interface for visualization tool."""
+from __future__ import annotations
+
 import os
 import subprocess
 from pathlib import Path
@@ -30,7 +32,7 @@ def run_tileserver() -> None:
     proc.start()
 
 
-def run_bokeh(img_input, port, noshow):
+def run_bokeh(img_input: list[str], port: int, *, noshow: bool) -> None:
     """Start the bokeh server."""
     cmd = [
         "bokeh",
@@ -69,7 +71,7 @@ def run_bokeh(img_input, port, noshow):
     default=5006,
 )
 @click.option("--noshow", is_flag=True, help="Do not launch browser.")
-def visualize(img_input, port, noshow) -> None:
+def visualize(img_input: list[str], port: int, *, noshow: bool) -> None:
     """Launches the visualization tool for the given directory(s).
 
     If only one path is given, Slides and overlays to be visualized are expected in
