@@ -1224,7 +1224,7 @@ def patch_pred_store(
     class_probs = patch_output.get("probabilities", [])
     preds = patch_output.get("predictions", [])
     patch_coords = np.array(patch_output.get("coordinates", []))
-    if not np.all(scale_factor == 1):
+    if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
     labels = patch_output.get("labels", [])
     # get classes to consider
