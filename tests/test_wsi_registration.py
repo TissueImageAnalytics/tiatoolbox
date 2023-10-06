@@ -39,7 +39,8 @@ def test_extract_features_time(dfbr_features: Path, test_count: int = 10) -> Non
     eager_compile_time /= test_count
     logger.info("Time taken for feature extraction (torch.compile): %f", compile_time)
     logger.info(
-        "Time taken for feature extraction (eager execution): %f", eager_compile_time,
+        "Time taken for feature extraction (eager execution): %f",
+        eager_compile_time,
     )
     assert compile_time < eager_compile_time
 
