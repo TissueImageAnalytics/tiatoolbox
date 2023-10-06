@@ -90,4 +90,4 @@ def visualize(img_input: list[str], port: int, *, noshow: bool) -> None:
 
     # start servers
     run_tileserver()  # pragma: no cover
-    run_bokeh(img_input, port, noshow)  # pragma: no cover
+    run_bokeh(img_input, port, noshow=noshow)  # pragma: no cover

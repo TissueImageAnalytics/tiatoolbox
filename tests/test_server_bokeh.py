@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 import requests
-from bokeh.client.session import ClientSession, pull_session
 from click.testing import CliRunner
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox import cli
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
@@ -63,9 +63,9 @@ def bk_session(data_path: dict[str, Path]) -> ClientSession:
     args = [
         [str(data_path["base_path"].parent)],
         5006,
-        True,
     ]
-    proc = Thread(target=run_bokeh, daemon=True, args=args)
+    kwargs = {"noshow": True}
+    proc = Thread(target=run_bokeh, daemon=True, args=args, kwargs=kwargs)
     proc.start()
     time.sleep(5)  # allow time for server to start
 
