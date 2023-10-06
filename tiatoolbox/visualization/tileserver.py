@@ -160,7 +160,7 @@ class TileServer(Flask):
         self.route("/tileserver/secondary_cmap", methods=["GET"])(
             self.get_secondary_cmap,
         )
-        self.route("/tileserver/tap_query/<float:x>/<float:y>")(self.tap_query)
+        self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
 
     def _get_session_id(self: TileServer) -> str:

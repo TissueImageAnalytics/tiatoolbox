@@ -694,7 +694,7 @@ def test_no_ann_layer(empty_app: TileServer, remote_sample: Callable) -> None:
 def test_point_query(app: TileServer) -> None:
     """Test point query."""
     with app.test_client() as client:
-        response = client.get(f"/tileserver/tap_query/{1138.52}/{1881.5}")
+        response = client.get("/tileserver/tap_query/1138.52/1881.5")
 
     assert response.status_code == 200
     props = json.loads(response.data)
@@ -703,7 +703,7 @@ def test_point_query(app: TileServer) -> None:
 
     # test tap where no annotation exists
     with app.test_client() as client:
-        response = client.get(f"/tileserver/tap_query/{-100}/{-100}")
+        response = client.get("/tileserver/tap_query/-100.0/-100.0")
 
     assert response.status_code == 200
     assert json.loads(response.data) == {}
