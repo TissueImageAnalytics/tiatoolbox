@@ -14,6 +14,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import requests
+import torch
 import yaml
 from filelock import FileLock
 from shapely.affinity import translate
@@ -874,6 +875,24 @@ def select_device(*, on_gpu: bool) -> str:
     return "cpu"
 
 
+def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
+    """Transfers model to cpu/gpu.
+
+    Args:
+        model (torch.nn.Module): PyTorch defined model.
+        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
+
+    Returns:
+        torch.nn.Module:
+            The model after being moved to cpu/gpu.
+    """
+    if on_gpu:  # DataParallel work only for cuda
+        model = torch.nn.DataParallel(model)
+        return model.to("cuda")
+
+    return model.to("cpu")
+
+
 def get_bounding_box(img: np.ndarray) -> np.ndarray:
     """Get bounding box coordinate information.
 
@@ -1223,7 +1242,7 @@ def patch_pred_store(
 
     # put patch predictions into a store
     annotations = []
-    for i in range(len(preds)):
+    for i, pred in enumerate(preds):
         if "probabilities" in keys:
             props = {
                 f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
@@ -1232,7 +1251,7 @@ def patch_pred_store(
             props = {}
         if "labels" in keys:
             props["label"] = class_dict[labels[i]]
-        props["type"] = class_dict[preds[i]]
+        props["type"] = class_dict[pred]
         annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
