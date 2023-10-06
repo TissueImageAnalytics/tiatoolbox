@@ -1215,6 +1215,7 @@ def patch_pred_store(
 
     Returns:
         SQLiteStore: An SQLiteStore containing Annotations for each patch.
+
     """
     if "coordinates" not in patch_output:
         # we cant create annotations without coordinates
