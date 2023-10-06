@@ -1,9 +1,13 @@
 """Define classes and methods for classification datasets."""
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import numpy as np
 import PIL
+from PIL import Image
 from torchvision import transforms
 
 from tiatoolbox import logger
@@ -12,6 +16,9 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import IntPair, Resolution, Units
 
 
 class _TorchPreprocCaller:
@@ -26,16 +33,16 @@ class _TorchPreprocCaller:
 
     """
 
-    def __init__(self, preprocs) -> None:
+    def __init__(self: _TorchPreprocCaller, preprocs: list) -> None:
         self.func = transforms.Compose(preprocs)
 
-    def __call__(self, img):
+    def __call__(self: _TorchPreprocCaller, img: np.ndarray) -> Image:
         img = PIL.Image.fromarray(img)
         img = self.func(img)
         return img.permute(1, 2, 0)
 
 
-def predefined_preproc_func(dataset_name):
+def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
     """Get the preprocessing information used for the pretrained model.
 
     Args:
@@ -73,11 +80,11 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
       `torch.utils.data.Dataset` class.
 
     Attributes:
-        inputs:
+        inputs (list or np.ndarray):
             Either a list of patches, where each patch is a ndarray or a
             list of valid path with its extension be (".jpg", ".jpeg",
             ".tif", ".tiff", ".png") pointing to an image.
-        labels:
+        labels (list):
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
 
@@ -93,7 +100,11 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
 
     """
 
-    def __init__(self, inputs, labels=None) -> None:
+    def __init__(
+        self: PatchDataset,
+        inputs: np.ndarray | list,
+        labels: list | None = None,
+    ) -> None:
         """Initialize :class:`PatchDataset`."""
         super().__init__()
 
@@ -105,7 +116,7 @@ class PatchDataset(dataset_abc.PatchDatasetABC):
         # perform check on the input
         self._check_input_integrity(mode="patch")
 
-    def __getitem__(self, idx):
+    def __getitem__(self: PatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
         patch = self.inputs[idx]
 
@@ -151,18 +162,19 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
     """
 
-    def __init__(
-        self,
-        img_path,
-        mode="wsi",
-        mask_path=None,
-        patch_input_shape=None,
-        stride_shape=None,
-        resolution=None,
-        units=None,
-        auto_get_mask=True,
-        min_mask_ratio=0,
-        preproc_func=None,
+    def __init__(  # noqa: PLR0913, PLR0915
+        self: WSIPatchDataset,
+        img_path: str | Path,
+        mode: str = "wsi",
+        mask_path: str | Path | None = None,
+        patch_input_shape: IntPair = None,
+        stride_shape: IntPair = None,
+        resolution: Resolution = None,
+        units: Units = None,
+        min_mask_ratio: float = 0,
+        preproc_func: Callable | None = None,
+        *,
+        auto_get_mask: bool = True,
     ) -> None:
         """Create a WSI-level patch dataset.
 
@@ -187,20 +199,20 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
                 stride shape to read at requested `resolution` and
                 `units`. Expected to be positive and of (height, width).
                 Note, this is not at level 0.
-            resolution:
+            resolution (Resolution):
                 Check (:class:`.WSIReader`) for details. When
                 `mode='tile'`, value is fixed to be `resolution=1.0` and
                 `units='baseline'` units: check (:class:`.WSIReader`) for
                 details.
-            units:
+            units (Units):
                 Units in which `resolution` is defined.
-            auto_get_mask:
+            auto_get_mask (bool):
                 If `True`, then automatically get simple threshold mask using
                 WSIReader.tissue_mask() function.
-            min_mask_ratio:
+            min_mask_ratio (float):
                 Only patches with positive area percentage above this value are
                 included. Defaults to 0.
-            preproc_func:
+            preproc_func (Callable):
                 Preprocessing function used to transform the input data. If
                 supplied, the function will be called on each patch before
                 returning it.
@@ -235,14 +247,14 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         if (
             not np.issubdtype(patch_input_shape.dtype, np.integer)
-            or np.size(patch_input_shape) > 2
+            or np.size(patch_input_shape) > 2  # noqa: PLR2004
             or np.any(patch_input_shape < 0)
         ):
             msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
             raise ValueError(msg)
         if (
             not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2
+            or np.size(stride_shape) > 2  # noqa: PLR2004
             or np.any(stride_shape < 0)
         ):
             msg = f"Invalid `stride_shape` value {stride_shape}."
@@ -331,7 +343,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         # Perform check on the input
         self._check_input_integrity(mode="wsi")
 
-    def __getitem__(self, idx):
+    def __getitem__(self: WSIPatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image

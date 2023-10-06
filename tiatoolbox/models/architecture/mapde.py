@@ -73,7 +73,7 @@ class MapDe(MicroNet):
     """
 
     def __init__(
-        self,
+        self: MapDe,
         num_input_channels: int = 3,
         min_distance: int = 4,
         threshold_abs: float = 250,
@@ -210,7 +210,7 @@ class MapDe(MicroNet):
         )
         self.dist_filter.requires_grad = False
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self: MapDe, input_tensor: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -230,7 +230,7 @@ class MapDe(MicroNet):
         return F.relu(out)
 
     #  skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
+    def postproc(self: MapDe, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 
         Performs peak detection and extracts coordinates in x, y format.
@@ -256,7 +256,8 @@ class MapDe(MicroNet):
     @staticmethod
     def infer_batch(
         model: torch.nn.Module,
-        batch_data: np.ndarray,
+        batch_data: torch.Tensor,
+        *,
         on_gpu: bool,
     ) -> list[np.ndarray]:
         """Run inference on an input batch.
@@ -280,7 +281,7 @@ class MapDe(MicroNet):
         """
         patch_imgs = batch_data
 
-        device = select_device(on_gpu)
+        device = select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 

@@ -23,17 +23,17 @@ class PatchExtractorABC(ABC):
     """Abstract base class for Patch Extraction in tiatoolbox."""
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self: PatchExtractorABC) -> None:
         """Return an iterator for the given object."""
         raise NotImplementedError
 
     @abstractmethod
-    def __next__(self):
+    def __next__(self: PatchExtractorABC) -> None:
         """Return the next item for the iteration."""
         raise NotImplementedError
 
     @abstractmethod
-    def __getitem__(self, item: int):
+    def __getitem__(self: PatchExtractorABC, item: int) -> None:
         """Get an item from the dataset."""
         raise NotImplementedError
 
@@ -42,7 +42,7 @@ class PatchExtractor(PatchExtractorABC):
     """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, Path, :class:`numpy.ndarray`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
@@ -76,8 +76,8 @@ class PatchExtractor(PatchExtractorABC):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
         min_mask_ratio (float):
             Area in percentage that a patch needs to contain of positive
@@ -117,7 +117,7 @@ class PatchExtractor(PatchExtractorABC):
     """
 
     def __init__(
-        self,
+        self: PatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
         input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
@@ -125,8 +125,9 @@ class PatchExtractor(PatchExtractorABC):
         units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
-        within_bound: bool = False,
         min_mask_ratio: float = 0,
+        *,
+        within_bound: bool = False,
     ) -> None:
         """Initialize :class:`PatchExtractor`."""
         if isinstance(patch_size, (tuple, list)):
@@ -166,16 +167,16 @@ class PatchExtractor(PatchExtractorABC):
             )
         self.within_bound = within_bound
 
-    def __iter__(self):
+    def __iter__(self: PatchExtractor) -> PatchExtractor:
         """Return an iterator for the given object."""
         self.n = 0
         return self
 
-    def __len__(self) -> int:
+    def __len__(self: PatchExtractor) -> int:
         """Return the number of patches in the extractor."""
         return self.locations_df.shape[0] if self.locations_df is not None else 0
 
-    def __next__(self):
+    def __next__(self: PatchExtractor) -> np.ndarray:
         """Return the next item for the iteration."""
         n = self.n
 
@@ -184,7 +185,7 @@ class PatchExtractor(PatchExtractorABC):
         self.n = n + 1
         return self[n]
 
-    def __getitem__(self, item: int):
+    def __getitem__(self: PatchExtractor, item: int) -> np.ndarray:
         """Get an item from the dataset."""
         if not isinstance(item, int):
             msg = "Index should be an integer."
@@ -206,7 +207,7 @@ class PatchExtractor(PatchExtractorABC):
             coord_space="resolution",
         )
 
-    def _generate_location_df(self):
+    def _generate_location_df(self: PatchExtractor) -> PatchExtractor:
         """Generate location list based on slide dimension.
 
         The slide dimension is calculated using units and resolution.
@@ -249,7 +250,7 @@ class PatchExtractor(PatchExtractorABC):
         wsi_shape: tuple[int, int],
         min_mask_ratio: float = 0,
         func: Callable | None = None,
-    ):
+    ) -> np.ndarray:
         """Validate patch extraction coordinates based on the input mask.
 
         This function indicates which coordinate is valid for mask-based
@@ -296,7 +297,7 @@ class PatchExtractor(PatchExtractorABC):
         ):
             msg = "`coordinates_list` should be ndarray of integer type."
             raise ValueError(msg)
-        if coordinates_list.shape[-1] != 4:
+        if coordinates_list.shape[-1] != 4:  # noqa: PLR2004
             msg = "`coordinates_list` must be of shape [N, 4]."
             raise ValueError(msg)
 
@@ -324,7 +325,10 @@ class PatchExtractor(PatchExtractorABC):
         )
         scaled_coords = list(np.int32(scaled_coords))
 
-        def default_sel_func(tissue_mask, coord):
+        def default_sel_func(
+            tissue_mask: np.ndarray,
+            coord: tuple[int, ...] | list[int, ...],
+        ) -> np.ndarray:
             """Default selection function to filter coordinates.
 
             This function selects a coordinate if the proportion of
@@ -350,9 +354,10 @@ class PatchExtractor(PatchExtractorABC):
         patch_input_shape: tuple[int, int] | np.ndarray | None = None,
         patch_output_shape: tuple[int, int] | np.ndarray | None = None,
         stride_shape: tuple[int, int] | np.ndarray | None = None,
+        *,
         input_within_bound: bool = False,
         output_within_bound: bool = False,
-    ):
+    ) -> list | np.ndarray | tuple[np.ndarray, np.ndarray]:
         """Calculate patch tiling coordinates.
 
         Args:
@@ -408,11 +413,11 @@ class PatchExtractor(PatchExtractorABC):
         patch_output_shape = np.array(patch_output_shape)
         stride_shape = np.array(stride_shape)
 
-        def validate_shape(shape):
+        def validate_shape(shape: np.ndarray) -> bool:
             """Test if the shape is valid for an image."""
             return (
                 not np.issubdtype(shape.dtype, np.integer)
-                or np.size(shape) > 2
+                or np.size(shape) > 2  # noqa: PLR2004
                 or np.any(shape < 0)
             )
 
@@ -442,18 +447,14 @@ class PatchExtractor(PatchExtractorABC):
             msg = f"`stride_shape` value {stride_shape} must > 1."
             raise ValueError(msg)
 
-        def flat_mesh_grid_coord(x, y):
+        def flat_mesh_grid_coord(x: int, y: int) -> np.ndarray:
             """Helper function to obtain coordinate grid."""
             x, y = np.meshgrid(x, y)
             return np.stack([x.flatten(), y.flatten()], axis=-1)
 
-        output_x_end = (
-            np.ceil(image_shape[0] / patch_output_shape[0]) * patch_output_shape[0]
-        )
+        output_x_end = np.ceil(image_shape[0] / stride_shape[0]) * stride_shape[0]
         output_x_list = np.arange(0, int(output_x_end), stride_shape[0])
-        output_y_end = (
-            np.ceil(image_shape[1] / patch_output_shape[1]) * patch_output_shape[1]
-        )
+        output_y_end = np.ceil(image_shape[1] / stride_shape[1]) * stride_shape[1]
         output_y_list = np.arange(0, int(output_y_end), stride_shape[1])
         output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
         output_br_list = output_tl_list + patch_output_shape[None]
@@ -520,8 +521,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
         stride(int or tuple(int)):
             Stride in (x, y) direction for patch extraction, default =
@@ -536,8 +537,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     """
 
-    def __init__(
-        self,
+    def __init__(  # noqa: PLR0913
+        self: SlidingWindowPatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
         input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
@@ -546,8 +547,9 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         stride: int | tuple[int, int] | None = None,
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
-        within_bound: bool = False,
         min_mask_ratio: float = 0,
+        *,
+        within_bound: bool = False,
     ) -> None:
         """Initialize :class:`SlidingWindowPatchExtractor`."""
         super().__init__(
@@ -563,11 +565,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         )
         if stride is None:
             self.stride = self.patch_size
+        elif isinstance(stride, (tuple, list)):
+            self.stride = (int(stride[0]), int(stride[1]))
         else:
-            if isinstance(stride, (tuple, list)):
-                self.stride = (int(stride[0]), int(stride[1]))
-            else:
-                self.stride = (int(stride), int(stride))
+            self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
 
@@ -611,14 +612,14 @@ class PointsPatchExtractor(PatchExtractor):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
 
     """
 
     def __init__(
-        self,
+        self: PointsPatchExtractor,
         input_img: str | Path | np.ndarray,
         locations_list: np.ndarray | DataFrame | str | Path,
         patch_size: int | tuple[int, int] = (224, 224),
@@ -626,6 +627,7 @@ class PointsPatchExtractor(PatchExtractor):
         units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
+        *,
         within_bound: bool = False,
     ) -> None:
         """Initialize :class:`PointsPatchExtractor`."""
@@ -650,15 +652,8 @@ class PointsPatchExtractor(PatchExtractor):
 
 def get_patch_extractor(
     method_name: str,
-    **kwargs: Path
-    | wsireader.WSIReader
-    | None
-    | str
-    | int
-    | tuple[int, int]
-    | float
-    | tuple[float, float],
-):
+    **kwargs: Path | wsireader.WSIReader | None | str | float | tuple[float, float],
+) -> PatchExtractor:
     """Return a patch extractor object as requested.
 
     Args:

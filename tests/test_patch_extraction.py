@@ -1,6 +1,9 @@
 """Test for code related to patch extraction."""
 
-import pathlib
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -15,15 +18,18 @@ from tiatoolbox.wsicore.wsireader import (
     VirtualWSIReader,
 )
 
+if TYPE_CHECKING:
+    from tiatoolbox.typing import IntPair, Resolution, Units
+
 
 def read_points_patches(
-    input_img,
-    locations_list,
-    patch_size=(20, 20),
-    units="level",
-    resolution=0.0,
-    item=2,
-):
+    input_img: str | Path,
+    locations_list: str | Path | float,
+    patch_size: IntPair = (20, 20),
+    units: Units = "level",
+    resolution: Resolution = 0.0,
+    item: int = 2,
+) -> np.ndarray:
     """Read patches with the help of PointsPatchExtractor using different formats."""
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
@@ -65,18 +71,18 @@ def read_points_patches(
     return data
 
 
-def test_patch_extractor(source_image):
+def test_patch_extractor(source_image: Path) -> None:
     """Test base class patch extractor."""
-    input_img = misc.imread(pathlib.Path(source_image))
+    input_img = misc.imread(Path(source_image))
     patches = patchextraction.PatchExtractor(input_img=input_img, patch_size=(20, 20))
     next_patches = iter(patches)
     assert next_patches.n == 0
 
 
-def test_get_patch_extractor(source_image, patch_extr_csv):
+def test_get_patch_extractor(source_image: Path, patch_extr_csv: Path) -> None:
     """Test get_patch_extractor returns the right object."""
-    input_img = misc.imread(pathlib.Path(source_image))
-    locations_list = pathlib.Path(patch_extr_csv)
+    input_img = misc.imread(Path(source_image))
+    locations_list = Path(patch_extr_csv)
     points = patchextraction.get_patch_extractor(
         input_img=input_img,
         locations_list=locations_list,
@@ -100,17 +106,17 @@ def test_get_patch_extractor(source_image, patch_extr_csv):
 
 
 def test_points_patch_extractor_image_format(
-    sample_svs,
-    sample_jp2,
-    source_image,
-    patch_extr_csv,
-):
+    sample_svs: Path,
+    sample_jp2: Path,
+    source_image: Path,
+    patch_extr_csv: Path,
+) -> None:
     """Test PointsPatchExtractor returns the right object."""
-    file_parent_dir = pathlib.Path(__file__).parent
-    locations_list = pathlib.Path(patch_extr_csv)
+    file_parent_dir = Path(__file__).parent
+    locations_list = Path(patch_extr_csv)
 
     points = patchextraction.get_patch_extractor(
-        input_img=pathlib.Path(source_image),
+        input_img=Path(source_image),
         locations_list=locations_list,
         method_name="point",
         patch_size=(200, 200),
@@ -119,7 +125,7 @@ def test_points_patch_extractor_image_format(
     assert isinstance(points.wsi, VirtualWSIReader)
 
     points = patchextraction.get_patch_extractor(
-        input_img=pathlib.Path(sample_svs),
+        input_img=Path(sample_svs),
         locations_list=locations_list,
         method_name="point",
         patch_size=(200, 200),
@@ -128,7 +134,7 @@ def test_points_patch_extractor_image_format(
     assert isinstance(points.wsi, OpenSlideWSIReader)
 
     points = patchextraction.get_patch_extractor(
-        input_img=pathlib.Path(sample_jp2),
+        input_img=Path(sample_jp2),
         locations_list=locations_list,
         method_name="point",
         patch_size=(200, 200),
@@ -136,7 +142,7 @@ def test_points_patch_extractor_image_format(
 
     assert isinstance(points.wsi, JP2WSIReader)
 
-    false_image = pathlib.Path(file_parent_dir.joinpath("data/source_image.test"))
+    false_image = Path(file_parent_dir.joinpath("data/source_image.test"))
     with pytest.raises(FileNotSupportedError):
         _ = patchextraction.get_patch_extractor(
             input_img=false_image,
@@ -147,56 +153,56 @@ def test_points_patch_extractor_image_format(
 
 
 def test_points_patch_extractor(
-    patch_extr_vf_image,
-    patch_extr_npy_read,
-    patch_extr_csv,
-    patch_extr_npy,
-    patch_extr_2col_npy,
-    patch_extr_json,
-    patch_extr_csv_noheader,
-):
+    patch_extr_vf_image: Path,
+    patch_extr_npy_read: Path,
+    patch_extr_csv: Path,
+    patch_extr_npy: Path,
+    patch_extr_2col_npy: Path,
+    patch_extr_json: Path,
+    patch_extr_csv_noheader: Path,
+) -> None:
     """Test PointsPatchExtractor for VirtualWSIReader."""
-    input_img = pathlib.Path(patch_extr_vf_image)
+    input_img = Path(patch_extr_vf_image)
 
-    saved_data = np.load(str(pathlib.Path(patch_extr_npy_read)))
+    saved_data = np.load(str(Path(patch_extr_npy_read)))
 
-    locations_list = pathlib.Path(patch_extr_csv)
+    locations_list = Path(patch_extr_csv)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = pathlib.Path(patch_extr_npy)
+    locations_list = Path(patch_extr_npy)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = pathlib.Path(patch_extr_2col_npy)
+    locations_list = Path(patch_extr_2col_npy)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = pathlib.Path(patch_extr_json)
+    locations_list = Path(patch_extr_json)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
-    locations_list = pathlib.Path(patch_extr_csv_noheader)
+    locations_list = Path(patch_extr_csv_noheader)
     data = read_points_patches(input_img, locations_list, item=23)
 
     assert np.all(data == saved_data)
 
 
 def test_points_patch_extractor_svs(
-    sample_svs,
-    patch_extr_svs_csv,
-    patch_extr_svs_npy_read,
-):
+    sample_svs: Path,
+    patch_extr_svs_csv: Path,
+    patch_extr_svs_npy_read: Path,
+) -> None:
     """Test PointsPatchExtractor for svs image."""
-    locations_list = pathlib.Path(patch_extr_svs_csv)
-    saved_data = np.load(str(pathlib.Path(patch_extr_svs_npy_read)))
+    locations_list = Path(patch_extr_svs_csv)
+    saved_data = np.load(str(Path(patch_extr_svs_npy_read)))
 
     data = read_points_patches(
-        pathlib.Path(sample_svs),
+        Path(sample_svs),
         locations_list,
         item=2,
         patch_size=(100, 100),
@@ -208,16 +214,16 @@ def test_points_patch_extractor_svs(
 
 
 def test_points_patch_extractor_jp2(
-    sample_jp2,
-    patch_extr_svs_csv,
-    patch_extr_jp2_read,
-):
+    sample_jp2: Path,
+    patch_extr_svs_csv: Path,
+    patch_extr_jp2_read: Path,
+) -> None:
     """Test PointsPatchExtractor for jp2 image."""
-    locations_list = pathlib.Path(patch_extr_svs_csv)
-    saved_data = np.load(str(pathlib.Path(patch_extr_jp2_read)))
+    locations_list = Path(patch_extr_svs_csv)
+    saved_data = np.load(str(Path(patch_extr_jp2_read)))
 
     data = read_points_patches(
-        pathlib.Path(sample_jp2),
+        Path(sample_jp2),
         locations_list,
         item=2,
         patch_size=(100, 100),
@@ -228,9 +234,9 @@ def test_points_patch_extractor_jp2(
     assert np.all(data == saved_data)
 
 
-def test_sliding_windowpatch_extractor(patch_extr_vf_image):
+def test_sliding_windowpatch_extractor(patch_extr_vf_image: Path) -> None:
     """Test SlidingWindowPatchExtractor for VF."""
-    input_img = pathlib.Path(patch_extr_vf_image)
+    input_img = Path(patch_extr_vf_image)
 
     stride = (20, 20)
     patch_size = (200, 200)
@@ -248,7 +254,7 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
 
     num_patches_img = len(coord_list)
     img_patches = np.zeros(
-        (num_patches_img, patch_size[1], patch_size[0], 3),
+        shape=(num_patches_img, patch_size[1], patch_size[0], 3),
         dtype=img.dtype,
     )
 
@@ -274,7 +280,7 @@ def test_sliding_windowpatch_extractor(patch_extr_vf_image):
     assert np.all(img_patches == img_patches_test)
 
 
-def test_get_coordinates():
+def test_get_coordinates() -> None:
     """Test get tile coordinates functionality."""
     expected_output = np.array(
         [
@@ -283,9 +289,9 @@ def test_get_coordinates():
         ],
     )
     output = PatchExtractor.get_coordinates(
-        image_shape=[9, 6],
-        patch_input_shape=[4, 4],
-        stride_shape=[4, 4],
+        image_shape=(9, 6),
+        patch_input_shape=(4, 4),
+        stride_shape=(4, 4),
         input_within_bound=True,
     )
     assert np.sum(expected_output - output) == 0
@@ -301,26 +307,26 @@ def test_get_coordinates():
         ],
     )
     output = PatchExtractor.get_coordinates(
-        image_shape=[9, 6],
-        patch_input_shape=[4, 4],
-        stride_shape=[4, 4],
+        image_shape=(9, 6),
+        patch_input_shape=(4, 4),
+        stride_shape=(4, 4),
         input_within_bound=False,
     )
     assert np.sum(expected_output - output) == 0
     # test when patch shape is larger than image
     output = PatchExtractor.get_coordinates(
-        image_shape=[9, 6],
-        patch_input_shape=[9, 9],
-        stride_shape=[9, 9],
+        image_shape=(9, 6),
+        patch_input_shape=(9, 9),
+        stride_shape=(9, 9),
         input_within_bound=False,
     )
     # test when output patch shape is out of bound
     # but input is in bound
     input_bounds, output_bounds = PatchExtractor.get_coordinates(
-        image_shape=[9, 6],
-        patch_input_shape=[5, 5],
-        patch_output_shape=[4, 4],
-        stride_shape=[4, 4],
+        image_shape=(9, 6),
+        patch_input_shape=(5, 5),
+        patch_output_shape=(4, 4),
+        stride_shape=(4, 4),
         output_within_bound=True,
         input_within_bound=False,
     )
@@ -328,97 +334,106 @@ def test_get_coordinates():
     assert len(output_bounds) == 2
     # test when patch shape is larger than image
     output = PatchExtractor.get_coordinates(
-        image_shape=[9, 6],
-        patch_input_shape=[9, 9],
-        stride_shape=[9, 8],
+        image_shape=(9, 6),
+        patch_input_shape=(9, 9),
+        stride_shape=(9, 8),
         input_within_bound=True,
     )
     assert len(output) == 0
-
+    # test with stride allowing extra patch
+    output = PatchExtractor.get_coordinates(
+        image_shape=(9, 6),
+        patch_input_shape=(4, 6),
+        stride_shape=(2, 6),
+        input_within_bound=False,
+    )
+    assert len(output) == 5
+    # shouldnt give any patch with top-left corner out of bound
+    assert np.all(np.max(output[:, :2], axis=0) < np.array([9, 6]))
     # test error input form
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9j, 6],
-            patch_input_shape=[4, 4],
-            stride_shape=[4, 4],
+            image_shape=(9j, 6),
+            patch_input_shape=(4, 4),
+            stride_shape=(4, 4),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            patch_input_shape=[4, 4],
-            stride_shape=[4, 4j],
+            image_shape=(9, 6),
+            patch_input_shape=(4, 4),
+            stride_shape=(4, 4j),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            patch_input_shape=[4j, 4],
-            stride_shape=[4, 4],
+            image_shape=(9, 6),
+            patch_input_shape=(4j, 4),
+            stride_shape=(4, 4),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            patch_input_shape=[4, -1],
-            stride_shape=[4, 4],
+            image_shape=(9, 6),
+            patch_input_shape=(4, -1),
+            stride_shape=(4, 4),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, -6],
-            patch_input_shape=[4, -1],
-            stride_shape=[4, 4],
+            image_shape=(9, -6),
+            patch_input_shape=(4, -1),
+            stride_shape=(4, 4),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6, 3],
-            patch_input_shape=[4, 4],
-            stride_shape=[4, 4],
+            image_shape=(9, 6, 3),
+            patch_input_shape=(4, 4),
+            stride_shape=(4, 4),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            patch_input_shape=[4, 4, 3],
-            stride_shape=[4, 4],
+            image_shape=(9, 6),
+            patch_input_shape=(4, 4, 3),
+            stride_shape=(4, 4),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            patch_input_shape=[4, 4],
-            stride_shape=[4, 4, 3],
+            image_shape=(9, 6),
+            patch_input_shape=(4, 4),
+            stride_shape=(4, 4, 3),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"stride.*> 1.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            patch_input_shape=[4, 4],
-            stride_shape=[0, 0],
+            image_shape=(9, 6),
+            patch_input_shape=(4, 4),
+            stride_shape=(0, 0),
             input_within_bound=False,
         )
     # * invalid shape for output
     with pytest.raises(ValueError, match=r".*input.*larger.*output.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            stride_shape=[4, 4],
-            patch_input_shape=[2, 2],
-            patch_output_shape=[4, 4],
+            image_shape=(9, 6),
+            stride_shape=(4, 4),
+            patch_input_shape=(2, 2),
+            patch_output_shape=(4, 4),
             input_within_bound=False,
         )
     with pytest.raises(ValueError, match=r"Invalid.*shape.*"):
         PatchExtractor.get_coordinates(
-            image_shape=[9, 6],
-            stride_shape=[4, 4],
-            patch_input_shape=[4, 4],
-            patch_output_shape=[2, -2],
+            image_shape=(9, 6),
+            stride_shape=(4, 4),
+            patch_input_shape=(4, 4),
+            patch_output_shape=(2, -2),
             input_within_bound=False,
         )
 
 
-def test_filter_coordinates():
+def test_filter_coordinates() -> None:
     """Test different coordinate filtering functions for patch extraction."""
     bbox_list = np.array(
         [
@@ -448,7 +463,7 @@ def test_filter_coordinates():
         slide_shape,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
-    flag_list = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
+    _flag_list = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
 
     # Test for bad mask input
     with pytest.raises(
@@ -494,11 +509,14 @@ def test_filter_coordinates():
         )
 
 
-def test_mask_based_patch_extractor_ndpi(sample_ndpi, caplog):
+def test_mask_based_patch_extractor_ndpi(
+    sample_ndpi: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
     patch_size = stride = (400, 400)
-    input_img = pathlib.Path(sample_ndpi)
+    input_img = Path(sample_ndpi)
     wsi = OpenSlideWSIReader(input_img=input_img)
     slide_dimensions = wsi.info.slide_dimensions
 

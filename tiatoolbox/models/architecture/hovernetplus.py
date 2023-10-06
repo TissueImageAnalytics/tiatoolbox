@@ -80,7 +80,7 @@ class HoVerNetPlus(HoVerNet):
     """
 
     def __init__(
-        self,
+        self: HoVerNetPlus,
         num_input_channels: int = 3,
         num_types: int | None = None,
         num_layers: int | None = None,
@@ -118,7 +118,7 @@ class HoVerNetPlus(HoVerNet):
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def _proc_ls(ls_map: np.ndarray):
+    def _proc_ls(ls_map: np.ndarray) -> np.ndarray:
         """Extract Layer Segmentation map with LS Map.
 
         This function takes the layer segmentation map and applies various morphological
@@ -139,7 +139,7 @@ class HoVerNetPlus(HoVerNet):
         min_size = 20000
         kernel_size = 20
 
-        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")
+        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")  # noqa: PLR2004
         mask = np.where(ls_map >= 1, 1, 0).astype("uint8")
         epith_all = epith_all > 0
         epith_mask = morphology.remove_small_objects(
@@ -180,7 +180,7 @@ class HoVerNetPlus(HoVerNet):
         return ls_map.astype("uint8")
 
     @staticmethod
-    def _get_layer_info(pred_layer):
+    def _get_layer_info(pred_layer: np.ndarray) -> dict:
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
@@ -231,7 +231,7 @@ class HoVerNetPlus(HoVerNet):
 
     @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: list[np.ndarray]):
+    def postproc(raw_maps: list[np.ndarray]) -> tuple:
         """Post-processing script for image tiles.
 
         Args:
@@ -320,7 +320,7 @@ class HoVerNetPlus(HoVerNet):
         return pred_inst, nuc_inst_info_dict, pred_layer, layer_info_dict
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool) -> tuple:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o
@@ -338,7 +338,7 @@ class HoVerNetPlus(HoVerNet):
         """
         patch_imgs = batch_data
 
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 

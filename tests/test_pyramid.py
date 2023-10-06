@@ -1,4 +1,6 @@
 """Test for tile pyramid generation."""
+from __future__ import annotations
+
 import re
 from pathlib import Path
 
@@ -13,7 +15,7 @@ from tiatoolbox.utils.image import imresize
 from tiatoolbox.wsicore import wsireader
 
 
-def test_zoomify_tile_path():
+def test_zoomify_tile_path() -> None:
     """Test Zoomify tile path generation."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -26,7 +28,7 @@ def test_zoomify_tile_path():
     assert re.match(pattern=r"\d+-\d+-\d+\.jpg", string=path.parts[1]) is not None
 
 
-def test_zoomify_len():
+def test_zoomify_len() -> None:
     """Test __len__ for ZoomifyGenerator."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -34,7 +36,7 @@ def test_zoomify_len():
     assert len(dz) == (4 * 4) + (2 * 2) + 1
 
 
-def test_zoomify_iter():
+def test_zoomify_iter() -> None:
     """Test __iter__ for ZoomifyGenerator."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -44,7 +46,7 @@ def test_zoomify_iter():
         assert tile.size == (256, 256)
 
 
-def test_tile_grid_size_invalid_level():
+def test_tile_grid_size_invalid_level() -> None:
     """Test tile_grid_size for IndexError on invalid levels."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -56,7 +58,7 @@ def test_tile_grid_size_invalid_level():
     dz.tile_grid_size(level=0)
 
 
-def test_get_tile_negative_level():
+def test_get_tile_negative_level() -> None:
     """Test for IndexError on negative levels."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -65,7 +67,7 @@ def test_get_tile_negative_level():
         dz.get_tile(-1, 0, 0)
 
 
-def test_get_tile_large_level():
+def test_get_tile_large_level() -> None:
     """Test for IndexError on too large a level."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -74,7 +76,7 @@ def test_get_tile_large_level():
         dz.get_tile(100, 0, 0)
 
 
-def test_get_tile_large_xy():
+def test_get_tile_large_xy() -> None:
     """Test for IndexError on too large an xy index."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -83,7 +85,7 @@ def test_get_tile_large_xy():
         dz.get_tile(0, 100, 100)
 
 
-def test_zoomify_tile_group_index_error():
+def test_zoomify_tile_group_index_error() -> None:
     """Test IndexError for Zoomify tile groups."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array)
@@ -92,7 +94,7 @@ def test_zoomify_tile_group_index_error():
         dz.tile_group(0, 100, 100)
 
 
-def test_zoomify_dump_options_combinations(tmp_path):
+def test_zoomify_dump_options_combinations(tmp_path: Path) -> None:
     """Test for no fatal errors on all option combinations for dump."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -114,7 +116,7 @@ def test_zoomify_dump_options_combinations(tmp_path):
             assert out_path.exists()
 
 
-def test_zoomify_dump_compression_error(tmp_path):
+def test_zoomify_dump_compression_error(tmp_path: Path) -> None:
     """Test ValueError is raised on invalid compression modes."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -131,7 +133,7 @@ def test_zoomify_dump_compression_error(tmp_path):
         dz.dump(out_path, container="tar", compression="deflate")
 
 
-def test_zoomify_dump_container_error(tmp_path):
+def test_zoomify_dump_container_error(tmp_path: Path) -> None:
     """Test ValueError is raised on invalid containers."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -142,7 +144,7 @@ def test_zoomify_dump_container_error(tmp_path):
         dz.dump(out_path, container="foo")
 
 
-def test_zoomify_dump(tmp_path):
+def test_zoomify_dump(tmp_path: Path) -> None:
     """Test dumping to directory."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -154,7 +156,7 @@ def test_zoomify_dump(tmp_path):
     assert Image.open(out_path / "TileGroup0" / "0-0-0.jpg").size == (64, 64)
 
 
-def test_get_thumb_tile():
+def test_get_thumb_tile() -> None:
     """Test getting a thumbnail tile (whole WSI in one tile)."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -166,7 +168,7 @@ def test_get_thumb_tile():
     assert np.isinf(psnr) or psnr < 40
 
 
-def test_sub_tile_levels():
+def test_sub_tile_levels() -> None:
     """Test sub-tile level generation."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -174,12 +176,17 @@ def test_sub_tile_levels():
     class MockTileGenerator(pyramid.TilePyramidGenerator):
         """Mock Tile Generator class for tests."""
 
-        def tile_path(self, level: int, x: int, y: int) -> Path:  # skipcq: PYL-R0201
+        def tile_path(
+            self: MockTileGenerator,
+            level: int,
+            x: int,
+            y: int,
+        ) -> Path:  # skipcq: PYL-R0201
             """Return path to mock tile."""
             return Path(level, x, y)
 
         @property
-        def sub_tile_level_count(self):
+        def sub_tile_level_count(self: MockTileGenerator) -> int:
             return 1
 
     dz = MockTileGenerator(wsi, tile_size=224)

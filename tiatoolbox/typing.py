@@ -1,12 +1,24 @@
 """Define Variable types for TIAToolbox."""
-from numbers import Number
-from typing import Literal, Tuple, Union
+from typing import Callable, Literal, Sequence, SupportsFloat
 
 import numpy as np
+from shapely.geometry import LineString, Point, Polygon
 
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+JSON = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
+NumPair = tuple[SupportsFloat, SupportsFloat]
+IntPair = tuple[int, int]
+
+# WSIReader
+Resolution = SupportsFloat | NumPair | np.ndarray | Sequence[SupportsFloat]
 Units = Literal["mpp", "power", "baseline", "level"]
-NumPair = Tuple[Number, Number]
-IntPair = Tuple[int, int]
-Bounds = Tuple[Number, Number, Number, Number]
-IntBounds = Tuple[int, int, int, int]
+Bounds = tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
+IntBounds = tuple[int, int, int, int]
+
+# Annotation Store
+Geometry = Point | LineString | Polygon
+Properties = JSON
+QueryGeometry = Bounds | Geometry
+CallablePredicate = Callable[[Properties], bool]
+CallableSelect = Callable[[Properties], Properties]
+Predicate = str | bytes | CallablePredicate
+Select = str | bytes | CallableSelect

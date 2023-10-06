@@ -1,4 +1,7 @@
 """Unit test package for ABC and __init__ ."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -7,19 +10,22 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 
+if TYPE_CHECKING:
+    import numpy as np
+
 
 @pytest.mark.skipif(
     toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
     reason="Local test on machine with GPU.",
 )
-def test_get_pretrained_model():
+def test_get_pretrained_model() -> None:
     """Test for downloading and creating pretrained models."""
     pretrained_info = rcParam["pretrained_model_info"]
     for pretrained_name in pretrained_info:
         get_pretrained_model(pretrained_name, overwrite=True)
 
 
-def test_model_abc():
+def test_model_abc() -> None:
     """Test API in model ABC."""
     # test missing definition for abstract
     with pytest.raises(TypeError):
@@ -30,12 +36,12 @@ def test_model_abc():
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self) -> None:
+        def __init__(self: Proto) -> None:
             super().__init__()
 
         @staticmethod
         # skipcq
-        def infer_batch():
+        def infer_batch() -> None:
             pass  # base class definition pass
 
     # skipcq
@@ -47,12 +53,12 @@ def test_model_abc():
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def forward(self):
+        def forward(self: Proto) -> None:
             pass  # base class definition pass
 
         @staticmethod
         # skipcq
-        def infer_batch():
+        def infer_batch() -> None:
             pass  # base class definition pass
 
     model = Proto()
@@ -63,21 +69,21 @@ def test_model_abc():
     # skipcq
     class Proto(ModelABC):
         # skipcq
-        def __init__(self) -> None:
+        def __init__(self: Proto) -> None:
             super().__init__()
 
         @staticmethod
         # skipcq
-        def postproc(image):
+        def postproc(image: np.ndarray) -> None:
             return image - 2
 
         # skipcq
-        def forward(self):
+        def forward(self: Proto) -> None:
             pass  # base class definition pass
 
         @staticmethod
         # skipcq
-        def infer_batch():
+        def infer_batch() -> None:
             pass  # base class definition pass
 
     model = Proto()  # skipcq

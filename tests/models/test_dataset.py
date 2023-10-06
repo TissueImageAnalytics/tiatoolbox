@@ -1,4 +1,5 @@
 """Test for predefined dataset within toolbox."""
+from __future__ import annotations
 
 import shutil
 from pathlib import Path
@@ -15,7 +16,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 class Proto1(DatasetInfoABC):
     """Intentionally created to check error with new attribute a."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto1) -> None:
         """Proto1 initialization."""
         self.a = "a"
 
@@ -23,7 +24,7 @@ class Proto1(DatasetInfoABC):
 class Proto2(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto2) -> None:
         """Proto2 initialization."""
         self.inputs = "a"
 
@@ -31,7 +32,7 @@ class Proto2(DatasetInfoABC):
 class Proto3(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and labels."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto3) -> None:
         """Proto3 initialization."""
         self.inputs = "a"
         self.labels = "a"
@@ -40,13 +41,13 @@ class Proto3(DatasetInfoABC):
 class Proto4(DatasetInfoABC):
     """Intentionally created to check error with attribute inputs and label names."""
 
-    def __init__(self) -> None:
+    def __init__(self: Proto4) -> None:
         """Proto4 initialization."""
         self.inputs = "a"
         self.label_names = "a"
 
 
-def test_dataset_abc():
+def test_dataset_abc() -> None:
     """Test for ABC."""
     # test defining a subclass of dataset info but not defining
     # enforcing attributes - should crash
@@ -61,7 +62,7 @@ def test_dataset_abc():
 
 
 @pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
-def test_kather_dataset_default():
+def test_kather_dataset_default() -> None:
     """Test for kather patch dataset with default parameters."""
     # test Kather with default init
     dataset_path = rcParam["TIATOOLBOX_HOME"] / "dataset" / "kather100k-validation"
@@ -75,7 +76,7 @@ def test_kather_dataset_default():
     shutil.rmtree(dataset_path, ignore_errors=False)
 
 
-def test_kather_nonexisting_dir():
+def test_kather_nonexisting_dir() -> None:
     """Pytest for not exist dir."""
     with pytest.raises(
         ValueError,
@@ -84,7 +85,7 @@ def test_kather_nonexisting_dir():
         _ = KatherPatchDataset(save_dir_path="non-existing-path")
 
 
-def test_kather_dataset(tmp_path):
+def test_kather_dataset(tmp_path: Path) -> None:
     """Test for kather patch dataset."""
     save_dir_path = tmp_path
 

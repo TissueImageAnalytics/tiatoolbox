@@ -1,6 +1,6 @@
 """Test for stain augmentation code."""
 
-import pathlib
+from pathlib import Path
 
 import albumentations as alb
 import numpy as np
@@ -12,11 +12,11 @@ from tiatoolbox.tools.stainnorm import get_normalizer
 from tiatoolbox.utils import imread
 
 
-def test_stainaugment(source_image, norm_vahadane):
+def test_stainaugment(source_image: Path, norm_vahadane: Path) -> None:
     """Test functionality of the StainAugmentor class."""
-    source_img = imread(pathlib.Path(source_image))
+    source_img = imread(Path(source_image))
     target_img = stain_norm_target()
-    vahadane_img = imread(pathlib.Path(norm_vahadane))
+    vahadane_img = imread(Path(norm_vahadane))
 
     # Test invalid method in the input
     with pytest.raises(ValueError, match=r".*Unsupported stain extractor method.*"):

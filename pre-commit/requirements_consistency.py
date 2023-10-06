@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 import yaml
 from pkg_resources import Requirement
@@ -27,7 +28,7 @@ def parse_pip(
     dashes are considered equivalent.
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the requirements file.
         lines (list):
             List of lines to parse.
@@ -46,15 +47,15 @@ def parse_pip(
             lines = fh.readlines()
     packages = {}
     for line in lines:
-        line = line.strip()
+        line_ = line.strip()
         # Skip comment lines
-        if line.startswith("#"):
+        if line_.startswith("#"):
             continue
         # Skip blank lines
-        if not line:
+        if not line_:
             continue
         # Parse requirement
-        requirement = Requirement.parse(line)
+        requirement = Requirement.parse(line_)
         # Check for duplicate packages
         if requirement.key in packages:
             msg = f"Duplicate dependency: {requirement.name} in {file_path.name}"
@@ -69,7 +70,7 @@ def parse_conda(file_path: Path) -> dict[str, Requirement]:
     """Parse a conda requirements file.
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the requirements file.
 
     Returns:
@@ -100,11 +101,11 @@ def parse_conda(file_path: Path) -> dict[str, Requirement]:
     return packages
 
 
-def parse_setup_py(file_path) -> dict[str, Requirement]:
+def parse_setup_py(file_path: Path) -> dict[str, Requirement]:
     """Parse a setup.py file.
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the setup.py file.
 
     Returns:
@@ -130,7 +131,7 @@ def test_files_exist(root_dir: Path) -> None:
     """Test that all requirements files exist.
 
     Args:
-        root_dir (pathlib.Path):
+        root_dir (Path):
             Path to the root directory of the project.
 
     Raises:
@@ -157,7 +158,7 @@ def parse_requirements(
     """Parse a requirements file (pip or conda).
 
     Args:
-        file_path (pathlib.Path):
+        file_path (Path):
             Path to the requirements file.
         lines (list):
             List of lines to parse.
@@ -233,7 +234,7 @@ def in_common_consistent(all_requirements: dict[Path, dict[str, Requirement]]) -
     return consistent
 
 
-def main():
+def main() -> NoReturn:
     """Main entry point for the hook."""
     root = Path(__file__).parent.parent
     test_files_exist(root)
