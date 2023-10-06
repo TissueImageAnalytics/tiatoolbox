@@ -3,7 +3,6 @@ import sys
 from contextlib import suppress
 
 import requests
-
 from bokeh.application.application import SessionContext
 
 
