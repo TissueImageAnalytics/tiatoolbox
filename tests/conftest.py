@@ -64,7 +64,9 @@ def root_path(request: pytest.FixtureRequest) -> Path:
 @pytest.fixture(scope="session")
 def tmp_samples_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Return a temporary path."""
-    return tmp_path_factory.mktemp("data")
+    path = tiatoolbox.rcParam["TIATOOLBOX_HOME"] / "samples"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 @pytest.fixture(scope="session")
