@@ -1629,7 +1629,7 @@ def test_imwrite(tmp_path: Path) -> NoReturn:
         )
 
 
-def test_patch_pred_store():
+def test_patch_pred_store() -> None:
     """Test patch_pred_store."""
     # Define a mock patch_output
     patch_output = {
@@ -1654,7 +1654,7 @@ def test_patch_pred_store():
         misc.patch_pred_store(patch_output, (1.0, 1.0))
 
 
-def test_patch_pred_store_cdict():
+def test_patch_pred_store_cdict() -> None:
     """Test patch_pred_store with a class dict."""
     # Define a mock patch_output
     patch_output = {
@@ -1667,7 +1667,7 @@ def test_patch_pred_store_cdict():
     class_dict = {0: "class0", 1: "class1"}
     store = misc.patch_pred_store(patch_output, (1.0, 1.0), class_dict=class_dict)
 
-    # Check that its an SQLiteStore containing the expected annotations
+    # Check that it's an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
@@ -1677,7 +1677,7 @@ def test_patch_pred_store_cdict():
         assert "other" not in annotation.properties
 
 
-def test_patch_pred_store_sf():
+def test_patch_pred_store_sf() -> None:
     """Test patch_pred_store with scale factor."""
     # Define a mock patch_output
     patch_output = {
@@ -1688,7 +1688,7 @@ def test_patch_pred_store_sf():
     }
     store = misc.patch_pred_store(patch_output, (2.0, 2.0))
 
-    # Check that its an SQLiteStore containing the expected annotations
+    # Check that it's an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
