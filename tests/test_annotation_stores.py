@@ -2823,3 +2823,56 @@ class TestStore:
         _, store = fill_store(store_cls, ":memory:")
         result = store.query((0, 0, 1000, 1000), min_area=1)
         assert len(result) == 100  # should only get cells, pts are too small
+
+    @staticmethod
+    def test_import_from_qupath(
+        tmp_path: Path,
+        store_cls: type[AnnotationStore],
+    ) -> None:
+        """Test importing from a QuPath annotations file with measurements."""
+        # make a simple example of a .geojson exported from QuPath
+        anns = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [
+                            [
+                                [1076, 2322.55],
+                                [1073.61, 2323.23],
+                                [1072.58, 2323.88],
+                                [1070.93, 2325.61],
+                                [1076, 2322.55],
+                            ],
+                        ],
+                    },
+                    "properties": {
+                        "object_type": "detection",
+                        "isLocked": "false",
+                        "measurements": [
+                            {
+                                "name": "Detection probability",
+                                "value": 0.847621500492096,
+                            },
+                            {"name": "Area µm^2", "value": 27.739423751831055},
+                        ],
+                    },
+                },
+            ],
+        }
+        with (tmp_path / "test_annotations.geojson").open("w") as f:
+            json.dump(anns, f)
+        store = store_cls.from_geojson(
+            tmp_path / "test_annotations.geojson",
+            unpack_qupath_measurements=True,
+        )
+        assert len(store) == 1
+        ann = next(iter(store.values()))
+        assert ann.properties == {
+            "object_type": "detection",
+            "isLocked": "false",
+            "Detection probability": 0.847621500492096,
+            "Area µm^2": 27.739423751831055,
+        }
