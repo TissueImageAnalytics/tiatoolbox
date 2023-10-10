@@ -7,8 +7,6 @@ import PIL
 from PIL import Image
 from torchvision import transforms
 
-from tiatoolbox.models.dataset import dataset_abc
-
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
@@ -63,67 +61,3 @@ def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
 
     preprocs = preproc_dict[dataset_name]
     return _TorchPreprocCaller(preprocs)
-
-
-class PatchDataset(dataset_abc.PatchDatasetABC):
-    """Define PatchDataset for torch inference.
-
-    Define a simple patch dataset, which inherits from the
-      `torch.utils.data.Dataset` class.
-
-    Attributes:
-        inputs (list or np.ndarray):
-            Either a list of patches, where each patch is a ndarray or a
-            list of valid path with its extension be (".jpg", ".jpeg",
-            ".tif", ".tiff", ".png") pointing to an image.
-        labels (list):
-            List of labels for sample at the same index in `inputs`.
-            Default is `None`.
-
-    Examples:
-        >>> # A user defined preproc func and expected behavior
-        >>> preproc_func = lambda img: img/2  # reduce intensity by half
-        >>> transformed_img = preproc_func(img)
-        >>> # create a dataset to get patches preprocessed by the above function
-        >>> ds = PatchDataset(
-        ...     inputs=['/A/B/C/img1.png', '/A/B/C/img2.png'],
-        ...     labels=["labels1", "labels2"],
-        ... )
-
-    """
-
-    def __init__(
-        self: PatchDataset,
-        inputs: np.ndarray | list,
-        labels: list | None = None,
-    ) -> None:
-        """Initialize :class:`PatchDataset`."""
-        super().__init__()
-
-        self.data_is_npy_alike = False
-
-        self.inputs = inputs
-        self.labels = labels
-
-        # perform check on the input
-        self._check_input_integrity(mode="patch")
-
-    def __getitem__(self: PatchDataset, idx: int) -> dict:
-        """Get an item from the dataset."""
-        patch = self.inputs[idx]
-
-        # Mode 0 is list of paths
-        if not self.data_is_npy_alike:
-            patch = self.load_img(patch)
-
-        # Apply preprocessing to selected patch
-        patch = self._preproc(patch)
-
-        data = {
-            "image": patch,
-        }
-        if self.labels is not None:
-            data["label"] = self.labels[idx]
-            return data
-
-        return data
