@@ -20,13 +20,14 @@ if TYPE_CHECKING:  # pragma: no cover
     from multiprocessing.managers import Namespace
 
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+    from tiatoolbox.typing import IntPair, Resolution, Units
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     """Define abstract base class for patch dataset."""
 
     def __init__(
-        self,
+        self: PatchDatasetABC,
     ) -> None:
         """Initialize :class:`PatchDatasetABC`."""
         super().__init__()
@@ -36,7 +37,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         self.labels = []
 
     @staticmethod
-    def _check_shape_integrity(shapes):
+    def _check_shape_integrity(shapes: list | np.ndarray) -> None:
         """Checks the integrity of input shapes.
 
         Args:
@@ -56,7 +57,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             msg = "Images must have the same dimensions."
             raise ValueError(msg)
 
-    def _check_input_integrity(self, mode):
+    def _check_input_integrity(self: PatchDatasetABC, mode: str) -> None:
         """Check that variables received during init are valid.
 
         These checks include:
@@ -113,11 +114,15 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             raise ValueError(msg)
 
     @staticmethod
-    def load_img(path):
+    def load_img(path: str | Path) -> np.ndarray:
         """Load an image from a provided path.
 
         Args:
-            path (str): Path to an image file.
+            path (str or Path): Path to an image file.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Image as a numpy array.
 
         """
         path = Path(path)
@@ -129,12 +134,12 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         return imread(path, as_uint8=False)
 
     @staticmethod
-    def preproc(image):
+    def preproc(image: np.ndarray) -> np.ndarray:
         """Define the pre-processing of this class of loader."""
         return image
 
     @property
-    def preproc_func(self):
+    def preproc_func(self: PatchDatasetABC) -> Callable:
         """Return the current pre-processing function of this instance.
 
         The returned function is expected to behave as follows:
@@ -144,7 +149,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         return self._preproc
 
     @preproc_func.setter
-    def preproc_func(self, func):
+    def preproc_func(self: PatchDatasetABC, func: Callable) -> None:
         """Set the pre-processing function for this instance.
 
         If `func=None`, the method will default to `self.preproc`.
@@ -162,12 +167,12 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             msg = f"{func} is not callable!"
             raise ValueError(msg)
 
-    def __len__(self) -> int:
+    def __len__(self: PatchDatasetABC) -> int:
         """Return the length of the instance attributes."""
         return len(self.inputs)
 
     @abstractmethod
-    def __getitem__(self, idx):
+    def __getitem__(self: PatchDatasetABC, idx: int) -> None:
         """Get an item from the dataset."""
         ...  # pragma: no cover
 
@@ -213,12 +218,12 @@ class WSIStreamDataset(torch_data.Dataset):
     """
 
     def __init__(
-        self,
+        self: WSIStreamDataset,
         ioconfig: IOSegmentorConfig,
         wsi_paths: list[str | Path],
         mp_shared_space: Namespace,
         preproc: Callable[[np.ndarray], np.ndarray] | None = None,
-        mode="wsi",
+        mode: str = "wsi",
     ) -> None:
         """Initialize :class:`WSIStreamDataset`."""
         super().__init__()
@@ -240,7 +245,7 @@ class WSIStreamDataset(torch_data.Dataset):
         self.wsi_idx = None  # to be received externally via thread communication
         self.reader = None
 
-    def _get_reader(self, img_path):
+    def _get_reader(self: WSIStreamDataset, img_path: str | Path) -> WSIReader:
         """Get appropriate reader for input path."""
         img_path = Path(img_path)
         if self.mode == "wsi":
@@ -261,12 +266,12 @@ class WSIStreamDataset(torch_data.Dataset):
             info=metadata,
         )
 
-    def __len__(self) -> int:
+    def __len__(self: WSIStreamDataset) -> int:
         """Return the length of the instance attributes."""
         return len(self.mp_shared_space.patch_inputs)
 
     @staticmethod
-    def collate_fn(batch):
+    def collate_fn(batch: list | np.ndarray) -> torch.Tensor:
         """Prototype to handle reading exception.
 
         This will exclude any sample with `None` from the batch. As
@@ -278,7 +283,7 @@ class WSIStreamDataset(torch_data.Dataset):
         batch = [v for v in batch if v is not None]
         return torch.utils.data.dataloader.default_collate(batch)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self: WSIStreamDataset, idx: int) -> tuple:
         """Get an item from the dataset."""
         # ! no need to lock as we do not modify source value in shared space
         if self.wsi_idx != self.mp_shared_space.wsi_idx:
@@ -341,18 +346,18 @@ class WSIPatchDataset(PatchDatasetABC):
     """
 
     def __init__(  # noqa: PLR0913, PLR0915
-        self,
-        img_path,
-        mode="wsi",
-        mask_path=None,
-        patch_input_shape=None,
-        stride_shape=None,
-        resolution=None,
-        units=None,
-        min_mask_ratio=0,
-        preproc_func=None,
+        self: WSIPatchDataset,
+        img_path: str | Path,
+        mode: str = "wsi",
+        mask_path: str | Path | None = None,
+        patch_input_shape: IntPair = None,
+        stride_shape: IntPair = None,
+        resolution: Resolution = None,
+        units: Units = None,
+        min_mask_ratio: float = 0,
+        preproc_func: Callable | None = None,
         *,
-        auto_get_mask=True,
+        auto_get_mask: bool = True,
     ) -> None:
         """Create a WSI-level patch dataset.
 
@@ -377,20 +382,20 @@ class WSIPatchDataset(PatchDatasetABC):
                 stride shape to read at requested `resolution` and
                 `units`. Expected to be positive and of (height, width).
                 Note, this is not at level 0.
-            resolution:
+            resolution (Resolution):
                 Check (:class:`.WSIReader`) for details. When
                 `mode='tile'`, value is fixed to be `resolution=1.0` and
                 `units='baseline'` units: check (:class:`.WSIReader`) for
                 details.
-            units:
+            units (Units):
                 Units in which `resolution` is defined.
-            auto_get_mask:
+            auto_get_mask (bool):
                 If `True`, then automatically get simple threshold mask using
                 WSIReader.tissue_mask() function.
-            min_mask_ratio:
+            min_mask_ratio (float):
                 Only patches with positive area percentage above this value are
                 included. Defaults to 0.
-            preproc_func:
+            preproc_func (Callable):
                 Preprocessing function used to transform the input data. If
                 supplied, the function will be called on each patch before
                 returning it.
@@ -521,7 +526,7 @@ class WSIPatchDataset(PatchDatasetABC):
         # Perform check on the input
         self._check_input_integrity(mode="wsi")
 
-    def __getitem__(self, idx):
+    def __getitem__(self: WSIPatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
         coords = self.inputs[idx]
         # Read image patch from the whole-slide image
@@ -546,11 +551,11 @@ class PatchDataset(PatchDatasetABC):
       `torch.utils.data.Dataset` class.
 
     Attributes:
-        inputs:
+        inputs (list or np.ndarray):
             Either a list of patches, where each patch is a ndarray or a
             list of valid path with its extension be (".jpg", ".jpeg",
             ".tif", ".tiff", ".png") pointing to an image.
-        labels:
+        labels (list):
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
 

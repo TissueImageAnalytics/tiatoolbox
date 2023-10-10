@@ -1,7 +1,14 @@
 """Define classes and methods for classification datasets."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import PIL
+from PIL import Image
 from torchvision import transforms
+
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
 
 
 class _TorchPreprocCaller:
@@ -16,16 +23,16 @@ class _TorchPreprocCaller:
 
     """
 
-    def __init__(self, preprocs) -> None:
+    def __init__(self: _TorchPreprocCaller, preprocs: list) -> None:
         self.func = transforms.Compose(preprocs)
 
-    def __call__(self, img):
+    def __call__(self: _TorchPreprocCaller, img: np.ndarray) -> Image:
         img = PIL.Image.fromarray(img)
         img = self.func(img)
         return img.permute(1, 2, 0)
 
 
-def predefined_preproc_func(dataset_name):
+def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
     """Get the preprocessing information used for the pretrained model.
 
     Args:
