@@ -1,13 +1,12 @@
 """Test tiatoolbox.models.engine.engine_abc."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
 import pytest
-import zarr
-import os
 
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
@@ -218,7 +217,7 @@ def test_engine_run() -> NoReturn:
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False)
-    assert os.path.exists(out), f"Zarr output file does not exist"
+    assert os.path.exists(out), "Zarr output file does not exist"
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
@@ -226,12 +225,12 @@ def test_engine_run() -> NoReturn:
         on_gpu=False,
         verbose=False,
     )
-    assert os.path.exists(out), f"Zarr output file does not exist"
-    
+    assert os.path.exists(out), "Zarr output file does not exist"
+
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         labels=list(range(10)),
         on_gpu=False,
     )
-    assert os.path.exists(out), f"Zarr output file does not exist"
+    assert os.path.exists(out), "Zarr output file does not exist"

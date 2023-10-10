@@ -5,13 +5,13 @@ import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
-import numcodecs
-import zarr
 
+import numcodecs
 import numpy as np
 import pandas as pd
 import torch
 import tqdm
+import zarr
 from torch import nn
 
 from tiatoolbox import logger
@@ -363,29 +363,35 @@ class EngineABC(ABC):
         raw_predictions: dict,
         output_type: str = "zarr",
         save_dir: Path | None = None,
-        **kwargs: dict
+        **kwargs: dict,
     ) -> Path | AnnotationStore:
-
         """Post-process an image patches."""
         # Create a Zarr and return the Path
 
         if not save_dir:
-           save_dir = Path.cwd()
+            save_dir = Path.cwd()
 
         """ Compressor and Chunks defaults set if not received from kwargs """
-        compressor = kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+        compressor = (
+            kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+        )
         chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
         path_to_output_file = save_dir / "output.zarr"
 
         # save to zarr
         predictions_array = np.array(raw_predictions["predictions"])
-        z = zarr.open(path_to_output_file, mode='w', shape=predictions_array.shape, chunks=chunks, compressor=compressor)
+        z = zarr.open(
+            path_to_output_file,
+            mode="w",
+            shape=predictions_array.shape,
+            chunks=chunks,
+            compressor=compressor,
+        )
         z[:] = predictions_array
 
-        if output_type is "AnnotationStore":
+        if output_type == "AnnotationStore":
             pass
-            # create_AnnotationStore()
 
         return path_to_output_file
 
