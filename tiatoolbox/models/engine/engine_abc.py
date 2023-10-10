@@ -475,7 +475,7 @@ class EngineABC(ABC):
         overwrite: bool = False,
         output_type: str = "dict",
         **kwargs: dict,
-    ) -> AnnotationStore | np.ndarray | pd.DataFrame | dict | str:
+    ) -> AnnotationStore | str:
         """Run the engine on input images.
 
         Args:

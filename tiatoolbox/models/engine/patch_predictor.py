@@ -17,7 +17,12 @@ from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import Resolution, Units
+    import os
+
+    from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.typing import IntPair, Resolution, Units
+
+    from .io_config import ModelIOConfigABC
 
 from .engine_abc import EngineABC
 from .io_config import IOPatchPredictorConfig
@@ -201,7 +206,7 @@ class PatchPredictor(EngineABC):
     """
 
     def __init__(
-        self,
+        self: PatchPredictor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_post_proc_workers: int = 0,
@@ -209,7 +214,7 @@ class PatchPredictor(EngineABC):
         pretrained_model: str | None = None,
         weights: str | None = None,
         *,
-        verbose=True,
+        verbose: bool = True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
         super().__init__(
@@ -230,7 +235,11 @@ class PatchPredictor(EngineABC):
         """Model inference on a WSI."""
         ...
 
-    def post_process_patches(self: PatchPredictor) -> NoReturn:
+    def post_process_patches(
+        self: PatchPredictor,
+        raw_predictions: dict,
+        output_type: str,
+    ) -> None:
         """Post-process an image patch."""
         ...
 
@@ -247,7 +256,7 @@ class PatchPredictor(EngineABC):
         post_proc_func: Callable | None = None,
         *,
         return_raw: bool = False,
-    ):
+    ) -> np.ndarray:
         """Merge patch level predictions to form a 2-dimensional prediction map.
 
         #! Improve how the below reads.
@@ -357,14 +366,14 @@ class PatchPredictor(EngineABC):
         return output
 
     def _predict_engine(
-        self,
-        dataset,
+        self: PatchPredictor,
+        dataset: torch.utils.data.Dataset,
         *,
-        return_probabilities=False,
-        return_labels=False,
-        return_coordinates=False,
-        device="cpu",
-    ):
+        return_probabilities: bool = False,
+        return_labels: bool = False,
+        return_coordinates: bool = False,
+        device: str = "cpu",
+    ) -> np.ndarray:
         """Make a prediction on a dataset. The dataset may be mutated.
 
         Args:
@@ -450,13 +459,13 @@ class PatchPredictor(EngineABC):
         return cum_output
 
     def _update_ioconfig(
-        self,
-        ioconfig,
-        patch_input_shape,
-        stride_shape,
-        resolution,
-        units,
-    ):
+        self: PatchPredictor,
+        ioconfig: IOPatchPredictorConfig,
+        patch_input_shape: IntPair,
+        stride_shape: IntPair,
+        resolution: Resolution,
+        units: Units,
+    ) -> IOPatchPredictorConfig:
         """Update the ioconfig.
 
         Args:
@@ -522,7 +531,15 @@ class PatchPredictor(EngineABC):
             output_resolutions=[],
         )
 
-    def _predict_patch(self, imgs, labels, return_probabilities, return_labels, on_gpu):
+    def _predict_patch(
+        self: PatchPredictor,
+        imgs: list | np.ndarray,
+        labels: list,
+        *,
+        return_probabilities: bool,
+        return_labels: bool,
+        device: str,
+    ) -> np.ndarray:
         """Process patch mode.
 
         Args:
@@ -540,8 +557,8 @@ class PatchPredictor(EngineABC):
                 Whether to return per-class probabilities.
             return_labels (bool):
                 Whether to return the labels with the predictions.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                Select the device to run the engine.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -566,23 +583,24 @@ class PatchPredictor(EngineABC):
             return_probabilities=return_probabilities,
             return_labels=return_labels,
             return_coordinates=return_coordinates,
-            on_gpu=on_gpu,
+            device=device,
         )
 
     def _predict_tile_wsi(  # noqa: PLR0913
-        self,
-        imgs,
-        masks,
-        labels,
-        mode,
-        return_probabilities,
-        on_gpu,
-        ioconfig,
-        merge_predictions,
-        save_dir,
-        save_output,
-        highest_input_resolution,
-    ):
+        self: PatchPredictor,
+        imgs: list,
+        masks: list | None,
+        labels: list,
+        mode: str,
+        ioconfig: IOPatchPredictorConfig,
+        save_dir: str | Path,
+        highest_input_resolution: list[dict],
+        *,
+        save_output: bool,
+        return_probabilities: bool,
+        merge_predictions: bool,
+        on_gpu: bool,
+    ) -> list | dict:
         """Predict on Tile and WSIs.
 
         Args:
@@ -714,29 +732,51 @@ class PatchPredictor(EngineABC):
 
         return file_dict if save_output else outputs
 
-    def run(self):
+    def run(
+        self: EngineABC,
+        images: list[os | Path | WSIReader] | np.ndarray,
+        masks: list[os | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+        *,
+        patch_mode: bool = True,
+        save_dir: os | Path | None = None,  # None will not save output
+        overwrite: bool = False,
+        output_type: str = "dict",
+        **kwargs: dict,
+    ) -> AnnotationStore | str:
         """Run engine."""
-        super().run()
+        super().run(
+            images=images,
+            masks=masks,
+            labels=labels,
+            ioconfig=ioconfig,
+            patch_mode=patch_mode,
+            save_dir=save_dir,
+            overwrite=overwrite,
+            output_type=output_type,
+            **kwargs,
+        )
 
     def predict(  # noqa: PLR0913
-        self,
-        imgs,
-        masks=None,
-        labels=None,
-        mode="patch",
+        self: PatchPredictor,
+        imgs: list,
+        masks: list | None = None,
+        labels: list | None = None,
+        mode: str = "patch",
         ioconfig: IOPatchPredictorConfig | None = None,
         patch_input_shape: tuple[int, int] | None = None,
         stride_shape: tuple[int, int] | None = None,
-        resolution=None,
-        units=None,
+        resolution: Resolution | None = None,
+        units: Units = None,
         *,
-        return_probabilities=False,
-        return_labels=False,
-        on_gpu=True,
-        merge_predictions=False,
-        save_dir=None,
-        save_output=False,
-    ):
+        return_probabilities: bool = False,
+        return_labels: bool = False,
+        on_gpu: bool = True,
+        merge_predictions: bool = False,
+        save_dir: str | Path | None = None,
+        save_output: bool = False,
+    ) -> np.ndarray | list | dict:
         """Make a prediction for a list of input data.
 
         Args:
