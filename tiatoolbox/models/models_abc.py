@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 import torch
 from torch import nn
@@ -59,7 +59,7 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
 class ModelABC(ABC, nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
-    def __init__(self) -> None:
+    def __init__(self: ModelABC) -> None:
         """Initialize Abstract class ModelABC."""
         super().__init__()
         self._postproc = self.postproc
@@ -67,13 +67,13 @@ class ModelABC(ABC, nn.Module):
 
     @abstractmethod
     # This is generic abc, else pylint will complain
-    def forward(self, *args, **kwargs):
+    def forward(self: ModelABC, *args: tuple[Any, ...], **kwargs: dict) -> None:
         """Torch method, this contains logic for using layers defined in init."""
         ...  # pragma: no cover
 
     @staticmethod
     @abstractmethod
-    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, device: str):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, device: str) -> None:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as I/O aggregation.
@@ -91,22 +91,22 @@ class ModelABC(ABC, nn.Module):
         ...  # pragma: no cover
 
     @staticmethod
-    def preproc(image):
+    def preproc(image: np.ndarray) -> np.ndarray:
         """Define the pre-processing of this class of model."""
         return image
 
     @staticmethod
-    def postproc(image):
+    def postproc(image: np.ndarray) -> np.ndarray:
         """Define the post-processing of this class of model."""
         return image
 
     @property
-    def preproc_func(self):
+    def preproc_func(self: ModelABC) -> Callable:
         """Return the current pre-processing function of this instance."""
         return self._preproc
 
     @preproc_func.setter
-    def preproc_func(self, func):
+    def preproc_func(self: ModelABC, func: Callable) -> None:
         """Set the pre-processing function for this instance.
 
         If `func=None`, the method will default to `self.preproc`.
@@ -131,12 +131,12 @@ class ModelABC(ABC, nn.Module):
             self._preproc = func
 
     @property
-    def postproc_func(self):
+    def postproc_func(self: ModelABC) -> Callable:
         """Return the current post-processing function of this instance."""
         return self._postproc
 
     @postproc_func.setter
-    def postproc_func(self, func):
+    def postproc_func(self: ModelABC, func: Callable) -> None:
         """Set the pre-processing function for this instance of model.
 
         If `func=None`, the method will default to `self.postproc`.
