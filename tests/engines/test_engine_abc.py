@@ -1,7 +1,6 @@
 """Test tiatoolbox.models.engine.engine_abc."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
@@ -217,7 +216,7 @@ def test_engine_run() -> NoReturn:
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False)
-    assert os.path.exists(out), "Zarr output file does not exist"
+    assert Path.exists(out), "Zarr output file does not exist"
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
@@ -225,7 +224,7 @@ def test_engine_run() -> NoReturn:
         on_gpu=False,
         verbose=False,
     )
-    assert os.path.exists(out), "Zarr output file does not exist"
+    assert Path.exists(out), "Zarr output file does not exist"
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
@@ -233,4 +232,4 @@ def test_engine_run() -> NoReturn:
         labels=list(range(10)),
         on_gpu=False,
     )
-    assert os.path.exists(out), "Zarr output file does not exist"
+    assert Path.exists(out), "Zarr output file does not exist"
