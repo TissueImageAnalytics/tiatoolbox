@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -54,9 +58,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger  # noqa: E402
@@ -113,6 +114,9 @@ def get_view_bounds(
 ) -> tuple[float, float, float, float]:
     """Helper to get the current view bounds.
 
+    Estimates a reasonable initial view bounds based on the image
+    dimensions and the size of the viewing plot.
+
     Args:
         dims: The dimensions of the image.
         plot_size: The size of the plot.
@@ -156,11 +160,16 @@ def to_num(x: str) -> int | float | None:
         return float(x)
 
 
-def get_from_config(keys: dict, default: Any = None) -> Any:  # noqa: ANN401
+def get_from_config(keys: list[str], default: Any = None) -> Any:  # noqa: ANN401
     """Helper to get a value from a config dict.
 
-    Looks recursively in the dict values for keys.
+    Looks in the dict values for nested keys.
     The default value is returned if the key is not found.
+
+    Args:
+        keys: The nested keys to look for. e.g ["a", "b"] will look for
+            config["a"]["b"].
+        default: The default value to return if the entry is not found.
 
     """
     c_dict = doc_config.config
@@ -343,6 +352,7 @@ def build_predicate() -> str:
 
 def initialise_slide() -> None:
     """Initialise the newly selected slide."""
+    # get some slide info
     UI["vstate"].mpp = UI["vstate"].wsi.info.mpp
     if UI["vstate"].mpp is None:
         UI["vstate"].mpp = [1, 1]
@@ -352,6 +362,7 @@ def initialise_slide() -> None:
     UI["vstate"].props = []
     plot_size = np.array([UI["p"].width, UI["p"].height])
 
+    # set up initial view window
     UI["vstate"].micron_formatter.args["mpp"] = UI["vstate"].mpp[0]
     if slide_name in get_from_config(["initial_views"], {}):
         lims = doc_config["initial_views"][slide_name]
@@ -384,6 +395,7 @@ def initialise_overlay() -> None:
     """Initialise the newly selected overlay."""
     UI["vstate"].colors = list(UI["vstate"].mapper.values())
     now_active = {b.label: b.active for b in UI["type_column"].children}
+    # add type toggles for any that weren't already there
     for t in sorted(UI["vstate"].types):
         if str(t) not in now_active:
             UI["type_column"].children.append(
@@ -426,6 +438,7 @@ def initialise_overlay() -> None:
                 bind_cb_obj(UI["color_column"].children[-1], color_input_cb),
             )
 
+    # remove any that are no longer in the overlay
     for b in UI["type_column"].children.copy():
         if b.label not in UI["vstate"].types and b.label not in UI["vstate"].layer_dict:
             UI["type_column"].children.remove(b)
@@ -889,6 +902,7 @@ def handle_graph_layer(attr: MenuItemClick) -> None:  # skipcq: PY-R1000
             UI["node_source"].data[key] = graph_dict[key]
 
     if do_feats:
+        # set up the node hover tooltips to show feats
         for i in range(min(graph_dict["feats"].shape[1], MAX_FEATS)):
             # more than 10 wont really fit in hover, ignore rest
             UI["node_source"].data[graph_feat_names[i]] = graph_dict["feats"][:, i]
@@ -1019,7 +1033,7 @@ def color_input_cb(
     UI["vstate"].to_update.update(["overlay"])
 
 
-def bind_cb_obj(cb_obj: Model, cb: Callable[[Model, str, Any, Any]]) -> Callable:
+def bind_cb_obj(cb_obj: Model, cb: Callable[[Model, str, Any, Any], None]) -> Callable:
     """Wrapper to bind a callback to a bokeh object."""
 
     def wrapped(attr: str, old: Any, new: Any) -> None:  # noqa: ANN401
@@ -1029,7 +1043,7 @@ def bind_cb_obj(cb_obj: Model, cb: Callable[[Model, str, Any, Any]]) -> Callable
     return wrapped
 
 
-def bind_cb_obj_tog(cb_obj: Model, cb: Callable[[Model, Any]]) -> Callable:
+def bind_cb_obj_tog(cb_obj: Model, cb: Callable[[Model, Any], None]) -> Callable:
     """Wrapper to bind a callback to a bokeh toggle object."""
 
     def wrapped(attr: ButtonClick) -> None:
@@ -1056,6 +1070,7 @@ def to_model_cb(attr: ButtonClick) -> None:  # noqa: ARG001
 def type_cmap_cb(attr: str, old: list[str], new: list[str]) -> None:  # noqa: ARG001
     """Callback to handle changing a type-specific color property."""
     if len(new) == 0:
+        # remove type-specific coloring
         UI["type_cmap_select"].options = [*UI["vstate"].types, "graph_overlay"]
         UI["s"].put(
             f"http://{host2}:5000/tileserver/secondary_cmap",
@@ -1142,9 +1157,14 @@ def tap_event_cb(event: DoubleTap) -> None:
     }
 
 
-# run NucleusInstanceSegmentor on a region of wsi defined by the box in box_source
 def segment_on_box() -> None:
-    """Callback to run hovernet on a region of the slide."""
+    """Callback to run hovernet on a region of the slide.
+
+    Will run NucleusInstanceSegmentor on selected region of wsi defined
+    by the box in box_source.
+
+    """
+    # make a mask defining the box
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
     msg = f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}'
@@ -1173,6 +1193,7 @@ def segment_on_box() -> None:
     tmp_mask_dir = Path(tempfile.mkdtemp())
     Image.fromarray(mask).save(tmp_mask_dir / "mask.png")
 
+    # run hovernet inside the box
     UI["vstate"].model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
     inst_segmentor.predict(
         [UI["vstate"].slide_path],
@@ -1216,6 +1237,14 @@ def gather_ui_elements(  # noqa: PLR0915
 
     Defines and gathers the main UI elements for a window, excluding any
     elements that have been deactivated in the config file.
+
+    Args:
+        vstate: the ViewerState object for the window
+        win_num: the window number (0 or 1)
+
+    Returns:
+        A tuple containing the layouts for the main and extra options tabs of the UI,
+        and a dict containing all the UI elements for ease of acess.
 
     """
     # define all the various widgets
@@ -1538,7 +1567,18 @@ def gather_ui_elements(  # noqa: PLR0915
 
 
 def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
-    """Make a new window for a slide."""
+    """Make a new window for a slide.
+
+    Creates a new window for the slide, including all the UI elements and
+    the main viewing window.
+
+    Args:
+        vstate: the ViewerState object for the window
+    Returns:
+        A dict containing the UI elements and other elements associated with the
+        window that we may need to reference, for ease of access.
+
+    """
     win_num = str(len(windows))
     if len(windows) == 1:
         slide_wins.children[0].width = 800
@@ -1805,7 +1845,12 @@ def control_tabs_remove_cb(
 
 
 def setup_config_ui_settings(config: dict) -> None:
-    """Set up the UI settings from the config file."""
+    """Set up the UI settings from the config file.
+
+    Args:
+        config: a dictionary of configuration options
+
+    """
     if "UI_settings" in config:
         for k in config["UI_settings"]:
             update_renderer(k, config["UI_settings"][k])
@@ -1899,7 +1944,15 @@ class DocConfig:
         self.config["auto_load"] = get_from_config(["auto_load"], 0) == 1
 
     def setup_doc(self: DocConfig, base_doc: Document) -> tuple[Row, Tabs]:
-        """Set up the document."""
+        """Set up the document.
+
+        Args:
+            base_doc: the document to set up
+        Returns:
+            A tuple containing a layout of the main slide window(s), and
+            the controls tab.
+
+        """
         self._get_config()
 
         # set initial slide to first one in base folder
