@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Dict
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
 else:  # pragma: no cover
-    import importlib_resources  # To support Python 3.8
+    import importlib_resources  # type: ignore[import-not-found]  # To support Python 3.8
 
 import yaml
 
