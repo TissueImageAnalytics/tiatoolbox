@@ -18,6 +18,7 @@ from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import utils
+from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -734,6 +735,7 @@ def test_sub_pixel_read_incorrect_read_func_return() -> None:
     image = np.ones((10, 10))
 
     def read_func(*args: tuple, **kwargs: dict) -> np.ndarray:  # noqa: ARG001
+        """Dummy read function for tests."""
         return np.ones((5, 5))
 
     with pytest.raises(ValueError, match="incorrect size"):
@@ -752,6 +754,7 @@ def test_sub_pixel_read_empty_read_func_return() -> None:
     image = np.ones((10, 10))
 
     def read_func(*args: tuple, **kwargs: dict) -> np.ndarray:  # noqa: ARG001
+        """Dummy read function for tests."""
         return np.ones((0, 0))
 
     with pytest.raises(ValueError, match="is empty"):
@@ -1642,3 +1645,69 @@ def test_imwrite(tmp_path: Path) -> NoReturn:
             tmp_path / "thisfolderdoesnotexist" / "test_imwrite.jpg",
             img,
         )
+
+
+def test_patch_pred_store() -> None:
+    """Test patch_pred_store."""
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "other": "other",
+    }
+
+    store = misc.patch_pred_store(patch_output, (1.0, 1.0))
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 1
+        assert annotation.properties["type"] in [0, 1]
+        assert "other" not in annotation.properties
+
+    patch_output.pop("coordinates")
+    # check correct error is raised if coordinates are missing
+    with pytest.raises(ValueError, match="coordinates"):
+        misc.patch_pred_store(patch_output, (1.0, 1.0))
+
+
+def test_patch_pred_store_cdict() -> None:
+    """Test patch_pred_store with a class dict."""
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+        "other": "other",
+    }
+    class_dict = {0: "class0", 1: "class1"}
+    store = misc.patch_pred_store(patch_output, (1.0, 1.0), class_dict=class_dict)
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 1
+        assert annotation.properties["label"] in ["class0", "class1"]
+        assert annotation.properties["type"] in ["class0", "class1"]
+        assert "other" not in annotation.properties
+
+
+def test_patch_pred_store_sf() -> None:
+    """Test patch_pred_store with scale factor."""
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+    }
+    store = misc.patch_pred_store(patch_output, (2.0, 2.0))
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 4
