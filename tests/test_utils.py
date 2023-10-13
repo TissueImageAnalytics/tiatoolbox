@@ -1667,7 +1667,7 @@ def test_patch_pred_store_cdict() -> None:
     class_dict = {0: "class0", 1: "class1"}
     store = misc.patch_pred_store(patch_output, (1.0, 1.0), class_dict=class_dict)
 
-    # Check that it's an SQLiteStore containing the expected annotations
+    # Check that its an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
@@ -1688,7 +1688,7 @@ def test_patch_pred_store_sf() -> None:
     }
     store = misc.patch_pred_store(patch_output, (2.0, 2.0))
 
-    # Check that it's an SQLiteStore containing the expected annotations
+    # Check that its an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():

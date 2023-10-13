@@ -1196,6 +1196,7 @@ def patch_pred_store(
 
     Returns:
         SQLiteStore: An SQLiteStore containing Annotations for each patch.
+
     """
     if "coordinates" not in patch_output:
         # we cant create annotations without coordinates
@@ -1205,7 +1206,7 @@ def patch_pred_store(
     class_probs = patch_output.get("probabilities", [])
     preds = patch_output.get("predictions", [])
     patch_coords = np.array(patch_output.get("coordinates", []))
-    if not np.all(scale_factor == 1):
+    if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
     labels = patch_output.get("labels", [])
     # get classes to consider
@@ -1223,7 +1224,7 @@ def patch_pred_store(
 
     # put patch predictions into a store
     annotations = []
-    for i in range(len(preds)):
+    for i, pred in enumerate(preds):
         if "probabilities" in keys:
             props = {
                 f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
@@ -1232,7 +1233,7 @@ def patch_pred_store(
             props = {}
         if "labels" in keys:
             props["label"] = class_dict[labels[i]]
-        props["type"] = class_dict[preds[i]]
+        props["type"] = class_dict[pred]
         annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
