@@ -108,7 +108,7 @@ rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.ya
 def _lazy_import(name: str, module_location: Path) -> dict[str, ModuleType]:
     spec = importlib.util.spec_from_file_location(name, module_location)
     if spec is None or spec.loader is None:
-        raise ModuleNotFoundError(name=name, path=module_location)
+        raise ModuleNotFoundError(name=name, path=str(module_location))
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)

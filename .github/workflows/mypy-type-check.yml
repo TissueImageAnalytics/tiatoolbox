@@ -31,8 +31,7 @@ jobs:
     - name: Setup mypy
       run: |
         pip install mypy
-        mypy --install-types
 
     - name: Perform type checking
       run: |
-        mypy tiatoolbox/__init__.py
+        mypy --install-types --non-interactive tiatoolbox/__init__.py
