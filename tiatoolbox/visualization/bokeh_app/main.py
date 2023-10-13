@@ -59,6 +59,7 @@ from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
 
+# github actions seems unable to find tiatoolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger  # noqa: E402
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (  # noqa: E402

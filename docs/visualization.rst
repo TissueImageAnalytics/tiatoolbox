@@ -26,7 +26,7 @@ in the slides folder should be all the slides you want to use, and the overlays 
 When a slide is selected in the interface, any valid overlay file that can be found that *contains the same name* (not including extension) will be available to overlay upon it.
 
 Segmentation
-^^^^^^^^^^^^^
+^^^^^^^^^^^^
 
 The best way of getting segmentations (in the form of contours) into the visualization is by putting them in an AnnotationStore (more information about hte tiatoolbox annotation store can be found at :obj:`storage <tiatoolbox.annotation.storage>`.  The other options are .geojson, or a hovernet -style .dat, both of which can usually be loaded within the interface but will incur a small delay while the data in converted internally into an AnnotationStore.
 
