@@ -1711,6 +1711,7 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     )
     if get_from_config(["opts", "colorbar_on"], 1) == 1:
         p.add_layout(color_bar, "below")
+    vstate.cprop = get_from_config(["default_cprop"], "type")
 
     # Define UI elements
     ui_layout, extra_options, elements_dict = gather_ui_elements(vstate, win_num)
