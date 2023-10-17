@@ -85,9 +85,7 @@
   </div>
 </div>
 <div class="slide"> {{ embed(roots.slide_windows) }} </div><div class="ui"> {{ embed(roots.ui_layout) }} </div>
-<div class="description">
-  <iframe src="bokeh_app/static/{{ demo_name }}/description.html" style="border:none;" width="100%" height="100%"></iframe>
-</div>
+<div class="description"> {{ embed(roots.description) }} </div>
 <script>
   const closePopupBtn = document.getElementById('close-popup');
   const popup = document.getElementById('popup');

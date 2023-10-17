@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -54,9 +58,6 @@ from bokeh.models import (
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # github actions seems unable to find tiatoolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -106,6 +107,14 @@ class UIWrapper:
     def __getitem__(self: UIWrapper, key: str) -> Any:  # noqa: ANN401
         """Gets ui element for the active window."""
         return win_dicts[self.active][key]
+
+
+def format_info(info: dict[str, Any]) -> str:
+    """Format the slide info for display."""
+    info_str = f"<b>Slide Name: {info.pop('file_path').name}</b><br>"
+    for k, v in info.items():
+        info_str += f"{k}: {v}<br>"
+    return info_str
 
 
 def get_view_bounds(
@@ -389,6 +398,7 @@ def initialise_slide() -> None:
     init_z = get_level_by_extent((0, UI["p"].y_range.start, UI["p"].x_range.end, 0))
     UI["vstate"].init_z = init_z
     logger.warning("slide info: %s", UI["vstate"].wsi.info.as_dict(), stacklevel=2)
+    slide_info.text = format_info(UI["vstate"].wsi.info.as_dict())
 
 
 def initialise_overlay() -> None:
@@ -1227,6 +1237,14 @@ slide_wins = row(
 )
 # and the controls
 control_tabs = Tabs(tabs=[], name="ui_layout")
+# slide info div
+slide_info = Div(
+    text="",
+    name="description",
+    width=800,
+    height=200,
+    sizing_mode="stretch_width",
+)
 
 
 def gather_ui_elements(  # noqa: PLR0915
@@ -1827,6 +1845,7 @@ def control_tabs_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
         UI["vstate"].init = False
     else:
         UI.active = new
+        slide_info.text = format_info(UI["vstate"].wsi.info.as_dict())
 
 
 def control_tabs_remove_cb(
@@ -1985,6 +2004,7 @@ class DocConfig:
         base_doc.add_root(slide_wins)
         base_doc.add_root(control_tabs)
         base_doc.add_root(popup_table)
+        base_doc.add_root(slide_info)
         base_doc.title = "Tiatoolbox Visualization Tool"
         return slide_wins, control_tabs
 
