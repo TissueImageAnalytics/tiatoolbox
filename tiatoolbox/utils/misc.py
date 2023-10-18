@@ -11,11 +11,13 @@ from typing import IO, TYPE_CHECKING
 
 import cv2
 import joblib
+import numcodecs
 import numpy as np
 import pandas as pd
 import requests
 import torch
 import yaml
+import zarr
 from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import Polygon
@@ -1201,7 +1203,9 @@ def patch_pred_store(
     patch_output: dict,
     scale_factor: tuple[int, int],
     class_dict: dict | None = None,
-) -> AnnotationStore:
+    save_dir: Path | None = None,
+    output_file: str | None = None,
+) -> AnnotationStore | Path:
     """Create an SQLiteStore containing Annotations for each patch.
 
     Args:
@@ -1212,9 +1216,16 @@ def patch_pred_store(
             conversion of annotations saved at non-baseline resolution to baseline.
             Should be model_mpp/slide_mpp.
         class_dict (dict): Optional dictionary mapping class indices to class names.
+        save_dir (str or pathlib.Path): Optional Output directory to save the Annotation
+            Store results. if the save_dir is not provided, then an SQLiteStore object
+            containing Annotations for each patch is returned.
+        output_file (str): Optional file name to save the Annotation Store results.
+            if the output_file is not provided, then an SQLiteStore object
+            containing Annotations for each patch is returned.
 
     Returns:
-        SQLiteStore: An SQLiteStore containing Annotations for each patch.
+        SQLiteStore: An SQLiteStore containing Annotations for each patch
+        or Path to file storing SQLiteStore containing Annotations for each patch
 
     """
     if "coordinates" not in patch_output:
@@ -1257,4 +1268,58 @@ def patch_pred_store(
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
+    # if a save director is provided, then dump store into a file
+    if save_dir and output_file:
+        output_file += ".db"
+        path_to_output_file = save_dir / output_file
+        save_dir.mkdir(parents=True, exist_ok=True)
+        store.dump(path_to_output_file)
+        return path_to_output_file
+
     return store
+
+def patch_pred_store_zarr(
+    raw_predictions: dict,
+    save_dir: Path,
+    output_file: str,
+    **kwargs: dict,
+) -> Path:
+    """Persists the patch predictor output to a zarr file.
+
+    Args:
+        raw_predictions (dict): A dictionary of patch prediction information.
+        save_dir (str or pathlib.Path): Output directory to save the Annotation
+            Store results. if the save_dir is not provided, then an SQLiteStore object
+            containing Annotations for each patch is returned.
+        output_file (str): File name to save the Annotation Store results.
+            if the output_file is not provided, then an SQLiteStore object
+            containing Annotations for each patch is returned.
+        **kwargs (dict):
+            Keyword Args to update patch_pred_store_zarr attributes.
+
+
+    Returns:
+        Path to zarr file storing the patch predictor output
+    
+    """
+
+    #Default values for Compressor and Chunks set if not received from kwargs.
+    compressor = (
+        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+    )
+    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+
+    # save to zarr
+    output_file += ".zarr"
+    path_to_output_file = save_dir / output_file
+    predictions_array = np.array(raw_predictions["predictions"])
+    z = zarr.open(
+        path_to_output_file,
+        mode="w",
+        shape=predictions_array.shape,
+        chunks=chunks,
+        compressor=compressor,
+    )
+    z[:] = predictions_array
+
+    return path_to_output_file
