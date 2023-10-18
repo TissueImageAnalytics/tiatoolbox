@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 class TestEngineABC(EngineABC):
     """Test EngineABC."""
 
-    def __init__(self: TestEngineABC, model: str | torch.nn.Module) -> NoReturn:
+    def __init__(self: TestEngineABC, model: str | torch.nn.Module, verbose: bool | None = None) -> NoReturn:
         """Test EngineABC init."""
-        super().__init__(model=model)
+        super().__init__(model=model, verbose=verbose)
 
     def infer_wsi(self: EngineABC) -> NoReturn:
         """Test infer_wsi."""
@@ -71,6 +71,19 @@ def test_incorrect_ioconfig() -> NoReturn:
         match=r".*provide a valid ModelIOConfigABC.*",
     ):
         engine.run(images=[], masks=[], ioconfig=None)
+
+
+def test_pretrained_ioconfig() -> NoReturn:
+    """ Test EngineABC initialization with ioconfig from the pretrained model in the toolbox """
+
+    #pre-trained model as a string
+    pretrained_model = "alexnet-kather100k"
+
+    """Test engine run without ioconfig"""
+    eng = TestEngineABC(model=pretrained_model)
+    out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False, patch_mode=True, ioconfig=None)
+    assert "predictions" in out
+    assert "labels" not in out
 
 
 def test_prepare_engines_save_dir(
@@ -215,7 +228,53 @@ def test_engine_run() -> NoReturn:
         )
 
     eng = TestEngineABC(model="alexnet-kather100k")
-    out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False)
+    out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False, patch_mode=True)
+    assert "predictions" in out
+    assert "labels" not in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        on_gpu=False,
+        verbose=False,
+    )
+    assert "predictions" in out
+    assert "labels" not in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        on_gpu=False,
+    )
+    assert "predictions" in out
+    assert "labels" in out
+
+
+def test_engine_run_with_verbose() -> NoReturn:
+    """Test engine run with verbose"""
+    """Run pytest with `-rP` option to view progress bar on the captured stderr call"""
+
+    eng = TestEngineABC(model="alexnet-kather100k", verbose=True)
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        on_gpu=False,
+    )
+
+    assert "predictions" in out
+    assert "labels" in out
+
+
+def test_patch_pred_zarr_store(
+    tmp_path: pytest.TempPathFactory
+) -> NoReturn:
+    """Test the engine run and patch pred store"""
+
+    save_dir=tmp_path / "patch_output"
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(images=np.zeros((10, 224, 224, 3), dtype=np.uint8), on_gpu=False, save_dir=save_dir, overwrite=True)
     assert Path.exists(out), "Zarr output file does not exist"
 
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -223,6 +282,8 @@ def test_engine_run() -> NoReturn:
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         on_gpu=False,
         verbose=False,
+        save_dir=save_dir,
+        overwrite=True
     )
     assert Path.exists(out), "Zarr output file does not exist"
 
@@ -231,5 +292,19 @@ def test_engine_run() -> NoReturn:
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         labels=list(range(10)),
         on_gpu=False,
+        save_dir=save_dir,
+        overwrite=True
+    )
+    assert Path.exists(out), "Zarr output file does not exist"
+
+    ''' test custom zarr output file name'''
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        on_gpu=False,
+        save_dir=save_dir,
+        overwrite=True,
+        output_file="patch_pred_output"
     )
     assert Path.exists(out), "Zarr output file does not exist"

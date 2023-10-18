@@ -6,18 +6,17 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
-import numcodecs
 import numpy as np
 import pandas as pd
 import torch
 import tqdm
-import zarr
 from torch import nn
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset
 from tiatoolbox.models.models_abc import load_torch_model, model_to
+from tiatoolbox.utils.misc import patch_pred_store, patch_pred_store_zarr
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -47,7 +46,7 @@ def prepare_engines_save_dir(
         patch_mode(bool):
             Whether to treat input image as a patch or WSI.
         overwrite (bool):
-                Whether to overwrite the results. Default = False.
+            Whether to overwrite the results. Default = False.
 
     Returns:
         :class:`Path`:
@@ -99,7 +98,7 @@ class EngineABC(ABC):
             Path to the weight of the corresponding `model`.
 
             >>> engine = EngineABC(
-            ...    pretrained_model="pretrained-model-name",
+            ...    model="pretrained-model-name",
             ...    weights="pretrained-local-weights.pth")
 
         batch_size (int):
@@ -122,7 +121,7 @@ class EngineABC(ABC):
             default = True.
         model (str | nn.Module):
             Defined PyTorch model.
-            Name of the existing models supported by the TIAToolbox for
+            Name of an existing model supported by the TIAToolbox for
             processing the data. For a full list of pretrained models,
             refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
@@ -138,7 +137,7 @@ class EngineABC(ABC):
             Whether to return the labels with the predictions.
         merge_predictions (bool):
             Whether to merge the predictions to form a 2-dimensional
-            map. This is only applicable `patch_mode` is False in inference.
+            map. This is only applicable if `patch_mode` is False in inference.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
@@ -170,22 +169,28 @@ class EngineABC(ABC):
         >>> # array of list of 2 image patches as input
         >>> import numpy as np
         >>> data = np.array([np.ndarray, np.ndarray])
-        >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
+        >>> engine = EngineABC(model="resnet18-kather100k")
+        >>> output = engine.run(data, patch_mode=True)
+
+        >>> # array of list of 2 image patches as input
+        >>> import numpy as np
+        >>> data = np.array([np.ndarray, np.ndarray])
+        >>> engine = EngineABC(model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=True)
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
-        >>> engine = EngineABC(pretrained_model="resnet18-kather100k")
+        >>> engine = EngineABC(model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=False)
 
         >>> # list of 2 image files as input
         >>> image = ['path/image1.png', 'path/image2.png']
-        >>> engine = EngineABC(pretraind_model="resnet18-kather100k")
+        >>> engine = EngineABC(model="resnet18-kather100k")
         >>> output = engine.run(image, patch_mode=False)
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
-        >>> engine = EngineABC(pretraind_model="resnet18-kather100k")
+        >>> engine = EngineABC(model="resnet18-kather100k")
         >>> output = engine.run(wsi_file, patch_mode=True)
 
     """
@@ -296,24 +301,6 @@ class EngineABC(ABC):
             shuffle=False,
         )
 
-    @staticmethod
-    def _convert_output_to_requested_type(
-        output: dict,
-        output_type: str,
-    ) -> AnnotationStore | np.ndarray | pd.DataFrame | dict | str:
-        """Converts inference output to requested type."""
-        # function convert output to output_type
-        if output_type.lower() == "array":
-            return np.array(output["predictions"])
-
-        if output_type.lower() == "json":
-            return json.dumps(output, indent=4)
-
-        if output_type.lower() == "dataframe":
-            return pd.DataFrame.from_dict(data=output)
-
-        return output
-
     def infer_patches(
         self: EngineABC,
         data_loader: DataLoader,
@@ -361,39 +348,43 @@ class EngineABC(ABC):
     def post_process_patches(
         self: EngineABC,
         raw_predictions: dict,
-        output_type: str = "zarr",
+        output_type: str,
         save_dir: Path | None = None,
         **kwargs: dict,
     ) -> Path | AnnotationStore:
-        """Post-process an image patches."""
-        # Create a Zarr and return the Path
-
+        
+        """Post-process image patches."""
+        
+        """Stores as an Annotation Store or Zarr (default) and returns the Path"""
+        
+        if not save_dir and self.patch_mode and output_type != "AnnotationStore":
+            return raw_predictions
+        
         if not save_dir:
-            save_dir = Path.cwd()
-
-        """ Compressor and Chunks defaults set if not received from kwargs """
-        compressor = (
-            kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-        )
-        chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
-
-        path_to_output_file = save_dir / "output.zarr"
-
-        # save to zarr
-        predictions_array = np.array(raw_predictions["predictions"])
-        z = zarr.open(
-            path_to_output_file,
-            mode="w",
-            shape=predictions_array.shape,
-            chunks=chunks,
-            compressor=compressor,
-        )
-        z[:] = predictions_array
-
+            raise OSError("`save_dir` not specified.") 
+        
+        output_file=kwargs["output_file"] and kwargs.pop("output_file") if "output_file" in kwargs else "output"
+        
         if output_type == "AnnotationStore":
-            pass
+            #scale_factor set from kwargs
+            scale_factor = kwargs["scale_factor"] if "scale_factor" in kwargs else None
+            #class_dict set from kwargs
+            class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
 
-        return path_to_output_file
+            return patch_pred_store(
+                raw_predictions,
+                scale_factor,
+                class_dict,
+                save_dir,
+                output_file
+            )
+        
+        return patch_pred_store_zarr(
+            raw_predictions,
+            save_dir,
+            output_file,
+            **kwargs,
+        )
 
     @abstractmethod
     def pre_process_wsi(self: EngineABC) -> NoReturn:
@@ -503,7 +494,7 @@ class EngineABC(ABC):
         overwrite: bool = False,
         output_type: str = "dict",
         **kwargs: dict,
-    ) -> AnnotationStore | str:
+    ) -> AnnotationStore | Path | str:
         """Run the engine on input images.
 
         Args:
@@ -561,8 +552,7 @@ class EngineABC(ABC):
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
-            >>> predictor = EngineABC(
-            ...                 pretrained_model="resnet18-kather100k")
+            >>> predictor = EngineABC(model="resnet18-kather100k")
             >>> output = predictor.run(wsis, patch_mode=False)
             >>> output.keys()
             ... ['wsi1.svs', 'wsi2.svs']
@@ -570,10 +560,34 @@ class EngineABC(ABC):
             ... {'raw': '0.raw.json', 'merged': '0.merged.npy'}
             >>> output['wsi2.svs']
             ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
-
+            
+            >>> predictor = EngineABC(model="alexnet-kather100k")
+            >>> output = predictor.run(
+            >>>     images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            >>>     labels=list(range(10)),
+            >>>     on_gpu=False,
+            >>>     )
+            >>> output
+            ... {'predictions': [[0.7716791033744812, 0.0111849969252944, ..., 0.034451354295015335, 0.004817609209567308]], 
+            ... 'labels': [tensor(0), tensor(1), tensor(2), tensor(3), tensor(4), tensor(5), tensor(6), tensor(7), tensor(8), tensor(9)]}
+            
+            >>> predictor = EngineABC(model="alexnet-kather100k")
+            >>> save_dir = Path("/tmp/patch_output/")
+            >>> output = eng.run(
+            >>>     images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            >>>     on_gpu=False,
+            >>>     verbose=False,
+            >>>     save_dir=save_dir,
+            >>>     overwrite=True
+            >>>     )
+            >>> output
+            ... /tmp/patch_output/output.zarr
         """
+
         for key in kwargs:
             setattr(self, key, kwargs[key])
+        
+        self.patch_mode = patch_mode
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
         self.images = self._validate_images_masks(images=images)
@@ -605,6 +619,8 @@ class EngineABC(ABC):
             return self.post_process_patches(
                 raw_predictions=raw_predictions,
                 output_type=output_type,
+                save_dir=save_dir,
+                **kwargs
             )
 
         return {"save_dir": save_dir}

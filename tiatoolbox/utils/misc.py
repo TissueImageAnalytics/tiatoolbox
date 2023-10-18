@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 import requests
 import yaml
+import zarr
+import numcodecs
 from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import Polygon
@@ -1182,7 +1184,9 @@ def patch_pred_store(
     patch_output: dict,
     scale_factor: tuple[int, int],
     class_dict: dict | None = None,
-) -> AnnotationStore:
+    save_dir: Path | None = None,
+    output_file: str | None = None,
+) -> AnnotationStore | Path:
     """Create an SQLiteStore containing Annotations for each patch.
 
     Args:
@@ -1237,5 +1241,41 @@ def patch_pred_store(
         annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    
+    if not save_dir:
+        return store
+    
+    else:
+        output_file += ".db"
+        path_to_output_file = save_dir / output_file
+        save_dir.mkdir(parents=True, exist_ok=True)
+        store.dump(path_to_output_file)
+        return path_to_output_file
 
-    return store
+def patch_pred_store_zarr(
+    raw_predictions: dict,
+    save_dir: Path,
+    output_file: str,
+    **kwargs:dict,
+) -> Path:
+    
+    """ Default values for Compressor and Chunks set if not received from kwargs """
+    compressor = (
+        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+    )
+    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+
+    # save to zarr
+    output_file += ".zarr"
+    path_to_output_file = save_dir / output_file
+    predictions_array = np.array(raw_predictions["predictions"])
+    z = zarr.open(
+        path_to_output_file,
+        mode="w",
+        shape=predictions_array.shape,
+        chunks=chunks,
+        compressor=compressor,
+    )
+    z[:] = predictions_array
+
+    return path_to_output_file
