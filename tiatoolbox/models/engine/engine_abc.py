@@ -584,7 +584,7 @@ class EngineABC(ABC):
             >>>     overwrite=True
             >>>     )
             >>> output
-            ... /tmp/patch_output/output.zarr
+            ... '/tmp/patch_output/output.zarr'
         """
         for key in kwargs:
             setattr(self, key, kwargs[key])
