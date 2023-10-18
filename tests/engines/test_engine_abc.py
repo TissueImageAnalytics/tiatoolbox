@@ -81,7 +81,7 @@ def test_pretrained_ioconfig() -> NoReturn:
     """Test EngineABC initialization with pretrained model name in the toolbox."""
     pretrained_model = "alexnet-kather100k"
 
-    #Test engine run without ioconfig
+    # Test engine run without ioconfig
     eng = TestEngineABC(model=pretrained_model)
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
