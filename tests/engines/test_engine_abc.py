@@ -78,8 +78,9 @@ def test_incorrect_ioconfig() -> NoReturn:
 
 
 def test_pretrained_ioconfig() -> NoReturn:
-    """Test EngineABC initialization with ioconfig from 
-        the pretrained model in the toolbox."""
+    """Test EngineABC initialization with ioconfig from
+    the pretrained model in the toolbox.
+    """
     # pre-trained model as a string
     pretrained_model = "alexnet-kather100k"
 
