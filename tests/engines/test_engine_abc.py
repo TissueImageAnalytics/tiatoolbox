@@ -18,7 +18,9 @@ class TestEngineABC(EngineABC):
     """Test EngineABC."""
 
     def __init__(
-        self: TestEngineABC, model: str | torch.nn.Module, verbose: bool | None = None,
+        self: TestEngineABC,
+        model: str | torch.nn.Module,
+        verbose: bool | None = None,
     ) -> NoReturn:
         """Test EngineABC init."""
         super().__init__(model=model, verbose=verbose)
