@@ -1200,14 +1200,14 @@ def patch_pred_store(
         save_dir (str or pathlib.Path): Optional Output directory to save the Annotation
             Store results. if the save_dir is not provided, then an SQLiteStore object
             containing Annotations for each patch is returned.
-        output_file (str): Optional file name to save the Annotation Store results. 
+        output_file (str): Optional file name to save the Annotation Store results.
             if the output_file is not provided, then an SQLiteStore object
             containing Annotations for each patch is returned.
 
 
     Returns:
-        SQLiteStore: An SQLiteStore containing Annotations for each patch 
-        or Path to file storing SQLiteStore containing Annotations for each patch  
+        SQLiteStore: An SQLiteStore containing Annotations for each patch
+        or Path to file storing SQLiteStore containing Annotations for each patch
 
     """
     if "coordinates" not in patch_output:
@@ -1250,14 +1250,14 @@ def patch_pred_store(
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
-    #if a save director is provided, then dump store into a file
+    # if a save director is provided, then dump store into a file
     if save_dir and output_file:
         output_file += ".db"
         path_to_output_file = save_dir / output_file
         save_dir.mkdir(parents=True, exist_ok=True)
         store.dump(path_to_output_file)
         return path_to_output_file
-    
+
     return store
 
 

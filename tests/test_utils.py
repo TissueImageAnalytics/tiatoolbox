@@ -1707,7 +1707,10 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     save_dir = tmp_path / "patch_output"
 
     store_path = misc.patch_pred_store(
-        patch_output, (1.0, 1.0), save_dir=save_dir, output_file="patch_pred_output",
+        patch_output,
+        (1.0, 1.0),
+        save_dir=save_dir,
+        output_file="patch_pred_output",
     )
 
     print("Annotation store path: ", store_path)

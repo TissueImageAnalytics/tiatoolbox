@@ -373,7 +373,11 @@ class EngineABC(ABC):
             class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
 
             return patch_pred_store(
-                raw_predictions, scale_factor, class_dict, save_dir, output_file,
+                raw_predictions,
+                scale_factor,
+                class_dict,
+                save_dir,
+                output_file,
             )
 
         return patch_pred_store_zarr(
@@ -566,10 +570,10 @@ class EngineABC(ABC):
             >>>     )
             >>> output
             ... {'predictions': [[0.7716791033744812, 0.0111849969252944, ...,
-            ... 0.034451354295015335, 0.004817609209567308]], 
-            ... 'labels': [tensor(0), tensor(1), tensor(2), tensor(3), tensor(4), 
+            ... 0.034451354295015335, 0.004817609209567308]],
+            ... 'labels': [tensor(0), tensor(1), tensor(2), tensor(3), tensor(4),
             ... tensor(5), tensor(6), tensor(7), tensor(8), tensor(9)]}
-            
+
             >>> predictor = EngineABC(model="alexnet-kather100k")
             >>> save_dir = Path("/tmp/patch_output/")
             >>> output = eng.run(
