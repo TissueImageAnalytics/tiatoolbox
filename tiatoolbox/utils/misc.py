@@ -11,12 +11,12 @@ from typing import IO, TYPE_CHECKING
 
 import cv2
 import joblib
+import numcodecs
 import numpy as np
 import pandas as pd
 import requests
 import yaml
 import zarr
-import numcodecs
 from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import Polygon
@@ -1249,7 +1249,7 @@ def patch_pred_store(
         annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
-    
+
     #if a save director is provided, then dump store into a file
     if save_dir and output_file:
         output_file += ".db"
@@ -1260,14 +1260,14 @@ def patch_pred_store(
     
     return store
 
+
 def patch_pred_store_zarr(
     raw_predictions: dict,
     save_dir: Path,
     output_file: str,
-    **kwargs:dict,
+    **kwargs: dict,
 ) -> Path:
-    
-    """ Default values for Compressor and Chunks set if not received from kwargs """
+    """Default values for Compressor and Chunks set if not received from kwargs."""
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
