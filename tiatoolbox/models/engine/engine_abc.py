@@ -1,13 +1,11 @@
 """Defines Abstract Base Class for TIAToolbox Model Engines."""
 from __future__ import annotations
 
-import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
-import pandas as pd
 import torch
 import tqdm
 from torch import nn
@@ -352,33 +350,32 @@ class EngineABC(ABC):
         save_dir: Path | None = None,
         **kwargs: dict,
     ) -> Path | AnnotationStore:
-        
         """Post-process image patches."""
-        
         """Stores as an Annotation Store or Zarr (default) and returns the Path"""
-        
+
         if not save_dir and self.patch_mode and output_type != "AnnotationStore":
             return raw_predictions
-        
+
         if not save_dir:
-            raise OSError("`save_dir` not specified.") 
-        
-        output_file=kwargs["output_file"] and kwargs.pop("output_file") if "output_file" in kwargs else "output"
-        
+            msg = "`save_dir` not specified."
+            raise OSError(msg)
+
+        output_file = (
+            kwargs["output_file"] and kwargs.pop("output_file")
+            if "output_file" in kwargs
+            else "output"
+        )
+
         if output_type == "AnnotationStore":
-            #scale_factor set from kwargs
+            # scale_factor set from kwargs
             scale_factor = kwargs["scale_factor"] if "scale_factor" in kwargs else None
-            #class_dict set from kwargs
+            # class_dict set from kwargs
             class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
 
             return patch_pred_store(
-                raw_predictions,
-                scale_factor,
-                class_dict,
-                save_dir,
-                output_file
+                raw_predictions, scale_factor, class_dict, save_dir, output_file,
             )
-        
+
         return patch_pred_store_zarr(
             raw_predictions,
             save_dir,
@@ -560,7 +557,7 @@ class EngineABC(ABC):
             ... {'raw': '0.raw.json', 'merged': '0.merged.npy'}
             >>> output['wsi2.svs']
             ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
-            
+
             >>> predictor = EngineABC(model="alexnet-kather100k")
             >>> output = predictor.run(
             >>>     images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
@@ -568,9 +565,9 @@ class EngineABC(ABC):
             >>>     on_gpu=False,
             >>>     )
             >>> output
-            ... {'predictions': [[0.7716791033744812, 0.0111849969252944, ..., 0.034451354295015335, 0.004817609209567308]], 
+            ... {'predictions': [[0.7716791033744812, 0.0111849969252944, ..., 0.034451354295015335, 0.004817609209567308]],
             ... 'labels': [tensor(0), tensor(1), tensor(2), tensor(3), tensor(4), tensor(5), tensor(6), tensor(7), tensor(8), tensor(9)]}
-            
+
             >>> predictor = EngineABC(model="alexnet-kather100k")
             >>> save_dir = Path("/tmp/patch_output/")
             >>> output = eng.run(
@@ -583,10 +580,9 @@ class EngineABC(ABC):
             >>> output
             ... /tmp/patch_output/output.zarr
         """
-
         for key in kwargs:
             setattr(self, key, kwargs[key])
-        
+
         self.patch_mode = patch_mode
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
@@ -620,7 +616,7 @@ class EngineABC(ABC):
                 raw_predictions=raw_predictions,
                 output_type=output_type,
                 save_dir=save_dir,
-                **kwargs
+                **kwargs,
             )
 
         return {"save_dir": save_dir}
