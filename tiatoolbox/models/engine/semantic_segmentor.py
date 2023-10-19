@@ -539,20 +539,20 @@ class SemanticSegmentor:
 
         if model is not None:
             self.model = torch.compile(
-                            model,
-                            mode="reduce-overhead",
-                            disable=not compiled,
-                        )
+                model,
+                mode="reduce-overhead",
+                disable=not compiled,
+            )
             # template ioconfig, usually coming from pretrained
             self.ioconfig = None
         else:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
             self.ioconfig = ioconfig
             self.model = torch.compile(
-                            model,
-                            mode="reduce-overhead",
-                            disable=not compiled,
-                        )
+                model,
+                mode="reduce-overhead",
+                disable=not compiled,
+            )
 
         # local variables for flagging mode within class,
         # subclass should have overwritten to alter some specific behavior
@@ -573,10 +573,10 @@ class SemanticSegmentor:
 
         self.dataset_class: WSIStreamDataset = dataset_class
         self.model = torch.compile(  # original copy
-                            model,
-                            mode="reduce-overhead",
-                            disable=not compiled,
-                        )
+            model,
+            mode="reduce-overhead",
+            disable=not compiled,
+        )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
@@ -1512,10 +1512,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
             num_loader_workers=num_loader_workers,
             num_postproc_workers=num_postproc_workers,
             model=torch.compile(
-                        model,
-                        mode="reduce-overhead",
-                        disable=not compiled,
-                    ),
+                model,
+                mode="reduce-overhead",
+                disable=not compiled,
+            ),
             pretrained_model=pretrained_model,
             pretrained_weights=pretrained_weights,
             verbose=verbose,
