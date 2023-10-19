@@ -1714,7 +1714,7 @@ def test_patch_pred_store_sf() -> None:
 
 
 def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store and persists predicted output to a zarr file."""
+    """Test patch_pred_store_zarr."""
     # Define a mock patch_output
     patch_output = {
         "predictions": [1, 0, 1],
@@ -1732,11 +1732,7 @@ def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
 
 
 def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store and persists predicted output and ensures the output file
-    extension is .zarr.
-    
-    """
-    
+    """Test patch_pred_store_zarr and ensures the output file extension is `.zarr`."""
     # Define a mock patch_output
     patch_output = {
         "predictions": [1, 0, 1],
