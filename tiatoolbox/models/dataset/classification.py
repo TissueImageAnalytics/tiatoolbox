@@ -162,7 +162,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
     """
 
-    def __init__(  # noqa: PLR0913, PLR0915
+    def __init__(  # noqa: PLR0915
         self: WSIPatchDataset,
         img_path: str | Path,
         mode: str = "wsi",

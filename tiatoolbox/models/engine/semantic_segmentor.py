@@ -527,22 +527,32 @@ class SemanticSegmentor:
         *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
+        compiled: bool = True,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
+        self.compiled = compiled
 
         if model is None and pretrained_model is None:
             msg = "Must provide either of `model` or `pretrained_model`"
             raise ValueError(msg)
 
         if model is not None:
-            self.model = model
+            self.model = torch.compile(
+                            model,
+                            mode="reduce-overhead",
+                            disable=not compiled,
+                        )
             # template ioconfig, usually coming from pretrained
             self.ioconfig = None
         else:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
             self.ioconfig = ioconfig
-            self.model = model
+            self.model = torch.compile(
+                            model,
+                            mode="reduce-overhead",
+                            disable=not compiled,
+                        )
 
         # local variables for flagging mode within class,
         # subclass should have overwritten to alter some specific behavior
@@ -562,7 +572,11 @@ class SemanticSegmentor:
         self.masks = None
 
         self.dataset_class: WSIStreamDataset = dataset_class
-        self.model = model  # original copy
+        self.model = torch.compile(  # original copy
+                            model,
+                            mode="reduce-overhead",
+                            disable=not compiled,
+                        )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
@@ -1490,13 +1504,18 @@ class DeepFeatureExtractor(SemanticSegmentor):
         *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
+        compiled: bool = True,
     ) -> None:
         """Initialize :class:`DeepFeatureExtractor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,
             num_postproc_workers=num_postproc_workers,
-            model=model,
+            model=torch.compile(
+                        model,
+                        mode="reduce-overhead",
+                        disable=not compiled,
+                    ),
             pretrained_model=pretrained_model,
             pretrained_weights=pretrained_weights,
             verbose=verbose,
