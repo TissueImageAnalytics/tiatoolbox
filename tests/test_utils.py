@@ -1715,7 +1715,6 @@ def test_patch_pred_store_sf() -> None:
 
 def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store and persists predicted output to a zarr file."""
-
     # Define a mock patch_output
     patch_output = {
         "predictions": [1, 0, 1],
@@ -1726,19 +1725,16 @@ def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
 
     save_path = tmp_path / "patch_output" / "output.zarr"
 
-    store_path = misc.patch_pred_store_zarr(
-        patch_output,
-        save_path=save_path
-    )
+    store_path = misc.patch_pred_store_zarr(patch_output, save_path=save_path)
 
     print("Zarr path: ", store_path)
     assert Path.exists(store_path), "Zarr output file does not exist"
 
-def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store and persists predicted output and ensures the output file 
-        extension is .zarr
-    """
 
+def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
+    """Test patch_pred_store and persists predicted output and ensures the output file
+    extension is .zarr.
+    """
     # Define a mock patch_output
     patch_output = {
         "predictions": [1, 0, 1],
@@ -1747,13 +1743,10 @@ def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
         "labels": [1, 0, 1],
     }
 
-    #sends the path of a jpeg source image, expects .zarr file in the same directory
+    # sends the path of a jpeg source image, expects .zarr file in the same directory
     save_path = tmp_path / "patch_output" / "patch.jpeg"
 
-    store_path = misc.patch_pred_store_zarr(
-        patch_output,
-        save_path=save_path
-    )
+    store_path = misc.patch_pred_store_zarr(patch_output, save_path=save_path)
 
     print("Zarr path: ", store_path)
     assert Path.exists(store_path), "Zarr output file does not exist"
@@ -1761,7 +1754,6 @@ def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
 
 def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store. and persists store output to a .db file."""
-    
     # Define a mock patch_output
     patch_output = {
         "predictions": [1, 0, 1],
@@ -1771,11 +1763,7 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     }
     save_path = tmp_path / "patch_output" / "output.db"
 
-    store_path = misc.patch_pred_store(
-        patch_output,
-        (1.0, 1.0),
-        save_path=save_path
-    )
+    store_path = misc.patch_pred_store(patch_output, (1.0, 1.0), save_path=save_path)
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"

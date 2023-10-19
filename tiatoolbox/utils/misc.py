@@ -1216,7 +1216,7 @@ def patch_pred_store(
             Should be model_mpp/slide_mpp.
         class_dict (dict): Optional dictionary mapping class indices to class names.
         save_path (str or Path): Optional Output directory to save the Annotation
-            Store results. 
+            Store results.
 
     Returns:
         SQLiteStore: An SQLiteStore containing Annotations for each patch
@@ -1265,10 +1265,10 @@ def patch_pred_store(
 
     # if a save director is provided, then dump store into a file
     if save_path:
-        #ensure parent directory exisits
+        # ensure parent directory exisits
         save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-        #ensure proper db extension
-        if save_path.suffix != ".db": 
+        # ensure proper db extension
+        if save_path.suffix != ".db":
             save_path = save_path.parent.absolute() / (save_path.stem + ".db")
         store.dump(save_path)
         return save_path
@@ -1299,7 +1299,7 @@ def patch_pred_store_zarr(
     )
     chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
-    #ensure proper zarr extension
+    # ensure proper zarr extension
     if save_path.suffix != ".zarr":
         save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
 
