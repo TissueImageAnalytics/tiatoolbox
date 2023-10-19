@@ -91,7 +91,7 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
 
 
     """
-    path_to_registry = str(path_to_registry)   # To pass tests with Python 3.8
+    path_to_registry = str(path_to_registry)  # To pass tests with Python 3.8
     pretrained_files_registry_path = importlib_resources.as_file(
         importlib_resources.files("tiatoolbox") / path_to_registry,
     )
