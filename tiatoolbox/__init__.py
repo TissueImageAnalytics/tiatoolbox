@@ -9,12 +9,14 @@ from typing import TYPE_CHECKING
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
 else:  # pragma: no cover
-    import importlib_resources  # To support Python 3.8
+    # To support Python 3.8
+    import importlib_resources  # type: ignore[import-not-found]
 
 import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
     from logging import LogRecord
+    from types import ModuleType
 
 __author__ = """TIA Centre"""
 __email__ = "tialab@dcs.warwick.ac.uk"
@@ -71,6 +73,7 @@ class DuplicateFilter(logging.Filter):
 
 
 # runtime context parameters
+rcParam: dict[str, str | Path | dict]  # noqa: N816
 rcParam = {  # noqa: N816
     "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
 }
@@ -88,6 +91,7 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
 
 
     """
+    path_to_registry = str(path_to_registry)  # To pass tests with Python 3.8
     pretrained_files_registry_path = importlib_resources.as_file(
         importlib_resources.files("tiatoolbox") / path_to_registry,
     )
@@ -101,8 +105,10 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
 rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.yaml")
 
 
-def _lazy_import(name: str, module_location: Path) -> sys.modules:
+def _lazy_import(name: str, module_location: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, module_location)
+    if spec is None or spec.loader is None:
+        raise ModuleNotFoundError(name=name, path=str(module_location))
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)
