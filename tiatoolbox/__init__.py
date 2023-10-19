@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
