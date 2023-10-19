@@ -1275,6 +1275,7 @@ def patch_pred_store(
 
     return store
 
+
 def patch_pred_store_zarr(
     raw_predictions: dict,
     save_path: Path,
@@ -1290,10 +1291,9 @@ def patch_pred_store_zarr(
 
     Returns:
         Path to zarr file storing the patch predictor output
-    
-    """
 
-    #Default values for Compressor and Chunks set if not received from kwargs.
+    """
+    # Default values for Compressor and Chunks set if not received from kwargs.
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
