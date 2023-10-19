@@ -1711,3 +1711,86 @@ def test_patch_pred_store_sf() -> None:
     assert len(store) == 3
     for annotation in store.values():
         assert annotation.geometry.area == 4
+
+
+def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
+    """Test patch_pred_store and persists predicted output to a zarr file."""
+
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+    }
+
+    save_path = tmp_path / "patch_output" / "output.zarr"
+
+    store_path = misc.patch_pred_store_zarr(
+        patch_output,
+        save_path=save_path
+    )
+
+    print("Zarr path: ", store_path)
+    assert Path.exists(store_path), "Zarr output file does not exist"
+
+def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
+    """Test patch_pred_store and persists predicted output and ensures the output file 
+        extension is .zarr
+    """
+
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+    }
+
+    #sends the path of a jpeg source image, expects .zarr file in the same directory
+    save_path = tmp_path / "patch_output" / "patch.jpeg"
+
+    store_path = misc.patch_pred_store_zarr(
+        patch_output,
+        save_path=save_path
+    )
+
+    print("Zarr path: ", store_path)
+    assert Path.exists(store_path), "Zarr output file does not exist"
+
+
+def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
+    """Test patch_pred_store. and persists store output to a .db file."""
+    
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+    }
+    save_path = tmp_path / "patch_output" / "output.db"
+
+    store_path = misc.patch_pred_store(
+        patch_output,
+        (1.0, 1.0),
+        save_path=save_path
+    )
+
+    print("Annotation store path: ", store_path)
+    assert Path.exists(store_path), "Annotation Store output file does not exist"
+
+    store = SQLiteStore(store_path)
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 1
+        assert annotation.properties["type"] in [0, 1]
+        assert "other" not in annotation.properties
+
+    patch_output.pop("coordinates")
+    # check correct error is raised if coordinates are missing
+    with pytest.raises(ValueError, match="coordinates"):
+        misc.patch_pred_store(patch_output, (1.0, 1.0))
