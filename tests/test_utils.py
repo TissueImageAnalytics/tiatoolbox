@@ -1792,7 +1792,7 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
         "labels": [1, 0, 1],
     }
 
-     # sends the path of a jpeg source image, expects .db file in the same directory
+    # sends the path of a jpeg source image, expects .db file in the same directory
     save_path = tmp_path / "patch_output" / "output.jpeg"
 
     store_path = misc.patch_pred_store(patch_output, (1.0, 1.0), save_path=save_path)
