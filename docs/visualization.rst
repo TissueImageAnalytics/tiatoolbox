@@ -30,6 +30,11 @@ When a slide is selected in the interface, any valid overlay file that can be fo
 Segmentation
 ^^^^^^^^^^^^
 
+.. image:: images/vis_gland_cmap.png
+    :width: 45%
+    :align: right
+    :alt: segmentation example
+
 To visualize segmentation, please save your results in the AnnotationStore format (more information about the TIAToolbox annotation store can be found at :obj:`storage <tiatoolbox.annotation.storage>`).  The other options are GeoJSON (.geojson), or a HoVerNet -style .dat (see :obj:`hovernet <tiatoolbox.models.architecture.hovernet>`). The GeoJSON and dat format can be loaded within the interface but will incur a delay as the data needs to be converted internally into an AnnotationStore for optimized visualization experience.
 
 If your annotations are in a geojson format following the sort of thing QuPath would output, that should be ok. Contours stored following hovernet-style output in a .dat file should also work. An overview of the data structure in these formats is below.
@@ -77,7 +82,13 @@ Can overlay multiple WSI's on top of each other as separate layers
 Graphs
 ^^^^^^
 
-Graphs can also be overlaid. These should be provided in a dictionary format, saved as a .json file.
+.. image:: images/vis_graph.png
+    :width: 45%
+    :align: right
+    :alt: graph example
+
+Graphs can also be overlaid. The display of nodes and edges can be toggled on/off independently in the right hand panel of the interface (note, edges will be turned off by default; they can be made visible by toggling the 'edges' toggle in the UI). An example of a graph overlay is shown to the right. Graph overlays should be provided in a dictionary format as below, saved as a .json file.
+
 e.g.::
 
     graph_dict = {
@@ -99,7 +110,6 @@ Additional features can be added to nodes by adding extra keys to the dictionary
 
 
 It will be possible to colour the nodes by these features in the interface, and the top 10 will appear in a tooltip when hovering over a node (you will have to turn on the hovertool in the small toolbar to the right of the main window to enable this, it is disabled by default.)
-The display of nodes and edges can be toggled on/off independently in the right hand panel of the interface (note, edges will be turned off by default).
 
 
 .. _examples:
@@ -261,8 +271,22 @@ General UI Controls and Options
     :align: center
     :alt: visualize interface
 
-Colormaps/colouring by score
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The interface is split into two main sections. The left hand side contains the main window, which displays the slide and overlays (or pontentially a linked pair of slide views), and the right hand side contains a number of UI elements to control the display of the overlays.
+
+The main window can be zoomed in and out using the mouse wheel, and panned by clicking and dragging. The slide can be changed using the slide dropdown menu. The overlay can be changed or additional overlays added using the overlay dropdown menu. The alpha of the slide and overlay can be controlled using the slide and overlay alpha sliders respectively.
+
+Type and layer select
+^^^^^^^^^^^^^^^^^^^^^
+
+.. image:: images/type_select.png
+    :width: 30%
+    :align: right
+    :alt: type select example
+
+If annotations have a type property, this will be used to populate the type select boxes. This allows you to toggle on/off annotations of a specific type. You can also modify the default colors that each type is displayed in by using the color picker widgets next to each type name (note these will only have an effect if the property to color by is selected as 'type'). Individual image overlays or graph overlays will also get their own toggle, labelled for example 'layer_i' or 'nodes', that can be used to toggle the respective overlays on or off.
+
+Colormaps/colouring by property values
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once you have selected a slide with the slide dropdown, you can overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colors can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
 
@@ -281,13 +305,23 @@ To save the annotations resulting from a model, or loaded from a .geojson or .da
 Dual window mode
 ^^^^^^^^^^^^^^^^
 
-A second window can be opened by selecting the 'window 2' tab in the top right. This will open the currently selected slide in a second window. The overlay shown in each window can be controlled independently to allow comparison of different overlays, or viewing of a model output side-by-side with the unoverlaid slide, or ground truth annotations. Slide navigation will be linked between both windows.
+.. image:: images/dual_win.png
+    :width: 100%
+    :align: center
+    :alt: dual window example
+
+A second window can be opened by selecting the 'window 2' tab in the top right. This will open the currently selected slide in a second window as illustrated above. The overlay shown in each window can be controlled independently to allow comparison of different overlays, or viewing of a model output side-by-side with the unoverlaid slide, or ground truth annotations. Slide navigation will be linked between both windows.
 Two different slides can also be opened in the two windows, although this will only be useful in cases where the two slides are registered so that a shared coordinate space/slide navigation makes sense.
 
 Inspecting annotations
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Annotations can be inspected by double clicking on them. This will open a popup showing the annotation in more detail, and allowing the properties to be viewed in a sortable table.
+Annotations can be inspected by double clicking on them. This will open a popup showing the annotation in more detail, and allowing the properties to be viewed in a sortable table. An example can be seen to the right.
+
+.. image:: images/properties_window.png
+    :width: 40%
+    :align: right
+    :alt: properties window example
 
 Zoomed out plotting
 ^^^^^^^^^^^^^^^^^^^
