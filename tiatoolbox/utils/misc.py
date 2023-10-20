@@ -1268,8 +1268,7 @@ def patch_pred_store(
         # ensure parent directory exisits
         save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
         # ensure proper db extension
-        if save_path.suffix != ".db":
-            save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
         store.dump(save_path)
         return save_path
 
@@ -1300,8 +1299,7 @@ def patch_pred_store_zarr(
     chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
     # ensure proper zarr extension
-    if save_path.suffix != ".zarr":
-        save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
 
     # save to zarr
     predictions_array = np.array(raw_predictions["predictions"])

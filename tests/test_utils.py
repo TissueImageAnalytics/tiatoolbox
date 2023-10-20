@@ -1780,3 +1780,37 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
         misc.patch_pred_store(patch_output, (1.0, 1.0))
+
+
+def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
+    """Test patch_pred_store and ensures the output file extension is `.db`."""
+    # Define a mock patch_output
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
+        "labels": [1, 0, 1],
+    }
+
+     # sends the path of a jpeg source image, expects .db file in the same directory
+    save_path = tmp_path / "patch_output" / "output.jpeg"
+
+    store_path = misc.patch_pred_store(patch_output, (1.0, 1.0), save_path=save_path)
+
+    print("Annotation store path: ", store_path)
+    assert Path.exists(store_path), "Annotation Store output file does not exist"
+
+    store = SQLiteStore(store_path)
+
+    # Check that its an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
+    assert len(store) == 3
+    for annotation in store.values():
+        assert annotation.geometry.area == 1
+        assert annotation.properties["type"] in [0, 1]
+        assert "other" not in annotation.properties
+
+    patch_output.pop("coordinates")
+    # check correct error is raised if coordinates are missing
+    with pytest.raises(ValueError, match="coordinates"):
+        misc.patch_pred_store(patch_output, (1.0, 1.0))
