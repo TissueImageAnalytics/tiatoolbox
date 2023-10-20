@@ -35,3 +35,4 @@ jobs:
     - name: Perform type checking
       run: |
         mypy --install-types --non-interactive --follow-imports=skip tiatoolbox/__init__.py
+        mypy --install-types --non-interactive --follow-imports=skip tiatoolbox/utils/exceptions.py

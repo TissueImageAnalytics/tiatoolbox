@@ -1,4 +1,5 @@
 """Custom Errors and Exceptions for TIAToolbox."""
+from __future__ import annotations
 
 
 class FileNotSupportedError(Exception):
@@ -10,7 +11,7 @@ class FileNotSupportedError(Exception):
     """
 
     def __init__(
-        self: Exception,
+        self: FileNotSupportedError,
         message: str = "File format is not supported",
     ) -> None:
         """Initialize :class:`FileNotSupportedError`."""
@@ -25,6 +26,9 @@ class MethodNotSupportedError(Exception):
 
     """
 
-    def __init__(self: Exception, message: str = "Method is not supported") -> None:
+    def __init__(
+        self: MethodNotSupportedError,
+        message: str = "Method is not supported",
+    ) -> None:
         """Initialize :class:`MethodNotSupportedError`."""
         super().__init__(message)
