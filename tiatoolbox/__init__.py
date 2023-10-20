@@ -71,7 +71,6 @@ class DuplicateFilter(logging.Filter):
 
 
 # runtime context parameters
-# TODO: add torch.compile flag
 rcParam = {  # noqa: N816
     "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
 }
