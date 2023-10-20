@@ -1286,7 +1286,7 @@ def dict_to_zarr(
     save_path: Path,
     **kwargs: dict,
 ) -> Path:
-    """Persists the patch predictor output to a zarr file.
+    """Saves the output of TIAToolbox engines to a zarr file.
 
     Args:
         raw_predictions (dict):
