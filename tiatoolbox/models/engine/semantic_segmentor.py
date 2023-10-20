@@ -527,11 +527,9 @@ class SemanticSegmentor:
         *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        compiled: bool = False,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
-        self.compiled = compiled
 
         if model is None and pretrained_model is None:
             msg = "Must provide either of `model` or `pretrained_model`"
@@ -565,11 +563,7 @@ class SemanticSegmentor:
         self.compiled = compiled
 
         self.dataset_class: WSIStreamDataset = dataset_class
-        self.model = torch.compile(  # original copy
-            model,
-            mode="reduce-overhead",
-            disable=not compiled,
-        )
+        self.model = model
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
