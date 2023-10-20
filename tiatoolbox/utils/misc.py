@@ -1199,7 +1199,7 @@ def add_from_dat(
     store.append_many(anns)
 
 
-def patch_pred_store(
+def dict_to_store(
     patch_output: dict,
     scale_factor: tuple[int, int],
     class_dict: dict | None = None,
@@ -1208,19 +1208,25 @@ def patch_pred_store(
     """Create an SQLiteStore containing Annotations for each patch.
 
     Args:
-        patch_output (dict): A dictionary of patch prediction information. Important
+        patch_output (dict):
+            A dictionary of patch prediction information. Important
             keys are "probabilities", "predictions", "coordinates", and "labels".
-        scale_factor (tuple[int, int]): The scale factor to use when loading the
+        scale_factor (tuple[int, int]):
+            The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
             conversion of annotations saved at non-baseline resolution to baseline.
             Should be model_mpp/slide_mpp.
-        class_dict (dict): Optional dictionary mapping class indices to class names.
-        save_path (str or Path): Optional Output directory to save the Annotation
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
             Store results.
 
     Returns:
-        SQLiteStore: An SQLiteStore containing Annotations for each patch
-        or Path to file storing SQLiteStore containing Annotations for each patch
+        SQLiteStore:
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
 
     """
     if "coordinates" not in patch_output:
@@ -1242,7 +1248,7 @@ def patch_pred_store(
     if class_dict is None:
         # if no class dict create a default one
         class_dict = {i: i for i in np.unique(preds + labels).tolist()}
-    annotations = []
+
     # find what keys we need to save
     keys = ["predictions"]
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
@@ -1275,7 +1281,7 @@ def patch_pred_store(
     return store
 
 
-def patch_pred_store_zarr(
+def dict_to_zarr(
     raw_predictions: dict,
     save_path: Path,
     **kwargs: dict,
@@ -1283,9 +1289,12 @@ def patch_pred_store_zarr(
     """Persists the patch predictor output to a zarr file.
 
     Args:
-        raw_predictions (dict): A dictionary of patch prediction information.
-        save_path (str or Path): Path to output file to save the patcH predictor results
-        **kwargs (dict): Keyword Args to update patch_pred_store_zarr attributes.
+        raw_predictions (dict):
+            A dictionary of output from TIAToolbox Engines.
+        save_path (str or Path):
+            Path to save the zarr file.
+        **kwargs (dict):
+            Keyword Args to update patch_pred_store_zarr attributes.
 
 
     Returns:
