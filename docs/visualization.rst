@@ -87,13 +87,14 @@ Graphs
     :align: right
     :alt: graph example
 
-Graphs can also be overlaid. The display of nodes and edges can be toggled on/off independently in the right hand panel of the interface (note, edges will be turned off by default; they can be made visible by toggling the 'edges' toggle in the UI). An example of a graph overlay is shown to the right. Graph overlays should be provided in a dictionary format as below, saved as a .json file.
+Graphs can also be overlaid. The display of nodes and edges can be toggled on/off independently in the right hand panel of the interface (note, edges will be turned off by default; they can be made visible by toggling the 'edges' toggle in the UI). An example of a graph overlay is shown to the right. Graph overlays should be provided in a dictionary format with keys as described below, saved as a .json file.
+
 
 e.g.::
 
     graph_dict = {
                 'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-		        'coordinates': n x 2 array of x,y coordinates for each graph node
+		        'coordinates': n x 2 array of x,y coordinates for each graph node (at baseline resolution)
 		}
 
 
