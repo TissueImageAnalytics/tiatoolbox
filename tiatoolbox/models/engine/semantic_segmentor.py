@@ -565,10 +565,10 @@ class SemanticSegmentor:
 
         self.dataset_class: WSIStreamDataset = dataset_class
         self.model = torch.compile(  # original copy
-                            model,
-                            mode="reduce-overhead",
-                            disable=not compiled,
-                        )
+            model,
+            mode="reduce-overhead",
+            disable=not compiled,
+        )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
