@@ -1205,7 +1205,7 @@ def dict_to_store(
     class_dict: dict | None = None,
     save_path: Path | None = None,
 ) -> AnnotationStore | Path:
-    """Create an SQLiteStore containing Annotations for each patch.
+    """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
 
     Args:
         patch_output (dict):
@@ -1223,7 +1223,7 @@ def dict_to_store(
             Store results.
 
     Returns:
-        SQLiteStore:
+        (SQLiteStore or Path):
             An SQLiteStore containing Annotations for each patch
             or Path to file storing SQLiteStore containing Annotations
             for each patch.
