@@ -112,7 +112,7 @@ class EngineABC(ABC):
             Whether to output logging information.
 
     Attributes:
-        images (str or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
+        images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
             A NHWC image or a path to WSI.
         patch_mode (str):
             Whether to treat input image as a patch or WSI.
@@ -144,7 +144,7 @@ class EngineABC(ABC):
             from either `level`, `power` or `mpp`. Please see
             :obj:`WSIReader` for details.
         patch_input_shape (tuple):
-            Size of patches input to the model. Patches are at
+            Shape of patches input to the model as tupled of HW. Patches are at
             requested read resolution, not with respect to level 0,
             and must be positive.
         stride_shape (tuple):
@@ -175,11 +175,6 @@ class EngineABC(ABC):
         >>> data = np.array([np.ndarray, np.ndarray])
         >>> engine = EngineABC(model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=True)
-
-        >>> # list of 2 image patch files as input
-        >>> data = ['path/img.png', 'path/img.png']
-        >>> engine = EngineABC(model="resnet18-kather100k")
-        >>> output = engine.run(data, patch_mode=False)
 
         >>> # list of 2 image files as input
         >>> image = ['path/image1.png', 'path/image2.png']
@@ -343,22 +338,42 @@ class EngineABC(ABC):
 
         return raw_predictions
 
-    def post_process_patches(
+    def setup_patch_dataset(
         self: EngineABC,
         raw_predictions: dict,
         output_type: str,
         save_dir: Path | None = None,
         **kwargs: dict,
     ) -> Path | AnnotationStore:
-        """Post-process image patches."""
-        """Stores as an Annotation Store or Zarr (default) and returns the Path"""
+        """Post-process image patches.
 
-        if not save_dir and self.patch_mode and output_type != "AnnotationStore":
-            return raw_predictions
+        Args:
+            raw_predictions (dict):
+                A dictionary of patch prediction information.
+            save_dir (Path):
+                Optional Output Path to directory to save the patch dataset output to a
+                `.zarr` or `.db` file, provided patch_mode is True. if the patch_mode is
+                  False then save_dir is required.
+            output_type (str):
+                The desired output type for resulting patch dataset.
+            **kwargs (dict):
+                Keyword Args to update setup_patch_dataset() method attributes.
 
-        if not save_dir:
-            msg = "`save_dir` not specified."
+        Returns: (dict, Path, :class:`SQLiteStore`):
+            if the output_type is "AnnotationStore", the function returns the patch
+            predictor output as an SQLiteStore containing Annotations for each or the
+            Path to a `.db` file depending on whether a save_dir Path is provided.
+            Otherwise, the function defaults to returning patch predictor output, either
+            as a dict or the Path to a `.zarr` file depending on whether a save_dir Path
+            is provided.
+
+        """
+        if not save_dir and not self.patch_mode:
+            msg = "`save_dir` must be specified when patch_mode is False."
             raise OSError(msg)
+
+        if not save_dir and output_type != "AnnotationStore":
+            return raw_predictions
 
         output_file = (
             kwargs["output_file"] and kwargs.pop("output_file")
@@ -618,7 +633,7 @@ class EngineABC(ABC):
             raw_predictions = self.infer_patches(
                 data_loader=data_loader,
             )
-            return self.post_process_patches(
+            return self.setup_patch_dataset(
                 raw_predictions=raw_predictions,
                 output_type=output_type,
                 save_dir=save_dir,

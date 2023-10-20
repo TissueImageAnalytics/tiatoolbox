@@ -60,7 +60,6 @@ def test_engine_abc_incorrect_model_type() -> NoReturn:
         TypeError,
         match="Input model must be a string or 'torch.nn.Module'.",
     ):
-        # Can't instantiate abstract class with abstract methods
         TestEngineABC(model=1)
 
 
