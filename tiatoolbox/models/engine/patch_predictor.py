@@ -230,12 +230,14 @@ class PatchPredictor:
         pretrained_weights: str | None = None,
         *,
         verbose: bool = True,
+        compiled: bool = True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
         super().__init__()
 
         self.imgs = None
         self.mode = None
+        self.compiled = compiled
 
         if model is None and pretrained_model is None:
             msg = "Must provide either `model` or `pretrained_model`."
@@ -249,7 +251,11 @@ class PatchPredictor:
 
         self.ioconfig = ioconfig  # for storing original
         self._ioconfig = None  # for storing runtime
-        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
+        self.model = torch.compile(  # for runtime, such as after wrapping with nn.DataParallel
+                            model,
+                            mode="reduce-overhead",
+                            disable=not compiled,
+                        )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_workers

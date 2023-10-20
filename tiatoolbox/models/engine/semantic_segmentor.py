@@ -28,7 +28,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.typing import IntPair, Resolution, Units
 
-
 def _estimate_canvas_parameters(
     sample_prediction: np.ndarray,
     canvas_shape: np.ndarray,
@@ -538,21 +537,13 @@ class SemanticSegmentor:
             raise ValueError(msg)
 
         if model is not None:
-            self.model = torch.compile(
-                            model,
-                            mode="reduce-overhead",
-                            disable=not compiled,
-                        )
+            self.model = model
             # template ioconfig, usually coming from pretrained
             self.ioconfig = None
         else:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
             self.ioconfig = ioconfig
-            self.model = torch.compile(
-                            model,
-                            mode="reduce-overhead",
-                            disable=not compiled,
-                        )
+            self.model = model
 
         # local variables for flagging mode within class,
         # subclass should have overwritten to alter some specific behavior
@@ -570,6 +561,7 @@ class SemanticSegmentor:
         self._outputs = []
         self.imgs = None
         self.masks = None
+        self.compiled = compiled
 
         self.dataset_class: WSIStreamDataset = dataset_class
         self.model = torch.compile(  # original copy
@@ -1504,18 +1496,13 @@ class DeepFeatureExtractor(SemanticSegmentor):
         *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        compiled: bool = True,
     ) -> None:
         """Initialize :class:`DeepFeatureExtractor`."""
         super().__init__(
             batch_size=batch_size,
             num_loader_workers=num_loader_workers,
             num_postproc_workers=num_postproc_workers,
-            model=torch.compile(
-                        model,
-                        mode="reduce-overhead",
-                        disable=not compiled,
-                    ),
+            model=model,
             pretrained_model=pretrained_model,
             pretrained_weights=pretrained_weights,
             verbose=verbose,

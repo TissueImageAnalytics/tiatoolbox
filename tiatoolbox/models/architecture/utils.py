@@ -103,7 +103,7 @@ class UpSample2x(nn.Module):
 
     """
 
-    def __init__(self: UpSample2x) -> None:
+    def __init__(self: UpSample2x, *, compiled: bool = True) -> None:
         """Initialize :class:`UpSample2x`."""
         super().__init__()
         # correct way to create constant within module
@@ -112,6 +112,7 @@ class UpSample2x(nn.Module):
             torch.from_numpy(np.ones((2, 2), dtype="float32")),
         )
         self.unpool_mat.unsqueeze(0)
+        self.compiled = compiled
 
     def forward(self: UpSample2x, x: torch.Tensor) -> torch.Tensor:
         """Logic for using layers defined in init.
