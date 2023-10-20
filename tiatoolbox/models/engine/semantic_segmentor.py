@@ -28,6 +28,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.typing import IntPair, Resolution, Units
 
+
 def _estimate_canvas_parameters(
     sample_prediction: np.ndarray,
     canvas_shape: np.ndarray,
