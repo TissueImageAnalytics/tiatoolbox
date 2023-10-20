@@ -560,7 +560,6 @@ class SemanticSegmentor:
         self._outputs = []
         self.imgs = None
         self.masks = None
-        self.compiled = compiled
 
         self.dataset_class: WSIStreamDataset = dataset_class
         self.model = model
