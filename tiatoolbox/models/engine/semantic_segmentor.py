@@ -526,7 +526,7 @@ class SemanticSegmentor:
         *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        compiled: bool = True,
+        compiled: bool = False,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
