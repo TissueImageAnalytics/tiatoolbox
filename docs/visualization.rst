@@ -3,6 +3,8 @@
 Visualization interface
 =======================
 
+The following assumes tiatoolbox has been installed per the instructions here: :ref:`installation <installation>`.
+
 Launching the interface
 -----------------------
 
@@ -21,18 +23,18 @@ In the folder(s) that your command pointed to, should be the things that you wan
 Data Format Conventions and File Structure
 ------------------------------------------
 
-in the slides folder should be all the slides you want to use, and the overlays folder should contain whatever graphs, segmentations, heatmaps etc you are interesting in overlaying over the slides.
+In the slides folder should be all the slides you want to use, and the overlays folder should contain whatever graphs, segmentations, heatmaps etc you are interesting in overlaying over the slides.
 
 When a slide is selected in the interface, any valid overlay file that can be found that *contains the same name* (not including extension) will be available to overlay upon it.
 
 Segmentation
 ^^^^^^^^^^^^
 
-The best way of getting segmentations (in the form of contours) into the visualization is by putting them in an AnnotationStore (more information about hte tiatoolbox annotation store can be found at :obj:`storage <tiatoolbox.annotation.storage>`.  The other options are .geojson, or a hovernet -style .dat, both of which can usually be loaded within the interface but will incur a small delay while the data in converted internally into an AnnotationStore.
+To visualize segmentation, please save your results in the AnnotationStore format (more information about the TIAToolbox annotation store can be found at :obj:`storage <tiatoolbox.annotation.storage>`).  The other options are GeoJSON (.geojson), or a HoVerNet -style .dat (see :obj:`hovernet <tiatoolbox.models.architecture.hovernet>`). The GeoJSON and dat format can be loaded within the interface but will incur a delay as the data needs to be converted internally into an AnnotationStore for optimized visualization experience.
 
 If your annotations are in a geojson format following the sort of thing QuPath would output, that should be ok. Contours stored following hovernet-style output in a .dat file should also work. An overview of the data structure in these formats is below.
 
-Hovernet style::
+HoVerNet style::
 
     sample_dict = {nuc_id: {
                     box: List[],
@@ -46,7 +48,7 @@ Hovernet style::
     }
 
 
-geojson::
+GeoJSON::
 
     {"type":"Feature",
     "geometry":{
@@ -70,16 +72,17 @@ Single channel images can also be used but are not recommended; they should take
 Whole Slide Overlays
 ^^^^^^^^^^^^^^^^^^^^
 
-Can overlay multiple WSI's on top of eachother as separate layers
+Can overlay multiple WSI's on top of each other as separate layers
 
 Graphs
 ^^^^^^
 
 Graphs can also be overlaid. These should be provided in a dictionary format, saved as a .json file.
-eg::
+e.g.::
 
-    graph_dict = {  'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-		'coordinates': n x 2 array of x,y coordinates for each graph node
+    graph_dict = {
+                'edge_index': 2 x n_edges array of indices of pairs of connected nodes
+		        'coordinates': n x 2 array of x,y coordinates for each graph node
 		}
 
 
@@ -87,11 +90,12 @@ Additional features can be added to nodes by adding extra keys to the dictionary
 
 ::
 
-    graph_dict = {  'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-    'coordinates': n x 2 array of x,y coordinates for each graph node
-    'feats': n x n_features array of features for each node
-    'feat_names': list n_features names for each feature
-    }
+    graph_dict = {
+                'edge_index': 2 x n_edges array of indices of pairs of connected nodes
+                'coordinates': n x 2 array of x,y coordinates for each graph node
+                'feats': n x n_features array of features for each node
+                'feat_names': list n_features names for each feature
+            }
 
 
 It will be possible to colour the nodes by these features in the interface, and the top 10 will appear in a tooltip when hovering over a node (you will have to turn on the hovertool in the small toolbar to the right of the main window to enable this, it is disabled by default.)
@@ -112,7 +116,7 @@ of each patch, and two predicted scores are in a .csv file. Patch size is 512.
 ::
 
     results_path = Path("path/to/results.csv")
-    SQ = SQLiteStore()
+    db = SQLiteStore()
     patch_df = pd.read_csv(results_path)
     annotations = []
     for i, row in patch_df.iterrows():
@@ -122,8 +126,8 @@ of each patch, and two predicted scores are in a .csv file. Patch size is 512.
         annotations.append(
             Annotation(Polygon.from_bounds(x, y, x + 512, y + 512), properties=properties)
         )
-    SQ.append_many(annotations)
-    SQ.dump("path/to/filename.db")   # filename should contain its associated slides name
+    db.append_many(annotations)
+    db.dump("path/to/filename.db")   # filename should contain its associated slides name
 
 When loading the above in the interface, you will be able to select any of the properties to colour the overlay by.
 
@@ -136,8 +140,8 @@ The tiatoolbox AnnotationStore class provides a method to do this.
 ::
 
     geojson_path = Path("path/to/annotations.geojson")
-    SQ1 = SQLiteStore.from_geojson(geojson_path)
-    SQ1.dump("path/to/annotations.db")
+    db1 = SQLiteStore.from_geojson(geojson_path)
+    db1.dump("path/to/annotations.db")
 
 Raw contours and properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -161,9 +165,9 @@ If you have a collection of raw centroids or detection contours with correspondi
         annotations.append(
             Annotation(Point(annotation), props)
         )  # use Polygon() instead if its a contour
-    SQ.append_many(annotations)
-    SQ.create_index("area", '"area"')  # create index on area for faster querying
-    SQ.dump("path/to/annotations.db")
+    db.append_many(annotations)
+    db.create_index("area", '"area"')  # create index on area for faster querying
+    db.dump("path/to/annotations.db")
 
 Note that in the above we saved the 'class' property as 'type' - this is because the UI treats the 'type' property as a special property, and will allow you to toggle annotations of a specific type on/off, in addition to other functionality.
 
@@ -196,16 +200,16 @@ properties of annotations (or can also do similarly for geometry)
     # the annotations in a store
     scores = [0.9, 0.5]
 
-    SQ = SQLiteStore("path/to/annotations.db")
+    db = SQLiteStore("path/to/annotations.db")
     # use the SQLiteStore.patch_many method to replace the properties dict
     # for each annotation.
     new_props = {}
-    for i, (key, annotation) in enumerate(SQ.items()):
+    for i, (key, annotation) in enumerate(db.items()):
         new_props[key] = annotation.properties  # get existing props
         new_props[key]["score"] = scores[i]  # add the new score
 
-    SQ.patch_many(
-        SQ.keys(), properties_iter=new_props
+    db.patch_many(
+        db.keys(), properties_iter=new_props
     )  # replace the properties dict for each annotation
 
 Merging two annotation stores
@@ -217,10 +221,10 @@ at the same time, just put them all in the same store as follows
 
 ::
 
-    SQ1 = SQLiteStore("path/to/annotations1.db")
-    SQ2 = SQLiteStore("path/to/annotations2.db")
-    anns = list(SQ1.items())
-    SQ2.append_many(anns)  # SQ2 .db file now contains all annotations from SQ1 too
+    db1 = SQLiteStore("path/to/annotations1.db")
+    db2 = SQLiteStore("path/to/annotations2.db")
+    anns = list(db1.items())
+    db2.append_many(anns)  # db2 .db file now contains all annotations from db1 too
 
 Shifting coordinates
 ^^^^^^^^^^^^^^^^^^^^
@@ -231,21 +235,21 @@ Lets say you have some annotations that were created on a slide, and you want to
 
     top_left = [2048, 1024]  # top left of tile
     tile_size = 1024  # tile size
-    SQ1 = SQLiteStore("path/to/annotations.db")
+    db1 = SQLiteStore("path/to/annotations.db")
     query_geom = Polygon.from_bounds(
         top_left[0], top_left[1], top_left[0] + tile_size, top_left[1] + tile_size
     )
-    SQ2 = SQLiteStore()
-    tile_anns = SQ1.query(query_geom) # get all annotations in the tile
-    SQ2.append_many(tile_anns.values(), tile_anns.keys()) # add them to a new store
+    db2 = SQLiteStore()
+    tile_anns = db1.query(query_geom) # get all annotations in the tile
+    db2.append_many(tile_anns.values(), tile_anns.keys()) # add them to a new store
 
 
     def translate_geom(geom):
         return geom.translate(-top_left[0], -top_left[1])
 
 
-    SQ2.transform(translate_geom)  # translate so coordinates relative to top left of tile
-    SQ2.dump("path/to/tile_annotations.db")
+    db2.transform(translate_geom)  # translate so coordinates relative to top left of tile
+    db2.dump("path/to/tile_annotations.db")
 
 .. _interface:
 
