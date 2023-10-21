@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, TypedDict
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
@@ -72,9 +72,15 @@ class DuplicateFilter(logging.Filter):
         return False
 
 
+class _RcParam(TypedDict):
+    """All the parameters in the rcParam dictionary should be defined here."""
+
+    TIATOOLBOX_HOME: Path
+    pretrained_model_info: dict[str, dict]
+
+
 # runtime context parameters
-rcParam: dict[str, str | Path | dict]  # noqa: N816
-rcParam = {  # noqa: N816
+rcParam: _RcParam = {  # noqa: N816
     "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
 }
 
