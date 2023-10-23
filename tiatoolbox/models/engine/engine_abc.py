@@ -264,6 +264,8 @@ class EngineABC(ABC):
 
         if isinstance(model, str):
             # ioconfig is retrieved from the pretrained model in the toolbox.
+            # list of pretrained models in the TIA Toolbox is available here:
+            # https://tia-toolbox.readthedocs.io/en/add-bokeh-app/pretrained.html
             # no need to provide ioconfig in EngineABC.run() this case.
             return get_pretrained_model(model, weights)
 
