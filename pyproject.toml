@@ -1,8 +1,8 @@
 [tool.pytest.ini_options]
-collect_ignore = ["setup.py", "benchmark/"]
+  collect_ignore = ["setup.py", "benchmark/"]
 
 [tool.black]
-exclude = '''
+  exclude = '''
   /(
       \.eggs
     | \.git
@@ -18,9 +18,9 @@ exclude = '''
     | setup.py
   )/
   '''
-include = '\.pyi?$'
-line-length = 88
-target-version = ['py37', 'py38', 'py39', 'py310']
+  include = '\.pyi?$'
+  line-length = 88
+  target-version = ['py37', 'py38', 'py39', 'py310']
 
 
 [tool.coverage.run]
@@ -29,21 +29,21 @@ source = ['tiatoolbox']
 omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
 [tool.coverage.report]
-exclude_lines = [
+  exclude_lines = [
     'if self.debug:',
     'pragma: no cover',
     'raise NotImplementedError',
     'if __name__ == .__main__.:',
-]
-ignore_errors = true
-omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
+  ]
+  ignore_errors = true
+  omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+  requires = ["setuptools"]
+  build-backend = "setuptools.build_meta"
 
 [tool.distutils.bdist_wheel]
-universal = true
+  universal = true
 
 [tool.poetry]
 name = "TIA Centre"
@@ -73,58 +73,58 @@ replace = 'TOOLBOX_VER: {new_version}'
 
 [tool.ruff]
 select = [
-    "A", # flake8-builtins
-    "B", # flake8-bugbear
-    "D", # pydocstyle, need to enable for docstrings check.
-    "E", # pycodestyle - Error
-    "F", # pyflakes
-    "G", # flake8-logging-format
-    "I", # Isort
-    "N", # pep8-naming
-    "S", # flake8-bandit
-    "W", # pycodestyle - Warning
-    "Q", # flake8-quotes
-    "C4", # flake8-comprehensions
-    "FA", # flake8-future-annotations
-    "EM", # flake8-errmsg
-    "PD", # pandas-vet
-    "PL", # Pylint
-    "PT", # flake8-pytest-style
-    "TD", # flake8-todos
-    "UP", # pyupgrade
-    "C90", # mccabe
-    "T10", # flake8-debugger
-    "T20", # flake8-print
-    "ANN", # flake8-annotations
-    "ARG", # flake8-unused-arguments
-    "BLE", # flake8-blind-except
-    "COM", # flake8-commas
-    "DTZ", # flake8-datetimez
-    "ERA", # eradicate
-    "FBT", # flake8-boolean-trap
-    "FIX", # flake8-fixme
-    "FLY", # flynt
-    "ICN", # flake8-import-conventions
-    "INP", # flake8-no-pep420
-    "INT", # flake8-gettext
-    "ISC", # flake8-implicit-str-concat
-    "NPY", # NumPy-specific rules
-    "PGH", # pygrep-hooks
-    "PIE", # flake8-pie
-    "PTH", # flake8-use-pathlib
-    "PYI", # flake8-pyi
-    "RET", # flake8-return
-    "RSE", # flake8-raise
-    "RUF", # Ruff-specific rules
-    "SLF", # flake8-self
-    "SIM", # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "TCH", # flake8-type-checking
-    "TRY", # tryceratops
-    "YTT", # flake8-2020
-    "PERF", # Perflint
-    "SLOT", # flake8-slots
-    "ASYNC", # flake8-async
+  "A",     # flake8-builtins
+  "B",     # flake8-bugbear
+  "D",     # pydocstyle, need to enable for docstrings check.
+  "E",     # pycodestyle - Error
+  "F",     # pyflakes
+  "G",     # flake8-logging-format
+  "I",     # Isort
+  "N",     # pep8-naming
+  "S",     # flake8-bandit
+  "W",     # pycodestyle - Warning
+  "Q",     # flake8-quotes
+  "C4",    # flake8-comprehensions
+  "FA",    # flake8-future-annotations
+  "EM",    # flake8-errmsg
+  "PD",    # pandas-vet
+  "PL",    # Pylint
+  "PT",    # flake8-pytest-style
+  "TD",    # flake8-todos
+  "UP",    # pyupgrade
+  "C90",   # mccabe
+  "T10",   # flake8-debugger
+  "T20",   # flake8-print
+  "ANN",   # flake8-annotations
+  "ARG",   # flake8-unused-arguments
+  "BLE",   # flake8-blind-except
+  "COM",   # flake8-commas
+  "DTZ",   # flake8-datetimez
+  "ERA",   # eradicate
+  "FBT",   # flake8-boolean-trap
+  "FIX",   # flake8-fixme
+  "FLY",   # flynt
+  "ICN",   # flake8-import-conventions
+  "INP",   # flake8-no-pep420
+  "INT",   # flake8-gettext
+  "ISC",   # flake8-implicit-str-concat
+  "NPY",   # NumPy-specific rules
+  "PGH",   # pygrep-hooks
+  "PIE",   # flake8-pie
+  "PTH",   # flake8-use-pathlib
+  "PYI",   # flake8-pyi
+  "RET",   # flake8-return
+  "RSE",   # flake8-raise
+  "RUF",   # Ruff-specific rules
+  "SLF",   # flake8-self
+  "SIM",   # flake8-simplify
+  "TID",   # flake8-tidy-imports
+  "TCH",   # flake8-type-checking
+  "TRY",   # tryceratops
+  "YTT",   # flake8-2020
+  "PERF",  # Perflint
+  "SLOT",  # flake8-slots
+  "ASYNC", # flake8-async
 ]
 ignore = []
 # Allow Ruff to discover `*.ipynb` files.
@@ -149,7 +149,7 @@ exclude = [
 ]
 
 # Ignore `F401` (import violations) in all `__init__.py` files.
-per-file-ignores = { "__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001", "S101", "PLR2004"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"], "tiatoolbox/cli/*" = ["PLR0913"] }
+per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001", "S101", "PLR2004"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"], "tiatoolbox/cli/*" = ["PLR0913"]}
 
 # Same as Black.
 line-length = 88
