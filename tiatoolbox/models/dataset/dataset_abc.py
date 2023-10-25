@@ -52,10 +52,12 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
     @staticmethod
     def _are_paths(inputs: input_type) -> TypeGuard[Iterable[Path]]:
+        """TypeGuard to check that input array contains only paths."""
         return all(isinstance(v, (Path, str)) for v in inputs)
 
     @staticmethod
     def _are_npy_like(inputs: input_type) -> TypeGuard[Iterable[np.ndarray]]:
+        """TypeGuard to check that input array contains only np.ndarray."""
         return all(isinstance(v, np.ndarray) for v in inputs)
 
     def _check_input_integrity(self: PatchDatasetABC, mode: str) -> None:
