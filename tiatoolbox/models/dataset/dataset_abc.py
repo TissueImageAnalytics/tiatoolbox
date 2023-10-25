@@ -3,7 +3,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Iterable, TypeGuard
+from typing import TYPE_CHECKING, Callable, Iterable
+
+if TYPE_CHECKING:
+    try:
+        from typing import TypeGuard
+    except ImportError:
+        from typing_extensions import TypeGuard  # to support python 3
+
 
 import numpy as np
 import torch
