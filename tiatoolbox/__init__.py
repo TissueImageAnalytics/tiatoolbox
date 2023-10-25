@@ -79,13 +79,7 @@ class _RcParam(TypedDict):
     pretrained_model_info: dict[str, dict]
 
 
-# runtime context parameters
-rcParam: _RcParam = {  # noqa: N816
-    "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
-}
-
-
-def read_registry_files(path_to_registry: str | Path) -> dict | str:
+def read_registry_files(path_to_registry: str | Path) -> dict:
     """Reads registry files using importlib_resources.
 
     Args:
@@ -107,8 +101,13 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
         return yaml.safe_load(registry_handle)
 
 
-# Load a dictionary of sample files data (names and urls)
-rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.yaml")
+# runtime context parameters
+rcParam: _RcParam = {  # noqa: N816
+    "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
+    "pretrained_model_info": read_registry_files(
+        "data/pretrained_model.yaml",
+    ),  # Load a dictionary of sample files data (names and urls)
+}
 
 
 def _lazy_import(name: str, module_location: Path) -> ModuleType:

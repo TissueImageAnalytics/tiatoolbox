@@ -166,7 +166,7 @@ max-complexity = 14
 
 # need to enable for docstrings check.
 [tool.ruff.pydocstyle]
-# Use Google-style docstrings.
+ # Use Google-style docstrings.
 convention = "google"
 
 [tool.ruff.pylint]
