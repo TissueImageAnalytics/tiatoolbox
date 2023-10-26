@@ -13,6 +13,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
 
+#Draft - will be moved into ModelABC as a class method
 def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     """Helper function to load a torch model.
 
@@ -34,6 +35,7 @@ def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     return model
 
 
+#Draft - will be moved into ModelABC as a class method
 def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
     """Transfers model to cpu/gpu.
 
@@ -46,14 +48,15 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
     Returns:
         torch.nn.Module:
             The model after being moved to cpu/gpu.
-
     """
-    if device != "cpu":
-        # DataParallel work only for cuda
+    device = torch.device(device)
+    model = model.to(device)
+
+    # If target device is CUDA and more than one GPU is available, use DataParallel
+    if device.type == "cuda" and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
 
-    device = torch.device(device)
-    return model.to(device)
+    return model
 
 
 class ModelABC(ABC, nn.Module):
@@ -70,6 +73,47 @@ class ModelABC(ABC, nn.Module):
     def forward(self: ModelABC, *args: tuple[Any, ...], **kwargs: dict) -> None:
         """Torch method, this contains logic for using layers defined in init."""
         ...  # pragma: no cover
+
+    def to(self: ModelABC, device: str = "cpu") -> torch.nn.Module:
+        """Transfers model to cpu/gpu.
+
+        Args:
+            model (torch.nn.Module):
+                PyTorch defined model.
+            device (str):
+                Transfers model to the specified device. Default is "cpu".
+
+        Returns:
+            torch.nn.Module:
+                The model after being moved to cpu/gpu.
+        """
+        device = torch.device(device)
+        model = super().to(device)
+
+        # If target device is CUDA and more than one GPU is available, use DataParallel
+        if device.type == "cuda" and torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
+
+        return model
+
+    def load_weights_from_path(self: ModelABC, weights: str | Path) -> nn.Module:
+        """Helper function to load a torch model.
+
+        Args:
+            weights (str or Path):
+                Path to pretrained weights.
+
+        Returns:
+            torch.nn.Module:
+                Torch model with pretrained weights loaded on CPU.
+
+        """
+        # ! assume to be saved in single GPU mode
+        # always load on to the CPU
+        saved_state_dict = torch.load(weights, map_location="cpu")
+
+        return self.load_state_dict(saved_state_dict, strict=True)
+
 
     @staticmethod
     @abstractmethod
