@@ -8,24 +8,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 import requests
-from bokeh.client.session import ClientSession, pull_session
 from click.testing import CliRunner
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox import cli
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-@pytest.fixture(scope="module")
-def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
-    """Set up a temporary data directory."""
-    tmp_path = tmp_path_factory.mktemp("data")
-    (tmp_path / "slides").mkdir()
-    (tmp_path / "overlays").mkdir()
-    return {"base_path": tmp_path}
 
 
 @pytest.fixture(scope="module", autouse=True)

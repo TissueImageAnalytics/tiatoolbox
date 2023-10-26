@@ -58,15 +58,6 @@ def get_renderer_prop(prop: str) -> json:
     return resp.json()
 
 
-@pytest.fixture(scope="module")
-def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
-    """Set up a temporary data directory."""
-    tmp_path = tmp_path_factory.mktemp("data")
-    (tmp_path / "slides").mkdir()
-    (tmp_path / "overlays").mkdir()
-    return {"base_path": tmp_path}
-
-
 @pytest.fixture(scope="module", autouse=True)
 def annotation_path(data_path: dict[str, object]) -> dict[str, object]:
     """Download some testing slides and overlays.
