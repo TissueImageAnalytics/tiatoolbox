@@ -11,10 +11,12 @@ from typing import IO, TYPE_CHECKING
 
 import cv2
 import joblib
+import numcodecs
 import numpy as np
 import pandas as pd
 import requests
 import yaml
+import zarr
 from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import Polygon
@@ -1178,24 +1180,34 @@ def add_from_dat(
     store.append_many(anns)
 
 
-def patch_pred_store(
+def dict_to_store(
     patch_output: dict,
     scale_factor: tuple[int, int],
     class_dict: dict | None = None,
-) -> AnnotationStore:
-    """Create an SQLiteStore containing Annotations for each patch.
+    save_path: Path | None = None,
+) -> AnnotationStore | Path:
+    """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
 
     Args:
-        patch_output (dict): A dictionary of patch prediction information. Important
+        patch_output (dict):
+            A dictionary in the TIAToolbox Engines output format. Important
             keys are "probabilities", "predictions", "coordinates", and "labels".
-        scale_factor (tuple[int, int]): The scale factor to use when loading the
+        scale_factor (tuple[int, int]):
+            The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
             conversion of annotations saved at non-baseline resolution to baseline.
             Should be model_mpp/slide_mpp.
-        class_dict (dict): Optional dictionary mapping class indices to class names.
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
+            Store results.
 
     Returns:
-        SQLiteStore: An SQLiteStore containing Annotations for each patch.
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
 
     """
     if "coordinates" not in patch_output:
@@ -1217,7 +1229,7 @@ def patch_pred_store(
     if class_dict is None:
         # if no class dict create a default one
         class_dict = {i: i for i in np.unique(preds + labels).tolist()}
-    annotations = []
+
     # find what keys we need to save
     keys = ["predictions"]
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
@@ -1238,4 +1250,56 @@ def patch_pred_store(
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
+    # if a save director is provided, then dump store into a file
+    if save_path:
+        # ensure parent directory exisits
+        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+        # ensure proper db extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.dump(save_path)
+        return save_path
+
     return store
+
+
+def dict_to_zarr(
+    raw_predictions: dict,
+    save_path: Path,
+    **kwargs: dict,
+) -> Path:
+    """Saves the output of TIAToolbox engines to a zarr file.
+
+    Args:
+        raw_predictions (dict):
+            A dictionary in the TIAToolbox Engines output format.
+        save_path (str or Path):
+            Path to save the zarr file.
+        **kwargs (dict):
+            Keyword Args to update patch_pred_store_zarr attributes.
+
+
+    Returns:
+        Path to zarr file storing the patch predictor output
+
+    """
+    # Default values for Compressor and Chunks set if not received from kwargs.
+    compressor = (
+        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+    )
+    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+
+    # ensure proper zarr extension
+    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+
+    # save to zarr
+    predictions_array = np.array(raw_predictions["predictions"])
+    z = zarr.open(
+        save_path,
+        mode="w",
+        shape=predictions_array.shape,
+        chunks=chunks,
+        compressor=compressor,
+    )
+    z[:] = predictions_array
+
+    return save_path
