@@ -14,7 +14,7 @@ from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset
 from tiatoolbox.models.models_abc import load_torch_model, model_to
-from tiatoolbox.utils.misc import patch_pred_store, patch_pred_store_zarr
+from tiatoolbox.utils.misc import dict_to_store, dict_to_zarr
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -389,7 +389,7 @@ class EngineABC(ABC):
             # class_dict set from kwargs
             class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
 
-            return patch_pred_store(
+            return dict_to_store(
                 raw_predictions,
                 scale_factor,
                 class_dict,
@@ -397,7 +397,7 @@ class EngineABC(ABC):
                 output_file,
             )
 
-        return patch_pred_store_zarr(
+        return dict_to_zarr(
             raw_predictions,
             save_dir,
             output_file,
