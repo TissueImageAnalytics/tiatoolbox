@@ -13,7 +13,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
 
-#Draft - will be moved into ModelABC as a class method
+# Draft - will be moved into ModelABC as a class method
 def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     """Helper function to load a torch model.
 
@@ -35,7 +35,7 @@ def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     return model
 
 
-#Draft - will be moved into ModelABC as a class method
+# Draft - will be moved into ModelABC as a class method
 def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
     """Transfers model to cpu/gpu.
 
@@ -113,7 +113,6 @@ class ModelABC(ABC, nn.Module):
         saved_state_dict = torch.load(weights, map_location="cpu")
 
         return self.load_state_dict(saved_state_dict, strict=True)
-
 
     @staticmethod
     @abstractmethod
