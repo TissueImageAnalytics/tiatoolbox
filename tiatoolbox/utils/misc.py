@@ -1209,7 +1209,7 @@ def dict_to_store(
 
     Args:
         patch_output (dict):
-            A dictionary of patch prediction information. Important
+            A dictionary in the TIAToolbox Engines output format. Important
             keys are "probabilities", "predictions", "coordinates", and "labels".
         scale_factor (tuple[int, int]):
             The scale factor to use when loading the
@@ -1290,7 +1290,7 @@ def dict_to_zarr(
 
     Args:
         raw_predictions (dict):
-            A dictionary of output from TIAToolbox Engines.
+            A dictionary in the TIAToolbox Engines output format.
         save_path (str or Path):
             Path to save the zarr file.
         **kwargs (dict):
