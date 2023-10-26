@@ -9,20 +9,20 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pkg_resources
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -413,7 +413,7 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     """Test running hovernet on a box."""
     slide_select = doc.get_model_by_name("slide_select0")
     slide_select.value = [data_path["slide2"].name]
-    go_button = doc.get_model_by_name("to_model0")
+    run_button = doc.get_model_by_name("to_model0")
     assert len(main.UI["color_column"].children) == 0
     slide_select.value = [data_path["slide1"].name]
     # set up a box selection
@@ -426,11 +426,10 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
 
     # select hovernet model and run it on box
     model_select = doc.get_model_by_name("model_drop0")
-    click = MenuItemClick(model_select, model_select.menu[0])
-    model_select._trigger_event(click)
+    model_select.value = "hovernet"
 
-    click = ButtonClick(go_button)
-    go_button._trigger_event(click)
+    click = ButtonClick(run_button)
+    run_button._trigger_event(click)
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num = label(np.any(im[:, :, :3], axis=2))
     # check there are multiple cells being detected

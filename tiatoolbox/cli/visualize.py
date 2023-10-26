@@ -3,17 +3,23 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 from threading import Thread
 
 import click
-import pkg_resources
+
+if sys.version_info >= (3, 9):  # pragma: no cover
+    import importlib.resources as importlib_resources
+else:  # pragma: no cover
+    # To support Python 3.8
+    import importlib_resources  # type: ignore[import-not-found]
 from flask_cors import CORS
 
 from tiatoolbox.cli.common import cli_img_input, tiatoolbox_cli
 from tiatoolbox.visualization.tileserver import TileServer
 
-BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
+BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 
 
 def run_tileserver() -> None:
