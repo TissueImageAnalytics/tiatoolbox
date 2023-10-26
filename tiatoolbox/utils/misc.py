@@ -1180,34 +1180,34 @@ def add_from_dat(
     store.append_many(anns)
 
 
-def patch_pred_store(
+def dict_to_store(
     patch_output: dict,
     scale_factor: tuple[int, int],
     class_dict: dict | None = None,
-    save_dir: Path | None = None,
-    output_file: str | None = None,
+    save_path: Path | None = None,
 ) -> AnnotationStore | Path:
-    """Create an SQLiteStore containing Annotations for each patch.
+    """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
 
     Args:
-        patch_output (dict): A dictionary of patch prediction information. Important
+        patch_output (dict):
+            A dictionary in the TIAToolbox Engines output format. Important
             keys are "probabilities", "predictions", "coordinates", and "labels".
-        scale_factor (tuple[int, int]): The scale factor to use when loading the
+        scale_factor (tuple[int, int]):
+            The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
             conversion of annotations saved at non-baseline resolution to baseline.
             Should be model_mpp/slide_mpp.
-        class_dict (dict): Optional dictionary mapping class indices to class names.
-        save_dir (str or pathlib.Path): Optional Output directory to save the Annotation
-            Store results. if the save_dir is not provided, then an SQLiteStore object
-            containing Annotations for each patch is returned.
-        output_file (str): Optional file name to save the Annotation Store results.
-            if the output_file is not provided, then an SQLiteStore object
-            containing Annotations for each patch is returned.
-
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
+            Store results.
 
     Returns:
-        SQLiteStore: An SQLiteStore containing Annotations for each patch
-        or Path to file storing SQLiteStore containing Annotations for each patch
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
 
     """
     if "coordinates" not in patch_output:
@@ -1229,7 +1229,7 @@ def patch_pred_store(
     if class_dict is None:
         # if no class dict create a default one
         class_dict = {i: i for i in np.unique(preds + labels).tolist()}
-    annotations = []
+
     # find what keys we need to save
     keys = ["predictions"]
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
@@ -1251,34 +1251,50 @@ def patch_pred_store(
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
     # if a save director is provided, then dump store into a file
-    if save_dir and output_file:
-        output_file += ".db"
-        path_to_output_file = save_dir / output_file
-        save_dir.mkdir(parents=True, exist_ok=True)
-        store.dump(path_to_output_file)
-        return path_to_output_file
+    if save_path:
+        # ensure parent directory exisits
+        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+        # ensure proper db extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.dump(save_path)
+        return save_path
 
     return store
 
 
-def patch_pred_store_zarr(
+def dict_to_zarr(
     raw_predictions: dict,
-    save_dir: Path,
-    output_file: str,
+    save_path: Path,
     **kwargs: dict,
 ) -> Path:
-    """Default values for Compressor and Chunks set if not received from kwargs."""
+    """Saves the output of TIAToolbox engines to a zarr file.
+
+    Args:
+        raw_predictions (dict):
+            A dictionary in the TIAToolbox Engines output format.
+        save_path (str or Path):
+            Path to save the zarr file.
+        **kwargs (dict):
+            Keyword Args to update patch_pred_store_zarr attributes.
+
+
+    Returns:
+        Path to zarr file storing the patch predictor output
+
+    """
+    # Default values for Compressor and Chunks set if not received from kwargs.
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
     chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
+    # ensure proper zarr extension
+    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+
     # save to zarr
-    output_file += ".zarr"
-    path_to_output_file = save_dir / output_file
     predictions_array = np.array(raw_predictions["predictions"])
     z = zarr.open(
-        path_to_output_file,
+        save_path,
         mode="w",
         shape=predictions_array.shape,
         chunks=chunks,
@@ -1286,4 +1302,4 @@ def patch_pred_store_zarr(
     )
     z[:] = predictions_array
 
-    return path_to_output_file
+    return save_path
