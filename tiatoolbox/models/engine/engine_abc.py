@@ -383,7 +383,7 @@ class EngineABC(ABC):
             else "output"
         )
 
-        save_path = save_dir / output_file 
+        save_path = save_dir / output_file
 
         if output_type == "AnnotationStore":
             # scale_factor set from kwargs
@@ -391,12 +391,7 @@ class EngineABC(ABC):
             # class_dict set from kwargs
             class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
 
-            return dict_to_store(
-                raw_predictions,
-                scale_factor,
-                class_dict,
-                save_path
-            )
+            return dict_to_store(raw_predictions, scale_factor, class_dict, save_path)
 
         return dict_to_zarr(
             raw_predictions,
