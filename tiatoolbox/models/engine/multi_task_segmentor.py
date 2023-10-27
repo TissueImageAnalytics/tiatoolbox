@@ -373,7 +373,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
                 tile_infer_output = self._infer_once()
 
-                self._process_tile_predictions(
+                self._process_tile_predictions(  # skipcq: PY-R1000
                     ioconfig,
                     tile_bounds,
                     tile_flag,
