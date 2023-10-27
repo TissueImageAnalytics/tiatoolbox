@@ -1,12 +1,12 @@
 .. _visualization:
 
-Visualization interface
-=======================
+Visualization Interface Usage
+=============================
 
-The following assumes tiatoolbox has been installed per the instructions here: :ref:`installation <installation>`.
+Tiatoolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using tiatoolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes tiatoolbox has been installed per the instructions here: :ref:`installation <installation>`.
 
-Launching the interface
------------------------
+1. Launching the interface
+--------------------------
 
 Start the interface using the command::
 
@@ -14,14 +14,25 @@ Start the interface using the command::
 
 alternatively just one path can be provided; in this case it is assumed that slides and overlays are in subdirectories of that provided directory called 'slides' and 'overlays' respectively::
 
-    tiatoolbox visualize --img-input path\to\parent_of_slides_and _overlays
+    tiatoolbox visualize --img-input path\to\parent_of_slides_and_overlays
 
-In the folder(s) that your command pointed to, should be the things that you want to visualize, following the conventions in the next section.
+In the folder(s) that your command pointed to, should be the things that you want to visualize, following the conventions in :ref:`Data formats <data_format>`.
+
+Launching on a remote machine
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As the UI is browser-based, you can launch the interface on a remote machine by logging in via ssh and forwarding the relevant ports so that the visualization of the remote slides and overlays can be viewed in the browser on your local machine. For example, connect via ssh to your remote machine::
+
+    ssh -L 5006:localhost:5006 -L 5000:localhost:5000 user@remote_machine
+
+this will start a ssh session where the two ports the interface uses by default (5006 and 5000) are forwarded.
+
+you can then launch the interface on the remote machine as above (tiatoolbox must be installed on the remote machine), and open the browser on your local machine. Navigate to localhost:5006 to view the interface.
 
 .. _interface:
 
-General UI Controls and Options
--------------------------------
+2. General UI Controls and Options
+----------------------------------
 
 .. image:: images/visualize_interface.png
     :width: 100%
@@ -42,15 +53,15 @@ Type and layer select
     :align: right
     :alt: type select example
 
-If annotations have a type property, this will be used to populate the type select boxes. This allows you to toggle on/off annotations of a specific type. You can also modify the default colors that each type is displayed in by using the color picker widgets next to each type name (note these will only have an effect if the property to color by is selected as 'type'). Individual image overlays or graph overlays will also get their own toggle, labelled for example 'layer_i' or 'nodes', that can be used to toggle the respective overlays on or off.
+If annotations have a type property, this will be used to populate the type select boxes. This allows you to toggle on/off annotations of a specific type. You can also modify the default colours that each type is displayed in by using the colour picker widgets next to each type name (note these will only have an effect if the property to colour by is selected as 'type'). Individual image overlays or graph overlays will also get their own toggle, labelled for example 'layer_i' or 'nodes', that can be used to toggle the respective overlays on or off.
 
-Colormaps/colouring by property values
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Colourmaps/colouring by property values
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Once you have selected a slide with the slide dropdown, you can overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colors can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
+Once you have selected a slide with the slide dropdown, you can overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. colours can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
 
 You can select the property that will be used to colour annotations in the colour_by box. The corresponding property should be either categorical (strings or ints), in which case a dict-based colour mapping should be used, or a float between 0-1 in which case a matplotlib colourmap should be applied.
-There is also the option for the special case 'color' to be used - if your annotations have a property called color, this will be assumed to be an rgb value in the form of a tuple (r, g, b) of floats between 0-1 for each annotation which will be used directly without any mapping.
+There is also the option for the special case 'colour' to be used - if your annotations have a property called colour, this will be assumed to be an rgb value in the form of a tuple (r, g, b) of floats between 0-1 for each annotation which will be used directly without any mapping.
 
 The 'colour type by property' box allows annotations of the specified type to be coloured by a different property to the 'global' one. For example, this could be used to have all detections coloured according to their type, but for Glands, colour by some feature describing them instead (their area, for example)
 
@@ -90,7 +101,7 @@ By default, the interface is set up to show only larger annotations while zoomed
 Other options
 ^^^^^^^^^^^^^
 
-There are a few options for how annotations are displayed. You can change the colourmap used in the colormap field if you are colouring objects according to a continuous property (should be between 0-1) - by entering the text of a matplotlib cmap.
+There are a few options for how annotations are displayed. You can change the colourmap used in the colourmap field if you are colouring objects according to a continuous property (should be between 0-1) - by entering the text of a matplotlib cmap.
 The buttons 'filled', 'mpp', 'grid', respectively toggle between filled and outline only rendering of annotations, using mpp or baseline pixels as the scale for the plot, and showing a grid overlay.
 
 A filter can be applied to annotations using the filter box. For example, entering props\['score'\]>0.5 would show only annotations for which the 'score' property  is greater than 0.5.
@@ -98,8 +109,8 @@ See the annotation store documentation on valid 'where' statements for more deta
 
 .. _data_format:
 
-Data Format Conventions and File Structure
-------------------------------------------
+3. Data Format Conventions and File Structure
+---------------------------------------------
 
 In the slides folder should be all the slides you want to use, and the overlays folder should contain whatever graphs, segmentations, heatmaps etc you are interesting in overlaying over the slides.
 
@@ -125,21 +136,30 @@ HoVerNet style::
                     contour: List[List[]],
                     prob: float,
                     type: int
-        ... #can add as many additional properties as we want...
-                    }
-    ... # other instances
-    }
+                ... #can add as many additional properties as we want...
+                            }
+                ... # other instances
+                }
+
+Files in this format can be converted to an AnnotationStore using: :obj:`store_to_dat <tiatoolbox.utils.misc.store_from_dat>`
 
 
 GeoJSON::
 
-    {"type":"Feature",
+    {
+    "type":"Feature",
     "geometry":{
         "type":"Polygon",
         "coordinates":[[[21741, 49174.09],[21737.84, 49175.12],[21734.76, 49175.93],[21729.85, 49179.85],[21726.12, 49184.84],[21725.69, 49187.95],[21725.08, 49191],[21725.7, 49194.04],[21726.15, 49197.15],[21727.65, 49199.92],[21729.47, 49202.53],[21731.82, 49204.74],[21747.53, 49175.23],[21741, 49174.09]]]},
         "properties":{"object_type":"detection","isLocked":false}
-    }
+    }}
 
+Files in this format can be converted to an AnnotationStore using the method:
+:obj:`AnnotationStore.from_geojson() <tiatoolbox.annotation.storage.AnnotationStore>`
+
+While data in these formats can be loaded directly into the interface, it is recommended to convert and save them as an annotation store outside the interface, as this will be much faster to load.
+
+Tiatoolbox also provides a function to convert the output of PatchPredictor to an annotation store, which can be found at :obj:`dict_to_store <tiatoolbox.utils.misc.dict_to_store>`.
 
 If your data is not in one of these formats, it is usually fairly straightforward to build an annotation store out of your model outputs.\
 A small script of 6-10 lines is usually all that is required. There are example code snippets illustrating how to create an annotation store in a variety of common scenarios in the examples section.
@@ -150,7 +170,7 @@ Heatmaps
 
 will display a low-res heatmap in .jpg or .png format. Should be the same aspect ratio as the WSI it will be overlaid on. When creating the image, keep in mind that white regions (255,255,255) will be made transparent.
 
-Single channel images can also be used but are not recommended; they should take values between 0 and 255 and will simply be put through a viridis colormap. 0 values will become white background.
+Single channel images can also be used but are not recommended; they should take values between 0 and 255 and will simply be put through a viridis colourmap. 0 values will become white background.
 
 Whole Slide Overlays
 ^^^^^^^^^^^^^^^^^^^^
@@ -193,8 +213,8 @@ It will be possible to colour the nodes by these features in the interface, and 
 
 .. _examples:
 
-Annotation Store examples
--------------------------
+4. Annotation Store examples
+----------------------------
 
 Patch Predictions
 ^^^^^^^^^^^^^^^^^
@@ -220,7 +240,7 @@ of each patch, and two predicted scores are in a .csv file. Patch size is 512.
 
 When loading the above in the interface, you will be able to select any of the properties to colour the overlay by.
 
-geojson outputs
+GeoJSON outputs
 ^^^^^^^^^^^^^^^
 
 While .geojson files can be loaded in the interface directly, it is often more convenient to convert them to a .db file first, as this will avoid the delay while the geojson is converted to an annotation store.
@@ -268,11 +288,11 @@ and associated node properties. The following example demonstrates how to packag
 
 ::
 
-    graph_dict = {  'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-        'coordinates': n x 2 array of x,y coordinates for each graph node
-        'feats': n x n_features array of features for each node
-        'feat_names': list n_features names for each feature
-        }
+    graph_dict = {'edge_index': 2 x n_edges array of indices of pairs of connected nodes
+                'coordinates': n x 2 array of x,y coordinates for each graph node
+                'feats': n x n_features array of features for each node
+                'feat_names': list n_features names for each feature
+                }
 
     with open("path/to/graph.json", "w") as f:
         json.dump(graph_dict, f)
@@ -342,8 +362,8 @@ Lets say you have some annotations that were created on a slide, and you want to
 
 .. _config:
 
-Config files
-------------
+5. Config files
+---------------
 
 A json config file can be placed in the overlays folder, to customize various aspects of the UI and annotation display when visualizing overlays in that location. This is especially useful for customising online demos. An example .json explaining all the fields is shown below.
 
@@ -364,10 +384,10 @@ Settings to control how annotations are displayed, including default colours for
 ::
 
     "colour_dict": {
-        "typeA": [252, 161, 3, 255],   # annotations whose 'type' property matches these, will display in the specified color
+        "typeA": [252, 161, 3, 255],   # annotations whose 'type' property matches these, will display in the specified colour
         "typeB": [3, 252, 40, 255]
     },
-    "default_cprop": "some_property",     # default property to color annotations by
+    "default_cprop": "some_property",     # default property to colour annotations by
     "default_type_cprop": {               # a property to colour a specific type by
     "type": "Gland",
     "cprop": "Explanation"
@@ -380,13 +400,13 @@ There are settings to control the initial values of some UI settings:
     "UI_settings": {
         "blur_radius": 0,           # applies a blur to rendererd annotations
         "edge_thickness": 0,        # thickness of boundaries drawn around annotation geometries (0=off)
-        "mapper": "jet",            # default colormapper to use when coloring by a continuous property
+        "mapper": "jet",            # default colourmapper to use when colouring by a continuous property
         "max_scale": 32             # controls zoom level at which small annotations are no longer rendered (larger val->smaller
     },                              # annotations visible when zoomed out)
     "opts": {
         "edges_on": 0,              # graph edges are shown or hidden by default
         "nodes_on": 1,              # graph nodes are shown or hidden by default
-        "colorbar_on": 1,           # whether colorbar is shown below main window
+        "colourbar_on": 1,           # whether colourbar is shown below main window
         "hover_on": 1
     },
 
@@ -400,9 +420,9 @@ and the ability to toggle on or off specific UI elements:
         "slide_row": 1,             # slide alpha toggle and slider
         "overlay_row": 1,           # overlay alpha toggle and slider
         "filter_input": 1,          # filter text input box
-        "cprop_input": 1,           # box to select which property to color annotations by ('color by' box)
-        "cmap_row": 1,              # row of UI elements with colormap select, blur, max_scale
-        "type_cmap_select": 1,      # UI element to select a secondary colormap for a specific type (i.e 'color type by' box)
+        "cprop_input": 1,           # box to select which property to colour annotations by ('colour by' box)
+        "cmap_row": 1,              # row of UI elements with colourmap select, blur, max_scale
+        "type_cmap_select": 1,      # UI element to select a secondary colourmap for a specific type (i.e 'colour type by' box)
         "model_row": 0,             # UI elements to chose and run a model
         "type_select_row": 1        # buttom group for toggling specific types of annotations on/off
     },
@@ -416,7 +436,7 @@ and the ability to toggle on or off specific UI elements:
         "res_switch": 1,            # allows to switch to lower res tiles for faster loading
         "mixing_type_select": 1,    # select mixing type for multi-property cmap builder
         "cmap_builder_input": 1,    # property select box for multi-prop cmap builder
-        "cmap_picker_column": 1,    # controls color chosen for each property in multi-prop cmap
+        "cmap_picker_column": 1,    # controls colour chosen for each property in multi-prop cmap
         "cmap_builder_button": 1    # button to build the multi-prop cmap
     }
     }
