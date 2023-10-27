@@ -1172,7 +1172,12 @@ def add_from_dat(
         # assume cerberus format with objects subdivided into categories
         anns = []
         for subcat in data:
-            if subcat == "resolution":
+            if (
+                subcat == "resolution"
+                or subcat == "proc_dimensions"
+                or subcat == "base_dimensions"
+                or "resolution" in subcat
+            ):
                 continue
             props = next(iter(data[subcat].values()))
             if not isinstance(props, dict):
