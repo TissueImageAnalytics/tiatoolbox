@@ -139,3 +139,14 @@ def test_lazy_import() -> None:
     )
 
     assert "exceptions" in sys.modules
+
+
+def test_lazy_import_module_not_found() -> None:
+    """'Test lazy import for ModuleNotFoundError."""
+    from tiatoolbox import _lazy_import
+
+    with pytest.raises(ModuleNotFoundError):
+        _lazy_import(
+            "nonexistent_module",
+            Path(__file__).parent.parent / "tiatoolbox",
+        )

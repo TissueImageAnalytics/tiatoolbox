@@ -11,13 +11,16 @@ from typing import IO, TYPE_CHECKING
 
 import cv2
 import joblib
+import numcodecs
 import numpy as np
 import pandas as pd
 import requests
 import torch
 import yaml
+import zarr
 from filelock import FileLock
 from shapely.affinity import translate
+from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 
@@ -860,7 +863,8 @@ def select_device(*, on_gpu: bool) -> str:
     """Selects the appropriate device as requested.
 
     Args:
-        on_gpu (bool): Selects gpu if True.
+        on_gpu (bool):
+            Selects gpu if True.
 
     Returns:
         str:
@@ -883,7 +887,6 @@ def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
     Returns:
         torch.nn.Module:
             The model after being moved to cpu/gpu.
-
     """
     if on_gpu:  # DataParallel work only for cuda
         model = torch.nn.DataParallel(model)
@@ -1194,3 +1197,128 @@ def add_from_dat(
 
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
+
+
+def dict_to_store(
+    patch_output: dict,
+    scale_factor: tuple[int, int],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+) -> AnnotationStore | Path:
+    """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
+
+    Args:
+        patch_output (dict):
+            A dictionary in the TIAToolbox Engines output format. Important
+            keys are "probabilities", "predictions", "coordinates", and "labels".
+        scale_factor (tuple[int, int]):
+            The scale factor to use when loading the
+            annotations. All coordinates will be multiplied by this factor to allow
+            conversion of annotations saved at non-baseline resolution to baseline.
+            Should be model_mpp/slide_mpp.
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
+            Store results.
+
+    Returns:
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
+
+    """
+    if "coordinates" not in patch_output:
+        # we cant create annotations without coordinates
+        msg = "Patch output must contain coordinates."
+        raise ValueError(msg)
+    # get relevant keys
+    class_probs = patch_output.get("probabilities", [])
+    preds = patch_output.get("predictions", [])
+    patch_coords = np.array(patch_output.get("coordinates", []))
+    if not np.all(np.array(scale_factor) == 1):
+        patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
+    labels = patch_output.get("labels", [])
+    # get classes to consider
+    if len(class_probs) == 0:
+        classes_predicted = np.unique(preds).tolist()
+    else:
+        classes_predicted = range(len(class_probs[0]))
+    if class_dict is None:
+        # if no class dict create a default one
+        class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+
+    # find what keys we need to save
+    keys = ["predictions"]
+    keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
+
+    # put patch predictions into a store
+    annotations = []
+    for i, pred in enumerate(preds):
+        if "probabilities" in keys:
+            props = {
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+            }
+        else:
+            props = {}
+        if "labels" in keys:
+            props["label"] = class_dict[labels[i]]
+        props["type"] = class_dict[pred]
+        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
+    store = SQLiteStore()
+    keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+
+    # if a save director is provided, then dump store into a file
+    if save_path:
+        # ensure parent directory exisits
+        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+        # ensure proper db extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.dump(save_path)
+        return save_path
+
+    return store
+
+
+def dict_to_zarr(
+    raw_predictions: dict,
+    save_path: Path,
+    **kwargs: dict,
+) -> Path:
+    """Saves the output of TIAToolbox engines to a zarr file.
+
+    Args:
+        raw_predictions (dict):
+            A dictionary in the TIAToolbox Engines output format.
+        save_path (str or Path):
+            Path to save the zarr file.
+        **kwargs (dict):
+            Keyword Args to update patch_pred_store_zarr attributes.
+
+
+    Returns:
+        Path to zarr file storing the patch predictor output
+
+    """
+    # Default values for Compressor and Chunks set if not received from kwargs.
+    compressor = (
+        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+    )
+    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+
+    # ensure proper zarr extension
+    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+
+    # save to zarr
+    predictions_array = np.array(raw_predictions["predictions"])
+    z = zarr.open(
+        save_path,
+        mode="w",
+        shape=predictions_array.shape,
+        chunks=chunks,
+        compressor=compressor,
+    )
+    z[:] = predictions_array
+
+    return save_path
