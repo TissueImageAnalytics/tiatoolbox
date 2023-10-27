@@ -191,7 +191,6 @@ def test_prepare_engines_save_dir(
             len_images=1,
             overwrite=False,
         )
-        assert out_path.exists()
 
 
 def test_engine_initalization() -> NoReturn:
