@@ -3,7 +3,7 @@
 Visualization Interface Usage
 =============================
 
-TIAToolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using tiatoolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes TIAToolbox has been installed per the instructions here: :ref:`installation <installation>`.
+TIAToolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using TIAToolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes TIAToolbox has been installed per the instructions here: :ref:`installation <installation>`.
 
 1. Launching the interface
 --------------------------
@@ -12,7 +12,7 @@ Start the interface using the command::
 
     tiatoolbox visualize --img-input path\to\slides --img-input path\to\overlays
 
-alternatively just one path can be provided; in this case it is assumed that slides and overlays are in subdirectories of that provided directory called 'slides' and 'overlays' respectively::
+Alternatively just one path can be provided; in this case it is assumed that slides and overlays are in subdirectories of that provided directory called 'slides' and 'overlays' respectively::
 
     tiatoolbox visualize --img-input path\to\parent_of_slides_and_overlays
 
@@ -25,9 +25,9 @@ As the UI is browser-based, you can launch the interface on a remote machine by 
 
     ssh -L 5006:localhost:5006 -L 5000:localhost:5000 user@remote_machine
 
-this will start a ssh session where the two ports the interface uses by default (5006 and 5000) are forwarded.
+This will start a ssh session where the two ports the interface uses by default (5006 and 5000) are forwarded.
 
-you can then launch the interface on the remote machine as above (tiatoolbox must be installed on the remote machine), and open the browser on your local machine. Navigate to localhost:5006 to view the interface.
+You can then launch the interface on the remote machine as above (TIAToolbox must be installed on the remote machine), and open the browser on your local machine. Navigate to localhost:5006 to view the interface.
 
 .. _interface:
 
@@ -58,7 +58,7 @@ If annotations have a type property, this will be used to populate the type sele
 Colourmaps/colouring by property values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Once you have selected a slide with the slide dropdown, you can overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. colours can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
+Once you have selected a slide with the slide dropdown, you can overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colours can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
 
 You can select the property that will be used to colour annotations in the colour_by box. The corresponding property should be either categorical (strings or ints), in which case a dict-based colour mapping should be used, or a float between 0-1 in which case a matplotlib colourmap should be applied.
 There is also the option for the special case 'colour' to be used - if your annotations have a property called colour, this will be assumed to be an rgb value in the form of a tuple (r, g, b) of floats between 0-1 for each annotation which will be used directly without any mapping.
@@ -159,7 +159,7 @@ Files in this format can be converted to an AnnotationStore using the method:
 
 While data in these formats can be loaded directly into the interface, it is recommended to convert and save them as an annotation store outside the interface, as this will be much faster to load.
 
-Tiatoolbox also provides a function to convert the output of PatchPredictor to an annotation store, which can be found at :obj:`dict_to_store <tiatoolbox.utils.misc.dict_to_store>`.
+TIAToolbox also provides a function to convert the output of PatchPredictor to an annotation store, which can be found at :obj:`dict_to_store <tiatoolbox.utils.misc.dict_to_store>`.
 
 If your data is not in one of these formats, it is usually fairly straightforward to build an annotation store out of your model outputs.\
 A small script of 6-10 lines is usually all that is required. There are example code snippets illustrating how to create an annotation store in a variety of common scenarios in the examples section.
@@ -168,7 +168,7 @@ Most use-cases should be covered in there, or something close enough that a few 
 Heatmaps
 ^^^^^^^^
 
-will display a low-res heatmap in .jpg or .png format. Should be the same aspect ratio as the WSI it will be overlaid on. When creating the image, keep in mind that white regions (255,255,255) will be made transparent.
+These should be provided as a low-res heatmap in .jpg or .png format. It should be the same aspect ratio as the WSI it will be overlaid on. When creating the image, keep in mind that white regions (255,255,255) will be made transparent.
 
 Single channel images can also be used but are not recommended; they should take values between 0 and 255 and will simply be put through a viridis colourmap. 0 values will become white background.
 
@@ -219,7 +219,7 @@ It will be possible to colour the nodes by these features in the interface, and 
 Patch Predictions
 ^^^^^^^^^^^^^^^^^
 
-lets say you have patch level predictions for a model. The top left corner
+Lets say you have patch level predictions for a model. The top left corner
 of each patch, and two predicted scores are in a .csv file. Patch size is 512.
 
 ::
@@ -244,7 +244,7 @@ GeoJSON outputs
 ^^^^^^^^^^^^^^^
 
 While .geojson files can be loaded in the interface directly, it is often more convenient to convert them to a .db file first, as this will avoid the delay while the geojson is converted to an annotation store.
-The tiatoolbox AnnotationStore class provides a method to do this.
+The TIAToolbox AnnotationStore class provides a method to do this.
 
 ::
 

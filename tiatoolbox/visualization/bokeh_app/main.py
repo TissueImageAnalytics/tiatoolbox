@@ -8,7 +8,7 @@ import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
 from shutil import rmtree
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 
 import numpy as np
 import requests
@@ -98,10 +98,10 @@ help_ss = InlineStyleSheet(
         :host(.help_tt) {
             width:200px;
             white-space: wrap;
-            padding-top: 0px;
-            padding-bottom: 0px;
-            margin-top: 0px;
-            margin-bottom: 0px;
+            padding-top: 3px;
+            padding-bottom: 3px;
+            margin-top: 3px;
+            margin-bottom: 3px;
         }
         """,
 )
@@ -177,7 +177,7 @@ def get_view_bounds(
     return x_range_start, x_range_end, y_range_start, y_range_end
 
 
-def to_num(x: str) -> int | float | None:
+def to_num(x: str | SupportsFloat) -> int | float | None:
     """Convert a str representation of a number to a numerical value."""
     if not isinstance(x, str):
         return x
