@@ -3,7 +3,7 @@
 Visualization Interface Usage
 =============================
 
-TIAToolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using TIAToolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes TIAToolbox has been installed per the instructions here: :ref:`installation <installation>`.
+TIAToolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using TIAToolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes TIAToolbox has been installed per the instructions here: :ref:`Installation <installation>`.
 
 1. Launching the interface
 --------------------------
@@ -105,7 +105,9 @@ There are a few options for how annotations are displayed. You can change the co
 The buttons 'filled', 'mpp', 'grid', respectively toggle between filled and outline only rendering of annotations, using mpp or baseline pixels as the scale for the plot, and showing a grid overlay.
 
 A filter can be applied to annotations using the filter box. For example, entering props\['score'\]>0.5 would show only annotations for which the 'score' property  is greater than 0.5.
-See the annotation store documentation on valid 'where' statements for more details.
+See the documentation in :obj:`AnnotationStore <tiatoolbox.annotation.storage.AnnotationStore>` on valid 'where' statements for more details.
+
+The main slide view can be made fullscreen by clicking the fullscreen icon in the small toolbar to the immediate right of the main window. This toolbar also provides a button to save the current view as a .png file.
 
 .. _data_format:
 
@@ -161,8 +163,7 @@ While data in these formats can be loaded directly into the interface, it is rec
 
 TIAToolbox also provides a function to convert the output of PatchPredictor to an annotation store, which can be found at :obj:`dict_to_store <tiatoolbox.utils.misc.dict_to_store>`.
 
-If your data is not in one of these formats, it is usually fairly straightforward to build an annotation store out of your model outputs.\
-A small script of 6-10 lines is usually all that is required. There are example code snippets illustrating how to create an annotation store in a variety of common scenarios in the examples section.
+If your data is not in one of these formats, it is usually fairly straightforward to build an annotation store out of your model outputs. A small script of 6-10 lines is usually all that is required. There are example code snippets illustrating how to create an annotation store in a variety of common scenarios in the examples section.
 Most use-cases should be covered in there, or something close enough that a few tweaks to a snippet will do what is needed.
 
 Heatmaps
@@ -188,7 +189,7 @@ Graphs
 Graphs can also be overlaid. The display of nodes and edges can be toggled on/off independently in the right hand panel of the interface (note, edges will be turned off by default; they can be made visible by toggling the 'edges' toggle in the UI). An example of a graph overlay is shown to the right. Graph overlays should be provided in a dictionary format with keys as described below, saved as a .json file.
 
 
-e.g.::
+E.g.::
 
     graph_dict = {
                 'edge_index': 2 x n_edges array of indices of pairs of connected nodes
@@ -219,7 +220,7 @@ It will be possible to colour the nodes by these features in the interface, and 
 Patch Predictions
 ^^^^^^^^^^^^^^^^^
 
-Lets say you have patch level predictions for a model. The top left corner
+Let's say you have patch level predictions for a model. The top left corner
 of each patch, and two predicted scores are in a .csv file. Patch size is 512.
 
 ::
@@ -283,7 +284,7 @@ Note that in the above we saved the 'class' property as 'type' - this is because
 Graphs example
 ^^^^^^^^^^^^^^
 
-Lets say you have a graph defined by nodes and edges,
+Let's say you have a graph defined by nodes and edges,
 and associated node properties. The following example demonstrates how to package this into a .json file
 
 ::
@@ -305,7 +306,7 @@ properties of annotations (or can also do similarly for geometry)
 
 ::
 
-    # lets assume you have calculated a score in some way, that you want to add to
+    # let's assume you have calculated a score in some way, that you want to add to
     # the annotations in a store
     scores = [0.9, 0.5]
 
@@ -338,7 +339,7 @@ at the same time, just put them all in the same store as follows
 Shifting coordinates
 ^^^^^^^^^^^^^^^^^^^^
 
-Lets say you have some annotations that were created on a slide, and you want to grab the annotations in a particular region and display them on a tile from that slide. You will need their coordinates to be relative to the tile. You can do this as follows
+Let's say you have some annotations that were created on a slide, and you want to grab the annotations in a particular region and display them on a tile from that slide. You will need their coordinates to be relative to the tile. You can do this as follows
 
 ::
 
@@ -436,3 +437,5 @@ and the ability to toggle on or off specific UI elements:
         "res_switch": 1,            # allows to switch to lower res tiles for faster loading
     }
     }
+
+This .json filename should end in 'config.json' to be picked up by the interface.
