@@ -167,9 +167,9 @@ def test_prepare_engines_save_dir(
     assert out_dir.exists()
     assert r"When providing multiple whole slide images" in caplog.text
 
-    #test for file overwrite with Path.mkdirs() method
+    # test for file overwrite with Path.mkdirs() method
     out_path = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output" / "output.zarr" ,
+        save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
         len_images=1,
         overwrite=True,
@@ -177,7 +177,7 @@ def test_prepare_engines_save_dir(
     assert out_path.exists()
 
     out_path = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output" / "output.zarr" ,
+        save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
         len_images=1,
         overwrite=True,
@@ -186,7 +186,7 @@ def test_prepare_engines_save_dir(
 
     with pytest.raises(FileExistsError):
         out_path = prepare_engines_save_dir(
-            save_dir=tmp_path / "patch_output" / "output.zarr" ,
+            save_dir=tmp_path / "patch_output" / "output.zarr",
             patch_mode=True,
             len_images=1,
             overwrite=False,
