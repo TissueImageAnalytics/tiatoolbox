@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -57,11 +61,8 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
-# Github actions seems unable to find tiatoolbox unless this is here
+# GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger  # noqa: E402
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (  # noqa: E402

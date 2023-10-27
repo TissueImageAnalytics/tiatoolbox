@@ -125,7 +125,7 @@ files:
     url: [ *testdata, "annotation/CMU-1-Small-Region_detections.db"]
   annotation_dat_svs_1:
     url: [ *testdata, "annotation/CMU-1-Small-Region_anns.dat"]
-  rendered_annotations_svs_1:
+  svs_1_rendered_annotations_jpg:
     url: [ *testdata, "annotation/CMU-1-Small-Region_rendered_annotations.jpg"]
   graph_svs_1:
     url: [ *testdata, "annotation/CMU-1-Small-Region_detections_gr.json"]

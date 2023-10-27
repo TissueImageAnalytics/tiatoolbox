@@ -3,7 +3,7 @@
 Visualization Interface Usage
 =============================
 
-Tiatoolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using tiatoolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes tiatoolbox has been installed per the instructions here: :ref:`installation <installation>`.
+TIAToolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using tiatoolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes TIAToolbox has been installed per the instructions here: :ref:`installation <installation>`.
 
 1. Launching the interface
 --------------------------
@@ -39,7 +39,7 @@ you can then launch the interface on the remote machine as above (tiatoolbox mus
     :align: center
     :alt: visualize interface
 
-The interface is split into two main sections. The left hand side contains the main window, which displays the slide and overlays (or pontentially a linked pair of slide views), and the right hand side contains a number of UI elements to control the display of the overlays.
+The interface is split into two main sections. The left hand side contains the main window, which displays the slide and overlays (or potentially a linked pair of slide views), and the right hand side contains a number of UI elements to control the display of the overlays.
 
 The main window can be zoomed in and out using the mouse wheel, and panned by clicking and dragging. The slide can be changed using the slide dropdown menu. The overlay can be changed or additional overlays added using the overlay dropdown menu. The alpha of the slide and overlay can be controlled using the slide and overlay alpha sliders respectively.
 
@@ -80,7 +80,7 @@ Dual window mode
     :align: center
     :alt: dual window example
 
-A second window can be opened by selecting the 'window 2' tab in the top right. This will open the currently selected slide in a second window as illustrated above. The overlay shown in each window can be controlled independently to allow comparison of different overlays, or viewing of a model output side-by-side with the unoverlaid slide, or ground truth annotations. Slide navigation will be linked between both windows.
+A second window can be opened by selecting the 'window 2' tab in the top right. This will open the currently selected slide in a second window as illustrated above. The overlay shown in each window can be controlled independently to allow comparison of different overlays, or viewing of a model output side-by-side with the raw image (slide), or ground truth annotations. Slide navigation will be linked between both windows.
 Two different slides can also be opened in the two windows, although this will only be useful in cases where the two slides are registered so that a shared coordinate space/slide navigation makes sense.
 
 Inspecting annotations
@@ -398,15 +398,15 @@ There are settings to control the initial values of some UI settings:
 ::
 
     "UI_settings": {
-        "blur_radius": 0,           # applies a blur to rendererd annotations
+        "blur_radius": 0,           # applies a blur to rendered annotations
         "edge_thickness": 0,        # thickness of boundaries drawn around annotation geometries (0=off)
-        "mapper": "jet",            # default colourmapper to use when colouring by a continuous property
+        "mapper": "jet",            # default colour mapper to use when colouring by a continuous property
         "max_scale": 32             # controls zoom level at which small annotations are no longer rendered (larger val->smaller
     },                              # annotations visible when zoomed out)
     "opts": {
         "edges_on": 0,              # graph edges are shown or hidden by default
         "nodes_on": 1,              # graph nodes are shown or hidden by default
-        "colourbar_on": 1,           # whether colourbar is shown below main window
+        "colourbar_on": 1,           # whether colour bar is shown below main window
         "hover_on": 1
     },
 
@@ -424,7 +424,7 @@ and the ability to toggle on or off specific UI elements:
         "cmap_row": 1,              # row of UI elements with colourmap select, blur, max_scale
         "type_cmap_select": 1,      # UI element to select a secondary colourmap for a specific type (i.e 'colour type by' box)
         "model_row": 0,             # UI elements to chose and run a model
-        "type_select_row": 1        # buttom group for toggling specific types of annotations on/off
+        "type_select_row": 1        # button group for toggling specific types of annotations on/off
     },
 
 ::
@@ -434,9 +434,5 @@ and the ability to toggle on or off specific UI elements:
         "pt_size_spinner": 1,       # control for point size and graph node size
         "edge_size_spinner": 1,     # control for edge thickness
         "res_switch": 1,            # allows to switch to lower res tiles for faster loading
-        "mixing_type_select": 1,    # select mixing type for multi-property cmap builder
-        "cmap_builder_input": 1,    # property select box for multi-prop cmap builder
-        "cmap_picker_column": 1,    # controls colour chosen for each property in multi-prop cmap
-        "cmap_builder_button": 1    # button to build the multi-prop cmap
     }
     }

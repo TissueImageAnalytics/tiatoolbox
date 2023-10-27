@@ -579,6 +579,7 @@ class TileServer(Flask):
 
         Returns:
             str: A jsonified list of the values of the property.
+
         """
         session_id = self._get_session_id()
         where = None
@@ -669,12 +670,15 @@ class TileServer(Flask):
         """Query for annotations at a point.
 
         Args:
-            x (float): The x coordinate.
-            y (float): The y coordinate.
+            x (float):
+                The x coordinate.
+            y (float):
+                The y coordinate.
 
         Returns:
-            Response: The jsonified dict of the properties of the
-            smallest annotation returned from the query at the point.
+            Response:
+                The jsonified dict of the properties of the
+                smallest annotation returned from the query at the point.
 
         """
         session_id = self._get_session_id()

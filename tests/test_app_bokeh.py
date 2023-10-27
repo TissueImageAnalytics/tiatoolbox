@@ -5,24 +5,31 @@ import io
 import json
 import multiprocessing
 import re
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
-import pkg_resources
+
+import bokeh.models as bkmodels
+
+if sys.version_info >= (3, 9):  # pragma: no cover
+    import importlib.resources as importlib_resources
+else:  # pragma: no cover
+    # To support Python 3.8
+    import importlib_resources  # type: ignore[import-not-found]
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -32,7 +39,7 @@ if TYPE_CHECKING:
     from bokeh.document import Document
 
 # constants
-BOKEH_PATH = pkg_resources.resource_filename("tiatoolbox", "visualization/bokeh_app")
+BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
@@ -91,7 +98,7 @@ def annotation_path(data_path: dict[str, object]) -> dict[str, object]:
         data_path["base_path"] / "overlays",
     )
     data_path["img_overlay"] = _fetch_remote_sample(
-        "rendered_annotations_svs_1",
+        "svs_1_rendered_annotations_jpg",
         data_path["base_path"] / "overlays",
     )
     data_path["geojson_anns"] = _fetch_remote_sample(
@@ -149,8 +156,8 @@ def test_to_num() -> None:
 def test_get_level_by_extent() -> None:
     """Test the get_level_by_extent function."""
     max_lev = 10
-    assert get_level_by_extent([1000, 1000, 1100, 1100]) == max_lev
-    assert get_level_by_extent([1000, 1000, 1000000, 1000000]) == 0
+    assert get_level_by_extent((1000, 1000, 1100, 1100)) == max_lev
+    assert get_level_by_extent((1000, 1000, 1000000, 1000000)) == 0
 
 
 # test the bokeh app
@@ -313,7 +320,7 @@ def test_type_cmap_select(doc: Document) -> None:
     cmap_select.value = ["prob"]
     # select a type to assign the cmap to
     cmap_select.value = ["prob", "0"]
-    # set edge thicknes to 0 so the edges don't add an extra colour
+    # set edge thickness to 0 so the edges don't add an extra colour
     spinner = doc.get_model_by_name("edge_size0")
     spinner.value = 0
     im = get_tile("overlay", 1, 2, 2, show=False)
