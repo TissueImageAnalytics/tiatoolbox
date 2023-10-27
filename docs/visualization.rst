@@ -143,7 +143,7 @@ HoVerNet style::
                 ... # other instances
                 }
 
-Files in this format can be converted to an AnnotationStore using: :obj:`store_to_dat <tiatoolbox.utils.misc.store_from_dat>`
+Files in this format can be converted to an AnnotationStore using: :obj:`store_to_dat <tiatoolbox.utils.misc.store_from_dat>`. This utility function should also be able to handle .dats output from :obj:`Cerberus <https://github.com/TissueImageAnalytics/cerberus>`.
 
 
 GeoJSON::
