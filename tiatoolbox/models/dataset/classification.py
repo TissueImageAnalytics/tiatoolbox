@@ -39,7 +39,7 @@ class _TorchPreprocCaller:
 
     def __call__(self: _TorchPreprocCaller, img: np.ndarray | Image) -> torch.Tensor:
         tensor: torch.Tensor = self.func(img)
-        return tensor.permute(img, (1, 2, 0))
+        return tensor.permute((1, 2, 0))
 
 
 def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
