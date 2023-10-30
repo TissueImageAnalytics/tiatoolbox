@@ -176,7 +176,7 @@ Single channel images can also be used but are not recommended; they should take
 Whole Slide Overlays
 ^^^^^^^^^^^^^^^^^^^^
 
-Can overlay multiple WSI's on top of each other as separate layers
+It is possible to overlay multiple WSI's on top of each other as separate layers simply by selecting them in the overlays dropdown, though if the visualization task can be acheived using another form of overlay, that wouold be recommended as it will usually be more flexible and faster to load.
 
 Graphs
 ^^^^^^
