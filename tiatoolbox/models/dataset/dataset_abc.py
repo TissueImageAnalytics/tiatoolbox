@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable
+from typing import TYPE_CHECKING, Callable, Iterable, List, Union
 
 if TYPE_CHECKING:
     try:
@@ -17,7 +17,7 @@ import torch
 
 from tiatoolbox.utils import imread
 
-input_type = list[str | Path | np.ndarray] | np.ndarray
+input_type = Union[List[Union[str, Path, np.ndarray]], np.ndarray]
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
