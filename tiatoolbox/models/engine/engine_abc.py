@@ -370,10 +370,6 @@ class EngineABC(ABC):
             is provided.
 
         """
-        if not save_dir and not self.patch_mode:
-            msg = "`save_dir` must be specified when patch_mode is False."
-            raise OSError(msg)
-
         if not save_dir and output_type != "AnnotationStore":
             return raw_predictions
 

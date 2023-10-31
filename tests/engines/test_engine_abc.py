@@ -6,9 +6,12 @@ from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
 import pytest
+import torchvision.models as torch_models
 
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
+from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:
     import torch.nn
@@ -20,10 +23,11 @@ class TestEngineABC(EngineABC):
     def __init__(
         self: TestEngineABC,
         model: str | torch.nn.Module,
+        weights: str | Path | None = None,
         verbose: bool | None = None,
     ) -> NoReturn:
         """Test EngineABC init."""
-        super().__init__(model=model, verbose=verbose)
+        super().__init__(model=model, weights=weights, verbose=verbose)
 
     def infer_wsi(self: EngineABC) -> NoReturn:
         """Test infer_wsi."""
@@ -65,8 +69,6 @@ def test_engine_abc_incorrect_model_type() -> NoReturn:
 
 def test_incorrect_ioconfig() -> NoReturn:
     """Test EngineABC initialization with incorrect ioconfig."""
-    import torchvision.models as torch_models
-
     model = torch_models.resnet18()
     engine = TestEngineABC(model=model)
     with pytest.raises(
@@ -91,6 +93,23 @@ def test_pretrained_ioconfig() -> NoReturn:
     assert "predictions" in out
     assert "labels" not in out
 
+def test_ioconfig() -> NoReturn:
+    """Test EngineABC initialization with valid ioconfig."""
+    ioconfig = ModelIOConfigABC(
+            input_resolutions=[
+                {"units": "baseline", "resolution": 1.0},
+            ],
+            patch_input_shape=(224, 224),
+        )
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        ioconfig=ioconfig,
+    )
+
+    assert "predictions" in out
+    assert "labels" not in out
 
 def test_prepare_engines_save_dir(
     tmp_path: pytest.TempPathFactory,
@@ -205,6 +224,10 @@ def test_engine_initalization() -> NoReturn:
     assert isinstance(eng, EngineABC)
     model = CNNModel("alexnet", num_classes=1)
     eng = TestEngineABC(model=model)
+    assert isinstance(eng, EngineABC)
+
+    weights_path = fetch_pretrained_weights("alexnet-kather100k")
+    eng = TestEngineABC(model="alexnet-kather100k", weights=weights_path)
     assert isinstance(eng, EngineABC)
 
 
@@ -345,3 +368,45 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         output_file="patch_pred_output",
     )
     assert Path.exists(out), "Zarr output file does not exist"
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(
+        ValueError,
+        match=r".*Patch output must contain coordinates.",
+    ):
+        out = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            labels=list(range(10)),
+            on_gpu=False,
+            save_dir=save_dir,
+            overwrite=True,
+            output_type="AnnotationStore",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Patch output must contain coordinates.",
+    ):
+        out = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            labels=list(range(10)),
+            on_gpu=False,
+            save_dir=save_dir,
+            overwrite=True,
+            output_type="AnnotationStore",
+            class_dict = {0: "class0", 1: "class1"},
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Patch output must contain coordinates.",
+    ):
+        out = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            labels=list(range(10)),
+            on_gpu=False,
+            save_dir=save_dir,
+            overwrite=True,
+            output_type="AnnotationStore",
+           scale_factor=(2.0, 2.0),
+        )
