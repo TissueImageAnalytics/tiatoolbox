@@ -24,14 +24,11 @@ import socket
 import subprocess
 import sys
 import threading
-from typing import TYPE_CHECKING
+from typing import Any
 
 import torch
 
 from tiatoolbox import logger
-
-if TYPE_CHECKING:  # pragma: no cover
-    from numbers import Number
 
 
 def has_gpu() -> bool:
@@ -218,7 +215,7 @@ def colab_has_gpu() -> bool:
 
 def has_network(
     hostname: str = "one.one.one.one",
-    timeout: Number = 3,
+    timeout: float = 3,
 ) -> bool:
     """Detect if the current environment has a network connection.
 
@@ -228,7 +225,7 @@ def has_network(
     Args:
         hostname (str):
             The hostname to ping. Defaults to "one.one.one.one".
-        timeout (Number):
+        timeout (float):
             Timeout in seconds for the fallback GET request.
 
     Returns:
@@ -344,12 +341,12 @@ def check_pixman_using_macports(versions: list) -> tuple[list, str]:
         flags=re.MULTILINE,
     )
     if matches:
-        versions = [version_to_tuple(matches.group(1))]
+        versions = [version_to_tuple(match) for match in matches]
 
     return versions, using
 
 
-def pixman_versions() -> tuple[list, str]:
+def pixman_versions() -> tuple[list, str | None]:
     """The version(s) of pixman that are installed.
 
     Some package managers (brew) may report multiple versions of pixman
@@ -365,7 +362,7 @@ def pixman_versions() -> tuple[list, str]:
             determined.
 
     """
-    versions = []
+    versions: list[Any] = []
     using = None
 
     if in_conda_env():

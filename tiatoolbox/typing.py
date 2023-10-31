@@ -2,7 +2,9 @@
 from typing import Callable, Literal, Sequence, SupportsFloat
 
 import numpy as np
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, Point, Polygon  # type: ignore[import-untyped]
+
+# Proper type annotations for shapely is not yet avaliable
 
 JSON = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
 NumPair = tuple[SupportsFloat, SupportsFloat]
