@@ -8,7 +8,10 @@ import numpy as np
 import pytest
 import torchvision.models as torch_models
 
-from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.architecture import (
+    fetch_pretrained_weights,
+    get_pretrained_model,
+)
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
@@ -226,8 +229,9 @@ def test_engine_initalization() -> NoReturn:
     eng = TestEngineABC(model=model)
     assert isinstance(eng, EngineABC)
 
+    model = get_pretrained_model("alexnet-kather100k")[0]
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
-    eng = TestEngineABC(model="alexnet-kather100k", weights=weights_path)
+    eng = TestEngineABC(model=model, weights=weights_path)
     assert isinstance(eng, EngineABC)
 
 
