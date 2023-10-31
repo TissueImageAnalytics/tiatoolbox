@@ -18,18 +18,18 @@ from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .io_config import IOInstanceSegmentorConfig
+    from .io_config import IOInstanceSegmentorConfig, IOSegmentorConfig
 
 
 def _process_instance_predictions(
-    inst_dict,
-    ioconfig,
-    tile_shape,
-    tile_flag,
-    tile_mode,
-    tile_tl,
-    ref_inst_dict,
-):
+    inst_dict: dict,
+    ioconfig: IOSegmentorConfig,
+    tile_shape: list,
+    tile_flag: list,
+    tile_mode: int,
+    tile_tl: tuple,
+    ref_inst_dict: dict,
+) -> list | tuple:
     """Function to merge new tile prediction with existing prediction.
 
     Args:
@@ -50,12 +50,12 @@ def _process_instance_predictions(
                 an overlapping tile from tile generation. The predicted
                 instances are immediately added to accumulated output.
             - 1: Vertical tile strip that stands between two normal tiles
-                (flag 0). It has the the same height as normal tile but
+                (flag 0). It has the same height as normal tile but
                 less width (hence vertical strip).
             - 2: Horizontal tile strip that stands between two normal tiles
-                (flag 0). It has the the same width as normal tile but
+                (flag 0). It has the same width as normal tile but
                 less height (hence horizontal strip).
-            - 3: tile strip stands at the cross section of four normal tiles
+            - 3: tile strip stands at the cross-section of four normal tiles
                 (flag 0).
         tile_tl (tuple): Top left coordinates of the current tile.
         ref_inst_dict (dict): Dictionary contains accumulated output. The
@@ -144,7 +144,7 @@ def _process_instance_predictions(
         msg = f"Unknown tile mode {tile_mode}."
         raise ValueError(msg)
 
-    def retrieve_sel_uids(sel_indices, inst_dict):
+    def retrieve_sel_uids(sel_indices: list, inst_dict: dict) -> list:
         """Helper to retrieved selected instance uids."""
         if len(sel_indices) > 0:
             # not sure how costly this is in large dict
@@ -153,7 +153,7 @@ def _process_instance_predictions(
 
     remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
 
-    # external removal only for tile at cross sections
+    # external removal only for tile at cross-sections
     # this one should contain UUID with the reference database
     remove_insts_in_orig = []
     if tile_mode == 3:  # noqa: PLR2004
@@ -186,17 +186,17 @@ def _process_instance_predictions(
 # caller. May need 3rd party libraries to use method/static method
 # otherwise.
 def _process_tile_predictions(
-    ioconfig,
-    tile_bounds,
-    tile_flag,
-    tile_mode,
-    tile_output,
+    ioconfig: IOSegmentorConfig,
+    tile_bounds: np.ndarray,
+    tile_flag: list,
+    tile_mode: int,
+    tile_output: list,
     # this would be replaced by annotation store
     # in the future
-    ref_inst_dict,
-    postproc,
-    merge_predictions,
-):
+    ref_inst_dict: dict,
+    postproc: Callable,
+    merge_predictions: Callable,
+) -> tuple[dict, list]:
     """Function to merge new tile prediction with existing prediction.
 
     Args:
@@ -368,7 +368,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     """
 
     def __init__(
-        self,
+        self: NucleusInstanceSegmentor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_postproc_workers: int = 0,
@@ -406,7 +406,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     def _get_tile_info(
         image_shape: list[int] | np.ndarray,
         ioconfig: IOInstanceSegmentorConfig,
-    ):
+    ) -> list[list, ...]:
         """Generating tile information.
 
         To avoid out of memory problem when processing WSI-scale in
@@ -467,7 +467,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # * remove all sides for boxes
         # unset for those lie within the selection
-        def unset_removal_flag(boxes, removal_flag):
+        def unset_removal_flag(boxes: tuple, removal_flag: np.ndarray) -> np.ndarray:
             """Unset removal flags for tiles intersecting image boundaries."""
             sel_boxes = [
                 shapely_box(0, 0, w, 0),  # top edge
@@ -581,7 +581,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         return info
 
-    def _to_shared_space(self, wsi_idx, patch_inputs, patch_outputs):
+    def _to_shared_space(
+        self: NucleusInstanceSegmentor,
+        wsi_idx: int,
+        patch_inputs: list,
+        patch_outputs: list,
+    ) -> None:
         """Helper functions to transfer variable to shared space.
 
         We modify the shared space so that we can update worker info
@@ -613,7 +618,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._mp_shared_space.patch_outputs = patch_outputs
         self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
 
-    def _infer_once(self):
+    def _infer_once(self: NucleusInstanceSegmentor) -> list:
         """Running the inference only once for the currently active dataloader."""
         num_steps = len(self._loader)
 
@@ -640,7 +645,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
-                on_gpu=self._on_gpu,
+                device=self._device,
             )
             # repackage so that it's a N list, each contains
             # L x etc. output
@@ -658,12 +663,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         return cum_output
 
     def _predict_one_wsi(
-        self,
+        self: NucleusInstanceSegmentor,
         wsi_idx: int,
-        ioconfig: IOInstanceSegmentorConfig,
+        ioconfig: IOSegmentorConfig,
         save_path: str,
         mode: str,
-    ):
+    ) -> None:
         """Make a prediction on tile/wsi.
 
         Args:
@@ -751,13 +756,13 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         self._wsi_inst_info = None  # clean up
 
     def _process_tile_predictions(
-        self,
-        ioconfig,
-        tile_bounds,
-        tile_flag,
-        tile_mode,
-        tile_output,
-    ):
+        self: NucleusInstanceSegmentor,
+        ioconfig: IOSegmentorConfig,
+        tile_bounds: np.ndarray,
+        tile_flag: list,
+        tile_mode: int,
+        tile_output: list,
+    ) -> None:
         """Function to dispatch parallel post processing."""
         args = [
             ioconfig,
@@ -775,10 +780,10 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             future = _process_tile_predictions(*args)
         self._futures.append(future)
 
-    def _merge_post_process_results(self):
+    def _merge_post_process_results(self: NucleusInstanceSegmentor) -> None:
         """Helper to aggregate results from parallel workers."""
 
-        def callback(new_inst_dict, remove_uuid_list):
+        def callback(new_inst_dict: dict, remove_uuid_list: list) -> None:
             """Helper to aggregate worker's results."""
             # ! DEPRECATION:
             # !     will be deprecated upon finalization of SQL annotation store

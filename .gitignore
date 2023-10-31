@@ -115,3 +115,6 @@ ENV/
 
 # vim/vi generated
 *.swp
+
+# output zarr generated
+*.zarr
