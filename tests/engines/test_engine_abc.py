@@ -93,14 +93,15 @@ def test_pretrained_ioconfig() -> NoReturn:
     assert "predictions" in out
     assert "labels" not in out
 
+
 def test_ioconfig() -> NoReturn:
     """Test EngineABC initialization with valid ioconfig."""
     ioconfig = ModelIOConfigABC(
-            input_resolutions=[
-                {"units": "baseline", "resolution": 1.0},
-            ],
-            patch_input_shape=(224, 224),
-        )
+        input_resolutions=[
+            {"units": "baseline", "resolution": 1.0},
+        ],
+        patch_input_shape=(224, 224),
+    )
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
@@ -110,6 +111,7 @@ def test_ioconfig() -> NoReturn:
 
     assert "predictions" in out
     assert "labels" not in out
+
 
 def test_prepare_engines_save_dir(
     tmp_path: pytest.TempPathFactory,
@@ -394,7 +396,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
             save_dir=save_dir,
             overwrite=True,
             output_type="AnnotationStore",
-            class_dict = {0: "class0", 1: "class1"},
+            class_dict={0: "class0", 1: "class1"},
         )
 
     with pytest.raises(
@@ -408,5 +410,5 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
             save_dir=save_dir,
             overwrite=True,
             output_type="AnnotationStore",
-           scale_factor=(2.0, 2.0),
+            scale_factor=(2.0, 2.0),
         )
