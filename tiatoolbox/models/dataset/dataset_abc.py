@@ -5,11 +5,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterable, List, Union
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     try:
         from typing import TypeGuard
     except ImportError:
-        from typing_extensions import TypeGuard  # to support python 3
+        from typing_extensions import TypeGuard  # to support python <3.10
 
 
 import numpy as np
