@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 import requests
-from bokeh.client.session import ClientSession, pull_session
 from click.testing import CliRunner
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox import cli
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
@@ -104,7 +104,10 @@ def test_cli_errors(data_path: dict[str, Path]) -> None:
         ],
     )
     assert result.exit_code == 1
-    assert result.exc_info[1].args[0] == "No input directory specified."
+    assert (
+        result.exc_info[1].args[0]
+        == "Must specify either base-path or both slide-path and overlay-path."
+    )
 
     # test with non-existent input folder
     result = runner.invoke(
@@ -112,9 +115,9 @@ def test_cli_errors(data_path: dict[str, Path]) -> None:
         [
             "visualize",
             "--noshow",
-            "--img-input",
+            "--slide-path",
             str(data_path["base_path"] / "slides"),
-            "--img-input",
+            "--overlay-path",
             "non_existent_folder",
         ],
     )
