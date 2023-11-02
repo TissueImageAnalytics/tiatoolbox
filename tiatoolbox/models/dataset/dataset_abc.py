@@ -102,8 +102,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             else:
                 raise ValueError(msg)
 
-            if shapes:
-                self._check_shape_integrity(shapes)
+            self._check_shape_integrity(shapes)
 
             # If input is a numpy array
             if isinstance(self.inputs, np.ndarray):
