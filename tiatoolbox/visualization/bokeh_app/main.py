@@ -299,6 +299,9 @@ def set_alpha_glyph(glyph: Glyph, alpha: float) -> None:
 
 def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str, str]:
     """Helper to get appropriate mapper for a property."""
+    if prop == "type":
+        UI["vstate"].is_categorical = True
+        return UI["vstate"].mapper
     # Find out the unique values of the chosen property
     resp = UI["s"].get(f"http://{host2}:5000/tileserver/prop_values/{prop}/all")
     prop_vals = json.loads(resp.text)
@@ -311,6 +314,7 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str,
         cmap = (
             "viridis" if UI["cmap_select"].value == "dict" else UI["cmap_select"].value
         )
+        UI["vstate"].is_categorical = False
     else:
         cmap = make_color_dict(prop_vals)
     return cmap
@@ -325,13 +329,10 @@ def update_renderer(prop: str, value: Any) -> None:  # noqa: ANN401
     """Helper to update a renderer property."""
     if prop == "mapper":
         if value == "dict":
-            if UI["cprop_input"].value[0] == "type":
-                value = UI["vstate"].mapper  # put the type mapper dict back
-            else:
-                value = get_mapper_for_prop(
-                    UI["cprop_input"].value[0],
-                    mapper_type="dict",
-                )
+            value = get_mapper_for_prop(
+                UI["cprop_input"].value[0],
+                mapper_type="dict",
+            )
             UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(None)
         if not isinstance(value, dict):
             UI["color_bar"].color_mapper.palette = make_color_seq_from_cmap(
@@ -639,6 +640,7 @@ class ViewerState:
         self.to_update = set()
         self.graph = []
         self.res = 2
+        self.is_categorical = True
 
     def __setattr__(
         self: ViewerState,
@@ -750,7 +752,7 @@ def cprop_input_cb(attr: str, old: str, new: list[str]) -> None:  # noqa: ARG001
     """Change property to colour by."""
     if len(new) == 0:
         return
-    cmap = UI["vstate"].mapper if new[0] == "type" else get_mapper_for_prop(new[0])
+    cmap = get_mapper_for_prop(new[0])
     UI["vstate"].cprop = new[0]
     update_renderer("mapper", cmap)
     UI["s"].put(
@@ -814,9 +816,10 @@ def opt_buttons_cb(attr: str, old: list[int], new: list[int]) -> None:  # noqa: 
 
 def cmap_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     """Callback to change the colour map."""
-    update_renderer("mapper", new)
-    UI["vstate"].update_state = 1
-    UI["vstate"].to_update.update(["overlay"])
+    if not (UI["vstate"].is_categorical and new != "dict"):
+        update_renderer("mapper", new)
+        UI["vstate"].update_state = 1
+        UI["vstate"].to_update.update(["overlay"])
 
 
 def blur_spinner_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
@@ -972,8 +975,10 @@ def update_ui_on_new_annotations(ann_types: list[str]) -> None:
             or UI["cprop_input"].value[0] not in UI["vstate"].props
         ):
             UI["cprop_input"].value = ["type"]
-            update_mapper()
         UI["vstate"].props_old = UI["vstate"].props
+        cmap = get_mapper_for_prop(UI["cprop_input"].value[0])
+        update_renderer("mapper", cmap)
+
     initialise_overlay()
     change_tiles("overlay")
 

@@ -685,28 +685,39 @@ def test_color_cycler() -> None:
 def test_cmap_select(doc: Document) -> None:
     """Test changing the cmap."""
     cmap_select = doc.get_model_by_name("cmap0")
-    main.UI["cprop_input"].value = ["type"]
-    # set the cmap to "viridis"
-    cmap_select.value = "viridis"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
-    assert resp.json() == "viridis"
-    cmap_select.value = "dict"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
-    # should now be the type mapping
-    for key in main.UI["vstate"].mapper:
-        assert str(key) in resp.json()
-        assert np.all(
-            np.array(resp.json()[str(key)]) == np.array(main.UI["vstate"].mapper[key]),
-        )
+
+    main.UI["cprop_input"].value = ["prob"]
     # set to jet
     cmap_select.value = "jet"
     resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
     assert resp.json() == "jet"
     # set to dict
-    main.UI["cprop_input"].value = ["prob"]
     cmap_select.value = "dict"
     resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
     assert isinstance(resp.json(), dict)
+
+    main.UI["cprop_input"].value = ["type"]
+    # should now be the type mapping
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    for key in main.UI["vstate"].mapper:
+        assert str(key) in resp.json()
+        assert np.all(
+            np.array(resp.json()[str(key)]) == np.array(main.UI["vstate"].mapper[key]),
+        )
+    # set the cmap to "coolwarm"
+    cmap_select.value = "coolwarm"
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    # as cprop is type (categorical), it should have had no effect
+    for key in main.UI["vstate"].mapper:
+        assert str(key) in resp.json()
+        assert np.all(
+            np.array(resp.json()[str(key)]) == np.array(main.UI["vstate"].mapper[key]),
+        )
+
+    main.UI["cprop_input"].value = ["prob"]
+    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    # should be coolwarm as thats the last cmap we set, and prob is continuous
+    assert resp.json() == "coolwarm"
 
 
 def test_option_buttons() -> None:
