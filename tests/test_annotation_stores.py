@@ -2825,11 +2825,11 @@ class TestStore:
         assert len(result) == 100  # should only get cells, pts are too small
 
     @staticmethod
-    def test_import_from_qupath(
+    def test_import_transform(
         tmp_path: Path,
         store_cls: type[AnnotationStore],
     ) -> None:
-        """Test importing from a QuPath annotations file with measurements."""
+        """Test importing with an application-specific transform."""
         # make a simple example of a .geojson exported from QuPath
         anns = {
             "type": "FeatureCollection",
@@ -2864,9 +2864,18 @@ class TestStore:
         }
         with (tmp_path / "test_annotations.geojson").open("w") as f:
             json.dump(anns, f)
+
+        def unpack_qpath(ann: Annotation) -> Annotation:
+            """Helper function to unpack QuPath measurements."""
+            props = ann.properties
+            measurements = props.pop("measurements")
+            for m in measurements:
+                props[m["name"]] = m["value"]
+            return ann
+
         store = store_cls.from_geojson(
             tmp_path / "test_annotations.geojson",
-            unpack_qupath_measurements=True,
+            import_transform=unpack_qpath,
         )
         assert len(store) == 1
         ann = next(iter(store.values()))

@@ -1724,8 +1724,7 @@ class AnnotationStore(ABC, MutableMapping):
         fp: IO | str,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
-        *,
-        unpack_qupath_measurements: bool = False,
+        import_transform: Callable[[Annotation], Annotation] | None = None,
     ) -> AnnotationStore:
         """Create a new database with annotations loaded from a geoJSON file.
 
@@ -1738,9 +1737,11 @@ class AnnotationStore(ABC, MutableMapping):
                 annotations saved at non-baseline resolution.
             origin (Tuple[float, float]):
                 The x and y coordinates to use as the origin for the annotations.
-            unpack_qupath_measurements (bool):
-                If True, unpack QuPath measurements into individual properties of each
-                annotation. Defaults to False. Use only for .geojson exported by QuPath.
+            import_transform (Callable):
+                A function to apply to each annotation after loading. Should take an
+                annotation as input and return an annotation. Defaults to None.
+                Intended to facilitate modifying the way annotations are loaded to
+                accomodate the specifics of different annotation formats.
 
         Returns:
             AnnotationStore:
@@ -1748,11 +1749,17 @@ class AnnotationStore(ABC, MutableMapping):
 
         """
         store = cls()
+        if import_transform is None:
+
+            def import_transform(annotation: Annotation) -> Annotation:
+                """Default import transform. Does Nothing."""
+                return annotation
+
         store.add_from_geojson(
             fp,
             scale_factor,
             origin=origin,
-            unpack_qupath_measurements=unpack_qupath_measurements,
+            import_transform=import_transform,
         )
         return store
 
@@ -1761,8 +1768,7 @@ class AnnotationStore(ABC, MutableMapping):
         fp: IO | str,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
-        *,
-        unpack_qupath_measurements: bool = False,
+        import_transform: Callable[[Annotation], Annotation] | None = None,
     ) -> None:
         """Add annotations from a .geojson file to an existing store.
 
@@ -1777,9 +1783,11 @@ class AnnotationStore(ABC, MutableMapping):
                 at non-baseline resolution.
             origin (Tuple[float, float]):
                 The x and y coordinates to use as the origin for the annotations.
-            unpack_qupath_measurements (bool):
-                If True, unpack QuPath measurements into individual properties of each
-                annotation. Defaults to False. Use only for .geojson exported by QuPath.
+            import_transform (Callable):
+                A function to apply to each annotation after loading. Should take an
+                annotation as input and return an annotation. Defaults to None.
+                Intended to facilitate modifying the way annotations are loaded to
+                accomodate the specifics of different annotation formats.
 
         """
 
@@ -1797,14 +1805,6 @@ class AnnotationStore(ABC, MutableMapping):
                 )
             return geom
 
-        def unpack_qpath(props: dict) -> dict:
-            """Helper function to unpack QuPath measurements."""
-            if unpack_qupath_measurements and "measurements" in props:
-                measurements = props.pop("measurements")
-                for m in measurements:
-                    props[m["name"]] = m["value"]
-            return props
-
         geojson = self._load_cases(
             fp=fp,
             string_fn=json.loads,
@@ -1812,11 +1812,13 @@ class AnnotationStore(ABC, MutableMapping):
         )
 
         annotations = [
-            Annotation(
-                transform_geometry(
-                    feature2geometry(feature["geometry"]),
+            import_transform(
+                Annotation(
+                    transform_geometry(
+                        feature2geometry(feature["geometry"]),
+                    ),
+                    feature["properties"],
                 ),
-                unpack_qpath(feature["properties"]),
             )
             for feature in geojson["features"]
         ]
