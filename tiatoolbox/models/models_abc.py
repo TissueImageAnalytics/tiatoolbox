@@ -4,9 +4,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
-from torch import nn
+import torch
+from torch import device as torch_device
 
 if TYPE_CHECKING:  # pragma: no cover
+    from pathlib import Path
+
     import numpy as np
 
 
@@ -31,7 +34,7 @@ class IOConfigABC(ABC):
         raise NotImplementedError
 
 
-class ModelABC(ABC, nn.Module):
+class ModelABC(ABC, torch.nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(self: ModelABC) -> None:
@@ -48,7 +51,11 @@ class ModelABC(ABC, nn.Module):
 
     @staticmethod
     @abstractmethod
-    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool) -> None:
+    def infer_batch(
+        model: torch.nn.Module,
+        batch_data: np.ndarray,
+        *,
+        on_gpu: bool) -> None:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as I/O aggregation.
@@ -135,3 +142,48 @@ class ModelABC(ABC, nn.Module):
             self._postproc = self.postproc
         else:
             self._postproc = func
+
+
+    def to(self: ModelABC, device: str = "cpu") -> torch.nn.Module:
+        """Transfers model to cpu/gpu.
+
+        Args:
+            model (torch.nn.Module):
+                PyTorch defined model.
+            device (str):
+                Transfers model to the specified device. Default is "cpu".
+
+        Returns:
+            torch.nn.Module:
+                The model after being moved to cpu/gpu.
+
+        """
+        device = torch_device(device)
+        model = super().to(device)
+
+        # If target device istorch.cuda and more
+        # than one GPU is available, use DataParallel
+        if device.type == "cuda" and torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
+
+        return model
+
+
+    def load_weights_from_path(self: ModelABC, weights: str | Path) -> torch.nn.Module:
+        """Helper function to load a torch model.
+
+        Args:
+            model (torch.nn.Module):
+                A torch model.
+            weights (str or Path):
+                Path to pretrained weights.
+
+        Returns:
+            torch.nn.Module:
+                Torch model with pretrained weights loaded on CPU.
+
+        """
+        # ! assume to be saved in single GPU mode
+        # always load on to the CPU
+        saved_state_dict = torch.load(weights, map_location="cpu")
+        return super().load_state_dict(saved_state_dict, strict=True)

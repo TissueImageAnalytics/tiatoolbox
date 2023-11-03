@@ -4,9 +4,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from torch import nn
 
-from tiatoolbox import rcParam
-from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox import rcParam, utils
+from tiatoolbox.models.architecture import (
+    fetch_pretrained_weights,
+    get_pretrained_model,
+)
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 
@@ -111,3 +115,19 @@ def test_model_abc() -> None:
     # coverage setter check
     model.postproc_func = None  # skipcq: PYL-W0201
     assert model.postproc_func(2) == 0
+
+    # Test overriden to() method
+    # Test on GPU
+    ### no GPU on Travis so this will crash
+    if not utils.env_detection.has_gpu():
+        model_on_device = model.to(device="cuda")
+        assert isinstance(model_on_device, nn.Module)
+
+    # Test on CPU
+    model_on_device = model.to(device="cpu")
+    assert isinstance(model_on_device, nn.Module)
+
+    #Test load_weights_from_path() method
+    weights_path = fetch_pretrained_weights("alexnet-kather100k")
+    with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
+        _ = model.load_weights_from_path(weights_path)
