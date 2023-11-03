@@ -170,4 +170,4 @@ max-complexity = 14
 convention = "google"
 
 [tool.ruff.pylint]
-max-args = 11
+max-args = 10
