@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, TypedDict
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
@@ -72,14 +72,14 @@ class DuplicateFilter(logging.Filter):
         return False
 
 
-# runtime context parameters
-rcParam: dict[str, str | Path | dict]  # noqa: N816
-rcParam = {  # noqa: N816
-    "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
-}
+class _RcParam(TypedDict):
+    """All the parameters in the rcParam dictionary should be defined here."""
+
+    TIATOOLBOX_HOME: Path
+    pretrained_model_info: dict[str, dict]
 
 
-def read_registry_files(path_to_registry: str | Path) -> dict | str:
+def read_registry_files(path_to_registry: str | Path) -> dict:
     """Reads registry files using importlib_resources.
 
     Args:
@@ -101,8 +101,13 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
         return yaml.safe_load(registry_handle)
 
 
-# Load a dictionary of sample files data (names and urls)
-rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.yaml")
+# runtime context parameters
+rcParam: _RcParam = {  # noqa: N816
+    "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
+    "pretrained_model_info": read_registry_files(
+        "data/pretrained_model.yaml",
+    ),  # Load a dictionary of sample files data (names and urls)
+}
 
 
 def _lazy_import(name: str, module_location: Path) -> ModuleType:
