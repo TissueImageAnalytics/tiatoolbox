@@ -24,7 +24,6 @@ import socket
 import subprocess
 import sys
 import threading
-from typing import Any
 
 import torch
 
@@ -362,7 +361,7 @@ def pixman_versions() -> tuple[list, str | None]:
             determined.
 
     """
-    versions: list[Any] = []
+    versions: list[int] = []
     using = None
 
     if in_conda_env():
