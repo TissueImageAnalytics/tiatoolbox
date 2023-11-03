@@ -134,7 +134,9 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
         # string array of the same shape
         [
             RNG.integers(0, 255, (4, 5, 3)),
-            np.array(["you_should_crash_here" for _ in range(4 * 5 * 3)]).reshape(
+            np.array(
+                ["you_should_crash_here" for _ in range(4 * 5 * 3)],
+            ).reshape(  # skipcq: PYL-E1121
                 4,
                 5,
                 3,
