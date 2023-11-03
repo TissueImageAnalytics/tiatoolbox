@@ -1747,6 +1747,24 @@ class AnnotationStore(ABC, MutableMapping):
             AnnotationStore:
                 A new annotation store with the annotations loaded from the file.
 
+        Example:
+            To load annotations from a GeoJSON exported by QuPath, with measurements
+            stored in a 'measurements' property as a list of name-value pairs, and
+            unpack those measurements into a flat dictionary of properties of
+            each annotation:
+            >>> from tiatoolbox.annotation.storage import SQLiteStore
+            >>> def unpack_qpath(ann: Annotation) -> Annotation:
+            >>>    #Helper function to unpack QuPath measurements.
+            >>>    props = ann.properties
+            >>>    measurements = props.pop("measurements")
+            >>>    for m in measurements:
+            >>>        props[m["name"]] = m["value"]
+            >>>    return ann
+            >>> store = SQLiteStore.from_geojson(
+            ...     "exported_file.geojson",
+            ...     import_transform=unpack_qpath,
+            ... )
+
         """
         store = cls()
         if import_transform is None:
