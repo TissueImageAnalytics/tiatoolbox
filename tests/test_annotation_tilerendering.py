@@ -59,21 +59,21 @@ def fill_store(
         cells = [
             Annotation(
                 cell,
-                {"type": "cell", "prob": RNG.random(1)[0], "color": (0, 1, 0)},
+                {"type": "cell", "prob": RNG.random(1)[0], "colour": (0, 1, 0)},
             )
             for cell in cell_grid
         ]
         points = [
             Annotation(
                 point,
-                {"type": "pt", "prob": RNG.random(1)[0], "color": (1, 0, 0)},
+                {"type": "pt", "prob": RNG.random(1)[0], "colour": (1, 0, 0)},
             )
             for point in points_grid
         ]
         lines = [
             Annotation(
                 LineString((x, x + 500) for x in range(100, 400, 10)),
-                {"type": "line", "prob": 0.75, "color": (0, 0, 1)},
+                {"type": "line", "prob": 0.75, "colour": (0, 0, 1)},
             ),
         ]
 
@@ -177,7 +177,7 @@ def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     small_annotation = Annotation(
         Polygon([(9, 9), (9, 10), (10, 10), (10, 9)]),
-        {"type": "cell", "prob": 0.75, "color": (0, 0, 1)},
+        {"type": "cell", "prob": 0.75, "colour": (0, 0, 1)},
     )
     store.append(small_annotation)
     renderer = AnnotationRenderer(
@@ -393,7 +393,7 @@ def test_direct_color(fill_store: Callable, tmp_path: Path) -> None:
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
+    renderer = AnnotationRenderer(score_prop="colour", edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
@@ -441,11 +441,11 @@ def test_unfilled_polys(fill_store: Callable, tmp_path: Path) -> None:
 
 def test_multipolygon_render(cell_grid: list[Polygon]) -> None:
     """Test multipolygon rendering."""
-    renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
+    renderer = AnnotationRenderer(score_prop="colour", edge_thickness=0)
     tile = np.zeros((1024, 1024, 3), dtype=np.uint8)
     renderer.render_multipoly(
         tile=tile,
-        annotation=Annotation(MultiPolygon(cell_grid), {"color": (1, 0, 0)}),
+        annotation=Annotation(MultiPolygon(cell_grid), {"colour": (1, 0, 0)}),
         top_left=(0, 0),
         scale=1,
     )

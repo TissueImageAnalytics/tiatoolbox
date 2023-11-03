@@ -3,7 +3,7 @@
 Visualization Interface Usage
 =============================
 
-TIAToolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using TIAToolbox and :ref:`Bokeh <https://bokeh.org/>`. The following assumes TIAToolbox has been installed per the instructions here: :ref:`Installation <installation>`.
+TIAToolbox provides a flexible visualization tool for viewing slides and overlaying associated model outputs or annotations. It is a browser-based UI built using TIAToolbox and `Bokeh <https://bokeh.org/>`_. The following assumes TIAToolbox has been installed per the instructions here: :ref:`Installation <installation>`.
 
 1. Launching the interface
 --------------------------
@@ -34,7 +34,7 @@ As the UI is browser-based, you can launch the interface on a remote machine by 
 
 This will start a ssh session where the two ports the interface uses by default (5006 and 5000) are forwarded.
 
-You can then launch the interface on the remote machine as above (TIAToolbox must be installed on the remote machine), and open the browser on your local machine. Navigate to localhost:5006 to view the interface.
+You can then launch the interface on the remote machine as above (TIAToolbox must be installed on the remote machine), and open the browser on your local machine. Navigate to ``localhost:5006`` to view the interface.
 
 .. _interface:
 
@@ -65,10 +65,10 @@ If annotations have a type property, this will be used to populate the type sele
 Colourmaps/colouring by property values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Once you have selected a slide with the slide dropdown, you can overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be put on there as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colours can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
+Once you have selected a slide with the slide dropdown, you can add overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be overlaid on the slide as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colours can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
 
 You can select the property that will be used to colour annotations in the colour_by box. The corresponding property should be either categorical (strings or ints), in which case a dict-based colour mapping should be used, or a float between 0-1 in which case a matplotlib colourmap should be applied.
-There is also the option for the special case 'colour' to be used - if your annotations have a property called colour, this will be assumed to be an rgb value in the form of a tuple (r, g, b) of floats between 0-1 for each annotation which will be used directly without any mapping.
+There is also the option for the special case 'colour' to be used. If your annotations have a property called colour, this will be assumed to be an rgb value in the form of a tuple (r, g, b) of floats between 0-1 for each annotation which will be used directly without any mapping.
 
 The 'colour type by property' box allows annotations of the specified type to be coloured by a different property to the 'global' one. For example, this could be used to have all detections coloured according to their type, but for Glands, colour by some feature describing them instead (their area, for example)
 
@@ -108,7 +108,7 @@ By default, the interface is set up to show only larger annotations while zoomed
 Other options
 ^^^^^^^^^^^^^
 
-There are a few options for how annotations are displayed. You can change the colourmap used in the colourmap field if you are colouring objects according to a continuous property (should be between 0-1) - by entering the text of a matplotlib cmap.
+There are a few options for how annotations are displayed. You can change the colourmap used in the colourmap field if you are colouring objects according to a continuous property (values should be between 0-1), by choosing one of the matplotlib cmaps.
 The buttons 'filled', 'mpp', 'grid', respectively toggle between filled and outline only rendering of annotations, using mpp or baseline pixels as the scale for the plot, and showing a grid overlay.
 
 A filter can be applied to annotations using the filter box. For example, entering props\['score'\]>0.5 would show only annotations for which the 'score' property  is greater than 0.5.
@@ -150,7 +150,7 @@ HoVerNet style::
                 ... # other instances
                 }
 
-Files in this format can be converted to an AnnotationStore using: :obj:`store_to_dat <tiatoolbox.utils.misc.store_from_dat>`. This utility function should also be able to handle .dats output from :obj:`Cerberus <https://github.com/TissueImageAnalytics/cerberus>`.
+Files in this format can be converted to an AnnotationStore using: :obj:`store_to_dat <tiatoolbox.utils.misc.store_from_dat>`. This utility function should also be able to handle .dats output from `Cerberus <https://github.com/TissueImageAnalytics/cerberus>`_.
 
 
 GeoJSON::
@@ -373,7 +373,7 @@ Let's say you have some annotations that were created on a slide, and you want t
 5. Config files
 ---------------
 
-A json config file can be placed in the overlays folder, to customize various aspects of the UI and annotation display when visualizing overlays in that location. This is especially useful for customising online demos. An example .json explaining all the fields is shown below.
+A JSON config file can be placed in the overlays folder, to customize various aspects of the UI and annotation display when visualizing overlays in that location. This is especially useful for customising online demos. An example .json explaining all the fields is shown below.
 
 There are settings to control how slides are loaded:
 
