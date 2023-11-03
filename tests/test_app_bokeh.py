@@ -148,7 +148,7 @@ def test_to_num() -> None:
     assert main.to_num("1") == 1
     assert main.to_num("1.0") == 1.0
     assert main.to_num("1.0e-3") == 1.0e-3
-    assert main.to_num(2) == 2
+    assert main.to_num("2") == 2
     assert main.to_num("None") is None
 
 

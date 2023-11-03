@@ -62,7 +62,7 @@ Type and layer select
 
 If annotations have a type property, this will be used to populate the type select boxes. This allows you to toggle on/off annotations of a specific type. You can also modify the default colours that each type is displayed in by using the colour picker widgets next to each type name (note these will only have an effect if the property to colour by is selected as 'type'). Individual image overlays or graph overlays will also get their own toggle, labelled for example 'layer_i' or 'nodes', that can be used to toggle the respective overlays on or off.
 
-Colourmaps/colouring by property values
+Colormaps/colouring by property values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once you have selected a slide with the slide dropdown, you can add overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be overlaid on the slide as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colours can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
@@ -183,7 +183,7 @@ Single channel images can also be used but are not recommended; they should take
 Whole Slide Overlays
 ^^^^^^^^^^^^^^^^^^^^
 
-It is possible to overlay multiple WSI's on top of each other as separate layers simply by selecting them in the overlays dropdown, though if the visualization task can be acheived using another form of overlay, that wouold be recommended as it will usually be more flexible and faster to load.
+It is possible to overlay multiple WSI's on top of each other as separate layers simply by selecting them in the overlays dropdown, though if the visualization task can be achieved using another form of overlay, that would be recommended as it will usually be more flexible and faster to load.
 
 Graphs
 ^^^^^^
@@ -414,7 +414,7 @@ There are settings to control the initial values of some UI settings:
     "opts": {
         "edges_on": 0,              # graph edges are shown or hidden by default
         "nodes_on": 1,              # graph nodes are shown or hidden by default
-        "colourbar_on": 1,           # whether colour bar is shown below main window
+        "colorbar_on": 1,           # whether colour bar is shown below main window
         "hover_on": 1
     },
 
