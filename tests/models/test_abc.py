@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 from torch import nn
 
-from tiatoolbox import rcParam, utils
+from tiatoolbox import rcParam
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
@@ -120,7 +120,7 @@ def test_model_abc() -> None:
     model_on_device = model.to(device="cpu")
     assert isinstance(model_on_device, nn.Module)
 
-    #Test load_weights_from_path() method
+    # Test load_weights_from_path() method
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
     with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
         _ = model.load_weights_from_path(weights_path)
