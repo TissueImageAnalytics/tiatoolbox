@@ -116,16 +116,15 @@ def test_model_abc() -> None:
     model.postproc_func = None  # skipcq: PYL-W0201
     assert model.postproc_func(2) == 0
 
-    # Test overriden to() method
-    # Test on GPU
-    ### no GPU on Travis so this will crash
-    if not utils.env_detection.has_gpu():
-        model_on_device = model.to(device="cuda")
-        assert isinstance(model_on_device, nn.Module)
-
     # Test on CPU
     model_on_device = model.to(device="cpu")
     assert isinstance(model_on_device, nn.Module)
+
+    # Test on GPU
+    # no GPU on Travis so this will crash
+    if not utils.env_detection.has_gpu():
+        with pytest.raises((AssertionError, RuntimeError)):
+            _ = model.to(device="cuda")
 
     #Test load_weights_from_path() method
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
