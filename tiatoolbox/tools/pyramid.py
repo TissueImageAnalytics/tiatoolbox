@@ -155,6 +155,7 @@ class TilePyramidGenerator:
         res: int = 1,
         pad_mode: str = "constant",
         interpolation: str = "optimise",
+        transparent_value: int | None = None,
     ) -> Image:
         """Get a tile at a given level and coordinate.
 
@@ -185,6 +186,9 @@ class TilePyramidGenerator:
                 Interpolation mode to use. Defaults to optimise.
                 Possible values are: linear, cubic, lanczos, nearest,
                 area, optimise. Linear most closely matches OpenSlide.
+            transparent_value (int):
+                If provided, pixels with this value across all channels will
+                be made transparent. Defaults to None.
 
         Returns:
             PIL.Image:
@@ -236,6 +240,12 @@ class TilePyramidGenerator:
             interpolation=interpolation,
         )
         logger.removeFilter(duplicate_filter)
+        if transparent_value is not None:
+            # Pixels with this value across all channels will be made transparent
+            alph = 255 * np.logical_not(
+                np.all(tile == transparent_value, axis=2),
+            ).astype("uint8")
+            tile = np.dstack((tile, alph))
         return Image.fromarray(tile)
 
     def tile_path(self: TilePyramidGenerator, level: int, x: int, y: int) -> Path:
@@ -575,6 +585,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         res: int = 1,
         pad_mode: str | None = None,
         interpolation: str | None = None,
+        transparent_value: int | None = None,  # noqa: ARG002
     ) -> Image:
         """Render a tile at a given level and coordinate.
 
@@ -600,6 +611,8 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             interpolation (str):
                 Method of interpolation. Possible values are: nearest,
                 linear, cubic, lanczos, area. Defaults to nearest.
+            transparent_value (int):
+                Not used by AnnotationTileGenerator.
 
         Returns:
             PIL.Image:
