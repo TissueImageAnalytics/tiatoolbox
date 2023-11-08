@@ -393,7 +393,7 @@ def test_load_annotations_empty(
 
         # test corresponding get
         response = client.get(
-            "/tileserver/annotations/",
+            "/tileserver/annotations",
             data={
                 "bounds": json.dumps([0, 0, 30000, 30000]),
                 "where": json.dumps(None),
@@ -707,3 +707,29 @@ def test_point_query(app: TileServer) -> None:
 
     assert response.status_code == 200
     assert json.loads(response.data) == {}
+
+
+def test_prop_range(app: TileServer) -> None:
+    """Test setting range in which color mapper will operate."""
+    with app.test_client() as client:
+        layer = app.pyramids["default"]["overlay"]
+        # there will be no scaling by default
+        assert layer.renderer.score_fn(0.5) == 0.5
+        response = client.put(
+            "/tileserver/prop_range",
+            data={"range": json.dumps([1.0, 3.0])},
+        )
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        # check that the renderer has been correctly updated
+        # as we are mapping the range [1, 3] to [0, 1], 1.5
+        # should now map to 0.25
+        assert layer.renderer.score_fn(1.5) == 0.25
+
+        response = client.put(
+            "/tileserver/prop_range",
+            data={"range": json.dumps(None)},
+        )
+        assert response.status_code == 200
+        # should be back to no scaling
+        assert layer.renderer.score_fn(0.5) == 0.5

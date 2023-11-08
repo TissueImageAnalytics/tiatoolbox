@@ -176,7 +176,7 @@ Most use-cases should be covered in there, or something close enough that a few 
 Heatmaps
 ^^^^^^^^
 
-These should be provided as a low-res heatmap in .jpg or .png format. It should be the same aspect ratio as the WSI it will be overlaid on. When creating the image, keep in mind that white regions (255,255,255) will be made transparent.
+These should be provided as a low-res heatmap in .jpg or .png format. It should be the same aspect ratio as the WSI it will be overlaid on. When creating the image, keep in mind that black pixels (0,0,0) will be made transparent.
 
 Single channel images can also be used but are not recommended; they should take values between 0 and 255 and will simply be put through a viridis colourmap. 0 values will become white background.
 
