@@ -34,7 +34,7 @@ As the UI is browser-based, you can launch the interface on a remote machine by 
 
 This will start a ssh session where the two ports the interface uses by default (5006 and 5000) are forwarded.
 
-You can then launch the interface on the remote machine as above (TIAToolbox must be installed on the remote machine), and open the browser on your local machine. Navigate to ``localhost:5006`` to view the interface.
+You can then launch the interface on the remote machine as above (TIAToolbox must be installed on the remote machine) and open the browser on your local machine. Navigate to ``localhost:5006`` to view the interface.
 
 .. _interface:
 
@@ -46,9 +46,9 @@ You can then launch the interface on the remote machine as above (TIAToolbox mus
     :align: center
     :alt: visualize interface
 
-The interface is split into two main sections. The left hand side contains the main window, which displays the slide and overlays (or potentially a linked pair of slide views), and the right hand side contains a number of UI elements to control the display of the overlays.
+The interface is split into two main sections. The left-hand side contains the main window, which displays the slide and overlays (or potentially a linked pair of slide views), and the right hand side contains a number of UI elements to control the display of the overlays.
 
-The main window can be zoomed in and out using the mouse wheel, and panned by clicking and dragging. The slide can be changed using the slide dropdown menu. The overlay can be changed or additional overlays added using the overlay dropdown menu. The alpha of the slide and overlay can be controlled using the slide and overlay alpha sliders respectively.
+The main window can be zoomed in and out using the mouse wheel and panned by clicking and dragging. The slide can be changed using the slide dropdown menu. The overlay can be changed, or additional overlays added using the overlay dropdown menu. The alpha of the slide and overlay can be controlled using the slide and overlay alpha sliders respectively.
 
 Information about the currently open slide can be found below the main window including slide name, dimensions, and level resolution information.
 
@@ -60,17 +60,17 @@ Type and layer select
     :align: right
     :alt: type select example
 
-If annotations have a type property, this will be used to populate the type select boxes. This allows you to toggle on/off annotations of a specific type. You can also modify the default colours that each type is displayed in by using the colour picker widgets next to each type name (note these will only have an effect if the property to colour by is selected as 'type'). Individual image overlays or graph overlays will also get their own toggle, labelled for example 'layer_i' or 'nodes', that can be used to toggle the respective overlays on or off.
+If annotations have a type property, this will be used to populate the type select boxes. This allows you to toggle on/off annotations of a specific type. You can also modify the default colors that each type is displayed in by using the color picker widgets next to each type name (note these will only have an effect if the property to color by is selected as 'type'). Individual image overlays or graph overlays will also get their own toggle, labelled for example 'layer_i' or 'nodes', that can be used to toggle the respective overlays on or off.
 
-Colourmaps/colouring by property values
+Colormaps/coloring by property values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Once you have selected a slide with the slide dropdown, you can add overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be overlaid on the slide as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. Colours can be individually selected for each type also if the randomly-generated colour scheme is not suitable.
+Once you have selected a slide with the slide dropdown, you can add overlays by repeatedly choosing files containing overlays from the overlay drop menu. They will be overlaid on the slide as separate layers. In the case of segmentations, if your segmentations have the 'type' property as one of their properties, this can additionally be used to show/hide annotations of that specific type. colors can be individually selected for each type also if the randomly generated color scheme is not suitable.
 
-You can select the property that will be used to colour annotations in the colour_by box. The corresponding property should be either categorical (strings or ints), in which case a dict-based colour mapping should be used, or a float between 0-1 in which case a matplotlib colourmap should be applied.
-There is also the option for the special case 'colour' to be used. If your annotations have a property called colour, this will be assumed to be an rgb value in the form of a tuple (r, g, b) of floats between 0-1 for each annotation which will be used directly without any mapping.
+You can select the property that will be used to color annotations in the color_by box. The corresponding property should be either categorical (strings or ints), in which case a dict-based color mapping should be used, or a float between 0-1 in which case a matplotlib colormap should be applied.
+There is also the option for the special case 'color' to be used. If your annotations have a property called color, this will be assumed to be an RGB value in the form of a tuple (R, G, B) of floats between 0-1 for each annotation which will be used directly without any mapping.
 
-The 'colour type by property' box allows annotations of the specified type to be coloured by a different property to the 'global' one. For example, this could be used to have all detections coloured according to their type, but for Glands, colour by some feature describing them instead (their area, for example)
+The 'color type by property' box allows annotations of the specified type to be colored by a different property to the 'global' one. For example, this could be used to have all detections colored according to their type, but for Glands, color by some feature describing them instead (their area, for example)
 
 Running models
 ^^^^^^^^^^^^^^
@@ -108,10 +108,10 @@ By default, the interface is set up to show only larger annotations while zoomed
 Other options
 ^^^^^^^^^^^^^
 
-There are a few options for how annotations are displayed. You can change the colourmap used in the colourmap field if you are colouring objects according to a continuous property (values should be between 0-1), by choosing one of the matplotlib cmaps.
+There are a few options for how annotations are displayed. You can change the colormap used in the colormap field if you are coloring objects according to a continuous property (values should be between 0-1), by choosing one of the matplotlib cmaps.
 The buttons 'filled', 'mpp', 'grid', respectively toggle between filled and outline only rendering of annotations, using mpp or baseline pixels as the scale for the plot, and showing a grid overlay.
 
-A filter can be applied to annotations using the filter box. For example, entering props\['score'\]>0.5 would show only annotations for which the 'score' property  is greater than 0.5.
+A filter can be applied to annotations using the filter box. For example, entering props\['score'\]>0.5 would show only annotations for which the 'score' property is greater than 0.5.
 See the documentation in :obj:`AnnotationStore <tiatoolbox.annotation.storage.AnnotationStore>` on valid 'where' statements for more details.
 
 The main slide view can be made fullscreen by clicking the fullscreen icon in the small toolbar to the immediate right of the main window. This toolbar also provides a button to save the current view as a .png file.
@@ -121,7 +121,7 @@ The main slide view can be made fullscreen by clicking the fullscreen icon in th
 3. Data Format Conventions and File Structure
 ---------------------------------------------
 
-In the slides folder should be all the slides you want to use, and the overlays folder should contain whatever graphs, segmentations, heatmaps etc you are interesting in overlaying over the slides.
+In the slides folder should be all the slides you want to use, and the overlays folder should contain whatever graphs, segmentations, heatmaps etc you are interested in overlaying over the slides.
 
 When a slide is selected in the interface, any valid overlay file that can be found that *contains the same name* (not including extension) will be available to overlay upon it.
 
@@ -178,12 +178,12 @@ Heatmaps
 
 These should be provided as a low-res heatmap in .jpg or .png format. It should be the same aspect ratio as the WSI it will be overlaid on. When creating the image, keep in mind that black pixels (0,0,0) will be made transparent.
 
-Single channel images can also be used but are not recommended; they should take values between 0 and 255 and will simply be put through a viridis colourmap. 0 values will become white background.
+Single channel images can also be used but are not recommended; they should take values between 0 and 255 and will simply be put through a viridis colormap. 0 values will become white background.
 
 Whole Slide Overlays
 ^^^^^^^^^^^^^^^^^^^^
 
-It is possible to overlay multiple WSI's on top of each other as separate layers simply by selecting them in the overlays dropdown, though if the visualization task can be acheived using another form of overlay, that wouold be recommended as it will usually be more flexible and faster to load.
+It is possible to overlay multiple WSI's on top of each other as separate layers simply by selecting them in the overlays dropdown, though if the visualization task can be achieved using another form of overlay, that would be recommended as it will usually be more flexible and faster to load.
 
 Graphs
 ^^^^^^
@@ -200,7 +200,7 @@ E.g.::
 
     graph_dict = {
                 'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-		        'coordinates': n x 2 array of x,y coordinates for each graph node (at baseline resolution)
+		        'coordinates': n x 2 array of x, y coordinates for each graph node (at baseline resolution)
 		}
 
 
@@ -210,13 +210,13 @@ Additional features can be added to nodes by adding extra keys to the dictionary
 
     graph_dict = {
                 'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-                'coordinates': n x 2 array of x,y coordinates for each graph node
+                'coordinates': n x 2 array of x, y coordinates for each graph node
                 'feats': n x n_features array of features for each node
                 'feat_names': list n_features names for each feature
             }
 
 
-It will be possible to colour the nodes by these features in the interface, and the top 10 will appear in a tooltip when hovering over a node (you will have to turn on the hovertool in the small toolbar to the right of the main window to enable this, it is disabled by default.)
+It will be possible to color the nodes by these features in the interface, and the top 10 will appear in a tooltip when hovering over a node (you will have to turn on the hovertool in the small toolbar to the right of the main window to enable this, it is disabled by default.)
 
 
 .. _examples:
@@ -246,7 +246,7 @@ of each patch, and two predicted scores are in a .csv file. Patch size is 512.
     db.append_many(annotations)
     db.dump("path/to/filename.db")   # filename should contain its associated slides name
 
-When loading the above in the interface, you will be able to select any of the properties to colour the overlay by.
+When loading the above in the interface, you will be able to select any of the properties to color the overlay by.
 
 GeoJSON outputs
 ^^^^^^^^^^^^^^^
@@ -281,7 +281,7 @@ If you have a collection of raw centroids or detection contours with correspondi
         props = {"score": properties["score"], "type": properties["class"]}
         annotations.append(
             Annotation(Point(annotation), props)
-        )  # use Polygon() instead if its a contour
+        )  # use Polygon() instead if it's a contour
     db.append_many(annotations)
     db.create_index("area", '"area"')  # create index on area for faster querying
     db.dump("path/to/annotations.db")
@@ -297,7 +297,7 @@ and associated node properties. The following example demonstrates how to packag
 ::
 
     graph_dict = {'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-                'coordinates': n x 2 array of x,y coordinates for each graph node
+                'coordinates': n x 2 array of x, y coordinates for each graph node
                 'feats': n x n_features array of features for each node
                 'feat_names': list n_features names for each feature
                 }
@@ -387,16 +387,16 @@ There are settings to control how slides are loaded:
     "auto_load": 1,     # if 1, upon opening a slide will also load all annotations associated with it
     "first_slide": "slideA.svs",            # initial slide to open upon launching viewer
 
-Settings to control how annotations are displayed, including default colours for specific types, and default properties to colour by:
+Settings to control how annotations are displayed, including default colors for specific types, and default properties to color by:
 
 ::
 
-    "colour_dict": {
-        "typeA": [252, 161, 3, 255],   # annotations whose 'type' property matches these, will display in the specified colour
+    "color_dict": {
+        "typeA": [252, 161, 3, 255],   # annotations whose 'type' property matches these, will display in the specified color
         "typeB": [3, 252, 40, 255]
     },
-    "default_cprop": "some_property",     # default property to colour annotations by
-    "default_type_cprop": {               # a property to colour a specific type by
+    "default_cprop": "some_property",     # default property to color annotations by
+    "default_type_cprop": {               # a property to color a specific type by
     "type": "Gland",
     "cprop": "Explanation"
     },
@@ -408,13 +408,13 @@ There are settings to control the initial values of some UI settings:
     "UI_settings": {
         "blur_radius": 0,           # applies a blur to rendered annotations
         "edge_thickness": 0,        # thickness of boundaries drawn around annotation geometries (0=off)
-        "mapper": "jet",            # default colour mapper to use when colouring by a continuous property
+        "mapper": "jet",            # default color mapper to use when coloring by a continuous property
         "max_scale": 32             # controls zoom level at which small annotations are no longer rendered (larger val->smaller
     },                              # annotations visible when zoomed out)
     "opts": {
         "edges_on": 0,              # graph edges are shown or hidden by default
         "nodes_on": 1,              # graph nodes are shown or hidden by default
-        "colourbar_on": 1,           # whether colour bar is shown below main window
+        "colorbar_on": 1,           # whether color bar is shown below main window
         "hover_on": 1
     },
 
@@ -428,9 +428,9 @@ and the ability to toggle on or off specific UI elements:
         "slide_row": 1,             # slide alpha toggle and slider
         "overlay_row": 1,           # overlay alpha toggle and slider
         "filter_input": 1,          # filter text input box
-        "cprop_input": 1,           # box to select which property to colour annotations by ('colour by' box)
-        "cmap_row": 1,              # row of UI elements with colourmap select, blur, max_scale
-        "type_cmap_select": 1,      # UI element to select a secondary colourmap for a specific type (i.e 'colour type by' box)
+        "cprop_input": 1,           # box to select which property to color annotations by ('color by' box)
+        "cmap_row": 1,              # row of UI elements with colormap select, blur, max_scale
+        "type_cmap_select": 1,      # UI element to select a secondary colormap for a specific type (i.e 'color type by' box)
         "model_row": 0,             # UI elements to chose and run a model
         "type_select_row": 1        # button group for toggling specific types of annotations on/off
     },
