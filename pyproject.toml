@@ -171,3 +171,6 @@ convention = "google"
 
 [tool.ruff.pylint]
 max-args = 10
+
+[tool.mypy]
+ignore_missing_imports = true
