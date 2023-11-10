@@ -417,6 +417,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
             scale_factor=(2.0, 2.0),
         )
 
+
 # to be implemented
 def test_engine_run_wsi() -> NoReturn:
     """Test the engine run for Whole slide images."""

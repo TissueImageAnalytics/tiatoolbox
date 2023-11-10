@@ -29,7 +29,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import IntPair, Resolution, Units
 
 
-
 def prepare_engines_save_dir(
     save_dir: os | Path | None,
     len_images: int,
@@ -444,7 +443,6 @@ class EngineABC(ABC):
             **kwargs,
         )
 
-
     @staticmethod
     def merge_predictions(
         img: str | Path | np.ndarray,
@@ -564,15 +562,15 @@ class EngineABC(ABC):
 
         return output
 
-
     @abstractmethod
-    def pre_process_wsi(self: EngineABC,
+    def pre_process_wsi(
+        self: EngineABC,
         images: list,
         labels: list,
         masks: list | None = None,
-        ioconfig: ModelIOConfigABC| None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         *,
-        patch_mode: bool=True,
+        patch_mode: bool = True,
     ) -> list[torch.utils.data.DataLoader]:
         """Pre-process a WSI."""
         dataloaders = []
@@ -603,28 +601,26 @@ class EngineABC(ABC):
                 shuffle=False,
             )
 
-            #list of dataloaders per image
+            # list of dataloaders per image
             dataloaders.append(dataloader)
 
         return dataloaders
-
 
     @abstractmethod
     def infer_wsi(
         self: EngineABC,
         model: torch.nn.Module,
         dataloaders: list,
-        #should be moved to wsi_post_processing
+        # should be moved to wsi_post_processing
         images: list,
         labels: list,
         highest_input_resolution: list[dict],
         merge_predictions: bool,
-        ) -> list:
+    ) -> list:
         """Model inference on a WSI."""
         # return coordinates of patches processed within a tile / whole-slide image
         raw_predictions_per_wsi = []
         for idx, dataloader in enumerate(dataloaders):
-
             # will be moved to post processing
             img_path_ = images[idx]
             img_label = None if labels is None else labels[idx]
@@ -659,13 +655,15 @@ class EngineABC(ABC):
 
                 # tolist might be very expensive
                 output_model["probabilities"].extend(
-                    batch_output_probabilities.tolist())
-                output_model["predictions"].extend(
-                    batch_output_predictions.tolist())
+                    batch_output_probabilities.tolist(),
+                )
+                output_model["predictions"].extend(batch_output_predictions.tolist())
 
-                if self.verbose: pbar.update()
+                if self.verbose:
+                    pbar.update()
 
-            if self.verbose: pbar.close()
+            if self.verbose:
+                pbar.close()
 
             output_model["label"] = img_label
             # add extra information useful for downstream analysis
@@ -691,13 +689,12 @@ class EngineABC(ABC):
 
         return raw_predictions_per_wsi
 
-
     @abstractmethod
     def post_process_wsi(self: EngineABC) -> NoReturn:
         """Post-process a WSI."""
         ## to bo implemented
 
-        #will be moved/implemented in Post processing wsi
+        # will be moved/implemented in Post processing wsi
         # if return_coordinates:
         #     cum_output["coordinates"].extend(batch_data["coords"].tolist())
         # if return_labels:  # be careful of `s`
@@ -705,16 +702,15 @@ class EngineABC(ABC):
         #     # and hence collated as list by torch
         #     cum_output["labels"].extend(list(batch_data["label"]))
 
-        #will be moved/implemented in Post processing wsi
-            # if not return_probabilities:
-            #     cum_output.pop("probabilities")
-            # if not return_labels:
-            #     cum_output.pop("labels")
-            # if not return_coordinates:
-            #     cum_output.pop("coordinates")
+        # will be moved/implemented in Post processing wsi
+        # if not return_probabilities:
+        #     cum_output.pop("probabilities")
+        # if not return_labels:
+        #     cum_output.pop("labels")
+        # if not return_coordinates:
+        #     cum_output.pop("coordinates")
 
         raise NotImplementedError
-
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
@@ -748,7 +744,7 @@ class EngineABC(ABC):
 
         return self.ioconfig
 
-    #should we revert to ModelIOConfigABC instead of IOPatchPredictorConfig?
+    # should we revert to ModelIOConfigABC instead of IOPatchPredictorConfig?
     def _update_ioconfig(
         self: EngineABC,
         ioconfig: ModelIOConfigABC,
@@ -1026,9 +1022,9 @@ class EngineABC(ABC):
             units,
         )
 
-        #since we're not expecting mode == "tile" should the
-        #Resolutions will be converted to baseline value.
-        #ioconfig = ioconfig.to_baseline()
+        # since we're not expecting mode == "tile" should the
+        # Resolutions will be converted to baseline value.
+        # ioconfig = ioconfig.to_baseline()
 
         fx_list = ioconfig.scale_to_highest(
             ioconfig.input_resolutions,
