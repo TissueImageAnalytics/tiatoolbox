@@ -1,9 +1,10 @@
 """Defines Abstract Base Class for TIAToolbox Model Engines."""
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, Callable, NoReturn
 
 import numpy as np
 import torch
@@ -15,6 +16,9 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model, model_to
 from tiatoolbox.utils.misc import dict_to_store, dict_to_zarr
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+
+from .io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -22,10 +26,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
-    from tiatoolbox.wsicore.wsireader import WSIReader
     from tiatoolbox.typing import IntPair, Resolution, Units
 
-    from .io_config import ModelIOConfigABC
 
 
 def prepare_engines_save_dir(
@@ -272,17 +274,17 @@ class EngineABC(ABC):
 
         if weights is not None:
             model = load_torch_model(model=model, weights=weights)
-        
+
         return model, None
-    
-    """ 
-    different approach now 
+
+    """
+    different approach now
     def setup_dataloader(
         self: EngineABC,
         images: np.ndarray | list,
         labels: list,
         masks: list | None = None,
-        ioconfig: ModelIOConfigABC| None = None,    
+        ioconfig: ModelIOConfigABC| None = None,
         *,
         patch_mode: bool=True,
     ) -> torch.utils.data.DataLoader:
@@ -298,7 +300,7 @@ class EngineABC(ABC):
 
         if patch_mode:
             dataset = PatchDataset(inputs=images, labels=labels)
-        
+
         else:
             dataset = WSIPatchDataset(
                 images,
@@ -311,7 +313,7 @@ class EngineABC(ABC):
             )
 
         dataset.preproc_func = self.model.preproc_func
-        
+
         # preprocessing must be defined with the dataset
         return torch.utils.data.DataLoader(
             dataset,
@@ -320,7 +322,7 @@ class EngineABC(ABC):
             drop_last=False,
             shuffle=False,
         )"""
-    
+
     def pre_process_patches(
         self: EngineABC,
         images: np.ndarray | list,
@@ -559,7 +561,7 @@ class EngineABC(ABC):
                     output = np.argmax(output, axis=-1)
                 # to make sure background is 0 while class will be 1...N
                 output[denominator > 0] += 1
-        
+
         return output
 
 
@@ -568,22 +570,21 @@ class EngineABC(ABC):
         images: list,
         labels: list,
         masks: list | None = None,
-        ioconfig: ModelIOConfigABC| None = None,    
+        ioconfig: ModelIOConfigABC| None = None,
         *,
         patch_mode: bool=True,
     ) -> list[torch.utils.data.DataLoader]:
         """Pre-process a WSI."""
-
         dataloaders = []
-        
+
         for idx, img_path in enumerate(images):
             img_path_ = Path(img_path)
-            img_label = None if labels is None else labels[idx]
+            None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
             dataset = WSIPatchDataset(
                 img_path_,
-                mode='wsi',
+                mode="wsi",
                 mask_path=img_mask,
                 patch_input_shape=ioconfig.patch_input_shape,
                 stride_shape=ioconfig.stride_shape,
@@ -604,7 +605,7 @@ class EngineABC(ABC):
 
             #list of dataloaders per image
             dataloaders.append(dataloader)
-        
+
         return dataloaders
 
 
@@ -617,15 +618,13 @@ class EngineABC(ABC):
         images: list,
         labels: list,
         highest_input_resolution: list[dict],
-        merge_predictions: bool = False,
+        merge_predictions: bool,
         ) -> list:
         """Model inference on a WSI."""
-
         # return coordinates of patches processed within a tile / whole-slide image
-        return_coordinates = True
         raw_predictions_per_wsi = []
         for idx, dataloader in enumerate(dataloaders):
-            
+
             # will be moved to post processing
             img_path_ = images[idx]
             img_label = None if labels is None else labels[idx]
@@ -686,18 +685,16 @@ class EngineABC(ABC):
                 )
                 outputs.append(merged_prediction)
 
-            # should we just add to a list of raw predictions and 
+            # should we just add to a list of raw predictions and
             # deal with in post processing?
             raw_predictions_per_wsi.append(outputs)
-            
+
         return raw_predictions_per_wsi
 
 
     @abstractmethod
     def post_process_wsi(self: EngineABC) -> NoReturn:
-
         """Post-process a WSI."""
-
         ## to bo implemented
 
         #will be moved/implemented in Post processing wsi
@@ -750,7 +747,7 @@ class EngineABC(ABC):
             self.ioconfig = ioconfig
 
         return self.ioconfig
-    
+
     #should we revert to ModelIOConfigABC instead of IOPatchPredictorConfig?
     def _update_ioconfig(
         self: EngineABC,
@@ -824,7 +821,7 @@ class EngineABC(ABC):
             stride_shape=stride_shape,
             output_resolutions=[],
         )
-    
+
     @staticmethod
     def _validate_images_masks(images: list | np.ndarray) -> list | np.ndarray:
         """Validate input images for a run."""
@@ -880,10 +877,11 @@ class EngineABC(ABC):
         masks: list[os | Path] | np.ndarray | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
+        units: Units = None,
+        # should ioconfig hyper params be part of kwargs?
         patch_input_shape: tuple[int, int] | None = None,
         stride_shape: tuple[int, int] | None = None,
         resolution: Resolution | None = None,
-        units: Units = None,
         *,
         patch_mode: bool = True,
         save_dir: os | Path | None = None,  # None will not save output
@@ -1019,7 +1017,7 @@ class EngineABC(ABC):
                 save_dir=save_dir,
                 **kwargs,
             )
-        
+
         ioconfig = self._update_ioconfig(
             ioconfig,
             patch_input_shape,
@@ -1028,7 +1026,7 @@ class EngineABC(ABC):
             units,
         )
 
-        #since we're not expecting mode == "tile" should the 
+        #since we're not expecting mode == "tile" should the
         #Resolutions will be converted to baseline value.
         #ioconfig = ioconfig.to_baseline()
 
@@ -1038,6 +1036,6 @@ class EngineABC(ABC):
         )
         fx_list = zip(fx_list, ioconfig.input_resolutions)
         fx_list = sorted(fx_list, key=lambda x: x[0])
-        highest_input_resolution = fx_list[0][1]
+        fx_list[0][1]
 
         return {"save_dir": save_dir}
