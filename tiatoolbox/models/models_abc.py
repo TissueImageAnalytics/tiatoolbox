@@ -55,7 +55,8 @@ class ModelABC(ABC, torch.nn.Module):
         model: torch.nn.Module,
         batch_data: np.ndarray,
         *,
-        on_gpu: bool) -> None:
+        on_gpu: bool,
+    ) -> None:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as I/O aggregation.
@@ -143,7 +144,6 @@ class ModelABC(ABC, torch.nn.Module):
         else:
             self._postproc = func
 
-
     def to(self: ModelABC, device: str = "cpu") -> torch.nn.Module:
         """Transfers model to cpu/gpu.
 
@@ -167,7 +167,6 @@ class ModelABC(ABC, torch.nn.Module):
             model = torch.nn.DataParallel(model)
 
         return model
-
 
     def load_weights_from_path(self: ModelABC, weights: str | Path) -> torch.nn.Module:
         """Helper function to load a torch model.
