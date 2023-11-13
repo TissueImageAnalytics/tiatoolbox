@@ -28,6 +28,7 @@ def test_get_pretrained_model() -> None:
     for pretrained_name in pretrained_info:
         get_pretrained_model(pretrained_name, overwrite=True)
 
+
 @pytest.mark.skipif(
     toolbox_env.running_on_ci(),
     reason="Local test on CLI",
@@ -122,7 +123,6 @@ def test_model_abc() -> None:
     # Test on CPU
     model_on_device = model.to(device="cpu")
     assert isinstance(model_on_device, nn.Module)
-
 
     # Test on GPU
     # no GPU on Travis so this will crash
