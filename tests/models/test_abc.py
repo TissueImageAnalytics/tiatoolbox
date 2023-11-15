@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+import torch
 from torch import nn
 
 from tiatoolbox import rcParam
@@ -51,6 +52,7 @@ class Proto(ModelABC):
     def __init__(self: Proto) -> None:
         """Initialize Proto."""
         super().__init__()
+        self.dummy_param = nn.Parameter(torch.empty(0))
 
     @staticmethod
     # skipcq
@@ -89,8 +91,10 @@ def test_model_to_cuda() -> None:
     # Test on GPU
     # no GPU on Travis so this will crash
     model = Proto()  # skipcq
-    model_on_device = model.to(device="cuda")
-    assert isinstance(model_on_device, nn.Module)
+    assert model.dummy_param.device.type == "cpu"
+    model = model.to(device="cuda")
+    assert isinstance(model, nn.Module)
+    assert model.dummy_param.device.type == "cuda"
 
 
 def test_model_abc() -> None:
@@ -136,8 +140,9 @@ def test_model_abc() -> None:
     assert model.postproc_func(2) == 0
 
     # Test on CPU
-    model_on_device = model.to(device="cpu")
-    assert isinstance(model_on_device, nn.Module)
+    model = model.to(device="cpu")
+    assert isinstance(model, nn.Module)
+    assert model.dummy_param.device.type == "cpu"
 
     # Test load_weights_from_path() method
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
