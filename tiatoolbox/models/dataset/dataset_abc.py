@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Iterable, List, Union
 
 import cv2
 import numpy as np
@@ -21,6 +21,11 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.typing import IntPair, Resolution, Units
+
+    try:
+        from typing import TypeGuard
+    except ImportError:
+        from typing_extensions import TypeGuard  # to support python <3.10
 
 input_type = Union[List[Union[str, Path, np.ndarray]], np.ndarray]
 
@@ -354,7 +359,7 @@ class WSIPatchDataset(PatchDatasetABC):
 
     """
 
-    def __init__(  # noqa: PLR0913, PLR0915
+    def __init__(  # skipcq: PY-R1000  # noqa: PLR0913, PLR0915
         self: WSIPatchDataset,
         img_path: str | Path,
         mode: str = "wsi",
