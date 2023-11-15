@@ -4,15 +4,72 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+import torch
+from torch import nn
 
 import tiatoolbox.models
 from tiatoolbox import rcParam, utils
-from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.architecture import (
+    fetch_pretrained_weights,
+    get_pretrained_model,
+)
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 
 if TYPE_CHECKING:
     import numpy as np
+
+
+class ProtoRaisesTypeError(ModelABC):
+    """Intentionally created to check for TypeError."""
+
+    # skipcq
+    def __init__(self: Proto) -> None:
+        """Initialize ProtoRaisesTypeError."""
+        super().__init__()
+
+    @staticmethod
+    # skipcq
+    def infer_batch() -> None:
+        """Define infer batch."""
+        # base class definition pass
+
+
+class ProtoNoPostProcess(ModelABC):
+    """Intentionally created to check No Post Processing."""
+
+    def forward(self: ProtoNoPostProcess) -> None:
+        """Define forward function."""
+
+    @staticmethod
+    # skipcq
+    def infer_batch() -> None:
+        """Define infer batch."""
+
+
+class Proto(ModelABC):
+    """Intentionally created to check error."""
+
+    def __init__(self: Proto) -> None:
+        """Initialize Proto."""
+        super().__init__()
+        self.dummy_param = nn.Parameter(torch.empty(0))
+
+    @staticmethod
+    # skipcq
+    def postproc(image: np.ndarray) -> np.ndarray:
+        """Define postproc function."""
+        return image - 2
+
+    # skipcq
+    def forward(self: Proto) -> None:
+        """Define forward function."""
+
+    @staticmethod
+    # skipcq
+    def infer_batch() -> None:
+        """Define infer batch."""
+        pass  # base class definition pass  # noqa: PIE790
 
 
 @pytest.mark.skipif(
@@ -26,6 +83,21 @@ def test_get_pretrained_model() -> None:
         get_pretrained_model(pretrained_name, overwrite=True)
 
 
+@pytest.mark.skipif(
+    toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
+    reason="Local test on CLI",
+)
+def test_model_to_cuda() -> None:
+    """This Test should pass locally if GPU is available."""
+    # Test on GPU
+    # no GPU on Travis so this will crash
+    model = Proto()  # skipcq
+    assert model.dummy_param.device.type == "cpu"
+    model = model.to(device="cuda")
+    assert isinstance(model, nn.Module)
+    assert model.dummy_param.device.type == "cuda"
+
+
 def test_model_abc() -> None:
     """Test API in model ABC."""
     # test missing definition for abstract
@@ -33,59 +105,14 @@ def test_model_abc() -> None:
         # crash due to not defining forward, infer_batch, postproc
         ModelABC()  # skipcq
 
-    # intentionally created to check error
-    # skipcq
-    class Proto(ModelABC):
-        # skipcq
-        def __init__(self: Proto) -> None:
-            super().__init__()
-
-        @staticmethod
-        # skipcq
-        def infer_batch() -> None:
-            pass  # base class definition pass
-
     # skipcq
     with pytest.raises(TypeError):
         # crash due to not defining forward and postproc
-        Proto()  # skipcq
+        ProtoRaisesTypeError()  # skipcq
 
-    # intentionally create to check inheritance
-    # skipcq
-    class Proto(ModelABC):
-        # skipcq
-        def forward(self: Proto) -> None:
-            pass  # base class definition pass
-
-        @staticmethod
-        # skipcq
-        def infer_batch() -> None:
-            pass  # base class definition pass
-
-    model = Proto()
+    model = ProtoNoPostProcess()
     assert model.preproc(1) == 1, "Must be unchanged!"
     assert model.postproc(1) == 1, "Must be unchanged!"
-
-    # intentionally created to check error
-    # skipcq
-    class Proto(ModelABC):
-        # skipcq
-        def __init__(self: Proto) -> None:
-            super().__init__()
-
-        @staticmethod
-        # skipcq
-        def postproc(image: np.ndarray) -> None:
-            return image - 2
-
-        # skipcq
-        def forward(self: Proto) -> None:
-            pass  # base class definition pass
-
-        @staticmethod
-        # skipcq
-        def infer_batch() -> None:
-            pass  # base class definition pass
 
     model = Proto()  # skipcq
     # test assign un-callable to preproc_func/postproc_func
@@ -130,3 +157,9 @@ def test_model_to() -> None:
     model = torch_models.resnet18()
     model = tiatoolbox.models.models_abc.model_to(device="cpu", model=model)
     assert isinstance(model, nn.Module)
+    assert model.dummy_param.device.type == "cpu"
+
+    # Test load_weights_from_file() method
+    weights_path = fetch_pretrained_weights("alexnet-kather100k")
+    with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
+        _ = model.load_weights_from_file(weights_path)

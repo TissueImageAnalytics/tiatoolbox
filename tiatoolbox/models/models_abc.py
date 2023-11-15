@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 import torch
+from torch import device as torch_device
 from torch import nn
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -56,7 +57,7 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
     return model.to(device)
 
 
-class ModelABC(ABC, nn.Module):
+class ModelABC(ABC, torch.nn.Module):
     """Abstract base class for models used in tiatoolbox."""
 
     def __init__(self: ModelABC) -> None:
@@ -160,3 +161,46 @@ class ModelABC(ABC, nn.Module):
             self._postproc = self.postproc
         else:
             self._postproc = func
+
+    def to(self: ModelABC, device: str = "cpu") -> torch.nn.Module:
+        """Transfers model to cpu/gpu.
+
+        Args:
+            model (torch.nn.Module):
+                PyTorch defined model.
+            device (str):
+                Transfers model to the specified device. Default is "cpu".
+
+        Returns:
+            torch.nn.Module:
+                The model after being moved to cpu/gpu.
+
+        """
+        device = torch_device(device)
+        model = super().to(device)
+
+        # If target device istorch.cuda and more
+        # than one GPU is available, use DataParallel
+        if device.type == "cuda" and torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)  # pragma: no cover
+
+        return model
+
+    def load_weights_from_file(self: ModelABC, weights: str | Path) -> torch.nn.Module:
+        """Helper function to load a torch model.
+
+        Args:
+            self (ModelABC):
+                A torch model as :class:`ModelABC`.
+            weights (str or Path):
+                Path to pretrained weights.
+
+        Returns:
+            torch.nn.Module:
+                Torch model with pretrained weights loaded on CPU.
+
+        """
+        # ! assume to be saved in single GPU mode
+        # always load on to the CPU
+        saved_state_dict = torch.load(weights, map_location="cpu")
+        return super().load_state_dict(saved_state_dict, strict=True)
