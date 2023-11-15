@@ -18,6 +18,57 @@ if TYPE_CHECKING:
     import numpy as np
 
 
+class ProtoRaisesTypeError(ModelABC):
+    """Intentionally created to check for TypeError."""
+
+    # skipcq
+    def __init__(self: Proto) -> None:
+        """Initialize ProtoRaisesTypeError."""
+        super().__init__()
+
+    @staticmethod
+    # skipcq
+    def infer_batch() -> None:
+        """Define infer batch."""
+        # base class definition pass
+
+
+class ProtoNoPostProcess(ModelABC):
+    """Intentionally created to check No Post Processing."""
+
+    def forward(self: ProtoNoPostProcess) -> None:
+        """Define forward function."""
+
+    @staticmethod
+    # skipcq
+    def infer_batch() -> None:
+        """Define infer batch."""
+
+
+class Proto(ModelABC):
+    """Intentionally created to check error."""
+
+    def __init__(self: Proto) -> None:
+        """Initialize Proto."""
+        super().__init__()
+
+    @staticmethod
+    # skipcq
+    def postproc(image: np.ndarray) -> np.ndarray:
+        """Define postproc function."""
+        return image - 2
+
+    # skipcq
+    def forward(self: Proto) -> None:
+        """Define forward function."""
+
+    @staticmethod
+    # skipcq
+    def infer_batch() -> None:
+        """Define infer batch."""
+        pass  # base class definition pass  # noqa: PIE790
+
+
 @pytest.mark.skipif(
     toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
     reason="Local test on machine with GPU.",
@@ -30,9 +81,18 @@ def test_get_pretrained_model() -> None:
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_ci(),
+    toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
     reason="Local test on CLI",
 )
+def test_model_to_cuda() -> None:
+    """This Test should pass locally if GPU is available."""
+    # Test on GPU
+    # no GPU on Travis so this will crash
+    model = Proto()  # skipcq
+    model_on_device = model.to(device="cuda")
+    assert isinstance(model_on_device, nn.Module)
+
+
 def test_model_abc() -> None:
     """Test API in model ABC."""
     # test missing definition for abstract
@@ -40,59 +100,14 @@ def test_model_abc() -> None:
         # crash due to not defining forward, infer_batch, postproc
         ModelABC()  # skipcq
 
-    # intentionally created to check error
-    # skipcq
-    class Proto(ModelABC):
-        # skipcq
-        def __init__(self: Proto) -> None:
-            super().__init__()
-
-        @staticmethod
-        # skipcq
-        def infer_batch() -> None:
-            pass  # base class definition pass
-
     # skipcq
     with pytest.raises(TypeError):
         # crash due to not defining forward and postproc
-        Proto()  # skipcq
+        ProtoRaisesTypeError()  # skipcq
 
-    # intentionally create to check inheritance
-    # skipcq
-    class Proto(ModelABC):
-        # skipcq
-        def forward(self: Proto) -> None:
-            pass  # base class definition pass
-
-        @staticmethod
-        # skipcq
-        def infer_batch() -> None:
-            pass  # base class definition pass
-
-    model = Proto()
+    model = ProtoNoPostProcess()
     assert model.preproc(1) == 1, "Must be unchanged!"
     assert model.postproc(1) == 1, "Must be unchanged!"
-
-    # intentionally created to check error
-    # skipcq
-    class Proto(ModelABC):
-        # skipcq
-        def __init__(self: Proto) -> None:
-            super().__init__()
-
-        @staticmethod
-        # skipcq
-        def postproc(image: np.ndarray) -> None:
-            return image - 2
-
-        # skipcq
-        def forward(self: Proto) -> None:
-            pass  # base class definition pass
-
-        @staticmethod
-        # skipcq
-        def infer_batch() -> None:
-            pass  # base class definition pass
 
     model = Proto()  # skipcq
     # test assign un-callable to preproc_func/postproc_func
@@ -123,12 +138,6 @@ def test_model_abc() -> None:
     # Test on CPU
     model_on_device = model.to(device="cpu")
     assert isinstance(model_on_device, nn.Module)
-
-    # Test on GPU
-    # no GPU on Travis so this will crash
-    if not toolbox_env.has_gpu():
-        model_on_device = model.to(device="cuda")
-        assert isinstance(model_on_device, nn.Module)
 
     # Test load_weights_from_path() method
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
