@@ -164,16 +164,16 @@ class ModelABC(ABC, torch.nn.Module):
         # If target device istorch.cuda and more
         # than one GPU is available, use DataParallel
         if device.type == "cuda" and torch.cuda.device_count() > 1:
-            model = torch.nn.DataParallel(model)
+            model = torch.nn.DataParallel(model)  # pragma: no cover
 
         return model
 
-    def load_weights_from_path(self: ModelABC, weights: str | Path) -> torch.nn.Module:
+    def load_weights_from_file(self: ModelABC, weights: str | Path) -> torch.nn.Module:
         """Helper function to load a torch model.
 
         Args:
-            model (torch.nn.Module):
-                A torch model.
+            self (ModelABC):
+                A torch model as :class:`ModelABC`.
             weights (str or Path):
                 Path to pretrained weights.
 
