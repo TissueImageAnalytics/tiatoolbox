@@ -166,7 +166,7 @@ class ModelABC(ABC, torch.nn.Module):
         """Transfers model to cpu/gpu.
 
         Args:
-            model (torch.nn.Module):
+            self (ModelABC):
                 PyTorch defined model.
             device (str):
                 Transfers model to the specified device. Default is "cpu".

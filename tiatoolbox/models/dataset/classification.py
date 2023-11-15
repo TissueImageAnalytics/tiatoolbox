@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PIL import Image
 from torchvision import transforms
 
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
+    import torch
+    from PIL import Image
 
 
 class _TorchPreprocCaller:
