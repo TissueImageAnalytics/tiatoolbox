@@ -140,6 +140,16 @@ def test_model_abc() -> None:
     model.postproc_func = None  # skipcq: PYL-W0201
     assert model.postproc_func(2) == 0
 
+    # Test load_weights_from_file() method
+    weights_path = fetch_pretrained_weights("alexnet-kather100k")
+    with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
+        _ = model.load_weights_from_file(weights_path)
+
+    # Test on CPU
+    model = model.to(device="cpu")
+    assert isinstance(model, nn.Module)
+    assert model.dummy_param.device.type == "cpu"
+
 
 def test_model_to() -> None:
     """Test for placing model on device."""
@@ -157,9 +167,3 @@ def test_model_to() -> None:
     model = torch_models.resnet18()
     model = tiatoolbox.models.models_abc.model_to(device="cpu", model=model)
     assert isinstance(model, nn.Module)
-    assert model.dummy_param.device.type == "cpu"
-
-    # Test load_weights_from_file() method
-    weights_path = fetch_pretrained_weights("alexnet-kather100k")
-    with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
-        _ = model.load_weights_from_file(weights_path)
