@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.optimize import linear_sum_assignment
-from scipy.spatial import distance
+from scipy.optimize import linear_sum_assignment  # type:ignore[import-untyped]
+from scipy.spatial import distance  # type:ignore[import-untyped]
 
 
 def pair_coordinates(
