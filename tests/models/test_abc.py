@@ -144,7 +144,7 @@ def test_model_abc() -> None:
     assert isinstance(model, nn.Module)
     assert model.dummy_param.device.type == "cpu"
 
-    # Test load_weights_from_path() method
+    # Test load_weights_from_file() method
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
     with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
-        _ = model.load_weights_from_path(weights_path)
+        _ = model.load_weights_from_file(weights_path)
