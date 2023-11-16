@@ -100,6 +100,8 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
 # Load a dictionary of sample files data (names and urls)
 rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.yaml")
 
+# Enable `torch-compile`` by default
+rcParam["enable_torch_compile"] = False
 
 def _lazy_import(name: str, module_location: Path) -> sys.modules:
     spec = importlib.util.spec_from_file_location(name, module_location)

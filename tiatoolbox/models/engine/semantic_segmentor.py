@@ -16,7 +16,7 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -527,12 +527,10 @@ class SemanticSegmentor:
         *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
-        compiled: bool = True,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
 
-        self.compiled = compiled
         if model is None and pretrained_model is None:
             msg = "Must provide either of `model` or `pretrained_model`"
             raise ValueError(msg)
@@ -541,7 +539,7 @@ class SemanticSegmentor:
             self.model = torch.compile(
                 model,
                 mode="reduce-overhead",
-                disable=not compiled,
+                disable=not rcParam["enable_torch_compile"],
             )
             # template ioconfig, usually coming from pretrained
             self.ioconfig = None
@@ -551,7 +549,7 @@ class SemanticSegmentor:
             self.model = torch.compile(
                 model,
                 mode="reduce-overhead",
-                disable=not compiled,
+                disable=not rcParam["enable_torch_compile"],
             )
 
         # local variables for flagging mode within class,

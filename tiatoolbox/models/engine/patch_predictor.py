@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import tqdm
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
@@ -230,14 +230,12 @@ class PatchPredictor:
         pretrained_weights: str | None = None,
         *,
         verbose: bool = True,
-        compiled: bool = True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
         super().__init__()
 
         self.imgs = None
         self.mode = None
-        self.compiled = compiled
 
         if model is None and pretrained_model is None:
             msg = "Must provide either `model` or `pretrained_model`."
@@ -255,7 +253,7 @@ class PatchPredictor:
             torch.compile(  # for runtime, such as after wrapping with nn.DataParallel
                 model,
                 mode="reduce-overhead",
-                disable=not compiled,
+                disable=not rcParam["enable_torch_compile"],
             )
         )
         self.pretrained_model = pretrained_model

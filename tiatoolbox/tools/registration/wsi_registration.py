@@ -15,7 +15,7 @@ from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 from torchvision.models import VGG16_Weights
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
@@ -328,19 +328,18 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self: torch.nn.Module, *, compiled: bool = True) -> None:
+    def __init__(self: torch.nn.Module) -> None:
         """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
         self.features: dict = dict.fromkeys(output_layers_key, None)
-        self.compiled = compiled
         self.pretrained: torch.nn.Sequential = torch.compile(
             torchvision.models.vgg16(
                 weights=VGG16_Weights.IMAGENET1K_V1,
             ),
             mode="reduce-overhead",
-            disable=not compiled,
+            disable=not rcParam["enable_torch_compile"],
         ).features
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
@@ -361,7 +360,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         """
 
-        @torch.compile(mode="reduce-overhead", disable=not self.compiled)
+        @torch.compile(mode="reduce-overhead", disable=not rcParam["enable_torch_compile"])
         def hook(
             _module: torch.nn.MaxPool2d,
             _module_input: tuple[torch.Tensor],
@@ -435,16 +434,11 @@ class DFBRegister:
     def __init__(
         self: DFBRegister,
         patch_size: tuple[int, int] = (224, 224),
-        *,
-        compiled: bool = True,
     ) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
-        self.compiled = compiled
-        self.feature_extractor = DFBRFeatureExtractor(
-            compiled=compiled,
-        )
+        self.feature_extractor = DFBRFeatureExtractor()
 
     # Make this function private when full pipeline is implemented.
     def extract_features(

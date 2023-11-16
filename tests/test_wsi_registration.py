@@ -21,10 +21,10 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 RNG = np.random.default_rng()  # Numpy Random Generator
 
 
-def test_extract_features(dfbr_features: Path, *, compiled: bool = True) -> None:
+def test_extract_features(dfbr_features: Path) -> None:
     """Test for CNN based feature extraction function."""
     # dfbr (deep feature based registration).
-    dfbr = DFBRegister(compiled=compiled)
+    dfbr = DFBRegister()
     fixed_img = np.repeat(
         np.expand_dims(
             np.repeat(
