@@ -527,22 +527,32 @@ class SemanticSegmentor:
         *,
         verbose: bool = True,
         auto_generate_mask: bool = False,
+        compiled: bool = True,
     ) -> None:
         """Initialize :class:`SemanticSegmentor`."""
         super().__init__()
 
+        self.compiled = compiled
         if model is None and pretrained_model is None:
             msg = "Must provide either of `model` or `pretrained_model`"
             raise ValueError(msg)
 
         if model is not None:
-            self.model = model
+            self.model = torch.compile(
+                model,
+                mode="reduce-overhead",
+                disable=not compiled,
+            )
             # template ioconfig, usually coming from pretrained
             self.ioconfig = None
         else:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
             self.ioconfig = ioconfig
-            self.model = model
+            self.model = torch.compile(
+                model,
+                mode="reduce-overhead",
+                disable=not compiled,
+            )
 
         # local variables for flagging mode within class,
         # subclass should have overwritten to alter some specific behavior
