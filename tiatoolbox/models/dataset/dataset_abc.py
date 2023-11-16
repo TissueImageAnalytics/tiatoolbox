@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Iterable, List, Union
 
 import cv2
 import numpy as np
@@ -22,9 +22,19 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.typing import IntPair, Resolution, Units
 
+    try:
+        from typing import TypeGuard
+    except ImportError:
+        from typing_extensions import TypeGuard  # to support python <3.10
+
+input_type = Union[List[Union[str, Path, np.ndarray]], np.ndarray]
+
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     """Define abstract base class for patch dataset."""
+
+    inputs: input_type
+    labels: list[int] | np.ndarray
 
     def __init__(
         self: PatchDatasetABC,
@@ -57,6 +67,16 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
             msg = "Images must have the same dimensions."
             raise ValueError(msg)
 
+    @staticmethod
+    def _are_paths(inputs: input_type) -> TypeGuard[Iterable[Path]]:
+        """TypeGuard to check that input array contains only paths."""
+        return all(isinstance(v, (Path, str)) for v in inputs)
+
+    @staticmethod
+    def _are_npy_like(inputs: input_type) -> TypeGuard[Iterable[np.ndarray]]:
+        """TypeGuard to check that input array contains only np.ndarray."""
+        return all(isinstance(v, np.ndarray) for v in inputs)
+
     def _check_input_integrity(self: PatchDatasetABC, mode: str) -> None:
         """Check that variables received during init are valid.
 
@@ -68,22 +88,14 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
         """
         if mode == "patch":
             self.data_is_npy_alike = False
-            is_all_paths = all(isinstance(v, (Path, str)) for v in self.inputs)
-            is_all_npy = all(isinstance(v, np.ndarray) for v in self.inputs)
 
             msg = (
                 "Input must be either a list/array of images "
                 "or a list of valid image paths."
             )
 
-            if not (is_all_paths or is_all_npy or isinstance(self.inputs, np.ndarray)):
-                raise ValueError(
-                    msg,
-                )
-
-            shapes = None
             # When a list of paths is provided
-            if is_all_paths:
+            if self._are_paths(self.inputs):
                 if any(not Path(v).exists() for v in self.inputs):
                     # at least one of the paths are invalid
                     raise ValueError(
@@ -93,12 +105,14 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
                 shapes = [self.load_img(v).shape for v in self.inputs]
                 self.data_is_npy_alike = False
 
-            if is_all_npy:
+            elif self._are_npy_like(self.inputs):
                 shapes = [v.shape for v in self.inputs]
                 self.data_is_npy_alike = True
 
-            if shapes:
-                self._check_shape_integrity(shapes)
+            else:
+                raise ValueError(msg)
+
+            self._check_shape_integrity(shapes)
 
             # If input is a numpy array
             if isinstance(self.inputs, np.ndarray):
@@ -345,7 +359,7 @@ class WSIPatchDataset(PatchDatasetABC):
 
     """
 
-    def __init__(  # noqa: PLR0913, PLR0915
+    def __init__(  # skipcq: PY-R1000  # noqa: PLR0913, PLR0915
         self: WSIPatchDataset,
         img_path: str | Path,
         mode: str = "wsi",
