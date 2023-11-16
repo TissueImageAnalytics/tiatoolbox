@@ -9,7 +9,7 @@ from tiatoolbox.utils.misc import parse_cv2_interpolaton, select_cv2_interpolati
 
 
 def background_composite(
-    image: np.ndarray | Image,
+    image: np.ndarray | Image.Image,
     fill: int = 255,
     *,
     alpha: bool,
@@ -96,18 +96,18 @@ def imresize(
         msg = "One of scale_factor and output_size must be not None."
         raise TypeError(msg)
     if scale_factor is not None:
-        scale_factor = np.array(scale_factor)
-        if scale_factor.size == 1:
-            scale_factor = np.repeat(scale_factor, 2)
+        scale_factor_array = np.array(scale_factor)
+        if scale_factor_array.size == 1:
+            scale_factor_array = np.repeat(scale_factor_array, 2)
 
     # Handle None arguments
     if output_size is None:
-        width = int(img.shape[1] * scale_factor[0])
-        height = int(img.shape[0] * scale_factor[1])
-        output_size = (width, height)
+        width = int(img.shape[1] * scale_factor_array[0])
+        height = int(img.shape[0] * scale_factor_array[1])
+        output_size_array = (width, height)
 
     if scale_factor is None:
-        scale_factor = img.shape[:2][::-1] / np.array(output_size)
+        scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
 
     # Return original if scale factor is 1
     if np.all(scale_factor == 1.0):  # noqa: PLR2004
@@ -152,11 +152,15 @@ def imresize(
     # Resize the image
     # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
     if img.shape[0] == img.shape[1] == 1:
-        return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
+        return img.repeat(output_size_array[1], 0).repeat(output_size_array[0], 1)
 
     if len(img.shape) == 3 and img.shape[-1] > 4:  # noqa: PLR2004
         img_channels = [
-            cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
+            cv2.resize(
+                src=img[..., ch],
+                dsize=output_size_array,
+                interpolation=interpolation,
+            )[
                 ...,
                 None,
             ]
@@ -164,7 +168,7 @@ def imresize(
         ]
         return np.concatenate(img_channels, axis=-1)
 
-    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
+    return cv2.resize(src=img, dsize=output_size_array, interpolation=interpolation)
 
 
 def rgb2od(img: np.ndarray) -> np.ndarray:
@@ -258,9 +262,13 @@ def bounds2locsize(
     left, top, right, bottom = bounds
     origin = origin.lower()
     if origin == "upper":
-        return np.array([left, top]), np.array([right - left, bottom - top])
+        return np.ndarray(
+            [np.array([left, top]), np.array([right - left, bottom - top])],
+        )
     if origin == "lower":
-        return np.array([left, bottom]), np.array([right - left, top - bottom])
+        return np.ndarray(
+            [np.array([left, bottom]), np.array([right - left, top - bottom])],
+        )
     msg = "Invalid origin. Only 'upper' or 'lower' are valid."
     raise ValueError(msg)
 
@@ -327,13 +335,13 @@ def bounds2slices(
         msg = "Invalid stride shape."
         raise ValueError(msg)
     if np.size(stride) == 1:
-        stride = np.tile(stride, 4)
+        stride_array = np.tile(stride, 4)
     elif np.size(stride) == 2:  # pragma: no cover  # noqa: PLR2004
-        stride = np.tile(stride, 2)
+        stride_array = np.tile(stride, 2)
 
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
-    return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
+    return tuple(slice(*x, s) for x, s in zip(slice_array, stride_array))
 
 
 def pad_bounds(
