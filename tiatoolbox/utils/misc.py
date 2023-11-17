@@ -1304,6 +1304,7 @@ def dict_to_zarr(
 
     return save_path
 
+
 def dict_to_zarr_wsi(
     raw_output: dict | np.ndarray,
     save_path: Path,
@@ -1330,7 +1331,7 @@ def dict_to_zarr_wsi(
     )
     chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
-    #TODO: Confirm if merged should be a standalone zarr or part of the main zarr group
+    # TODO: Confirm if merged should be a standalone zarr or part of the main zarr group
     # or two different files and return a file dict of two save paths (original idea)
     if isinstance(raw_output, np.ndarray):
         # ensure proper zarr extension
@@ -1342,14 +1343,14 @@ def dict_to_zarr_wsi(
             shape=raw_output.shape,
             chunks=chunks,
             compressor=compressor,
-            )
+        )
         output_zarr[:] = raw_output
         return save_path
 
     # ensure proper zarr extension
     save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
     output_zarr = zarr.open(save_path, mode="w")
-    
+
     probabilities_array = np.array(raw_output["probabilities"])
     probabilities_zarr = output_zarr.create_dataset(
         name="probabilities",
@@ -1367,7 +1368,7 @@ def dict_to_zarr_wsi(
         compressor=compressor,
     )
     predictions_zarr[:] = predictions_array
-    
+
     if "coordinates" in raw_output:
         coordinates_array = np.array(raw_output["coordinates"])
         coordinates_zarr = output_zarr.create_dataset(

@@ -1,9 +1,9 @@
 """Test tiatoolbox.models.engine.engine_abc."""
 from __future__ import annotations
-import copy
 
-from pathlib import Path
+import copy
 import shutil
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable, NoReturn
 
 import numpy as np
@@ -35,13 +35,12 @@ class TestEngineABC(EngineABC):
         """Test EngineABC init."""
         super().__init__(model=model, weights=weights, verbose=verbose)
 
-
     def post_process_wsi(
-            self: EngineABC,
-            raw_output: dict,
-            save_dir: Path,
-            **kwargs,
-            ) -> Path:
+        self: EngineABC,
+        raw_output: dict,
+        save_dir: Path,
+        **kwargs,
+    ) -> Path:
         """Test post_process_wsi."""
         return super().post_process_wsi(
             raw_output,
@@ -49,17 +48,14 @@ class TestEngineABC(EngineABC):
             **kwargs,
         )
 
-    def pre_process_wsi(self: EngineABC,
+    def pre_process_wsi(
+        self: EngineABC,
         img_path: Path,
         mask_path: Path,
-        ioconfig: ModelIOConfigABC| None = None,
+        ioconfig: ModelIOConfigABC | None = None,
     ) -> torch.utils.data.DataLoader:
-        return super().pre_process_wsi(
-            img_path,
-            mask_path,
-            ioconfig
-        )
-    
+        return super().pre_process_wsi(img_path, mask_path, ioconfig)
+
     def infer_wsi(
         self: EngineABC,
         dataloader: torch.utils.data.DataLoader,
@@ -75,8 +71,9 @@ class TestEngineABC(EngineABC):
             img_label,
             highest_input_resolution,
             merge_predictions,
-            **kwargs
+            **kwargs,
         )
+
 
 def test_engine_abc() -> NoReturn:
     """Test EngineABC initialization."""
@@ -192,7 +189,7 @@ def test_prepare_engines_save_dir(
             len_images=2,
             overwrite=False,
         )
-    
+
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_single_output",
         patch_mode=False,
@@ -449,7 +446,6 @@ def test_engine_run_wsi(
     chdir: Callable,
 ) -> NoReturn:
     """Test the engine run for Whole slide images."""
-
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
@@ -465,7 +461,7 @@ def test_engine_run_wsi(
         "stride_shape": patch_size,
         "resolution": 0.5,
         "save_dir": save_dir,
-        "units": "mpp"
+        "units": "mpp",
     }
 
     out = eng.run(
@@ -487,7 +483,7 @@ def test_engine_run_wsi(
         patch_mode=False,
         **kwargs,
     )
-    
+
     assert Path.exists(out), "Zarr output file does not exist"
     shutil.rmtree(out.parent.absolute())
 
@@ -503,6 +499,3 @@ def test_engine_run_wsi(
     assert Path.exists(out), "Zarr output file does not exist"
 
     print(save_dir)
-
-
-

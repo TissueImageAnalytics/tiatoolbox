@@ -1,11 +1,11 @@
 """Defines Abstract Base Class for TIAToolbox Model Engines."""
 from __future__ import annotations
-from collections import OrderedDict
 
 import copy
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, NoReturn
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
@@ -559,14 +559,15 @@ class EngineABC(ABC):
         return output
 
     @abstractmethod
-    def pre_process_wsi(self: EngineABC,
+    def pre_process_wsi(
+        self: EngineABC,
         img_path: Path,
         mask_path: Path,
-        ioconfig: ModelIOConfigABC| None = None,
+        ioconfig: ModelIOConfigABC | None = None,
     ) -> torch.utils.data.DataLoader:
         """Pre-process a WSI."""
         dataloader = None
-        
+
         dataset = WSIPatchDataset(
             img_path,
             mode="wsi",
@@ -597,9 +598,8 @@ class EngineABC(ABC):
         highest_input_resolution: list[dict],
         merge_predictions: bool,
         **kwargs: dict,
-        ) -> dict | np.ndarray:
+    ) -> dict | np.ndarray:
         """Model inference on a WSI."""
-        
         # return coordinates of patches processed within a tile / whole-slide image
         return_coordinates = True
 
@@ -609,7 +609,7 @@ class EngineABC(ABC):
             "coordinates": [],
             "labels": [],
         }
-        
+
         for _, batch_data in enumerate(dataloader):
             batch_output_probabilities = self.model.infer_batch(
                 self.model,
@@ -621,8 +621,9 @@ class EngineABC(ABC):
                 batch_output_probabilities,
             )
 
-            return_labels = kwargs["return_labels"] \
-                if "return_labels" in kwargs else False
+            return_labels = (
+                kwargs["return_labels"] if "return_labels" in kwargs else False
+            )
 
             # tolist might be very expensive
             cum_output["probabilities"].extend(batch_output_probabilities.tolist())
@@ -633,8 +634,8 @@ class EngineABC(ABC):
                 # We do not use tolist here because label may be of mixed types
                 # and hence collated as list by torch
                 cum_output["labels"].extend(list(batch_data["label"]))
-            
-        #return cum_output
+
+        # return cum_output
 
         ## should we move this to infer wsi ??
         cum_output["label"] = img_label
@@ -658,9 +659,8 @@ class EngineABC(ABC):
             )
             # outputs.append(merged_prediction)
             return merged_prediction
-        
-        return cum_output
 
+        return cum_output
 
     @abstractmethod
     def post_process_wsi(
@@ -668,9 +668,8 @@ class EngineABC(ABC):
         raw_output: dict,
         save_dir: Path,
         **kwargs,
-        ) -> Path:
+    ) -> Path:
         """Post-process a WSI."""
-
         output_file = (
             kwargs["output_file"] and kwargs.pop("output_file")
             if "output_file" in kwargs
@@ -679,11 +678,7 @@ class EngineABC(ABC):
 
         save_path = save_dir / output_file
 
-        return dict_to_zarr_wsi(
-            raw_output,
-            save_path,
-            **kwargs
-        )
+        return dict_to_zarr_wsi(raw_output, save_path, **kwargs)
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
@@ -1002,8 +997,9 @@ class EngineABC(ABC):
         fx_list = sorted(fx_list, key=lambda x: x[0])
         highest_input_resolution = fx_list[0][1]
 
-        merge_predictions = kwargs["merge_predictions"] \
-            if "merge_predictions" in kwargs else False
+        merge_predictions = (
+            kwargs["merge_predictions"] if "merge_predictions" in kwargs else False
+        )
 
         wsi_output_zarrs = OrderedDict()
 
@@ -1012,14 +1008,10 @@ class EngineABC(ABC):
             img_label = None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
-            dataloader = self.pre_process_wsi(
-                img_path_, 
-                img_mask, 
-                ioconfig
-            )
-            
+            dataloader = self.pre_process_wsi(img_path_, img_mask, ioconfig)
+
             # Only a single label per whole-slide image is supported
-            kwargs["return_labels"]=False
+            kwargs["return_labels"] = False
 
             raw_output = self.infer_wsi(
                 dataloader,
@@ -1027,10 +1019,10 @@ class EngineABC(ABC):
                 img_label,
                 highest_input_resolution,
                 merge_predictions,
-                **kwargs
-            )  
+                **kwargs,
+            )
 
-            #TODO: Confirm if merged should be a standalone zarr
+            # TODO: Confirm if merged should be a standalone zarr
             # or part of the main zarr group
             # output_file = f"{idx:0{len(str(len(self.images)))}d}"
             output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
@@ -1041,4 +1033,3 @@ class EngineABC(ABC):
             )
 
         return save_dir
-        
