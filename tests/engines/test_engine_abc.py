@@ -1,8 +1,10 @@
 """Test tiatoolbox.models.engine.engine_abc."""
 from __future__ import annotations
+import copy
 
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn
+import shutil
+from typing import TYPE_CHECKING, Callable, NoReturn
 
 import numpy as np
 import pytest
@@ -28,22 +30,53 @@ class TestEngineABC(EngineABC):
         model: str | torch.nn.Module,
         weights: str | Path | None = None,
         verbose: bool | None = None,
+        batch_size: int | None = None,
     ) -> NoReturn:
         """Test EngineABC init."""
         super().__init__(model=model, weights=weights, verbose=verbose)
 
-    def infer_wsi(self: EngineABC) -> NoReturn:
-        """Test infer_wsi."""
-        ...  # dummy function for tests.
 
-    def post_process_wsi(self: EngineABC) -> NoReturn:
+    def post_process_wsi(
+            self: EngineABC,
+            raw_output: dict,
+            save_dir: Path,
+            **kwargs,
+            ) -> Path:
         """Test post_process_wsi."""
-        ...  # dummy function for tests.
+        return super().post_process_wsi(
+            raw_output,
+            save_dir,
+            **kwargs,
+        )
 
-    def pre_process_wsi(self: EngineABC) -> NoReturn:
-        """Test pre_process_wsi."""
-        ...  # dummy function for tests.
-
+    def pre_process_wsi(self: EngineABC,
+        img_path: Path,
+        mask_path: Path,
+        ioconfig: ModelIOConfigABC| None = None,
+    ) -> torch.utils.data.DataLoader:
+        return super().pre_process_wsi(
+            img_path,
+            mask_path,
+            ioconfig
+        )
+    
+    def infer_wsi(
+        self: EngineABC,
+        dataloader: torch.utils.data.DataLoader,
+        img_path: Path,
+        img_label: str,
+        highest_input_resolution: list[dict],
+        merge_predictions: bool,
+        **kwargs: dict,
+    ) -> dict | np.ndarray:
+        return super().infer_wsi(
+            dataloader,
+            img_path,
+            img_label,
+            highest_input_resolution,
+            merge_predictions,
+            **kwargs
+        )
 
 def test_engine_abc() -> NoReturn:
     """Test EngineABC initialization."""
@@ -151,7 +184,7 @@ def test_prepare_engines_save_dir(
 
     with pytest.raises(
         OSError,
-        match=r".*More than 1 WSIs detected but there is no save directory provided.*",
+        match=r".*Input WSIs detected but there is no save directory provided.*",
     ):
         _ = prepare_engines_save_dir(
             save_dir=None,
@@ -159,16 +192,7 @@ def test_prepare_engines_save_dir(
             len_images=2,
             overwrite=False,
         )
-
-    out_dir = prepare_engines_save_dir(
-        save_dir=None,
-        patch_mode=False,
-        len_images=1,
-        overwrite=False,
-    )
-
-    assert out_dir == Path.cwd()
-
+    
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_single_output",
         patch_mode=False,
@@ -418,5 +442,66 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         )
 
 # to be implemented
-def test_engine_run_wsi() -> NoReturn:
+def test_engine_run_wsi(
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+    chdir: Callable,
+) -> NoReturn:
     """Test the engine run for Whole slide images."""
+
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = TestEngineABC(model="alexnet-kather100k", batch_size=32)
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{tmp_path}/model_wsi_output"
+
+    kwargs = {
+        "return_labels": True,
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "units": "mpp"
+    }
+
+    out = eng.run(
+        images=[mini_wsi_svs],
+        masks=[mini_wsi_msk],
+        patch_mode=False,
+        **kwargs,
+    )
+
+    assert Path.exists(out), "Zarr output file does not exist"
+    shutil.rmtree(out.parent.absolute())
+
+    _kwargs = copy.deepcopy(kwargs)
+    _kwargs["merge_predictions"] = False
+    # test reading of multiple whole-slide images
+    out = eng.run(
+        images=[mini_wsi_svs, mini_wsi_svs],
+        masks=[mini_wsi_msk, mini_wsi_msk],
+        patch_mode=False,
+        **kwargs,
+    )
+    
+    assert Path.exists(out), "Zarr output file does not exist"
+    shutil.rmtree(out.parent.absolute())
+
+    _kwargs["merge_predictions"] = True
+    # test reading of multiple whole-slide images
+    out = eng.run(
+        images=[mini_wsi_svs, mini_wsi_svs],
+        masks=[mini_wsi_msk, mini_wsi_msk],
+        patch_mode=False,
+        **kwargs,
+    )
+
+    assert Path.exists(out), "Zarr output file does not exist"
+
+    print(save_dir)
+
+
+

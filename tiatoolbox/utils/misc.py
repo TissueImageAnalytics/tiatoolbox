@@ -1303,3 +1303,92 @@ def dict_to_zarr(
     z[:] = predictions_array
 
     return save_path
+
+def dict_to_zarr_wsi(
+    raw_output: dict | np.ndarray,
+    save_path: Path,
+    **kwargs: dict,
+) -> Path:
+    """Saves the output of TIAToolbox engines to a zarr file.
+
+    Args:
+        raw_predictions (dict):
+            A dictionary in the TIAToolbox Engines output format.
+        save_path (str or Path):
+            Path to save the zarr file.
+        **kwargs (dict):
+            Keyword Args to update patch_pred_store_zarr attributes.
+
+
+    Returns:
+        Path to zarr file storing the patch predictor output
+
+    """
+    # Default values for Compressor and Chunks set if not received from kwargs.
+    compressor = (
+        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+    )
+    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+
+    #TODO: Confirm if merged should be a standalone zarr or part of the main zarr group
+    # or two different files and return a file dict of two save paths (original idea)
+    if isinstance(raw_output, np.ndarray):
+        # ensure proper zarr extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".merged.zarr")
+
+        output_zarr = zarr.open(
+            save_path,
+            mode="w",
+            shape=raw_output.shape,
+            chunks=chunks,
+            compressor=compressor,
+            )
+        output_zarr[:] = raw_output
+        return save_path
+
+    # ensure proper zarr extension
+    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+    output_zarr = zarr.open(save_path, mode="w")
+    
+    probabilities_array = np.array(raw_output["probabilities"])
+    probabilities_zarr = output_zarr.create_dataset(
+        name="probabilities",
+        shape=probabilities_array.shape,
+        chunks=chunks,
+        compressor=compressor,
+    )
+    probabilities_zarr[:] = probabilities_array
+
+    predictions_array = np.array(raw_output["predictions"])
+    predictions_zarr = output_zarr.create_dataset(
+        name="predictions",
+        shape=predictions_array.shape,
+        chunks=chunks,
+        compressor=compressor,
+    )
+    predictions_zarr[:] = predictions_array
+    
+    if "coordinates" in raw_output:
+        coordinates_array = np.array(raw_output["coordinates"])
+        coordinates_zarr = output_zarr.create_dataset(
+            name="coordinates",
+            shape=coordinates_array.shape,
+            chunks=chunks,
+            compressor=compressor,
+        )
+        coordinates_zarr[:] = coordinates_array
+
+    if "labels" in raw_output:
+        labels_array = np.array(raw_output["labels"])
+        labels_zarr = output_zarr.create_dataset(
+            name="labels",
+            shape=labels_array.shape,
+            chunks=chunks,
+            compressor=compressor,
+        )
+        labels_zarr[:] = labels_array
+
+    ##DEBEG TODO REMOVE
+    print("\n tree of zarr output \n ", output_zarr.tree())
+
+    return save_path.parent.absolute()

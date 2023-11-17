@@ -1,5 +1,6 @@
 """Defines Abstract Base Class for TIAToolbox Model Engines."""
 from __future__ import annotations
+from collections import OrderedDict
 
 import copy
 from abc import ABC, abstractmethod
@@ -15,7 +16,7 @@ from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model, model_to
-from tiatoolbox.utils.misc import dict_to_store, dict_to_zarr
+from tiatoolbox.utils.misc import dict_to_store, dict_to_zarr, dict_to_zarr_wsi
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 from .io_config import ModelIOConfigABC
@@ -60,22 +61,17 @@ def prepare_engines_save_dir(
         return save_dir
 
     if save_dir is None:
-        if len_images > 1:
-            msg = (
-                "More than 1 WSIs detected but there is no save directory provided."
-                "Please provide a 'save_dir'."
-            )
-            raise OSError(msg)
-        return (
-            Path.cwd()
-        )  # save the output to current working directory and return save_dir
-
-    if len_images > 1:
-        logger.info(
-            "When providing multiple whole slide images, "
-            "the outputs will be saved and the locations of outputs "
-            "will be returned to the calling function.",
+        msg = (
+            "Input WSIs detected but there is no save directory provided."
+            "Please provide a 'save_dir'."
         )
+        raise OSError(msg)
+
+    logger.info(
+        "When providing multiple whole slide images, "
+        "the outputs will be saved and the locations of outputs "
+        "will be returned to the calling function.",
+    )
 
     save_dir = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=overwrite)
@@ -446,7 +442,7 @@ class EngineABC(ABC):
 
 
     @staticmethod
-    def merge_predictions(
+    def _merge_predictions(
         img: str | Path | np.ndarray,
         output: dict,
         resolution: Resolution | None = None,
@@ -567,153 +563,130 @@ class EngineABC(ABC):
 
     @abstractmethod
     def pre_process_wsi(self: EngineABC,
-        images: list,
-        labels: list,
-        masks: list | None = None,
+        img_path: Path,
+        mask_path: Path,
         ioconfig: ModelIOConfigABC| None = None,
-        *,
-        patch_mode: bool=True,
-    ) -> list[torch.utils.data.DataLoader]:
+    ) -> torch.utils.data.DataLoader:
         """Pre-process a WSI."""
-        dataloaders = []
+        dataloader = None
+        
+        dataset = WSIPatchDataset(
+            img_path,
+            mode="wsi",
+            mask_path=mask_path,
+            patch_input_shape=ioconfig.patch_input_shape,
+            stride_shape=ioconfig.stride_shape,
+            resolution=ioconfig.input_resolutions[0]["resolution"],
+            units=ioconfig.input_resolutions[0]["units"],
+        )
 
-        for idx, img_path in enumerate(images):
-            img_path_ = Path(img_path)
-            None if labels is None else labels[idx]
-            img_mask = None if masks is None else masks[idx]
+        dataset.preproc_func = self.model.preproc_func
 
-            dataset = WSIPatchDataset(
-                img_path_,
-                mode="wsi",
-                mask_path=img_mask,
-                patch_input_shape=ioconfig.patch_input_shape,
-                stride_shape=ioconfig.stride_shape,
-                resolution=ioconfig.input_resolutions[0]["resolution"],
-                units=ioconfig.input_resolutions[0]["units"],
-            )
-
-            dataset.preproc_func = self.model.preproc_func
-
-            # preprocessing must be defined with the dataset
-            dataloader = torch.utils.data.DataLoader(
-                dataset,
-                num_workers=self.num_loader_workers,
-                batch_size=self.batch_size,
-                drop_last=False,
-                shuffle=False,
-            )
-
-            #list of dataloaders per image
-            dataloaders.append(dataloader)
-
-        return dataloaders
-
+        # preprocessing must be defined with the dataset
+        return torch.utils.data.DataLoader(
+            dataset,
+            num_workers=self.num_loader_workers,
+            batch_size=self.batch_size,
+            drop_last=False,
+            shuffle=False,
+        )
 
     @abstractmethod
     def infer_wsi(
         self: EngineABC,
-        model: torch.nn.Module,
-        dataloaders: list,
-        #should be moved to wsi_post_processing
-        images: list,
-        labels: list,
+        dataloader: torch.utils.data.DataLoader,
+        img_path: Path,
+        img_label: str,
         highest_input_resolution: list[dict],
         merge_predictions: bool,
-        ) -> list:
+        **kwargs: dict,
+        ) -> dict | np.ndarray:
         """Model inference on a WSI."""
+        
         # return coordinates of patches processed within a tile / whole-slide image
-        raw_predictions_per_wsi = []
-        for idx, dataloader in enumerate(dataloaders):
+        return_coordinates = True
 
-            # will be moved to post processing
-            img_path_ = images[idx]
-            img_label = None if labels is None else labels[idx]
+        cum_output = {
+            "probabilities": [],
+            "predictions": [],
+            "coordinates": [],
+            "labels": [],
+        }
+        
+        for _, batch_data in enumerate(dataloader):
+            batch_output_probabilities = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+            # We get the index of the class with the maximum probability
+            batch_output_predictions = self.model.postproc_func(
+                batch_output_probabilities,
+            )
 
-            pbar = None
-            if self.verbose:
-                pbar = tqdm.tqdm(
-                    total=int(len(dataloader)),
-                    leave=True,
-                    ncols=80,
-                    ascii=True,
-                    position=0,
-                )
+            return_labels = kwargs["return_labels"] \
+                if "return_labels" in kwargs else False
 
-            output_model = {
-                "probabilities": [],
-                "predictions": [],
-                "coordinates": [],
-                "labels": [],
-            }
+            # tolist might be very expensive
+            cum_output["probabilities"].extend(batch_output_probabilities.tolist())
+            cum_output["predictions"].extend(batch_output_predictions.tolist())
+            if return_coordinates:
+                cum_output["coordinates"].extend(batch_data["coords"].tolist())
+            if return_labels:  # be careful of `s`
+                # We do not use tolist here because label may be of mixed types
+                # and hence collated as list by torch
+                cum_output["labels"].extend(list(batch_data["label"]))
+            
+        #return cum_output
 
-            for _, batch_data in enumerate(dataloader):
-                batch_output_probabilities = self.model.infer_batch(
-                    model,
-                    batch_data["image"],
-                    device=self.device,
-                )
-                # We get the index of the class with the maximum probability
-                batch_output_predictions = self.model.postproc_func(
-                    batch_output_probabilities,
-                )
+        ## should we move this to infer wsi ??
+        cum_output["label"] = img_label
+        # add extra information useful for downstream analysis
+        cum_output["pretrained_model"] = self.model
+        cum_output["resolution"] = highest_input_resolution["resolution"]
+        cum_output["units"] = highest_input_resolution["units"]
 
-                # tolist might be very expensive
-                output_model["probabilities"].extend(
-                    batch_output_probabilities.tolist())
-                output_model["predictions"].extend(
-                    batch_output_predictions.tolist())
+        # OLD logic TODO confirm to remove
+        # outputs = [cum_output]  # assign to a list
 
-                if self.verbose: pbar.update()
+        merged_prediction = None
 
-            if self.verbose: pbar.close()
-
-            output_model["label"] = img_label
-            # add extra information useful for downstream analysis
-            output_model["pretrained_model"] = self.model
-            output_model["resolution"] = highest_input_resolution["resolution"]
-            output_model["units"] = highest_input_resolution["units"]
-
-            outputs = [output_model]  # assign to a list
-            merged_prediction = None
-            if merge_predictions:
-                merged_prediction = self.merge_predictions(
-                    img_path_,
-                    output_model,
-                    resolution=output_model["resolution"],
-                    units=output_model["units"],
-                    post_proc_func=self.model.postproc,
-                )
-                outputs.append(merged_prediction)
-
-            # should we just add to a list of raw predictions and
-            # deal with in post processing?
-            raw_predictions_per_wsi.append(outputs)
-
-        return raw_predictions_per_wsi
+        if merge_predictions:
+            merged_prediction = self._merge_predictions(
+                img_path,
+                cum_output,
+                resolution=cum_output["resolution"],
+                units=cum_output["units"],
+                post_proc_func=self.model.postproc,
+            )
+            # outputs.append(merged_prediction)
+            return merged_prediction
+        
+        return cum_output
 
 
     @abstractmethod
-    def post_process_wsi(self: EngineABC) -> NoReturn:
+    def post_process_wsi(
+        self: EngineABC,
+        raw_output: dict,
+        save_dir: Path,
+        **kwargs,
+        ) -> Path:
         """Post-process a WSI."""
-        ## to bo implemented
 
-        #will be moved/implemented in Post processing wsi
-        # if return_coordinates:
-        #     cum_output["coordinates"].extend(batch_data["coords"].tolist())
-        # if return_labels:  # be careful of `s`
-        #     # We do not use tolist here because label may be of mixed types
-        #     # and hence collated as list by torch
-        #     cum_output["labels"].extend(list(batch_data["label"]))
+        output_file = (
+            kwargs["output_file"] and kwargs.pop("output_file")
+            if "output_file" in kwargs
+            else "output"
+        )
 
-        #will be moved/implemented in Post processing wsi
-            # if not return_probabilities:
-            #     cum_output.pop("probabilities")
-            # if not return_labels:
-            #     cum_output.pop("labels")
-            # if not return_coordinates:
-            #     cum_output.pop("coordinates")
+        save_path = save_dir / output_file
 
-        raise NotImplementedError
+        return dict_to_zarr_wsi(
+            raw_output,
+            save_path,
+            **kwargs
+        )
 
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
@@ -877,11 +850,6 @@ class EngineABC(ABC):
         masks: list[os | Path] | np.ndarray | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
-        units: Units = None,
-        # should ioconfig hyper params be part of kwargs?
-        patch_input_shape: tuple[int, int] | None = None,
-        stride_shape: tuple[int, int] | None = None,
-        resolution: Resolution | None = None,
         *,
         patch_mode: bool = True,
         save_dir: os | Path | None = None,  # None will not save output
@@ -997,8 +965,8 @@ class EngineABC(ABC):
         self.model = model_to(model=self.model, device=self.device)
 
         save_dir = prepare_engines_save_dir(
-            save_dir,
-            len(self.images),
+            save_dir=save_dir,
+            len_images=len(self.images),
             patch_mode=patch_mode,
             overwrite=overwrite,
         )
@@ -1020,10 +988,10 @@ class EngineABC(ABC):
 
         ioconfig = self._update_ioconfig(
             ioconfig,
-            patch_input_shape,
-            stride_shape,
-            resolution,
-            units,
+            self.patch_input_shape,
+            self.stride_shape,
+            self.resolution,
+            self.units,
         )
 
         #since we're not expecting mode == "tile" should the
@@ -1036,6 +1004,45 @@ class EngineABC(ABC):
         )
         fx_list = zip(fx_list, ioconfig.input_resolutions)
         fx_list = sorted(fx_list, key=lambda x: x[0])
-        fx_list[0][1]
+        highest_input_resolution = fx_list[0][1]
 
-        return {"save_dir": save_dir}
+        merge_predictions = kwargs["merge_predictions"] \
+            if "merge_predictions" in kwargs else False
+
+        wsi_output_zarrs = OrderedDict()
+
+        for idx, img_path in enumerate(self.images):
+            img_path_ = Path(img_path)
+            img_label = None if labels is None else labels[idx]
+            img_mask = None if masks is None else masks[idx]
+
+            dataloader = self.pre_process_wsi(
+                img_path_, 
+                img_mask, 
+                ioconfig
+            )
+            
+            # Only a single label per whole-slide image is supported
+            kwargs["return_labels"]=False
+
+            raw_output = self.infer_wsi(
+                dataloader,
+                img_path,
+                img_label,
+                highest_input_resolution,
+                merge_predictions,
+                **kwargs
+            )  
+
+            #TODO: Confirm if merged should be a standalone zarr
+            # or part of the main zarr group
+            # output_file = f"{idx:0{len(str(len(self.images)))}d}"
+            output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
+            save_dir = self.post_process_wsi(
+                raw_output,
+                save_dir,
+                output_file=output_file,
+            )
+
+        return save_dir
+        
