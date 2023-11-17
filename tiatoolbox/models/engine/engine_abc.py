@@ -677,13 +677,13 @@ class EngineABC(ABC):
             else "output"
         )
         save_path = save_dir / output_file
-        
+
         file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
-        
-        #merge_predictions is true
+
+        # merge_predictions is true
         if len(raw_output) > 1:
             file_dict["merged"] = dict_to_zarr_wsi(raw_output[1], save_path, **kwargs)
-        
+
         return file_dict
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
