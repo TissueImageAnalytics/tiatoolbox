@@ -360,8 +360,10 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         """
 
-        @torch.compile(mode=rcParam["torch_compile_mode"],
-                       disable=not rcParam["enable_torch_compile"])
+        @torch.compile(
+            mode=rcParam["torch_compile_mode"],
+            disable=not rcParam["enable_torch_compile"],
+        )
         def hook(
             _module: torch.nn.MaxPool2d,
             _module_input: tuple[torch.Tensor],
