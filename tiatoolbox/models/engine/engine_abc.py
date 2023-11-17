@@ -598,7 +598,7 @@ class EngineABC(ABC):
         highest_input_resolution: list[dict],
         merge_predictions: bool,
         **kwargs: dict,
-    ) -> dict | np.ndarray:
+    ) -> list:
         """Model inference on a WSI."""
         # return coordinates of patches processed within a tile / whole-slide image
         return_coordinates = True
@@ -645,7 +645,7 @@ class EngineABC(ABC):
         cum_output["units"] = highest_input_resolution["units"]
 
         # OLD logic TODO confirm to remove
-        # outputs = [cum_output]  # assign to a list
+        outputs = [cum_output]  # assign to a list
 
         merged_prediction = None
 
@@ -657,28 +657,34 @@ class EngineABC(ABC):
                 units=cum_output["units"],
                 post_proc_func=self.model.postproc,
             )
-            # outputs.append(merged_prediction)
-            return merged_prediction
+            outputs.append(merged_prediction)
 
-        return cum_output
+        return outputs
 
     @abstractmethod
     def post_process_wsi(
         self: EngineABC,
-        raw_output: dict,
+        raw_output: list,
         save_dir: Path,
         **kwargs,
-    ) -> Path:
+    ) -> dict:
         """Post-process a WSI."""
+        file_dict = {}
+
         output_file = (
             kwargs["output_file"] and kwargs.pop("output_file")
             if "output_file" in kwargs
             else "output"
         )
-
         save_path = save_dir / output_file
-
-        return dict_to_zarr_wsi(raw_output, save_path, **kwargs)
+        
+        file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
+        
+        #merge_predictions is true
+        if len(raw_output) > 1:
+            file_dict["merged"] = dict_to_zarr_wsi(raw_output[1], save_path, **kwargs)
+        
+        return file_dict
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
@@ -847,7 +853,7 @@ class EngineABC(ABC):
         overwrite: bool = False,
         output_type: str = "dict",
         **kwargs: dict,
-    ) -> AnnotationStore | Path | str:
+    ) -> AnnotationStore | Path | str | dict:
         """Run the engine on input images.
 
         Args:
@@ -1015,7 +1021,7 @@ class EngineABC(ABC):
 
             raw_output = self.infer_wsi(
                 dataloader,
-                img_path,
+                img_path_,
                 img_label,
                 highest_input_resolution,
                 merge_predictions,
@@ -1024,12 +1030,11 @@ class EngineABC(ABC):
 
             # TODO: Confirm if merged should be a standalone zarr
             # or part of the main zarr group
-            # output_file = f"{idx:0{len(str(len(self.images)))}d}"
             output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
-            save_dir = self.post_process_wsi(
+            wsi_output_zarrs[img_path] = self.post_process_wsi(
                 raw_output,
                 save_dir,
                 output_file=output_file,
             )
 
-        return save_dir
+        return wsi_output_zarrs

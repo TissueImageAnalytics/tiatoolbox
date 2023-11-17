@@ -1320,7 +1320,6 @@ def dict_to_zarr_wsi(
         **kwargs (dict):
             Keyword Args to update patch_pred_store_zarr attributes.
 
-
     Returns:
         Path to zarr file storing the patch predictor output
 
@@ -1392,4 +1391,4 @@ def dict_to_zarr_wsi(
     ##DEBEG TODO REMOVE
     print("\n tree of zarr output \n ", output_zarr.tree())
 
-    return save_path.parent.absolute()
+    return save_path

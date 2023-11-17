@@ -471,8 +471,10 @@ def test_engine_run_wsi(
         **kwargs,
     )
 
-    assert Path.exists(out), "Zarr output file does not exist"
-    shutil.rmtree(out.parent.absolute())
+    for output_info in out.values():
+        assert Path(output_info["raw"]).exists()
+        assert "merged" not in output_info
+    shutil.rmtree(save_dir)
 
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = False
@@ -484,8 +486,10 @@ def test_engine_run_wsi(
         **kwargs,
     )
 
-    assert Path.exists(out), "Zarr output file does not exist"
-    shutil.rmtree(out.parent.absolute())
+    for output_info in out.values():
+        assert Path(output_info["raw"]).exists()
+        assert "merged" not in output_info
+    shutil.rmtree(save_dir)
 
     _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
@@ -496,6 +500,7 @@ def test_engine_run_wsi(
         **kwargs,
     )
 
-    assert Path.exists(out), "Zarr output file does not exist"
-
-    print(save_dir)
+    for output_info in out.values():
+        assert Path(output_info["raw"]).exists()
+        assert "merged" not in output_info
+    shutil.rmtree(save_dir)
