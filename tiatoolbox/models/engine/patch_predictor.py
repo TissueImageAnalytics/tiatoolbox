@@ -252,7 +252,7 @@ class PatchPredictor:
         self.model = (
             torch.compile(  # for runtime, such as after wrapping with nn.DataParallel
                 model,
-                mode="reduce-overhead",
+                mode=rcParam["torch_compile_mode"],
                 disable=not rcParam["enable_torch_compile"],
             )
         )

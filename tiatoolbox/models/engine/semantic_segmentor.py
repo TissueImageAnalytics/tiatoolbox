@@ -538,7 +538,7 @@ class SemanticSegmentor:
         if model is not None:
             self.model = torch.compile(
                 model,
-                mode="reduce-overhead",
+                mode=rcParam["torch_compile_mode"],
                 disable=not rcParam["enable_torch_compile"],
             )
             # template ioconfig, usually coming from pretrained
@@ -548,7 +548,7 @@ class SemanticSegmentor:
             self.ioconfig = ioconfig
             self.model = torch.compile(
                 model,
-                mode="reduce-overhead",
+                mode=rcParam["torch_compile_mode"],
                 disable=not rcParam["enable_torch_compile"],
             )
 
