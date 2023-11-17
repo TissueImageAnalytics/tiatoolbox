@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Callable
 
 import cv2
 import numpy as np
-import PIL
-from PIL import Image
 from torchvision import transforms
 
 from tiatoolbox import logger
@@ -18,6 +16,9 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    import torch
+    from PIL.Image import Image
+
     from tiatoolbox.typing import IntPair, Resolution, Units
 
 
@@ -36,10 +37,9 @@ class _TorchPreprocCaller:
     def __init__(self: _TorchPreprocCaller, preprocs: list) -> None:
         self.func = transforms.Compose(preprocs)
 
-    def __call__(self: _TorchPreprocCaller, img: np.ndarray) -> Image:
-        img = PIL.Image.fromarray(img)
-        img = self.func(img)
-        return img.permute(1, 2, 0)
+    def __call__(self: _TorchPreprocCaller, img: np.ndarray | Image) -> torch.Tensor:
+        tensor: torch.Tensor = self.func(img)
+        return tensor.permute((1, 2, 0))
 
 
 def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:

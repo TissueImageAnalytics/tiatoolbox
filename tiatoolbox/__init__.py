@@ -4,17 +4,19 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, TypedDict
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
 else:  # pragma: no cover
-    import importlib_resources  # To support Python 3.8
+    # To support Python 3.8
+    import importlib_resources  # type: ignore[import-not-found]
 
 import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
     from logging import LogRecord
+    from types import ModuleType
 
 __author__ = """TIA Centre"""
 __email__ = "tialab@dcs.warwick.ac.uk"
@@ -70,13 +72,14 @@ class DuplicateFilter(logging.Filter):
         return False
 
 
-# runtime context parameters
-rcParam = {  # noqa: N816
-    "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
-}
+class _RcParam(TypedDict):
+    """All the parameters in the rcParam dictionary should be defined here."""
+
+    TIATOOLBOX_HOME: Path
+    pretrained_model_info: dict[str, dict]
 
 
-def read_registry_files(path_to_registry: str | Path) -> dict | str:
+def read_registry_files(path_to_registry: str | Path) -> dict:
     """Reads registry files using importlib_resources.
 
     Args:
@@ -88,6 +91,7 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
 
 
     """
+    path_to_registry = str(path_to_registry)  # To pass tests with Python 3.8
     pretrained_files_registry_path = importlib_resources.as_file(
         importlib_resources.files("tiatoolbox") / path_to_registry,
     )
@@ -97,8 +101,13 @@ def read_registry_files(path_to_registry: str | Path) -> dict | str:
         return yaml.safe_load(registry_handle)
 
 
-# Load a dictionary of sample files data (names and urls)
-rcParam["pretrained_model_info"] = read_registry_files("data/pretrained_model.yaml")
+# runtime context parameters
+rcParam: _RcParam = {  # noqa: N816
+    "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
+    "pretrained_model_info": read_registry_files(
+        "data/pretrained_model.yaml",
+    ),  # Load a dictionary of sample files data (names and urls)
+}
 
 # Enable `torch-compile`` by default
 rcParam["enable_torch_compile"] = True
@@ -107,8 +116,10 @@ rcParam["enable_torch_compile"] = True
 #  Options: “default”, “reduce-overhead”, “max-autotune” or “max-autotune-no-cudagraphs”
 rcParam["torch_compile_mode"] = "default"
 
-def _lazy_import(name: str, module_location: Path) -> sys.modules:
+def _lazy_import(name: str, module_location: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, module_location)
+    if spec is None or spec.loader is None:
+        raise ModuleNotFoundError(name=name, path=str(module_location))
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)

@@ -1,0 +1,43 @@
+# This workflow will perform code type checking using mypy
+
+name: mypy type checking
+
+on:
+  push:
+    branches: [ develop, pre-release, master, main ]
+  pull_request:
+    branches: [ develop, pre-release, master, main ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup mypy
+      run: |
+        pip install mypy
+
+    - name: Perform type checking
+      run: |
+        mypy --install-types --non-interactive --follow-imports=skip \
+          tiatoolbox/__init__.py \
+          tiatoolbox/__main__.py \
+          tiatoolbox/typing.py \
+          tiatoolbox/utils/__init__.py \
+          tiatoolbox/utils/env_detection.py \
+          tiatoolbox/utils/exceptions.py
