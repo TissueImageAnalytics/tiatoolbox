@@ -104,7 +104,11 @@ def imresize(
     if output_size is None:
         width = int(img.shape[1] * scale_factor_array[0])
         height = int(img.shape[0] * scale_factor_array[1])
-        output_size_array = (width, height)
+        output_size_array = np.array((width, height))
+    else:
+        output_size_array = np.array(output_size)
+        if output_size_array.size == 1:
+            output_size_array = np.repeat(output_size_array, 2)
 
     if scale_factor is None:
         scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
@@ -115,7 +119,7 @@ def imresize(
 
     # Get appropriate cv2 interpolation enum
     if interpolation == "optimise":
-        interpolation = select_cv2_interpolation(scale_factor)
+        interpolation = select_cv2_interpolation(scale_factor_array)
 
     # a list of (original type, converted type) tuple
     # all `converted type` are np.dtypes that cv2.resize
@@ -224,7 +228,7 @@ def od2rgb(od: np.ndarray) -> np.ndarray:
 def bounds2locsize(
     bounds: tuple[int, int, int, int],
     origin: str = "upper",
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """Calculate the size of a tuple of bounds.
 
     Bounds are expected to be in the `(left, top, right, bottom)` or
@@ -262,13 +266,9 @@ def bounds2locsize(
     left, top, right, bottom = bounds
     origin = origin.lower()
     if origin == "upper":
-        return np.ndarray(
-            [np.array([left, top]), np.array([right - left, bottom - top])],
-        )
+        return np.array([left, top]), np.array([right - left, bottom - top])
     if origin == "lower":
-        return np.ndarray(
-            [np.array([left, bottom]), np.array([right - left, top - bottom])],
-        )
+        return np.array([left, bottom]), np.array([right - left, top - bottom])
     msg = "Invalid origin. Only 'upper' or 'lower' are valid."
     raise ValueError(msg)
 
