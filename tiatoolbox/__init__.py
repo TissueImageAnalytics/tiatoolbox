@@ -110,12 +110,13 @@ rcParam: _RcParam = {  # noqa: N816
         "data/pretrained_model.yaml",
     ),  # Load a dictionary of sample files data (names and urls)
     "enable_torch_compile": True,
-        # Enable `torch-compile`` by default
+    # Enable `torch-compile`` by default
     "torch_compile_mode": "default",
-        # Set ``torch-compile`` mode to ``default`` by default
-        # Options: “default”, “reduce-overhead”, “max-autotune”
-        # or “max-autotune-no-cudagraphs”
+    # Set ``torch-compile`` mode to ``default`` by default
+    # Options: “default”, “reduce-overhead”, “max-autotune”
+    # or “max-autotune-no-cudagraphs”
 }
+
 
 def _lazy_import(name: str, module_location: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, module_location)
