@@ -30,7 +30,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import IntPair, Resolution, Units
 
 
-
 def prepare_engines_save_dir(
     save_dir: os | Path | None,
     len_images: int,
@@ -440,7 +439,6 @@ class EngineABC(ABC):
             **kwargs,
         )
 
-
     @staticmethod
     def _merge_predictions(
         img: str | Path | np.ndarray,
@@ -559,7 +557,6 @@ class EngineABC(ABC):
                 output[denominator > 0] += 1
 
         return output
-
 
     @abstractmethod
     def pre_process_wsi(self: EngineABC,
@@ -688,7 +685,6 @@ class EngineABC(ABC):
             **kwargs
         )
 
-
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
 
@@ -721,7 +717,7 @@ class EngineABC(ABC):
 
         return self.ioconfig
 
-    #should we revert to ModelIOConfigABC instead of IOPatchPredictorConfig?
+    # should we revert to ModelIOConfigABC instead of IOPatchPredictorConfig?
     def _update_ioconfig(
         self: EngineABC,
         ioconfig: ModelIOConfigABC,
@@ -994,9 +990,9 @@ class EngineABC(ABC):
             self.units,
         )
 
-        #since we're not expecting mode == "tile" should the
-        #Resolutions will be converted to baseline value.
-        #ioconfig = ioconfig.to_baseline()
+        # since we're not expecting mode == "tile" should the
+        # Resolutions will be converted to baseline value.
+        # ioconfig = ioconfig.to_baseline()
 
         fx_list = ioconfig.scale_to_highest(
             ioconfig.input_resolutions,
