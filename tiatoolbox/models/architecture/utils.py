@@ -103,7 +103,7 @@ class UpSample2x(nn.Module):
 
     """
 
-    def __init__(self: UpSample2x, *) -> None:
+    def __init__(self: UpSample2x) -> None:
         """Initialize :class:`UpSample2x`."""
         super().__init__()
         # correct way to create constant within module
