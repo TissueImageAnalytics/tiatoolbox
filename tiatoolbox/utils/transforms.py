@@ -147,7 +147,7 @@ def imresize(
     converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
     img = img.astype(converted_dtype)
 
-    interpolation = parse_cv2_interpolaton(interpolation)
+    cv2_interpolation = parse_cv2_interpolaton(interpolation)
 
     # Resize the image
     # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
@@ -159,7 +159,7 @@ def imresize(
             cv2.resize(
                 src=img[..., ch],
                 dsize=output_size_array,
-                interpolation=interpolation,
+                interpolation=cv2_interpolation,
             )[
                 ...,
                 None,
@@ -168,7 +168,7 @@ def imresize(
         ]
         return np.concatenate(img_channels, axis=-1)
 
-    return cv2.resize(src=img, dsize=output_size_array, interpolation=interpolation)
+    return cv2.resize(src=img, dsize=output_size_array, interpolation=cv2_interpolation)
 
 
 def rgb2od(img: np.ndarray) -> np.ndarray:
@@ -305,7 +305,7 @@ def locsize2bounds(
 def bounds2slices(
     bounds: tuple[int, int, int, int],
     stride: int | tuple[int, int, tuple[int, int]] = 1,
-) -> tuple[slice]:
+) -> tuple[slice, ...]:
     """Convert bounds to slices.
 
     Create a tuple of slices for each start/stop pair in bounds.
@@ -341,7 +341,12 @@ def bounds2slices(
 
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
-    return tuple(slice(*x, s) for x, s in zip(slice_array, stride_array))
+
+    slices = []
+    for x, s in zip(slice_array, stride_array):
+        slices.append(slice(x[0], x[1], s))
+
+    return tuple(slices)
 
 
 def pad_bounds(
