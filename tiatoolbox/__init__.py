@@ -77,6 +77,8 @@ class _RcParam(TypedDict):
 
     TIATOOLBOX_HOME: Path
     pretrained_model_info: dict[str, dict]
+    enable_torch_compile: bool
+    torch_compile_mode: str
 
 
 def read_registry_files(path_to_registry: str | Path) -> dict:
