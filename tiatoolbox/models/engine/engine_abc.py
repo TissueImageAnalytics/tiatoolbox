@@ -316,7 +316,6 @@ class EngineABC(ABC):
             shuffle=False,
         )
 
-
     def infer_patches(
         self: EngineABC,
         data_loader: DataLoader,
@@ -360,7 +359,6 @@ class EngineABC(ABC):
             progress_bar.close()
 
         return raw_predictions
-
 
     def post_process_patches(
         self: EngineABC,
@@ -536,7 +534,6 @@ class EngineABC(ABC):
 
         return output
 
-
     @abstractmethod
     def infer_wsi(
         self: EngineABC,
@@ -624,7 +621,7 @@ class EngineABC(ABC):
 
         file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
 
-        #merge_predictions is true
+        # merge_predictions is true
         if len(raw_output) > 1:
             file_dict["merged"] = dict_to_zarr_wsi(raw_output[1], save_path, **kwargs)
 
@@ -961,7 +958,7 @@ class EngineABC(ABC):
                 images=img_path_,
                 masks=img_mask,
                 ioconfig=ioconfig,
-                )
+            )
 
             # Only a single label per whole-slide image is supported
             kwargs["return_labels"] = False
