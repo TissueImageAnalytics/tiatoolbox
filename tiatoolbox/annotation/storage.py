@@ -1724,7 +1724,7 @@ class AnnotationStore(ABC, MutableMapping):
         fp: IO | str,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
-        import_transform: Callable[[Annotation], Annotation] | None = None,
+        transform: Callable[[Annotation], Annotation] | None = None,
     ) -> AnnotationStore:
         """Create a new database with annotations loaded from a geoJSON file.
 
@@ -1737,7 +1737,7 @@ class AnnotationStore(ABC, MutableMapping):
                 annotations saved at non-baseline resolution.
             origin (Tuple[float, float]):
                 The x and y coordinates to use as the origin for the annotations.
-            import_transform (Callable):
+            transform (Callable):
                 A function to apply to each annotation after loading. Should take an
                 annotation as input and return an annotation. Defaults to None.
                 Intended to facilitate modifying the way annotations are loaded to
@@ -1753,7 +1753,7 @@ class AnnotationStore(ABC, MutableMapping):
             unpack those measurements into a flat dictionary of properties of
             each annotation:
             >>> from tiatoolbox.annotation.storage import SQLiteStore
-            >>> def unpack_qpath(ann: Annotation) -> Annotation:
+            >>> def unpack_qupath(ann: Annotation) -> Annotation:
             >>>    #Helper function to unpack QuPath measurements.
             >>>    props = ann.properties
             >>>    measurements = props.pop("measurements")
@@ -1762,14 +1762,14 @@ class AnnotationStore(ABC, MutableMapping):
             >>>    return ann
             >>> store = SQLiteStore.from_geojson(
             ...     "exported_file.geojson",
-            ...     import_transform=unpack_qpath,
+            ...     transform=unpack_qupath,
             ... )
 
         """
         store = cls()
-        if import_transform is None:
+        if transform is None:
 
-            def import_transform(annotation: Annotation) -> Annotation:
+            def transform(annotation: Annotation) -> Annotation:
                 """Default import transform. Does Nothing."""
                 return annotation
 
@@ -1777,7 +1777,7 @@ class AnnotationStore(ABC, MutableMapping):
             fp,
             scale_factor,
             origin=origin,
-            import_transform=import_transform,
+            transform=transform,
         )
         return store
 
@@ -1786,7 +1786,7 @@ class AnnotationStore(ABC, MutableMapping):
         fp: IO | str,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
-        import_transform: Callable[[Annotation], Annotation] | None = None,
+        transform: Callable[[Annotation], Annotation] | None = None,
     ) -> None:
         """Add annotations from a .geojson file to an existing store.
 
@@ -1801,11 +1801,11 @@ class AnnotationStore(ABC, MutableMapping):
                 at non-baseline resolution.
             origin (Tuple[float, float]):
                 The x and y coordinates to use as the origin for the annotations.
-            import_transform (Callable):
+            transform (Callable):
                 A function to apply to each annotation after loading. Should take an
                 annotation as input and return an annotation. Defaults to None.
                 Intended to facilitate modifying the way annotations are loaded to
-                accomodate the specifics of different annotation formats.
+                accommodate the specifics of different annotation formats.
 
         """
 
@@ -1830,7 +1830,7 @@ class AnnotationStore(ABC, MutableMapping):
         )
 
         annotations = [
-            import_transform(
+            transform(
                 Annotation(
                     transform_geometry(
                         feature2geometry(feature["geometry"]),

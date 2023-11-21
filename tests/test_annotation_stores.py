@@ -2865,7 +2865,7 @@ class TestStore:
         with (tmp_path / "test_annotations.geojson").open("w") as f:
             json.dump(anns, f)
 
-        def unpack_qpath(ann: Annotation) -> Annotation:
+        def unpack_qupath(ann: Annotation) -> Annotation:
             """Helper function to unpack QuPath measurements."""
             props = ann.properties
             measurements = props.pop("measurements")
@@ -2875,7 +2875,7 @@ class TestStore:
 
         store = store_cls.from_geojson(
             tmp_path / "test_annotations.geojson",
-            import_transform=unpack_qpath,
+            transform=unpack_qupath,
         )
         assert len(store) == 1
         ann = next(iter(store.values()))
