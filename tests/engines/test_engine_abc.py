@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
 import pytest
@@ -30,16 +30,30 @@ class TestEngineABC(EngineABC):
         model: str | torch.nn.Module,
         weights: str | Path | None = None,
         verbose: bool | None = None,
-        batch_size: int | None = None,
     ) -> NoReturn:
         """Test EngineABC init."""
-        super().__init__(model=model, weights=weights, verbose=verbose)
+        super().__init__(
+            model=model,
+            weights=weights,
+            verbose=verbose)
+
+
+    def set_dataloader(
+        self: EngineABC,
+        images: Path,
+        masks: Path | None = None,
+        labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+    ) -> torch.utils.data.DataLoader:
+        """Test pre process images."""
+        return super().set_dataloader(images, masks, labels, ioconfig)
+
 
     def post_process_wsi(
         self: EngineABC,
         raw_output: dict,
         save_dir: Path,
-        **kwargs,
+        **kwargs: dict,
     ) -> Path:
         """Test post_process_wsi."""
         return super().post_process_wsi(
@@ -48,13 +62,6 @@ class TestEngineABC(EngineABC):
             **kwargs,
         )
 
-    def pre_process_wsi(
-        self: EngineABC,
-        img_path: Path,
-        mask_path: Path,
-        ioconfig: ModelIOConfigABC | None = None,
-    ) -> torch.utils.data.DataLoader:
-        return super().pre_process_wsi(img_path, mask_path, ioconfig)
 
     def infer_wsi(
         self: EngineABC,
@@ -62,15 +69,17 @@ class TestEngineABC(EngineABC):
         img_path: Path,
         img_label: str,
         highest_input_resolution: list[dict],
+        *,
         merge_predictions: bool,
         **kwargs: dict,
     ) -> dict | np.ndarray:
+        """Test infer_wsi."""
         return super().infer_wsi(
             dataloader,
             img_path,
             img_label,
             highest_input_resolution,
-            merge_predictions,
+            merge_predictions=merge_predictions,
             **kwargs,
         )
 
@@ -154,7 +163,6 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output",
         patch_mode=True,
-        len_images=1,
         overwrite=False,
     )
 
@@ -164,7 +172,6 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output",
         patch_mode=True,
-        len_images=1,
         overwrite=True,
     )
 
@@ -174,7 +181,6 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=None,
         patch_mode=True,
-        len_images=1,
         overwrite=False,
     )
     assert out_dir is None
@@ -186,14 +192,12 @@ def test_prepare_engines_save_dir(
         _ = prepare_engines_save_dir(
             save_dir=None,
             patch_mode=False,
-            len_images=2,
             overwrite=False,
         )
 
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_single_output",
         patch_mode=False,
-        len_images=1,
         overwrite=False,
     )
 
@@ -204,7 +208,6 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_multiple_output",
         patch_mode=False,
-        len_images=2,
         overwrite=False,
     )
 
@@ -216,7 +219,6 @@ def test_prepare_engines_save_dir(
     out_path = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
-        len_images=1,
         overwrite=True,
     )
     assert out_path.exists()
@@ -224,7 +226,6 @@ def test_prepare_engines_save_dir(
     out_path = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
-        len_images=1,
         overwrite=True,
     )
     assert out_path.exists()
@@ -233,7 +234,6 @@ def test_prepare_engines_save_dir(
         out_path = prepare_engines_save_dir(
             save_dir=tmp_path / "patch_output" / "output.zarr",
             patch_mode=True,
-            len_images=1,
             overwrite=False,
         )
 
@@ -443,14 +443,13 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
 def test_engine_run_wsi(
     sample_wsi_dict: dict,
     tmp_path: Path,
-    chdir: Callable,
 ) -> NoReturn:
     """Test the engine run for Whole slide images."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
-    eng = TestEngineABC(model="alexnet-kather100k", batch_size=32)
+    eng = TestEngineABC(model="alexnet-kather100k")
 
     patch_size = np.array([224, 224])
     save_dir = f"{tmp_path}/model_wsi_output"

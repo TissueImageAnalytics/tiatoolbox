@@ -1313,7 +1313,7 @@ def dict_to_zarr_wsi(
     """Saves the output of TIAToolbox engines to a zarr file.
 
     Args:
-        raw_predictions (dict):
+        raw_output (dict or ndarray):
             A dictionary in the TIAToolbox Engines output format.
         save_path (str or Path):
             Path to save the zarr file.
@@ -1330,8 +1330,6 @@ def dict_to_zarr_wsi(
     )
     chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
-    # TODO: Confirm if merged should be a standalone zarr or part of the main zarr group
-    # or two different files and return a file dict of two save paths (original idea)
     if isinstance(raw_output, np.ndarray):
         # ensure proper zarr extension
         save_path = save_path.parent.absolute() / (save_path.stem + ".merged.zarr")
@@ -1387,8 +1385,5 @@ def dict_to_zarr_wsi(
             compressor=compressor,
         )
         labels_zarr[:] = labels_array
-
-    ##DEBEG TODO REMOVE
-    print("\n tree of zarr output \n ", output_zarr.tree())
 
     return save_path

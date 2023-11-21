@@ -32,7 +32,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def prepare_engines_save_dir(
     save_dir: os | Path | None,
-    len_images: int,
     *,
     patch_mode: bool,
     overwrite: bool,
@@ -42,8 +41,6 @@ def prepare_engines_save_dir(
     Args:
         save_dir (str or Path):
             Path to output directory.
-        len_images (int):
-            List of inputs to process.
         patch_mode(bool):
             Whether to treat input image as a patch or WSI.
         overwrite (bool):
@@ -272,34 +269,23 @@ class EngineABC(ABC):
 
         return model, None
 
-    """
-    different approach now
-    def setup_dataloader(
+    @abstractmethod
+    def set_dataloader(
         self: EngineABC,
-        images: np.ndarray | list,
-        labels: list,
-        masks: list | None = None,
-        ioconfig: ModelIOConfigABC| None = None,
-        *,
-        patch_mode: bool=True,
+        images: Path,
+        masks: Path | None = None,
+        labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
     ) -> torch.utils.data.DataLoader:
+        """Pre-process an image patch."""
+        if labels:
+            # if a labels is provided, then return with the prediction
+            self.return_labels = bool(labels)
 
-        # if a labels is provided, then return with the prediction
-        self.return_labels = bool(labels)
-
-        #ensure images is list of paths if patch mode is wsi
-        input_images_is_path_like = isinstance(images[0], (str, Path))
-        if patch_mode is None and not input_images_is_path_like:
-            msg = "Input to `wsi` mode must be a list of file paths."
-            raise ValueError(msg)
-
-        if patch_mode:
-            dataset = PatchDataset(inputs=images, labels=labels)
-
-        else:
+        if isinstance(images, Path):
             dataset = WSIPatchDataset(
-                images,
-                mode='wsi',
+                img_path=images,
+                mode="wsi",
                 mask_path=masks,
                 patch_input_shape=ioconfig.patch_input_shape,
                 stride_shape=ioconfig.stride_shape,
@@ -307,26 +293,16 @@ class EngineABC(ABC):
                 units=ioconfig.input_resolutions[0]["units"],
             )
 
-        dataset.preproc_func = self.model.preproc_func
+            dataset.preproc_func = self.model.preproc_func
 
-        # preprocessing must be defined with the dataset
-        return torch.utils.data.DataLoader(
-            dataset,
-            num_workers=self.num_loader_workers,
-            batch_size=self.batch_size,
-            drop_last=False,
-            shuffle=False,
-        )"""
-
-    def pre_process_patches(
-        self: EngineABC,
-        images: np.ndarray | list,
-        labels: list,
-    ) -> torch.utils.data.DataLoader:
-        """Pre-process an image patch."""
-        if labels:
-            # if a labels is provided, then return with the prediction
-            self.return_labels = bool(labels)
+            # preprocessing must be defined with the dataset
+            return torch.utils.data.DataLoader(
+                dataset,
+                num_workers=self.num_loader_workers,
+                batch_size=self.batch_size,
+                drop_last=False,
+                shuffle=False,
+            )
 
         dataset = PatchDataset(inputs=images, labels=labels)
         dataset.preproc_func = self.model.preproc_func
@@ -339,6 +315,7 @@ class EngineABC(ABC):
             drop_last=False,
             shuffle=False,
         )
+
 
     def infer_patches(
         self: EngineABC,
@@ -383,6 +360,7 @@ class EngineABC(ABC):
             progress_bar.close()
 
         return raw_predictions
+
 
     def post_process_patches(
         self: EngineABC,
@@ -558,36 +536,6 @@ class EngineABC(ABC):
 
         return output
 
-    @abstractmethod
-    def pre_process_wsi(
-        self: EngineABC,
-        img_path: Path,
-        mask_path: Path,
-        ioconfig: ModelIOConfigABC | None = None,
-    ) -> torch.utils.data.DataLoader:
-        """Pre-process a WSI."""
-        dataloader = None
-
-        dataset = WSIPatchDataset(
-            img_path,
-            mode="wsi",
-            mask_path=mask_path,
-            patch_input_shape=ioconfig.patch_input_shape,
-            stride_shape=ioconfig.stride_shape,
-            resolution=ioconfig.input_resolutions[0]["resolution"],
-            units=ioconfig.input_resolutions[0]["units"],
-        )
-
-        dataset.preproc_func = self.model.preproc_func
-
-        # preprocessing must be defined with the dataset
-        return torch.utils.data.DataLoader(
-            dataset,
-            num_workers=self.num_loader_workers,
-            batch_size=self.batch_size,
-            drop_last=False,
-            shuffle=False,
-        )
 
     @abstractmethod
     def infer_wsi(
@@ -596,6 +544,7 @@ class EngineABC(ABC):
         img_path: Path,
         img_label: str,
         highest_input_resolution: list[dict],
+        *,
         merge_predictions: bool,
         **kwargs: dict,
     ) -> list:
@@ -635,20 +584,15 @@ class EngineABC(ABC):
                 # and hence collated as list by torch
                 cum_output["labels"].extend(list(batch_data["label"]))
 
-        # return cum_output
-
-        ## should we move this to infer wsi ??
         cum_output["label"] = img_label
         # add extra information useful for downstream analysis
         cum_output["pretrained_model"] = self.model
         cum_output["resolution"] = highest_input_resolution["resolution"]
         cum_output["units"] = highest_input_resolution["units"]
 
-        # OLD logic TODO confirm to remove
         outputs = [cum_output]  # assign to a list
 
         merged_prediction = None
-
         if merge_predictions:
             merged_prediction = self._merge_predictions(
                 img_path,
@@ -666,7 +610,7 @@ class EngineABC(ABC):
         self: EngineABC,
         raw_output: list,
         save_dir: Path,
-        **kwargs,
+        **kwargs: dict,
     ) -> dict:
         """Post-process a WSI."""
         file_dict = {}
@@ -677,13 +621,13 @@ class EngineABC(ABC):
             else "output"
         )
         save_path = save_dir / output_file
-        
+
         file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
-        
+
         #merge_predictions is true
         if len(raw_output) > 1:
             file_dict["merged"] = dict_to_zarr_wsi(raw_output[1], save_path, **kwargs)
-        
+
         return file_dict
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
@@ -963,15 +907,14 @@ class EngineABC(ABC):
 
         save_dir = prepare_engines_save_dir(
             save_dir=save_dir,
-            len_images=len(self.images),
             patch_mode=patch_mode,
             overwrite=overwrite,
         )
 
         if patch_mode:
-            data_loader = self.pre_process_patches(
-                self.images,
-                self.labels,
+            data_loader = self.set_dataloader(
+                images=self.images,
+                labels=self.labels,
             )
             raw_predictions = self.infer_patches(
                 data_loader=data_loader,
@@ -993,7 +936,7 @@ class EngineABC(ABC):
 
         # since we're not expecting mode == "tile" should the
         # Resolutions will be converted to baseline value.
-        # ioconfig = ioconfig.to_baseline()
+        ioconfig = ioconfig.to_baseline()
 
         fx_list = ioconfig.scale_to_highest(
             ioconfig.input_resolutions,
@@ -1014,7 +957,11 @@ class EngineABC(ABC):
             img_label = None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
-            dataloader = self.pre_process_wsi(img_path_, img_mask, ioconfig)
+            dataloader = self.set_dataloader(
+                images=img_path_,
+                masks=img_mask,
+                ioconfig=ioconfig,
+                )
 
             # Only a single label per whole-slide image is supported
             kwargs["return_labels"] = False
@@ -1028,10 +975,8 @@ class EngineABC(ABC):
                 **kwargs,
             )
 
-            # TODO: Confirm if merged should be a standalone zarr
-            # or part of the main zarr group
             output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
-            wsi_output_zarrs[img_path] = self.post_process_wsi(
+            wsi_output_zarrs[output_file] = self.post_process_wsi(
                 raw_output,
                 save_dir,
                 output_file=output_file,
