@@ -130,6 +130,9 @@ def test_imresize_no_scale_factor() -> None:
     resized_img = utils.transforms.imresize(img, output_size=(50, 100))
     assert resized_img.shape == (100, 50, 3)
 
+    resized_img = utils.transforms.imresize(img, output_size=100)
+    assert resized_img.shape == (100, 100, 3)
+
 
 def test_imresize_no_scale_factor_or_output_size() -> None:
     """Test imresize with no scale_factor or output_size."""
