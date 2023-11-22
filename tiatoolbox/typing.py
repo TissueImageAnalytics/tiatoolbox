@@ -6,7 +6,8 @@ from typing import Callable, Dict, List, Literal, Sequence, SupportsFloat, Tuple
 import numpy as np
 from shapely.geometry import LineString, Point, Polygon  # type: ignore[import-untyped]
 
-# Proper type annotations for shapely is not yet available
+# Proper type annotations for shapely is not yet available.
+
 
 JSON = Union[Dict[str, "JSON"], List["JSON"], str, int, float, bool, None]
 NumPair = Tuple[SupportsFloat, SupportsFloat]
