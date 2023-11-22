@@ -95,23 +95,17 @@ def imresize(
     if scale_factor is None and output_size is None:
         msg = "One of scale_factor and output_size must be not None."
         raise TypeError(msg)
-    if scale_factor is not None:
-        scale_factor_array = np.array(scale_factor)
-        if scale_factor_array.size == 1:
-            scale_factor_array = np.repeat(scale_factor_array, 2)
 
-    # Handle None arguments
-    if output_size is None:
+    if scale_factor is None:
+        output_size_array = np.array(output_size)
+        output_size_array = np.resize(output_size_array, 2)
+        scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
+    else:
+        scale_factor_array = np.array(scale_factor)
+        scale_factor_array = np.resize(scale_factor_array, 2)
         width = int(img.shape[1] * scale_factor_array[0])
         height = int(img.shape[0] * scale_factor_array[1])
         output_size_array = np.array((width, height))
-    else:
-        output_size_array = np.array(output_size)
-        if output_size_array.size == 1:
-            output_size_array = np.repeat(output_size_array, 2)
-
-    if scale_factor is None:
-        scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
 
     # Return original if scale factor is 1
     if np.all(scale_factor == 1.0):  # noqa: PLR2004
