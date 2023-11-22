@@ -971,7 +971,7 @@ class EngineABC(ABC):
                 img_path_,
                 img_label,
                 highest_input_resolution,
-                merge_predictions,
+                merge_predictions=merge_predictions,
                 **kwargs,
             )
 
