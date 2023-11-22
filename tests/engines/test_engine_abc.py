@@ -32,11 +32,7 @@ class TestEngineABC(EngineABC):
         verbose: bool | None = None,
     ) -> NoReturn:
         """Test EngineABC init."""
-        super().__init__(
-            model=model,
-            weights=weights,
-            verbose=verbose)
-
+        super().__init__(model=model, weights=weights, verbose=verbose)
 
     def set_dataloader(
         self: EngineABC,
@@ -47,7 +43,6 @@ class TestEngineABC(EngineABC):
     ) -> torch.utils.data.DataLoader:
         """Test pre process images."""
         return super().set_dataloader(images, masks, labels, ioconfig)
-
 
     def post_process_wsi(
         self: EngineABC,
@@ -61,7 +56,6 @@ class TestEngineABC(EngineABC):
             save_dir,
             **kwargs,
         )
-
 
     def infer_wsi(
         self: EngineABC,
