@@ -143,7 +143,7 @@ def imresize(
 
     # Get appropriate cv2 interpolation enum
     if interpolation == "optimise":
-        interpolation = select_cv2_interpolation(tuple(scale_factor_array))
+        interpolation = select_cv2_interpolation(scale_factor_array)
 
     # a list of (original type, converted type) tuple
     # all `converted type` are np.dtypes that cv2.resize
