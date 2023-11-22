@@ -57,6 +57,37 @@ def background_composite(
     return np.asarray(composite)
 
 
+def _get_scale_factor_array(
+    scale_factor: float | tuple[float, float] | None,
+) -> np.ndarray:
+    """Converts scale factor to appropriate format required by imresize."""
+    scale_factor_array = np.array(None)
+    if scale_factor is not None:
+        scale_factor_array = np.array(scale_factor, dtype=float)
+        if scale_factor_array.size == 1:
+            scale_factor_array = np.repeat(scale_factor_array, 2)
+    return scale_factor_array
+
+
+def _get_output_size_array(
+    img: np.ndarray,
+    output_size: int | tuple[int, int] | None,
+    scale_factor_array: np.ndarray,
+) -> np.ndarray:
+    """Converts output size to appropriate format required by imresize."""
+    # Handle None arguments
+    if output_size is None:
+        width = int(img.shape[1] * scale_factor_array[0])
+        height = int(img.shape[0] * scale_factor_array[1])
+        return np.array((width, height))
+
+    output_size_array = np.array(output_size)
+    if output_size_array.size == 1:
+        output_size_array = np.repeat(output_size_array, 2)
+
+    return output_size_array
+
+
 def imresize(
     img: np.ndarray,
     scale_factor: float | tuple[float, float] | None = None,
@@ -68,7 +99,7 @@ def imresize(
     Args:
         img (:class:`numpy.ndarray`):
             Input image, assumed to be in `HxWxC` or `HxW` format.
-        scale_factor (tuple(float)):
+        scale_factor (float or Tuple[float, float]):
             Scaling factor to resize the input image.
         output_size (tuple(int)):
             Output image size, (width, height).
@@ -95,31 +126,24 @@ def imresize(
     if scale_factor is None and output_size is None:
         msg = "One of scale_factor and output_size must be not None."
         raise TypeError(msg)
-    if scale_factor is not None:
-        scale_factor_array = np.array(scale_factor)
-        if scale_factor_array.size == 1:
-            scale_factor_array = np.repeat(scale_factor_array, 2)
 
-    # Handle None arguments
-    if output_size is None:
-        width = int(img.shape[1] * scale_factor_array[0])
-        height = int(img.shape[0] * scale_factor_array[1])
-        output_size_array = np.array((width, height))
-    else:
-        output_size_array = np.array(output_size)
-        if output_size_array.size == 1:
-            output_size_array = np.repeat(output_size_array, 2)
+    scale_factor_array = _get_scale_factor_array(scale_factor)
+    output_size_array = _get_output_size_array(
+        img=img,
+        output_size=output_size,
+        scale_factor_array=scale_factor_array,
+    )
 
     if scale_factor is None:
         scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
 
     # Return original if scale factor is 1
-    if np.all(scale_factor == 1.0):  # noqa: PLR2004
+    if np.all(scale_factor_array == 1.0):  # noqa: PLR2004
         return img
 
     # Get appropriate cv2 interpolation enum
     if interpolation == "optimise":
-        interpolation = select_cv2_interpolation(scale_factor_array)
+        interpolation = select_cv2_interpolation(tuple(scale_factor_array))
 
     # a list of (original type, converted type) tuple
     # all `converted type` are np.dtypes that cv2.resize
