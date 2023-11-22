@@ -37,4 +37,11 @@ jobs:
         mypy --install-types --non-interactive --follow-imports=skip \
           tiatoolbox/__init__.py \
           tiatoolbox/__main__.py \
-          tiatoolbox/utils/exceptions.py
+          tiatoolbox/typing.py \
+          tiatoolbox/tiatoolbox.py \
+          tiatoolbox/utils/__init__.py \
+          tiatoolbox/utils/env_detection.py \
+          tiatoolbox/utils/exceptions.py \
+          tiatoolbox/utils/magic.py \
+          tiatoolbox/utils/metrics.py \
+          tiatoolbox/utils/transforms.py
