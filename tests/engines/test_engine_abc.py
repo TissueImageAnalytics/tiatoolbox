@@ -476,7 +476,7 @@ def test_engine_run_wsi(
         images=[mini_wsi_svs, mini_wsi_svs],
         masks=[mini_wsi_msk, mini_wsi_msk],
         patch_mode=False,
-        **kwargs,
+        **_kwargs,
     )
 
     for output_info in out.values():
@@ -490,10 +490,10 @@ def test_engine_run_wsi(
         images=[mini_wsi_svs, mini_wsi_svs],
         masks=[mini_wsi_msk, mini_wsi_msk],
         patch_mode=False,
-        **kwargs,
+        **_kwargs,
     )
 
     for output_info in out.values():
         assert Path(output_info["raw"]).exists()
-        assert "merged" not in output_info
+        assert "merged" in output_info
     shutil.rmtree(save_dir)

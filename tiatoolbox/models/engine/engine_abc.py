@@ -943,9 +943,10 @@ class EngineABC(ABC):
         fx_list = sorted(fx_list, key=lambda x: x[0])
         highest_input_resolution = fx_list[0][1]
 
-        merge_predictions = (
-            kwargs["merge_predictions"] if "merge_predictions" in kwargs else False
-        )
+        merge_predictions = False
+        if "merge_predictions" in kwargs:
+            merge_predictions = kwargs["merge_predictions"]
+            kwargs.pop("merge_predictions")
 
         wsi_output_zarrs = OrderedDict()
 
