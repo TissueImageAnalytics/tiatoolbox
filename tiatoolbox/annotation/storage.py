@@ -2581,7 +2581,7 @@ class SQLiteStore(AnnotationStore):
 
         return query_string, query_parameters
 
-    def _query(
+    def _query(  # noqa: PLR0913
         self: SQLiteStore,
         columns: str,
         geometry: Geometry | None = None,
