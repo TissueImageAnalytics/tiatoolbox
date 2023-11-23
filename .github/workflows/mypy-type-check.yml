@@ -44,4 +44,5 @@ jobs:
           tiatoolbox/utils/exceptions.py \
           tiatoolbox/utils/magic.py \
           tiatoolbox/utils/metrics.py \
-          tiatoolbox/utils/transforms.py
+          tiatoolbox/utils/transforms.py \
+          tiatoolbox/utils/misc.py

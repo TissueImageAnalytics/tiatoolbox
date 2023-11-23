@@ -36,12 +36,12 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def split_path_name_ext(
-    full_path: os | PathLike,
+    full_path: PathLike,
 ) -> tuple[Path, str, list[str]]:
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (os | PathLike):
+        full_path (PathLike):
             Path to a file.
 
     Returns:
@@ -61,13 +61,13 @@ def split_path_name_ext(
 
 
 def grab_files_from_dir(
-    input_path: os | PathLike,
-    file_types: str | tuple[str] = ("*.jpg", "*.png", "*.tif"),
+    input_path: PathLike,
+    file_types: str | tuple[str, ...] = ("*.jpg", "*.png", "*.tif"),
 ) -> list[Path]:
     """Grab file paths specified by file extensions.
 
     Args:
-        input_path (os | PathLike):
+        input_path (PathLike):
             Path to the directory where files
             need to be searched.
         file_types (str or tuple(str)):
@@ -93,7 +93,7 @@ def grab_files_from_dir(
         else:
             file_types = (file_types,)
 
-    files_grabbed = []
+    files_grabbed: list[Path] = []
     for files in file_types:
         files_grabbed.extend(input_path.glob(files))
     # Ensure same ordering
@@ -103,7 +103,7 @@ def grab_files_from_dir(
 
 def save_yaml(
     input_dict: dict,
-    output_path: os | PathLike = "output.yaml",
+    output_path: PathLike = "output.yaml",
     *,
     parents: bool = False,
     exist_ok: bool = False,
@@ -113,7 +113,7 @@ def save_yaml(
     Args:
         input_dict (dict):
             A variable of type 'dict'.
-        output_path (os | PathLike):
+        output_path (PathLike):
             Path to save the output file.
         parents (bool):
             Make parent directories if they do not exist. Default is
@@ -1058,7 +1058,7 @@ def anns_from_hoverdict(
     props: list,
     typedict: dict,
     origin: tuple,
-    scale_factor: float,
+    scale_factor: tuple[float, float],
 ) -> list[Annotation]:
     """Helper function to create list of Annotation objects.
 
@@ -1074,7 +1074,7 @@ def anns_from_hoverdict(
             A dictionary mapping annotation types to more descriptive names.
         origin (tuple):
             The x and y coordinates to use as the origin for the annotations.
-        scale_factor (float):
+        scale_factor (tuple[float, float]):
             The scale factor to use when loading the annotations. All coordinates
             will be multiplied by this factor.
 
@@ -1134,8 +1134,8 @@ def make_default_dict(data: dict, subcat: str) -> dict:
 
 
 def add_from_dat(
-    store: list[AnnotationStore],
-    fp: IO | os | PathLike,
+    store: AnnotationStore,
+    fp: IO | PathLike,
     scale_factor: tuple[float, float] = (1, 1),
     typedict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
@@ -1147,9 +1147,9 @@ def add_from_dat(
     Args:
         store (AnnotationStore):
             An :class:`AnnotationStore` object.
-        fp (IO | os | PathLike):
+        fp (IO | PathLike):
             The file path or handle to load from.
-        scale_factor (float):
+        scale_factor (tuple[float, float]):
             The scale factor to use when loading the annotations. All coordinates
             will be multiplied by this factor to allow import of annotations saved
             at non-baseline resolution.
