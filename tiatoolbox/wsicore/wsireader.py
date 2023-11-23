@@ -2781,8 +2781,14 @@ class VirtualWSIReader(WSIReader):
     :func:`~tiatoolbox.utils.image.sub_pixel_read`.
 
     Attributes:
-        img (:class:`numpy.ndarray`)
-        mode (str)
+        img (:class:`numpy.ndarray`):
+            Input image as :class:`numpy.ndarray`.
+        mode (str):
+            Mode of the input image. Default is 'rgb'. Allowed values
+            are: rgb, bool, feature. "rgb" mode supports bright-field color images.
+            "bool" mode supports binary masks,
+            interpolation in this case will be "nearest" instead of "bicubic".
+            "feature" mode allows multichannel features.
 
     Args:
         input_img (str, :obj:`Path`, :class:`numpy.ndarray`):
@@ -2791,7 +2797,10 @@ class VirtualWSIReader(WSIReader):
             Metadata for the virtual wsi.
         mode (str):
             Mode of the input image. Default is 'rgb'. Allowed values
-            are: rgb, bool, multichannel.
+            are: rgb, bool, feature. "rgb" mode supports bright-field color images.
+            "bool" mode supports binary masks,
+            interpolation in this case will be "nearest" instead of "bicubic".
+            "feature" mode allows multichannel features.
 
     """
 
@@ -2809,9 +2818,9 @@ class VirtualWSIReader(WSIReader):
             mpp=mpp,
             power=power,
         )
-        if input_img.shape[2] > 4:
-            mode = "multichannel"
-        if mode.lower() not in ["rgb", "bool", "multichannel"]:
+        if input_img.shape[2] not in [3, 4] and mode != "bool":
+            mode = "feature"
+        if mode.lower() not in ["rgb", "bool", "feature"]:
             msg = "Invalid mode."
             raise ValueError(msg)
         self.mode = mode.lower()
