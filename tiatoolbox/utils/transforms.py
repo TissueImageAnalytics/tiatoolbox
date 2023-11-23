@@ -57,16 +57,22 @@ def background_composite(
     return np.asarray(composite)
 
 
+def _convert_scalar_to_width_height(array: np.ndarray) -> np.ndarray:
+    """Converts scalar numpy array to specify width and height."""
+    if array.size == 1:
+        return np.repeat(array, 2)
+
+    return array
+
+
 def _get_scale_factor_array(
     scale_factor: float | tuple[float, float] | None,
-) -> np.ndarray:
+) -> np.ndarray | None:
     """Converts scale factor to appropriate format required by imresize."""
-    scale_factor_array = np.array(None)
     if scale_factor is not None:
-        scale_factor_array = np.array(scale_factor, dtype=float)
-        if scale_factor_array.size == 1:
-            scale_factor_array = np.repeat(scale_factor_array, 2)
-    return scale_factor_array
+        scale_factor = np.array(scale_factor, dtype=float)
+        return _convert_scalar_to_width_height(scale_factor)
+    return scale_factor
 
 
 def _get_output_size_array(
@@ -81,11 +87,7 @@ def _get_output_size_array(
         height = int(img.shape[0] * scale_factor_array[1])
         return np.array((width, height))
 
-    output_size_array = np.array(output_size)
-    if output_size_array.size == 1:
-        output_size_array = np.repeat(output_size_array, 2)
-
-    return output_size_array
+    return _convert_scalar_to_width_height(np.array(output_size))
 
 
 def imresize(
