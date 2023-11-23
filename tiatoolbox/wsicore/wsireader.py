@@ -2818,17 +2818,22 @@ class VirtualWSIReader(WSIReader):
             mpp=mpp,
             power=power,
         )
-        if input_img.shape[2] not in [3, 4] and mode != "bool":
-            mode = "feature"
         if mode.lower() not in ["rgb", "bool", "feature"]:
             msg = "Invalid mode."
             raise ValueError(msg)
-        self.mode = mode.lower()
 
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
             self.img = utils.imread(self.input_path)
+
+        if self.img.ndim == 2:  # noqa: PLR2004
+            self.img = np.expand_dims(self.img, axis=2)
+
+        if self.img.shape[2] not in [3, 4] and mode != "bool":
+            mode = "feature"
+
+        self.mode = mode.lower()
 
         if info is not None:
             self._m_info = info
