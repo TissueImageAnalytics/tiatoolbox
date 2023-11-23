@@ -2827,11 +2827,12 @@ class VirtualWSIReader(WSIReader):
         else:
             self.img = utils.imread(self.input_path)
 
-        if self.img.ndim == 2:  # noqa: PLR2004
-            self.img = np.expand_dims(self.img, axis=2)
+        if mode != "bool":
+            if self.img.ndim == 2:  # noqa: PLR2004, SIM114
+                mode = "feature"
 
-        if self.img.shape[2] not in [3, 4] and mode != "bool":
-            mode = "feature"
+            elif self.img.shape[2] not in [3, 4]:
+                mode = "feature"
 
         self.mode = mode.lower()
 
