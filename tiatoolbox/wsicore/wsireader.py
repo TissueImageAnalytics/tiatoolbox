@@ -2781,8 +2781,14 @@ class VirtualWSIReader(WSIReader):
     :func:`~tiatoolbox.utils.image.sub_pixel_read`.
 
     Attributes:
-        img (:class:`numpy.ndarray`)
-        mode (str)
+        img (:class:`numpy.ndarray`):
+            Input image as :class:`numpy.ndarray`.
+        mode (str):
+            Mode of the input image. Default is 'rgb'. Allowed values
+            are: rgb, bool, feature. "rgb" mode supports bright-field color images.
+            "bool" mode supports binary masks,
+            interpolation in this case will be "nearest" instead of "bicubic".
+            "feature" mode allows multichannel features.
 
     Args:
         input_img (str, :obj:`Path`, :class:`numpy.ndarray`):
@@ -2791,7 +2797,10 @@ class VirtualWSIReader(WSIReader):
             Metadata for the virtual wsi.
         mode (str):
             Mode of the input image. Default is 'rgb'. Allowed values
-            are: rgb, bool, multichannel.
+            are: rgb, bool, feature. "rgb" mode supports bright-field color images.
+            "bool" mode supports binary masks,
+            interpolation in this case will be "nearest" instead of "bicubic".
+            "feature" mode allows multichannel features.
 
     """
 
@@ -2809,17 +2818,23 @@ class VirtualWSIReader(WSIReader):
             mpp=mpp,
             power=power,
         )
-        if input_img.shape[2] > 4:
-            mode = "multichannel"
-        if mode.lower() not in ["rgb", "bool", "multichannel"]:
+        if mode.lower() not in ["rgb", "bool", "feature"]:
             msg = "Invalid mode."
             raise ValueError(msg)
-        self.mode = mode.lower()
 
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
             self.img = utils.imread(self.input_path)
+
+        if mode != "bool":
+            if self.img.ndim == 2:  # noqa: PLR2004, SIM114
+                mode = "feature"
+
+            elif self.img.shape[2] not in [3, 4]:
+                mode = "feature"
+
+        self.mode = mode.lower()
 
         if info is not None:
             self._m_info = info
@@ -3266,6 +3281,9 @@ class VirtualWSIReader(WSIReader):
             *utils.transforms.bounds2locsize(bounds_at_baseline),
         )
         bounds_at_read = utils.transforms.locsize2bounds(location_at_read, size_at_read)
+
+        if self.mode == "bool":
+            interpolation = "nearest"
 
         if interpolation in [None, "none"]:
             interpolation = None
