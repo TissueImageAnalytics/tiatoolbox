@@ -3282,11 +3282,11 @@ class VirtualWSIReader(WSIReader):
         )
         bounds_at_read = utils.transforms.locsize2bounds(location_at_read, size_at_read)
 
-        if self.mode == "bool":
-            interpolation = "nearest"
-
         if interpolation in [None, "none"]:
             interpolation = None
+
+        if interpolation is None and self.mode == "bool":
+            interpolation = "nearest"
 
         im_region = utils.image.sub_pixel_read(
             self.img,
