@@ -3285,7 +3285,7 @@ class VirtualWSIReader(WSIReader):
         if interpolation in [None, "none"]:
             interpolation = None
 
-        if interpolation is None and self.mode == "bool":
+        if interpolation == "optimise" and self.mode == "bool":
             interpolation = "nearest"
 
         im_region = utils.image.sub_pixel_read(
