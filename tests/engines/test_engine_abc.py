@@ -522,6 +522,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
+
 def test_engine_run_wsi(
     sample_wsi_dict: dict,
     tmp_path: Path,

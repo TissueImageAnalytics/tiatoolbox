@@ -925,7 +925,7 @@ class EngineABC(ABC):
                 **kwargs,
             )
 
-        self._ioconfig  = self._update_ioconfig(
+        self._ioconfig = self._update_ioconfig(
             ioconfig,
             self.patch_input_shape,
             self.stride_shape,
