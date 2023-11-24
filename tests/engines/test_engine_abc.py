@@ -585,3 +585,44 @@ def test_engine_run_wsi(
         assert Path(output_info["raw"]).exists()
         assert "merged" in output_info
     shutil.rmtree(save_dir)
+
+
+def test_wsi_predictor_merge_predictions() -> None:
+    """Test normal run of wsi predictor with merge predictions option."""
+    # blind test
+    # pseudo output dict from model with 2 patches
+    output = {
+        "resolution": 1.0,
+        "units": "baseline",
+        "probabilities": [[0.45, 0.55], [0.90, 0.10]],
+        "predictions": [1, 0],
+        "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
+    }
+
+    merged = TestEngineABC._merge_predictions(
+        np.zeros([4, 4]),
+        output,
+        resolution=1.0,
+        units="baseline",
+    )
+    _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
+    assert np.sum(merged - _merged) == 0
+
+    # blind test for merging probabilities
+    merged = TestEngineABC._merge_predictions(
+        np.zeros([4, 4]),
+        output,
+        resolution=1.0,
+        units="baseline",
+        return_raw=True,
+    )
+    _merged = np.array(
+        [
+            [0.45, 0.45, 0, 0],
+            [0.45, 0.45, 0, 0],
+            [0, 0, 0.90, 0.90],
+            [0, 0, 0.90, 0.90],
+        ],
+    )
+    assert merged.shape == (4, 4, 2)
+    assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
