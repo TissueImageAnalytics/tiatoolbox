@@ -270,7 +270,7 @@ class EngineABC(ABC):
         return model, None
 
     @abstractmethod
-    def set_dataloader(
+    def get_dataloader(
         self: EngineABC,
         images: Path,
         masks: Path | None = None,
@@ -583,7 +583,7 @@ class EngineABC(ABC):
 
         cum_output["label"] = img_label
         # add extra information useful for downstream analysis
-        cum_output["pretrained_model"] = self.model
+        # cum_output["pretrained_model"] = self.model REDUNDANT Remove
         cum_output["resolution"] = highest_input_resolution["resolution"]
         cum_output["units"] = highest_input_resolution["units"]
 
@@ -620,6 +620,8 @@ class EngineABC(ABC):
         save_path = save_dir / output_file
 
         file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
+
+        ## extend to annotations store raw_output[0],
 
         # merge_predictions is true
         if len(raw_output) > 1:
@@ -909,7 +911,7 @@ class EngineABC(ABC):
         )
 
         if patch_mode:
-            data_loader = self.set_dataloader(
+            data_loader = self.get_dataloader(
                 images=self.images,
                 labels=self.labels,
             )
@@ -923,7 +925,7 @@ class EngineABC(ABC):
                 **kwargs,
             )
 
-        ioconfig = self._update_ioconfig(
+        self._ioconfig  = self._update_ioconfig(
             ioconfig,
             self.patch_input_shape,
             self.stride_shape,
@@ -931,15 +933,11 @@ class EngineABC(ABC):
             self.units,
         )
 
-        # since we're not expecting mode == "tile" should the
-        # Resolutions will be converted to baseline value.
-        ioconfig = ioconfig.to_baseline()
-
-        fx_list = ioconfig.scale_to_highest(
-            ioconfig.input_resolutions,
-            ioconfig.input_resolutions[0]["units"],
+        fx_list = self._ioconfig.scale_to_highest(
+            self._ioconfig.input_resolutions,
+            self._ioconfig.input_resolutions[0]["units"],
         )
-        fx_list = zip(fx_list, ioconfig.input_resolutions)
+        fx_list = zip(fx_list, self._ioconfig.input_resolutions)
         fx_list = sorted(fx_list, key=lambda x: x[0])
         highest_input_resolution = fx_list[0][1]
 
@@ -955,10 +953,10 @@ class EngineABC(ABC):
             img_label = None if labels is None else labels[idx]
             img_mask = None if masks is None else masks[idx]
 
-            dataloader = self.set_dataloader(
+            dataloader = self.get_dataloader(
                 images=img_path_,
                 masks=img_mask,
-                ioconfig=ioconfig,
+                ioconfig=self._ioconfig,
             )
 
             # Only a single label per whole-slide image is supported

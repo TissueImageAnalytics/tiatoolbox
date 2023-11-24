@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, Callable, NoReturn
 
 import numpy as np
 import pytest
@@ -34,7 +34,7 @@ class TestEngineABC(EngineABC):
         """Test EngineABC init."""
         super().__init__(model=model, weights=weights, verbose=verbose)
 
-    def set_dataloader(
+    def get_dataloader(
         self: EngineABC,
         images: Path,
         masks: Path | None = None,
@@ -42,7 +42,7 @@ class TestEngineABC(EngineABC):
         ioconfig: ModelIOConfigABC | None = None,
     ) -> torch.utils.data.DataLoader:
         """Test pre process images."""
-        return super().set_dataloader(images, masks, labels, ioconfig)
+        return super().get_dataloader(images, masks, labels, ioconfig)
 
     def post_process_wsi(
         self: EngineABC,
@@ -433,7 +433,95 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         )
 
 
-# to be implemented
+def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
+    """Test for delegating args to io config."""
+    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
+
+    # test not providing config / full input info for not pretrained models
+    model = CNNModel("resnet50")
+    eng = TestEngineABC(model=model)
+    with pytest.raises(ValueError, match=r".*Please provide a valid ModelIOConfigABC*"):
+        eng.run([mini_wsi_svs], patch_mode=False, save_dir=tmp_path / "dump")
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    kwargs = {
+        "patch_input_shape": [512, 512],
+        "resolution": 1.75,
+        "units": "mpp",
+    }
+    for key in kwargs:
+        _kwargs = copy.deepcopy(kwargs)
+        _kwargs.pop(key)
+        with pytest.raises(ValueError, match=r".*Please provide.*.ModelIOConfigABC*"):
+            eng.run(
+                [mini_wsi_svs],
+                patch_mode=False,
+                save_dir=f"{tmp_path}/dump",
+                **_kwargs,
+            )
+        shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    # test providing config / full input info for non pretrained models
+    ioconfig = ModelIOConfigABC(
+        patch_input_shape=(512, 512),
+        stride_shape=(256, 256),
+        input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
+    )
+    eng.run(
+        [mini_wsi_svs],
+        patch_mode=False,
+        save_dir=f"{tmp_path}/dump",
+        ioconfig=ioconfig,
+    )
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng.run(
+        [mini_wsi_svs],
+        patch_mode=False,
+        save_dir=f"{tmp_path}/dump",
+        **kwargs,
+    )
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    # test overwriting pretrained ioconfig
+    eng = TestEngineABC(model="alexnet-kather100k")
+    eng.run(
+        [mini_wsi_svs],
+        patch_input_shape=(300, 300),
+        patch_mode=False,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.patch_input_shape == (300, 300)
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng.run(
+        [mini_wsi_svs],
+        stride_shape=(300, 300),
+        patch_mode=False,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.stride_shape == (300, 300)
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng.run(
+        [mini_wsi_svs],
+        resolution=1.99,
+        patch_mode=False,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.input_resolutions[0]["resolution"] == 1.99
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    eng.run(
+        [mini_wsi_svs],
+        units="baseline",
+        patch_mode=False,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
 def test_engine_run_wsi(
     sample_wsi_dict: dict,
     tmp_path: Path,
