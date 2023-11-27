@@ -36,12 +36,12 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def split_path_name_ext(
-    full_path: PathLike,
+    full_path: PathLike | str,
 ) -> tuple[Path, str, list[str]]:
     """Split path of a file to directory path, file name and extensions.
 
     Args:
-        full_path (PathLike):
+        full_path (PathLike | str):
             Path to a file.
 
     Returns:
