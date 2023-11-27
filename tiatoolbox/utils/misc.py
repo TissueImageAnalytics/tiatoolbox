@@ -1223,12 +1223,17 @@ def dict_to_store(
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
     labels = patch_output.get("labels", [])
     # get classes to consider
-    classes_predicted = np.unique(preds).tolist()
+    if len(class_probs) == 0:
+        classes_predicted = np.unique(preds).tolist()
+    else:
+        classes_predicted = range(len(class_probs[0]))
 
     if class_dict is None:
         # if no class dict create a default one
-        class_dict = {i: i for i in np.unique(preds + labels).tolist()}
-
+        if len(class_probs) == 0:
+              class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+        else:
+              class_dict = {i: i for i in range(len(class_probs))}
 
     # find what keys we need to save
     keys = ["predictions"]
