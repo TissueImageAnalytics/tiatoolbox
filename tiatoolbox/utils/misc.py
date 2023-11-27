@@ -1244,7 +1244,7 @@ def dict_to_store(
     for i, pred in enumerate(preds):
         if "probabilities" in keys:
             props = {
-                f"prob_{class_dict[j]}" : class_probs[i][j] for j in classes_predicted
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
             }
         else:
             props = {}

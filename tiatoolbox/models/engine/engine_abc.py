@@ -556,7 +556,7 @@ class EngineABC(ABC):
             "labels": [],
         }
 
-        #get return flags from kwargs or set to False, useful in Annotation Store
+        # get return flags from kwargs or set to False, useful in Annotation Store
         return_labels = kwargs["return_labels"] if "return_labels" in kwargs else False
 
         for _, batch_data in enumerate(dataloader):
@@ -588,10 +588,10 @@ class EngineABC(ABC):
 
         outputs = [cum_output]  # assign to a list
 
-        #pop unused items from cum_output
-        if len(cum_output["probabilities"])==0:
+        # pop unused items from cum_output
+        if len(cum_output["probabilities"]) == 0:
             cum_output.pop("probabilities")
-        if not return_labels or len(cum_output["labels"])==0:
+        if not return_labels or len(cum_output["labels"]) == 0:
             cum_output.pop("labels")
 
         merged_prediction = None
@@ -644,14 +644,15 @@ class EngineABC(ABC):
 
         if output_type == "AnnotationStore":
             # scale_factor set from kwargs
-            scale_factor = kwargs["scale_factor"] \
-                if "scale_factor" in kwargs else (1.0, 1.0)
+            scale_factor = (
+                kwargs["scale_factor"] if "scale_factor" in kwargs else (1.0, 1.0)
+            )
             # class_dict set from kwargs
             class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
 
             return dict_to_store(raw_output[0], scale_factor, class_dict, save_path)
 
-        #Expected output type is Zarr
+        # Expected output type is Zarr
         file_dict = {}
 
         file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
@@ -1006,7 +1007,7 @@ class EngineABC(ABC):
 
             output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
 
-            #WSI output dict can have either Zarr paths or Annotation Stores
+            # WSI output dict can have either Zarr paths or Annotation Stores
             wsi_output_dict[output_file] = self.post_process_wsi(
                 raw_output,
                 save_dir,
