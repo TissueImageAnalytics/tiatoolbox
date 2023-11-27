@@ -1229,7 +1229,6 @@ def dict_to_store(
         # if no class dict create a default one
         class_dict = {i: i for i in np.unique(preds + labels).tolist()}
 
-
     # find what keys we need to save
     keys = ["predictions"]
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
@@ -1239,7 +1238,7 @@ def dict_to_store(
     for i, pred in enumerate(preds):
         if "probabilities" in keys:
             props = {
-                f"prob_{class_dict[j]}" : class_probs[i][j] for j in classes_predicted
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
             }
         else:
             props = {}

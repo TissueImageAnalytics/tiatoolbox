@@ -587,6 +587,7 @@ def test_engine_run_wsi(
         assert "merged" in output_info
     shutil.rmtree(save_dir)
 
+
 def test_engine_run_wsi_annotation_store(
     sample_wsi_dict: dict,
     tmp_path: Path,
@@ -623,6 +624,7 @@ def test_engine_run_wsi_annotation_store(
         assert Path(output_info).exists()
         assert output_info.suffix == ".db"
     shutil.rmtree(save_dir)
+
 
 def test_wsi_predictor_merge_predictions() -> None:
     """Test normal run of wsi predictor with merge predictions option."""
