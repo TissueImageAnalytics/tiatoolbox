@@ -31,6 +31,7 @@ from tiatoolbox.utils.exceptions import FileNotSupportedError
 if TYPE_CHECKING:  # pragma: no cover
     from os import PathLike
 
+    import numpy.typing as npt
     from shapely import geometry
 
 
@@ -729,7 +730,7 @@ def download_data(
 
         if unzip:
             unzip_path = save_dir / save_path.stem
-            unzip_data(str(save_path), str(unzip_path), del_zip=False)
+            unzip_data(save_path, unzip_path, del_zip=False)
             return unzip_path
 
     return save_path
@@ -922,7 +923,7 @@ def get_bounding_box(img: np.ndarray) -> np.ndarray:
     return np.array([c_min, r_min, cmax, r_max])
 
 
-def string_to_tuple(in_str: str) -> tuple[str]:
+def string_to_tuple(in_str: str) -> tuple[str, ...]:
     """Splits input string to tuple at ','.
 
     Args:
@@ -930,7 +931,7 @@ def string_to_tuple(in_str: str) -> tuple[str]:
             input string.
 
     Returns:
-        tuple:
+        tuple[str, ...]:
             Return a tuple of strings by splitting in_str at ','.
 
     """
@@ -969,7 +970,7 @@ def ppu2mpp(ppu: int, units: str | int) -> float:
     return 1 / ppu * microns_per_unit[units]
 
 
-def select_cv2_interpolation(scale_factor: float | np.ndarray[float, float]) -> str:
+def select_cv2_interpolation(scale_factor: float | npt.NDArray[np.float64]) -> str:
     """Return appropriate interpolation method for opencv based image resize.
 
     Args:
@@ -1044,7 +1045,7 @@ def make_valid_poly(
             A valid geometry.
 
     """
-    if origin != (0, 0):
+    if origin != (0, 0) and origin is not None:
         # transform coords to be relative to given pt.
         poly = translate(poly, -origin[0], -origin[1])
     if poly.is_valid:
@@ -1056,8 +1057,8 @@ def make_valid_poly(
 def anns_from_hoverdict(
     data: dict,
     props: list,
-    typedict: dict,
-    origin: tuple,
+    typedict: dict | None,
+    origin: tuple[float, float],
     scale_factor: tuple[float, float],
 ) -> list[Annotation]:
     """Helper function to create list of Annotation objects.
@@ -1072,7 +1073,7 @@ def anns_from_hoverdict(
             A list of properties
         typedict (dict):
             A dictionary mapping annotation types to more descriptive names.
-        origin (tuple):
+        origin (tuple[float, float]):
             The x and y coordinates to use as the origin for the annotations.
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the annotations. All coordinates
