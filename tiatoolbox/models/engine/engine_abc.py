@@ -556,6 +556,9 @@ class EngineABC(ABC):
             "labels": [],
         }
 
+        #get return flags from kwargs or set to False, useful in Annotation Store
+        return_labels = kwargs["return_labels"] if "return_labels" in kwargs else False
+
         for _, batch_data in enumerate(dataloader):
             batch_output_probabilities = self.model.infer_batch(
                 self.model,
@@ -565,10 +568,6 @@ class EngineABC(ABC):
             # We get the index of the class with the maximum probability
             batch_output_predictions = self.model.postproc_func(
                 batch_output_probabilities,
-            )
-
-            return_labels = (
-                kwargs["return_labels"] if "return_labels" in kwargs else False
             )
 
             # tolist might be very expensive
@@ -589,6 +588,12 @@ class EngineABC(ABC):
 
         outputs = [cum_output]  # assign to a list
 
+        #pop unused items from cum_output
+        if len(cum_output["probabilities"])==0:
+            cum_output.pop("probabilities")
+        if not return_labels or len(cum_output["labels"])==0:
+            cum_output.pop("labels")
+
         merged_prediction = None
         if merge_predictions:
             merged_prediction = self._merge_predictions(
@@ -607,11 +612,29 @@ class EngineABC(ABC):
         self: EngineABC,
         raw_output: list,
         save_dir: Path,
+        output_type: str,
         **kwargs: dict,
-    ) -> dict:
-        """Post-process a WSI."""
-        file_dict = {}
+    ) -> dict | AnnotationStore:
+        """Post-process a WSI.
 
+        Args:
+            raw_output (dict):
+                A dictionary of patch prediction information.
+            save_dir (Path):
+                Output Path to directory to save the patch dataset output to a
+                `.zarr` or `.db` file
+            output_type (str):
+                The desired output type for resulting patch dataset.
+            **kwargs (dict):
+                Keyword Args to update setup_patch_dataset() method attributes.
+
+        Returns: (dict or Path):
+            if the output_type is "AnnotationStore", the function returns the patch
+            predictor output as an SQLiteStore containing Annotations stored to a `.db`
+            file. Otherwise, the function defaults to returning patch predictor output
+            stored to a `.zarr` file.
+
+        """
         output_file = (
             kwargs["output_file"] and kwargs.pop("output_file")
             if "output_file" in kwargs
@@ -619,9 +642,19 @@ class EngineABC(ABC):
         )
         save_path = save_dir / output_file
 
-        file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
+        if output_type == "AnnotationStore":
+            # scale_factor set from kwargs
+            scale_factor = kwargs["scale_factor"] \
+                if "scale_factor" in kwargs else (1.0, 1.0)
+            # class_dict set from kwargs
+            class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
 
-        ## extend to annotations store raw_output[0],
+            return dict_to_store(raw_output[0], scale_factor, class_dict, save_path)
+
+        #Expected output type is Zarr
+        file_dict = {}
+
+        file_dict["raw"] = dict_to_zarr_wsi(raw_output[0], save_path, **kwargs)
 
         # merge_predictions is true
         if len(raw_output) > 1:
@@ -946,7 +979,7 @@ class EngineABC(ABC):
             merge_predictions = kwargs["merge_predictions"]
             kwargs.pop("merge_predictions")
 
-        wsi_output_zarrs = OrderedDict()
+        wsi_output_dict = OrderedDict()
 
         for idx, img_path in enumerate(self.images):
             img_path_ = Path(img_path)
@@ -972,10 +1005,13 @@ class EngineABC(ABC):
             )
 
             output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
-            wsi_output_zarrs[output_file] = self.post_process_wsi(
+
+            #WSI output dict can have either Zarr paths or Annotation Stores
+            wsi_output_dict[output_file] = self.post_process_wsi(
                 raw_output,
                 save_dir,
                 output_file=output_file,
+                output_type=output_type,
             )
 
-        return wsi_output_zarrs
+        return wsi_output_dict

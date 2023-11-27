@@ -1217,18 +1217,18 @@ def dict_to_store(
     # get relevant keys
     class_probs = patch_output.get("probabilities", [])
     preds = patch_output.get("predictions", [])
+
     patch_coords = np.array(patch_output.get("coordinates", []))
     if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
     labels = patch_output.get("labels", [])
     # get classes to consider
-    if len(class_probs) == 0:
-        classes_predicted = np.unique(preds).tolist()
-    else:
-        classes_predicted = range(len(class_probs[0]))
+    classes_predicted = np.unique(preds).tolist()
+
     if class_dict is None:
         # if no class dict create a default one
         class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+
 
     # find what keys we need to save
     keys = ["predictions"]
@@ -1239,7 +1239,7 @@ def dict_to_store(
     for i, pred in enumerate(preds):
         if "probabilities" in keys:
             props = {
-                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+                f"prob_{class_dict[j]}" : class_probs[i][j] for j in classes_predicted
             }
         else:
             props = {}

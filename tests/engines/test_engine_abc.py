@@ -587,6 +587,42 @@ def test_engine_run_wsi(
         assert "merged" in output_info
     shutil.rmtree(save_dir)
 
+def test_engine_run_wsi_annotation_store(
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+) -> NoReturn:
+    """Test the engine run for Whole slide images."""
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{tmp_path}/model_wsi_output"
+
+    kwargs = {
+        "return_labels": True,
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "units": "mpp",
+        "scale_factor": (2.0, 2.0),
+    }
+
+    out = eng.run(
+        images=[mini_wsi_svs],
+        masks=[mini_wsi_msk],
+        patch_mode=False,
+        output_type="AnnotationStore",
+        **kwargs,
+    )
+
+    for output_info in out.values():
+        assert Path(output_info).exists()
+        assert output_info.suffix == ".db"
+    shutil.rmtree(save_dir)
 
 def test_wsi_predictor_merge_predictions() -> None:
     """Test normal run of wsi predictor with merge predictions option."""
