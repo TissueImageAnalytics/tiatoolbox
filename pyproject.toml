@@ -175,4 +175,3 @@ max-args = 10
 [tool.mypy]
 ignore_missing_imports = true
 python_version = 3.8
-plugins = "numpy.typing.mypy_plugin"
