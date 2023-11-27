@@ -152,8 +152,7 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
         ...     np.ones([100, 100, 3]).astype('uint8')*255)
 
     """
-    if isinstance(image_path, Path):
-        image_path_str = str(image_path)
+    image_path_str = str(image_path)
 
     if not cv2.imwrite(image_path_str, cv2.cvtColor(img, cv2.COLOR_RGB2BGR)):
         msg = "Could not write image."
@@ -416,7 +415,8 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
         msg = "Image should be uint8."
         raise AssertionError(msg)
     img_out = img.copy()
-    p_low, p_high = np.percentile(img_out, (low_p, high_p))
+    percentiles = np.array(np.percentile(img_out, (low_p, high_p)))
+    p_low, p_high = percentiles[0], percentiles[1]
     if p_low >= p_high:
         p_low, p_high = np.min(img_out), np.max(img_out)
     if p_high > p_low:
@@ -425,7 +425,7 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
             in_range=(p_low, p_high),
             out_range=(0.0, 255.0),
         )
-    return np.uint8(img_out)
+    return img_out.astype(np.uint8)
 
 
 def __numpy_array_to_table(input_table: np.ndarray) -> pd.DataFrame:
@@ -455,11 +455,11 @@ def __numpy_array_to_table(input_table: np.ndarray) -> pd.DataFrame:
     raise ValueError(msg)
 
 
-def __assign_unknown_class(input_table: np.ndarray | pd.DataFrame) -> pd.DataFrame:
+def __assign_unknown_class(input_table: pd.DataFrame) -> pd.DataFrame:
     """Creates a column and assigns None if class is unknown.
 
     Args:
-        input_table: (np.ndarray or pd.DataFrame):
+        input_table: (pd.DataFrame):
             input table.
 
     Returns:
@@ -639,7 +639,7 @@ def parse_cv2_interpolaton(interpolation: str | int) -> int:
 def assert_dtype_int(
     input_var: np.ndarray,
     message: str = "Input must be integer.",
-) -> AssertionError or None:
+) -> None:
     """Generate error if dtype is not int.
 
     Args:
