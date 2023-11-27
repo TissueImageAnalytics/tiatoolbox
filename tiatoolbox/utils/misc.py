@@ -1231,9 +1231,9 @@ def dict_to_store(
     if class_dict is None:
         # if no class dict create a default one
         if len(class_probs) == 0:
-              class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+            class_dict = {i: i for i in np.unique(preds + labels).tolist()}
         else:
-              class_dict = {i: i for i in range(len(class_probs))}
+            class_dict = {i: i for i in range(len(class_probs))}
 
     # find what keys we need to save
     keys = ["predictions"]
