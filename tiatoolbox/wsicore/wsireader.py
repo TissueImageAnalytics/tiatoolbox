@@ -2827,12 +2827,10 @@ class VirtualWSIReader(WSIReader):
         else:
             self.img = utils.imread(self.input_path)
 
-        if mode != "bool":
-            if self.img.ndim == 2:  # noqa: PLR2004, SIM114
-                mode = "feature"
-
-            elif self.img.shape[2] not in [3, 4]:
-                mode = "feature"
+        if mode != "bool" and (
+            self.img.ndim == 2 or self.img.shape[2] not in [3, 4]  # noqa: PLR2004
+        ):
+            mode = "feature"
 
         self.mode = mode.lower()
 
@@ -3282,11 +3280,11 @@ class VirtualWSIReader(WSIReader):
         )
         bounds_at_read = utils.transforms.locsize2bounds(location_at_read, size_at_read)
 
-        if self.mode == "bool":
-            interpolation = "nearest"
-
         if interpolation in [None, "none"]:
             interpolation = None
+
+        if interpolation == "optimise" and self.mode == "bool":
+            interpolation = "nearest"
 
         im_region = utils.image.sub_pixel_read(
             self.img,
