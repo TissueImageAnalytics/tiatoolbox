@@ -572,7 +572,7 @@ def chdir() -> Callable:
 
 @pytest.fixture(scope="module")
 def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
-    """Set up a temporary data directory."""
+    """Set up a temporary data directory for testing visualization UI."""
     tmp_path = tmp_path_factory.mktemp("data")
     (tmp_path / "slides").mkdir()
     (tmp_path / "overlays").mkdir()

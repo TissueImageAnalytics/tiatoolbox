@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -57,9 +61,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -142,7 +143,7 @@ def get_view_bounds(
 ) -> tuple[float, float, float, float]:
     """Helper to get the current view bounds.
 
-    Estimates a reasonable initial view bounds based on the image
+    Estimate a reasonable initial view bounds based on the image
     dimensions and the size of the viewing plot.
 
     Args:
@@ -191,7 +192,7 @@ def to_num(x: str | SupportsFloat) -> int | float | None:
 def get_from_config(keys: list[str], default: Any = None) -> Any:  # noqa: ANN401
     """Helper to get a value from a config dict.
 
-    Looks in the dict values for nested keys.
+    Check dict values for nested keys.
     The default value is returned if the key is not found.
 
     Args:
@@ -291,7 +292,7 @@ def make_color_dict(types: list[str]) -> dict[str, tuple[float, float, float]]:
 
 
 def set_alpha_glyph(glyph: Glyph, alpha: float) -> None:
-    """Sets both fill and line alpha for a glyph."""
+    """Set the fill and line alpha for a glyph."""
     glyph.fill_alpha = alpha
     glyph.line_alpha = alpha
 
