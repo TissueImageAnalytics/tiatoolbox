@@ -70,19 +70,19 @@ def _get_scale_factor_array(
 ) -> np.ndarray | None:
     """Converts scale factor to appropriate format required by imresize."""
     if scale_factor is not None:
-        scale_factor = np.array(scale_factor, dtype=float)
-        return _convert_scalar_to_width_height(scale_factor)
+        scale_factor_array = np.array(scale_factor, dtype=float)
+        return _convert_scalar_to_width_height(scale_factor_array)
     return scale_factor
 
 
 def _get_output_size_array(
     img: np.ndarray,
     output_size: int | tuple[int, int] | None,
-    scale_factor_array: np.ndarray,
+    scale_factor_array: np.ndarray | None,
 ) -> np.ndarray:
     """Converts output size to appropriate format required by imresize."""
     # Handle None arguments
-    if output_size is None:
+    if output_size is None and scale_factor_array is not None:
         width = int(img.shape[1] * scale_factor_array[0])
         height = int(img.shape[0] * scale_factor_array[1])
         return np.array((width, height))
