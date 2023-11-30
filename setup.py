@@ -21,7 +21,7 @@ install_requires = [
 dependency_links = []
 
 if sys.platform != "darwin":
-    dependency_links = ["https://download.pytorch.org/whl/cu113"]
+    dependency_links = ["https://download.pytorch.org/whl/cu118"]
 
 setup_requirements = [
     "pytest-runner",
