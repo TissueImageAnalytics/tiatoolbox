@@ -693,9 +693,9 @@ class AnnotationRenderer:
                 )
             if self.function_mapper:
                 return self.function_mapper(annotation.properties)
-            if score_prop == "colour":
+            if score_prop == "color":
                 # use colors directly specified in annotation properties
-                return (*[int(255 * c) for c in annotation.properties["colour"]], 255)
+                return (*[int(255 * c) for c in annotation.properties["color"]], 255)
             if score_prop is not None:
                 return tuple(
                     int(c * 255)

@@ -275,19 +275,19 @@ def make_safe_name(name: str) -> str:
 def make_color_dict(types: list[str]) -> dict[str, tuple[float, float, float]]:
     """Helper to make a color dict from a list of types."""
     colors = random_colors(len(types), bright=True)
-    # Grab colors out of doc_config["colour_dict"] if possible, otherwise use random
-    type_colours = {}
+    # Grab colors out of doc_config["color_dict"] if possible, otherwise use random
+    type_colors = {}
     for i, t in enumerate(types):
         if t in UI["vstate"].mapper:
             # Keep existing color
-            type_colours[t] = UI["vstate"].mapper[t]
-        elif str(t) in doc_config["colour_dict"]:
+            type_colors[t] = UI["vstate"].mapper[t]
+        elif str(t) in doc_config["color_dict"]:
             # Grab color from config if possible
-            type_colours[t] = to_float_rgb(doc_config["colour_dict"][str(t)])
+            type_colors[t] = to_float_rgb(doc_config["color_dict"][str(t)])
         else:
             # Otherwise use random
-            type_colours[t] = (*colors[i], 1)
-    return type_colours
+            type_colors[t] = (*colors[i], 1)
+    return type_colors
 
 
 def set_alpha_glyph(glyph: Glyph, alpha: float) -> None:
@@ -748,7 +748,7 @@ def filter_input_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
 
 
 def cprop_input_cb(attr: str, old: str, new: list[str]) -> None:  # noqa: ARG001
-    """Change property to colour by."""
+    """Change property to color by."""
     if len(new) == 0:
         return
     cmap = get_mapper_for_prop(new[0])
@@ -814,7 +814,7 @@ def opt_buttons_cb(attr: str, old: list[int], new: list[int]) -> None:  # noqa: 
 
 
 def cmap_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
-    """Callback to change the colour map."""
+    """Callback to change the color map."""
     if not (UI["vstate"].is_categorical and new != "dict"):
         update_renderer("mapper", new)
         UI["vstate"].update_state = 1
@@ -1377,7 +1377,7 @@ def gather_ui_elements(  # noqa: PLR0915
         position="right",
     )
     cprop_input = MultiChoice(
-        title="Colour by:",
+        title="color by:",
         max_items=1,
         options=[get_from_config(["default_cprop"], "type")],
         value=[get_from_config(["default_cprop"], "type")],
@@ -1413,7 +1413,7 @@ def gather_ui_elements(  # noqa: PLR0915
     ]
     cmap_tooltip = Tooltip(
         content=HTML(
-            """Choose a colourmap. If the property being coloured by is categorical,
+            """Choose a colormap. If the property being colored by is categorical,
             dict should be used.""",
         ),
         position="right",
@@ -1479,7 +1479,7 @@ def gather_ui_elements(  # noqa: PLR0915
     )
     model_drop = Select(
         title="choose model:",
-        options=["hovernet", "nuclick"],
+        options=["hovernet"],
         height=25,
         width=120,
         max_width=120,
@@ -1498,16 +1498,16 @@ def gather_ui_elements(  # noqa: PLR0915
     )
     type_cprop_tt = Tooltip(
         content=HTML(
-            """Select a type of object, and a property to colour by. Objects of
-            selected type will be coloured by the selected property.
-            This will override the global 'colour by' property for that type.""",
+            """Select a type of object, and a property to color by. Objects of
+            selected type will be colored by the selected property.
+            This will override the global 'color by' property for that type.""",
         ),
         position="right",
         css_classes=["help_tt"],
         stylesheets=[help_ss],
     )
     type_cmap_select = MultiChoice(
-        title="Colour type by property:",
+        title="color type by property:",
         max_items=2,
         options=["*"],
         search_option_limit=5000,
@@ -1992,7 +1992,7 @@ class DocConfig:
     def __init__(self: DocConfig) -> None:
         """Initialise the class."""
         self.config = {
-            "colour_dict": {},
+            "color_dict": {},
             "initial_views": {},
             "default_cprop": "type",
             "demo_name": "TIAvis",

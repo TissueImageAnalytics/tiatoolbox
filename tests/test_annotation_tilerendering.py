@@ -59,21 +59,21 @@ def fill_store(
         cells = [
             Annotation(
                 cell,
-                {"type": "cell", "prob": RNG.random(1)[0], "colour": (0, 1, 0)},
+                {"type": "cell", "prob": RNG.random(1)[0], "color": (0, 1, 0)},
             )
             for cell in cell_grid
         ]
         points = [
             Annotation(
                 point,
-                {"type": "pt", "prob": RNG.random(1)[0], "colour": (1, 0, 0)},
+                {"type": "pt", "prob": RNG.random(1)[0], "color": (1, 0, 0)},
             )
             for point in points_grid
         ]
         lines = [
             Annotation(
                 LineString((x, x + 500) for x in range(100, 400, 10)),
-                {"type": "line", "prob": 0.75, "colour": (0, 0, 1)},
+                {"type": "line", "prob": 0.75, "color": (0, 0, 1)},
             ),
         ]
 
@@ -130,12 +130,12 @@ def test_correct_number_rendered(fill_store: Callable, tmp_path: Path) -> None:
     tg = AnnotationTileGenerator(wsi.info, store, renderer)
 
     thumb = tg.get_thumb_tile()
-    _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
+    _, num = label(np.array(thumb)[:, :, 1])  # default color is green
     assert num == 75  # expect 75 rendered objects
 
 
-def test_correct_colour_rendered(fill_store: Callable, tmp_path: Path) -> None:
-    """Test colour mapping."""
+def test_correct_color_rendered(fill_store: Callable, tmp_path: Path) -> None:
+    """Test color mapping."""
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
@@ -177,7 +177,7 @@ def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     small_annotation = Annotation(
         Polygon([(9, 9), (9, 10), (10, 10), (10, 9)]),
-        {"type": "cell", "prob": 0.75, "colour": (0, 0, 1)},
+        {"type": "cell", "prob": 0.75, "color": (0, 0, 1)},
     )
     store.append(small_annotation)
     renderer = AnnotationRenderer(
@@ -188,7 +188,7 @@ def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
 
     thumb = tg.get_tile(1, 0, 0)
-    _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
+    _, num = label(np.array(thumb)[:, :, 1])  # default color is green
     assert num == 25  # expect 25 cells in top left quadrant
 
 
@@ -203,7 +203,7 @@ def test_decimation(fill_store: Callable, tmp_path: Path) -> None:
     thumb = tg.get_tile(1, 1, 1)
     plt.imshow(thumb)
     plt.show(block=False)
-    _, num = label(np.array(thumb)[:, :, 1])  # default colour is green
+    _, num = label(np.array(thumb)[:, :, 1])  # default color is green
     assert num == 17  # expect 17 pts in bottom right quadrant
 
 
@@ -319,10 +319,10 @@ def test_user_provided_cm(fill_store: Callable, tmp_path: Path) -> None:
 
 
 def test_random_mapper() -> None:
-    """Test random colour map dict for list."""
+    """Test random color map dict for list."""
     test_list = ["line", "pt", "cell"]
     renderer = AnnotationRenderer(mapper=test_list)
-    # check all the colours are valid rgba values
+    # check all the colors are valid rgba values
     for ann_type in test_list:
         rgba = renderer.mapper(ann_type)
         assert isinstance(rgba, tuple)
@@ -338,7 +338,7 @@ def test_categorical_mapper(fill_store: Callable, tmp_path: Path) -> None:
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
     renderer = AnnotationRenderer(score_prop="type", mapper="categorical")
     AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
-    # check correct keys exist and all colours are valid rgba values
+    # check correct keys exist and all colors are valid rgba values
     for ann_type in ["line", "pt", "cell"]:
         rgba = renderer.mapper(ann_type)
         assert isinstance(rgba, tuple)
@@ -347,7 +347,7 @@ def test_categorical_mapper(fill_store: Callable, tmp_path: Path) -> None:
             assert 0 <= val <= 1
 
 
-def test_colour_prop_warnings(
+def test_color_prop_warnings(
     fill_store: Callable,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
@@ -393,7 +393,7 @@ def test_direct_color(fill_store: Callable, tmp_path: Path) -> None:
     array = np.ones((1024, 1024))
     wsi = wsireader.VirtualWSIReader(array, mpp=(1, 1))
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
-    renderer = AnnotationRenderer(score_prop="colour", edge_thickness=0)
+    renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
@@ -441,11 +441,11 @@ def test_unfilled_polys(fill_store: Callable, tmp_path: Path) -> None:
 
 def test_multipolygon_render(cell_grid: list[Polygon]) -> None:
     """Test multipolygon rendering."""
-    renderer = AnnotationRenderer(score_prop="colour", edge_thickness=0)
+    renderer = AnnotationRenderer(score_prop="color", edge_thickness=0)
     tile = np.zeros((1024, 1024, 3), dtype=np.uint8)
     renderer.render_multipoly(
         tile=tile,
-        annotation=Annotation(MultiPolygon(cell_grid), {"colour": (1, 0, 0)}),
+        annotation=Annotation(MultiPolygon(cell_grid), {"color": (1, 0, 0)}),
         top_left=(0, 0),
         scale=1,
     )

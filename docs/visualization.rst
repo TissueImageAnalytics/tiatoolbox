@@ -10,18 +10,18 @@ TIAToolbox provides a flexible visualization tool for viewing slides and overlay
 
 Start the interface using the command::
 
-    tiatoolbox visualize --slide-path path\to\slides --overlay-path path\to\overlays
+    tiatoolbox visualize --slide-path path/to/slides --overlay-path path/to/overlays
 
 This should cause the interface to appear in a new browser tab.
 Alternatively just one base path can be provided; in this case it is assumed that slides and overlays are in subdirectories of that provided directory called 'slides' and 'overlays' respectively::
 
-    tiatoolbox visualize --base-path path\to\parent_of_slides_and_overlays
+    tiatoolbox visualize --base-path path/to/parent_of_slides_and_overlays
 
 In the folder(s) that your command pointed to, should be the things that you want to visualize, following the conventions in :ref:`Data formats <data_format>`.
 
 If you need to change the port on which the interface is launched from the default of 5006, you can do so using the --port flag::
 
-    tiatoolbox visualize --slide-path path\to\slides --overlay-path path\to\overlays --port 5001
+    tiatoolbox visualize --slide-path path/to/slides --overlay-path path/to/overlays --port 5001
 
 Though in most cases this should not be necessary.
 
@@ -48,7 +48,7 @@ You can then launch the interface on the remote machine as above (TIAToolbox mus
 
 The interface is split into two main sections. The left-hand side contains the main window, which displays the slide and overlays (or potentially a linked pair of slide views), and the right hand side contains a number of UI elements to control the display of the overlays.
 
-The main window can be zoomed in and out using the mouse wheel and panned by clicking and dragging. The slide can be changed using the slide dropdown menu. The overlay can be changed, or additional overlays added using the overlay dropdown menu. The alpha of the slide and overlay can be controlled using the slide and overlay alpha sliders respectively.
+The main window can be zoomed in and out using the mouse wheel and panned by clicking and dragging. The slide can be changed using the slide dropdown menu. The overlay can be changed, or additional overlays added using the overlay dropdown menu. Note: overlays involving a large number of annotations may take a short while to load. The alpha of the slide and overlay can be controlled using the slide and overlay alpha sliders respectively.
 
 Information about the currently open slide can be found below the main window including slide name, dimensions, and level resolution information.
 
@@ -75,7 +75,7 @@ The 'color type by property' box allows annotations of the specified type to be 
 Running models
 ^^^^^^^^^^^^^^
 
-Regions of the image can be selected, using either a box select or points, which can be sent to a model via selecting the model in the drop-down menu and then clicking go. Available so far are hovernet and nuclick.
+Regions of the image can be selected, using either a box select or points, which can be sent to a model via selecting the model in the drop-down menu and then clicking go. Available so far is hovernet, and nuclick will likely be added in the future.
 
 To save the annotations resulting from a model, or loaded from a .geojson or .dat (will be saved as a SQLiteStore .db file which will be far quicker to load) use the save button (for the moment it is just saved in a file '{slide_name}\_saved_anns.db' in the overlays folder).
 

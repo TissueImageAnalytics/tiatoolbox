@@ -1562,7 +1562,8 @@ def test_from_multi_head_dat(tmp_path: Path) -> None:
     data = {
         "A": head_a,
         "B": head_b,
-        "resolution": 0.5,
+        "proc_resolution": {"resolution": 0.5, "units": "mpp"},
+        "base_resolution": {"resolution": 0.25, "units": "mpp"},
         "other_meta_data": {"foo": "bar"},
     }
     joblib.dump(data, tmp_path / "test.dat")
