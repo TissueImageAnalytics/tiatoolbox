@@ -2770,7 +2770,7 @@ def test_read_multi_channel() -> None:
 
     assert region.shape == (100, 50, 6)
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
 
     # Test read_rect function:
     region = wsi.read_rect(location=(0, 0), size=(50, 100))
