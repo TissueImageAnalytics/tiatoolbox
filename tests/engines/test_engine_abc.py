@@ -634,7 +634,6 @@ def test_engine_run_wsi_merge_predictions(
         "units": "mpp",
     }
 
-
     _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
     out = eng.run(
@@ -665,7 +664,7 @@ def test_engine_run_wsi_merge_predictions(
     shutil.rmtree(save_dir)
 
 
-def extract_probabilities_from_annotation_store(dbfile:str) -> dict:
+def extract_probabilities_from_annotation_store(dbfile: str) -> dict:
     """Helper function to extract probabilities from Annotation Store."""
     probs_dict = {}
     con = sqlite3.connect(dbfile)
