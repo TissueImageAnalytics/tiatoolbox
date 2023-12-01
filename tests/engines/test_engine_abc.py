@@ -670,8 +670,7 @@ def extract_probabilities_from_annotation_store(dbfile:str) -> dict:
     probs_dict = {}
     con = sqlite3.connect(dbfile)
     cur = con.cursor()
-    annotations_properties = [a for a in cur.execute(
-        "SELECT properties FROM annotations")]
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 
     for item in annotations_properties:
         for json_str in item:
