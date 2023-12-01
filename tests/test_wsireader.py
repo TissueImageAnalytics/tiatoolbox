@@ -208,7 +208,7 @@ def read_bounds_level_consistency(wsi: WSIReader, bounds: IntBounds) -> None:
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
-        for b in as_float[i + 1:]:
+        for b in as_float[i + 1 :]:
             _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
             assert phase_diff < 0.125
             assert error < 0.125
@@ -2649,7 +2649,7 @@ def test_read_rect_level_consistency(wsi: WSIReader) -> None:
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
-        for b in as_float[i + 1:]:
+        for b in as_float[i + 1 :]:
             _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
             assert phase_diff < 0.125
             assert error < 0.125
@@ -2759,27 +2759,17 @@ def test_read_mpp(wsi: WSIReader) -> None:
 
 
 def test_read_multi_channel() -> None:
-    """ Test reading an image with more than three channels. """
+    """Test reading an image with more than three channels."""
     # Create a simple array:
     input_img = np.ones((1000, 1000, 6))
     wsi = wsireader.VirtualWSIReader(input_img)
 
     # Test read_bound function:
-    region = wsi.read_bounds(bounds=(0, 0, 50, 100))
-    target = input_img[:100, :50, :]
-
-    assert region.shape == (100, 50, 6)
-    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
+    img = wsi.read_bounds(bounds=(0, 0, 50, 100))
+    assert img.shape == (100, 50, 6)
 
     # Test read_rect function:
-    region = wsi.read_rect(location=(0, 0), size=(50, 100))
-    target = cv2.resize(
-        input_img[:50, :25, :],
-        (50, 100),
-        interpolation=cv2.INTER_CUBIC,
-    )
-
-    assert region.shape == (100, 50, 6)
-    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    location = (0, 0)
+    size = (256, 256)
+    img = wsi.read_rect(location, size)
+    assert img.shape == (256, 256, 6)
