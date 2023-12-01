@@ -276,13 +276,15 @@ class EngineABC(ABC):
         masks: Path | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
+        *,
+        patch_mode: bool = True,
     ) -> torch.utils.data.DataLoader:
         """Pre-process an image patch."""
         if labels:
             # if a labels is provided, then return with the prediction
             self.return_labels = bool(labels)
 
-        if isinstance(images, Path):
+        if not patch_mode:
             dataset = WSIPatchDataset(
                 img_path=images,
                 mode="wsi",
@@ -991,6 +993,7 @@ class EngineABC(ABC):
                 images=img_path_,
                 masks=img_mask,
                 ioconfig=self._ioconfig,
+                patch_mode=patch_mode,
             )
 
             # Only a single label per whole-slide image is supported
