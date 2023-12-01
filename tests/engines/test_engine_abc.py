@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import copy
+import json
 import shutil
+import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, NoReturn
 
 import numpy as np
 import pytest
 import torchvision.models as torch_models
+import zarr
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
@@ -473,6 +476,9 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
         ioconfig=ioconfig,
     )
+    assert eng._ioconfig.patch_input_shape == (512, 512)
+    assert eng._ioconfig.stride_shape == (256, 256)
+    assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     eng.run(
@@ -481,6 +487,9 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         save_dir=f"{tmp_path}/dump",
         **kwargs,
     )
+    assert eng._ioconfig.patch_input_shape == [512, 512]
+    assert eng._ioconfig.stride_shape == [512, 512]
+    assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
@@ -523,6 +532,18 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
 
+def validate_probabilities(probabilities: list | dict) -> bool:
+    """Helper function to test if the probabilities value are valid."""
+    if isinstance(probabilities, dict):
+        return all(0 <= probability <= 1 for _, probability in probabilities.items())
+
+    for row in probabilities:
+        for element in row:
+            if not (0 <= element <= 1):
+                return False
+    return True
+
+
 def test_engine_run_wsi(
     sample_wsi_dict: dict,
     tmp_path: Path,
@@ -554,7 +575,15 @@ def test_engine_run_wsi(
     )
 
     for output_info in out.values():
-        assert Path(output_info["raw"]).exists()
+        out_zarr_group_path = output_info["raw"]
+        assert Path(out_zarr_group_path).exists()
+        assert out_zarr_group_path.suffix == ".zarr"
+        eng_zarr_group = zarr.open_group(out_zarr_group_path, mode="a")
+        assert isinstance(eng_zarr_group["predictions"], zarr.core.Array)
+        assert eng_zarr_group["predictions"].ndim == 1
+        assert isinstance(eng_zarr_group["coordinates"], zarr.core.Array)
+        assert eng_zarr_group["coordinates"].ndim == 2
+        assert validate_probabilities(eng_zarr_group["probabilities"])
         assert "merged" not in output_info
     shutil.rmtree(save_dir)
 
@@ -569,9 +598,42 @@ def test_engine_run_wsi(
     )
 
     for output_info in out.values():
-        assert Path(output_info["raw"]).exists()
+        out_zarr_group_path = output_info["raw"]
+        assert Path(out_zarr_group_path).exists()
+        assert out_zarr_group_path.suffix == ".zarr"
+        eng_zarr_group = zarr.open_group(out_zarr_group_path, mode="a")
+        assert isinstance(eng_zarr_group["predictions"], zarr.core.Array)
+        assert eng_zarr_group["predictions"].ndim == 1
+        assert isinstance(eng_zarr_group["coordinates"], zarr.core.Array)
+        assert eng_zarr_group["coordinates"].ndim == 2
+        assert validate_probabilities(eng_zarr_group["probabilities"])
         assert "merged" not in output_info
     shutil.rmtree(save_dir)
+
+
+def test_engine_run_wsi_merge_predictions(
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+) -> NoReturn:
+    """Test the engine run for Whole slide images."""
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{tmp_path}/model_wsi_output"
+
+    _kwargs = {
+        "return_labels": True,
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "units": "mpp",
+    }
+
 
     _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
@@ -583,9 +645,40 @@ def test_engine_run_wsi(
     )
 
     for output_info in out.values():
-        assert Path(output_info["raw"]).exists()
+        out_zarr_group_path = output_info["raw"]
+        assert Path(out_zarr_group_path).exists()
+        assert out_zarr_group_path.suffix == ".zarr"
+        eng_zarr_group = zarr.open_group(out_zarr_group_path, mode="a")
+        assert isinstance(eng_zarr_group["predictions"], zarr.core.Array)
+        assert eng_zarr_group["predictions"].ndim == 1
+        assert isinstance(eng_zarr_group["coordinates"], zarr.core.Array)
+        assert eng_zarr_group["coordinates"].ndim == 2
+        assert validate_probabilities(eng_zarr_group["probabilities"])
+
         assert "merged" in output_info
+        merged_zarr_path = output_info["merged"]
+        assert Path(merged_zarr_path).exists()
+        assert merged_zarr_path.suffix == ".zarr"
+        merged_zarr = zarr.open(merged_zarr_path, mode="a")
+        assert isinstance(merged_zarr, zarr.core.Array)
+        assert merged_zarr.ndim == 2
     shutil.rmtree(save_dir)
+
+
+def extract_probabilities_from_annotation_store(dbfile:str) -> dict:
+    """Helper function to extract probabilities from Annotation Store."""
+    probs_dict = {}
+    con = sqlite3.connect(dbfile)
+    cur = con.cursor()
+    annotations_properties = [a for a in cur.execute(
+        "SELECT properties FROM annotations")]
+
+    for item in annotations_properties:
+        for json_str in item:
+            probs_dict = json.loads(json_str)
+            probs_dict.pop("type")
+
+    return probs_dict
 
 
 def test_engine_run_wsi_annotation_store(
@@ -623,6 +716,9 @@ def test_engine_run_wsi_annotation_store(
     for output_info in out.values():
         assert Path(output_info).exists()
         assert output_info.suffix == ".db"
+        probabilities = extract_probabilities_from_annotation_store(output_info)
+        assert validate_probabilities(probabilities)
+
     shutil.rmtree(save_dir)
 
 
