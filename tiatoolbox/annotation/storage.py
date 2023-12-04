@@ -2289,15 +2289,12 @@ class SQLiteStore(AnnotationStore):
                         Whether the function is deterministic.
 
                 """
-                try:
-                    con.create_function(
-                        name,
-                        nargs,
-                        fn,
-                        deterministic=deterministic,
-                    )
-                except TypeError:
-                    con.create_function(name, nargs, fn)
+                con.create_function(
+                    name,
+                    nargs,
+                    fn,
+                    deterministic=deterministic,
+                )
 
             register_custom_function(
                 "geometry_predicate",
