@@ -68,18 +68,18 @@ def run_bokeh(img_input: list[str], port: int, *, noshow: bool) -> None:
     Slides and overlays to be visualized are expected in subdirectories of the
     base directory named slides and overlays, respectively. It is also possible
     to provide a slide and overlay path separately
-    (use --slide-path and --overlay-path).""",
+    (use --slides and --overlays).""",
 )
 @click.option(
-    "--slide-path",
+    "--slides",
     help="""Path to directory containing slides to be displayed.
     This option must be used in conjunction with --overlay-path.
     The --base-path option should not be used in this case.""",
 )
 @click.option(
-    "--overlay-path",
+    "--overlays",
     help="""Path to directory containing overlays to be displayed.
-    This option must be used in conjunction with --slide-path.
+    This option must be used in conjunction with --slides.
     The --base-path option should not be used in this case.""",
 )
 @click.option(
@@ -91,8 +91,8 @@ def run_bokeh(img_input: list[str], port: int, *, noshow: bool) -> None:
 @click.option("--noshow", is_flag=True, help="Do not launch browser.")
 def visualize(
     base_path: str,
-    slide_path: str,
-    overlay_path: str,
+    slides: str,
+    overlays: str,
     port: int,
     *,
     noshow: bool,
@@ -104,17 +104,17 @@ def visualize(
 
     Args:
         base_path (str): Path to base directory containing images to be displayed.
-        slide_path (str): Path to directory containing slides to be displayed.
-        overlay_path (str): Path to directory containing overlays to be displayed.
+        slides (str): Path to directory containing slides to be displayed.
+        overlays (str): Path to directory containing overlays to be displayed.
         port (int): Port to launch the visualization tool on.
         noshow (bool): Do not launch in browser (mainly intended for testing).
 
     """
     # sanity check the input args
-    if base_path is None and (slide_path is None or overlay_path is None):
-        msg = "Must specify either base-path or both slide-path and overlay-path."
+    if base_path is None and (slides is None or overlays is None):
+        msg = "Must specify either base-path or both slides and overlays."
         raise ValueError(msg)
-    img_input = [base_path, slide_path, overlay_path]
+    img_input = [base_path, slides, overlays]
     img_input = [p for p in img_input if p is not None]
     # check that the input paths exist
     for input_path in img_input:

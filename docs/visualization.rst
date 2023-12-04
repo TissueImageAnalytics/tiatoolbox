@@ -10,7 +10,7 @@ TIAToolbox provides a flexible visualization tool for viewing slides and overlay
 
 Start the interface using the command::
 
-    tiatoolbox visualize --slide-path path/to/slides --overlay-path path/to/overlays
+    tiatoolbox visualize --slides path/to/slides --overlays path/to/overlays
 
 This should cause the interface to appear in a new browser tab.
 Alternatively just one base path can be provided; in this case it is assumed that slides and overlays are in subdirectories of that provided directory called 'slides' and 'overlays' respectively::
@@ -21,7 +21,7 @@ In the folder(s) that your command pointed to, should be the things that you wan
 
 If you need to change the port on which the interface is launched from the default of 5006, you can do so using the --port flag::
 
-    tiatoolbox visualize --slide-path path/to/slides --overlay-path path/to/overlays --port 5001
+    tiatoolbox visualize --slides path/to/slides --overlays path/to/overlays --port 5001
 
 Though in most cases this should not be necessary.
 

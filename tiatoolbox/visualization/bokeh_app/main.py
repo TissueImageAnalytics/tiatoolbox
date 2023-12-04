@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -57,9 +61,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -364,9 +365,11 @@ def build_predicate() -> str:
         for layer in UI["type_column"].children
         if layer.active and layer.label in UI["vstate"].types
     ]
+    combo = "None"
     if len(preds) == len(UI["vstate"].types):
         preds = []
-    combo = "None"
+    elif len(preds) == 0:
+        preds = ['props["type"]=="None"']
     if len(preds) > 0:
         combo = "(" + ") | (".join(preds) + ")"
     if UI["filter_input"].value not in ["None", ""]:
