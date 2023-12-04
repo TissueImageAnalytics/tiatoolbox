@@ -531,8 +531,13 @@ class TileServer(Flask):
             sq = SQLiteStore.from_geojson(overlay_path)
         elif overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
-        else:
+        if overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
+        else:
+            # make a temporary db for the new annotations
+            tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+            sq.dump(tmp_path)
+            sq = SQLiteStore(tmp_path)
 
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):

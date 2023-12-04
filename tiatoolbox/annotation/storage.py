@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import (
     IO,
     TYPE_CHECKING,
+    Any,
     Callable,
     ClassVar,
     Generator,
@@ -1824,14 +1825,6 @@ class AnnotationStore(ABC, MutableMapping):
                 )
             return geom
 
-        def unpack_qpath(props: dict) -> dict:
-            """Helper function to unpack QuPath measurements."""
-            if unpack_qupath_measurements and "measurements" in props:
-                measurements = props.pop("measurements")
-                for m in measurements:
-                    props[m["name"]] = m["value"]
-            return props
-
         geojson = self._load_cases(
             fp=fp,
             string_fn=json.loads,
@@ -2234,13 +2227,13 @@ class SQLiteStore(AnnotationStore):
             self.con.commit()
         self.table_columns = self._get_table_columns()
 
-    def __getattribute__(self, name: str) -> Any:
+    def __getattribute__(self: SQLiteStore, name: str) -> Any:  # noqa: ANN401
         """If attr is con, return thread-local connection."""
         if name == "con":
             return self.get_connection(threading.get_ident())
         return super().__getattribute__(name)
 
-    def get_connection(self, thread_id) -> sqlite3.Connection:
+    def get_connection(self: SQLiteStore, thread_id: int) -> sqlite3.Connection:
         """Get a connection to the database."""
         if thread_id not in self.cons:
             con = sqlite3.connect(str(self.path), isolation_level="DEFERRED", uri=True)
@@ -2259,8 +2252,8 @@ class SQLiteStore(AnnotationStore):
                 return self._geometry_predicate(name, a, b)
 
             def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
-                """Function to load and execute pickle bytes with a "properties" dict."""
-                fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301
+                """Function to load and execute pickle bytes with "properties" dict."""
+                fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301  # noqa: S301
                 properties = json.loads(properties)
                 return fn(properties)
 
@@ -2277,6 +2270,7 @@ class SQLiteStore(AnnotationStore):
                 name: str,
                 nargs: int,
                 fn: Callable,
+                *,
                 deterministic: bool = False,
             ) -> None:
                 """Register a custom SQLite function.
@@ -2296,7 +2290,12 @@ class SQLiteStore(AnnotationStore):
 
                 """
                 try:
-                    con.create_function(name, nargs, fn, deterministic=deterministic)
+                    con.create_function(
+                        name,
+                        nargs,
+                        fn,
+                        deterministic=deterministic,
+                    )
                 except TypeError:
                     con.create_function(name, nargs, fn)
 
@@ -2476,9 +2475,6 @@ class SQLiteStore(AnnotationStore):
         self.optimize(vacuum=False, limit=1000)
         for con in self.cons.values():
             con.close()
-        self.metadata.con.close()
-        self.metadata = None
-        self.cons = {}
 
     def _make_token(self: SQLiteStore, annotation: Annotation, key: str | None) -> dict:
         """Create token data dict for tokenized SQL transaction."""
