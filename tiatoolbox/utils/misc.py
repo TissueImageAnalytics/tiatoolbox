@@ -1027,6 +1027,7 @@ def store_from_dat(
     """
     store = cls()
     add_from_dat(store, fp, scale_factor, typedict=typedict, origin=origin)
+    store.create_index("area", '"area"')
     return store
 
 

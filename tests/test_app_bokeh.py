@@ -10,9 +10,10 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
+
+import bokeh.models as bkmodels
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
@@ -21,14 +22,14 @@ else:  # pragma: no cover
     import importlib_resources  # type: ignore[import-not-found]
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -142,7 +143,7 @@ def run_app() -> None:
         layers={},
     )
     CORS(app, send_wildcard=True)
-    app.run(host="127.0.0.1", threaded=False)
+    app.run(host="127.0.0.1", threaded=True)
 
 
 @pytest.fixture(scope="module")
