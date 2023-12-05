@@ -2472,6 +2472,7 @@ class SQLiteStore(AnnotationStore):
         self.optimize(vacuum=False, limit=1000)
         for con in self.cons.values():
             con.close()
+        self.cons = {}
 
     def _make_token(self: SQLiteStore, annotation: Annotation, key: str | None) -> dict:
         """Create token data dict for tokenized SQL transaction."""

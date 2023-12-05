@@ -10,9 +10,10 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
+
+import bokeh.models as bkmodels
 
 if sys.version_info >= (3, 9):  # pragma: no cover
     import importlib.resources as importlib_resources
@@ -21,14 +22,14 @@ else:  # pragma: no cover
     import importlib_resources  # type: ignore[import-not-found]
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -523,9 +524,18 @@ def test_type_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
     assert num_after < num_before
+
+    # turn off all the types
+    for type_toggle in type_column_list:
+        type_toggle.active = False
+    # check that there are no cells
+    im = get_tile("overlay", 4, 8, 4, show=False)
+    _, num_after = label(np.any(im[:, :, :3], axis=2))
+    assert num_after == 0
+
     # reselect them
-    type_column_list[0].active = True
-    type_column_list[-1].active = True
+    for type_toggle in type_column_list:
+        type_toggle.active = True
     # check we are back to original number of cells
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_after = label(np.any(im[:, :, :3], axis=2))
