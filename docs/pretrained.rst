@@ -469,7 +469,7 @@ The model uses the following input output configuration:
     - 1: Other
     - 2: Epithelial
 
- .. collapse:: Output Region Classes
+.. collapse:: Output Region Classes
 
     - 0: Background
     - 1: Other Tissue
