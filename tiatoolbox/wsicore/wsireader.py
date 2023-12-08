@@ -989,11 +989,17 @@ class WSIReader:
             raise ValueError(
                 msg,
             )
+        scale_levels_available = [
+            np.log2(np.round(x, 3)) for x in self.info.level_downsamples
+        ]
         try:
-            level = np.log2(rescale)
-            if not level.is_integer():
+            level_scale = np.log2(rescale)
+            if not level_scale.is_integer():
                 raise ValueError  # noqa: TRY301
-            level = np.int_(level)
+            level_scale = np.int_(level_scale)
+            if level_scale not in scale_levels_available:
+                raise IndexError  # noqa: TRY301
+            level = scale_levels_available.index(level_scale)
             slide_dimension = self.info.level_dimensions[level]
             rescale = 1
         # Raise index error if desired pyramid level not embedded
@@ -1549,7 +1555,10 @@ class WSIReader:
 
             # convert to baseline reference frame
             bounds = start_w, start_h, end_w, end_h
-            baseline_bounds = tuple(bound * (2**level) for bound in bounds)
+            baseline_bounds = tuple(
+                bound * int(np.round(self.info.level_downsamples[level], 3))
+                for bound in bounds
+            )
             # Read image region
             im = self.read_bounds(baseline_bounds, level)
 
