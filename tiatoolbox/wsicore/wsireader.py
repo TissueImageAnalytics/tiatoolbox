@@ -1576,7 +1576,7 @@ class WSIReader:
 
             # Rescale to the correct objective value
             if rescale != 1:
-                im = utils.transforms.imresize(img=im, scale_factor=rescale)
+                im = utils.transforms.imresize(img=im, scale_factor=(1 / rescale))
 
             img_save_name = (
                 "_".join(
@@ -1596,10 +1596,10 @@ class WSIReader:
                 [
                     iter_tot,
                     img_save_name,
-                    start_w,
-                    end_w,
-                    start_h,
-                    end_h,
+                    int(start_w / rescale),
+                    int(end_w / rescale),
+                    int(start_h / rescale),
+                    int(end_h / rescale),
                     im.shape[0],
                     im.shape[1],
                 ],
