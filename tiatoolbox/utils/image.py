@@ -439,7 +439,7 @@ def sub_pixel_read(  # noqa: C901, PLR0912, PLR0913, PLR0915
     interpolation: str = "nearest",
     interpolation_padding: int = 2,
     read_func: Callable | None = None,
-    pad_mode: str = "constant",
+    pad_mode: str | None = "constant",
     pad_constant_values: int | tuple[int, int] = 0,
     read_kwargs: dict | None = None,
     pad_kwargs: dict | None = None,
@@ -583,7 +583,7 @@ def sub_pixel_read(  # noqa: C901, PLR0912, PLR0913, PLR0915
         image = np.array(image)
 
     # Normalize none pad_mode to None
-    if pad_mode.lower() == "none":
+    if pad_mode and pad_mode.lower() == "none":
         pad_mode = None
 
     # Initialise variables
