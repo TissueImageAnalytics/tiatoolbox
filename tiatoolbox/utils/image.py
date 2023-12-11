@@ -271,8 +271,7 @@ def crop_and_pad_edges(
         padding = padding + zero_tuple
 
     # Crop the region
-    slices = bounds2slices(overlap)
-    slices += (...,)
+    slices = (*bounds2slices(overlap), ...)
     crop = region[slices]
 
     # Return if pad_mode is None
@@ -433,7 +432,7 @@ def safe_padded_read(
 def sub_pixel_read(  # noqa: C901, PLR0912, PLR0913, PLR0915
     image: np.ndarray,
     bounds: IntBounds,
-    output_size: tuple[int, int],
+    output_size: tuple[int, int] | np.ndarray,
     padding: int | tuple[int, int] = 0,
     stride: int | tuple[int, int] = 1,
     interpolation: str = "nearest",
