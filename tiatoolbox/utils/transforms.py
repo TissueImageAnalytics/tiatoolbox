@@ -330,7 +330,7 @@ def locsize2bounds(
 
 def bounds2slices(
     bounds: tuple[int, int, int, int] | np.ndarray,
-    stride: int | tuple[int, int, tuple[int, int]] = 1,
+    stride: int | tuple[int, int] = 1,
 ) -> tuple[slice, ...]:
     """Convert bounds to slices.
 
