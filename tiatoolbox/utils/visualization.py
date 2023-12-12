@@ -403,7 +403,7 @@ def overlay_prediction_contours(
     canvas: np.ndarray,
     inst_dict: dict,
     type_colours: dict | None = None,
-    inst_colours: np.ndarray | tuple[int] = (255, 255, 0),
+    inst_colours: np.ndarray | tuple[int, int, int] = (255, 255, 0),
     line_thickness: int = 2,
     *,
     draw_dot: bool,
@@ -443,23 +443,24 @@ def overlay_prediction_contours(
 
     if inst_colours is None:
         inst_colours = random_colors(len(inst_dict), bright=True)
-        inst_colours = np.array(inst_colours) * 255
-        inst_colours = inst_colours.astype(np.uint8)
-    elif isinstance(inst_colours, tuple):
-        inst_colours = np.array([inst_colours] * len(inst_dict))
+
+    inst_colours_array = np.array(inst_colours) * 255
+
+    if isinstance(inst_colours, tuple):
+        inst_colours_array = np.array([inst_colours] * len(inst_dict))
     elif not isinstance(inst_colours, np.ndarray):
         msg = f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
         raise TypeError(
             msg,
         )
-    inst_colours = inst_colours.astype(np.uint8)
+    inst_colours_array = inst_colours_array.astype(np.uint8)
 
     for idx, [_, inst_info] in enumerate(inst_dict.items()):
         inst_contour = inst_info["contour"]
         if "type" in inst_info and type_colours is not None:
             inst_colour = type_colours[inst_info["type"]][1]
         else:
-            inst_colour = (inst_colours[idx]).tolist()
+            inst_colour = (inst_colours_array[idx]).tolist()
         cv2.drawContours(
             overlay,
             [np.array(inst_contour)],
@@ -479,9 +480,9 @@ def plot_graph(
     canvas: np.ndarray,
     nodes: np.ndarray,
     edges: np.ndarray,
-    node_colors: tuple[int] | np.ndarray = (255, 0, 0),
+    node_colors: tuple[int, int, int] | np.ndarray = (255, 0, 0),
     node_size: int = 5,
-    edge_colors: tuple[int] | np.ndarray = (0, 0, 0),
+    edge_colors: tuple[int, int, int] | np.ndarray = (0, 0, 0),
     edge_size: int = 5,
 ) -> np.ndarray:
     """Drawing a graph onto a canvas.
@@ -920,11 +921,10 @@ class AnnotationRenderer:
             int((bounds[2] - bounds[0]) / scale),
         ]
 
-        mpp_sf = (
-            np.minimum(self.info["mpp"][0] / 0.25, 1)
-            if self.info["mpp"] is not None
-            else 1
-        )
+        mpp_sf = 1
+        if self.info["mpp"]:
+            mpp_sf = np.minimum(self.info["mpp"][0] / 0.25, 1)
+
         min_area = 0.0005 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
 
         tile = np.zeros((output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8)
