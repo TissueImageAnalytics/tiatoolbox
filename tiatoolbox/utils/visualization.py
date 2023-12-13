@@ -513,25 +513,29 @@ def plot_graph(
 
     """
     if isinstance(node_colors, tuple):
-        node_colors = [node_colors] * len(nodes)
+        node_colors_list = np.array([node_colors] * len(nodes))
+    else:
+        node_colors_list = node_colors.tolist()
     if isinstance(edge_colors, tuple):
-        edge_colors = [edge_colors] * len(edges)
+        edge_colors_list = [edge_colors] * len(edges)
+    else:
+        edge_colors_list = edge_colors.tolist()
 
     # draw the edges
-    def to_int_tuple(x: list | np.ndarray) -> tuple[int, ...]:
+    def to_int_tuple(x: tuple[int, ...] | np.ndarray) -> tuple[int, ...]:
         """Helper to convert to tuple of int."""
         return tuple(int(v) for v in x)
 
     for idx, (src, dst) in enumerate(edges):
         src_ = to_int_tuple(nodes[src])
         dst_ = to_int_tuple(nodes[dst])
-        color = to_int_tuple(edge_colors[idx])
+        color = to_int_tuple(edge_colors_list[idx])
         cv2.line(canvas, src_, dst_, color, thickness=edge_size)
 
     # draw the nodes
     for idx, node in enumerate(nodes):
         node_ = to_int_tuple(node)
-        color = to_int_tuple(node_colors[idx])
+        color = to_int_tuple(node_colors_list[idx])
         cv2.circle(canvas, node_, node_size, color, thickness=-1)
     return canvas
 
@@ -606,7 +610,7 @@ class AnnotationRenderer:
         zoomed_out_strat: int | str = 10000,
         thickness: int = -1,
         edge_thickness: int = 1,
-        secondary_cmap: dict[str, str, str] | None = None,
+        secondary_cmap: dict | None = None,
         blur_radius: int = 0,
         score_prop_edge: str | None = None,
         function_mapper: Callable | None = None,
