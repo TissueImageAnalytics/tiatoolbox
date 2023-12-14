@@ -23,7 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import Annotation, AnnotationStore
 
 
-def random_colors(num_colors: int, *, bright: bool) -> list:
+def random_colors(num_colors: int, *, bright: bool) -> np.ndarray:
     """Generate a number of random colors.
 
     To get visually distinct colors, generate them in HSV space then
@@ -36,15 +36,15 @@ def random_colors(num_colors: int, *, bright: bool) -> list:
             To use bright color or not.
 
     Returns:
-        list:
-            List of (r, g, b) colors.
+        np.ndarray:
+            Array of (r, g, b) colors.
 
     """
     brightness = 1.0 if bright else 0.7
     hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
     colors = [colorsys.hsv_to_rgb(*c) for c in hsv]
     random.shuffle(colors)
-    return colors
+    return np.array(colors)
 
 
 def colourise_image(img: np.ndarray, cmap: str = "viridis") -> np.ndarray:
@@ -444,15 +444,17 @@ def overlay_prediction_contours(
     if inst_colours is None:
         inst_colours = random_colors(len(inst_dict), bright=True)
 
+    if not isinstance(inst_colours, (tuple, np.ndarray)):
+        msg = f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}."
+        raise TypeError(
+            msg,
+        )
+
     inst_colours_array = np.array(inst_colours) * 255
 
     if isinstance(inst_colours, tuple):
         inst_colours_array = np.array([inst_colours] * len(inst_dict))
-    elif not isinstance(inst_colours, np.ndarray):
-        msg = f"`inst_colours` must be np.ndarray or tuple: {type(inst_colours)}"
-        raise TypeError(
-            msg,
-        )
+
     inst_colours_array = inst_colours_array.astype(np.uint8)
 
     for idx, [_, inst_info] in enumerate(inst_dict.items()):
