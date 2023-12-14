@@ -887,7 +887,7 @@ class AnnotationRenderer:
             # save a more readable version of the mapper too
             _ = self._set_mapper(__value)
             return
-        if __name == "blur_radius":
+        if __name == "blur_radius" and isinstance(__value, int):
             # need to change additional settings
             if __value > 0:
                 self.__dict__["blur"] = ImageFilter.GaussianBlur(__value)
