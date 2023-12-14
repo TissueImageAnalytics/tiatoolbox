@@ -17,7 +17,7 @@ from tiatoolbox.utils.transforms import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntBounds
+    from tiatoolbox.typing import IntBounds, NumpyPadLiteral
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """
@@ -193,7 +193,7 @@ def crop_and_pad_edges(
     bounds: tuple[int, int, int, int],
     max_dimensions: tuple[int, int],
     region: np.ndarray,
-    pad_mode: str = "constant",
+    pad_mode: NumpyPadLiteral = "constant",
     pad_constant_values: int | tuple = 0,
 ) -> np.ndarray:
     """Apply padding to areas of a region which are outside max dimensions.
@@ -278,6 +278,8 @@ def crop_and_pad_edges(
     if pad_mode in ["none", None]:
         return crop
 
+    crop = np.array(crop)
+
     # Pad the region and return
     if pad_mode == "constant":
         return np.pad(crop, padding, mode=pad_mode, constant_values=pad_constant_values)
@@ -289,7 +291,7 @@ def safe_padded_read(
     bounds: IntBounds,
     stride: int | tuple[int, int] = 1,
     padding: int | tuple[int, int] = 0,
-    pad_mode: str = "constant",
+    pad_mode: NumpyPadLiteral = "constant",
     pad_constant_values: int | tuple[int, int] = 0,
     pad_kwargs: dict | None = None,
 ) -> np.ndarray:
@@ -422,7 +424,7 @@ def safe_padded_read(
         pad_width += [(0, 0)]
     # Pad the image region at the edges
     return np.pad(
-        region,
+        np.array(region),
         pad_width,
         mode=pad_mode,
         **pad_kwargs,
@@ -438,7 +440,7 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
     interpolation: str = "nearest",
     interpolation_padding: int = 2,
     read_func: Callable | None = None,
-    pad_mode: str | None = "constant",
+    pad_mode: NumpyPadLiteral = "constant",
     pad_constant_values: int | tuple[int, int] = 0,
     read_kwargs: dict | None = None,
     pad_kwargs: dict | None = None,
@@ -641,6 +643,8 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
         if not np.array_equal(region_size, valid_int_size):
             msg = "Read function returned a region of incorrect size."
             raise ValueError(msg)
+
+    region = np.array(region)
 
     # 1.5 Pad the region
     pad_width = find_padding(*bounds2locsize(read_bounds), image_size=image_size)
