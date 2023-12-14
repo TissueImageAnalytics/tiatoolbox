@@ -17,6 +17,8 @@ from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
+    from typing import Any
+
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
@@ -618,8 +620,8 @@ class AnnotationRenderer:
         function_mapper: Callable | None = None,
     ) -> None:
         """Initialize :class:`AnnotationRenderer`."""
-        self.raw_mapper = None
-        self.mapper = mapper
+        self.raw_mapper: str | dict | list | None = None
+        self.mapper = self._set_mapper(value=mapper)
         self.score_prop = score_prop
         self.score_prop_edge = score_prop_edge
         self.where = where
@@ -850,27 +852,41 @@ class AnnotationRenderer:
             thickness=3,
         )
 
+    def _set_mapper(
+        self: AnnotationRenderer,
+        value: str | list | dict | None,
+    ) -> Callable:
+        """Set the mapper."""
+        mapper = colormaps["jet"]
+        if value is None:
+            self.raw_mapper = "jet"
+        if isinstance(value, str) and value != "categorical":
+            self.raw_mapper = value
+            mapper = colormaps[value]
+        else:
+            mapper = value
+        if isinstance(value, list):
+            colors = random_colors(len(value), bright=True)
+            mapper = {key: (*color, 1) for key, color in zip(value, colors)}
+        if isinstance(value, dict):
+            self.raw_mapper = value
+            self.__dict__["mapper"] = lambda x: value[x]
+            return self.__dict__["mapper"]
+
+        self.__dict__["mapper"] = mapper
+        return mapper
+
     def __setattr__(
         self: AnnotationRenderer,
         __name: str,
         __value: str | list | dict | None,
     ) -> None:
         """Set attribute each time an attribute is set."""
+        value: Any = None
         if __name == "mapper":
             # save a more readable version of the mapper too
-            if __value is None:
-                self.raw_mapper = "jet"
-                __value = colormaps["jet"]
-            if isinstance(__value, str) and __value != "categorical":
-                self.raw_mapper = __value
-                __value = colormaps[__value]
-            if isinstance(__value, list):
-                colors = random_colors(len(__value), bright=True)
-                __value = {key: (*color, 1) for key, color in zip(__value, colors)}
-            if isinstance(__value, dict):
-                self.raw_mapper = __value
-                self.__dict__[__name] = lambda x: __value[x]
-                return
+            _ = self._set_mapper(__value)
+            return
         if __name == "blur_radius":
             # need to change additional settings
             if __value > 0:
@@ -882,7 +898,9 @@ class AnnotationRenderer:
         elif __name == "edge_thickness":
             self.__dict__["edge_thickness_old"] = __value
 
-        self.__dict__[__name] = __value
+        if value is None:
+            value = __value
+        self.__dict__[__name] = value
 
     def render_annotations(
         self: AnnotationRenderer,
