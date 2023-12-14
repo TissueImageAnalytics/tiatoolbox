@@ -857,24 +857,23 @@ class AnnotationRenderer:
         value: str | list | dict | None,
     ) -> Callable:
         """Set the mapper."""
-        mapper = colormaps["jet"]
+        self.__dict__["mapper"] = value
         if value is None:
             self.raw_mapper = "jet"
+            self.__dict__["mapper"] = colormaps["jet"]
         if isinstance(value, str) and value != "categorical":
             self.raw_mapper = value
-            mapper = colormaps[value]
-        else:
-            mapper = value
+            self.__dict__["mapper"] = colormaps[value]
         if isinstance(value, list):
             colors = random_colors(len(value), bright=True)
-            mapper = {key: (*color, 1) for key, color in zip(value, colors)}
+            self.__dict__["mapper"] = {
+                key: (*color, 1) for key, color in zip(value, colors)
+            }
         if isinstance(value, dict):
             self.raw_mapper = value
             self.__dict__["mapper"] = lambda x: value[x]
-            return self.__dict__["mapper"]
 
-        self.__dict__["mapper"] = mapper
-        return mapper
+        return self.__dict__["mapper"]
 
     def __setattr__(
         self: AnnotationRenderer,
