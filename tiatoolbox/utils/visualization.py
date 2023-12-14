@@ -17,8 +17,6 @@ from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Any
-
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
@@ -881,7 +879,6 @@ class AnnotationRenderer:
         __value: str | list | dict | None,
     ) -> None:
         """Set attribute each time an attribute is set."""
-        value: Any = None
         if __name == "mapper":
             # save a more readable version of the mapper too
             _ = self._set_mapper(__value)
@@ -897,9 +894,7 @@ class AnnotationRenderer:
         elif __name == "edge_thickness":
             self.__dict__["edge_thickness_old"] = __value
 
-        if value is None:
-            value = __value
-        self.__dict__[__name] = value
+        self.__dict__[__name] = __value
 
     def render_annotations(
         self: AnnotationRenderer,
