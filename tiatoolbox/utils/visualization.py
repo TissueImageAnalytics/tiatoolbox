@@ -940,7 +940,7 @@ class AnnotationRenderer:
         ]
 
         mpp_sf = 1
-        if self.info["mpp"]:
+        if self.info["mpp"] is not None:
             mpp_sf = np.minimum(self.info["mpp"][0] / 0.25, 1)
 
         min_area = 0.0005 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
