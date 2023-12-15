@@ -123,7 +123,19 @@ files:
     url: [ *testdata, "registration/HE_2_level8_mask.png" ]
   annotation_store_svs_1:
     url: [ *testdata, "annotation/CMU-1-Small-Region_detections.db"]
-  rendered_annotations_svs_1:
-    url: [ *testdata, "annotation/svs_1_rendered_annotations.tiff"]
+  annotation_dat_svs_1:
+    url: [ *testdata, "annotation/CMU-1-Small-Region_anns.dat"]
+  svs_1_rendered_annotations_jpg:
+    url: [ *testdata, "annotation/CMU-1-Small-Region_rendered_annotations.jpg"]
+  graph_svs_1:
+    url: [ *testdata, "annotation/CMU-1-Small-Region_detections_gr.json"]
+  graph_svs_1_feats:
+    url: [ *testdata, "annotation/CMU-1-Small-Region_gr_feats.json"]
+  geojson_cmu_1:
+    url: [ *testdata, "annotation/CMU-1.geojson"]
+  config_1:
+    url: [ *testdata, "annotation/test1_config.json"]
+  config_2:
+    url: [ *testdata, "annotation/test2_config.json"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
