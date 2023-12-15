@@ -39,12 +39,4 @@ jobs:
           tiatoolbox/__main__.py \
           tiatoolbox/typing.py \
           tiatoolbox/tiatoolbox.py \
-          tiatoolbox/utils/__init__.py \
-          tiatoolbox/utils/env_detection.py \
-          tiatoolbox/utils/exceptions.py \
-          tiatoolbox/utils/image.py \
-          tiatoolbox/utils/magic.py \
-          tiatoolbox/utils/metrics.py \
-          tiatoolbox/utils/transforms.py \
-          tiatoolbox/utils/misc.py \
-          tiatoolbox/utils/visualization.py
+          tiatoolbox/utils/*.py

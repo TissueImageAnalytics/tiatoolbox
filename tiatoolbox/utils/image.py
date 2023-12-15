@@ -708,7 +708,7 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
                 locsize2bounds((0, 0), region_size),
                 (-(interpolation_padding + residuals) * np.tile(scaling, 2)),
             ),
-        ),
+        ).astype(int),
     )
     region = region[(*trimming, ...)]
     region_size = region.shape[:2][::-1]
