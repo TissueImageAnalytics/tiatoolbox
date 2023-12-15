@@ -16,7 +16,12 @@ from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model, model_to
-from tiatoolbox.utils.misc import dict_to_store, dict_to_zarr, dict_to_zarr_wsi
+from tiatoolbox.utils.misc import (
+    dict_to_store,
+    dict_to_zarr,
+    dict_to_zarr_wsi,
+    ndarray_to_zarr,
+)
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 from .io_config import ModelIOConfigABC
@@ -573,18 +578,18 @@ class EngineABC(ABC):
             )
 
             # tolist might be very expensive
-            cum_output["probabilities"].extend(batch_output_probabilities.tolist())
-            cum_output["predictions"].extend(batch_output_predictions.tolist())
+            cum_output["probabilities"].extend(ndarray_to_zarr(batch_output_probabilities))
+            cum_output["predictions"].extend(ndarray_to_zarr(batch_output_predictions))
+
             if return_coordinates:
-                cum_output["coordinates"].extend(batch_data["coords"].tolist())
+                cum_output["coordinates"].extend(ndarray_to_zarr(batch_data["coords"]))
             if return_labels:  # be careful of `s`
                 # We do not use tolist here because label may be of mixed types
                 # and hence collated as list by torch
-                cum_output["labels"].extend(list(batch_data["label"]))
+                cum_output["labels"].extend(ndarray_to_zarr(batch_data["label"]))
 
         cum_output["label"] = img_label
         # add extra information useful for downstream analysis
-        # cum_output["pretrained_model"] = self.model REDUNDANT Remove
         cum_output["resolution"] = highest_input_resolution["resolution"]
         cum_output["units"] = highest_input_resolution["units"]
 
@@ -950,6 +955,7 @@ class EngineABC(ABC):
             data_loader = self.get_dataloader(
                 images=self.images,
                 labels=self.labels,
+                patch_mode=patch_mode,
             )
             raw_predictions = self.infer_patches(
                 data_loader=data_loader,

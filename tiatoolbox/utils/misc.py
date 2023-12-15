@@ -1180,6 +1180,31 @@ def add_from_dat(
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
 
+def patch_predictions_as_annotations(
+    preds: list,
+    keys: list,
+    class_dict: dict,
+    class_probs: list,
+    patch_coords: list,
+    classes_predicted: list,
+    labels: list,
+) -> list:
+    """Helper function to generate annotation per patch predictions."""
+    annotations = []
+    for i, pred in enumerate(preds):
+        if "probabilities" in keys:
+            props = {
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+            }
+        else:
+            props = {}
+        if "labels" in keys:
+            props["label"] = class_dict[labels[i]]
+        props["type"] = class_dict[pred]
+        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
+
+    return annotations
+
 
 def dict_to_store(
     patch_output: dict,
@@ -1241,18 +1266,15 @@ def dict_to_store(
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
 
     # put patch predictions into a store
-    annotations = []
-    for i, pred in enumerate(preds):
-        if "probabilities" in keys:
-            props = {
-                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
-            }
-        else:
-            props = {}
-        if "labels" in keys:
-            props["label"] = class_dict[labels[i]]
-        props["type"] = class_dict[pred]
-        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
+    annotations = patch_predictions_as_annotations(
+        preds,
+        keys,
+        class_dict,
+        class_probs,
+        patch_coords,
+        classes_predicted,
+        labels)
+
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
@@ -1309,6 +1331,34 @@ def dict_to_zarr(
     z[:] = predictions_array
 
     return save_path
+
+def ndarray_to_zarr(
+        raw_array: np.ndarray,
+        save_path: Path | None = None,
+        **kwargs: dict,
+    ) -> zarr.core.Array | Path :
+    """Helper function persisits numpy arrays as zarr."""
+    # Default values for Compressor and Chunks set if not received from kwargs.
+    compressor = (
+        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+    )
+    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+
+    z = zarr.create(
+        mode="w",
+        shape=raw_array.shape,
+        chunks=chunks,
+        compressor=compressor,
+    )
+    z[:] = raw_array
+
+    if save_path:
+        # ensure proper zarr extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+        zarr.save(save_path, z)
+        return save_path
+
+    return z
 
 
 def dict_to_zarr_wsi(
