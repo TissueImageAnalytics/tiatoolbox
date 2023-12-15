@@ -2377,6 +2377,7 @@ class SQLiteStore(AnnotationStore):
         cx: float,
         cy: float,
     ) -> bytes:
+        """Unpack WKB data."""
         return (
             self._decompress_data(data)
             if data

@@ -1,5 +1,50 @@
 # History
 
+## 1.5.0 (2023-12-15)
+
+### Major Updates and Feature Improvements
+
+- Adds the bokeh visualization tool. #684
+  - The tool allows a user to launch a server on their machine to visualise whole slide images, overlay the results of deep learning algorithms or to select a patch from whole slide image and run TIAToolbox deep learning engines.
+  - This tool powers the TIA demos server. For details please see https://tiademos.dcs.warwick.ac.uk/.
+- Extends Annotation to Support Init from WKB #639
+- Adds `IOConfig` for NuClick in `pretrained_model.yaml` #709
+- Adds functions to save the TIAToolbox Engine outputs to Zarr and AnnotationStore files. #724
+- Adds Support for QuPath Annotation Imports #721
+
+### Changes to API
+
+- Adds `model.to(device)` and `model.load_model_from_file()` functionality to make it compatible with PyTorch API. #733
+- Replaces `pretrained` with `weights` to make the engines compatible with the new PyTorch API. #621
+- Adds support for high-level imports for various utility functions and classes such as `WSIReader`, `PatchPredictor` and `imread` #606, #607,
+- Adds `tiatoolbox.typing` for type hints. #619
+- Fixes incorrect file size saved by `save_tiles`, issue with certain WSIs raised by @TomastpPereira
+- TissueMasker transform now returns mask instead of a list. #748
+  - Fixes #732
+
+### Bug Fixes and Other Changes
+
+- Fixes `pixman` incompability error on Colab #601
+- Removes `shapely.speedups`. The module no longer has any affect in Shapely >=2.0. #622
+- Fixes errors in the slidegraph example notebook #608
+- Fixes bugs in WSI Registration #645, #670, #693
+- Fixes the situation where PatchExtractor.get_coords() can return patch coords which lie fully outside the bounds of a slide. #712
+  - Fixes #710
+- Fixes #738 raised by @xiachenrui
+
+### Development related changes
+
+- Replaces `flake8` and `isort` with `ruff` #625, #666
+- Adds `mypy` checks to `root` and `utils` package. This will be rolled out in phases to other modules. #723
+- Adds a module to detect file types using magic number/signatures #616
+- Uses `poetry` for version updates instead of `bump2version`. #638
+- Removes `setup.cfg` and uses `pyproject.toml` for project configurations.
+- Reduces runtime for some unit tests e.g., #627, #630, #631, #629
+- Reuses models and datasets in tests on GitHub actions by utilising cache #641, #644
+- Set up parallel tests locally #671
+
+**Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v1.4.0...v1.5.0
+
 ## 1.4.1 (2023-07-25)
 
 ### Bug Fixes and Other Changes
