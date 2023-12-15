@@ -6,6 +6,8 @@ import io
 import json
 import os
 import secrets
+import sys
+import tempfile
 import urllib
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,6 +17,7 @@ from flask import Flask, Response, jsonify, make_response, request, send_file
 from flask.templating import render_template
 from matplotlib import colormaps
 from PIL import Image
+from shapely.geometry import Point
 
 from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -152,12 +155,15 @@ class TileServer(Flask):
         self.route("/tileserver/color_prop", methods=["GET"])(self.get_color_prop)
         self.route("/tileserver/slide", methods=["GET"])(self.get_slide)
         self.route("/tileserver/cmap", methods=["GET"])(self.get_mapper)
-        self.route("/tileserver/annotations/", methods=["GET"])(self.get_annotations)
+        self.route("/tileserver/annotations", methods=["GET"])(self.get_annotations)
         self.route("/tileserver/overlay", methods=["GET"])(self.get_overlay)
         self.route("/tileserver/renderer/<prop>", methods=["GET"])(self.get_renderer)
         self.route("/tileserver/secondary_cmap", methods=["GET"])(
             self.get_secondary_cmap,
         )
+        self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
+        self.route("/tileserver/prop_range", methods=["PUT"])(self.prop_range)
+        self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
 
     def _get_session_id(self: TileServer) -> str:
         """Get the session_id from the request.
@@ -282,11 +288,12 @@ class TileServer(Flask):
         """
         try:
             pyramid = self.pyramids[session_id][layer]
-            interpolation = (
-                "nearest"
-                if isinstance(self.layers[session_id][layer], VirtualWSIReader)
-                else "optimise"
-            )
+            if isinstance(self.layers[session_id][layer], VirtualWSIReader):
+                interpolation = "nearest"
+                transparent_value = 0
+            else:
+                interpolation = "optimise"
+                transparent_value = None
             if isinstance(pyramid, AnnotationTileGenerator):
                 interpolation = None
         except KeyError:
@@ -298,6 +305,7 @@ class TileServer(Flask):
                 y=y,
                 res=res,
                 interpolation=interpolation,
+                transparent_value=transparent_value,
             )
         except IndexError:
             return Response("Tile not found", status=404)
@@ -315,7 +323,7 @@ class TileServer(Flask):
 
     @staticmethod
     def decode_safe_name(name: str) -> Path:
-        """Decode a url-safe name."""
+        """Decode a URL-safe name."""
         return Path(urllib.parse.unquote(name).replace("\\", os.sep))
 
     def get_ann_layer(
@@ -403,8 +411,11 @@ class TileServer(Flask):
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""
         session_id = self._get_session_id()
-        cmap = request.form["cmap"]
-        self.renderers[session_id].mapper = json.loads(cmap)
+        cmap = json.loads(request.form["cmap"])
+        if isinstance(cmap, dict):
+            cmap = dict(zip(cmap["keys"], cmap["values"]))
+            self.renderers[session_id].score_fn = lambda x: x
+        self.renderers[session_id].mapper = cmap
         self.renderers[session_id].function_mapper = None
 
         return "done"
@@ -423,7 +434,12 @@ class TileServer(Flask):
         return "done"
 
     def update_renderer(self: TileServer, prop: str) -> str:
-        """Update a property in the renderer."""
+        """Update a property in the renderer.
+
+        Args:
+            prop (str): The property to update.
+
+        """
         session_id = self._get_session_id()
         val = request.form["val"]
         val = json.loads(val)
@@ -441,6 +457,9 @@ class TileServer(Flask):
 
         Adds to an existing store if one is already present,
         otherwise creates a new store.
+
+        Returns:
+            str: A jsonified list of types.
 
         """
         session_id = self._get_session_id()
@@ -462,6 +481,9 @@ class TileServer(Flask):
             file_path,
             np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
         )
+        tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+        sq.dump(tmp_path)
+        sq = SQLiteStore(tmp_path)
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
@@ -478,6 +500,9 @@ class TileServer(Flask):
         If the path points to some annotations, the current overlay
         is replaced with the new one. If the path points to an image,
         it is added as a new layer.
+
+        Returns:
+            str: A jsonified list of types.
 
         """
         session_id = self._get_session_id()
@@ -506,8 +531,13 @@ class TileServer(Flask):
             sq = SQLiteStore.from_geojson(overlay_path)
         elif overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
-        else:
+        if overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
+        else:
+            # make a temporary db for the new annotations
+            tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+            sq.dump(tmp_path)
+            sq = SQLiteStore(tmp_path)
 
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
@@ -530,7 +560,15 @@ class TileServer(Flask):
         return json.dumps(types)
 
     def get_properties(self: TileServer, ann_type: str) -> str:
-        """Get all the properties of the annotations in the store."""
+        """Get all the properties of the annotations in the store.
+
+        Args:
+            ann_type (str): The type of annotations to get the properties for.
+
+        Returns:
+            str: A jsonified list of the properties.
+
+        """
         session_id = self._get_session_id()
         where = None
         if ann_type != "all":
@@ -546,7 +584,15 @@ class TileServer(Flask):
         return json.dumps(list(set(props)))
 
     def get_property_values(self: TileServer, prop: str, ann_type: str) -> str:
-        """Get all the values of a property in the store."""
+        """Get all the values of a property in the store.
+
+        Args:
+            prop (str): The property to get the values of.
+            ann_type (str): The type of annotations to get the values for.
+
+        Returns:
+            str: A jsonified list of the values of the property.
+        """
         session_id = self._get_session_id()
         where = None
         if ann_type != "all":
@@ -572,7 +618,10 @@ class TileServer(Flask):
         save_path = self.decode_safe_name(save_path)
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
-                if layer.store.path.suffix == ".db":
+                if (
+                    layer.store.path.suffix == ".db"
+                    and layer.store.path.name != "temp.db"
+                ):
                     logger.info("%s*.db committed.", layer.store.path.stem)
                     layer.store.commit()
                 else:
@@ -631,3 +680,44 @@ class TileServer(Flask):
         mapper = self.renderers[session_id].secondary_cmap
         mapper["mapper"] = mapper["mapper"].__class__.__name__
         return jsonify(mapper)
+
+    def tap_query(self: TileServer, x: float, y: float) -> Response:
+        """Query for annotations at a point.
+
+        Args:
+            x (float): The x coordinate.
+            y (float): The y coordinate.
+
+        Returns:
+            Response: The jsonified dict of the properties of the
+            smallest annotation returned from the query at the point.
+
+        """
+        session_id = self._get_session_id()
+        anns = self.get_ann_layer(session_id).store.query(
+            Point(x, y),
+        )
+        if len(anns) == 0:
+            return json.dumps({})
+        return jsonify(list(anns.values())[-1].properties)
+
+    def prop_range(self: TileServer) -> str:
+        """Set the range which the color mapper will map to.
+
+        It will create an appropriate function to map the range to the
+        range [0, 1], and set the renderers score_fn to this function.
+
+        """
+        session_id = self._get_session_id()
+        prop_range = json.loads(request.form["range"])
+        if prop_range is None:
+            self.renderers[session_id].score_fn = lambda x: x
+            return "done"
+        minv, maxv = prop_range
+        self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
+        return "done"
+
+    @staticmethod
+    def shutdown() -> None:
+        """Shutdown the tileserver."""
+        sys.exit()
