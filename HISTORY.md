@@ -43,6 +43,8 @@
 - Reuses models and datasets in tests on GitHub actions by utilising cache #641, #644
 - Set up parallel tests locally #671
 
+**Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v1.4.0...v1.5.0
+
 ## 1.4.1 (2023-07-25)
 
 ### Bug Fixes and Other Changes
