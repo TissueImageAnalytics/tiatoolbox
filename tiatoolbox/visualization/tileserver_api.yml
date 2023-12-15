@@ -1,0 +1,424 @@
+openapi: 3.0.0
+info:
+  title: tiatoolbox tileserver API
+  version: 1.0.0
+  description: A simple API to get tiles from a WSI, together with rendered
+    annotations. Provides endpoints to get tiles from different layers,
+    specify the path to the resource to be displayed, and control aspects of the
+    AnnotationRenderer used to render the annotations.
+
+paths:
+  /tileserver/layer/{layer}/{session_id}/zoomify/TileGroup{tile_group}/{z}-{x}-{y}@{res}x.jpg:
+    get:
+      summary: Get zoomify tiles for a layer
+      parameters:
+        - in: path
+          name: layer
+          description: Name of the layer
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: session_id
+          description: Name of the session_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: tile_group
+          description: Number of the TileGroup
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: z
+          description: Zoom level
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: x
+          description: X coordinate of the tile
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: y
+          description: Y coordinate of the tile
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: res
+          description: Resolution of the tile (1 or 2x)
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Image returned successfully
+          content:
+            image/webp:
+              schema:
+                type: image/webp
+
+  /:
+    get:
+      summary: Get index page
+      description: This endpoint serves a web page with a simple slide viewer
+      responses:
+        '200':
+          description: The index page.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /tileserver/session_id:
+    get:
+      summary: Get session_id information
+      description: Set up new session_id identifier to disambiguate different sessions
+      responses:
+        '200':
+          description: Successful response
+          headers:
+          Set-Cookie:
+            schema:
+              type: string
+            description: The 'session_id' cookie containing the session_id identifier.
+
+  /tileserver/color_prop:
+    put:
+      summary: Update the property used to determine the colors of rendered annotations
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                prop:
+                  type: string
+                  description: JSON encoded property name to color annotations by
+      responses:
+        '200':
+          description: Successful response
+    get:
+      summary: Get the property used to color annotations from renderer.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /tileserver/slide:
+    put:
+      summary: Change the base slide. All overlays will be removed.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                slide_path:
+                  type: string
+                  description: Path to the slide in url safe form
+      responses:
+        '200':
+          description: Successful response
+    get:
+      summary: Get the slide metadata.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tileserver/cmap:
+    put:
+      summary: Change colormap for annotation layer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                cmap:
+                  type: string
+                  description: The colormap, should be a JSON encoded matplotlib colormap name or dict containing list of possible property values under "keys", and list of RGBA tuples under "values".
+      responses:
+        '200':
+          description: Successful response
+    get:
+      summary: Get the mapper used to color annotations from renderer.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tileserver/annotations:
+    put:
+      summary: Load annotations for a slide
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                file_path:
+                  type: string
+                  description: Path to the annotation file in url safe form. Can be a .db, .dat or .geojson file
+                model_mpp:
+                  type: float
+                  description: JSON encoded model microns per pixel, used if annotations are output of a model not at baseline
+      responses:
+        '200':
+          description: A jsonified list of types of loaded annotations
+          content:
+            application/json:
+    get:
+      summary: Get the annotations in the specified bounds.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                bounds:
+                  type: list
+                  description: A JSON encoded list of 4 numbers, [xmin, ymin, xmax, ymax] describing the bounds of the query
+                where:
+                  type: string
+                  description: A valid AnnotationStore filter string, json encoded
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    geom:
+                      type: string
+                    properties:
+                      type: object
+
+  /tileserver/overlay:
+    put:
+      summary: Change overlay for a slide
+      description: This endpoint changes the overlay. If the path points to some annotations, the current overlay is replaced with the new one. If the path points to an image, it is added as a new layer.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                overlay_path:
+                  type: string
+                  description: URL safe path to the new overlay image file
+      responses:
+        '200':
+          description: A jsonified list of types present in the overlay, if any
+          content:
+            application/json:
+    get:
+      summary: Get the overlay info.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+              type: string
+
+  /tileserver/commit:
+    post:
+      summary: Commit database changes
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                save_path:
+                  type: string
+                  description: URL safe path to save the database changes
+      responses:
+        '200':
+          description: Successful response
+
+  /tileserver/renderer/{prop}:
+    put:
+      summary: Update annotation renderer properties
+      parameters:
+        in: path
+        name: prop
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                val:
+                  type: string
+                  description: The JSON encoded value to set the property to
+      responses:
+        '200':
+          description: Successful response
+    get:
+      summary: Get the requested property from the renderer.
+      parameters:
+        in: path
+        name: prop
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tileserver/secondary_cmap:
+    put:
+      summary: Change secondary color map for a property type
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                type_id:
+                  type: string
+                  description: JSON encoded type for which you want to override the primary color map
+                prop:
+                  type: string
+                  description: Property to use to color annotations of the chosen type
+                cmap:
+                  type: string
+                  description: JSON encoded matplotlib colormap name or dict, to use to generate colors from property values
+      responses:
+        '200':
+          description: Successful response
+    get:
+      summary: Get the secondary cmap from the renderer.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tileserver/prop_names/{ann_type}:
+    get:
+      summary: Get all the properties of the annotations in the store
+      description: This endpoint retrieves all the property names in the annotations in the store of the specified type.
+      parameters:
+        - name: ann_type
+          in: path
+          required: true
+          description: The annotation type to filter properties by, or "all" for all types.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of annotation properties.
+          content:
+            application/json:
+              schema:
+                type: array
+
+  /tileserver/prop_values/{prop}/{ann_type}:
+    get:
+      summary: Get a list of available values for a property
+      parameters:
+        - in: path
+          name: prop
+          description: Name of the property to retrieve values for
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: type
+          description: Name of a type to retrieve property values for.
+            if all, prop values over all annotations will be returned
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  values:
+                    type: array
+                    items:
+                      type: string
+
+  /tileserver/reset/{session_id}:
+    put:
+      summary: Remove no longer needed objects if session is closed
+      parameters:
+        - in: path
+          name: session_id
+          description: Name of the session_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+
+  /tileserver/tap_query/{x}/{y}:
+    get:
+      summary: Query annotation at a point
+      parameters:
+        - name: x
+          in: path
+          description: X coordinate of the point
+          required: true
+          schema:
+            type: number
+        - name: y
+          in: path
+          description: Y coordinate of the point
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type: string
+                  description: JSONified dictionary of annotation properties
+                  example: '{"type": 0, "prob": 0.988}'

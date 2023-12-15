@@ -1,6 +1,8 @@
+"""Define wsi_registration classes and methods."""
+from __future__ import annotations
+
 import itertools
-from numbers import Number
-from typing import Dict, Tuple, Union
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -11,6 +13,7 @@ from numpy.linalg import inv
 from skimage import exposure, filters
 from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
+from torchvision.models import VGG16_Weights
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -18,8 +21,11 @@ from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
-IntBounds = Tuple[int, int, int, int]
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import IntBounds, Resolution, Units
+
+RGB_IMAGE_DIM = 3
+BIN_MASK_DIM = 2
 
 
 def _check_dims(
@@ -27,7 +33,7 @@ def _check_dims(
     moving_img: np.ndarray,
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Check the dimensionality of images and mask.
 
     This function verify the dimensionality of images and their corresponding masks.
@@ -50,18 +56,20 @@ def _check_dims(
 
     """
     if len(np.unique(fixed_mask)) == 1 or len(np.unique(moving_mask)) == 1:
-        raise ValueError("The foreground is missing in the mask.")
+        msg = "The foreground is missing in the mask."
+        raise ValueError(msg)
 
     if (
         fixed_img.shape[:2] != fixed_mask.shape
         or moving_img.shape[:2] != moving_mask.shape
     ):
-        raise ValueError("Mismatch of shape between image and its corresponding mask.")
+        msg = "Mismatch of shape between image and its corresponding mask."
+        raise ValueError(msg)
 
-    if len(fixed_img.shape) == 3:
+    if len(fixed_img.shape) == RGB_IMAGE_DIM:
         fixed_img = cv2.cvtColor(fixed_img, cv2.COLOR_BGR2GRAY)
 
-    if len(moving_img.shape) == 3:
+    if len(moving_img.shape) == RGB_IMAGE_DIM:
         moving_img = cv2.cvtColor(moving_img, cv2.COLOR_BGR2GRAY)
 
     return fixed_img, moving_img
@@ -86,7 +94,11 @@ def compute_center_of_mass(mask: np.ndarray) -> tuple:
     return (x_coord_center, y_coord_center)
 
 
-def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
+def apply_affine_transformation(
+    fixed_img: np.ndarray,
+    moving_img: np.ndarray,
+    transform_initializer: np.ndarray,
+) -> np.ndarray:
     """Apply affine transformation using OpenCV.
 
     Args:
@@ -108,7 +120,9 @@ def apply_affine_transformation(fixed_img, moving_img, transform_initializer):
 
     """
     return cv2.warpAffine(
-        moving_img, transform_initializer[0:-1][:], fixed_img.shape[:2][::-1]
+        moving_img,
+        transform_initializer[0:-1][:],
+        fixed_img.shape[:2][::-1],
     )
 
 
@@ -119,7 +133,7 @@ def prealignment(
     moving_mask: np.ndarray,
     dice_overlap: float = 0.5,
     rotation_step: int = 10,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """Coarse registration of an image pair.
 
     This function performs initial alignment of a moving image with respect to a
@@ -156,9 +170,9 @@ def prealignment(
     """
     orig_fixed_img, orig_moving_img = fixed_img, moving_img
 
-    if len(fixed_mask.shape) != 2:
+    if len(fixed_mask.shape) != BIN_MASK_DIM:
         fixed_mask = fixed_mask[:, :, 0]
-    if len(moving_mask.shape) != 2:
+    if len(moving_mask.shape) != BIN_MASK_DIM:
         moving_mask = moving_mask[:, :, 0]
 
     fixed_mask = np.uint8(fixed_mask > 0)
@@ -168,11 +182,13 @@ def prealignment(
     moving_img = np.squeeze(moving_img)
     fixed_img, moving_img = _check_dims(fixed_img, moving_img, fixed_mask, moving_mask)
 
-    if rotation_step < 10 or rotation_step > 20:
-        raise ValueError("Please select the rotation step in between 10 and 20.")
+    if rotation_step < 10 or rotation_step > 20:  # noqa: PLR2004
+        msg = "Please select the rotation step in between 10 and 20."
+        raise ValueError(msg)
 
     if dice_overlap < 0 or dice_overlap > 1:
-        raise ValueError("The dice_overlap should be in between 0 and 1.0.")
+        msg = "The dice_overlap should be in between 0 and 1.0."
+        raise ValueError(msg)
 
     fixed_img = exposure.rescale_intensity(img_as_float(fixed_img), in_range=(0, 1))
     moving_img = exposure.rescale_intensity(img_as_float(moving_img), in_range=(0, 1))
@@ -203,7 +219,7 @@ def prealignment(
             [1, 0, fixed_com[0] - moving_com[0]],
             [0, 1, fixed_com[1] - moving_com[1]],
             [0, 0, 1],
-        ]
+        ],
     )
     origin_transform_com_ = [[1, 0, -fixed_com[0]], [0, 1, -fixed_com[1]], [0, 0, 1]]
     origin_transform_com = [[1, 0, fixed_com[0]], [0, 1, fixed_com[1]], [0, 0, 1]]
@@ -217,14 +233,17 @@ def prealignment(
 
         transform = np.matmul(
             np.matmul(
-                np.matmul(origin_transform_com, rotation_matrix), origin_transform_com_
+                np.matmul(origin_transform_com, rotation_matrix),
+                origin_transform_com_,
             ),
             com_transform,
         )
 
         # Apply transformation
         warped_moving_mask = cv2.warpAffine(
-            moving_mask, transform[0:-1][:], fixed_img.shape[:2][::-1]
+            moving_mask,
+            transform[0:-1][:],
+            fixed_img.shape[:2][::-1],
         )
         dice_com = dice(fixed_mask, warped_moving_mask)
 
@@ -237,7 +256,9 @@ def prealignment(
 
         # Apply transformation to both image and mask
         moving_img = apply_affine_transformation(
-            orig_fixed_img, orig_moving_img, pre_transform
+            orig_fixed_img,
+            orig_moving_img,
+            pre_transform,
         )
         moving_mask = apply_affine_transformation(fixed_img, moving_mask, pre_transform)
 
@@ -247,12 +268,14 @@ def prealignment(
         "Not able to find the best transformation for pre-alignment. "
         "Try changing the values for 'dice_overlap' and 'rotation_step'.",
     )
-    return np.eye(3), moving_img, moving_mask, dice_before
+    return np.eye(3), orig_moving_img, moving_mask, dice_before
 
 
 def match_histograms(
-    image_a: np.ndarray, image_b: np.ndarray, kernel_size: int = 7
-) -> Tuple[np.ndarray, np.ndarray]:
+    image_a: np.ndarray,
+    image_b: np.ndarray,
+    kernel_size: int = 7,
+) -> tuple[np.ndarray, np.ndarray]:
     """Image normalization function.
 
     This function performs histogram equalization to unify the
@@ -279,12 +302,14 @@ def match_histograms(
 
     """
     image_a, image_b = np.squeeze(image_a), np.squeeze(image_b)
-    if len(image_a.shape) == 3 or len(image_b.shape) == 3:
-        raise ValueError("The input images should be grayscale images.")
+    if len(image_a.shape) == RGB_IMAGE_DIM or len(image_b.shape) == RGB_IMAGE_DIM:
+        msg = "The input images should be grayscale images."
+        raise ValueError(msg)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
     entropy_a, entropy_b = filters.rank.entropy(image_a, kernel), filters.rank.entropy(
-        image_b, kernel
+        image_b,
+        kernel,
     )
     if np.mean(entropy_a) > np.mean(entropy_b):
         image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)
@@ -303,24 +328,23 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self):
+    def __init__(self: torch.nn.Module) -> None:
+        """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
         self.features: dict = dict.fromkeys(output_layers_key, None)
         self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
-            pretrained=True
+            weights=VGG16_Weights.IMAGENET1K_V1,
         ).features
-        self.f_hooks = []
-
-        for i, l in enumerate(output_layers_id):
-            self.f_hooks.append(
-                getattr(self.pretrained, l).register_forward_hook(
-                    self.forward_hook(output_layers_key[i])
-                )
+        self.f_hooks = [
+            getattr(self.pretrained, layer).register_forward_hook(
+                self.forward_hook(output_layers_key[i]),
             )
+            for i, layer in enumerate(output_layers_id)
+        ]
 
-    def forward_hook(self, layer_name: str) -> None:
+    def forward_hook(self: torch.nn.Module, layer_name: str) -> None:
         """Register a hook.
 
         Args:
@@ -334,7 +358,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         def hook(
             _module: torch.nn.MaxPool2d,
-            _module_input: Tuple[torch.Tensor],
+            _module_input: tuple[torch.Tensor],
             module_output: torch.Tensor,
         ) -> None:
             """Forward hook for feature extraction.
@@ -355,7 +379,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self: torch.nn.Module, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -402,15 +426,18 @@ class DFBRegister:
 
     """
 
-    def __init__(self, patch_size: Tuple[int, int] = (224, 224)):
+    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
+        """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale, self.y_scale = [], []
         self.feature_extractor = DFBRFeatureExtractor()
 
     # Make this function private when full pipeline is implemented.
     def extract_features(
-        self, fixed_img: np.ndarray, moving_img: np.ndarray
-    ) -> Dict[str, torch.Tensor]:
+        self: DFBRegister,
+        fixed_img: np.ndarray,
+        moving_img: np.ndarray,
+    ) -> dict[str, torch.Tensor]:
         """CNN based feature extraction for registration.
 
         This function extracts multiscale features from a pre-trained
@@ -431,10 +458,14 @@ class DFBRegister:
         self.x_scale = 1.0 * np.array(fixed_img.shape[:2]) / self.patch_size
         self.y_scale = 1.0 * np.array(moving_img.shape[:2]) / self.patch_size
         fixed_cnn = imresize(
-            fixed_img, output_size=self.patch_size, interpolation="linear"
+            fixed_img,
+            output_size=self.patch_size,
+            interpolation="linear",
         )
         moving_cnn = imresize(
-            moving_img, output_size=self.patch_size, interpolation="linear"
+            moving_img,
+            output_size=self.patch_size,
+            interpolation="linear",
         )
 
         fixed_cnn = fixed_cnn / 255.0
@@ -451,7 +482,7 @@ class DFBRegister:
         return self.feature_extractor(x)
 
     @staticmethod
-    def finding_match(feature_dist: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def finding_match(feature_dist: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Computes matching points.
 
         This function computes all the possible matching points
@@ -476,12 +507,14 @@ class DFBRegister:
         masked = np.ma.masked_array(feature_dist, mask)
         second_min = np.amin(masked, axis=1)
         return np.array([seq, ind_first_min]).transpose(), np.array(
-            second_min / first_min
+            second_min / first_min,
         )
 
     @staticmethod
     def compute_feature_distances(
-        features_x: np.ndarray, features_y: np.ndarray, factor: int
+        features_x: np.ndarray,
+        features_y: np.ndarray,
+        factor: int,
     ) -> np.ndarray:
         """Compute feature distance.
 
@@ -505,7 +538,9 @@ class DFBRegister:
         feature_distance = np.linalg.norm(
             np.repeat(np.expand_dims(features_x, axis=0), features_y.shape[0], axis=0)
             - np.repeat(
-                np.expand_dims(features_y, axis=1), features_x.shape[0], axis=1
+                np.expand_dims(features_y, axis=1),
+                features_x.shape[0],
+                axis=1,
             ),
             axis=len(features_x.shape),
         )
@@ -518,16 +553,22 @@ class DFBRegister:
             np.ones([factor, factor], dtype="int32"),
         )
         row_ind = np.repeat(
-            feature_grid.reshape([ref_feature_size, 1]), ref_feature_size, axis=1
+            feature_grid.reshape([ref_feature_size, 1]),
+            ref_feature_size,
+            axis=1,
         )
         col_ind = np.repeat(
-            feature_grid.reshape([1, ref_feature_size]), ref_feature_size, axis=0
+            feature_grid.reshape([1, ref_feature_size]),
+            ref_feature_size,
+            axis=0,
         )
         return feature_distance[row_ind, col_ind]
 
     def feature_mapping(
-        self, features: Dict[str, torch.Tensor], num_matching_points: int = 128
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        self: DFBRegister,
+        features: dict[str, torch.Tensor],
+        num_matching_points: int = 128,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find mapping between CNN features.
 
         This function maps features of a fixed image to that of
@@ -550,8 +591,9 @@ class DFBRegister:
                   quality of each matching point.
 
         """
-        if len(features) != 3:
-            raise ValueError("The feature mapping step expects 3 blocks of features.")
+        if len(features) != 3:  # noqa: PLR2004
+            msg = "The feature mapping step expects 3 blocks of features."
+            raise ValueError(msg)
 
         pool3_feat = features["block3_pool"].detach().numpy()
         pool4_feat = features["block4_pool"].detach().numpy()
@@ -619,7 +661,8 @@ class DFBRegister:
 
     @staticmethod
     def estimate_affine_transform(
-        points_0: np.ndarray, points_1: np.ndarray
+        points_0: np.ndarray,
+        points_1: np.ndarray,
     ) -> np.ndarray:
         """Compute affine transformation matrix.
 
@@ -653,7 +696,7 @@ class DFBRegister:
         fixed_mask: np.ndarray,
         moving_image: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> Tuple[np.array, np.array, np.array, np.array, IntBounds]:
+    ) -> tuple[np.array, np.array, np.array, np.array, IntBounds]:
         """Extract tissue region.
 
         This function uses binary mask for extracting tissue
@@ -741,17 +784,19 @@ class DFBRegister:
         end_x_y = points[:, 0:2] + 1
         bbox_coord = np.c_[points, end_x_y].astype(int)
         return PatchExtractor.filter_coordinates(
-            mask_reader, bbox_coord, mask.shape[::-1]
+            mask_reader,
+            bbox_coord,
+            mask.shape[::-1],
         )
 
     def filtering_matching_points(
-        self,
+        self: DFBRegister,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
         fixed_matched_points: np.ndarray,
         moving_matched_points: np.ndarray,
         quality: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Filter the matching points.
 
         This function removes the duplicated points and the points
@@ -777,7 +822,8 @@ class DFBRegister:
 
         """
         included_index = self.find_points_inside_boundary(
-            fixed_mask, fixed_matched_points
+            fixed_mask,
+            fixed_matched_points,
         )
         fixed_matched_points, moving_matched_points, quality = (
             fixed_matched_points[included_index, :],
@@ -785,7 +831,8 @@ class DFBRegister:
             quality[included_index],
         )
         included_index = self.find_points_inside_boundary(
-            moving_mask, moving_matched_points
+            moving_mask,
+            moving_matched_points,
         )
         fixed_matched_points, moving_matched_points, quality = (
             fixed_matched_points[included_index, :],
@@ -799,7 +846,7 @@ class DFBRegister:
         repeated_points = unq[count > 1]
         for repeated_point in repeated_points:
             repeated_idx = np.argwhere(
-                np.all(fixed_matched_points == repeated_point, axis=1)
+                np.all(fixed_matched_points == repeated_point, axis=1),
             )
             duplicate_ind = np.hstack([duplicate_ind, repeated_idx.ravel()])
 
@@ -807,29 +854,33 @@ class DFBRegister:
         repeated_points = unq[count > 1]
         for repeated_point in repeated_points:
             repeated_idx = np.argwhere(
-                np.all(moving_matched_points == repeated_point, axis=1)
+                np.all(moving_matched_points == repeated_point, axis=1),
             )
             duplicate_ind = np.hstack([duplicate_ind, repeated_idx.ravel()])
 
         if len(duplicate_ind) > 0:
             duplicate_ind = duplicate_ind.astype(int)
             fixed_matched_points = np.delete(
-                fixed_matched_points, duplicate_ind, axis=0
+                fixed_matched_points,
+                duplicate_ind,
+                axis=0,
             )
             moving_matched_points = np.delete(
-                moving_matched_points, duplicate_ind, axis=0
+                moving_matched_points,
+                duplicate_ind,
+                axis=0,
             )
             quality = np.delete(quality, duplicate_ind)
 
         return fixed_matched_points, moving_matched_points, quality
 
     def perform_dfbregister(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Perform DFBR to align a pair of image.
 
         This function aligns a pair of images using Deep
@@ -854,7 +905,7 @@ class DFBRegister:
         """
         features = self.extract_features(fixed_img, moving_img)
         fixed_matched_points, moving_matched_points, quality = self.feature_mapping(
-            features
+            features,
         )
 
         (
@@ -870,26 +921,31 @@ class DFBRegister:
         )
 
         tissue_transform = DFBRegister.estimate_affine_transform(
-            fixed_matched_points, moving_matched_points
+            fixed_matched_points,
+            moving_matched_points,
         )
 
         # Apply transformation
         moving_img = apply_affine_transformation(
-            fixed_img, moving_img, tissue_transform
+            fixed_img,
+            moving_img,
+            tissue_transform,
         )
         moving_mask = apply_affine_transformation(
-            fixed_img, moving_mask, tissue_transform
+            fixed_img,
+            moving_mask,
+            tissue_transform,
         )
 
         return tissue_transform, moving_img, moving_mask
 
     def perform_dfbregister_block_wise(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Perform DFBR to align a pair of images in a block wise manner.
 
         This function divides the images into four equal parts and then
@@ -948,10 +1004,14 @@ class DFBRegister:
         fixed_matched_points, moving_matched_points, quality = [], [], []
         for _index, bounding_box in enumerate(blocks_bounding_box):
             fixed_block = fixed_img[
-                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
+                bounding_box[0] : bounding_box[1],
+                bounding_box[2] : bounding_box[3],
+                :,
             ]
             moving_block = moving_img[
-                bounding_box[0] : bounding_box[1], bounding_box[2] : bounding_box[3], :
+                bounding_box[0] : bounding_box[1],
+                bounding_box[2] : bounding_box[3],
+                :,
             ]
             features = self.extract_features(fixed_block, moving_block)
             (
@@ -959,11 +1019,12 @@ class DFBRegister:
                 moving_block_matched_points,
                 block_quality,
             ) = self.feature_mapping(features)
+            bounding_box_2_0 = [bounding_box[2], bounding_box[0]]
             fixed_matched_points.append(
-                fixed_block_matched_points + [bounding_box[2], bounding_box[0]]
+                fixed_block_matched_points + bounding_box_2_0,
             )
             moving_matched_points.append(
-                moving_block_matched_points + [bounding_box[2], bounding_box[0]]
+                moving_block_matched_points + bounding_box_2_0,
             )
             quality.append(block_quality)
         fixed_matched_points, moving_matched_points, quality = (
@@ -984,24 +1045,27 @@ class DFBRegister:
         )
 
         block_transform = DFBRegister.estimate_affine_transform(
-            fixed_matched_points, moving_matched_points
+            fixed_matched_points,
+            moving_matched_points,
         )
 
         # Apply transformation
         moving_img = apply_affine_transformation(fixed_img, moving_img, block_transform)
         moving_mask = apply_affine_transformation(
-            fixed_img, moving_mask, block_transform
+            fixed_img,
+            moving_mask,
+            block_transform,
         )
 
         return block_transform, moving_img, moving_mask
 
     def register(
-        self,
+        self: DFBRegister,
         fixed_img: np.ndarray,
         moving_img: np.ndarray,
         fixed_mask: np.ndarray,
         moving_mask: np.ndarray,
-        transform_initializer: np.ndarray = None,
+        transform_initializer: np.ndarray | None = None,
     ) -> np.ndarray:
         """Perform whole slide image registration.
 
@@ -1025,17 +1089,22 @@ class DFBRegister:
                 An affine transformation matrix.
 
         """
-        if len(fixed_img.shape) != 3 or len(moving_img.shape) != 3:
+        if (
+            len(fixed_img.shape) != RGB_IMAGE_DIM
+            or len(moving_img.shape) != RGB_IMAGE_DIM
+        ):
+            msg = "The required shape for fixed and moving images is n x m x 3."
             raise ValueError(
-                "The required shape for fixed and moving images is n x m x 3."
+                msg,
             )
 
-        if fixed_img.shape[2] != 3 or moving_img.shape[2] != 3:
-            raise ValueError("The input images are expected to have 3 channels.")
+        if fixed_img.shape[2] != RGB_IMAGE_DIM or moving_img.shape[2] != RGB_IMAGE_DIM:
+            msg = "The input images are expected to have 3 channels."
+            raise ValueError(msg)
 
-        if len(fixed_mask.shape) > 2:
+        if len(fixed_mask.shape) > BIN_MASK_DIM:
             fixed_mask = fixed_mask[:, :, 0]
-        if len(moving_mask.shape) > 2:
+        if len(moving_mask.shape) > BIN_MASK_DIM:
             moving_mask = moving_mask[:, :, 0]
 
         fixed_mask = np.uint8(fixed_mask > 0)
@@ -1044,15 +1113,22 @@ class DFBRegister:
         # Perform Pre-alignment
         if transform_initializer is None:
             transform_initializer, moving_img, moving_mask, before_dice = prealignment(
-                fixed_img, moving_img, fixed_mask, moving_mask
+                fixed_img,
+                moving_img,
+                fixed_mask,
+                moving_mask,
             )
         else:
             # Apply transformation to both image and mask
             moving_img = apply_affine_transformation(
-                fixed_img, moving_img, transform_initializer
+                fixed_img,
+                moving_img,
+                transform_initializer,
             )
             moving_mask = apply_affine_transformation(
-                fixed_img, moving_mask, transform_initializer
+                fixed_img,
+                moving_mask,
+                transform_initializer,
             )
 
             before_dice = dice(fixed_mask, moving_mask)
@@ -1070,7 +1146,10 @@ class DFBRegister:
             transform_tissue_img,
             transform_tissue_mask,
         ) = self.perform_dfbregister(
-            fixed_tissue_img, moving_tissue_img, fixed_tissue_mask, moving_tissue_mask
+            fixed_tissue_img,
+            moving_tissue_img,
+            fixed_tissue_mask,
+            moving_tissue_mask,
         )
 
         # Use the estimated transform only if it improves DICE overlap
@@ -1090,7 +1169,10 @@ class DFBRegister:
             transform_tissue_img,
             transform_tissue_mask,
         ) = self.perform_dfbregister_block_wise(
-            fixed_tissue_img, moving_tissue_img, fixed_tissue_mask, moving_tissue_mask
+            fixed_tissue_img,
+            moving_tissue_img,
+            fixed_tissue_mask,
+            moving_tissue_mask,
         )
 
         # Use the estimated tissue transform only if it improves DICE overlap
@@ -1106,9 +1188,21 @@ class DFBRegister:
 
         # Fix translation offset
         shift, _error, _diff_phase = phase_cross_correlation(
-            fixed_tissue_img, moving_tissue_img
+            fixed_tissue_img,
+            moving_tissue_img,
         )
         translation_offset = np.array([[1, 0, shift[1]], [0, 1, shift[0]], [0, 0, 1]])
+        transform_tissue_mask = apply_affine_transformation(
+            fixed_tissue_mask,
+            moving_tissue_mask,
+            translation_offset,
+        )
+
+        # Use the estimated phase cross correlation transform
+        # only if it improves DICE overlap
+        after_dice = dice(fixed_tissue_mask, transform_tissue_mask)
+        if after_dice < before_dice:
+            translation_offset = np.eye(3, 3)
 
         # Combining tissue and block transform
         tissue_transform = translation_offset @ block_transform @ tissue_transform
@@ -1121,14 +1215,14 @@ class DFBRegister:
                 [1, 0, -tissue_top_left_coord[1]],
                 [0, 1, -tissue_top_left_coord[0]],
                 [0, 0, 1],
-            ]
+            ],
         )
         inverse_translation = np.array(
             [
                 [1, 0, tissue_top_left_coord[1]],
                 [0, 1, tissue_top_left_coord[0]],
                 [0, 0, 1],
-            ]
+            ],
         )
         image_transform = inverse_translation @ tissue_transform @ forward_translation
 
@@ -1140,7 +1234,7 @@ def estimate_bspline_transform(
     moving_image: np.ndarray,
     fixed_mask: np.ndarray,
     moving_mask: np.ndarray,
-    **kwargs,
+    **kwargs: dict,
 ) -> sitk.BSplineTransform:
     """Estimate B-spline transformation.
 
@@ -1213,21 +1307,30 @@ def estimate_bspline_transform(
     bspline_params.update(kwargs)
 
     fixed_image, moving_image = np.squeeze(fixed_image), np.squeeze(moving_image)
-    if len(fixed_image.shape) > 3 or len(moving_image.shape) > 3:
-        raise ValueError("The input images can only be grayscale or RGB images.")
-
-    if (len(fixed_image.shape) == 3 and fixed_image.shape[2] != 3) or (
-        len(moving_image.shape) == 3 and moving_image.shape[2] != 3
+    if (
+        len(fixed_image.shape) > RGB_IMAGE_DIM
+        or len(moving_image.shape) > RGB_IMAGE_DIM
     ):
-        raise ValueError("The input images can only have 3 channels.")
+        msg = "The input images can only be grayscale or RGB images."
+        raise ValueError(msg)
+
+    if (
+        len(fixed_image.shape) == RGB_IMAGE_DIM
+        and fixed_image.shape[2] != RGB_IMAGE_DIM
+    ) or (
+        len(moving_image.shape) == RGB_IMAGE_DIM
+        and moving_image.shape[2] != RGB_IMAGE_DIM
+    ):
+        msg = "The input images can only have 3 channels."
+        raise ValueError(msg)
 
     # Inverting intensity values
     fixed_image_inv = np.invert(fixed_image)
     moving_image_inv = np.invert(moving_image)
 
-    if len(fixed_mask.shape) > 2:
+    if len(fixed_mask.shape) > BIN_MASK_DIM:
         fixed_mask = fixed_mask[:, :, 0]
-    if len(moving_mask.shape) > 2:
+    if len(moving_mask.shape) > BIN_MASK_DIM:
         moving_mask = moving_mask[:, :, 0]
     fixed_mask = np.array(fixed_mask != 0, dtype=np.uint8)
     moving_mask = np.array(moving_mask != 0, dtype=np.uint8)
@@ -1235,7 +1338,9 @@ def estimate_bspline_transform(
     # Background Removal
     fixed_image_inv = cv2.bitwise_and(fixed_image_inv, fixed_image_inv, mask=fixed_mask)
     moving_image_inv = cv2.bitwise_and(
-        moving_image_inv, moving_image_inv, mask=moving_mask
+        moving_image_inv,
+        moving_image_inv,
+        mask=moving_mask,
     )
 
     # Getting SimpleITK Images from numpy arrays
@@ -1249,12 +1354,13 @@ def estimate_bspline_transform(
 
     # Determine the number of B-spline control points using physical spacing
     grid_physical_spacing = 2 * [
-        bspline_params["grid_space"]
+        bspline_params["grid_space"],
     ]  # A control point every grid_space (mm)
     image_physical_size = [
         size * spacing
         for size, spacing in zip(
-            fixed_image_inv_sitk.GetSize(), fixed_image_inv_sitk.GetSpacing()
+            fixed_image_inv_sitk.GetSize(),
+            fixed_image_inv_sitk.GetSpacing(),
         )
     ]
     mesh_size = [
@@ -1264,18 +1370,22 @@ def estimate_bspline_transform(
     mesh_size = [int(sz / 4 + 0.5) for sz in mesh_size]
 
     tx = sitk.BSplineTransformInitializer(
-        image1=fixed_image_inv_sitk, transformDomainMeshSize=mesh_size
+        image1=fixed_image_inv_sitk,
+        transformDomainMeshSize=mesh_size,
     )
-    print("Initial Number of B-spline Parameters:", tx.GetNumberOfParameters)
+    logger.info("Initial Number of B-spline Parameters: %d", tx.GetNumberOfParameters())
 
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetInitialTransformAsBSpline(
-        tx, inPlace=True, scaleFactors=bspline_params["scale_factors"]
+        tx,
+        inPlace=True,
+        scaleFactors=bspline_params["scale_factors"],
     )
     registration_method.SetMetricAsMattesMutualInformation(50)
     registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
     registration_method.SetMetricSamplingPercentage(
-        bspline_params["sampling_percent"], sitk.sitkWallClock
+        bspline_params["sampling_percent"],
+        sitk.sitkWallClock,
     )
 
     registration_method.SetShrinkFactorsPerLevel(bspline_params["shrink_factor"])
@@ -1291,7 +1401,9 @@ def estimate_bspline_transform(
 
 
 def apply_bspline_transform(
-    fixed_image: np.ndarray, moving_image: np.ndarray, transform: sitk.BSplineTransform
+    fixed_image: np.ndarray,
+    moving_image: np.ndarray,
+    transform: sitk.BSplineTransform,
 ) -> np.ndarray:
     """Apply the given B-spline transform to a moving image.
 
@@ -1339,7 +1451,11 @@ class AffineWSITransformer:
 
     """
 
-    def __init__(self, reader: WSIReader, transform: np.ndarray) -> None:
+    def __init__(
+        self: AffineWSITransformer,
+        reader: WSIReader,
+        transform: np.ndarray,
+    ) -> None:
         """Initialize object.
 
         Args:
@@ -1374,8 +1490,10 @@ class AffineWSITransformer:
         return points_warp[:, :-1]
 
     def get_patch_dimensions(
-        self, size: Tuple[int, int], transform: np.ndarray
-    ) -> Tuple[int, int]:
+        self: AffineWSITransformer,
+        size: tuple[int, int],
+        transform: np.ndarray,
+    ) -> tuple[int, int]:
         """Compute patch size needed for transformation.
 
         Args:
@@ -1409,6 +1527,7 @@ class AffineWSITransformer:
         y = np.array(list(itertools.chain.from_iterable(y)))
 
         points = np.array([x, y]).transpose()
+        transform = transform * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]  # remove translation
         transform_points = self.transform_points(points, transform)
 
         width = np.max(transform_points[:, 0]) - np.min(transform_points[:, 0]) + 1
@@ -1418,8 +1537,11 @@ class AffineWSITransformer:
         return (width, height)
 
     def get_transformed_location(
-        self, location: Tuple[int, int], size: Tuple[int, int], level: int
-    ) -> Tuple[int, int]:
+        self: AffineWSITransformer,
+        location: tuple[int, int],
+        size: tuple[int, int],
+        level: int,
+    ) -> tuple[int, int]:
         """Get corresponding location on unregistered image and the required patch size.
 
         This function applies inverse transformation to the centre point of the region.
@@ -1461,7 +1583,11 @@ class AffineWSITransformer:
         )
         return transformed_location, transformed_size
 
-    def transform_patch(self, patch: np.ndarray, size: Tuple[int, int]) -> np.ndarray:
+    def transform_patch(
+        self: AffineWSITransformer,
+        patch: np.ndarray,
+        size: tuple[int, int],
+    ) -> np.ndarray:
         """Apply transformation to the given patch.
 
         This function applies the transformation matrix after removing the translation.
@@ -1480,18 +1606,18 @@ class AffineWSITransformer:
         transform = self.transform_level0 * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]
         translation = (-size[0] / 2 + 0.5, -size[1] / 2 + 0.5)
         forward_translation = np.array(
-            [[1, 0, translation[0]], [0, 1, translation[1]], [0, 0, 1]]
+            [[1, 0, translation[0]], [0, 1, translation[1]], [0, 0, 1]],
         )
         inverse_translation = np.linalg.inv(forward_translation)
         transform = inverse_translation @ transform @ forward_translation
         return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
 
     def read_rect(
-        self,
-        location: Tuple[int, int],
-        size: Tuple[int, int],
+        self: AffineWSITransformer,
+        location: tuple[int, int],
+        size: tuple[int, int],
         resolution: Resolution,
-        units: str,
+        units: Units,
     ) -> np.ndarray:
         """Read a transformed region of the transformed whole slide image.
 
@@ -1504,10 +1630,10 @@ class AffineWSITransformer:
                 reference frame.
             size (tuple(int)):
                 (width, height) tuple giving the desired output image size.
-            resolution (float or tuple(float)):
-                Pyramid level/resolution layer.
-            units (str):
-                Units of the scale.
+            resolution (Resolution):
+                Resolution used for reading the image.
+            units (Units):
+                Units of resolution used for reading the image.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -1516,9 +1642,9 @@ class AffineWSITransformer:
         """
         (
             read_level,
-            _,
-            _,
-            _post_read_scale,
+            _level_location,
+            level_size,
+            post_read_scale,
             _baseline_read_size,
         ) = self.wsi_reader.find_read_rect_params(
             location=location,
@@ -1527,15 +1653,29 @@ class AffineWSITransformer:
             units=units,
         )
         transformed_location, max_size = self.get_transformed_location(
-            location, size, read_level
+            location,
+            level_size,
+            read_level,
         )
-        patch = self.wsi_reader.read_rect(
-            transformed_location, max_size, resolution=resolution, units=units
-        )
+
+        # Read at optimal level and corrected read size
+        patch = self.wsi_reader.read_region(transformed_location, read_level, max_size)
+        patch = np.array(patch)
+
+        # Apply transformation
         transformed_patch = self.transform_patch(patch, max_size)
 
-        start_row = int(max_size[1] / 2) - int(size[1] / 2)
-        end_row = int(max_size[1] / 2) + int(size[1] / 2)
-        start_col = int(max_size[0] / 2) - int(size[0] / 2)
-        end_col = int(max_size[0] / 2) + int(size[0] / 2)
-        return transformed_patch[start_row:end_row, start_col:end_col, :]
+        # Crop to get rid of black borders due to rotation
+        start_row = int(max_size[1] / 2) - int(level_size[1] / 2)
+        end_row = int(max_size[1] / 2) + int(level_size[1] / 2)
+        start_col = int(max_size[0] / 2) - int(level_size[0] / 2)
+        end_col = int(max_size[0] / 2) + int(level_size[0] / 2)
+        transformed_patch = transformed_patch[start_row:end_row, start_col:end_col, :]
+
+        # Resize to desired size
+        return imresize(
+            img=transformed_patch,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation="optimise",
+        )

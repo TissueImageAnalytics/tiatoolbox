@@ -29,20 +29,28 @@
   <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/pip-install.yml">
     <img src="https://img.shields.io/pypi/pyversions/tiatoolbox.svg"  alt="Supported Python versions"/>
   </a>
- <a href="https://github.com/psf/black">
-      <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style black"/>
-    </a>
-  <a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml">
+<br>
+<a href="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml">
     <img src="https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml/badge.svg"  alt="GitHub Workflow passing"/>
   </a>
   <a href="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox">
       <img src="https://codecov.io/gh/TissueImageAnalytics/tiatoolbox/branch/master/graph/badge.svg?token=7UZEMacQHm" alt="Code Coverage"/>
   </a>
+<br>
+<br>
+ <a href="https://github.com/psf/black">
+      <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style black"/>
+    </a>
+<a href="https://github.com/astral-sh/ruff">
+      <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Code Style black"/>
+    </a>
   <br><br>
   <a href="#cite-this-repository"><img src="https://img.shields.io/badge/Cite%20this%20repository-BibTeX-brightgreen" alt="DOI"></a> <a href="https://doi.org/10.1038/s43856-022-00186-5"><img src="https://img.shields.io/badge/DOI-10.1038%2Fs43856--022--00186--5-blue" alt="DOI"></a>
 <br>
 
 ## Getting Started
+
+TIAToolbox is a computational pathology toolbox developed by TIA Centre that provides an end-to-end API for pathology image analysis using best practices. It is based on **[PyTorch](https://pytorch.org/)**, a popular deep learning framework that enables efficient and flexible implementation of state-of-the-art algorithms. TIAToolbox supports many features through a command-line interface and can integrate with standard PyTorch modules. It also offers tools for data loading, pre-processing, model inference, post-processing, and visualization. Whether you are a computational, biomedical, or clinical researcher, TIAToolbox can help you get started in digital pathology with minimal effort.
 
 ### All Users
 

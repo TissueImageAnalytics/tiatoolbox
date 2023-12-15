@@ -1,8 +1,7 @@
-"""Tests for toolbox global workspace."""
+"""Test for toolbox global workspace."""
 
 import importlib
 import logging
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,31 +12,31 @@ import tiatoolbox
 from tiatoolbox import DuplicateFilter, logger
 
 
-def test_set_root_dir():
+def test_set_root_dir(tmp_path: Path) -> None:
     """Test for setting new root dir."""
     # skipcq
     importlib.reload(tiatoolbox)
     from tiatoolbox import rcParam
 
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
-    test_dir_path = os.path.join(os.getcwd(), "tmp_check/")
+    test_dir_path = tmp_path / "tmp_check"
     # clean up previous test
-    if os.path.exists(test_dir_path):
-        os.rmdir(test_dir_path)
+    if Path.exists(test_dir_path):
+        Path.rmdir(test_dir_path)
     rcParam["TIATOOLBOX_HOME"] = test_dir_path
     # reimport to see if it overwrites
     # silence Deep Source because this is an intentional check
     # skipcq
     from tiatoolbox import rcParam
 
-    os.makedirs(rcParam["TIATOOLBOX_HOME"])
-    if not os.path.exists(test_dir_path):
+    rcParam["TIATOOLBOX_HOME"].mkdir(parents=True)
+    if not Path.exists(test_dir_path):
         pytest.fail(f"`{rcParam['TIATOOLBOX_HOME']}` != `{test_dir_path}`")
     shutil.rmtree(rcParam["TIATOOLBOX_HOME"], ignore_errors=True)
     rcParam["TIATOOLBOX_HOME"] = old_root_dir  # reassign for subsequent test
 
 
-def test_set_logger():
+def test_set_logger() -> None:
     """Test for setting new logger."""
     logger = logging.getLogger()
     logger.handlers = []  # reset first to overwrite import
@@ -58,7 +57,7 @@ def test_set_logger():
     assert len(logger.handlers) == 2
 
 
-def helper_logger_test(level: str):
+def helper_logger_test(level: str) -> None:
     """Helper for logger tests."""
     if level.lower() in ["debug", "info"]:
         output = "out"
@@ -74,7 +73,7 @@ def helper_logger_test(level: str):
     )
 
     proc = subprocess.Popen(
-        [
+        [  # noqa: S603, S607
             "python",
             "-c",
             run_statement,
@@ -90,8 +89,8 @@ def helper_logger_test(level: str):
     assert proc.communicate()[order[1]] == b""
 
 
-def test_logger_output():
-    """Tests if logger is writing output to correct value."""
+def test_logger_output() -> None:
+    """Test if logger is writing output to correct value."""
     # Test DEBUG is written to stdout
     helper_logger_test(level="debug")
 
@@ -108,8 +107,8 @@ def test_logger_output():
     helper_logger_test(level="critical")
 
 
-def test_duplicate_filter(caplog):
-    """Tests DuplicateFilter for warnings."""
+def test_duplicate_filter(caplog: pytest.LogCaptureFixture) -> None:
+    """Test DuplicateFilter for warnings."""
     for _ in range(2):
         logger.warning("Test duplicate filter warnings.")
     assert "Test duplicate filter warnings." in caplog.text
@@ -126,7 +125,8 @@ def test_duplicate_filter(caplog):
     assert "\n" not in caplog.text[:-2]
 
 
-def test_lazy_import():
+def test_lazy_import() -> None:
+    """Test lazy import for tiatoolbox."""
     import sys
 
     from tiatoolbox import _lazy_import
@@ -139,3 +139,14 @@ def test_lazy_import():
     )
 
     assert "exceptions" in sys.modules
+
+
+def test_lazy_import_module_not_found() -> None:
+    """'Test lazy import for ModuleNotFoundError."""
+    from tiatoolbox import _lazy_import
+
+    with pytest.raises(ModuleNotFoundError):
+        _lazy_import(
+            "nonexistent_module",
+            Path(__file__).parent.parent / "tiatoolbox",
+        )

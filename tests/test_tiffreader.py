@@ -1,13 +1,18 @@
+"""Test TIFFWSIReader."""
+from typing import Callable
+
 import pytest
 from defusedxml import ElementTree
 
-from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.wsicore import wsireader
 
 
-def test_ome_missing_instrument_ref(monkeypatch):
+def test_ome_missing_instrument_ref(
+    monkeypatch: pytest.MonkeyPatch,
+    remote_sample: Callable,
+) -> None:
     """Test that an OME-TIFF can be read without instrument reference."""
-    sample = _fetch_remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
     page = wsi.tiff.pages[0]
     description = page.description
@@ -26,9 +31,12 @@ def test_ome_missing_instrument_ref(monkeypatch):
     assert wsi.info.objective_power is None
 
 
-def test_ome_missing_physicalsize(monkeypatch):
+def test_ome_missing_physicalsize(
+    monkeypatch: pytest.MonkeyPatch,
+    remote_sample: Callable,
+) -> None:
     """Test that an OME-TIFF can be read without physical size."""
-    sample = _fetch_remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
     page = wsi.tiff.pages[0]
     description = page.description
@@ -47,9 +55,13 @@ def test_ome_missing_physicalsize(monkeypatch):
     assert wsi.info.mpp is None
 
 
-def test_ome_missing_physicalsizey(monkeypatch, caplog):
+def test_ome_missing_physicalsizey(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    remote_sample: Callable,
+) -> None:
     """Test that an OME-TIFF can be read without physical size."""
-    sample = _fetch_remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
     page = wsi.tiff.pages[0]
     description = page.description
@@ -68,9 +80,12 @@ def test_ome_missing_physicalsizey(monkeypatch, caplog):
     assert "Only one MPP value found. Using it for both X  and Y" in caplog.text
 
 
-def test_tiffreader_non_tiled_metadata(monkeypatch):
+def test_tiffreader_non_tiled_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    remote_sample: Callable,
+) -> None:
     """Test that fetching metadata for non-tiled TIFF works."""
-    sample = _fetch_remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-pyramid-1-small")
     wsi = wsireader.TIFFWSIReader(sample)
     monkeypatch.setattr(wsi.tiff, "is_ome", False)
     monkeypatch.setattr(

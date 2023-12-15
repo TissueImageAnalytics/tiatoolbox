@@ -6,15 +6,18 @@ The raw metadata is also preserved and accessible via a dictionary. The
 format of this dictionary may vary between WSI formats.
 
 """
+from __future__ import annotations
+
 from numbers import Number
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Mapping, Sequence
 
 import numpy as np
 
 from tiatoolbox import logger
 
-Resolution = Union[Number, Tuple[Number, Number], np.ndarray]
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import Resolution, Units
 
 
 class WSIMeta:
@@ -90,19 +93,20 @@ class WSIMeta:
 
     _valid_axes_characters = "YXSTZ"
 
-    def __init__(
-        self,
-        slide_dimensions: Tuple[int, int],
+    def __init__(  # noqa: PLR0913
+        self: WSIMeta,
+        slide_dimensions: tuple[int, int],
         axes: str,
-        level_dimensions: Optional[Sequence[Tuple[int, int]]] = None,
-        objective_power: Optional[float] = None,
-        level_count: Optional[int] = None,
-        level_downsamples: Optional[Sequence[float]] = (1,),
-        vendor: Optional[str] = None,
-        mpp: Optional[Sequence[float]] = None,
-        file_path: Optional[Path] = None,
-        raw: Optional[Mapping[str, str]] = None,
-    ):
+        level_dimensions: Sequence[tuple[int, int]] | None = None,
+        objective_power: float | None = None,
+        level_count: int | None = None,
+        level_downsamples: Sequence[float] | None = (1,),
+        vendor: str | None = None,
+        mpp: Sequence[float] | None = None,
+        file_path: Path | None = None,
+        raw: Mapping[str, str] | None = None,
+    ) -> None:
+        """Initialize WSIMeta."""
         self.axes = axes
         self.objective_power = float(objective_power) if objective_power else None
         self.slide_dimensions = tuple(int(x) for x in slide_dimensions)
@@ -126,7 +130,7 @@ class WSIMeta:
 
         self.validate()
 
-    def validate(self):
+    def validate(self: WSIMeta) -> bool:
         """Validate passed values and cast to Python types.
 
         Metadata values are often given as strings and must be
@@ -175,11 +179,11 @@ class WSIMeta:
         if all(x is None for x in [self.objective_power, self.mpp]):
             logger.warning("Unknown scale (no objective_power or mpp)")
 
-        return passed  # noqa
+        return passed
 
     def level_downsample(
-        self,
-        level: Union[int, float],
+        self: WSIMeta,
+        level: float,
     ) -> float:
         """Get the downsample factor for a level.
 
@@ -188,7 +192,7 @@ class WSIMeta:
         level below and the level above.
 
         Args:
-            level (int or float):
+            level (float):
                 Level to get downsample factor for.
 
         Returns:
@@ -208,8 +212,10 @@ class WSIMeta:
         return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
 
     def relative_level_scales(
-        self, resolution: Resolution, units: str
-    ) -> List[np.ndarray]:
+        self: WSIMeta,
+        resolution: Resolution,
+        units: Units,
+    ) -> list[np.ndarray]:
         """Calculate scale of each level in the WSI relative to given resolution.
 
         Find the relative scale of each image pyramid / resolution level
@@ -219,9 +225,9 @@ class WSIMeta:
         target and < 1 indicates that it is smaller.
 
         Args:
-            resolution (float or tuple(float)):
+            resolution (Resolution):
                 Scale to calculate relative to units.
-            units (str):
+            units (Units):
                 Units of the scale. Allowed values are: `"mpp"`,
                 `"power"`, `"level"`, `"baseline"`. Baseline refers to
                 the largest resolution in the WSI (level 0).
@@ -252,11 +258,12 @@ class WSIMeta:
 
         """
         if units not in ("mpp", "power", "level", "baseline"):
-            raise ValueError("Invalid units")
+            msg = "Invalid units"
+            raise ValueError(msg)
 
         level_downsamples = self.level_downsamples
 
-        def np_pair(x: Union[Number, np.array]) -> np.ndarray:
+        def np_pair(x: Number | np.array) -> np.ndarray:
             """Ensure input x is a numpy array of length 2."""
             # If one number is given, the same value is used for x and y
             if isinstance(x, Number):
@@ -265,9 +272,12 @@ class WSIMeta:
 
         if units == "level":
             if resolution >= len(level_downsamples):
+                msg = (
+                    f"Target scale level {resolution} > "
+                    f"number of levels {len(level_downsamples)} in WSI"
+                )
                 raise ValueError(
-                    f"Target scale level {resolution} "
-                    f"> number of levels {len(level_downsamples)} in WSI"
+                    msg,
                 )
             base_scale, resolution = 1, self.level_downsample(resolution)
 
@@ -275,14 +285,18 @@ class WSIMeta:
 
         if units == "mpp":
             if self.mpp is None:
-                raise ValueError("MPP is None. Cannot determine scale in terms of MPP.")
+                msg = "MPP is None. Cannot determine scale in terms of MPP."
+                raise ValueError(msg)
             base_scale = self.mpp
 
         if units == "power":
             if self.objective_power is None:
-                raise ValueError(
+                msg = (
                     "Objective power is None. "
-                    "Cannot determine scale in terms of objective power."
+                    "Cannot determine scale in terms of objective power.",
+                )
+                raise ValueError(
+                    msg,
                 )
             base_scale, resolution = 1 / self.objective_power, 1 / resolution
 
@@ -293,18 +307,16 @@ class WSIMeta:
             (base_scale * downsample) / resolution for downsample in level_downsamples
         ]
 
-    def as_dict(self):
+    def as_dict(self: WSIMeta) -> dict:
         """Convert WSIMeta to dictionary of Python types.
 
         Returns:
             dict:
-                Whole slide image meta data as dictionary.
+                Whole slide image metadata as dictionary.
 
         """
-        if self.mpp is None:
-            mpp = (self.mpp, self.mpp)
-        else:
-            mpp = tuple(self.mpp)
+        mpp = (self.mpp, self.mpp) if self.mpp is None else tuple(self.mpp)
+
         return {
             "objective_power": self.objective_power,
             "slide_dimensions": self.slide_dimensions,

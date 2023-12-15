@@ -1,4 +1,6 @@
 """Simple check to ensure each code cell in a notebook is valid Python."""
+from __future__ import annotations
+
 import argparse
 import json
 import re
@@ -6,30 +8,31 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Set, Tuple
 
 
 def git_branch_name() -> str:
     """Get the current branch name."""
     return (
-        subprocess.check_output(["/usr/bin/git", "rev-parse", "--abbrev-ref", "HEAD"])
+        subprocess.check_output(
+            ["/usr/bin/git", "rev-parse", "--abbrev-ref", "HEAD"],  # noqa: S603
+        )
         .decode()
         .strip()
     )
 
 
-def git_branch_modified_paths(from_ref: str, to_ref: str) -> Set[Path]:
+def git_branch_modified_paths(from_ref: str, to_ref: str) -> set[Path]:
     """Get a set of file paths modified on this branch vs develop."""
     from_to = f"{from_ref}...{to_ref}"
     return {
         Path(p)
         for p in subprocess.check_output(
-            [
+            [  # noqa: S603
                 "/usr/bin/git",
                 "diff",
                 "--name-only",
                 from_to,
-            ]
+            ],
         )
         .decode()
         .strip()
@@ -37,12 +40,12 @@ def git_branch_modified_paths(from_ref: str, to_ref: str) -> Set[Path]:
     }
 
 
-def git_previous_commit_modified_paths() -> Set[Path]:
+def git_previous_commit_modified_paths() -> set[Path]:
     """Get a set of file paths modified in the previous commit."""
     return {
         Path(p)
         for p in subprocess.check_output(
-            ["/usr/bin/git", "diff", "--name-only", "HEAD~"]
+            ["/usr/bin/git", "diff", "--name-only", "HEAD~"],  # noqa: S603
         )
         .decode()
         .strip()
@@ -72,7 +75,7 @@ class PatternReplacement:
 MAIN_BRANCHES = ("master", "main")
 
 
-def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
+def main(files: list[Path], from_ref: str, to_ref: str) -> bool:
     """Check that URLs in the notebook are relative to the current branch.
 
     Args:
@@ -150,7 +153,7 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
         # Write the file if it has changed
         if changed:
             print(f"Updating {path}")
-            with open(path, "w", encoding="utf-8") as fh:
+            with Path.open(path, "w", encoding="utf-8") as fh:
                 json.dump(notebook, fh, indent=1, ensure_ascii=False)
                 fh.write("\n")
         else:
@@ -159,8 +162,10 @@ def main(files: List[Path], from_ref: str, to_ref: str) -> bool:
 
 
 def check_notebook(
-    path: Path, to_ref: str, replacements: List[PatternReplacement]
-) -> Tuple[bool, dict]:
+    path: Path,
+    to_ref: str,
+    replacements: list[PatternReplacement],
+) -> tuple[bool, dict]:
     """Check the notebook for URL replacements.
 
     Args:
@@ -183,7 +188,7 @@ def check_notebook(
         return changed, None
 
     # Load the notebook
-    with open(path, encoding="utf-8") as fh:
+    with Path.open(path, encoding="utf-8") as fh:
         notebook = json.load(fh)
         # Check each cell
     for cell_num, cell in enumerate(notebook["cells"]):
@@ -197,7 +202,7 @@ def check_notebook(
     return changed, notebook
 
 
-def replace_line(line: str, to_ref: str, replacements: List[PatternReplacement]) -> str:
+def replace_line(line: str, to_ref: str, replacements: list[PatternReplacement]) -> str:
     """Perform pattern replacements in the line.
 
     Args:
@@ -230,7 +235,11 @@ if __name__ == "__main__":
         default=list(Path.cwd().rglob("*.ipynb")),
     )
     parser.add_argument(
-        "-f", "--from-ref", help="Reference to diff from", type=str, default="develop"
+        "-f",
+        "--from-ref",
+        help="Reference to diff from",
+        type=str,
+        default="develop",
     )
     parser.add_argument(
         "-t",

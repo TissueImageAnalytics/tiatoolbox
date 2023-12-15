@@ -1,16 +1,26 @@
 """Top-level package for TIA Toolbox."""
+from __future__ import annotations
 
 import importlib.util
-import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Dict, TypedDict
 
-import pkg_resources
+if sys.version_info >= (3, 9):  # pragma: no cover
+    import importlib.resources as importlib_resources
+else:  # pragma: no cover
+    # To support Python 3.8
+    import importlib_resources  # type: ignore[import-not-found]
+
 import yaml
 
-__author__ = """TIA Lab"""
+if TYPE_CHECKING:  # pragma: no cover
+    from logging import LogRecord
+    from types import ModuleType
+
+__author__ = """TIA Centre"""
 __email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "1.4.1"
+__version__ = "1.5.0"
 
 # This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux
@@ -23,7 +33,7 @@ import logging
 
 # We only create a logger if root has no handler to prevent overwriting use existing
 # logging
-logging.captureWarnings(True)
+logging.captureWarnings(capture=True)
 if not logging.getLogger().hasHandlers():
     formatter = logging.Formatter(
         "|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s",
@@ -46,7 +56,15 @@ else:
 
 
 class DuplicateFilter(logging.Filter):
-    def filter(self, record):
+    """Define an object to filter duplicate logs.
+
+    The DuplicateFilter filters logs to avoid printing them multiple times
+    while running code in a loop.
+
+    """
+
+    def filter(self: DuplicateFilter, record: LogRecord) -> bool:
+        """Filter input record."""
         current_log = (record.module, record.levelno, record.msg)
         if current_log != getattr(self, "last_log", None):
             self.last_log = current_log
@@ -54,20 +72,48 @@ class DuplicateFilter(logging.Filter):
         return False
 
 
+class _RcParam(TypedDict):
+    """All the parameters in the rcParam dictionary should be defined here."""
+
+    TIATOOLBOX_HOME: Path
+    pretrained_model_info: dict[str, dict]
+
+
+def read_registry_files(path_to_registry: str | Path) -> dict:
+    """Reads registry files using importlib_resources.
+
+    Args:
+        path_to_registry (str or Path):
+            Path to registry files from tiatoolbox root.
+
+    Returns:
+        Contents of yaml file.
+
+
+    """
+    path_to_registry = str(path_to_registry)  # To pass tests with Python 3.8
+    pretrained_files_registry_path = importlib_resources.as_file(
+        importlib_resources.files("tiatoolbox") / path_to_registry,
+    )
+
+    with pretrained_files_registry_path as registry_file_path:
+        registry_handle = Path.open(registry_file_path)
+        return yaml.safe_load(registry_handle)
+
+
 # runtime context parameters
-rcParam = {"TIATOOLBOX_HOME": os.path.join(os.path.expanduser("~"), ".tiatoolbox")}
-
-# Load a dictionary of sample files data (names and urls)
-PRETRAINED_FILES_REGISTRY_PATH = pkg_resources.resource_filename(
-    "tiatoolbox", "data/pretrained_model.yaml"
-)
-with open(PRETRAINED_FILES_REGISTRY_PATH) as registry_handle:
-    PRETRAINED_INFO = yaml.safe_load(registry_handle)
-rcParam["pretrained_model_info"] = PRETRAINED_INFO
+rcParam: _RcParam = {  # noqa: N816
+    "TIATOOLBOX_HOME": Path.home() / ".tiatoolbox",
+    "pretrained_model_info": read_registry_files(
+        "data/pretrained_model.yaml",
+    ),  # Load a dictionary of sample files data (names and urls)
+}
 
 
-def _lazy_import(name: str, module_location: Path):
+def _lazy_import(name: str, module_location: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, module_location)
+    if spec is None or spec.loader is None:
+        raise ModuleNotFoundError(name=name, path=str(module_location))
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)
@@ -77,7 +123,7 @@ def _lazy_import(name: str, module_location: Path):
 
 
 if __name__ == "__main__":
-    print("tiatoolbox version:" + str(__version__))
+    print("tiatoolbox version:" + str(__version__))  # noqa: T201
     location = Path(__file__).parent
     annotation = _lazy_import("annotation", location)
     models = _lazy_import("models", location)

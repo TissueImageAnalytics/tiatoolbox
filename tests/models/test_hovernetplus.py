@@ -1,16 +1,17 @@
 """Unit test package for HoVerNet+."""
 
+from typing import Callable
+
 import torch
 
 from tiatoolbox.models import HoVerNetPlus
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 from tiatoolbox.utils.transforms import imresize
 
 
-def test_functionality(remote_sample, tmp_path):
+def test_functionality(remote_sample: Callable) -> None:
     """Functionality test."""
-    tmp_path = str(tmp_path)
     sample_patch = str(remote_sample("stainnorm-source"))
     patch_pre = imread(sample_patch)
     patch_pre = imresize(patch_pre, scale_factor=0.5)
@@ -24,8 +25,8 @@ def test_functionality(remote_sample, tmp_path):
     assert len(model.decoder["hv"]) > 0, "Decoder must contain hv branch."
     assert len(model.decoder["tp"]) > 0, "Decoder must contain tp branch."
     assert len(model.decoder["ls"]) > 0, "Decoder must contain ls branch."
-    fetch_pretrained_weights("hovernetplus-oed", f"{tmp_path}/weigths.pth")
-    pretrained = torch.load(f"{tmp_path}/weigths.pth")
+    weights_path = fetch_pretrained_weights("hovernetplus-oed")
+    pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, on_gpu=False)
     assert len(output) == 4, "Must contain predictions for: np, hv, tp and ls branches."

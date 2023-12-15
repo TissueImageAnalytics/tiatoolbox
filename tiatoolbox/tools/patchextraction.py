@@ -1,30 +1,40 @@
 """This file defines patch extraction methods for deep learning models."""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Callable, Tuple, Union
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
-from pandas import DataFrame
 
 from tiatoolbox import logger
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupportedError
 from tiatoolbox.wsicore import wsireader
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pathlib import Path
+
+    from pandas import DataFrame
+
+    from tiatoolbox.typing import Resolution, Units
 
 
 class PatchExtractorABC(ABC):
     """Abstract base class for Patch Extraction in tiatoolbox."""
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self: PatchExtractorABC) -> None:
+        """Return an iterator for the given object."""
         raise NotImplementedError
 
     @abstractmethod
-    def __next__(self):
+    def __next__(self: PatchExtractorABC) -> None:
+        """Return the next item for the iteration."""
         raise NotImplementedError
 
     @abstractmethod
-    def __getitem__(self, item: int):
+    def __getitem__(self: PatchExtractorABC, item: int) -> None:
+        """Get an item from the dataset."""
         raise NotImplementedError
 
 
@@ -32,7 +42,7 @@ class PatchExtractor(PatchExtractorABC):
     """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, Path, :class:`numpy.ndarray`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
@@ -46,7 +56,7 @@ class PatchExtractor(PatchExtractorABC):
             'morphological', a tissue mask is generated for the
             input_image using tiatoolbox :class:`TissueMasker`
             functionality.
-        resolution (int or float or tuple of float):
+        resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
             valid. This value is in terms of the corresponding units.
@@ -54,11 +64,8 @@ class PatchExtractor(PatchExtractorABC):
             slide at 0.5 microns per-pixel, and resolution=3,
             units="level" will read at level at pyramid level /
             resolution layer 3.
-        units (str):
-            Units of resolution, default = "level". Supported units are:
-            microns per pixel (mpp), objective power (power), pyramid /
-            resolution level (level), Only pyramid / resolution levels
-            (level) embedded in the whole slide image are supported.
+        units (Units):
+            Units of resolution, default = "level".
         pad_mode (str):
             Method for padding at edges of the WSI. Default to
             'constant'. See :func:`numpy.pad` for more information.
@@ -69,8 +76,8 @@ class PatchExtractor(PatchExtractorABC):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
         min_mask_ratio (float):
             Area in percentage that a patch needs to contain of positive
@@ -78,13 +85,13 @@ class PatchExtractor(PatchExtractorABC):
 
 
     Attributes:
-        wsi(WSIReader):
+        wsi (WSIReader):
             Input image for patch extraction of type :obj:`WSIReader`.
-        patch_size(tuple(int)):
+        patch_size (tuple(int)):
             Patch size tuple (width, height).
-        resolution(tuple(int)):
+        resolution (Resolution):
             Resolution at which to read the image.
-        units (str):
+        units (Units):
             Units of resolution.
         n (int):
             Current state of the iterator.
@@ -110,17 +117,19 @@ class PatchExtractor(PatchExtractorABC):
     """
 
     def __init__(
-        self,
-        input_img: Union[str, Path, np.ndarray],
-        patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
-        resolution: Union[int, float, Tuple[float, float]] = 0,
-        units: str = "level",
+        self: PatchExtractor,
+        input_img: str | Path | np.ndarray,
+        patch_size: int | tuple[int, int],
+        input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
+        resolution: Resolution = 0,
+        units: Units = "level",
         pad_mode: str = "constant",
-        pad_constant_values: Union[int, Tuple[int, int]] = 0,
-        within_bound: bool = False,
+        pad_constant_values: int | tuple[int, int] = 0,
         min_mask_ratio: float = 0,
-    ):
+        *,
+        within_bound: bool = False,
+    ) -> None:
+        """Initialize :class:`PatchExtractor`."""
         if isinstance(patch_size, (tuple, list)):
             self.patch_size = (int(patch_size[0]), int(patch_size[1]))
         else:
@@ -144,24 +153,31 @@ class PatchExtractor(PatchExtractorABC):
                 self.mask = None
             else:
                 self.mask = self.wsi.tissue_mask(
-                    method=input_mask, resolution=1.25, units="power"
+                    method=input_mask,
+                    resolution=1.25,
+                    units="power",
                 )
         elif isinstance(input_mask, wsireader.VirtualWSIReader):
             self.mask = input_mask
         else:
             self.mask = wsireader.VirtualWSIReader(
-                input_mask, info=self.wsi.info, mode="bool"
+                input_mask,
+                info=self.wsi.info,
+                mode="bool",
             )
         self.within_bound = within_bound
 
-    def __iter__(self):
+    def __iter__(self: PatchExtractor) -> PatchExtractor:
+        """Return an iterator for the given object."""
         self.n = 0
         return self
 
-    def __len__(self):
+    def __len__(self: PatchExtractor) -> int:
+        """Return the number of patches in the extractor."""
         return self.locations_df.shape[0] if self.locations_df is not None else 0
 
-    def __next__(self):
+    def __next__(self: PatchExtractor) -> np.ndarray:
+        """Return the next item for the iteration."""
         n = self.n
 
         if n >= self.locations_df.shape[0]:
@@ -169,9 +185,11 @@ class PatchExtractor(PatchExtractorABC):
         self.n = n + 1
         return self[n]
 
-    def __getitem__(self, item: int):
+    def __getitem__(self: PatchExtractor, item: int) -> np.ndarray:
+        """Get an item from the dataset."""
         if not isinstance(item, int):
-            raise TypeError("Index should be an integer.")
+            msg = "Index should be an integer."
+            raise TypeError(msg)
 
         if item >= self.locations_df.shape[0]:
             raise IndexError
@@ -189,7 +207,7 @@ class PatchExtractor(PatchExtractorABC):
             coord_space="resolution",
         )
 
-    def _generate_location_df(self):
+    def _generate_location_df(self: PatchExtractor) -> PatchExtractor:
         """Generate location list based on slide dimension.
 
         The slide dimension is calculated using units and resolution.
@@ -229,10 +247,10 @@ class PatchExtractor(PatchExtractorABC):
     def filter_coordinates(
         mask_reader: wsireader.VirtualWSIReader,
         coordinates_list: np.ndarray,
-        wsi_shape: Tuple[int, int],
+        wsi_shape: tuple[int, int],
         min_mask_ratio: float = 0,
-        func: Callable = None,
-    ):
+        func: Callable | None = None,
+    ) -> np.ndarray:
         """Validate patch extraction coordinates based on the input mask.
 
         This function indicates which coordinate is valid for mask-based
@@ -271,34 +289,46 @@ class PatchExtractor(PatchExtractorABC):
 
         """
         if not isinstance(mask_reader, wsireader.VirtualWSIReader):
-            raise ValueError("`mask_reader` should be wsireader.VirtualWSIReader.")
+            msg = "`mask_reader` should be wsireader.VirtualWSIReader."
+            raise TypeError(msg)
         if not isinstance(coordinates_list, np.ndarray) or not np.issubdtype(
-            coordinates_list.dtype, np.integer
+            coordinates_list.dtype,
+            np.integer,
         ):
-            raise ValueError("`coordinates_list` should be ndarray of integer type.")
-        if coordinates_list.shape[-1] != 4:
-            raise ValueError("`coordinates_list` must be of shape [N, 4].")
+            msg = "`coordinates_list` should be ndarray of integer type."
+            raise ValueError(msg)
+        if coordinates_list.shape[-1] != 4:  # noqa: PLR2004
+            msg = "`coordinates_list` must be of shape [N, 4]."
+            raise ValueError(msg)
 
         if not 0 <= min_mask_ratio <= 1:
-            raise ValueError("`min_mask_ratio` must be between 0 and 1.")
+            msg = "`min_mask_ratio` must be between 0 and 1."
+            raise ValueError(msg)
 
         # the tissue mask exists in the reader already, no need to generate it
         tissue_mask = mask_reader.img
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
-        scale_factors = np.array(tissue_mask.shape[::-1]) / np.array(wsi_shape)
+        scale_factors = np.array(tissue_mask.shape[1::-1]) / np.array(wsi_shape)
         scaled_coords = coordinates_list.copy().astype(np.float32)
         scaled_coords[:, [0, 2]] *= scale_factors[0]
         scaled_coords[:, [0, 2]] = np.clip(
-            scaled_coords[:, [0, 2]], 0, tissue_mask.shape[1]
+            scaled_coords[:, [0, 2]],
+            0,
+            tissue_mask.shape[1],
         )
         scaled_coords[:, [1, 3]] *= scale_factors[1]
         scaled_coords[:, [1, 3]] = np.clip(
-            scaled_coords[:, [1, 3]], 0, tissue_mask.shape[0]
+            scaled_coords[:, [1, 3]],
+            0,
+            tissue_mask.shape[0],
         )
         scaled_coords = list(np.int32(scaled_coords))
 
-        def default_sel_func(tissue_mask, coord):
+        def default_sel_func(
+            tissue_mask: np.ndarray,
+            coord: tuple[int, ...] | list[int, ...],
+        ) -> np.ndarray:
             """Default selection function to filter coordinates.
 
             This function selects a coordinate if the proportion of
@@ -314,21 +344,20 @@ class PatchExtractor(PatchExtractorABC):
             ) and (pos_area > 0 and patch_area > 0)
 
         func = default_sel_func if func is None else func
-        flag_list = []
-        for coord in scaled_coords:
-            flag_list.append(func(tissue_mask, coord))
+        flag_list = [func(tissue_mask, coord) for coord in scaled_coords]
 
         return np.array(flag_list)
 
     @staticmethod
     def get_coordinates(
-        image_shape: Union[Tuple[int, int], np.ndarray] = None,
-        patch_input_shape: Union[Tuple[int, int], np.ndarray] = None,
-        patch_output_shape: Union[Tuple[int, int], np.ndarray] = None,
-        stride_shape: Union[Tuple[int, int], np.ndarray] = None,
+        image_shape: tuple[int, int] | np.ndarray | None = None,
+        patch_input_shape: tuple[int, int] | np.ndarray | None = None,
+        patch_output_shape: tuple[int, int] | np.ndarray | None = None,
+        stride_shape: tuple[int, int] | np.ndarray | None = None,
+        *,
         input_within_bound: bool = False,
         output_within_bound: bool = False,
-    ):
+    ) -> list | np.ndarray | tuple[np.ndarray, np.ndarray]:
         """Calculate patch tiling coordinates.
 
         Args:
@@ -384,46 +413,48 @@ class PatchExtractor(PatchExtractorABC):
         patch_output_shape = np.array(patch_output_shape)
         stride_shape = np.array(stride_shape)
 
-        def validate_shape(shape):
-            """Tests if the shape is valid for an image."""
+        def validate_shape(shape: np.ndarray) -> bool:
+            """Test if the shape is valid for an image."""
             return (
                 not np.issubdtype(shape.dtype, np.integer)
-                or np.size(shape) > 2
+                or np.size(shape) > 2  # noqa: PLR2004
                 or np.any(shape < 0)
             )
 
         if validate_shape(image_shape):
-            raise ValueError(f"Invalid `image_shape` value {image_shape}.")
+            msg = f"Invalid `image_shape` value {image_shape}."
+            raise ValueError(msg)
         if validate_shape(patch_input_shape):
-            raise ValueError(f"Invalid `patch_input_shape` value {patch_input_shape}.")
+            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+            raise ValueError(msg)
         if validate_shape(patch_output_shape):
+            msg = f"Invalid `patch_output_shape` value {patch_output_shape}."
             raise ValueError(
-                f"Invalid `patch_output_shape` value {patch_output_shape}."
+                msg,
             )
         if validate_shape(stride_shape):
-            raise ValueError(f"Invalid `stride_shape` value {stride_shape}.")
+            msg = f"Invalid `stride_shape` value {stride_shape}."
+            raise ValueError(msg)
         if np.any(patch_input_shape < patch_output_shape):
+            msg = (
+                f"`patch_input_shape` must larger than `patch_output_shape` "
+                f"{patch_input_shape} must > {patch_output_shape}."
+            )
             raise ValueError(
-                (
-                    f"`patch_input_shape` must larger than `patch_output_shape`"
-                    f" {patch_input_shape} must > {patch_output_shape}."
-                )
+                msg,
             )
         if np.any(stride_shape < 1):
-            raise ValueError(f"`stride_shape` value {stride_shape} must > 1.")
+            msg = f"`stride_shape` value {stride_shape} must > 1."
+            raise ValueError(msg)
 
-        def flat_mesh_grid_coord(x, y):
+        def flat_mesh_grid_coord(x: int, y: int) -> np.ndarray:
             """Helper function to obtain coordinate grid."""
             x, y = np.meshgrid(x, y)
             return np.stack([x.flatten(), y.flatten()], axis=-1)
 
-        output_x_end = (
-            np.ceil(image_shape[0] / patch_output_shape[0]) * patch_output_shape[0]
-        )
+        output_x_end = np.ceil(image_shape[0] / stride_shape[0]) * stride_shape[0]
         output_x_list = np.arange(0, int(output_x_end), stride_shape[0])
-        output_y_end = (
-            np.ceil(image_shape[1] / patch_output_shape[1]) * patch_output_shape[1]
-        )
+        output_y_end = np.ceil(image_shape[1] / stride_shape[1]) * stride_shape[1]
         output_y_list = np.arange(0, int(output_y_end), stride_shape[1])
         output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
         output_br_list = output_tl_list + patch_output_shape[None]
@@ -440,10 +471,12 @@ class PatchExtractor(PatchExtractorABC):
             sel |= np.any(input_tl_list < 0, axis=1)
         ####
         input_bound_list = np.concatenate(
-            [input_tl_list[~sel], input_br_list[~sel]], axis=-1
+            [input_tl_list[~sel], input_br_list[~sel]],
+            axis=-1,
         )
         output_bound_list = np.concatenate(
-            [output_tl_list[~sel], output_br_list[~sel]], axis=-1
+            [output_tl_list[~sel], output_br_list[~sel]],
+            axis=-1,
         )
         if return_output_bound:
             return input_bound_list, output_bound_list
@@ -468,7 +501,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             'morphological', a tissue mask is generated for the
             input_image using tiatoolbox :class:`TissueMasker`
             functionality.
-        resolution (int or float or tuple of float):
+        resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
             valid. This value is in terms of the corresponding units.
@@ -476,12 +509,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             slide at 0.5 microns per-pixel, and resolution=3,
             units="level" will read at level at pyramid level /
             resolution layer 3.
-        units (str):
-            The units of resolution, default = "level". Supported units
-            are: microns per pixel (mpp), objective power (power),
-            pyramid / resolution level (level), Only pyramid /
-            resolution levels (level) embedded in the whole slide image
-            are supported.
+        units (Units):
+            The units of resolution, default = "level".
         pad_mode (str):
             Method for padding at edges of the WSI. Default to
             'constant'. See :func:`numpy.pad` for more information.
@@ -492,8 +521,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
         stride(int or tuple(int)):
             Stride in (x, y) direction for patch extraction, default =
@@ -508,19 +537,21 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     """
 
-    def __init__(
-        self,
-        input_img: Union[str, Path, np.ndarray],
-        patch_size: Union[int, Tuple[int, int]],
-        input_mask: Union[str, Path, np.ndarray, wsireader.WSIReader] = None,
-        resolution: Union[int, float, Tuple[float, float]] = 0,
-        units: str = "level",
-        stride: Union[int, Tuple[int, int]] = None,
+    def __init__(  # noqa: PLR0913
+        self: SlidingWindowPatchExtractor,
+        input_img: str | Path | np.ndarray,
+        patch_size: int | tuple[int, int],
+        input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        stride: int | tuple[int, int] | None = None,
         pad_mode: str = "constant",
-        pad_constant_values: Union[int, Tuple[int, int]] = 0,
-        within_bound: bool = False,
+        pad_constant_values: int | tuple[int, int] = 0,
         min_mask_ratio: float = 0,
-    ):
+        *,
+        within_bound: bool = False,
+    ) -> None:
+        """Initialize :class:`SlidingWindowPatchExtractor`."""
         super().__init__(
             input_img=input_img,
             input_mask=input_mask,
@@ -534,11 +565,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         )
         if stride is None:
             self.stride = self.patch_size
+        elif isinstance(stride, (tuple, list)):
+            self.stride = (int(stride[0]), int(stride[1]))
         else:
-            if isinstance(stride, (tuple, list)):
-                self.stride = (int(stride[0]), int(stride[1]))
-            else:
-                self.stride = (int(stride), int(stride))
+            self.stride = (int(stride), int(stride))
 
         self._generate_location_df()
 
@@ -558,7 +588,7 @@ class PointsPatchExtractor(PatchExtractor):
             resolution).
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        resolution (int or float or tuple of float):
+        resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
             valid. This value is in terms of the corresponding units.
@@ -566,7 +596,7 @@ class PointsPatchExtractor(PatchExtractor):
             slide at 0.5 microns per-pixel, and resolution=3,
             units="level" will read at level at pyramid level /
             resolution layer 3.
-        units (str):
+        units (Units):
             The units of resolution, default = "level". Supported units
             are: microns per pixel (mpp), objective power (power),
             pyramid / resolution level (level), Only pyramid /
@@ -582,23 +612,25 @@ class PointsPatchExtractor(PatchExtractor):
             Whether to extract patches beyond the input_image size
             limits. If False, extracted patches at margins will be
             padded appropriately based on `pad_constant_values` and
-            `pad_mode`. If False, patches at the margin that their
-            bounds exceed the mother image dimensions would be
+            `pad_mode`. If True, patches at the margins whose
+            bounds would exceed the mother image dimensions would be
             neglected. Default is False.
 
     """
 
     def __init__(
-        self,
-        input_img: Union[str, Path, np.ndarray],
-        locations_list: Union[np.ndarray, DataFrame, str, Path],
-        patch_size: Union[int, Tuple[int, int]] = (224, 224),
-        resolution: Union[int, float, Tuple[float, float]] = 0,
-        units: str = "level",
+        self: PointsPatchExtractor,
+        input_img: str | Path | np.ndarray,
+        locations_list: np.ndarray | DataFrame | str | Path,
+        patch_size: int | tuple[int, int] = (224, 224),
+        resolution: Resolution = 0,
+        units: Units = "level",
         pad_mode: str = "constant",
-        pad_constant_values: Union[int, Tuple[int, int]] = 0,
+        pad_constant_values: int | tuple[int, int] = 0,
+        *,
         within_bound: bool = False,
-    ):
+    ) -> None:
+        """Initialize :class:`PointsPatchExtractor`."""
         super().__init__(
             input_img=input_img,
             patch_size=patch_size,
@@ -611,26 +643,17 @@ class PointsPatchExtractor(PatchExtractor):
 
         self.locations_df = misc.read_locations(input_table=locations_list)
         self.locations_df["x"] = self.locations_df["x"] - int(
-            (self.patch_size[1] - 1) / 2
+            (self.patch_size[1] - 1) / 2,
         )
         self.locations_df["y"] = self.locations_df["y"] - int(
-            (self.patch_size[1] - 1) / 2
+            (self.patch_size[1] - 1) / 2,
         )
 
 
 def get_patch_extractor(
     method_name: str,
-    **kwargs: Union[
-        Path,
-        wsireader.WSIReader,
-        None,
-        str,
-        int,
-        Tuple[int, int],
-        float,
-        Tuple[float, float],
-    ],
-):
+    **kwargs: Path | wsireader.WSIReader | None | str | float | tuple[float, float],
+) -> PatchExtractor:
     """Return a patch extractor object as requested.
 
     Args:
@@ -652,8 +675,9 @@ def get_patch_extractor(
 
     """
     if method_name.lower() not in ["point", "slidingwindow"]:
-        raise MethodNotSupported(
-            f"{method_name.lower()} method is not currently supported."
+        msg = f"{method_name.lower()} method is not currently supported."
+        raise MethodNotSupportedError(
+            msg,
         )
 
     if method_name.lower() == "point":

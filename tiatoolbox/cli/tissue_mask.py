@@ -1,5 +1,8 @@
 """Command line interface for tissue_mask."""
-import pathlib
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
@@ -15,8 +18,16 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.tools.tissuemask import TissueMasker
 
-def get_masker(method, kernel_size, units, resolution):
+
+def get_masker(
+    method: str,
+    kernel_size: tuple[int, int],
+    units: str,
+    resolution: float,
+) -> TissueMasker:
     """Get Tissue Masker."""
     from tiatoolbox.tools import tissuemask
 
@@ -38,7 +49,8 @@ def get_masker(method, kernel_size, units, resolution):
 @cli_method(default="Otsu")
 @cli_resolution(default=1.25)
 @cli_units(
-    default="power", input_type=click.Choice(["mpp", "power"], case_sensitive=False)
+    default="power",
+    input_type=click.Choice(["mpp", "power"], case_sensitive=False),
 )
 @cli_mode(default="show")
 @cli_file_type(default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff")
@@ -50,17 +62,28 @@ def get_masker(method, kernel_size, units, resolution):
     help="kernel size for morphological dilation, default=1, 1",
 )
 def tissue_mask(
-    img_input, output_path, method, resolution, units, kernel_size, mode, file_types
-):
+    img_input: str,
+    output_path: str,
+    method: str,
+    resolution: float,
+    units: str,
+    kernel_size: [int, int],
+    mode: str,
+    file_types: str,
+) -> None:
     """Generate tissue mask for a WSI."""
     import numpy as np
     from PIL import Image
 
-    from tiatoolbox.utils.misc import imwrite
+    from tiatoolbox.utils import imwrite
     from tiatoolbox.wsicore.wsireader import WSIReader
 
     files_all, output_path = prepare_file_dir_cli(
-        img_input, output_path, file_types, mode, "meta-data"
+        img_input,
+        output_path,
+        file_types,
+        mode,
+        "meta-data",
     )
 
     masker = get_masker(method, kernel_size, units, resolution)
@@ -78,6 +101,6 @@ def tissue_mask(
 
         # Else, save (the only other option for mode)
         imwrite(
-            output_path.joinpath(pathlib.Path(curr_file).stem + ".png"),
+            output_path.joinpath(Path(curr_file).stem + ".png"),
             mask[0].astype(np.uint8) * 255,
         )

@@ -1,30 +1,35 @@
+"""Test docstring examples and imports are valid."""
+from __future__ import annotations
+
 import ast
 import doctest
 import importlib
 import os
 import sys
+from doctest import DocTest
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Generator
 
 import pytest
 
 
 @pytest.fixture()
-def source_files(root_path):
+def source_files(root_path: Path) -> Generator:
     """Recursively yield source files from the project."""
     ignore = {"__pycache__"}
 
-    def generator():
+    def generator() -> Generator:
+        """Generates path to files."""
         for root, dirs, files in os.walk(root_path):
-            files = [f for f in files if f.endswith(".py") and f[0] != "."]
+            files_ = [f for f in files if f.endswith(".py") and f[0] != "."]
             dirs[:] = [d for d in dirs if d not in ignore and d[0] != "."]
-            for file in files:
+            for file in files_:
                 yield Path(root, file)
 
     return generator()
 
 
-def test_validate_docstring_examples(source_files, root_path):
+def test_validate_docstring_examples(source_files: list, root_path: Path) -> None:
     """Test that all docstring examples are valid.
 
     Validity checks are:
@@ -102,8 +107,8 @@ def raise_source_exception(
     rel_path: Path,
     source_lineno: int,
     file_lineno: int,
-    source_offset: Optional[int] = None,
-    exception: Optional[Exception] = None,
+    source_offset: int | None = None,
+    exception: Exception | None = None,
 ) -> None:
     """Raise an exception with the source code and line number highlighted.
 
@@ -135,21 +140,23 @@ def raise_source_exception(
         source_lines.insert(source_lineno, f"{' '*(source_offset+3)}^ {message}")
     annotated_source = "\n".join(source_lines)
     exception = type(exception) if exception else SyntaxError
+    msg = f"{rel_path}:{file_lineno}: {message}\n{annotated_source}"
     raise exception(
-        f"{rel_path}:{file_lineno}: {message}\n{annotated_source}"
+        msg,
     ) from None
 
 
-def import_node_names(import_node: Union[ast.Import, ast.ImportFrom]) -> List[str]:
+def import_node_names(import_node: ast.Import | ast.ImportFrom) -> list[str]:
     """Get the names being imported by import nodes."""
     if isinstance(import_node, ast.ImportFrom):
         return [import_node.module]
     if isinstance(import_node, ast.Import):
         return [name.name for name in import_node.names]
-    raise TypeError("Unknown node type")
+    msg = "Unknown node type"
+    raise TypeError(msg)
 
 
-def check_ast(doc, rel_path) -> ast.AST:
+def check_ast(doc: DocTest, rel_path: str | Path) -> ast.AST | None:
     """Check that the source syntax is valid."""
     source = "".join(eg.source for eg in doc.examples)
     try:

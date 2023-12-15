@@ -1,5 +1,5 @@
 """Define Image transforms."""
-from typing import Tuple, Union
+from __future__ import annotations
 
 import cv2
 import numpy as np
@@ -8,11 +8,16 @@ from PIL import Image
 from tiatoolbox.utils.misc import parse_cv2_interpolaton, select_cv2_interpolation
 
 
-def background_composite(image, fill=255, alpha=False):
+def background_composite(
+    image: np.ndarray | Image.Image,
+    fill: int = 255,
+    *,
+    alpha: bool,
+) -> np.ndarray:
     """Image composite with specified background.
 
     Args:
-        image (ndarray or PIL.Image):
+        image (ndarray or :class:`Image`):
             Input image.
         fill (int):
             Fill value for the background, defaults to 255.
@@ -43,7 +48,7 @@ def background_composite(image, fill=255, alpha=False):
     image = image.convert("RGBA")
 
     composite = Image.fromarray(
-        np.full(list(image.size[::-1]) + [4], fill, dtype=np.uint8)
+        np.full([*list(image.size[::-1]), 4], fill, dtype=np.uint8),
     )
     composite.alpha_composite(image)
     if not alpha:
@@ -52,13 +57,51 @@ def background_composite(image, fill=255, alpha=False):
     return np.asarray(composite)
 
 
-def imresize(img, scale_factor=None, output_size=None, interpolation="optimise"):
+def _convert_scalar_to_width_height(array: np.ndarray) -> np.ndarray:
+    """Converts scalar numpy array to specify width and height."""
+    if array.size == 1:
+        return np.repeat(array, 2)
+
+    return array
+
+
+def _get_scale_factor_array(
+    scale_factor: float | tuple[float, float] | None,
+) -> np.ndarray | None:
+    """Converts scale factor to appropriate format required by imresize."""
+    if scale_factor is not None:
+        scale_factor_array = np.array(scale_factor, dtype=float)
+        return _convert_scalar_to_width_height(scale_factor_array)
+    return scale_factor
+
+
+def _get_output_size_array(
+    img: np.ndarray,
+    output_size: int | tuple[int, int] | None,
+    scale_factor_array: np.ndarray | None,
+) -> np.ndarray:
+    """Converts output size to appropriate format required by imresize."""
+    # Handle None arguments
+    if output_size is None and scale_factor_array is not None:
+        width = int(img.shape[1] * scale_factor_array[0])
+        height = int(img.shape[0] * scale_factor_array[1])
+        return np.array((width, height))
+
+    return _convert_scalar_to_width_height(np.array(output_size))
+
+
+def imresize(
+    img: np.ndarray,
+    scale_factor: float | tuple[float, float] | None = None,
+    output_size: int | tuple[int, int] | None = None,
+    interpolation: str = "optimise",
+) -> np.ndarray:
     """Resize input image.
 
     Args:
         img (:class:`numpy.ndarray`):
             Input image, assumed to be in `HxWxC` or `HxW` format.
-        scale_factor (tuple(float)):
+        scale_factor (float or Tuple[float, float]):
             Scaling factor to resize the input image.
         output_size (tuple(int)):
             Output image size, (width, height).
@@ -83,28 +126,26 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
 
     """
     if scale_factor is None and output_size is None:
-        raise TypeError("One of scale_factor and output_size must be not None.")
-    if scale_factor is not None:
-        scale_factor = np.array(scale_factor)
-        if scale_factor.size == 1:
-            scale_factor = np.repeat(scale_factor, 2)
+        msg = "One of scale_factor and output_size must be not None."
+        raise TypeError(msg)
 
-    # Handle None arguments
-    if output_size is None:
-        width = int(img.shape[1] * scale_factor[0])
-        height = int(img.shape[0] * scale_factor[1])
-        output_size = (width, height)
+    scale_factor_array = _get_scale_factor_array(scale_factor)
+    output_size_array = _get_output_size_array(
+        img=img,
+        output_size=output_size,
+        scale_factor_array=scale_factor_array,
+    )
 
     if scale_factor is None:
-        scale_factor = img.shape[:2][::-1] / np.array(output_size)
+        scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
 
     # Return original if scale factor is 1
-    if np.all(scale_factor == 1.0):
+    if np.all(scale_factor_array == 1.0):  # noqa: PLR2004
         return img
 
     # Get appropriate cv2 interpolation enum
     if interpolation == "optimise":
-        interpolation = select_cv2_interpolation(scale_factor)
+        interpolation = select_cv2_interpolation(scale_factor_array)
 
     # a list of (original type, converted type) tuple
     # all `converted type` are np.dtypes that cv2.resize
@@ -128,33 +169,39 @@ def imresize(img, scale_factor=None, output_size=None, interpolation="optimise")
     source_dtypes = [v[0] for v in dtype_mapping]
     original_dtype = img.dtype
     if original_dtype not in source_dtypes:
+        msg = f"Does not support resizing for array of dtype: {original_dtype}"
         raise ValueError(
-            f"Does not support resizing for array of dtype: {original_dtype}"
+            msg,
         )
 
     converted_dtype = dtype_mapping[source_dtypes.index(original_dtype)][1]
     img = img.astype(converted_dtype)
 
-    interpolation = parse_cv2_interpolaton(interpolation)
+    cv2_interpolation = parse_cv2_interpolaton(interpolation)
 
     # Resize the image
     # Handle case for 1x1 images which cv2 v4.5.4 no longer handles
     if img.shape[0] == img.shape[1] == 1:
-        return img.repeat(output_size[1], 0).repeat(output_size[0], 1)
+        return img.repeat(output_size_array[1], 0).repeat(output_size_array[0], 1)
 
-    if len(img.shape) == 3 and img.shape[-1] > 4:
+    if len(img.shape) == 3 and img.shape[-1] > 4:  # noqa: PLR2004
         img_channels = [
-            cv2.resize(img[..., ch], tuple(output_size), interpolation=interpolation)[
-                ..., None
+            cv2.resize(
+                src=img[..., ch],
+                dsize=output_size_array,
+                interpolation=cv2_interpolation,
+            )[
+                ...,
+                None,
             ]
             for ch in range(img.shape[-1])
         ]
         return np.concatenate(img_channels, axis=-1)
 
-    return cv2.resize(img, tuple(output_size), interpolation=interpolation)
+    return cv2.resize(src=img, dsize=output_size_array, interpolation=cv2_interpolation)
 
 
-def rgb2od(img):
+def rgb2od(img: np.ndarray) -> np.ndarray:
     r"""Convert from RGB to optical density (:math:`OD_{RGB}`) space.
 
     .. math::
@@ -179,7 +226,7 @@ def rgb2od(img):
     return np.maximum(-1 * np.log(img / 255), 1e-6)
 
 
-def od2rgb(od):
+def od2rgb(od: np.ndarray) -> np.ndarray:
     r"""Convert from optical density (:math:`OD_{RGB}`) to RGB.
 
     .. math::
@@ -204,7 +251,10 @@ def od2rgb(od):
     return (255 * np.exp(-1 * od)).astype(np.uint8)
 
 
-def bounds2locsize(bounds, origin="upper"):
+def bounds2locsize(
+    bounds: tuple[int, int, int, int] | np.ndarray,
+    origin: str = "upper",
+) -> tuple[np.ndarray, np.ndarray]:
     """Calculate the size of a tuple of bounds.
 
     Bounds are expected to be in the `(left, top, right, bottom)` or
@@ -219,16 +269,16 @@ def bounds2locsize(bounds, origin="upper"):
             Defaults to upper.
 
     Returns:
-        tuple:
-            A 2-tuple containing integer 2-tuples for location and size:
+        np.ndarray:
+            A set of two arrays containing integer for location and size:
 
-            - :py:obj:`tuple` - location tuple
-                - :py:obj:`int` - x
-                - :py:obj:`int` - y
+            - location array
+                - x location
+                - y location
 
-            - :py:obj:`size` - size tuple
-                - :py:obj:`int` - width
-                - :py:obj:`int` - height
+            - size array
+                - width
+                - height
 
     Examples:
         >>> from tiatoolbox.utils.transforms import bounds2locsize
@@ -245,10 +295,14 @@ def bounds2locsize(bounds, origin="upper"):
         return np.array([left, top]), np.array([right - left, bottom - top])
     if origin == "lower":
         return np.array([left, bottom]), np.array([right - left, top - bottom])
-    raise ValueError("Invalid origin. Only 'upper' or 'lower' are valid.")
+    msg = "Invalid origin. Only 'upper' or 'lower' are valid."
+    raise ValueError(msg)
 
 
-def locsize2bounds(location, size):
+def locsize2bounds(
+    location: tuple[int, int],
+    size: tuple[int, int],
+) -> tuple[int, int, int, int]:
     """Convert a location and size to bounds.
 
     Args:
@@ -275,9 +329,9 @@ def locsize2bounds(location, size):
 
 
 def bounds2slices(
-    bounds: Tuple[int, int, int, int],
-    stride: Union[int, Tuple[int, int, Tuple[int, int]]] = 1,
-) -> Tuple[slice]:
+    bounds: tuple[int, int, int, int] | np.ndarray,
+    stride: int | tuple[int, int] = 1,
+) -> tuple[slice, ...]:
     """Convert bounds to slices.
 
     Create a tuple of slices for each start/stop pair in bounds.
@@ -304,21 +358,26 @@ def bounds2slices(
 
     """
     if np.size(stride) not in [1, 2]:
-        raise ValueError("Invalid stride shape.")
+        msg = "Invalid stride shape."
+        raise ValueError(msg)
+    stride_array = np.tile(stride, 2)
     if np.size(stride) == 1:
-        stride = np.tile(stride, 4)
-    elif np.size(stride) == 2:  # pragma: no cover
-        stride = np.tile(stride, 2)
+        stride_array = np.tile(stride, 4)
 
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
-    return tuple(slice(*x, s) for x, s in zip(slice_array, stride))
+
+    slices = []
+    for x, s in zip(slice_array, stride_array):
+        slices.append(slice(x[0], x[1], s))
+
+    return tuple(slices)
 
 
 def pad_bounds(
-    bounds: Tuple[int, int, int, int],
-    padding: Union[int, Tuple[int, int], Tuple[int, int, int, int]],
-) -> Tuple[int, int, int, int]:
+    bounds: tuple[int, int, int, int],
+    padding: int | tuple[int, int] | tuple[int, int, int, int] | np.ndarray,
+) -> tuple[int, int, int, int]:
     """Add padding to bounds.
 
     Arguments:
@@ -338,11 +397,13 @@ def pad_bounds(
 
     """
     if np.size(bounds) % 2 != 0:
-        raise ValueError("Bounds must have an even number of elements.")
+        msg = "Bounds must have an even number of elements."
+        raise ValueError(msg)
     ndims = np.size(bounds) // 2
 
     if np.size(padding) not in [1, 2, np.size(bounds)]:
-        raise ValueError("Invalid number of padding elements.")
+        msg = "Invalid number of padding elements."
+        raise ValueError(msg)
 
     if np.size(padding) == 1 or np.size(padding) == np.size(bounds):
         pass

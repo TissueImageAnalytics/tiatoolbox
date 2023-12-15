@@ -1,21 +1,33 @@
 """pytest fixtures."""
+from __future__ import annotations
 
-import pathlib
+import os
 import shutil
 from pathlib import Path
 from typing import Callable
 
 import pytest
-from _pytest.tmpdir import TempPathFactory
 
+import tiatoolbox
+from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
+from tiatoolbox.utils.env_detection import running_on_ci
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
 # -------------------------------------------------------------------------------------
 
 
-def pytest_generate_tests(metafunc):
+def pytest_configure() -> None:
+    """Perform initial configuration for TIAToolbox tests."""
+    logger.info(
+        "🏁 Starting tests. TIAToolbox Version: %s. CI: %s",
+        tiatoolbox.__version__,
+        running_on_ci(),
+    )
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     """Generate (parameterize) test scenarios.
 
     Adapted from pytest documentation. For more information on
@@ -29,6 +41,7 @@ def pytest_generate_tests(metafunc):
         return
     idlist = []
     argvalues = []
+    argnames = None
     for scenario in metafunc.cls.scenarios:
         idlist.append(scenario[0])
         items = scenario[1].items()
@@ -43,25 +56,32 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(scope="session")
-def root_path(request) -> Path:
+def root_path(request: pytest.FixtureRequest) -> Path:
     """Return the root path of the project."""
     return Path(request.config.rootdir) / "tiatoolbox"
 
 
 @pytest.fixture(scope="session")
-def remote_sample(tmp_path_factory: TempPathFactory) -> Callable:
+def tmp_samples_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Return a temporary path."""
+    return tmp_path_factory.mktemp("data")
+
+
+@pytest.fixture(scope="session")
+def remote_sample(tmp_samples_path: str) -> Callable:
     """Factory fixture for fetching sample files."""
 
-    def __remote_sample(key: str) -> pathlib.Path:
+    def __remote_sample(key: str) -> Path:
         """Wrapper around tiatoolbox.data._fetch_remote_sample for tests."""
-        return _fetch_remote_sample(key, tmp_path_factory.mktemp("data"))
+        return _fetch_remote_sample(key, tmp_samples_path)
 
     return __remote_sample
 
 
 @pytest.fixture(scope="session")
-def sample_ndpi(remote_sample) -> pathlib.Path:
+def sample_ndpi(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ndpi images.
+
     Download ndpi image for pytest.
 
     """
@@ -69,7 +89,7 @@ def sample_ndpi(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_ndpi2(remote_sample) -> pathlib.Path:
+def sample_ndpi2(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ndpi images.
 
     Download ndpi image for pytest.
@@ -80,8 +100,9 @@ def sample_ndpi2(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_svs(remote_sample) -> pathlib.Path:
+def sample_svs(remote_sample: Callable) -> Path:
     """Sample pytest fixture for svs images.
+
     Download svs image for pytest.
 
     """
@@ -89,8 +110,9 @@ def sample_svs(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_ome_tiff(remote_sample) -> pathlib.Path:
+def sample_ome_tiff(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ome-tiff (brightfield pyramid) images.
+
     Download ome-tiff image for pytest.
 
     """
@@ -98,18 +120,24 @@ def sample_ome_tiff(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_jp2(remote_sample) -> pathlib.Path:
+def sample_jp2(remote_sample: Callable) -> Path:
     """Sample pytest fixture for JP2 images.
+
     Download jp2 image for pytest.
 
     """
-    return remote_sample("jp2-omnyx-1")
+    return remote_sample("jp2-omnyx-small")
 
 
 @pytest.fixture(scope="session")
-def sample_all_wsis(sample_ndpi, sample_svs, sample_jp2, tmpdir_factory):
+def sample_all_wsis(
+    sample_ndpi: Path,
+    sample_svs: Path,
+    sample_jp2: Path,
+    tmpdir_factory: pytest.TempdirFactory,
+) -> Path:
     """Sample wsi(s) of all types supported by tiatoolbox."""
-    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+    dir_path = Path(tmpdir_factory.mktemp("data"))
 
     try:
         dir_path.joinpath(sample_ndpi.name).symlink_to(sample_ndpi)
@@ -124,13 +152,18 @@ def sample_all_wsis(sample_ndpi, sample_svs, sample_jp2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
+def sample_all_wsis2(
+    sample_ndpi2: Path,
+    sample_svs: Path,
+    sample_jp2: Path,
+    tmpdir_factory: pytest.TempdirFactory,
+) -> Path:
     """Sample wsi(s) of all types supported by tiatoolbox.
 
     Adds sample fluorescence ndpi image.
 
     """
-    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+    dir_path = Path(tmpdir_factory.mktemp("data"))
 
     try:
         dir_path.joinpath(sample_ndpi2.name).symlink_to(sample_ndpi2)
@@ -145,8 +178,32 @@ def sample_all_wsis2(sample_ndpi2, sample_svs, sample_jp2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def source_image(remote_sample) -> pathlib.Path:
+def sample_svs_ndpi_wsis(
+    sample_ndpi2: Path,
+    sample_svs: Path,
+    tmpdir_factory: pytest.TempdirFactory,
+) -> Path:
+    """Sample SVS and NDPI wsi(s).
+
+    Uses sample fluorescence ndpi image.
+
+    """
+    dir_path = Path(tmpdir_factory.mktemp("data"))
+
+    try:
+        dir_path.joinpath(sample_ndpi2.name).symlink_to(sample_ndpi2)
+        dir_path.joinpath(sample_svs.name).symlink_to(sample_svs)
+    except OSError:
+        shutil.copy(sample_ndpi2, dir_path.joinpath(sample_ndpi2.name))
+        shutil.copy(sample_svs, dir_path.joinpath(sample_svs.name))
+
+    return dir_path
+
+
+@pytest.fixture(scope="session")
+def source_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for source image.
+
     Download stain normalization source image for pytest.
 
     """
@@ -154,8 +211,9 @@ def source_image(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def norm_macenko(remote_sample) -> pathlib.Path:
+def norm_macenko(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_macenko image.
+
     Download norm_macenko image for pytest.
 
     """
@@ -163,8 +221,9 @@ def norm_macenko(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def norm_reinhard(remote_sample) -> pathlib.Path:
+def norm_reinhard(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_reinhard image.
+
     Download norm_reinhard image for pytest.
 
     """
@@ -172,8 +231,9 @@ def norm_reinhard(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def norm_ruifrok(remote_sample) -> pathlib.Path:
+def norm_ruifrok(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_ruifrok image.
+
     Download norm_ruifrok image for pytest.
 
     """
@@ -181,8 +241,9 @@ def norm_ruifrok(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def norm_vahadane(remote_sample) -> pathlib.Path:
+def norm_vahadane(remote_sample: Callable) -> Path:
     """Sample pytest fixture for norm_vahadane image.
+
     Download norm_vahadane image for pytest.
 
     """
@@ -191,15 +252,15 @@ def norm_vahadane(remote_sample) -> pathlib.Path:
 
 @pytest.fixture(scope="session")
 def sample_visual_fields(
-    source_image,
-    norm_ruifrok,
-    norm_reinhard,
-    norm_macenko,
-    norm_vahadane,
-    tmpdir_factory,
-):
+    source_image: Path,
+    norm_ruifrok: Path,
+    norm_reinhard: Path,
+    norm_macenko: Path,
+    norm_vahadane: Path,
+    tmpdir_factory: pytest.TempdirFactory,
+) -> Path:
     """Sample visual fields(s) of all types supported by tiatoolbox."""
-    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+    dir_path = Path(tmpdir_factory.mktemp("data"))
 
     try:
         dir_path.joinpath(source_image.name).symlink_to(source_image)
@@ -218,8 +279,9 @@ def sample_visual_fields(
 
 
 @pytest.fixture(scope="session")
-def patch_extr_vf_image(remote_sample) -> pathlib.Path:
+def patch_extr_vf_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for a visual field image.
+
     Download TCGA-HE-7130-01Z-00-DX1 image for pytest.
 
     """
@@ -227,8 +289,9 @@ def patch_extr_vf_image(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_csv(remote_sample) -> pathlib.Path:
+def patch_extr_csv(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction csv.
+
     Download sample patch extraction csv for pytest.
 
     """
@@ -236,8 +299,9 @@ def patch_extr_csv(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_json(remote_sample) -> pathlib.Path:
+def patch_extr_json(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction json.
+
     Download sample patch extraction json for pytest.
 
     """
@@ -245,8 +309,9 @@ def patch_extr_json(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_npy(remote_sample) -> pathlib.Path:
+def patch_extr_npy(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction npy.
+
     Download sample patch extraction npy for pytest.
 
     """
@@ -254,8 +319,9 @@ def patch_extr_npy(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_csv_noheader(remote_sample) -> pathlib.Path:
+def patch_extr_csv_noheader(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction noheader csv.
+
     Download sample patch extraction noheader csv for pytest.
 
     """
@@ -263,8 +329,9 @@ def patch_extr_csv_noheader(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_2col_json(remote_sample) -> pathlib.Path:
+def patch_extr_2col_json(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction 2col json.
+
     Download sample patch extraction 2col json for pytest.
 
     """
@@ -272,8 +339,9 @@ def patch_extr_2col_json(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_2col_npy(remote_sample) -> pathlib.Path:
+def patch_extr_2col_npy(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction 2col npy.
+
     Download sample patch extraction 2col npy for pytest.
 
     """
@@ -281,8 +349,9 @@ def patch_extr_2col_npy(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_jp2_csv(remote_sample) -> pathlib.Path:
+def patch_extr_jp2_csv(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction jp2 csv.
+
     Download sample patch extraction jp2 csv for pytest.
 
     """
@@ -290,8 +359,9 @@ def patch_extr_jp2_csv(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_jp2_read(remote_sample) -> pathlib.Path:
+def patch_extr_jp2_read(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction jp2 read npy.
+
     Download sample patch extraction jp2 read npy for pytest.
 
     """
@@ -299,8 +369,9 @@ def patch_extr_jp2_read(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_npy_read(remote_sample) -> pathlib.Path:
+def patch_extr_npy_read(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction read npy.
+
     Download sample patch extraction read npy for pytest.
 
     """
@@ -308,8 +379,9 @@ def patch_extr_npy_read(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_svs_csv(remote_sample) -> pathlib.Path:
+def patch_extr_svs_csv(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction svs csv.
+
     Download sample patch extraction svs csv for pytest.
 
     """
@@ -317,8 +389,9 @@ def patch_extr_svs_csv(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_svs_header(remote_sample) -> pathlib.Path:
+def patch_extr_svs_header(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction svs_header csv.
+
     Download sample patch extraction svs_header csv for pytest.
 
     """
@@ -326,8 +399,9 @@ def patch_extr_svs_header(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def patch_extr_svs_npy_read(remote_sample) -> pathlib.Path:
+def patch_extr_svs_npy_read(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch extraction svs_read npy.
+
     Download sample patch extraction svs_read npy for pytest.
 
     """
@@ -335,8 +409,9 @@ def patch_extr_svs_npy_read(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch1(remote_sample) -> pathlib.Path:
+def sample_patch1(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 1.
+
     Download sample patch 1 (Kather100K) for pytest.
 
     """
@@ -344,8 +419,9 @@ def sample_patch1(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch2(remote_sample) -> pathlib.Path:
+def sample_patch2(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 2.
+
     Download sample patch 2 (Kather100K) for pytest.
 
     """
@@ -353,8 +429,9 @@ def sample_patch2(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch3(remote_sample) -> pathlib.Path:
+def sample_patch3(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 3.
+
     Download sample patch 3 (PCam) for pytest.
 
     """
@@ -362,8 +439,9 @@ def sample_patch3(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def sample_patch4(remote_sample) -> pathlib.Path:
+def sample_patch4(remote_sample: Callable) -> Path:
     """Sample pytest fixture for sample patch 4.
+
     Download sample patch 4 (PCam) for pytest.
 
     """
@@ -371,9 +449,13 @@ def sample_patch4(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory):
+def dir_sample_patches(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    tmpdir_factory: pytest.TempdirFactory,
+) -> Path:
     """Directory of sample image patches for testing."""
-    dir_path = pathlib.Path(tmpdir_factory.mktemp("data"))
+    dir_path = Path(tmpdir_factory.mktemp("data"))
 
     try:
         dir_path.joinpath(sample_patch1.name).symlink_to(sample_patch2)
@@ -386,8 +468,9 @@ def dir_sample_patches(sample_patch1, sample_patch2, tmpdir_factory):
 
 
 @pytest.fixture(scope="session")
-def sample_wsi_dict(remote_sample):
+def sample_wsi_dict(remote_sample: Callable) -> dict:
     """Sample pytest fixture for torch wsi dataset.
+
     Download svs image for pytest.
 
     """
@@ -409,7 +492,7 @@ def sample_wsi_dict(remote_sample):
 
 
 @pytest.fixture(scope="session")
-def fixed_image(remote_sample) -> pathlib.Path:
+def fixed_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for fixed image.
 
     Download fixed image for pytest.
@@ -418,7 +501,7 @@ def fixed_image(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def moving_image(remote_sample) -> pathlib.Path:
+def moving_image(remote_sample: Callable) -> Path:
     """Sample pytest fixture for moving image.
 
     Download moving image for pytest.
@@ -427,7 +510,7 @@ def moving_image(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def dfbr_features(remote_sample) -> pathlib.Path:
+def dfbr_features(remote_sample: Callable) -> Path:
     """Sample pytest fixture for DFBR features.
 
     Download features used by Deep Feature Based
@@ -437,7 +520,7 @@ def dfbr_features(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def fixed_mask(remote_sample) -> pathlib.Path:
+def fixed_mask(remote_sample: Callable) -> Path:
     """Sample pytest fixture for fixed mask.
 
     Download fixed mask for pytest.
@@ -446,9 +529,51 @@ def fixed_mask(remote_sample) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def moving_mask(remote_sample) -> pathlib.Path:
+def moving_mask(remote_sample: Callable) -> Path:
     """Sample pytest fixture for moving mask.
 
     Download moving mask for pytest.
     """
     return remote_sample("moving_mask")
+
+
+@pytest.fixture(scope="session")
+def chdir() -> Callable:
+    """Return a context manager to change the current working directory.
+
+    Todo: switch to chdir from contextlib when Python 3.11 is required
+
+    """
+    try:
+        from contextlib import chdir
+    except ImportError:
+        from contextlib import AbstractContextManager
+
+        class chdir(AbstractContextManager):  # noqa: N801
+            """Non thread-safe context manager to change the current working directory.
+
+            See Also: https://github.com/python/cpython/blob/main/Lib/contextlib.py.
+
+            """
+
+            def __init__(self: chdir, path: Path) -> None:
+                self.path = path
+                self._old_cwd = []
+
+            def __enter__(self: chdir) -> None:
+                self._old_cwd.append(os.getcwd())  # noqa: PTH109
+                os.chdir(self.path)
+
+            def __exit__(self: chdir, *excinfo: object) -> None:
+                os.chdir(self._old_cwd.pop())
+
+    return chdir
+
+
+@pytest.fixture(scope="module")
+def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
+    """Set up a temporary data directory for testing visualization UI."""
+    tmp_path = tmp_path_factory.mktemp("data")
+    (tmp_path / "slides").mkdir()
+    (tmp_path / "overlays").mkdir()
+    return {"base_path": tmp_path}

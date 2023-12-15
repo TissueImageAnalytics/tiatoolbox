@@ -1,6 +1,11 @@
-"""Package to read whole slide images"""
+"""Package to read whole slide images."""
 from tiatoolbox.wsicore import metadata, wsimeta, wsireader
 
+from .wsimeta import WSIMeta
+from .wsireader import WSIReader
+
 # Top level imports
-WSIReader = wsireader.WSIReader
-WSIMeta = wsimeta.WSIMeta
+__all__ = [
+    "WSIReader",
+    "WSIMeta",
+]

@@ -1,6 +1,6 @@
-"""Tests for stain augmentation code."""
+"""Test for stain augmentation code."""
 
-import pathlib
+from pathlib import Path
 
 import albumentations as alb
 import numpy as np
@@ -9,14 +9,14 @@ import pytest
 from tiatoolbox.data import stain_norm_target
 from tiatoolbox.tools.stainaugment import StainAugmentor
 from tiatoolbox.tools.stainnorm import get_normalizer
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils import imread
 
 
-def test_stainaugment(source_image, norm_vahadane):
+def test_stainaugment(source_image: Path, norm_vahadane: Path) -> None:
     """Test functionality of the StainAugmentor class."""
-    source_img = imread(pathlib.Path(source_image))
+    source_img = imread(Path(source_image))
     target_img = stain_norm_target()
-    vahadane_img = imread(pathlib.Path(norm_vahadane))
+    vahadane_img = imread(Path(norm_vahadane))
 
     # Test invalid method in the input
     with pytest.raises(ValueError, match=r".*Unsupported stain extractor method.*"):
@@ -25,7 +25,10 @@ def test_stainaugment(source_image, norm_vahadane):
     # 1. Testing without stain matrix.
     # Test with macenko stain extractor
     augmentor = StainAugmentor(
-        method="macenko", sigma1=3.0, sigma2=3.0, augment_background=True
+        method="macenko",
+        sigma1=3.0,
+        sigma2=3.0,
+        augment_background=True,
     )
     augmentor.fit(source_img)
     source_img_aug = augmentor.augment()
@@ -64,7 +67,7 @@ def test_stainaugment(source_image, norm_vahadane):
                 sigma1=0.0,
                 sigma2=0.0,
                 always_apply=True,
-            )
+            ),
         ],
         p=1,
     )

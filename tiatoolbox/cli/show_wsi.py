@@ -1,4 +1,4 @@
-"""Command line interface for TileServer"""
+"""Command line interface for TileServer."""
 import click
 
 from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
@@ -23,7 +23,12 @@ from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli
     colour map string or 'categorical' (random colours will be generated
     for each possible value of property).""",
 )
-def show_wsi(img_input, name, colour_by, colour_map):  # pragma: no cover
+def show_wsi(
+    img_input: str,
+    name: str,
+    colour_by: str,
+    colour_map: str,
+) -> None:  # pragma: no cover
     """Show a slide together with any overlays."""
     from tiatoolbox.utils.visualization import AnnotationRenderer
     from tiatoolbox.visualization.tileserver import TileServer
@@ -31,20 +36,21 @@ def show_wsi(img_input, name, colour_by, colour_map):  # pragma: no cover
     renderer = AnnotationRenderer()
     if colour_by is not None:
         if colour_map is None:
+            msg = "If colouring by a property, must also define a colour map."
             raise ValueError(
-                "If colouring by a property, must also define a colour map."
+                msg,
             )
         renderer = AnnotationRenderer(score_prop=colour_by, mapper=colour_map)
 
     if len(img_input) == 0:
-        raise ValueError("At least one image path must be provided.")
+        msg = "At least one image path must be provided."
+        raise ValueError(msg)
     if len(name) == 0:
         app = TileServer("TileServer", list(img_input), renderer=renderer)
     elif len(name) == len(img_input):
         app = TileServer("TileServer", dict(zip(name, img_input)), renderer=renderer)
     else:
-        raise (
-            ValueError("if names are provided, must match the number of paths provided")
-        )
+        msg = "if names are provided, must match the number of paths provided"
+        raise ValueError(msg)
 
     app.run(threaded=False)

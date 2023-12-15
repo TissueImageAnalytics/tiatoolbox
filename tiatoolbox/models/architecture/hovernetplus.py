@@ -1,12 +1,14 @@
+"""Define HoVerNetPlus architecture."""
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import List
 
 import cv2
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 from skimage import morphology
+from torch import nn
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.architecture.utils import UpSample2x
@@ -78,8 +80,12 @@ class HoVerNetPlus(HoVerNet):
     """
 
     def __init__(
-        self, num_input_channels: int = 3, num_types: int = None, num_layers: int = None
-    ):
+        self: HoVerNetPlus,
+        num_input_channels: int = 3,
+        num_types: int | None = None,
+        num_layers: int | None = None,
+    ) -> None:
+        """Initialize :class:`HoVerNetPlus`."""
         super().__init__(mode="fast")
         self.num_input_channels = num_input_channels
         self.num_types = num_types
@@ -91,28 +97,28 @@ class HoVerNetPlus(HoVerNet):
                 [
                     (
                         "tp",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=num_types),
+                        self._create_decoder_branch(ksize=ksize, out_ch=num_types),
                     ),
                     (
                         "np",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2),
+                        self._create_decoder_branch(ksize=ksize, out_ch=2),
                     ),
                     (
                         "hv",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=2),
+                        self._create_decoder_branch(ksize=ksize, out_ch=2),
                     ),
                     (
                         "ls",
-                        HoVerNet._create_decoder_branch(ksize=ksize, out_ch=num_layers),
+                        self._create_decoder_branch(ksize=ksize, out_ch=num_layers),
                     ),
-                ]
-            )
+                ],
+            ),
         )
 
         self.upsample2x = UpSample2x()
 
     @staticmethod
-    def _proc_ls(ls_map: np.ndarray):
+    def _proc_ls(ls_map: np.ndarray) -> np.ndarray:
         """Extract Layer Segmentation map with LS Map.
 
         This function takes the layer segmentation map and applies various morphological
@@ -133,11 +139,12 @@ class HoVerNetPlus(HoVerNet):
         min_size = 20000
         kernel_size = 20
 
-        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")
+        epith_all = np.where(ls_map >= 2, 1, 0).astype("uint8")  # noqa: PLR2004
         mask = np.where(ls_map >= 1, 1, 0).astype("uint8")
         epith_all = epith_all > 0
         epith_mask = morphology.remove_small_objects(
-            epith_all, min_size=min_size
+            epith_all,
+            min_size=min_size,
         ).astype("uint8")
         epith_edited = epith_mask * ls_map
         epith_edited = epith_edited.astype("uint8")
@@ -145,18 +152,26 @@ class HoVerNetPlus(HoVerNet):
         for i in [3, 2, 4]:
             tmp = np.where(epith_edited == i, 1, 0).astype("uint8")
             ep_open = cv2.morphologyEx(
-                tmp, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size))
+                tmp,
+                cv2.MORPH_CLOSE,
+                np.ones((kernel_size, kernel_size)),
             )
             ep_open = cv2.morphologyEx(
-                ep_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size))
+                ep_open,
+                cv2.MORPH_OPEN,
+                np.ones((kernel_size, kernel_size)),
             )
             epith_edited_open[ep_open == 1] = i
 
         mask_open = cv2.morphologyEx(
-            mask, cv2.MORPH_CLOSE, np.ones((kernel_size, kernel_size))
+            mask,
+            cv2.MORPH_CLOSE,
+            np.ones((kernel_size, kernel_size)),
         )
         mask_open = cv2.morphologyEx(
-            mask_open, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size))
+            mask_open,
+            cv2.MORPH_OPEN,
+            np.ones((kernel_size, kernel_size)),
         ).astype("uint8")
         ls_map = mask_open.copy()
         for i in range(2, 5):
@@ -165,7 +180,7 @@ class HoVerNetPlus(HoVerNet):
         return ls_map.astype("uint8")
 
     @staticmethod
-    def _get_layer_info(pred_layer):
+    def _get_layer_info(pred_layer: np.ndarray) -> dict:
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
@@ -200,7 +215,9 @@ class HoVerNetPlus(HoVerNet):
         for type_class in layer_list:
             layer = np.where(pred_layer == type_class, 1, 0).astype("uint8")
             contours, _ = cv2.findContours(
-                layer.astype("uint8"), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+                layer.astype("uint8"),
+                cv2.RETR_TREE,
+                cv2.CHAIN_APPROX_NONE,
             )
             for layer in contours:
                 coords = layer[:, 0, :]
@@ -213,8 +230,8 @@ class HoVerNetPlus(HoVerNet):
         return layer_info_dict
 
     @staticmethod
-    # skipcq: PYL-W0221  # noqa: E800
-    def postproc(raw_maps: List[np.ndarray]):
+    # skipcq: PYL-W0221  # noqa: ERA001
+    def postproc(raw_maps: list[np.ndarray]) -> tuple:
         """Post-processing script for image tiles.
 
         Args:
@@ -273,6 +290,7 @@ class HoVerNetPlus(HoVerNet):
                             },
                             ...
                         }
+
         Examples:
             >>> from tiatoolbox.models.architecture.hovernetplus import HoVerNetPlus
             >>> import torch
@@ -290,7 +308,7 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        pred_inst = HoVerNet._proc_np_hv(np_map, hv_map, scale_factor=0.5)
+        pred_inst = HoVerNetPlus._proc_np_hv(np_map, hv_map, scale_factor=0.5)
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
 
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
@@ -302,14 +320,14 @@ class HoVerNetPlus(HoVerNet):
         return pred_inst, nuc_inst_info_dict, pred_layer, layer_info_dict
 
     @staticmethod
-    def infer_batch(model, batch_data, on_gpu):
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, on_gpu: bool) -> tuple:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o
         aggregation.
 
         Args:
-            model (nn.Module)
+            model (nn.Module):
                 PyTorch defined model.
             batch_data (ndarray):
                 A batch of data generated by
@@ -320,7 +338,7 @@ class HoVerNetPlus(HoVerNet):
         """
         patch_imgs = batch_data
 
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 
@@ -330,7 +348,7 @@ class HoVerNetPlus(HoVerNet):
         with torch.inference_mode():
             pred_dict = model(patch_imgs_gpu)
             pred_dict = OrderedDict(
-                [[k, v.permute(0, 2, 3, 1).contiguous()] for k, v in pred_dict.items()]
+                [[k, v.permute(0, 2, 3, 1).contiguous()] for k, v in pred_dict.items()],
             )
             pred_dict["np"] = F.softmax(pred_dict["np"], dim=-1)[..., 1:]
 

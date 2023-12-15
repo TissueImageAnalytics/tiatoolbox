@@ -19,13 +19,13 @@
 # absolute, like shown here.
 #
 import os
-import pathlib
+from pathlib import Path
 import shutil
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-import tiatoolbox  # noqa: E402
+import tiatoolbox
 
 # -- General configuration ---------------------------------------------
 
@@ -1996,7 +1996,7 @@ def all_but_ipynb(dir_path, contents):
 
 
 DOC_ROOT = os.path.dirname(os.path.realpath(__file__))
-PROJ_ROOT = pathlib.Path(DOC_ROOT).parent
+PROJ_ROOT = Path(DOC_ROOT).parent
 shutil.rmtree(os.path.join(PROJ_ROOT, "docs/_notebooks"), ignore_errors=True)
 shutil.copytree(
     os.path.join(PROJ_ROOT, "examples"),

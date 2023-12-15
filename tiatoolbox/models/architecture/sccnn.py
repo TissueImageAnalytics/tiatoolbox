@@ -1,4 +1,4 @@
-"""Defines SCCNN architecture.
+"""Define SCCNN architecture.
 
 Sirinukunwattana, Korsuk, et al.
 "Locality sensitive deep learning for detection and classification
@@ -9,12 +9,11 @@ IEEE transactions on medical imaging 35.5 (2016): 1196-1206.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import List, Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
 from skimage.feature import peak_local_max
+from torch import nn
 
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import misc
@@ -67,10 +66,8 @@ class SCCNN(ModelABC):
     Args:
         num_input_channels (int):
             Number of channels in input. default=3.
-        out_height (int):
-            Output height. default=13.
-        out_width (int):
-            Output width. default=13.
+        patch_output_shape tuple(int):
+            Defines output height and output width. default=(13, 13).
         radius (int):
             Radius for nucleus detection, default = 12.
         min_distance (int):
@@ -88,13 +85,14 @@ class SCCNN(ModelABC):
     """
 
     def __init__(
-        self,
+        self: SCCNN,
         num_input_channels: int = 3,
-        patch_output_shape: Tuple[int, int] = (13, 13),
+        patch_output_shape: tuple[int, int] = (13, 13),
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
     ) -> None:
+        """Initialize :class:`SCCNN`."""
         super().__init__()
         out_height = patch_output_shape[0]
         out_width = patch_output_shape[1]
@@ -117,7 +115,9 @@ class SCCNN(ModelABC):
         self.threshold_abs = threshold_abs
 
         def conv_act_block(
-            in_channels: int, out_channels: int, kernel_size: int
+            in_channels: int,
+            out_channels: int,
+            kernel_size: int,
         ) -> torch.nn.ModuleDict:
             """Convolution and activation branch for SCCNN.
 
@@ -153,7 +153,8 @@ class SCCNN(ModelABC):
             return nn.ModuleDict(module_dict)
 
         def spatially_constrained_layer1(
-            in_channels: int, out_channels: int
+            in_channels: int,
+            out_channels: int,
         ) -> torch.nn.ModuleDict:
             """Spatially constrained layer.
 
@@ -201,7 +202,10 @@ class SCCNN(ModelABC):
         self.layer = nn.ModuleDict(module_dict)
 
     def spatially_constrained_layer2(
-        self, sc1_0: torch.Tensor, sc1_1: torch.Tensor, sc1_2: torch.Tensor
+        self: SCCNN,
+        sc1_0: torch.Tensor,
+        sc1_1: torch.Tensor,
+        sc1_2: torch.Tensor,
     ) -> torch.Tensor:
         """Spatially constrained layer 2.
 
@@ -250,7 +254,10 @@ class SCCNN(ModelABC):
         """
         return image / 255.0
 
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:  # skipcq: PYL-W0221
+    def forward(  # skipcq: PYL-W0221
+        self: SCCNN,
+        input_tensor: torch.Tensor,
+    ) -> torch.Tensor:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -271,7 +278,7 @@ class SCCNN(ModelABC):
             in_tensor: torch.Tensor,
             out_height: int = 13,
             out_width: int = 13,
-        ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
             """Spatially constrained layer 1.
 
             Estimates row, column and height for
@@ -313,12 +320,13 @@ class SCCNN(ModelABC):
         l5 = self.layer["l5"]["conv1"](drop1)
         drop2 = self.layer["dropout2"](l5)
         s1_sigmoid0, s1_sigmoid1, s1_sigmoid2 = spatially_constrained_layer1(
-            self.layer["sc"], drop2
+            self.layer["sc"],
+            drop2,
         )
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
-    #  skipcq: PYL-W0221  # noqa: E800
-    def postproc(self, prediction_map: np.ndarray) -> np.ndarray:
+    #  skipcq: PYL-W0221  # noqa: ERA001
+    def postproc(self: SCCNN, prediction_map: np.ndarray) -> np.ndarray:
         """Post-processing script for MicroNet.
 
         Performs peak detection and extracts coordinates in x, y format.
@@ -343,8 +351,11 @@ class SCCNN(ModelABC):
 
     @staticmethod
     def infer_batch(
-        model: nn.Module, batch_data: np.ndarray | torch.Tensor, on_gpu: bool
-    ) -> List[np.ndarray]:
+        model: nn.Module,
+        batch_data: np.ndarray | torch.Tensor,
+        *,
+        on_gpu: bool,
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -366,7 +377,7 @@ class SCCNN(ModelABC):
         """
         patch_imgs = batch_data
 
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)
         # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()

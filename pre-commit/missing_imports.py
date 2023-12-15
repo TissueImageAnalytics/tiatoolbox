@@ -5,6 +5,8 @@ Any found bad imports will be printed and the script will exit with a non-zero
 status.
 
 """
+from __future__ import annotations
+
 import argparse
 import ast
 import importlib
@@ -12,7 +14,7 @@ import os
 import sys
 import tokenize
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import NoReturn
 
 from requirements_consistency import parse_requirements
 
@@ -42,7 +44,7 @@ REQUIREMENTS_FILES = (
 )
 
 
-def find_source_files(base_dir: Path) -> List[Path]:
+def find_source_files(base_dir: Path) -> list[Path]:
     """Recursively find all source files in the given directory.
 
     Args:
@@ -58,12 +60,14 @@ def find_source_files(base_dir: Path) -> List[Path]:
     source_files = []
     for root, dirs, files in os.walk(base_dir):
         dirs[:] = [d for d in dirs if not (d in ignore or d[0] in (".", "_"))]
-        files = [f for f in files if f.endswith(".py") and f[0] not in (".",)]
+        files = [  # noqa: PLW2901
+            f for f in files if f.endswith(".py") and f[0] not in (".",)
+        ]
         source_files.extend(Path(root) / f for f in files)
     return source_files
 
 
-def find_imports(py_source_path: Path) -> List[str]:
+def find_imports(py_source_path: Path) -> list[str]:
     """Find all imports in the given Python source file.
 
     Args:
@@ -76,8 +80,8 @@ def find_imports(py_source_path: Path) -> List[str]:
             the file.
 
     """
-    with open(  # This file could be any python file anywhere, skipcq
-        py_source_path, "r"
+    with Path.open(  # This file could be any python file anywhere, skipcq
+        py_source_path,
     ) as fh:
         source = fh.read()
     tree = ast.parse(source)
@@ -110,7 +114,7 @@ def std_spec(fullname: str) -> str:
     return "site-packages" not in origin.parts and "dist-packages" not in origin.parts
 
 
-def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[str, str]]:
+def stems(node: ast.Import | ast.ImportFrom) -> list[tuple[str, str]]:
     """Return the stem of each alias in the given import node.
 
     Args:
@@ -126,15 +130,16 @@ def stems(node: Union[ast.Import, ast.ImportFrom]) -> List[Tuple[str, str]]:
         return [(alias.name, alias.name.split(".")[0]) for alias in node.names]
     if isinstance(node, ast.ImportFrom):
         return [(node.module, node.module.split(".")[0])]
+    msg = f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom."
     raise TypeError(
-        f"Unexpected node type: {type(node)}. Should be ast.Import or ast.ImportFrom."
+        msg,
     )
 
 
-def main():
+def main() -> NoReturn:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Static analysis of requirements files and import statements."
+        description="Static analysis of requirements files and import statements.",
     )
     parser.add_argument(
         "files",
@@ -160,16 +165,18 @@ def main():
 
 
 def find_bad_imports(
-    root: Path, source_files: List[Path], requirements_path: Path
-) -> List[Tuple[Union[ast.Import, ast.ImportFrom], ast.alias]]:
+    root: Path,
+    source_files: list[Path],
+    requirements_path: Path,
+) -> list[tuple[ast.Import | ast.ImportFrom, ast.alias]]:
     """Find bad imports in the given requirements file.
 
     Args:
-        root (pathlib.Path):
+        root (Path):
             Root directory of the project.
-        source_root (pathlib.Path):
+        source_files (list(Path)):
             Root directory of the source code.
-        requirements_path (pathlib.Path):
+        requirements_path (Path):
             Path to the requirements file.
 
     Returns:
@@ -187,7 +194,7 @@ def find_bad_imports(
     for path in source_files:
         file_import_nodes = find_imports(path)
         # Mapping of import alias names and stems to nodes
-        stem_to_node_alias: Dict[Tuple[ast.alias, str], ast.Import] = {
+        stem_to_node_alias: dict[tuple[ast.alias, str], ast.Import] = {
             stem: (node, alias)
             for node in file_import_nodes
             for alias, stem in stems(node)
@@ -208,18 +215,18 @@ def find_bad_imports(
                 print(
                     f"{path.relative_to(root)}:{node.lineno}:"
                     f" Import not in {requirements_path.name}:"
-                    f" {stem}" + (f" ({alias})" if alias != stem else "")
+                    f" {stem}" + (f" ({alias})" if alias != stem else ""),
                 )
     return result
 
 
-def find_comments(path, line_num: int):
+def find_comments(path: str | Path, line_num: int) -> list:
     """Find comments on the given line.
 
     Args:
-        path:
+        path (str | Path):
             Path to the file.
-        line_num:
+        line_num (int):
             Line number to find comments on.
 
     Returns:
@@ -227,7 +234,8 @@ def find_comments(path, line_num: int):
             List of comments on the line.
 
     """
-    with open(path, "rb") as fh:  # This file could be any python file anywhere, skipcq
+    with Path.open(path, "rb") as fh:
+        # This file could be any python file anywhere.
         tokens = tokenize.tokenize(fh.readline)
         return [
             t.string

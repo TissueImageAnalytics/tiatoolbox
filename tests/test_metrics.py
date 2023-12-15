@@ -1,12 +1,14 @@
-"""Tests for metrics package in the toolbox."""
+"""Test for metrics package in the toolbox."""
 
 import numpy as np
 import pytest
 
 from tiatoolbox.utils.metrics import dice, f1_detection, pair_coordinates
 
+RNG = np.random.default_rng()  # Numpy Random Generator
 
-def test_pair_coordinates():
+
+def test_pair_coordinates() -> None:
     """Test for unique coordinates matching."""
     set_a = np.array([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]])
     set_b = np.array([[0.1, 0.1], [1.1, 1.1], [2.1, 2.1], [3.1, 3.1], [4.2, 4.2]])
@@ -19,7 +21,7 @@ def test_pair_coordinates():
     assert np.all(set_b[unpaired_b[0]] == np.array([4.2, 4.2]))
 
 
-def test_f1_detection():
+def test_f1_detection() -> None:
     """Test for calculate F1 detection."""
     set_a = np.array([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]])
     set_b = np.array([[0.1, 0.1], [1.1, 1.1], [2.1, 2.1], [3.1, 3.1], [4.2, 4.2]])
@@ -27,10 +29,10 @@ def test_f1_detection():
     assert score - 1.0 < 1.0e-6
 
 
-def test_dice():
+def test_dice() -> None:
     """Test to calculate DICE."""
-    gt_mask = np.random.randint(2, size=(256, 256))
-    pred_mask = np.random.randint(2, size=(256, 256))
+    gt_mask = RNG.integers(2, size=(256, 256))
+    pred_mask = RNG.integers(2, size=(256, 256))
     dice_val = dice(gt_mask, pred_mask)
     assert dice_val >= 0
     assert dice_val <= 1.0
@@ -54,9 +56,9 @@ def test_dice():
     assert np.isnan(dice_val)
 
 
-def test_dice_shape_mismatch_error():
-    """Tests if the shape of inputs does not match."""
-    gt_mask = np.random.randint(2, size=(256, 256, 1))
-    pred_mask = np.random.randint(2, size=(256, 256, 3))
+def test_dice_shape_mismatch_error() -> None:
+    """Test if the shape of inputs does not match."""
+    gt_mask = RNG.integers(2, size=(256, 256, 1))
+    pred_mask = RNG.integers(2, size=(256, 256, 3))
     with pytest.raises(ValueError, match=r".*Shape mismatch between the two masks.*"):
         _ = dice(gt_mask, pred_mask)

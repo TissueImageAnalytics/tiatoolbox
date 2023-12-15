@@ -1,20 +1,20 @@
-"""Defines MicroNet architecture.
+"""Define MicroNet architecture.
 
 Raza, SEA et al., “Micro-Net: A unified model for segmentation of
 various objects in microscopy images,” Medical Image Analysis,
-Dec. 2018, vol. 52, p. 160–173.
+Dec. 2018, vol. 52, p. 160-173.
 
 """
+from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as functional
 from scipy import ndimage
 from skimage import morphology
+from torch import nn
+from torch.nn import functional
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.models_abc import ModelABC
@@ -22,9 +22,11 @@ from tiatoolbox.utils import misc
 
 
 def group1_forward_branch(
-    layer: nn.Module, in_tensor: torch.Tensor, resized_feat: torch.Tensor
+    layer: nn.Module,
+    in_tensor: torch.Tensor,
+    resized_feat: torch.Tensor,
 ) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -48,7 +50,7 @@ def group1_forward_branch(
 
 
 def group2_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -66,9 +68,11 @@ def group2_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Te
 
 
 def group3_forward_branch(
-    layer: nn.Module, main_feat: torch.Tensor, skip: torch.Tensor
+    layer: nn.Module,
+    main_feat: torch.Tensor,
+    skip: torch.Tensor,
 ) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -93,7 +97,7 @@ def group3_forward_branch(
 
 
 def group4_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Tensor:
-    """Defines group 1 connections.
+    """Define group 1 connections.
 
     Args:
         layer (torch.nn.Module):
@@ -109,7 +113,7 @@ def group4_forward_branch(layer: nn.Module, in_tensor: torch.Tensor) -> torch.Te
     return layer["conv1"](a)
 
 
-def group1_arch_branch(in_ch: int, resized_in_ch: int, out_ch: int):
+def group1_arch_branch(in_ch: int, resized_in_ch: int, out_ch: int) -> nn.ModuleDict:
     """Group1 branch for MicroNet.
 
     Args:
@@ -177,7 +181,7 @@ def group1_arch_branch(in_ch: int, resized_in_ch: int, out_ch: int):
     return nn.ModuleDict(module_dict)
 
 
-def group2_arch_branch(in_ch: int, out_ch: int):
+def group2_arch_branch(in_ch: int, out_ch: int) -> nn.ModuleDict:
     """Group2 branch for MicroNet.
 
     Args:
@@ -217,7 +221,7 @@ def group2_arch_branch(in_ch: int, out_ch: int):
     return nn.ModuleDict(module_dict)
 
 
-def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
+def group3_arch_branch(in_ch: int, skip: int, out_ch: int) -> nn.ModuleDict:
     """Group3 branch for MicroNet.
 
     Args:
@@ -235,7 +239,10 @@ def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
     """
     module_dict = OrderedDict()
     module_dict["up1"] = nn.ConvTranspose2d(
-        in_ch, out_ch, kernel_size=(2, 2), stride=(2, 2)
+        in_ch,
+        out_ch,
+        kernel_size=(2, 2),
+        stride=(2, 2),
     )
     module_dict["conv1"] = nn.Sequential(
         nn.Conv2d(
@@ -260,11 +267,17 @@ def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
         nn.Tanh(),
     )
     module_dict["up2"] = nn.ConvTranspose2d(
-        out_ch, out_ch, kernel_size=(5, 5), stride=(1, 1)
+        out_ch,
+        out_ch,
+        kernel_size=(5, 5),
+        stride=(1, 1),
     )
 
     module_dict["up3"] = nn.ConvTranspose2d(
-        skip, out_ch, kernel_size=(5, 5), stride=(1, 1)
+        skip,
+        out_ch,
+        kernel_size=(5, 5),
+        stride=(1, 1),
     )
 
     module_dict["conv3"] = nn.Sequential(
@@ -284,8 +297,8 @@ def group3_arch_branch(in_ch: int, skip: int, out_ch: int):
 def group4_arch_branch(
     in_ch: int,
     out_ch: int,
-    up_kernel: Tuple[int, int] = (2, 2),
-    up_strides: Tuple[int, int] = (2, 2),
+    up_kernel: tuple[int, int] = (2, 2),
+    up_strides: tuple[int, int] = (2, 2),
     activation: str = "tanh",
 ) -> nn.ModuleDict:
     """Group4 branch for MicroNet.
@@ -312,14 +325,14 @@ def group4_arch_branch(
             An output of type :class:`torch.nn.ModuleDict`
 
     """
-    if activation == "relu":
-        activation = nn.ReLU()
-    else:
-        activation = nn.Tanh()
+    activation = nn.ReLU() if activation == "relu" else nn.Tanh()
 
     module_dict = OrderedDict()
     module_dict["up1"] = nn.ConvTranspose2d(
-        in_ch, out_ch, kernel_size=up_kernel, stride=up_strides
+        in_ch,
+        out_ch,
+        kernel_size=up_kernel,
+        stride=up_strides,
     )
     module_dict["conv1"] = nn.Sequential(
         nn.Conv2d(
@@ -336,8 +349,10 @@ def group4_arch_branch(
 
 
 def out_arch_branch(
-    in_ch: int, num_output_channels: int = 2, activation: str = "softmax"
-):
+    in_ch: int,
+    num_output_channels: int = 2,
+    activation: str = "softmax",
+) -> torch.nn.Sequential:
     """Group5 branch for MicroNet.
 
     This branch defines architecture for auxiliary and the main output.
@@ -355,10 +370,8 @@ def out_arch_branch(
             An output of type :class:`torch.nn.Sequential`
 
     """
-    if activation == "relu":
-        activation = nn.ReLU()
-    else:
-        activation = nn.Softmax()
+    activation = nn.ReLU() if activation == "relu" else nn.Softmax()
+
     return nn.Sequential(
         nn.Dropout2d(p=0.5),
         nn.Conv2d(
@@ -426,17 +439,24 @@ class MicroNet(ModelABC):
     """
 
     def __init__(
-        self, num_input_channels=3, num_output_channels=2, out_activation="softmax"
-    ):
+        self: MicroNet,
+        num_input_channels: int = 3,
+        num_output_channels: int = 2,
+        out_activation: str = "softmax",
+    ) -> None:
+        """Initialize :class:`MicroNet`."""
         super().__init__()
-        if num_output_channels < 2:
-            raise ValueError("Number of classes should be >=2.")
+        if num_output_channels < 2:  # noqa: PLR2004
+            msg = "Number of classes should be >=2."
+            raise ValueError(msg)
         self.__num_output_channels = num_output_channels
         self.in_ch = num_input_channels
 
         module_dict = OrderedDict()
         module_dict["b1"] = group1_arch_branch(
-            num_input_channels, num_input_channels, 64
+            num_input_channels,
+            num_input_channels,
+            64,
         )
         module_dict["b2"] = group1_arch_branch(128, num_input_channels, 128)
         module_dict["b3"] = group1_arch_branch(256, num_input_channels, 256)
@@ -450,23 +470,38 @@ class MicroNet(ModelABC):
         module_dict["b9"] = group3_arch_branch(256, 128, 128)
 
         module_dict["fm1"] = group4_arch_branch(
-            128, 64, (2, 2), (2, 2), activation=out_activation
+            128,
+            64,
+            (2, 2),
+            (2, 2),
+            activation=out_activation,
         )
         module_dict["fm2"] = group4_arch_branch(
-            256, 128, (4, 4), (4, 4), activation=out_activation
+            256,
+            128,
+            (4, 4),
+            (4, 4),
+            activation=out_activation,
         )
         module_dict["fm3"] = group4_arch_branch(
-            512, 256, (8, 8), (8, 8), activation=out_activation
+            512,
+            256,
+            (8, 8),
+            (8, 8),
+            activation=out_activation,
         )
 
         module_dict["aux_out1"] = out_arch_branch(
-            64, num_output_channels=self.__num_output_channels
+            64,
+            num_output_channels=self.__num_output_channels,
         )
         module_dict["aux_out2"] = out_arch_branch(
-            128, num_output_channels=self.__num_output_channels
+            128,
+            num_output_channels=self.__num_output_channels,
         )
         module_dict["aux_out3"] = out_arch_branch(
-            256, num_output_channels=self.__num_output_channels
+            256,
+            num_output_channels=self.__num_output_channels,
         )
 
         module_dict["out"] = out_arch_branch(
@@ -477,7 +512,10 @@ class MicroNet(ModelABC):
 
         self.layer = nn.ModuleDict(module_dict)
 
-    def forward(self, input_tensor: torch.Tensor):  # skipcq: PYL-W0221
+    def forward(  # skipcq: PYL-W0221
+        self: MicroNet,
+        input_tensor: torch.Tensor,
+    ) -> list[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -531,7 +569,7 @@ class MicroNet(ModelABC):
         return [out, aux1, aux2, aux3]
 
     @staticmethod
-    def postproc(image: np.ndarray):
+    def postproc(image: np.ndarray) -> tuple[np.ndarray, dict]:
         """Post-processing script for MicroNet.
 
         Args:
@@ -556,7 +594,7 @@ class MicroNet(ModelABC):
         return canvas, nuc_inst_info_dict
 
     @staticmethod
-    def preproc(image: np.ndarray):
+    def preproc(image: np.ndarray) -> np.ndarray:
         """Preprocessing function for MicroNet.
 
         Performs per image standardization.
@@ -587,8 +625,11 @@ class MicroNet(ModelABC):
 
     @staticmethod
     def infer_batch(
-        model: torch.nn.Module, batch_data: np.ndarray, on_gpu: bool
-    ) -> np.ndarray:
+        model: torch.nn.Module,
+        batch_data: torch.Tensor,
+        *,
+        on_gpu: bool,
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -597,20 +638,20 @@ class MicroNet(ModelABC):
         Args:
             model (nn.Module):
                 PyTorch defined model.
-            batch_data (:class:`numpy.ndarray`):
+            batch_data (:class:`torch.Tensor`):
                 A batch of data generated by
                 `torch.utils.data.DataLoader`.
             on_gpu (bool):
                 Whether to run inference on a GPU.
 
         Returns:
-            np.ndarray:
+            list(np.ndarray):
                 Probability map as a numpy array.
 
         """
         patch_imgs = batch_data
 
-        device = misc.select_device(on_gpu)
+        device = misc.select_device(on_gpu=on_gpu)
         patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 

@@ -1,17 +1,34 @@
 """Custom Errors and Exceptions for TIAToolbox."""
+from __future__ import annotations
 
 
-class FileNotSupported(Exception):
-    """Raise No supported file found error."""
+class FileNotSupportedError(Exception):
+    """Raise No supported file found error.
 
-    def __init__(self, message="File format is not supported"):
-        self.message = message
-        super().__init__(self.message)
+    Args:
+        message (str) : Display message for the error.
+
+    """
+
+    def __init__(
+        self: FileNotSupportedError,
+        message: str = "File format is not supported",
+    ) -> None:
+        """Initialize :class:`FileNotSupportedError`."""
+        super().__init__(message)
 
 
-class MethodNotSupported(Exception):
-    """Raise No supported file found error."""
+class MethodNotSupportedError(Exception):
+    """Raise No supported file found error.
 
-    def __init__(self, message="Method is not supported"):
-        self.message = message
-        super().__init__(self.message)
+    Args:
+        message (str) : Display message for the error.
+
+    """
+
+    def __init__(
+        self: MethodNotSupportedError,
+        message: str = "Method is not supported",
+    ) -> None:
+        """Initialize :class:`MethodNotSupportedError`."""
+        super().__init__(message)

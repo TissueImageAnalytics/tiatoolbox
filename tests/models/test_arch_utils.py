@@ -1,4 +1,4 @@
-"""Unit test package for architecture utilities"""
+"""Unit test package for architecture utilities."""
 
 import numpy as np
 import pytest
@@ -11,7 +11,7 @@ from tiatoolbox.models.architecture.utils import (
 )
 
 
-def test_all():
+def test_all() -> None:
     """Contains all tests for now."""
     layer = UpSample2x()
     sample = np.array([[1, 2], [3, 4]])[..., None]
@@ -24,7 +24,7 @@ def test_all():
             [1, 1, 2, 2],
             [3, 3, 4, 4],
             [3, 3, 4, 4],
-        ]
+        ],
     )
     assert np.sum(_output - output) == 0
 
@@ -38,7 +38,7 @@ def test_all():
     assert np.sum(x[0, 0, :, :] - sample) == 0
 
 
-def test_centre_crop_operators():
+def test_centre_crop_operators() -> None:
     """Test for crop et. al. ."""
     sample = torch.rand((1, 3, 15, 15), dtype=torch.float32)
     output = centre_crop(sample, [3, 3], data_format="NCHW")

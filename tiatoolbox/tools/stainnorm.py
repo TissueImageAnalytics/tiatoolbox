@@ -1,4 +1,6 @@
 """Stain normalization classes."""
+from __future__ import annotations
+
 import cv2
 import numpy as np
 
@@ -8,7 +10,7 @@ from tiatoolbox.tools.stainextract import (
     RuifrokExtractor,
     VahadaneExtractor,
 )
-from tiatoolbox.utils.exceptions import MethodNotSupported
+from tiatoolbox.utils.exceptions import MethodNotSupportedError
 from tiatoolbox.utils.misc import load_stain_matrix
 from tiatoolbox.utils.transforms import od2rgb, rgb2od
 
@@ -33,7 +35,8 @@ class StainNormalizer:
 
     """
 
-    def __init__(self):
+    def __init__(self: StainNormalizer) -> None:
+        """Initialize :class:`StainNormalizer`."""
         self.extractor = None
         self.stain_matrix_target = None
         self.target_concentrations = None
@@ -41,7 +44,7 @@ class StainNormalizer:
         self.stain_matrix_target_RGB = None
 
     @staticmethod
-    def get_concentrations(img, stain_matrix):
+    def get_concentrations(img: np.ndarray, stain_matrix: np.ndarray) -> np.ndarray:
         """Estimate concentration matrix given an image and stain matrix.
 
         Args:
@@ -59,7 +62,7 @@ class StainNormalizer:
         x, _, _, _ = np.linalg.lstsq(stain_matrix.T, od.T, rcond=-1)
         return x.T
 
-    def fit(self, target):
+    def fit(self: StainNormalizer, target: np.ndarray) -> None:
         """Fit to a target image.
 
         Args:
@@ -69,15 +72,18 @@ class StainNormalizer:
         """
         self.stain_matrix_target = self.extractor.get_stain_matrix(target)
         self.target_concentrations = self.get_concentrations(
-            target, self.stain_matrix_target
+            target,
+            self.stain_matrix_target,
         )
         self.maxC_target = np.percentile(
-            self.target_concentrations, 99, axis=0
+            self.target_concentrations,
+            99,
+            axis=0,
         ).reshape((1, 2))
         # useful to visualize.
         self.stain_matrix_target_RGB = od2rgb(self.stain_matrix_target)
 
-    def transform(self, img):
+    def transform(self: StainNormalizer, img: np.ndarray) -> np.ndarray:
         """Transform an image.
 
         Args:
@@ -94,11 +100,11 @@ class StainNormalizer:
         max_c_source = np.percentile(source_concentrations, 99, axis=0).reshape((1, 2))
         source_concentrations *= self.maxC_target / max_c_source
         trans = 255 * np.exp(
-            -1 * np.dot(source_concentrations, self.stain_matrix_target)
+            -1 * np.dot(source_concentrations, self.stain_matrix_target),
         )
 
         # ensure between 0 and 255
-        trans[trans > 255] = 255
+        trans[trans > 255] = 255  # noqa: PLR2004
         trans[trans < 0] = 0
 
         return trans.reshape(img.shape).astype(np.uint8)
@@ -122,7 +128,8 @@ class CustomNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self, stain_matrix):
+    def __init__(self: StainNormalizer, stain_matrix: np.ndarray) -> None:
+        """Initialize :class:`CustomNormalizer`."""
         super().__init__()
 
         self.extractor = CustomExtractor(stain_matrix)
@@ -149,7 +156,8 @@ class RuifrokNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self):
+    def __init__(self: StainNormalizer) -> None:
+        """Initialize :class:`RuifrokNormalizer`."""
         super().__init__()
         self.extractor = RuifrokExtractor()
 
@@ -175,7 +183,8 @@ class MacenkoNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self):
+    def __init__(self: StainNormalizer) -> None:
+        """Initialize :class:`MacenkoNormalizer`."""
         super().__init__()
         self.extractor = MacenkoExtractor()
 
@@ -201,7 +210,8 @@ class VahadaneNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self):
+    def __init__(self: StainNormalizer) -> None:
+        """Initialize :class:`VahadaneNormalizer`."""
         super().__init__()
         self.extractor = VahadaneExtractor()
 
@@ -231,11 +241,12 @@ class ReinhardNormalizer:
 
     """
 
-    def __init__(self):
+    def __init__(self: ReinhardNormalizer) -> None:
+        """Initialize :class:`ReinhardNormalizer`."""
         self.target_means = None
         self.target_stds = None
 
-    def fit(self, target):
+    def fit(self: ReinhardNormalizer, target: np.ndarray) -> None:
         """Fit to a target image.
 
         Args:
@@ -247,7 +258,7 @@ class ReinhardNormalizer:
         self.target_means = means
         self.target_stds = stds
 
-    def transform(self, img):
+    def transform(self: ReinhardNormalizer, img: np.ndarray) -> np.ndarray:
         """Transform an image.
 
         Args:
@@ -273,7 +284,7 @@ class ReinhardNormalizer:
         return self.merge_back(norm1, norm2, norm3)
 
     @staticmethod
-    def lab_split(img):
+    def lab_split(img: np.ndarray) -> tuple[float, float, float]:
         """Convert from RGB uint8 to LAB and split into channels.
 
         Args:
@@ -300,7 +311,7 @@ class ReinhardNormalizer:
         return chan1, chan2, chan3
 
     @staticmethod
-    def merge_back(chan1, chan2, chan3):
+    def merge_back(chan1: float, chan2: float, chan3: float) -> np.ndarray:
         """Take separate LAB channels and merge back to give RGB uint8.
 
         Args:
@@ -322,7 +333,10 @@ class ReinhardNormalizer:
         img = np.clip(cv2.merge((chan1, chan2, chan3)), 0, 255).astype(np.uint8)
         return cv2.cvtColor(img, cv2.COLOR_LAB2RGB)
 
-    def get_mean_std(self, img):
+    def get_mean_std(
+        self: ReinhardNormalizer,
+        img: np.ndarray,
+    ) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         """Get mean and standard deviation of each channel.
 
         Args:
@@ -347,7 +361,10 @@ class ReinhardNormalizer:
         return means, stds
 
 
-def get_normalizer(method_name, stain_matrix=None):
+def get_normalizer(
+    method_name: str,
+    stain_matrix: np.ndarray | None = None,
+) -> StainNormalizer:
     """Return a :class:`.StainNormalizer` with corresponding name.
 
     Args:
@@ -377,11 +394,12 @@ def get_normalizer(method_name, stain_matrix=None):
         "vahadane",
         "custom",
     ]:
-        raise MethodNotSupported
+        raise MethodNotSupportedError
 
     if stain_matrix is not None and method_name.lower() != "custom":
+        msg = '`stain_matrix` is only defined when using `method_name`="custom".'
         raise ValueError(
-            '`stain_matrix` is only defined when using `method_name`="custom".'
+            msg,
         )
 
     if method_name.lower() == "reinhard":
