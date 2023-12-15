@@ -1004,6 +1004,8 @@ def store_from_dat(
             All coordinates will be multiplied by this factor to allow import of
             annotations saved at non-baseline resolution. Should be model_mpp/slide_mpp,
             where model_mpp is the resolution at which the annotations were saved.
+            If scale information is stored in the .dat file (as in cerberus output),
+            that will be used and this arg will be ignored.
         typedict (Dict[str, str]):
             A dictionary mapping annotation types to annotation keys. Annotations
             with a type that is a key in the dictionary, will have their type
@@ -1025,6 +1027,7 @@ def store_from_dat(
     """
     store = cls()
     add_from_dat(store, fp, scale_factor, typedict=typedict, origin=origin)
+    store.create_index("area", '"area"')
     return store
 
 
@@ -1153,7 +1156,10 @@ def add_from_dat(
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the annotations. All coordinates
             will be multiplied by this factor to allow import of annotations saved
-            at non-baseline resolution.
+            at non-baseline resolution. Should be model_mpp/slide_mpp, where
+            model_mpp is the resolution at which the annotations were saved.
+            If scale information is stored in the .dat file (as in cerberus output),
+            that will be used and this arg will be ignored.
         typedict (Dict[str, str]):
             A dictionary mapping annotation types to annotation keys. Annotations
             with a type that is a key in the dictionary, will have their type
@@ -1169,11 +1175,23 @@ def add_from_dat(
     """
     data = joblib.load(fp)
     props = list(data[next(iter(data.keys()))].keys())
+    if "base_resolution" in data and "proc_resolution" in data:
+        # we can infer scalefactor from resolutions
+        scale_factor = (
+            data["proc_resolution"]["resolution"]
+            / data["base_resolution"]["resolution"]
+        )
+        logger.info("Scale factor inferred from resolutions: %s", scale_factor)
     if "contour" not in props:
         # assume cerberus format with objects subdivided into categories
         anns = []
         for subcat in data:
-            if subcat == "resolution":
+            if (
+                subcat == "resolution"
+                or subcat == "proc_dimensions"
+                or subcat == "base_dimensions"
+                or "resolution" in subcat
+            ):
                 continue
             props = next(iter(data[subcat].values()))
             if not isinstance(props, dict):

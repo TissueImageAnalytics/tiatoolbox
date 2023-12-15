@@ -323,7 +323,8 @@ def test_change_cmap(app: TileServer) -> None:
         assert layer.renderer.mapper(0.5) == colormaps["jet"](0.5)
 
         cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
-        response = client.put("/tileserver/cmap", data={"cmap": json.dumps(cdict)})
+        req_data = {"keys": list(cdict.keys()), "values": list(cdict.values())}
+        response = client.put("/tileserver/cmap", data={"cmap": json.dumps(req_data)})
         assert layer.renderer.mapper("type2") == [0, 1, 0]
 
         # test corresponding get
@@ -392,7 +393,7 @@ def test_load_annotations_empty(
 
         # test corresponding get
         response = client.get(
-            "/tileserver/annotations/",
+            "/tileserver/annotations",
             data={
                 "bounds": json.dumps([0, 0, 30000, 30000]),
                 "where": json.dumps(None),
@@ -688,3 +689,47 @@ def test_no_ann_layer(empty_app: TileServer, remote_sample: Callable) -> None:
         )
         with pytest.raises(ValueError, match="No annotation layer found."):
             client.get("/tileserver/prop_names/all")
+
+
+def test_point_query(app: TileServer) -> None:
+    """Test point query."""
+    with app.test_client() as client:
+        response = client.get("/tileserver/tap_query/1138.52/1881.5")
+
+    assert response.status_code == 200
+    props = json.loads(response.data)
+    assert props["type"] == 0
+    assert props["prob"] == pytest.approx(0.988, abs=0.001)
+
+    # test tap where no annotation exists
+    with app.test_client() as client:
+        response = client.get("/tileserver/tap_query/-100.0/-100.0")
+
+    assert response.status_code == 200
+    assert json.loads(response.data) == {}
+
+
+def test_prop_range(app: TileServer) -> None:
+    """Test setting range in which color mapper will operate."""
+    with app.test_client() as client:
+        layer = app.pyramids["default"]["overlay"]
+        # there will be no scaling by default
+        assert layer.renderer.score_fn(0.5) == 0.5
+        response = client.put(
+            "/tileserver/prop_range",
+            data={"range": json.dumps([1.0, 3.0])},
+        )
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        # check that the renderer has been correctly updated
+        # as we are mapping the range [1, 3] to [0, 1], 1.5
+        # should now map to 0.25
+        assert layer.renderer.score_fn(1.5) == 0.25
+
+        response = client.put(
+            "/tileserver/prop_range",
+            data={"range": json.dumps(None)},
+        )
+        assert response.status_code == 200
+        # should be back to no scaling
+        assert layer.renderer.score_fn(0.5) == 0.5
