@@ -578,7 +578,9 @@ class EngineABC(ABC):
             )
 
             # tolist might be very expensive
-            cum_output["probabilities"].extend(ndarray_to_zarr(batch_output_probabilities))
+            cum_output["probabilities"].extend(
+                ndarray_to_zarr(batch_output_probabilities),
+            )
             cum_output["predictions"].extend(ndarray_to_zarr(batch_output_predictions))
 
             if return_coordinates:

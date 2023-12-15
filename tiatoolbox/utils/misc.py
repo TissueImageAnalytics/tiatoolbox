@@ -1180,6 +1180,7 @@ def add_from_dat(
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
 
+
 def patch_predictions_as_annotations(
     preds: list,
     keys: list,
@@ -1267,13 +1268,8 @@ def dict_to_store(
 
     # put patch predictions into a store
     annotations = patch_predictions_as_annotations(
-        preds,
-        keys,
-        class_dict,
-        class_probs,
-        patch_coords,
-        classes_predicted,
-        labels)
+        preds, keys, class_dict, class_probs, patch_coords, classes_predicted, labels,
+    )
 
     store = SQLiteStore()
     keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
@@ -1332,11 +1328,12 @@ def dict_to_zarr(
 
     return save_path
 
+
 def ndarray_to_zarr(
-        raw_array: np.ndarray,
-        save_path: Path | None = None,
-        **kwargs: dict,
-    ) -> zarr.core.Array | Path :
+    raw_array: np.ndarray,
+    save_path: Path | None = None,
+    **kwargs: dict,
+) -> zarr.core.Array | Path:
     """Helper function persisits numpy arrays as zarr."""
     # Default values for Compressor and Chunks set if not received from kwargs.
     compressor = (
