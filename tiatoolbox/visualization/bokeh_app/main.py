@@ -268,7 +268,7 @@ def make_color_seq_from_cmap(cmap: str | None = None) -> list[str]:
 
 
 def make_safe_name(name: str) -> str:
-    """Helper to make a name safe for use in a url."""
+    """Helper to make a name safe for use in a URL."""
     return urllib.parse.quote(str(PureWindowsPath(name)), safe="")
 
 
@@ -843,7 +843,7 @@ def scale_spinner_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
 
 
 def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
-    """Setup the newly chosen slide."""
+    """Set up the newly chosen slide."""
     if len(new) == 0:
         return
     slide_path = Path(doc_config["slide_folder"]) / Path(new[0])
@@ -985,7 +985,7 @@ def update_ui_on_new_annotations(ann_types: list[str]) -> None:
 
 
 def layer_drop_cb(attr: MenuItemClick) -> None:
-    """Setup the newly chosen overlay."""
+    """Set up the newly chosen overlay."""
     if Path(attr.item).suffix == ".json":
         # It's a graph
         handle_graph_layer(attr)
@@ -2094,7 +2094,7 @@ class DocConfig:
         control_tabs.on_change("active", control_tabs_cb)
         control_tabs.on_change("tabs", control_tabs_remove_cb)
 
-        # Add the window and controls etc to the document
+        # Add the window and controls etc. to the document
         base_doc.template_variables["demo_name"] = doc_config["demo_name"]
         base_doc.add_periodic_callback(update, 220)
         base_doc.add_root(slide_wins)

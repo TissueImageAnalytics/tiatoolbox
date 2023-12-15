@@ -199,9 +199,9 @@ Graphs can also be overlaid. The display of nodes and edges can be toggled on/of
 E.g.::
 
     graph_dict = {
-                'edge_index': 2 x n_edges array of indices of pairs of connected nodes
-		        'coordinates': n x 2 array of x, y coordinates for each graph node (at baseline resolution)
-		}
+            'edge_index': 2 x n_edges array of indices of pairs of connected nodes
+            'coordinates': n x 2 array of x, y coordinates for each graph node (at baseline resolution)
+            }
 
 
 Additional features can be added to nodes by adding extra keys to the dictionary, eg:

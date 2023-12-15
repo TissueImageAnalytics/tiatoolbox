@@ -85,7 +85,7 @@ def get_renderer_prop(prop: str) -> json:
 
 
 @pytest.fixture(scope="module", autouse=True)
-def annotation_path(data_path: dict[str, object]) -> dict[str, object]:
+def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     """Download some testing slides and overlays.
 
     Set up a dictionary defining the paths to the files
@@ -744,7 +744,7 @@ def test_cmap_select(doc: Document) -> None:
 
     main.UI["cprop_input"].value = ["prob"]
     resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
-    # should be coolwarm as thats the last cmap we set, and prob is continuous
+    # should be coolwarm as that is the last cmap we set, and prob is continuous
     assert resp.json() == "coolwarm"
 
 

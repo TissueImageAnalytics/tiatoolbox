@@ -323,7 +323,7 @@ class TileServer(Flask):
 
     @staticmethod
     def decode_safe_name(name: str) -> Path:
-        """Decode a url-safe name."""
+        """Decode a URL-safe name."""
         return Path(urllib.parse.unquote(name).replace("\\", os.sep))
 
     def get_ann_layer(

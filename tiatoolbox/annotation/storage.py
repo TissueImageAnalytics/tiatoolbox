@@ -121,7 +121,7 @@ class Annotation:
         if self._geometry is None:
             # Lazy creation of Shapely object when first requested. This
             # is memoized under _geometry. object.__setattr__ must be
-            # used becuase the class is frozen and will disallow normal
+            # used because the class is frozen and will disallow normal
             # assignment.
             object.__setattr__(self, "_geometry", shapely_wkb.loads(self._wkb))
         # Return memoized geometry
@@ -1277,8 +1277,8 @@ class AnnotationStore(ABC, MutableMapping):
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
                 may be a string, Callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
@@ -3162,8 +3162,8 @@ class SQLiteStore(AnnotationStore):
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
                 may be a string, Callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
