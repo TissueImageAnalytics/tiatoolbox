@@ -1,11 +1,11 @@
 # torch installation
 --extra-index-url https://download.pytorch.org/whl/cu118; sys_platform != "darwin"
-albumentations>=1.3.0, <1.3.1
+albumentations>=1.3.0, <=1.3.1
 bokeh>=3.1.1, <=3.3.2
 Click>=8.1.3, <=8.1.7
 defusedxml>=0.7.1, <=0.7.1
-filelock>=3.9.0, <3.13.1
-flask>=2.2.2, <3.0.0
+filelock>=3.9.0, <=3.13.1
+flask>=2.2.2, <=3.0.0
 flask-cors>=4.0.0, <=4.0.0
 glymur>=0.12.7, <=0.12.9 # 0.12.6 is incompatible due to a private attribute
 imagecodecs>=2022.9.26, <=2023.9.18
