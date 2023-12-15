@@ -18,7 +18,9 @@
 - Replaces `pretrained` with `weights` to make the engines compatible with the new PyTorch API. #621
 - Adds support for high-level imports for various utility functions and classes such as `WSIReader`, `PatchPredictor` and `imread` #606, #607,
 - Adds `tiatoolbox.typing` for type hints. #619
-- TissueMasker transform now returns mask instead of a list. #732, #748
+- Fixes incorrect file size saved by `save_tiles`, issue with certain WSIs raised by @TomastpPereira
+- TissueMasker transform now returns mask instead of a list. #748
+  - Fixes #732
 
 ### Bug Fixes and Other Changes
 
@@ -26,7 +28,9 @@
 - Removes `shapely.speedups`. The module no longer has any affect in Shapely >=2.0. #622
 - Fixes errors in the slidegraph example notebook #608
 - Fixes bugs in WSI Registration #645, #670, #693
-- Fix the situation where PatchExtractor.get_coords() can return patch coords which lie fully outside the bounds of a slide. #710, #712
+- Fixes the situation where PatchExtractor.get_coords() can return patch coords which lie fully outside the bounds of a slide. #712
+  - Fixes #710
+- Fixes #738 raised by @xiachenrui
 
 ### Development related changes
 
