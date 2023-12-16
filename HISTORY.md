@@ -1,5 +1,14 @@
 # History
 
+## 1.5.1 (2023-12-16)
+
+### Development related changes
+
+- Specifies compatible Python versions
+  - Fixes `tiatoolbox-feedstock` build for conda-forge release #763
+
+**Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v1.5.0...v1.5.1
+
 ## 1.5.0 (2023-12-15)
 
 ### Major Updates and Feature Improvements
