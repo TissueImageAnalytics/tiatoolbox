@@ -1,6 +1,6 @@
 # History
 
-## 1.5.0 (2023-12-16)
+## 1.5.1 (2023-12-16)
 
 ### Development related changes
 
