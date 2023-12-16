@@ -34,7 +34,7 @@ test_requirements = [
 setup(
     author="TIA Centre",
     author_email="tia@dcs.warwick.ac.uk",
-    python_requires=">=3.8, <=3.11",
+    python_requires=">=3.8, <3.12",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
