@@ -27,3 +27,16 @@ CallablePredicate = Callable[[Properties], bool]
 CallableSelect = Callable[[Properties], Properties]
 Predicate = Union[str, bytes, CallablePredicate]
 Select = Union[str, bytes, CallableSelect]
+NumpyPadLiteral = Literal[
+    "constant",
+    "edge",
+    "linear_ramp",
+    "maximum",
+    "mean",
+    "median",
+    "minimum",
+    "reflect",
+    "symmetric",
+    "wrap",
+    "empty",
+]
