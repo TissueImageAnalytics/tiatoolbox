@@ -1286,7 +1286,13 @@ def dict_to_store(
 
     # put patch predictions into a store
     annotations = patch_predictions_as_annotations(
-        preds, keys, class_dict, class_probs, patch_coords, classes_predicted, labels,
+        preds,
+        keys,
+        class_dict,
+        class_probs,
+        patch_coords,
+        classes_predicted,
+        labels,
     )
 
     store = SQLiteStore()
