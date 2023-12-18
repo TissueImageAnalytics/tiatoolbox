@@ -1,0 +1,121 @@
+{% extends base %}
+
+<!-- goes in head -->
+{% block preamble %}
+<link href="bokeh_app/static/custom.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block postamble %}
+  <style>
+    .slide {
+        width: 80%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        margin: 10px 0;
+    }
+    .ui {
+        width: 20%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+    .description {
+        width: 78%;
+        height: 100%;
+        position: absolute;
+        top: 100%;
+        left: 2%;
+        margin: 10px 0;
+    }
+    .hidden {
+      display: none;
+    }
+
+    .popup {
+      position: absolute;
+      top: 30%;
+      left: 20%;
+      width: 20%;
+      height: 30%;
+      background-color: rgba(0, 0, 0, 0.0);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .popup-content {
+      background-color: white;
+      padding: 10px;
+      border-radius: 5px;
+      width: 80%;
+      max-width: 350px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 2;
+    }
+    .popup-body {
+      height: 75%;
+      overflow: auto;
+    }
+
+    .popup-header {
+      cursor: move;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+
+  </style>
+{% endblock %}
+
+<!-- goes in body -->
+{% block contents %}
+<div id="popup" class="popup">
+  <div class="popup-content hidden">
+    <div class="popup-header">
+      <h2>Annotation Properties</h2>
+    </div>
+    <div class="popup-body">
+    {{ embed(roots.popup_window) }}
+    </div>
+    <button class="btn btn-primary" id="close-popup">Close</button>
+  </div>
+</div>
+<div class="slide"> {{ embed(roots.slide_windows) }} </div><div class="ui"> {{ embed(roots.ui_layout) }} </div>
+<div class="description"> {{ embed(roots.description) }} </div>
+<script>
+  const closePopupBtn = document.getElementById('close-popup');
+  const popup = document.getElementById('popup');
+  const popupContent = document.querySelector('.popup-content');
+  const popupHeader = document.querySelector('.popup-header');
+
+  let isDragging = false;
+  let offsetX, offsetY;
+
+  closePopupBtn.addEventListener('click', function() {
+      popupContent.classList.add('hidden');
+  });
+
+  popupHeader.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      offsetX = e.clientX - popupContent.getBoundingClientRect().left;
+      offsetY = e.clientY - popupContent.getBoundingClientRect().top;
+  });
+
+  document.addEventListener('mousemove', function(e) {
+      if (isDragging) {
+          popupContent.style.left = (e.clientX - offsetX) + 'px';
+          popupContent.style.top = (e.clientY - offsetY) + 'px';
+          popupContent.style.position = 'fixed';
+          console.log('New position is:', popupContent.style.left, popupContent.style.top);
+      }
+  });
+
+  document.addEventListener('mouseup', function() {
+      isDragging = false;
+  });
+</script>
+{% endblock %}

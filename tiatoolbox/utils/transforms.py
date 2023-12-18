@@ -376,7 +376,7 @@ def bounds2slices(
 
 def pad_bounds(
     bounds: tuple[int, int, int, int],
-    padding: int | tuple[int, int] | tuple[int, int, int, int],
+    padding: int | tuple[int, int] | tuple[int, int, int, int] | np.ndarray,
 ) -> tuple[int, int, int, int]:
     """Add padding to bounds.
 

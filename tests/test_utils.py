@@ -1544,7 +1544,8 @@ def test_from_multi_head_dat(tmp_path: Path) -> None:
     data = {
         "A": head_a,
         "B": head_b,
-        "resolution": 0.5,
+        "proc_resolution": {"resolution": 0.5, "units": "mpp"},
+        "base_resolution": {"resolution": 0.25, "units": "mpp"},
         "other_meta_data": {"foo": "bar"},
     }
     joblib.dump(data, tmp_path / "test.dat")
@@ -1627,7 +1628,7 @@ def test_imwrite(tmp_path: Path) -> NoReturn:
 
     with pytest.raises(IOError, match="Could not write image"):
         utils.misc.imwrite(
-            tmp_path / "thisfolderdoesnotexist" / "test_imwrite.jpg",
+            tmp_path / "this_folder_does_not_exist" / "test_imwrite.jpg",
             img,
         )
 

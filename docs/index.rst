@@ -14,6 +14,7 @@ Welcome to TIA Toolbox's documentation!
     Pre-trained Models <pretrained.rst>
     Jupyter Notebooks <notebooks.rst>
     Algorithms <algorithms.rst>
+    Visualization <visualization.rst>
     API Reference <_autosummary/tiatoolbox>
     Contributing <contributing.rst>
     Authors <authors.rst>
