@@ -323,7 +323,6 @@ class EngineABC(ABC):
             shuffle=False,
         )
 
-
     def infer_patches(
         self: EngineABC,
         data_loader: DataLoader,
@@ -367,7 +366,6 @@ class EngineABC(ABC):
             progress_bar.close()
 
         return raw_predictions
-
 
     def post_process_patches(
         self: EngineABC,
@@ -546,7 +544,6 @@ class EngineABC(ABC):
         # referring to the zarr group generated during the infer_wsi step
         return save_path.parent.absolute() / (save_path.stem + ".zarr")
 
-
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
 
@@ -578,7 +575,6 @@ class EngineABC(ABC):
             self.ioconfig = ioconfig
 
         return self.ioconfig
-
 
     def _update_ioconfig(
         self: EngineABC,
@@ -877,7 +873,7 @@ class EngineABC(ABC):
             # Only a single label per whole-slide image is supported
             kwargs["return_labels"] = False
 
-            #custom output file name
+            # custom output file name
             output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
 
             raw_output = self.infer_wsi(

@@ -1361,7 +1361,7 @@ def wsi_batch_output_to_zarr_group(
     batch_output_label: np.ndarray | None,
     save_path: Path,
     **kwargs: dict,
-    ) -> zarr.group | Path:
+) -> zarr.group | Path:
     """Saves the intermediate batch outputs of TIAToolbox engines to a zarr file.
 
     Args:
@@ -1397,7 +1397,7 @@ def wsi_batch_output_to_zarr_group(
         save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
         wsi_batch_zarr_group = zarr.open(save_path, mode="w")
 
-        #populate the zarr group for the first time
+        # populate the zarr group for the first time
         probabilities_zarr = wsi_batch_zarr_group.create_dataset(
             name="probabilities",
             shape=batch_output_probabilities.shape,
