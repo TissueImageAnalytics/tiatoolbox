@@ -48,7 +48,11 @@ class TestEngineABC(EngineABC):
     ) -> torch.utils.data.DataLoader:
         """Test pre process images."""
         return super().get_dataloader(
-            images, masks, labels, ioconfig, patch_mode=patch_mode,
+            images,
+            masks,
+            labels,
+            ioconfig,
+            patch_mode=patch_mode,
         )
 
     def post_process_wsi(
