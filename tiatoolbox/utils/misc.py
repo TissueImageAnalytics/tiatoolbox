@@ -1332,49 +1332,34 @@ def dict_to_zarr(
 
     return save_path
 
-def ndarray_to_zarr(
-        raw_array: np.ndarray,
-        save_path: Path | None = None,
-        **kwargs: dict,
-    ) -> zarr.core.Array | Path :
-    """Helper function persisits numpy arrays as zarr."""
-    # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = (
-        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-    )
-    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
-    z = zarr.create(
-        mode="w",
-        shape=raw_array.shape,
-        chunks=chunks,
-        compressor=compressor,
-    )
-    z[:] = raw_array
-
-    if save_path:
-        # ensure proper zarr extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
-        zarr.save(save_path, z)
-        return save_path
-
-    return z
-
-
-def dict_to_zarr_wsi(
-    raw_output: dict | np.ndarray,
+def wsi_batch_output_to_zarr_group(
+    wsi_batch_zarr_group: zarr.group | None,
+    batch_output_probabilities: np.ndarray,
+    batch_output_predictions: np.ndarray,
+    batch_output_coordinates: np.ndarray | None,
+    batch_output_label: np.ndarray | None,
     save_path: Path,
     **kwargs: dict,
-) -> Path:
-    """Saves the output of TIAToolbox engines to a zarr file.
+    ) -> zarr.group | Path:
+    """Saves the intermediate batch outputs of TIAToolbox engines to a zarr file.
 
     Args:
-        raw_output (dict or ndarray):
-            A dictionary in the TIAToolbox Engines output format.
+        wsi_batch_zarr_group (zarr.group):
+            Optional zarr group name consisting of zarrs to save the batch output
+            values.
+        batch_output_probabilities (np.ndarray):
+            Probability batch output from infer wsi
+        batch_output_predictions (np.ndarray):
+            Predictions batch output from infer wsi
+        batch_output_coordinates (np.ndarray):
+            Coordinates batch output from infer wsi
+        batch_output_label (np.ndarray):
+            Labels batch output from infer wsi
         save_path (str or Path):
             Path to save the zarr file.
         **kwargs (dict):
-            Keyword Args to update patch_pred_store_zarr attributes.
+            Keyword Args to update wsi_batch_output_to_zarr_group attributes.
 
     Returns:
         Path to zarr file storing the patch predictor output
@@ -1386,60 +1371,60 @@ def dict_to_zarr_wsi(
     )
     chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
 
-    if isinstance(raw_output, np.ndarray):
-        # ensure proper zarr extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".merged.zarr")
+    # case 1: new zarr group
+    if not wsi_batch_zarr_group:
+        # ensure proper zarr extension and create persistant zarr group
+        save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+        wsi_batch_zarr_group = zarr.open(save_path, mode="w")
 
-        output_zarr = zarr.open(
-            save_path,
-            mode="w",
-            shape=raw_output.shape,
+        #populate the zarr group for the first time
+        probabilities_zarr = wsi_batch_zarr_group.create_dataset(
+            name="probabilities",
+            shape=batch_output_probabilities.shape,
             chunks=chunks,
             compressor=compressor,
         )
-        output_zarr[:] = raw_output
-        return save_path
+        probabilities_zarr[:] = batch_output_probabilities
 
-    # ensure proper zarr extension
-    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
-    output_zarr = zarr.open(save_path, mode="w")
-
-    probabilities_array = np.array(raw_output["probabilities"])
-    probabilities_zarr = output_zarr.create_dataset(
-        name="probabilities",
-        shape=probabilities_array.shape,
-        chunks=chunks,
-        compressor=compressor,
-    )
-    probabilities_zarr[:] = probabilities_array
-
-    predictions_array = np.array(raw_output["predictions"])
-    predictions_zarr = output_zarr.create_dataset(
-        name="predictions",
-        shape=predictions_array.shape,
-        chunks=chunks,
-        compressor=compressor,
-    )
-    predictions_zarr[:] = predictions_array
-
-    if "coordinates" in raw_output:
-        coordinates_array = np.array(raw_output["coordinates"])
-        coordinates_zarr = output_zarr.create_dataset(
-            name="coordinates",
-            shape=coordinates_array.shape,
+        predictions_zarr = wsi_batch_zarr_group.create_dataset(
+            name="predictions",
+            shape=batch_output_predictions.shape,
             chunks=chunks,
             compressor=compressor,
         )
-        coordinates_zarr[:] = coordinates_array
+        predictions_zarr[:] = batch_output_predictions
 
-    if "labels" in raw_output:
-        labels_array = np.array(raw_output["labels"])
-        labels_zarr = output_zarr.create_dataset(
-            name="labels",
-            shape=labels_array.shape,
-            chunks=chunks,
-            compressor=compressor,
-        )
-        labels_zarr[:] = labels_array
+        if batch_output_coordinates is not None:
+            coordinates_zarr = wsi_batch_zarr_group.create_dataset(
+                name="coordinates",
+                shape=batch_output_coordinates.shape,
+                chunks=chunks,
+                compressor=compressor,
+            )
+            coordinates_zarr[:] = batch_output_coordinates
 
-    return save_path
+        if batch_output_label is not None:
+            labels_zarr = wsi_batch_zarr_group.create_dataset(
+                name="labels",
+                shape=batch_output_label.shape,
+                chunks=chunks,
+                compressor=compressor,
+            )
+            labels_zarr[:] = batch_output_label
+
+    # case 2: apped to exisiting zarr group
+    probabilities_zarr = wsi_batch_zarr_group["probabilities"]
+    probabilities_zarr.append(batch_output_probabilities)
+
+    predictions_zarr = wsi_batch_zarr_group["predictions"]
+    predictions_zarr.append(batch_output_predictions)
+
+    if batch_output_coordinates is not None:
+        coordinates_zarr = wsi_batch_zarr_group["coordinates"]
+        coordinates_zarr.append(batch_output_coordinates)
+
+    if batch_output_label is not None:
+        labels_zarr = wsi_batch_zarr_group["labels"]
+        labels_zarr.append(batch_output_label)
+
+    return wsi_batch_zarr_group

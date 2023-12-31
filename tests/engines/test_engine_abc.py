@@ -60,27 +60,24 @@ class TestEngineABC(EngineABC):
         """Test post_process_wsi."""
         return super().post_process_wsi(
             raw_output,
-            save_dir,
+            save_dir=save_dir,
             **kwargs,
         )
 
     def infer_wsi(
         self: EngineABC,
         dataloader: torch.utils.data.DataLoader,
-        img_path: Path,
         img_label: str,
         highest_input_resolution: list[dict],
-        *,
-        merge_predictions: bool,
+        save_dir: Path,
         **kwargs: dict,
     ) -> dict | np.ndarray:
         """Test infer_wsi."""
         return super().infer_wsi(
             dataloader,
-            img_path,
             img_label,
             highest_input_resolution,
-            merge_predictions=merge_predictions,
+            save_dir,
             **kwargs,
         )
 
@@ -579,7 +576,7 @@ def test_engine_run_wsi(
     )
 
     for output_info in out.values():
-        out_zarr_group_path = output_info["raw"]
+        out_zarr_group_path = output_info
         assert Path(out_zarr_group_path).exists()
         assert out_zarr_group_path.suffix == ".zarr"
         eng_zarr_group = zarr.open_group(out_zarr_group_path, mode="a")
@@ -588,83 +585,6 @@ def test_engine_run_wsi(
         assert isinstance(eng_zarr_group["coordinates"], zarr.core.Array)
         assert eng_zarr_group["coordinates"].ndim == 2
         assert validate_probabilities(eng_zarr_group["probabilities"])
-        assert "merged" not in output_info
-    shutil.rmtree(save_dir)
-
-    _kwargs = copy.deepcopy(kwargs)
-    _kwargs["merge_predictions"] = False
-    # test reading of multiple whole-slide images
-    out = eng.run(
-        images=[mini_wsi_svs, mini_wsi_svs],
-        masks=[mini_wsi_msk, mini_wsi_msk],
-        patch_mode=False,
-        **_kwargs,
-    )
-
-    for output_info in out.values():
-        out_zarr_group_path = output_info["raw"]
-        assert Path(out_zarr_group_path).exists()
-        assert out_zarr_group_path.suffix == ".zarr"
-        eng_zarr_group = zarr.open_group(out_zarr_group_path, mode="a")
-        assert isinstance(eng_zarr_group["predictions"], zarr.core.Array)
-        assert eng_zarr_group["predictions"].ndim == 1
-        assert isinstance(eng_zarr_group["coordinates"], zarr.core.Array)
-        assert eng_zarr_group["coordinates"].ndim == 2
-        assert validate_probabilities(eng_zarr_group["probabilities"])
-        assert "merged" not in output_info
-    shutil.rmtree(save_dir)
-
-
-def test_engine_run_wsi_merge_predictions(
-    sample_wsi_dict: dict,
-    tmp_path: Path,
-) -> NoReturn:
-    """Test the engine run for Whole slide images."""
-    # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
-
-    eng = TestEngineABC(model="alexnet-kather100k")
-
-    patch_size = np.array([224, 224])
-    save_dir = f"{tmp_path}/model_wsi_output"
-
-    _kwargs = {
-        "return_labels": True,
-        "patch_input_shape": patch_size,
-        "stride_shape": patch_size,
-        "resolution": 0.5,
-        "save_dir": save_dir,
-        "units": "mpp",
-    }
-
-    _kwargs["merge_predictions"] = True
-    # test reading of multiple whole-slide images
-    out = eng.run(
-        images=[mini_wsi_svs, mini_wsi_svs],
-        masks=[mini_wsi_msk, mini_wsi_msk],
-        patch_mode=False,
-        **_kwargs,
-    )
-
-    for output_info in out.values():
-        out_zarr_group_path = output_info["raw"]
-        assert Path(out_zarr_group_path).exists()
-        assert out_zarr_group_path.suffix == ".zarr"
-        eng_zarr_group = zarr.open_group(out_zarr_group_path, mode="a")
-        assert isinstance(eng_zarr_group["predictions"], zarr.core.Array)
-        assert eng_zarr_group["predictions"].ndim == 1
-        assert isinstance(eng_zarr_group["coordinates"], zarr.core.Array)
-        assert eng_zarr_group["coordinates"].ndim == 2
-        assert validate_probabilities(eng_zarr_group["probabilities"])
-
-        assert "merged" in output_info
-        merged_zarr_path = output_info["merged"]
-        assert Path(merged_zarr_path).exists()
-        assert merged_zarr_path.suffix == ".zarr"
-        merged_zarr = zarr.open(merged_zarr_path, mode="a")
-        assert isinstance(merged_zarr, zarr.core.Array)
-        assert merged_zarr.ndim == 2
     shutil.rmtree(save_dir)
 
 
@@ -722,44 +642,3 @@ def test_engine_run_wsi_annotation_store(
         assert validate_probabilities(probabilities)
 
     shutil.rmtree(save_dir)
-
-
-def test_wsi_predictor_merge_predictions() -> None:
-    """Test normal run of wsi predictor with merge predictions option."""
-    # blind test
-    # pseudo output dict from model with 2 patches
-    output = {
-        "resolution": 1.0,
-        "units": "baseline",
-        "probabilities": [[0.45, 0.55], [0.90, 0.10]],
-        "predictions": [1, 0],
-        "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
-    }
-
-    merged = TestEngineABC._merge_predictions(
-        np.zeros([4, 4]),
-        output,
-        resolution=1.0,
-        units="baseline",
-    )
-    _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
-    assert np.sum(merged - _merged) == 0
-
-    # blind test for merging probabilities
-    merged = TestEngineABC._merge_predictions(
-        np.zeros([4, 4]),
-        output,
-        resolution=1.0,
-        units="baseline",
-        return_raw=True,
-    )
-    _merged = np.array(
-        [
-            [0.45, 0.45, 0, 0],
-            [0.45, 0.45, 0, 0],
-            [0, 0, 0.90, 0.90],
-            [0, 0, 0.90, 0.90],
-        ],
-    )
-    assert merged.shape == (4, 4, 2)
-    assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
