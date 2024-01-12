@@ -2588,8 +2588,10 @@ class SQLiteStore(AnnotationStore):
             if geometry_predicate == "centers_within_k":
                 # Use rtree index to check distance between points
                 query_string += (
-                    "AND (((:min_x + :max_x)/2 - (min_x + max_x)/2)*((:min_x + :max_x)/2 - (min_x + max_x)/2) + "
-                    " ((:min_y + :max_y)/2 - (min_y + max_y)/2)*((:min_y + :max_y)/2 - (min_y+ max_y)/2)) < :distance2 "
+                    "AND (((:min_x + :max_x)/2 - (min_x + max_x)/2)*"
+                    "((:min_x + :max_x)/2 - (min_x + max_x)/2) + "
+                    " ((:min_y + :max_y)/2 - (min_y + max_y)/2)*"
+                    "((:min_y + :max_y)/2 - (min_y+ max_y)/2)) < :distance2 "
                 )
                 query_parameters["distance2"] = distance**2
             # Otherwise, perform a regular bounding box intersection
