@@ -100,7 +100,7 @@ class CoordinateTransform:
 
     """
 
-    type: str = "identity"
+    type: str = "identity" # noqa: A003
     scale: list[float] | None = None
 
 
@@ -140,7 +140,7 @@ class Axis:
     """
 
     name: TCZYX
-    type: Literal["time", "space", "channel"]
+    type: Literal["time", "space", "channel"] # noqa: A003
     unit: SpaceUnits | TimeUnits | None = None
 
 
@@ -186,8 +186,8 @@ class Window:
     """
 
     end: Number = 255
-    max: Number = 255
-    min: Number = 0
+    max: Number = 255 # noqa: A003
+    min: Number = 0 # noqa: A003
     start: Number = 0
 
 
@@ -257,7 +257,7 @@ class Omero:
     """
 
     name: str | None = None
-    id: int = 1
+    id: int = 1 # noqa: A003
     channels: list = field(
         default_factory=lambda: [
             Channel(label="Red", color="FF0000"),
