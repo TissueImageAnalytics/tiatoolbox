@@ -70,19 +70,19 @@ def _get_scale_factor_array(
 ) -> np.ndarray | None:
     """Converts scale factor to appropriate format required by imresize."""
     if scale_factor is not None:
-        scale_factor = np.array(scale_factor, dtype=float)
-        return _convert_scalar_to_width_height(scale_factor)
+        scale_factor_array = np.array(scale_factor, dtype=float)
+        return _convert_scalar_to_width_height(scale_factor_array)
     return scale_factor
 
 
 def _get_output_size_array(
     img: np.ndarray,
     output_size: int | tuple[int, int] | None,
-    scale_factor_array: np.ndarray,
+    scale_factor_array: np.ndarray | None,
 ) -> np.ndarray:
     """Converts output size to appropriate format required by imresize."""
     # Handle None arguments
-    if output_size is None:
+    if output_size is None and scale_factor_array is not None:
         width = int(img.shape[1] * scale_factor_array[0])
         height = int(img.shape[0] * scale_factor_array[1])
         return np.array((width, height))
@@ -252,7 +252,7 @@ def od2rgb(od: np.ndarray) -> np.ndarray:
 
 
 def bounds2locsize(
-    bounds: tuple[int, int, int, int],
+    bounds: tuple[int, int, int, int] | np.ndarray,
     origin: str = "upper",
 ) -> tuple[np.ndarray, np.ndarray]:
     """Calculate the size of a tuple of bounds.
@@ -329,8 +329,8 @@ def locsize2bounds(
 
 
 def bounds2slices(
-    bounds: tuple[int, int, int, int],
-    stride: int | tuple[int, int, tuple[int, int]] = 1,
+    bounds: tuple[int, int, int, int] | np.ndarray,
+    stride: int | tuple[int, int] = 1,
 ) -> tuple[slice, ...]:
     """Convert bounds to slices.
 
@@ -360,10 +360,9 @@ def bounds2slices(
     if np.size(stride) not in [1, 2]:
         msg = "Invalid stride shape."
         raise ValueError(msg)
+    stride_array = np.tile(stride, 2)
     if np.size(stride) == 1:
         stride_array = np.tile(stride, 4)
-    elif np.size(stride) == 2:  # pragma: no cover  # noqa: PLR2004
-        stride_array = np.tile(stride, 2)
 
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
@@ -377,7 +376,7 @@ def bounds2slices(
 
 def pad_bounds(
     bounds: tuple[int, int, int, int],
-    padding: int | tuple[int, int] | tuple[int, int, int, int],
+    padding: int | tuple[int, int] | tuple[int, int, int, int] | np.ndarray,
 ) -> tuple[int, int, int, int]:
     """Add padding to bounds.
 

@@ -2107,6 +2107,7 @@ def test_store_reader_alpha(remote_sample: Callable) -> None:
         wsi_reader.info,
         base_wsi=wsi_reader,
     )
+    store_reader.renderer.info["mpp"] = store_reader.info.as_dict()["mpp"]
     wsi_thumb = wsi_reader.slide_thumbnail()
     wsi_tile = wsi_reader.read_rect((500, 500), (1000, 1000))
     store_thumb = store_reader.slide_thumbnail()
