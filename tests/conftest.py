@@ -570,7 +570,8 @@ def chdir() -> Callable:
                 os.chdir(self._old_cwd.pop())
 
     return chdir
-  
+
+
 @pytest.fixture(scope="module")
 def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
     """Set up a temporary data directory for testing visualization UI."""
