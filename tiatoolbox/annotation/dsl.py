@@ -265,14 +265,14 @@ class SQLJSONDictionary(SQLExpression):
 
     def __str__(self: SQLJSONDictionary) -> str:
         """Return a human-readable, or informal, string representation of an object."""
-        return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
+        return f"json_extract(properties, '$.{self.acc}')"
 
     def __getitem__(self: SQLJSONDictionary, key: str) -> SQLJSONDictionary:
         """Get an item from the dataset."""
         key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
 
         joiner = "." if self.acc and not isinstance(key, int) else ""
-        return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
+        return SQLJSONDictionary(acc=self.acc + joiner + f'"{key_str}"')
 
     def get(
         self: SQLJSONDictionary,
