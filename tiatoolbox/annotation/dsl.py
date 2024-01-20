@@ -269,10 +269,10 @@ class SQLJSONDictionary(SQLExpression):
 
     def __getitem__(self: SQLJSONDictionary, key: str) -> SQLJSONDictionary:
         """Get an item from the dataset."""
-        key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
+        key_str = f"[{key}]" if isinstance(key, (int,)) else f'"{key}"'
 
         joiner = "." if self.acc and not isinstance(key, int) else ""
-        return SQLJSONDictionary(acc=self.acc + joiner + f'"{key_str}"')
+        return SQLJSONDictionary(acc=self.acc + joiner + key_str)
 
     def get(
         self: SQLJSONDictionary,

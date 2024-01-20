@@ -105,8 +105,8 @@ class TestSQLite:
             {},
         )
         assert str(query) == (
-            '((json_extract(properties, "$.int") == 2) OR '
-            '(json_extract(properties, "$.int") == 3))'
+            """((json_extract(properties, '$."int"') == 2) OR """
+            """(json_extract(properties, '$."int"') == 3))"""
         )
 
 
