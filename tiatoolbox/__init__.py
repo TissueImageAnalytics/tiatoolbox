@@ -109,8 +109,8 @@ rcParam: _RcParam = {  # noqa: N816
     "pretrained_model_info": read_registry_files(
         "data/pretrained_model.yaml",
     ),  # Load a dictionary of sample files data (names and urls)
-    "enable_torch_compile": True,
-    # Enable `torch-compile`` by default
+    "enable_torch_compile": False,
+    # Disable `torch-compile`` by default
     "torch_compile_mode": "default",
     # Set ``torch-compile`` mode to ``default`` by default
     # Options: “default”, “reduce-overhead”, “max-autotune”
