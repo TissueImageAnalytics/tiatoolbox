@@ -2830,7 +2830,7 @@ class VirtualWSIReader(WSIReader):
         if mode != "bool" and (
             self.img.ndim == 2 or self.img.shape[2] not in [3, 4]  # noqa: PLR2004
         ):
-            logger.warning("The input image mode is set to 'feature'")
+            logger.warning("The image mode is set to 'feature' as the input dimensions do not match with binary mask or RGB/RGBA.")
             mode = "feature"
 
         self.mode = mode.lower()
