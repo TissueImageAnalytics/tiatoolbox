@@ -34,6 +34,7 @@ import sqlite3
 import struct
 import sys
 import tempfile
+import threading
 import uuid
 import zlib
 from abc import ABC, abstractmethod
@@ -45,6 +46,7 @@ from pathlib import Path
 from typing import (
     IO,
     TYPE_CHECKING,
+    Any,
     Callable,
     ClassVar,
     Generator,
@@ -119,7 +121,7 @@ class Annotation:
         if self._geometry is None:
             # Lazy creation of Shapely object when first requested. This
             # is memoized under _geometry. object.__setattr__ must be
-            # used becuase the class is frozen and will disallow normal
+            # used because the class is frozen and will disallow normal
             # assignment.
             object.__setattr__(self, "_geometry", shapely_wkb.loads(self._wkb))
         # Return memoized geometry
@@ -1275,8 +1277,8 @@ class AnnotationStore(ABC, MutableMapping):
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
                 may be a string, Callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.
@@ -2127,7 +2129,7 @@ class SQLiteStore(AnnotationStore):
         """Opens :class:`SQLiteStore` from file pointer or path."""
         return SQLiteStore(fp)
 
-    def __init__(  # noqa: PLR0915
+    def __init__(
         self: SQLiteStore,
         connection: Path | str | IO = ":memory:",
         compression: str = "zlib",
@@ -2178,7 +2180,7 @@ class SQLiteStore(AnnotationStore):
             self.path.is_file()
             and self.path.stat().st_size > 0
         )
-        self.con = sqlite3.connect(str(self.path), isolation_level="DEFERRED")
+        self.cons = {}
         self.con.execute("BEGIN")
 
         # Set up metadata
@@ -2191,80 +2193,6 @@ class SQLiteStore(AnnotationStore):
         # store locally as constantly fetching from db in (de)serialization is slow
         self.compression = self.metadata["compression"]
         self.compression_level = self.metadata["compression_level"]
-
-        # Register predicate functions as custom SQLite functions
-        def wkb_predicate(
-            name: str,
-            wkb_a: bytes,
-            b: bytes,
-            cx: float,
-            cy: float,
-        ) -> bool:
-            """Wrapper function to allow WKB as inputs to binary predicates."""
-            a = shapely_wkb.loads(wkb_a)
-            b = self._unpack_geometry(b, cx, cy)
-            return self._geometry_predicate(name, a, b)
-
-        def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
-            """Function to load and execute pickle bytes with a "properties" dict."""
-            fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301  # noqa: S301
-            properties = json.loads(properties)
-            return fn(properties)
-
-        def get_area(wkb_bytes: bytes, cx: float, cy: float) -> float:
-            """Function to get the area of a geometry."""
-            return self._unpack_geometry(
-                wkb_bytes,
-                cx,
-                cy,
-            ).area
-
-        # Register custom functions
-        def register_custom_function(
-            name: str,
-            nargs: int,
-            fn: Callable,
-            *,
-            deterministic: bool = False,
-        ) -> None:
-            """Register a custom SQLite function.
-
-            Only Python >= 3.8 supports deterministic functions,
-            fallback to without this argument if not available.
-
-            Args:
-                name:
-                    The name of the function.
-                nargs:
-                    The number of arguments the function takes.
-                fn:
-                    The function to register.
-                deterministic:
-                    Whether the function is deterministic.
-
-            """
-            try:
-                self.con.create_function(name, nargs, fn, deterministic=deterministic)
-            except TypeError:
-                self.con.create_function(name, nargs, fn)
-
-        register_custom_function(
-            "geometry_predicate",
-            5,
-            wkb_predicate,
-            deterministic=True,
-        )
-        register_custom_function(
-            "pickle_expression",
-            2,
-            pickle_expression,
-            deterministic=True,
-        )
-        register_custom_function("REGEXP", 2, py_regexp)
-        register_custom_function("REGEXP", 3, py_regexp)
-        register_custom_function("LISTSUM", 1, json_list_sum)
-        register_custom_function("CONTAINS", 1, json_contains)
-        register_custom_function("get_area", 3, get_area)
 
         if exists:
             self.table_columns = self._get_table_columns()
@@ -2298,6 +2226,96 @@ class SQLiteStore(AnnotationStore):
         if self.auto_commit:
             self.con.commit()
         self.table_columns = self._get_table_columns()
+
+    def __getattribute__(self: SQLiteStore, name: str) -> Any:  # noqa: ANN401
+        """If attr is con, return thread-local connection."""
+        if name == "con":
+            return self.get_connection(threading.get_ident())
+        return super().__getattribute__(name)
+
+    def get_connection(self: SQLiteStore, thread_id: int) -> sqlite3.Connection:
+        """Get a connection to the database."""
+        if thread_id not in self.cons:
+            con = sqlite3.connect(str(self.path), isolation_level="DEFERRED", uri=True)
+
+            # Register predicate functions as custom SQLite functions
+            def wkb_predicate(
+                name: str,
+                wkb_a: bytes,
+                b: bytes,
+                cx: float,
+                cy: float,
+            ) -> bool:
+                """Wrapper function to allow WKB as inputs to binary predicates."""
+                a = shapely_wkb.loads(wkb_a)
+                b = self._unpack_geometry(b, cx, cy)
+                return self._geometry_predicate(name, a, b)
+
+            def pickle_expression(pickle_bytes: bytes, properties: str) -> bool:
+                """Function to load and execute pickle bytes with "properties" dict."""
+                fn = pickle.loads(pickle_bytes)  # skipcq: BAN-B301  # noqa: S301
+                properties = json.loads(properties)
+                return fn(properties)
+
+            def get_area(wkb_bytes: bytes, cx: float, cy: float) -> float:
+                """Function to get the area of a geometry."""
+                return self._unpack_geometry(
+                    wkb_bytes,
+                    cx,
+                    cy,
+                ).area
+
+            # Register custom functions
+            def register_custom_function(
+                name: str,
+                nargs: int,
+                fn: Callable,
+                *,
+                deterministic: bool = False,
+            ) -> None:
+                """Register a custom SQLite function.
+
+                Only Python >= 3.8 supports deterministic functions,
+                fallback to without this argument if not available.
+
+                Args:
+                    name:
+                        The name of the function.
+                    nargs:
+                        The number of arguments the function takes.
+                    fn:
+                        The function to register.
+                    deterministic:
+                        Whether the function is deterministic.
+
+                """
+                con.create_function(
+                    name,
+                    nargs,
+                    fn,
+                    deterministic=deterministic,
+                )
+
+            register_custom_function(
+                "geometry_predicate",
+                5,
+                wkb_predicate,
+                deterministic=True,
+            )
+            register_custom_function(
+                "pickle_expression",
+                2,
+                pickle_expression,
+                deterministic=True,
+            )
+            register_custom_function("REGEXP", 2, py_regexp)
+            register_custom_function("REGEXP", 3, py_regexp)
+            register_custom_function("LISTSUM", 1, json_list_sum)
+            register_custom_function("CONTAINS", 1, json_contains)
+            register_custom_function("get_area", 3, get_area)
+            self.cons[thread_id] = con
+            return con
+        return self.cons[thread_id]
 
     def serialise_geometry(  # skipcq: PYL-W0221
         self: SQLiteStore,
@@ -2359,6 +2377,7 @@ class SQLiteStore(AnnotationStore):
         cx: float,
         cy: float,
     ) -> bytes:
+        """Unpack WKB data."""
         return (
             self._decompress_data(data)
             if data
@@ -2452,7 +2471,9 @@ class SQLiteStore(AnnotationStore):
         if self.auto_commit:
             self.con.commit()
         self.optimize(vacuum=False, limit=1000)
-        self.con.close()
+        for con in self.cons.values():
+            con.close()
+        self.cons = {}
 
     def _make_token(self: SQLiteStore, annotation: Annotation, key: str | None) -> dict:
         """Create token data dict for tokenized SQL transaction."""
@@ -3142,8 +3163,8 @@ class SQLiteStore(AnnotationStore):
                 Only annotations for which this predicate is true will
                 be returned. Defaults to None (assume always true). This
                 may be a string, Callable, or pickled function as bytes.
-                Callables are called to filter each result returned the
-                from annotation store backend in python before being
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
                 returned to the user. A pickle object is, where
                 possible, hooked into the backend as a user defined
                 function to filter results during the backend query.

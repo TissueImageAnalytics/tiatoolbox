@@ -21,7 +21,7 @@ install_requires = [
 dependency_links = []
 
 if sys.platform != "darwin":
-    dependency_links = ["https://download.pytorch.org/whl/cu113"]
+    dependency_links = ["https://download.pytorch.org/whl/cu118"]
 
 setup_requirements = [
     "pytest-runner",
@@ -34,7 +34,7 @@ test_requirements = [
 setup(
     author="TIA Centre",
     author_email="tia@dcs.warwick.ac.uk",
-    python_requires=">=3.8",
+    python_requires=">=3.8, <3.12",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
@@ -63,6 +63,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/TissueImageAnalytics/tiatoolbox",
-    version="1.4.1",
+    version="1.5.1",
     zip_safe=False,
 )
