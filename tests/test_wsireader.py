@@ -9,7 +9,6 @@ import shutil
 from copy import deepcopy
 from pathlib import Path
 
-
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
 from typing import TYPE_CHECKING, Callable, Iterable
 
