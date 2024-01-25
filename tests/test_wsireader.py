@@ -9,9 +9,6 @@ import shutil
 from copy import deepcopy
 from pathlib import Path
 
-import os
-
-os.add_dll_directory("C:/Users/u2272723/PycharmProjects/openslide-win64/bin")
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
 from typing import TYPE_CHECKING, Callable, Iterable
