@@ -328,11 +328,13 @@ class HoVerNet(ModelABC):
         num_input_channels: int = 3,
         num_types: int | None = None,
         mode: str = "original",
+        nuc_type_dict: dict | None = None,
     ) -> None:
         """Initialize :class:`HoVerNet`."""
         super().__init__()
         self.mode = mode
         self.num_types = num_types
+        self.nuc_type_dict = nuc_type_dict
 
         if mode not in ["original", "fast"]:
             msg = (
@@ -774,7 +776,7 @@ class HoVerNet(ModelABC):
             tp_map = None
             np_map, hv_map = raw_maps
 
-        pred_type = tp_map
+        pred_type = np.around(tp_map).astype("uint8")
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 

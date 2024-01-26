@@ -645,10 +645,11 @@ hovernet_fast-pannuke:
             mode: "fast"
             nuc_type_dict: {
                 0: "Background",
-                1: "Epithelial",
+                1: "Neoplastic",
                 2: "Inflammatory",
-                3: "Spindle-Shaped",
-                4: "Miscellaneous",
+                3: "Connective",
+                4: "Dead",
+                5: "Non-Neoplastic Epithelial",
             }
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
