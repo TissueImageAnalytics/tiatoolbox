@@ -536,11 +536,7 @@ class SemanticSegmentor:
             raise ValueError(msg)
 
         if model is not None:
-            self.model = torch.compile(
-                model,
-                mode=rcParam["torch_compile_mode"],
-                disable=not rcParam["enable_torch_compile"],
-            )
+            self.model = model
             # template ioconfig, usually coming from pretrained
             self.ioconfig = None
         else:
