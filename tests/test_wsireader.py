@@ -2759,7 +2759,7 @@ def test_read_mpp(wsi: WSIReader) -> None:
 
 
 def test_read_multi_channel(source_image: Path) -> None:
-    """Test reading an image with more than three channels"""
+    """Test reading an image with more than three channels."""
     img_array = utils.misc.imread(Path(source_image))
     new_img_array = np.concatenate((img_array, img_array), axis=-1)
     wsi = wsireader.VirtualWSIReader(new_img_array)
