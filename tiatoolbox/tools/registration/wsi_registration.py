@@ -15,7 +15,7 @@ from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 from torchvision.models import VGG16_Weights
 
-from tiatoolbox import logger, rcParam
+from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize

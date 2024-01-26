@@ -16,7 +16,7 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
-from tiatoolbox import logger, rcParam
+from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
