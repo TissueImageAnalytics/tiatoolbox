@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import tqdm
 
-from tiatoolbox import logger, rcParam
+from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
