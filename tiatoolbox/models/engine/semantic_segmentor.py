@@ -542,11 +542,7 @@ class SemanticSegmentor:
         else:
             model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
             self.ioconfig = ioconfig
-            self.model = torch.compile(
-                model,
-                mode=rcParam["torch_compile_mode"],
-                disable=not rcParam["enable_torch_compile"],
-            )
+            self.model = model
 
         # local variables for flagging mode within class,
         # subclass should have overwritten to alter some specific behavior
