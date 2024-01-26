@@ -2766,22 +2766,17 @@ def test_read_multi_channel(source_image: Path) -> None:
     wsi = wsireader.VirtualWSIReader(new_img_array)
 
     # Test read_bound function:
-    region = wsi.read_bounds(bounds=(0, 0, 50, 100))
-    target = new_img_array[:100, :50, :]
-
-    assert region.shape == (100, 50, 6)
-    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) == 0
-
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
-    region = wsi.read_bounds(bounds, pad_mode="reflect", interpolation="cubic")
-    target_size = tuple(np.round(np.array([25, 50]) * 2).astype(int))
+    region = wsi.read_bounds(bounds, resolution=1, units="mpp")
+    target_size = tuple(np.round(np.array([25, 50]) / 2).astype(int))
     target = cv2.resize(
         new_img_array[:50, :25, :],
         target_size,
         interpolation=cv2.INTER_CUBIC,
     )
 
+    assert region.shape == (100, 50, 6)
+    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
