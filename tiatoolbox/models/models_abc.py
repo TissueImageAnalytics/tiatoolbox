@@ -8,7 +8,7 @@ import torch
 import torch._dynamo
 from torch import device as torch_device
 
-torch._dynamo.config.suppress_errors = True  # noqa: SLF001, PYL-W0212
+torch._dynamo.config.suppress_errors = True  # noqa: SLF001, skipcq: PYL-W0212
 
 
 if TYPE_CHECKING:  # pragma: no cover
