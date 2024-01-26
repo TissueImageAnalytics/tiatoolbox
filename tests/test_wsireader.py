@@ -2778,9 +2778,9 @@ def test_read_multi_channel(source_image: Path) -> None:
     region = wsi.read_bounds(bounds, pad_mode="reflect", interpolation="cubic")
     target_size = tuple(np.round(np.array([25, 50]) * 2).astype(int))
     target = cv2.resize(
-    new_img_array[:50, :25, :],
-    target_size,
-    interpolation=cv2.INTER_CUBIC,
+        new_img_array[:50, :25, :],
+        target_size,
+        interpolation=cv2.INTER_CUBIC,
     )
 
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
