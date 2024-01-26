@@ -772,11 +772,12 @@ class HoVerNet(ModelABC):
         """
         if len(raw_maps) == 3:  # noqa: PLR2004
             np_map, hv_map, tp_map = raw_maps
+            tp_map = np.around(tp_map).astype("uint8")
         else:
             tp_map = None
             np_map, hv_map = raw_maps
 
-        pred_type = np.around(tp_map).astype("uint8")
+        pred_type = tp_map
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
