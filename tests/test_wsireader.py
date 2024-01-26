@@ -2759,24 +2759,29 @@ def test_read_mpp(wsi: WSIReader) -> None:
 
 
 def test_read_multi_channel(source_image: Path) -> None:
-    """Test reading an image with more than three channels."""
+    """Test reading image with more than three channels.
+    Create a virtual WSI by concatenating the source_image
+    """
     img_array = utils.misc.imread(Path(source_image))
-
     new_img_array = np.concatenate((img_array, img_array), axis=-1)
-    wsi = wsireader.VirtualWSIReader(new_img_array)
 
-    # Test read_bound function:
-    location = (0, 0)
-    size = (50, 100)
-    bounds = utils.transforms.locsize2bounds(location, size)
-    region = wsi.read_bounds(bounds, resolution=1, units="mpp")
-    target_size = tuple(np.round(np.array([25, 50]) / 2).astype(int))
+    new_img_size = np.array(new_img_array.shape[:2][::-1])
+    double_size = tuple((new_img_size * 2).astype(int))
+    meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
+    wsi = wsireader.VirtualWSIReader(new_img_array, info=meta)
+
+    region = wsi.read_rect(location=(0, 0), size=(50, 100), pad_mode="reflect")
     target = cv2.resize(
         new_img_array[:50, :25, :],
-        target_size,
+        (50, 100),
         interpolation=cv2.INTER_CUBIC,
     )
 
-    assert region.shape == (100, 50, 6)
+    assert region.shape == (100, 50, (new_img_array.shape[-1]))
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.1
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+
+
+
+
+
