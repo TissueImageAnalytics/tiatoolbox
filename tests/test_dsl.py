@@ -46,6 +46,7 @@ SAMPLE_PROPERTIES = {
     "neg": -1,
     "bool": True,
     "nesting": {"fib": [1, 1, 2, 3, 5], "foo": {"bar": "baz"}},
+    "dot.key": 3.14,
 }
 
 
@@ -571,3 +572,19 @@ class TestPredicate:
             eval_locals,
         )
         assert bool(check(result)) is True
+
+    @staticmethod
+    def test_key_with_period(
+        eval_globals: dict[str, object],
+        eval_locals: Mapping[str, object],
+        check: Callable,
+    ) -> None:
+        """Test key with period."""
+        query = "props['dot.key']"
+        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            query,
+            eval_globals,
+            eval_locals,
+        )
+
+        assert check(result) == 3.14
