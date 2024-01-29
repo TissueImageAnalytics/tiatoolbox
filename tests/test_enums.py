@@ -1,4 +1,5 @@
 """Tests for the enumerated types used by TIAToolbox."""
+
 import pytest
 
 from tiatoolbox.enums import GeometryType

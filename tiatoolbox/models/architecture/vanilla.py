@@ -1,4 +1,5 @@
 """Define vanilla CNNs with torch backbones, mainly for patch classification."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

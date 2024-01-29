@@ -1,4 +1,5 @@
 """Test for NGFF metadata dataclasses."""
+
 from tiatoolbox.wsicore.metadata import ngff
 
 
