@@ -586,11 +586,12 @@ def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
 # -------------------------------------------------------------------------------------
 
 
-def timed(fn: Callable) -> (Callable, float):
+def timed(fn: Callable, *args: object) -> (Callable, float):
     """A decorator that times the execution of a function.
 
     Args:
         fn (Callable): The function to be timed.
+        args (object): Arguments to be passed to the function.
 
     Returns:
         A tuple containing the result of the function
@@ -601,13 +602,13 @@ def timed(fn: Callable) -> (Callable, float):
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
         start.record()
-        result = fn()
+        result = fn(*args)
         end.record()
         torch.cuda.synchronize()
         compile_time = start.elapsed_time(end) / 1000
     else:
         start = time.time()
-        result = fn()
+        result = fn(*args)
         end = time.time()
         compile_time = end - start
     return result, compile_time
