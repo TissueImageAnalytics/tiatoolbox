@@ -1236,6 +1236,7 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
 def test_patch_predictor_torch_compile(
     sample_patch1: Path,
     sample_patch2: Path,
+    tmp_path: Path,
 ) -> None:
     """Test torch.compile functionality.
 
@@ -1248,23 +1249,26 @@ def test_patch_predictor_torch_compile(
     # Test torch.compile with default mode
     rcParam["torch_compile_mode"] = "default"
     _, compile_time = timed(
-        test_patch_predictor_kather100k_output,
+        test_patch_predictor_api,
         sample_patch1,
         sample_patch2,
+        tmp_path,
     )
     logger.info("torch.compile default mode: %s", compile_time)
     rcParam["torch_compile_mode"] = "reduce-overhead"
     _, compile_time = timed(
-        test_patch_predictor_kather100k_output,
+        test_patch_predictor_api,
         sample_patch1,
         sample_patch2,
+        tmp_path,
     )
     logger.info("torch.compile reduce-overhead mode: %s", compile_time)
     rcParam["torch_compile_mode"] = "max-autotune"
     _, compile_time = timed(
-        test_patch_predictor_kather100k_output,
+        test_patch_predictor_api,
         sample_patch1,
         sample_patch2,
+        tmp_path,
     )
     logger.info("torch.compile max-autotune mode: %s", compile_time)
     rcParam["enable_torch_compile"] = torch_compile_enabled
