@@ -1243,6 +1243,7 @@ def test_patch_predictor_torch_compile(
     Args:
         sample_patch1 (Path): Path to sample patch 1.
         sample_patch2 (Path): Path to sample patch 2.
+        tmp_path (Path): Path to temporary directory.
     """
     torch_compile_enabled = rcParam["enable_torch_compile"]
     rcParam["enable_torch_compile"] = True
