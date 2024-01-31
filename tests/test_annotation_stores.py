@@ -597,7 +597,7 @@ def test_sqlite_pquery_warn_no_index(
     assert "Query is not using an index." in caplog.text
     # Check that there is no warning after creating the index
     store.create_index("test_index", "props['class']")
-    with pytest.warns(None) as record:
+    with pytest.warns([]) as record:
         store.pquery("props['class']")
         assert len(record) == 0
 
