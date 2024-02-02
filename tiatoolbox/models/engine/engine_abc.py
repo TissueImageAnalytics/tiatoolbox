@@ -1,4 +1,5 @@
 """Defines Abstract Base Class for TIAToolbox Model Engines."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
