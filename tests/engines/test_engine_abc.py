@@ -1,4 +1,5 @@
 """Test tiatoolbox.models.engine.engine_abc."""
+
 from __future__ import annotations
 
 import copy
