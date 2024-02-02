@@ -1,4 +1,5 @@
 """Define Variable types for TIAToolbox."""
+
 from __future__ import annotations
 
 from typing import Callable, Dict, List, Literal, Sequence, SupportsFloat, Tuple, Union

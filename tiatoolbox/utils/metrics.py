@@ -1,4 +1,5 @@
 """This module defines several metrics used in computational pathology."""
+
 from __future__ import annotations
 
 import numpy as np

@@ -1,4 +1,5 @@
 """Stain matrix extraction for stain normalization."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
