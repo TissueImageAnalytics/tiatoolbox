@@ -1,4 +1,5 @@
 """This module defines classes which can read image data from WSI formats."""
+
 from __future__ import annotations
 
 import copy

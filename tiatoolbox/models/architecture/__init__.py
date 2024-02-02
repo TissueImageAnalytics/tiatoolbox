@@ -1,4 +1,5 @@
 """Define a set of models to be used within tiatoolbox."""
+
 from __future__ import annotations
 
 import os

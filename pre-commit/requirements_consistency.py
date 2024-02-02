@@ -1,4 +1,5 @@
 """Test for ensuring that requirements files are valid and consistent."""
+
 from __future__ import annotations
 
 import importlib

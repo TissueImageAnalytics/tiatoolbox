@@ -1,4 +1,5 @@
 """Test docstring examples and imports are valid."""
+
 from __future__ import annotations
 
 import ast

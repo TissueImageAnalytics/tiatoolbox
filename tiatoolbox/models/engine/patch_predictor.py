@@ -1,4 +1,5 @@
 """This module implements patch level prediction."""
+
 from __future__ import annotations
 
 import copy
