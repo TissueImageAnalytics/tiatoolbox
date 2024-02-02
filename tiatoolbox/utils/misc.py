@@ -1,4 +1,5 @@
 """Miscellaneous small functions repeatedly used in tiatoolbox."""
+
 from __future__ import annotations
 
 import copy
@@ -1080,9 +1081,11 @@ def anns_from_hoverdict(
                 origin,
             ),
             {
-                prop: typedict[ann[prop]]
-                if prop == "type" and typedict is not None
-                else ann[prop]
+                prop: (
+                    typedict[ann[prop]]
+                    if prop == "type" and typedict is not None
+                    else ann[prop]
+                )
                 for prop in props[3:]
                 if prop in ann
             },

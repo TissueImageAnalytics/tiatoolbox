@@ -1,4 +1,5 @@
 """Simple Flask WSGI apps to display tiles as slippery maps."""
+
 from __future__ import annotations
 
 import copy

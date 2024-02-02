@@ -1,4 +1,5 @@
 """Command line interface for patch_predictor."""
+
 from __future__ import annotations
 
 import click

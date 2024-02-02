@@ -3,6 +3,7 @@
 Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerator.
 
 """
+
 from __future__ import annotations
 
 from pathlib import Path

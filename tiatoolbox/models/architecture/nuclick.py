@@ -5,6 +5,7 @@ NuClick: a deep learning framework for interactive segmentation of microscopic i
 Medical Image Analysis, 65, 101771.
 
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

@@ -22,6 +22,7 @@ Properties
     Key-value pairs associated with a geometry.
 
 """
+
 from __future__ import annotations
 
 import contextlib

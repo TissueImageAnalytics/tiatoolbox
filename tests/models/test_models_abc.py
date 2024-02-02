@@ -1,4 +1,5 @@
 """Unit test package for ABC and __init__ ."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
