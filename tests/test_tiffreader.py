@@ -1,4 +1,5 @@
 """Test TIFFWSIReader."""
+
 from typing import Callable
 
 import pytest

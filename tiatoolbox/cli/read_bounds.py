@@ -1,4 +1,5 @@
 """Command line interface for read_bounds."""
+
 from pathlib import Path
 
 from tiatoolbox.cli.common import (

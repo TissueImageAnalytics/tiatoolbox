@@ -1,4 +1,5 @@
 """Define CNNs as used in IDaRS for prediction of molecular pathways and mutations."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

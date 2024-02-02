@@ -6,6 +6,7 @@ The raw metadata is also preserved and accessible via a dictionary. The
 format of this dictionary may vary between WSI formats.
 
 """
+
 from __future__ import annotations
 
 from numbers import Number

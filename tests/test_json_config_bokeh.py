@@ -1,4 +1,5 @@
 """Test the bokeh app with config.json file."""
+
 from __future__ import annotations
 
 import time

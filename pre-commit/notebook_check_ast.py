@@ -1,4 +1,5 @@
 """Simple check to ensure each code cell in a notebook is valid Python."""
+
 from __future__ import annotations
 
 import argparse

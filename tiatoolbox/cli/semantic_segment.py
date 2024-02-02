@@ -1,4 +1,5 @@
 """Command line interface for semantic segmentation."""
+
 from __future__ import annotations
 
 import click
