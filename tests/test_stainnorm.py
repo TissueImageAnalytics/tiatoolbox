@@ -248,7 +248,7 @@ def test_cli_stainnorm_dir(source_image: Path, tmp_path: Path) -> None:
             "--output-path",
             str(tmp_path / "stainnorm_ouput"),
             "--method",
-            "vahadane",
+            "ruifrok",
         ],
     )
 

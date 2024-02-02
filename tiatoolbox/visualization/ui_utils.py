@@ -1,4 +1,5 @@
 """Some utilities for bokeh ui."""
+
 from __future__ import annotations
 
 from cmath import pi

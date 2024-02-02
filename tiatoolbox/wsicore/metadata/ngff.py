@@ -6,6 +6,7 @@ Based on version 0.4 of the specification:
 https://ngff.openmicroscopy.org/0.4/
 
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

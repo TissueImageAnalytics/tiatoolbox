@@ -6,6 +6,7 @@ parsing the entire file. There may occationally be false positives which
 should be caught when attemping to parse the file.
 
 """
+
 from __future__ import annotations
 
 import zipfile
