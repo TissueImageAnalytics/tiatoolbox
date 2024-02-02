@@ -1,4 +1,5 @@
 """Define common code required for cli."""
+
 from __future__ import annotations
 
 from pathlib import Path

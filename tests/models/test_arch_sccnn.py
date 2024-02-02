@@ -1,4 +1,5 @@
 """Unit test package for SCCNN."""
+
 from typing import Callable
 
 import numpy as np

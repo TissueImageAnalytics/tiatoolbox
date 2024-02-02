@@ -9,6 +9,7 @@ easily serialised via the use of an io.BytesIO object or saved directly
 to disk.
 
 """
+
 from __future__ import annotations
 
 import tarfile

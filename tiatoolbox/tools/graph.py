@@ -377,13 +377,13 @@ class SlideGraphConstructor:
             # (most un-similar).
             i_vs_all_similarities = np.ones(len(points))
             # Set the neighbours similarity to calculated values (similarity/fd)
-            i_vs_all_similarities[
-                neighbour_indexes_single_point
-            ] = neighbour_similarities
+            i_vs_all_similarities[neighbour_indexes_single_point] = (
+                neighbour_similarities
+            )
             i_vs_all_similarities = i_vs_all_similarities[i + 1 :]
-            condensed_distance_matrix[
-                index : index + len(i_vs_all_similarities)
-            ] = i_vs_all_similarities
+            condensed_distance_matrix[index : index + len(i_vs_all_similarities)] = (
+                i_vs_all_similarities
+            )
             index = index + len(i_vs_all_similarities)
 
         # Perform hierarchical clustering (using similarity as distance)

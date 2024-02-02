@@ -1,4 +1,5 @@
 """Define HoVerNet architecture."""
+
 from __future__ import annotations
 
 import math

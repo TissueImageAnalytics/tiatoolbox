@@ -1,4 +1,5 @@
 """Visualisation and overlay functions used in tiatoolbox."""
+
 from __future__ import annotations
 
 import colorsys
