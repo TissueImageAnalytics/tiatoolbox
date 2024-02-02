@@ -5,6 +5,7 @@ various objects in microscopy images,” Medical Image Analysis,
 Dec. 2018, vol. 52, p. 160-173.
 
 """
+
 from __future__ import annotations
 
 from collections import OrderedDict

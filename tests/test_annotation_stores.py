@@ -1,4 +1,5 @@
 """Test for annotation store classes."""
+
 from __future__ import annotations
 
 import json
@@ -595,11 +596,17 @@ def test_sqlite_pquery_warn_no_index(
     _, store = fill_store(SQLiteStore, ":memory:")
     store.pquery("*", unique=False)
     assert "Query is not using an index." in caplog.text
-    # Check that there is no warning after creating the index
+
+
+def test_sqlite_pquery_nowarn_index(
+    fill_store: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that after making index, does not warn."""
+    _, store = fill_store(SQLiteStore, ":memory:")
     store.create_index("test_index", "props['class']")
-    with pytest.warns(None) as record:
-        store.pquery("props['class']")
-        assert len(record) == 0
+    store.pquery("props['class']")
+    assert "Query is not using an index." not in caplog.text
 
 
 def test_sqlite_store_indexes(fill_store: Callable, tmp_path: Path) -> None:

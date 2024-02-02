@@ -1,4 +1,5 @@
 """Models package for the models implemented in tiatoolbox."""
+
 from __future__ import annotations
 
 from . import architecture, dataset, engine, models_abc

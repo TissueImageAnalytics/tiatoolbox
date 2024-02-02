@@ -1,4 +1,5 @@
 """Define wsi_registration classes and methods."""
+
 from __future__ import annotations
 
 import itertools

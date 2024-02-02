@@ -1,4 +1,5 @@
 """Command line interface for stain_norm."""
+
 from pathlib import Path
 
 import click

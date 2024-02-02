@@ -1,4 +1,5 @@
 """Test for detecting magic numbers and signatures in files."""
+
 import sqlite3
 import zipfile
 from io import BytesIO

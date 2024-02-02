@@ -14,6 +14,7 @@ as accurate as can be reasonably be expected depending on what is being
 detected.
 
 """
+
 from __future__ import annotations
 
 import os

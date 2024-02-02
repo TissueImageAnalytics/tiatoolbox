@@ -5,6 +5,7 @@ for cell detection." 2019 IEEE 16th International Symposium on Biomedical
 Imaging (ISBI 2019). IEEE, 2019.
 
 """
+
 from __future__ import annotations
 
 import numpy as np
