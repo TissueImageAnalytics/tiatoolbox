@@ -1246,6 +1246,7 @@ def test_patch_predictor_torch_compile(
         tmp_path (Path): Path to temporary directory.
     """
     torch_compile_enabled = rcParam["enable_torch_compile"]
+    torch._dynamo.reset()
     rcParam["enable_torch_compile"] = True
     # Test torch.compile with default mode
     rcParam["torch_compile_mode"] = "default"
@@ -1256,6 +1257,7 @@ def test_patch_predictor_torch_compile(
         tmp_path,
     )
     logger.info("torch.compile default mode: %s", compile_time)
+    torch._dynamo.reset()
     rcParam["torch_compile_mode"] = "reduce-overhead"
     _, compile_time = timed(
         test_patch_predictor_api,
@@ -1264,6 +1266,7 @@ def test_patch_predictor_torch_compile(
         tmp_path,
     )
     logger.info("torch.compile reduce-overhead mode: %s", compile_time)
+    torch._dynamo.reset()
     rcParam["torch_compile_mode"] = "max-autotune"
     _, compile_time = timed(
         test_patch_predictor_api,
@@ -1272,4 +1275,5 @@ def test_patch_predictor_torch_compile(
         tmp_path,
     )
     logger.info("torch.compile max-autotune mode: %s", compile_time)
+    torch._dynamo.reset()
     rcParam["enable_torch_compile"] = torch_compile_enabled
