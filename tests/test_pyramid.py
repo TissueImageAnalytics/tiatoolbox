@@ -1,4 +1,5 @@
 """Test for tile pyramid generation."""
+
 from __future__ import annotations
 
 import re

@@ -1,4 +1,5 @@
 """Define a set of UNet variants to be used within tiatoolbox."""
+
 from __future__ import annotations
 
 from typing import Any

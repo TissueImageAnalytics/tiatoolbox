@@ -1,4 +1,5 @@
 """Top-level package for TIA Toolbox."""
+
 from __future__ import annotations
 
 import importlib.util

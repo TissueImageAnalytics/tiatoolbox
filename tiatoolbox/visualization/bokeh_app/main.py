@@ -1,4 +1,5 @@
 """Main module for the tiatoolbox visualization bokeh app."""
+
 from __future__ import annotations
 
 import json
