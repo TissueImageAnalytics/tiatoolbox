@@ -2028,7 +2028,7 @@ class AnnotationStore(ABC, MutableMapping):
         transformed_geoms = {
             key: transform(annotation.geometry) for key, annotation in self.items()
         }
-        self.patch_many(transformed_geoms.keys(), transformed_geoms.values())
+        transformed_geoms.items()
 
     def __del__(self: AnnotationStore) -> None:
         """Implements destructor method.
