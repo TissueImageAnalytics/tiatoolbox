@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from numbers import Number
 from typing import TYPE_CHECKING, Callable
 
 import numpy as np
@@ -13,13 +14,11 @@ from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
 
 if TYPE_CHECKING:  # pragma: no cover
-    from numbers import Number
-
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
 
-def delaunay_adjacency(points: ArrayLike, dthresh: int) -> list:
+def delaunay_adjacency(points: ArrayLike, dthresh: float) -> list:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
 
     Points which are further apart than dthresh will not be connected.
@@ -29,7 +28,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: int) -> list:
     Args:
         points (ArrayLike):
             An nxm list of coordinates.
-        dthresh (int):
+        dthresh (float):
             Distance threshold for triangulation.
 
     Returns:
@@ -44,7 +43,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: int) -> list:
 
     """
     # Validate inputs
-    if not isinstance(dthresh, int):
+    if not isinstance(dthresh, Number):
         msg = "dthresh must be a number."
         raise TypeError(msg)
     if len(points) < 4:  # noqa: PLR2004
