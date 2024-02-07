@@ -650,7 +650,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
         baseline_y = (y * self.tile_size * scale) - (self.overlap * scale)
-        coord = [baseline_x, baseline_y]
+        coord = (int(baseline_x), int(baseline_y))
         if level < self.sub_tile_level_count:
             output_size = self.output_tile_size // 2 ** (
                 self.sub_tile_level_count - level
