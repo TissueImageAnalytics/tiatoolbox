@@ -42,4 +42,5 @@ jobs:
           tiatoolbox/utils/*.py \
           tiatoolbox/tools/__init__.py \
           tiatoolbox/tools/stainextract.py \
-          tiatoolbox/tools/pyramid.py
+          tiatoolbox/tools/pyramid.py \
+          tiatoolbox/tools/tissuemask.py
