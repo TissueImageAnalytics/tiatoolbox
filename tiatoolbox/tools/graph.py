@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from numbers import Number
 from typing import TYPE_CHECKING, Callable
 
 import numpy as np
@@ -14,11 +13,13 @@ from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
 
 if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
+
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
 
-def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
+def delaunay_adjacency(points: ArrayLike, dthresh: int) -> list:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
 
     Points which are further apart than dthresh will not be connected.
@@ -43,7 +44,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
 
     """
     # Validate inputs
-    if not isinstance(dthresh, Number):
+    if not isinstance(dthresh, int):
         msg = "dthresh must be a number."
         raise TypeError(msg)
     if len(points) < 4:  # noqa: PLR2004
@@ -57,6 +58,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     tessellation = Delaunay(points)
     # Find all connected neighbours for each point in the set of
     # triangles. Starting with an empty dictionary.
+    triangle_neighbours: defaultdict
     triangle_neighbours = defaultdict(set)
     # Iterate over each triplet of point indexes which denotes a
     # triangle within the tessellation.
@@ -157,7 +159,7 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
 
 def affinity_to_edge_index(
     affinity_matrix: torch.Tensor | ArrayLike,
-    threshold: Number = 0.5,
+    threshold: float = 0.5,
 ) -> torch.tensor | ArrayLike:
     """Convert an affinity matrix (similarity matrix) to an edge index.
 
@@ -233,12 +235,12 @@ class SlideGraphConstructor:
     def build(
         points: ArrayLike,
         features: ArrayLike,
-        lambda_d: Number = 3.0e-3,
-        lambda_f: Number = 1.0e-3,
-        lambda_h: Number = 0.8,
-        connectivity_distance: Number = 4000,
-        neighbour_search_radius: Number = 2000,
-        feature_range_thresh: Number | None = 1e-4,
+        lambda_d: float = 3.0e-3,
+        lambda_f: float = 1.0e-3,
+        lambda_h: float = 0.8,
+        connectivity_distance: int = 4000,
+        neighbour_search_radius: int = 2000,
+        feature_range_thresh: float | None = 1e-4,
     ) -> dict[str, ArrayLike]:
         """Build a graph via hybrid clustering in spatial and feature space.
 
@@ -416,7 +418,7 @@ class SlideGraphConstructor:
 
     @classmethod
     def visualise(
-        cls: SlideGraphConstructor,
+        cls: type[SlideGraphConstructor],
         graph: dict[str, ArrayLike],
         color: ArrayLike | str | Callable | None = None,
         node_size: Number | ArrayLike | Callable = 25,
@@ -510,8 +512,8 @@ class SlideGraphConstructor:
         # Plot the nodes
         plt.scatter(
             *nodes.T,
-            c=color(graph) if isinstance(color, Callable) else color,
-            s=node_size(graph) if isinstance(node_size, Callable) else node_size,
+            c=color(graph) if callable(color) else color,
+            s=node_size(graph) if callable(node_size) else node_size,
             zorder=2,
         )
 
