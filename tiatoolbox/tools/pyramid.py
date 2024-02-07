@@ -657,13 +657,14 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             )
             output_size = np.repeat(output_size, 2).astype(int)
             thumb = self.get_thumb_tile()
-            thumb.thumbnail(output_size)
+            thumb.thumbnail((output_size[0], output_size[1]))
             return thumb
         slide_dimensions = np.array(self.info.slide_dimensions)
         if all(slide_dimensions < [baseline_x, baseline_y]):
             raise IndexError
 
-        bounds = locsize2bounds(coord, [self.output_tile_size * scale] * 2)
+        size = [self.output_tile_size * scale] * 2
+        bounds = locsize2bounds(coord, (size[0], size[1]))
         tile = self.renderer.render_annotations(
             self.store,
             bounds,
