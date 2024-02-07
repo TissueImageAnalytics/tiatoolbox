@@ -664,7 +664,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             raise IndexError
 
         size = [self.output_tile_size * scale] * 2
-        bounds = locsize2bounds(coord, (size[0], size[1]))
+        bounds = locsize2bounds(coord, (int(size[0]), int(size[1])))
         tile = self.renderer.render_annotations(
             self.store,
             bounds,
