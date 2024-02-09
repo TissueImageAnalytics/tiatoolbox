@@ -1372,13 +1372,13 @@ def wsi_batch_output_to_zarr_group(
             Optional zarr group name consisting of zarrs to save the batch output
             values.
         batch_output_probabilities (np.ndarray):
-            Probability batch output from infer wsi
+            Probability batch output from infer wsi.
         batch_output_predictions (np.ndarray):
-            Predictions batch output from infer wsi
+            Predictions batch output from infer wsi.
         batch_output_coordinates (np.ndarray):
-            Coordinates batch output from infer wsi
+            Coordinates batch output from infer wsi.
         batch_output_label (np.ndarray):
-            Labels batch output from infer wsi
+            Labels batch output from infer wsi.
         save_path (str or Path):
             Path to save the zarr file.
         **kwargs (dict):

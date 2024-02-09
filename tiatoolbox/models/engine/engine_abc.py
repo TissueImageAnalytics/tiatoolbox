@@ -64,7 +64,7 @@ def prepare_engines_save_dir(
 
     if save_dir is None:
         msg = (
-            "Input WSIs detected but there is no save directory provided."
+            "Input WSIs detected but no save directory provided."
             "Please provide a 'save_dir'."
         )
         raise OSError(msg)
@@ -326,14 +326,14 @@ class EngineABC(ABC):
 
     def infer_patches(
         self: EngineABC,
-        data_loader: DataLoader,
+        dataloader: DataLoader,
     ) -> dict:
         """Model inference on an image patch."""
         progress_bar = None
 
         if self.verbose:
             progress_bar = tqdm.tqdm(
-                total=int(len(data_loader)),
+                total=int(len(dataloader)),
                 leave=True,
                 ncols=80,
                 ascii=True,
@@ -346,7 +346,7 @@ class EngineABC(ABC):
         if self.return_labels:
             raw_predictions["labels"] = []
 
-        for _, batch_data in enumerate(data_loader):
+        for _, batch_data in enumerate(dataloader):
             batch_output_predictions = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
@@ -520,9 +520,9 @@ class EngineABC(ABC):
 
         Returns: (dict or Path):
             if the output_type is "AnnotationStore", the function returns the patch
-            predictor output as an SQLiteStore containing Annotations stored to a `.db`
+            predictor output as an SQLiteStore containing Annotations stored in a `.db`
             file. Otherwise, the function defaults to returning patch predictor output
-            stored to a `.zarr` file.
+            stored in a `.zarr` file.
 
         """
         output_file = (
@@ -585,7 +585,7 @@ class EngineABC(ABC):
         resolution: Resolution,
         units: Units,
     ) -> ModelIOConfigABC:
-        """Update the ioconfig.
+        """Update IOConfig.
 
         Args:
             ioconfig (:class:`ModelIOConfigABC`):
@@ -826,13 +826,13 @@ class EngineABC(ABC):
         )
 
         if patch_mode:
-            data_loader = self.get_dataloader(
+            dataloader = self.get_dataloader(
                 images=self.images,
                 labels=self.labels,
                 patch_mode=patch_mode,
             )
             raw_predictions = self.infer_patches(
-                data_loader=data_loader,
+                dataloader=dataloader,
             )
             return self.post_process_patches(
                 raw_predictions=raw_predictions,
@@ -849,13 +849,13 @@ class EngineABC(ABC):
             self.units,
         )
 
-        fx_list = self._ioconfig.scale_to_highest(
+        scale_factors = self._ioconfig.scale_to_highest(
             self._ioconfig.input_resolutions,
             self._ioconfig.input_resolutions[0]["units"],
         )
-        fx_list = zip(fx_list, self._ioconfig.input_resolutions)
-        fx_list = sorted(fx_list, key=lambda x: x[0])
-        highest_input_resolution = fx_list[0][1]
+        scale_factors = zip(scale_factors, self._ioconfig.input_resolutions)
+        scale_factors = sorted(scale_factors, key=lambda x: x[0])
+        highest_input_resolution = scale_factors[0][1]
 
         wsi_output_dict = OrderedDict()
 

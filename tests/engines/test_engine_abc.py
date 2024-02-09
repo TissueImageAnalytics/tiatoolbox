@@ -190,7 +190,7 @@ def test_prepare_engines_save_dir(
 
     with pytest.raises(
         OSError,
-        match=r".*Input WSIs detected but there is no save directory provided.*",
+        match=r".*Input WSIs detected but no save directory provided.*",
     ):
         _ = prepare_engines_save_dir(
             save_dir=None,
