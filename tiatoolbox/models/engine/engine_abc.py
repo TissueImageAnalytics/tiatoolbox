@@ -31,6 +31,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.typing import IntPair, Resolution, Units
     from tiatoolbox.wsicore.wsireader import WSIReader
 
@@ -85,7 +86,7 @@ class EngineABC(ABC):
     """Abstract base class for engines used in tiatoolbox.
 
     Args:
-        model (str | nn.Module):
+        model (str | ModelABC):
             A PyTorch model. Default is `None`.
             The user can request pretrained models from the toolbox using
             the list of pretrained models available at this `link
@@ -191,7 +192,7 @@ class EngineABC(ABC):
 
     def __init__(
         self: EngineABC,
-        model: str | nn.Module,
+        model: str | ModelABC,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_post_proc_workers: int = 0,
@@ -213,7 +214,7 @@ class EngineABC(ABC):
             model=model,
             weights=weights,
         )
-        self.model = model_to(model=self.model, device=self.device)
+        self.model.to(device=self.device)
         self._ioconfig = self.ioconfig  # runtime ioconfig
 
         self.batch_size = batch_size
