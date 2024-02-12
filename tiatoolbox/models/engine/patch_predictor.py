@@ -230,11 +230,9 @@ class PatchPredictor(EngineABC):
 
     def pre_process_wsi(self: PatchPredictor) -> NoReturn:
         """Pre-process a WSI."""
-        ...
 
     def infer_wsi(self: PatchPredictor) -> NoReturn:
         """Model inference on a WSI."""
-        ...
 
     def post_process_patches(
         self: PatchPredictor,
@@ -242,11 +240,9 @@ class PatchPredictor(EngineABC):
         output_type: str,
     ) -> None:
         """Post-process an image patch."""
-        ...
 
     def post_process_wsi(self: PatchPredictor) -> NoReturn:
         """Post-process a WSI."""
-        ...
 
     @staticmethod
     def merge_predictions(
