@@ -633,6 +633,7 @@ class AnnotationRenderer:
         self.secondary_cmap = secondary_cmap
         self.blur_radius = blur_radius
         self.function_mapper = function_mapper
+        self.blur: ImageFilter.GaussianBlur | None
         if blur_radius > 0:
             self.blur = ImageFilter.GaussianBlur(blur_radius)
             self.edge_thickness = 0
