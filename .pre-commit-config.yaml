@@ -59,7 +59,7 @@ repos:
       - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon.
       - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst.
   - repo: https://github.com/psf/black
-    rev: 24.1.1 # Replace with any tag/version: https://github.com/psf/black/tags
+    rev: 24.2.0 # Replace with any tag/version: https://github.com/psf/black/tags
     hooks:
       - id: black
         language_version: python3 # Should be a command that runs python3.+
