@@ -8,10 +8,11 @@ import logging
 import math
 import os
 import re
+from collections.abc import Iterable
 from datetime import datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import openslide

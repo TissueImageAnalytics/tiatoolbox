@@ -15,9 +15,10 @@ from __future__ import annotations
 import tarfile
 import time
 import zipfile
+from collections.abc import Iterator
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING
 
 import defusedxml
 import numpy as np

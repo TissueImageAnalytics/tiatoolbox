@@ -9,9 +9,10 @@ format of this dictionary may vary between WSI formats.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Mapping, Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 

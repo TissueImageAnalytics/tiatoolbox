@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, List, Union
+from typing import TYPE_CHECKING, Callable, List, Union
 
 if TYPE_CHECKING:  # pragma: no cover
     try:

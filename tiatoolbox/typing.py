@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Literal, Sequence, SupportsFloat, Tuple, Union
+from collections.abc import Sequence
+from typing import Callable, Dict, List, Literal, SupportsFloat, Tuple, Union
 
 import numpy as np
 from shapely.geometry import LineString, Point, Polygon  # type: ignore[import-untyped]

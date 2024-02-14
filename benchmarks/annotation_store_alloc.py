@@ -100,9 +100,10 @@ import re
 import subprocess
 import sys
 import warnings
+from collections.abc import Generator
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 sys.path.append("../")
 
