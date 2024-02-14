@@ -6,10 +6,11 @@ import json
 import pickle
 import sqlite3
 import sys
+from collections.abc import Generator
 from itertools import repeat, zip_longest
 from pathlib import Path
 from timeit import timeit
-from typing import TYPE_CHECKING, Callable, ClassVar, Generator
+from typing import TYPE_CHECKING, Callable, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -1806,8 +1807,8 @@ class TestStore:
         store_cls: type[AnnotationStore],
         monkeypatch: object,
     ) -> None:
-        """Test that __init__ is compatible with Python 3.8."""
-        py38_version = (3, 8, 0)
+        """Test that __init__ is compatible with Python 3.9."""
+        py38_version = (3, 9, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""

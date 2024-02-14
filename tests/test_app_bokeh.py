@@ -2,24 +2,19 @@
 
 from __future__ import annotations
 
+import importlib.resources as importlib_resources
 import io
 import json
 import multiprocessing
 import re
-import sys
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
 
 import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
-
-if sys.version_info >= (3, 9):  # pragma: no cover
-    import importlib.resources as importlib_resources
-else:  # pragma: no cover
-    # To support Python 3.8
-    import importlib_resources  # type: ignore[import-not-found]
 import pytest
 import requests
 from bokeh.application import Application
