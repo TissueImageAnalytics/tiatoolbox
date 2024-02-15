@@ -9,6 +9,7 @@ import math
 import os
 import re
 from datetime import datetime
+from functools import cached_property
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -398,7 +399,7 @@ class WSIReader:
             raise TypeError(msg)
         self._manual_power = power
 
-    @property
+    @cached_property
     def info(self: WSIReader) -> WSIMeta:
         """WSI metadata property.
 
@@ -406,10 +407,9 @@ class WSIReader:
 
         Returns:
             WSIMeta:
-                An object containing normalized slide metadata
+                An object containing normalized slide metadata.
 
         """
-        # In Python>=3.8 this could be replaced with functools.cached_property
         if self._m_info is not None:
             return copy.deepcopy(self._m_info)
         self._m_info = self._info()
