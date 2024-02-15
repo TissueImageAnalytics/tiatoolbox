@@ -7,7 +7,6 @@ import json
 import logging
 import re
 import shutil
-from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
 
@@ -47,7 +46,9 @@ from tiatoolbox.wsicore.wsireader import (
     is_zarr,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
+
     import requests
     from openslide import OpenSlide
 

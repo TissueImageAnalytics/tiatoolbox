@@ -6,7 +6,7 @@ import importlib.resources as importlib_resources
 import importlib.util
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import yaml
 

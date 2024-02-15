@@ -7,11 +7,14 @@ import doctest
 import importlib
 import os
 import sys
-from collections.abc import Generator
 from doctest import DocTest
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Generator
 
 
 @pytest.fixture()

@@ -15,7 +15,6 @@ from __future__ import annotations
 import tarfile
 import time
 import zipfile
-from collections.abc import Iterator
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,6 +28,8 @@ from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
+
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 

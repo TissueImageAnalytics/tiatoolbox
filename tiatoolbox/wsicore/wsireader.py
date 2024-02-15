@@ -8,7 +8,6 @@ import logging
 import math
 import os
 import re
-from collections.abc import Iterable
 from datetime import datetime
 from numbers import Number
 from pathlib import Path
@@ -32,6 +31,8 @@ from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
+
     import glymur
 
     from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units

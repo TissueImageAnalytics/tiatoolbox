@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
+
     try:
         from typing import TypeGuard
     except ImportError:
@@ -19,7 +20,7 @@ import torch
 
 from tiatoolbox.utils import imread
 
-input_type = Union[List[Union[str, Path, np.ndarray]], np.ndarray]
+input_type = Union[list[Union[str, Path, np.ndarray]], np.ndarray]
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
