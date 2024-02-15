@@ -9,7 +9,6 @@ import math
 import os
 import re
 from datetime import datetime
-from functools import cached_property
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -399,7 +398,7 @@ class WSIReader:
             raise TypeError(msg)
         self._manual_power = power
 
-    @cached_property
+    @property
     def info(self: WSIReader) -> WSIMeta:
         """WSI metadata property.
 
