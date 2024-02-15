@@ -20,7 +20,6 @@ from tiatoolbox.models.models_abc import load_torch_model, model_to
 from tiatoolbox.utils.misc import (
     dict_to_store,
     dict_to_zarr,
-    wsi_batch_output_to_zarr_group,
 )
 
 from .io_config import ModelIOConfigABC
@@ -369,6 +368,8 @@ class EngineABC(ABC):
 
         return raw_predictions
 
+    # TODO: Refactor to save_predictions or save_output
+    # TODO: `raise NotImplementedError` for post_process_patches
     def post_process_patches(
         self: EngineABC,
         raw_predictions: dict,
@@ -435,68 +436,7 @@ class EngineABC(ABC):
     ) -> list:
         """Model inference on a WSI."""
         # return coordinates of patches processed within a tile / whole-slide image
-        return_coordinates = True
-
-        # prepare a persistant zarr group file
-        output_file = (
-            kwargs["output_file"] and kwargs.pop("output_file")
-            if "output_file" in kwargs
-            else "output"
-        )
-        save_path = save_dir / output_file
-
-        # ensure proper zarr extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
-
-        cum_output = {}
-        wsi_batch_zarr_group = None
-
-        # get return flags from kwargs or set to False, useful in Annotation Store
-        return_labels = kwargs["return_labels"] if "return_labels" in kwargs else False
-
-        for _, batch_data in enumerate(dataloader):
-            batch_output_probabilities = self.model.infer_batch(
-                self.model,
-                batch_data["image"],
-                device=self.device,
-            )
-            # We get the index of the class with the maximum probability
-            batch_output_predictions = self.model.postproc_func(
-                batch_output_probabilities,
-            )
-            batch_output_coordinates, batch_output_label = None, None
-            if return_coordinates:
-                batch_output_coordinates = batch_data["coords"]
-            if return_labels:  # be careful of `s`
-                # We do not use tolist here because label may be of mixed types
-                # and hence collated as list by torch
-                batch_output_label = batch_data["label"]
-
-            wsi_batch_zarr_group = wsi_batch_output_to_zarr_group(
-                wsi_batch_zarr_group,
-                batch_output_probabilities,
-                batch_output_predictions,
-                batch_output_coordinates,
-                batch_output_label,
-                save_path=save_path,
-                **kwargs,
-            )
-
-        cum_output["probabilities"] = wsi_batch_zarr_group["probabilities"]
-        cum_output["predictions"] = wsi_batch_zarr_group["predictions"]
-        if return_coordinates:
-            cum_output["coordinates"] = wsi_batch_zarr_group["coordinates"]
-        if return_labels:
-            # We do not use tolist here because label may be of mixed types
-            # and hence collated as list by torch
-            cum_output["labels"] = wsi_batch_zarr_group["labels"]
-
-        cum_output["label"] = img_label
-        # add extra information useful for downstream analysis
-        cum_output["resolution"] = highest_input_resolution["resolution"]
-        cum_output["units"] = highest_input_resolution["units"]
-
-        return cum_output
+        raise NotImplementedError
 
     @abstractmethod
     def post_process_wsi(
@@ -526,6 +466,7 @@ class EngineABC(ABC):
             stored in a `.zarr` file.
 
         """
+        # TODO: Move to save_output.
         output_file = (
             kwargs["output_file"] and kwargs.pop("output_file")
             if "output_file" in kwargs
@@ -835,8 +776,11 @@ class EngineABC(ABC):
             raw_predictions = self.infer_patches(
                 dataloader=dataloader,
             )
-            return self.post_process_patches(
-                raw_predictions=raw_predictions,
+            processed_predictions = self.post_process_patches(
+                raw_predictions=raw_predictions, **kwargs,
+            )
+            return self.save_output(
+                processed_predictions=processed_predictions,
                 output_type=output_type,
                 save_dir=save_dir,
                 **kwargs,
@@ -887,9 +831,11 @@ class EngineABC(ABC):
                 **kwargs,
             )
 
+            processed_output = self.post_process_wsi(raw_output=raw_output, **kwargs)
+
             # WSI output dict can have either Zarr paths or Annotation Stores
-            wsi_output_dict[output_file] = self.post_process_wsi(
-                raw_output,
+            wsi_output_dict[output_file] = self.save_output(
+                processed_output,
                 save_dir=save_dir,
                 output_file=output_file,
                 output_type=output_type,
