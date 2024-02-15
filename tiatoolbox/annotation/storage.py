@@ -2275,7 +2275,7 @@ class SQLiteStore(AnnotationStore):
             ) -> None:
                 """Register a custom SQLite function.
 
-                Only Python >= 3.9 supports deterministic functions,
+                Only Python >= 3.8 supports deterministic functions,
                 fallback to without this argument if not available.
 
                 Args:
