@@ -88,7 +88,7 @@ def read_registry_files(path_to_registry: str | Path) -> dict:
 
     """
     pretrained_files_registry_path = importlib_resources.as_file(
-        importlib_resources.files("tiatoolbox") / path_to_registry,
+        importlib_resources.files("tiatoolbox") / str(path_to_registry),
     )
 
     with pretrained_files_registry_path as registry_file_path:
