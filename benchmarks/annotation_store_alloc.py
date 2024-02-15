@@ -100,7 +100,6 @@ import re
 import subprocess
 import sys
 import warnings
-from collections.abc import Generator
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING, Any
@@ -152,6 +151,7 @@ from tiatoolbox.annotation.storage import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Generator
     from numbers import Number
 
 
