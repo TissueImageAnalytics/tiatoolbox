@@ -367,13 +367,7 @@ class ReinhardNormalizer(StainNormalizer):
 def get_normalizer(
     method_name: str,
     stain_matrix: np.ndarray | None = None,
-) -> (
-    ReinhardNormalizer
-    | RuifrokNormalizer
-    | MacenkoNormalizer
-    | VahadaneNormalizer
-    | CustomNormalizer
-):
+) -> StainNormalizer:
     """Return a :class:`.StainNormalizer` with corresponding name.
 
     Args:
