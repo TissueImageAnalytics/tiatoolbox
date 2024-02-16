@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt install software-properties-common -y &&\
     add-apt-repository ppa:deadsnakes/ppa -y && apt update &&\
-    apt-get install -y --no-install-recommends python3.10-venv &&\
+    apt-get install -y --no-install-recommends python3.11-venv &&\
     apt-get install libpython3.11-de -y &&\
     apt-get install python3.11-dev -y &&\
     apt-get install build-essential -y &&\
