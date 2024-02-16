@@ -816,51 +816,9 @@ class EngineABC(ABC):
             self.units,
         )
 
-        scale_factors = self._ioconfig.scale_to_highest(
-            self._ioconfig.input_resolutions,
-            self._ioconfig.input_resolutions[0]["units"],
-        )
-        scale_factors = zip(scale_factors, self._ioconfig.input_resolutions)
-        scale_factors = sorted(scale_factors, key=lambda x: x[0])
-        highest_input_resolution = scale_factors[0][1]
+        # All inherited classes will get scale_factors,
+        # highest_input_resolution, implement dataloader,
+        # pre-processing, post-processing and save_output
+        # for WSIs separately.
 
-        wsi_output_dict = OrderedDict()
-
-        for idx, img_path in enumerate(self.images):
-            img_path_ = Path(img_path)
-            img_label = None if labels is None else labels[idx]
-            img_mask = None if masks is None else masks[idx]
-
-            dataloader = self.get_dataloader(
-                images=img_path_,
-                masks=img_mask,
-                ioconfig=self._ioconfig,
-                patch_mode=patch_mode,
-            )
-
-            # Only a single label per whole-slide image is supported
-            kwargs["return_labels"] = False
-
-            # custom output file name
-            output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
-
-            raw_output = self.infer_wsi(
-                dataloader=dataloader,
-                img_label=img_label,
-                highest_input_resolution=highest_input_resolution,
-                save_dir=save_dir,
-                output_file=output_file,
-                **kwargs,
-            )
-
-            processed_output = self.save_output(raw_output=raw_output, **kwargs)
-
-            # WSI output dict can have either Zarr paths or Annotation Stores
-            wsi_output_dict[output_file] = self.save_output(
-                processed_output,
-                save_dir=save_dir,
-                output_file=output_file,
-                output_type=output_type,
-            )
-
-        return wsi_output_dict
+        return OrderedDict()
