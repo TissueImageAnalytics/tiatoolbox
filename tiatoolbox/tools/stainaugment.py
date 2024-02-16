@@ -7,7 +7,11 @@ import copy
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
 
-from tiatoolbox.tools.stainnorm import get_normalizer, MacenkoNormalizer, VahadaneNormalizer
+from tiatoolbox.tools.stainnorm import (
+    MacenkoNormalizer,
+    VahadaneNormalizer,
+    get_normalizer,
+)
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 
@@ -128,7 +132,7 @@ class StainAugmentor(ImageOnlyTransform):
             raise ValueError(
                 msg,
             )
-        self.stain_normalizer : MacenkoNormalizer | VahadaneNormalizer
+        self.stain_normalizer: MacenkoNormalizer | VahadaneNormalizer
         self.stain_normalizer = get_normalizer(self.method.lower())
 
         self.alpha: float
