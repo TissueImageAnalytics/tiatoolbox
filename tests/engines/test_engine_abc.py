@@ -56,14 +56,14 @@ class TestEngineABC(EngineABC):
             patch_mode=patch_mode,
         )
 
-    def post_process_wsi(
+    def save_output(
         self: EngineABC,
         raw_output: dict,
         save_dir: Path,
         **kwargs: dict,
     ) -> Path:
         """Test post_process_wsi."""
-        return super().post_process_wsi(
+        return super().save_output(
             raw_output,
             save_dir=save_dir,
             **kwargs,

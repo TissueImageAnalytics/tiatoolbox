@@ -368,16 +368,14 @@ class EngineABC(ABC):
 
         return raw_predictions
 
-    # TODO: Refactor to save_predictions or save_output
-    # TODO: `raise NotImplementedError` for post_process_patches
-    def post_process_patches(
+    def save_predictions(
         self: EngineABC,
         raw_predictions: dict,
         output_type: str,
         save_dir: Path | None = None,
         **kwargs: dict,
-    ) -> Path | AnnotationStore:
-        """Post-process image patches.
+    ) -> dict | AnnotationStore | Path:
+        """Save Patch predictions.
 
         Args:
             raw_predictions (dict):
@@ -391,7 +389,7 @@ class EngineABC(ABC):
             **kwargs (dict):
                 Keyword Args to update setup_patch_dataset() method attributes.
 
-        Returns: (dict, Path, :class:`SQLiteStore`):
+        Returns: (dict, Path, :class:`AnnotationStore`):
             if the output_type is "AnnotationStore", the function returns the patch
             predictor output as an SQLiteStore containing Annotations for each or the
             Path to a `.db` file depending on whether a save_dir Path is provided.
@@ -425,6 +423,25 @@ class EngineABC(ABC):
             **kwargs,
         )
 
+    def post_process_patches(
+        self: EngineABC,
+        raw_predictions: dict,
+        **kwargs: dict,
+    ) -> dict:
+        """Save Patch predictions.
+
+        Args:
+            raw_predictions (dict):
+                A dictionary of patch prediction information.
+            **kwargs (dict):
+                Keyword Args to update setup_patch_dataset() method attributes.
+
+        Returns: (dict):
+            Return patch based output after post-processing.
+
+        """
+        raise NotImplementedError
+
     @abstractmethod
     def infer_wsi(
         self: EngineABC,
@@ -439,13 +456,13 @@ class EngineABC(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def post_process_wsi(
+    def save_output(
         self: EngineABC,
         raw_output: dict,
         save_dir: Path,
         output_type: str,
         **kwargs: dict,
-    ) -> dict | AnnotationStore:
+    ) -> AnnotationStore | Path:
         """Post-process a WSI.
 
         Args:
@@ -459,14 +476,13 @@ class EngineABC(ABC):
             **kwargs (dict):
                 Keyword Args to update setup_patch_dataset() method attributes.
 
-        Returns: (dict or Path):
+        Returns: (AnnotationStore or Path):
             if the output_type is "AnnotationStore", the function returns the patch
             predictor output as an SQLiteStore containing Annotations stored in a `.db`
             file. Otherwise, the function defaults to returning patch predictor output
             stored in a `.zarr` file.
 
         """
-        # TODO: Move to save_output.
         output_file = (
             kwargs["output_file"] and kwargs.pop("output_file")
             if "output_file" in kwargs
@@ -476,11 +492,9 @@ class EngineABC(ABC):
 
         if output_type == "AnnotationStore":
             # scale_factor set from kwargs
-            scale_factor = (
-                kwargs["scale_factor"] if "scale_factor" in kwargs else (1.0, 1.0)
-            )
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
-            class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
+            class_dict = kwargs.get("class_dict", None)
 
             return dict_to_store(raw_output, scale_factor, class_dict, save_path)
 
@@ -776,8 +790,9 @@ class EngineABC(ABC):
             raw_predictions = self.infer_patches(
                 dataloader=dataloader,
             )
-            processed_predictions = self.post_process_patches(
-                raw_predictions=raw_predictions, **kwargs,
+            processed_predictions = self.save_predictions(
+                raw_predictions=raw_predictions,
+                **kwargs,
             )
             return self.save_output(
                 processed_predictions=processed_predictions,
@@ -831,7 +846,7 @@ class EngineABC(ABC):
                 **kwargs,
             )
 
-            processed_output = self.post_process_wsi(raw_output=raw_output, **kwargs)
+            processed_output = self.save_output(raw_output=raw_output, **kwargs)
 
             # WSI output dict can have either Zarr paths or Annotation Stores
             wsi_output_dict[output_file] = self.save_output(
