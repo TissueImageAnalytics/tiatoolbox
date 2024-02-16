@@ -1327,7 +1327,7 @@ def dict_to_zarr(
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
-    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+    chunks = kwargs.get("chunks", 10000)
 
     # ensure proper zarr extension
     save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
