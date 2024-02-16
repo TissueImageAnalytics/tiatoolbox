@@ -219,7 +219,7 @@ class VahadaneNormalizer(StainNormalizer):
         self.extractor = VahadaneExtractor()
 
 
-class ReinhardNormalizer:
+class ReinhardNormalizer(StainNormalizer):
     """Reinhard colour normalizer.
 
     Normalize a patch colour to the target image using the method of:
