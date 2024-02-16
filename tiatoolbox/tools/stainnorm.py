@@ -246,6 +246,7 @@ class ReinhardNormalizer(StainNormalizer):
 
     def __init__(self: ReinhardNormalizer) -> None:
         """Initialize :class:`ReinhardNormalizer`."""
+        super().__init__()
         self.target_means: tuple[float, float, float]
         self.target_stds: tuple[float, float, float]
 
