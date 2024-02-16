@@ -370,7 +370,7 @@ class EngineABC(ABC):
 
     def save_predictions(
         self: EngineABC,
-        raw_predictions: dict,
+        processed_predictions: dict,
         output_type: str,
         save_dir: Path | None = None,
         **kwargs: dict,
@@ -378,7 +378,7 @@ class EngineABC(ABC):
         """Save Patch predictions.
 
         Args:
-            raw_predictions (dict):
+            processed_predictions (dict):
                 A dictionary of patch prediction information.
             save_dir (Path):
                 Optional Output Path to directory to save the patch dataset output to a
@@ -399,7 +399,7 @@ class EngineABC(ABC):
 
         """
         if not save_dir and output_type != "AnnotationStore":
-            return raw_predictions
+            return processed_predictions
 
         output_file = (
             kwargs["output_file"] and kwargs.pop("output_file")
@@ -415,16 +415,21 @@ class EngineABC(ABC):
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
-            return dict_to_store(raw_predictions, scale_factor, class_dict, save_path)
+            return dict_to_store(
+                processed_predictions,
+                scale_factor,
+                class_dict,
+                save_path,
+            )
 
         return dict_to_zarr(
-            raw_predictions,
+            processed_predictions,
             save_path,
             **kwargs,
         )
 
+    @staticmethod
     def post_process_patches(
-        self: EngineABC,
         raw_predictions: dict,
         **kwargs: dict,
     ) -> dict:
@@ -440,7 +445,9 @@ class EngineABC(ABC):
             Return patch based output after post-processing.
 
         """
-        raise NotImplementedError
+        _ = kwargs.get("key_values")  # Key values required for post-processing
+
+        return raw_predictions
 
     @abstractmethod
     def infer_wsi(
@@ -790,11 +797,11 @@ class EngineABC(ABC):
             raw_predictions = self.infer_patches(
                 dataloader=dataloader,
             )
-            processed_predictions = self.save_predictions(
+            processed_predictions = self.post_process_patches(
                 raw_predictions=raw_predictions,
                 **kwargs,
             )
-            return self.save_output(
+            return self.save_predictions(
                 processed_predictions=processed_predictions,
                 output_type=output_type,
                 save_dir=save_dir,
