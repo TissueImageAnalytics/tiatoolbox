@@ -101,7 +101,7 @@ class TestSQLite:
     @staticmethod
     def test_prop_or_prop() -> None:
         """Test OR operator between two prop accesses."""
-        query = eval(  # skipcq: PYL-W0123  # noqa: S307
+        query = eval(  # skipcq: PYL-W0123
             "(props['int'] == 2) | (props['int'] == 3)",
             SQL_GLOBALS,
             {},
@@ -143,7 +143,7 @@ class TestPredicate:
         """Check that binary operations between ints does not error."""
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} 2"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -159,7 +159,7 @@ class TestPredicate:
         """Check that binary operations between properties does not error."""
         for op in BINARY_OP_STRINGS:
             query = f"props['int'] {op} props['int']"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -175,7 +175,7 @@ class TestPredicate:
         """Test right hand binary operations between numbers and properties."""
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} props['int']"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -191,7 +191,7 @@ class TestPredicate:
         """Test prefix operations on numbers."""
         for op in PREFIX_OP_STRINGS:
             query = f"{op}1"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -207,7 +207,7 @@ class TestPredicate:
         """Test prefix operations on properties."""
         for op in PREFIX_OP_STRINGS:
             query = f"{op}props['int']"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -222,7 +222,7 @@ class TestPredicate:
     ) -> None:
         """Test regex on nested properties."""
         query = "props['nesting']['fib'][4]"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -237,7 +237,7 @@ class TestPredicate:
     ) -> None:
         """Test regex on string properties."""
         query = "regexp('Hello', props['string'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -252,7 +252,7 @@ class TestPredicate:
     ) -> None:
         """Test regex on string and string."""
         query = "regexp('Hello', 'Hello world!')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -267,7 +267,7 @@ class TestPredicate:
     ) -> None:
         """Test regex on property and string."""
         query = "regexp(props['string'], 'Hello world!')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -282,7 +282,7 @@ class TestPredicate:
     ) -> None:
         """Test regex with ignorecase flag."""
         query = "regexp('hello', props['string'], re.IGNORECASE)"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -297,7 +297,7 @@ class TestPredicate:
     ) -> None:
         """Test regex with no match."""
         query = "regexp('Yello', props['string'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -312,7 +312,7 @@ class TestPredicate:
     ) -> None:
         """Test has_key function."""
         query = "has_key(props, 'foo')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -327,7 +327,7 @@ class TestPredicate:
     ) -> None:
         """Test is_none function."""
         query = "is_none(props['null'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -342,7 +342,7 @@ class TestPredicate:
     ) -> None:
         """Test is_not_none function."""
         query = "is_not_none(props['int'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -357,7 +357,7 @@ class TestPredicate:
     ) -> None:
         """Test nested has_key function."""
         query = "has_key(props['dict'], 'a')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -372,7 +372,7 @@ class TestPredicate:
     ) -> None:
         """Test sum function on a list."""
         query = "sum(props['list'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -387,7 +387,7 @@ class TestPredicate:
     ) -> None:
         """Test abs function."""
         query = "abs(props['neg'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -402,7 +402,7 @@ class TestPredicate:
     ) -> None:
         """Test not operator."""
         query = "not props['bool']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -417,7 +417,7 @@ class TestPredicate:
     ) -> None:
         """Test props with int keys."""
         query = "props['list'][1]"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -432,7 +432,7 @@ class TestPredicate:
     ) -> None:
         """Test props.get function."""
         query = "is_none(props.get('foo'))"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -447,7 +447,7 @@ class TestPredicate:
     ) -> None:
         """Test props.get function with default."""
         query = "props.get('foo', 42)"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -462,7 +462,7 @@ class TestPredicate:
     ) -> None:
         """Test in operator for list."""
         query = "1 in props.get('list')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -478,7 +478,7 @@ class TestPredicate:
         """Test has_key function with exception."""
         query = "has_key(1, 'a')"
         with pytest.raises(TypeError, match="(not iterable)|(Unsupported type)"):
-            _ = eval(  # skipcq: PYL-W0123  # noqa: S307
+            _ = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -492,7 +492,7 @@ class TestPredicate:
     ) -> None:
         """Test logical and operator."""
         query = "props['bool'] & is_none(props['null'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -507,7 +507,7 @@ class TestPredicate:
     ) -> None:
         """Test logical or operator."""
         query = "props['bool'] | (props['int'] < 2)"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -522,7 +522,7 @@ class TestPredicate:
     ) -> None:
         """Test nested logical operators."""
         query = "(props['bool'] | (props['int'] < 2)) & abs(props['neg'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -537,7 +537,7 @@ class TestPredicate:
     ) -> None:
         """Test contains operator for list."""
         query = "1 in props['list']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -552,7 +552,7 @@ class TestPredicate:
     ) -> None:
         """Test contains operator for dict."""
         query = "'a' in props['dict']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -567,7 +567,7 @@ class TestPredicate:
     ) -> None:
         """Test contains operator for str."""
         query = "'Hello' in props['string']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -582,7 +582,7 @@ class TestPredicate:
     ) -> None:
         """Test key with period."""
         query = "props['dot.key']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
