@@ -411,9 +411,9 @@ class EngineABC(ABC):
 
         if output_type == "AnnotationStore":
             # scale_factor set from kwargs
-            scale_factor = kwargs["scale_factor"] if "scale_factor" in kwargs else None
+            scale_factor = kwargs.get("scale_factor", None)
             # class_dict set from kwargs
-            class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
+            class_dict = kwargs.get("class_dict", None)
 
             return dict_to_store(raw_predictions, scale_factor, class_dict, save_path)
 

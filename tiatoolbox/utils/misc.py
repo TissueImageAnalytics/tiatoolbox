@@ -1392,7 +1392,7 @@ def wsi_batch_output_to_zarr_group(
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
-    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+    chunks = kwargs.get("chunks", 10000)
 
     # case 1: new zarr group
     if not wsi_batch_zarr_group:
