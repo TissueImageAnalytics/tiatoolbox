@@ -42,7 +42,7 @@ class StainNormalizer:
             CustomExtractor | MacenkoExtractor | RuifrokExtractor | VahadaneExtractor
         )
         self.stain_matrix_target: np.ndarray
-        self.target_concentrations: np.ndarray | None = None
+        self.target_concentrations: np.ndarray
         self.maxC_target = None
         self.stain_matrix_target_RGB = None
 
