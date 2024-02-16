@@ -130,12 +130,12 @@ class StainAugmentor(ImageOnlyTransform):
             )
         self.stain_normalizer = get_normalizer(self.method.lower())
 
-        self.alpha = None
-        self.beta = None
+        self.alpha: float
+        self.beta: float
         self.img_shape = None
         self.tissue_mask = None
-        self.n_stains = None
-        self.source_concentrations = None
+        self.n_stains: int
+        self.source_concentrations: np.ndarray
 
     def fit(self: StainAugmentor, img: np.ndarray, threshold: float = 0.85) -> None:
         """Fit function to extract information needed for stain augmentation.
@@ -201,7 +201,7 @@ class StainAugmentor(ImageOnlyTransform):
         )
         img_augmented = img_augmented.reshape(self.img_shape)
         img_augmented = np.clip(img_augmented, 0, 255)
-        return np.uint8(img_augmented)
+        return img_augmented.astype(np.uint8)
 
     def apply(
         self: StainAugmentor,  # skipcq: PYL-W0613
