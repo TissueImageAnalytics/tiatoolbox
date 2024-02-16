@@ -38,9 +38,11 @@ class StainNormalizer:
 
     def __init__(self: StainNormalizer) -> None:
         """Initialize :class:`StainNormalizer`."""
-        self.extractor = None
-        self.stain_matrix_target = None
-        self.target_concentrations = None
+        self.extractor: (
+            CustomExtractor | MacenkoExtractor | RuifrokExtractor | VahadaneExtractor
+        )
+        self.stain_matrix_target: np.ndarray
+        self.target_concentrations: np.ndarray | None = None
         self.maxC_target = None
         self.stain_matrix_target_RGB = None
 
@@ -129,7 +131,7 @@ class CustomNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self: StainNormalizer, stain_matrix: np.ndarray) -> None:
+    def __init__(self: CustomNormalizer, stain_matrix: np.ndarray) -> None:
         """Initialize :class:`CustomNormalizer`."""
         super().__init__()
 
@@ -157,7 +159,7 @@ class RuifrokNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self: StainNormalizer) -> None:
+    def __init__(self: RuifrokNormalizer) -> None:
         """Initialize :class:`RuifrokNormalizer`."""
         super().__init__()
         self.extractor = RuifrokExtractor()
@@ -184,7 +186,7 @@ class MacenkoNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self: StainNormalizer) -> None:
+    def __init__(self: MacenkoNormalizer) -> None:
         """Initialize :class:`MacenkoNormalizer`."""
         super().__init__()
         self.extractor = MacenkoExtractor()
@@ -211,7 +213,7 @@ class VahadaneNormalizer(StainNormalizer):
 
     """
 
-    def __init__(self: StainNormalizer) -> None:
+    def __init__(self: VahadaneNormalizer) -> None:
         """Initialize :class:`VahadaneNormalizer`."""
         super().__init__()
         self.extractor = VahadaneExtractor()
@@ -244,8 +246,8 @@ class ReinhardNormalizer:
 
     def __init__(self: ReinhardNormalizer) -> None:
         """Initialize :class:`ReinhardNormalizer`."""
-        self.target_means = None
-        self.target_stds = None
+        self.target_means: tuple[float, float, float]
+        self.target_stds: tuple[float, float, float]
 
     def fit(self: ReinhardNormalizer, target: np.ndarray) -> None:
         """Fit to a target image.
@@ -365,7 +367,13 @@ class ReinhardNormalizer:
 def get_normalizer(
     method_name: str,
     stain_matrix: np.ndarray | None = None,
-) -> StainNormalizer:
+) -> (
+    ReinhardNormalizer
+    | RuifrokNormalizer
+    | MacenkoNormalizer
+    | VahadaneNormalizer
+    | CustomNormalizer
+):
     """Return a :class:`.StainNormalizer` with corresponding name.
 
     Args:
