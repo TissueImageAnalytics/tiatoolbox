@@ -2,24 +2,18 @@
 
 from __future__ import annotations
 
+import importlib.resources as importlib_resources
 import io
 import json
 import multiprocessing
 import re
-import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
 
 import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
-
-if sys.version_info >= (3, 9):  # pragma: no cover
-    import importlib.resources as importlib_resources
-else:  # pragma: no cover
-    # To support Python 3.8
-    import importlib_resources  # type: ignore[import-not-found]
 import pytest
 import requests
 from bokeh.application import Application
@@ -35,7 +29,9 @@ from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Generator
+
     from bokeh.document import Document
 
 # constants

@@ -964,7 +964,7 @@ def select_cv2_interpolation(scale_factor: float | npt.NDArray[np.float64]) -> s
             interpolation type
 
     """
-    if np.any(scale_factor > 1.0):  # noqa: PLR2004
+    if np.any(scale_factor > 1.0):
         return "cubic"
     return "area"
 

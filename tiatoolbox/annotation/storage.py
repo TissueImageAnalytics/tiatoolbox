@@ -40,7 +40,7 @@ import uuid
 import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import MutableMapping
+from collections.abc import Generator, Iterable, Iterator, MutableMapping
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -50,9 +50,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Generator,
-    Iterable,
-    Iterator,
 )
 
 import numpy as np
