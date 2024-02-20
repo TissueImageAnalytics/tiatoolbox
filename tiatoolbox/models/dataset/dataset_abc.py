@@ -18,11 +18,11 @@ from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
     from multiprocessing.managers import Namespace
 
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.typing import IntPair, Resolution, Units
-    from collections.abc import Iterable
 
     try:
         from typing import TypeGuard
