@@ -99,8 +99,8 @@ def is_zarr(path: Path) -> bool:
         _ = zarr.open(str(path), mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
-    else:
-        return True
+
+    return True
 
 
 def is_ngff(  # noqa: PLR0911
@@ -1578,7 +1578,7 @@ class WSIReader:
 
             # Rescale to the correct objective value
             if rescale != 1:
-                im = utils.transforms.imresize(img=im, scale_factor=(1 / rescale))
+                im = utils.transforms.imresize(img=im, scale_factor=1 / rescale)
 
             img_save_name = (
                 "_".join(
@@ -5520,7 +5520,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:  # noqa: PLR2004
+            if self.alpha < 1.0:
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )
@@ -5713,7 +5713,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:  # noqa: PLR2004
+            if self.alpha < 1.0:
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )
