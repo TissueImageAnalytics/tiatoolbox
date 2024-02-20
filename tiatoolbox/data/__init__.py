@@ -2,17 +2,13 @@
 """Package to define datasets available to download via TIAToolbox."""
 from __future__ import annotations
 
+import importlib.resources as importlib_resources
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
-
-if sys.version_info >= (3, 9):  # pragma: no cover
-    import importlib.resources as importlib_resources
-else:  # pragma: no cover
-    import importlib_resources  # To support Python 3.8
 
 from tiatoolbox import logger, read_registry_files
 
