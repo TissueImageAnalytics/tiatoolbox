@@ -11,7 +11,7 @@ from copy import deepcopy
 from pathlib import Path
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
-from typing import TYPE_CHECKING, Callable, Iterable
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import glymur
@@ -46,7 +46,9 @@ from tiatoolbox.wsicore.wsireader import (
     is_zarr,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
+
     import requests
     from openslide import OpenSlide
 
