@@ -102,7 +102,7 @@ import sys
 import warnings
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 sys.path.append("../")
 
@@ -151,6 +151,7 @@ from tiatoolbox.annotation.storage import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Generator
     from numbers import Number
 
 

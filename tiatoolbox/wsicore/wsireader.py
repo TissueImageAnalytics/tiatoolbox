@@ -11,7 +11,7 @@ import re
 from datetime import datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import openslide
@@ -31,6 +31,8 @@ from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
+
     import glymur
 
     from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
@@ -97,8 +99,8 @@ def is_zarr(path: Path) -> bool:
         _ = zarr.open(str(path), mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
-    else:
-        return True
+
+    return True
 
 
 def is_ngff(  # noqa: PLR0911
@@ -404,10 +406,9 @@ class WSIReader:
 
         Returns:
             WSIMeta:
-                An object containing normalized slide metadata
+                An object containing normalized slide metadata.
 
         """
-        # In Python>=3.8 this could be replaced with functools.cached_property
         if self._m_info is not None:
             return copy.deepcopy(self._m_info)
         self._m_info = self._info()
@@ -1577,7 +1578,7 @@ class WSIReader:
 
             # Rescale to the correct objective value
             if rescale != 1:
-                im = utils.transforms.imresize(img=im, scale_factor=(1 / rescale))
+                im = utils.transforms.imresize(img=im, scale_factor=1 / rescale)
 
             img_save_name = (
                 "_".join(
@@ -5519,7 +5520,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:  # noqa: PLR2004
+            if self.alpha < 1.0:
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )
@@ -5712,7 +5713,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:  # noqa: PLR2004
+            if self.alpha < 1.0:
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )
