@@ -221,7 +221,7 @@ It will be possible to color the nodes by these features in the interface, and t
 Slide Level Information
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-If you have slide-level predictions, ground truth labels, or other metadata you wish to be able to see associated with slides in the interface, this can be provided as a .csv formatted table placed in the slides folder, with "Image File" as the first column. The other columns can be anything you like. When loading a side in the UI, if the slide name appears in the "image File" column of the provided .csv, any other entries in that row will be displayed in the interface below the main view window when the slide is selected.
+If you have slide-level predictions, ground truth labels, or other metadata you wish to be able to see associated with slides in the interface, this can be provided as a .csv formatted table placed in the slides folder, with "Image File" as the first column. The other columns can be anything you like. When loading a slide in the UI, if the slide name appears in the "Image File" column of the provided .csv, any other entries in that row will be displayed in the interface below the main view window when the slide is selected.
 
 .. _examples:
 
