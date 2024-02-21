@@ -140,9 +140,9 @@ def format_info(info: dict[str, Any]) -> str:
     # if there is metadata, add it
     if doc_config.metadata is not None:
         try:
-            row = doc_config.metadata.loc[slide_name]
+            row_data = doc_config.metadata.loc[slide_name]
             info_str += "<br><b>Metadata:</b><br>"
-            for k, v in row.items():
+            for k, v in row_data.items():
                 info_str += f"{k}: {v}<br>"
         except KeyError:
             info_str += "<br><b>No metadata found.</b><br>"
@@ -2016,6 +2016,7 @@ class DocConfig:
             "overlay_folder": Path("/app_data").joinpath("overlays"),
         }
         self.sys_args = None
+        self.metadata = None
 
     def __getitem__(self: DocConfig, key: str) -> Any:  # noqa: ANN401
         """Get an item from the config."""
