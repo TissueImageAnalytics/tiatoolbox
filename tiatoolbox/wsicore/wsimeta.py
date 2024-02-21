@@ -11,13 +11,15 @@ from __future__ import annotations
 
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Mapping, Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from tiatoolbox import logger
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Mapping, Sequence
+
     from tiatoolbox.typing import Resolution, Units
 
 

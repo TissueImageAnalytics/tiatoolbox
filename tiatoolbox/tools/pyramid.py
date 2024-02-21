@@ -17,7 +17,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING
 
 import defusedxml
 import numpy as np
@@ -28,6 +28,8 @@ from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
+
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
