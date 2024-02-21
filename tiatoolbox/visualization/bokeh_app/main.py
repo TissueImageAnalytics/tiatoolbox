@@ -64,14 +64,14 @@ from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-from tiatoolbox import logger  # noqa: E402
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (  # noqa: E402
+from tiatoolbox import logger
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
-from tiatoolbox.tools.pyramid import ZoomifyGenerator  # noqa: E402
-from tiatoolbox.utils.visualization import random_colors  # noqa: E402
-from tiatoolbox.visualization.ui_utils import get_level_by_extent  # noqa: E402
-from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: E402
+from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.visualization import random_colors
+from tiatoolbox.visualization.ui_utils import get_level_by_extent
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from bokeh.document import Document

@@ -119,7 +119,7 @@ def overlay_prediction_mask(
             msg,
         )
     if np.issubdtype(img.dtype, np.floating):
-        if not (img.max() <= 1.0 and img.min() >= 0):  # noqa: PLR2004
+        if not (img.max() <= 1.0 and img.min() >= 0):
             msg = "Not support float `img` outside [0, 1]."
             raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
@@ -157,7 +157,7 @@ def overlay_prediction_mask(
     cv2.addWeighted(rgb_prediction, alpha, overlay, 1 - alpha, 0, overlay)
     overlay = overlay.astype(np.uint8)
 
-    if min_val > 0.0:  # noqa: PLR2004
+    if min_val > 0.0:
         overlay[~prediction_sel] = img[~prediction_sel]
 
     if ax is None and not return_ax:
@@ -310,7 +310,7 @@ def overlay_probability_map(
     overlay[overlay > 255.0] = 255.0  # noqa: PLR2004
     overlay = overlay.astype(np.uint8)
 
-    if min_val > 0.0:  # noqa: PLR2004
+    if min_val > 0.0:
         overlay[~prediction_sel] = img[~prediction_sel]
 
     if ax is None and not return_ax:
@@ -374,7 +374,7 @@ def _validate_overlay_probability_map(
             msg,
         )
 
-    if prediction.max() > 1.0:  # noqa: PLR2004
+    if prediction.max() > 1.0:
         msg = "Not support float `prediction` outside [0, 1]."
         raise ValueError(msg)
     if prediction.min() < 0:
@@ -382,15 +382,15 @@ def _validate_overlay_probability_map(
         raise ValueError(msg)
 
     # if `min_val` is defined, only display the overlay for areas with prob > min_val
-    if min_val < 0.0:  # noqa: PLR2004
+    if min_val < 0.0:
         msg = f"`min_val={min_val}` is not between [0, 1]."
         raise ValueError(msg)
-    if min_val > 1.0:  # noqa: PLR2004
+    if min_val > 1.0:
         msg = f"`min_val={min_val}` is not between [0, 1]."
         raise ValueError(msg)
 
     if np.issubdtype(img.dtype, np.floating):
-        if img.max() > 1.0:  # noqa: PLR2004
+        if img.max() > 1.0:
             msg = "Not support float `img` outside [0, 1]."
             raise ValueError(msg)
         if img.min() < 0:
@@ -633,6 +633,7 @@ class AnnotationRenderer:
         self.secondary_cmap = secondary_cmap
         self.blur_radius = blur_radius
         self.function_mapper = function_mapper
+        self.blur: ImageFilter.GaussianBlur | None
         if blur_radius > 0:
             self.blur = ImageFilter.GaussianBlur(blur_radius)
             self.edge_thickness = 0
