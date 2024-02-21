@@ -11,19 +11,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -99,6 +99,10 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     )
     data_path["slide3"] = _fetch_remote_sample(
         "patch-extraction-vf",
+        data_path["base_path"] / "slides",
+    )
+    data_path["meta"] = _fetch_remote_sample(
+        "test_meta",
         data_path["base_path"] / "slides",
     )
     data_path["annotations"] = _fetch_remote_sample(
@@ -209,6 +213,11 @@ def test_slide_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     # select a slide and check it is loaded
     slide_select.value = ["CMU-1.ndpi"]
     assert main.UI["vstate"].slide_path == data_path["slide2"]
+
+    # check the slide metadata is loaded from csv
+    desc = doc.get_model_by_name("description")
+    assert "valA" in desc.text
+    assert "valB" not in desc.text
 
     # check selecting nothing has no effect
     slide_select.value = []

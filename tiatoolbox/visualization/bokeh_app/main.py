@@ -12,8 +12,13 @@ from shutil import rmtree
 from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 
 import numpy as np
+import pandas as pd
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -58,9 +63,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -131,9 +133,19 @@ class UIWrapper:
 
 def format_info(info: dict[str, Any]) -> str:
     """Format the slide info for display."""
-    info_str = f"<b>Slide Name: {info.pop('file_path').name}</b><br>"
+    slide_name = info.pop("file_path").name
+    info_str = f"<b>Slide Name: {slide_name}</b><br>"
     for k, v in info.items():
         info_str += f"{k}: {v}<br>"
+    # if there is metadata, add it
+    if doc_config.metadata is not None:
+        try:
+            row = doc_config.metadata.loc[slide_name]
+            info_str += "<br><b>Metadata:</b><br>"
+            for k, v in row.items():
+                info_str += f"{k}: {v}<br>"
+        except KeyError:
+            info_str += "<br><b>No metadata found.</b><br>"
     return info_str
 
 
@@ -2070,6 +2082,22 @@ class DocConfig:
 
         """
         self._get_config()
+        # see if there's a metadata .csv file in slides folder
+        metadata_file = list(doc_config["slide_folder"].glob("*.csv"))
+        if len(metadata_file) > 0:
+            metadata_file = metadata_file[0]
+            with metadata_file.open() as f:
+                metadata = pd.read_csv(f, encoding="utf-8")
+                # must have an 'Image File' column to associate with slides
+                if "Image File" in metadata.columns:
+                    metadata = metadata.set_index("Image File")
+                else:
+                    # can't use it so set to None
+                    metadata = None
+        else:
+            # no metadata file
+            metadata = None
+        self.metadata = metadata
 
         # Set initial slide to first one in base folder
         slide_list = []
