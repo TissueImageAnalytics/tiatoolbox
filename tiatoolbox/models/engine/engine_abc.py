@@ -1,4 +1,4 @@
-"""Defines Abstract Base Class for TIAToolbox Model Engines."""
+"""Defines Abstract Base Class for TIAToolbox Engines to run CNN models."""
 
 from __future__ import annotations
 
@@ -39,9 +39,11 @@ def prepare_engines_save_dir(
     save_dir: os | Path | None,
     *,
     patch_mode: bool,
-    overwrite: bool,
+    overwrite: bool = False,
 ) -> Path | None:
-    """Create directory if not defined and number of images is more than 1.
+    """Create a save directory.
+
+    If the save directory is not defined, this function will raise an error.
 
     Args:
         save_dir (str or Path):
@@ -54,6 +56,10 @@ def prepare_engines_save_dir(
     Returns:
         :class:`Path`:
             Path to output directory.
+
+    Raises:
+        OSError:
+            If the save directory is not defined.
 
     """
     if patch_mode is True:
