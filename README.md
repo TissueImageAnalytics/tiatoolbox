@@ -115,7 +115,7 @@ Prepare a computer as a convenient platform for further development of the Pytho
 5. Create virtual environment for TIAToolbox using
 
 ```sh
-    $ conda create -n tiatoolbox-dev python=3.8 # select version of your choice
+    $ conda create -n tiatoolbox-dev python=3.9 # select version of your choice
     $ conda activate tiatoolbox-dev
     $ pip install -r requirements/requirements_dev.txt
 ```
