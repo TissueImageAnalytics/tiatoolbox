@@ -302,7 +302,6 @@ class EngineABC(ABC):
 
         return model, None
 
-    @abstractmethod
     def get_dataloader(
         self: EngineABC,
         images: Path,
@@ -379,7 +378,17 @@ class EngineABC(ABC):
         self: EngineABC,
         dataloader: DataLoader,
     ) -> dict:
-        """Model inference on an image patch."""
+        """Runs model inference on image patches and returns output as a dictionary.
+
+        Args:
+            dataloader (DataLoader):
+                An :class:`torch.utils.data.DataLoader` object to run inference.
+
+        Returns:
+            dict:
+                Result of model inference as a dictionary.
+
+        """
         progress_bar = None
 
         if self.verbose:
