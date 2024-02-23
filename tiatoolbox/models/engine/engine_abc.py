@@ -182,26 +182,34 @@ class EngineABC(ABC):
             Whether to output logging information.
 
     Examples:
-        >>> # array of list of 2 image patches as input
+        >>> class TestEngineABC(EngineABC):
+        >>>     def __init__(
+        >>>        self,
+        >>>        model,
+        >>>        weights,
+        >>>        verbose,
+        >>>     ):
+        >>>       super().__init__(model=model, weights=weights, verbose=verbose)
+        >>> # define infer_wsi
         >>> import numpy as np
         >>> data = np.array([np.ndarray, np.ndarray])
-        >>> engine = EngineABC(model="resnet18-kather100k")
+        >>> engine = TestEngineABC(model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=True)
 
         >>> # array of list of 2 image patches as input
         >>> import numpy as np
         >>> data = np.array([np.ndarray, np.ndarray])
-        >>> engine = EngineABC(model="resnet18-kather100k")
+        >>> engine = TestEngineABC(model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=True)
 
         >>> # list of 2 image files as input
         >>> image = ['path/image1.png', 'path/image2.png']
-        >>> engine = EngineABC(model="resnet18-kather100k")
+        >>> engine = TestEngineABC(model="resnet18-kather100k")
         >>> output = engine.run(image, patch_mode=False)
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
-        >>> engine = EngineABC(model="resnet18-kather100k")
+        >>> engine = TestEngineABC(model="resnet18-kather100k")
         >>> output = engine.run(wsi_file, patch_mode=True)
 
     """
