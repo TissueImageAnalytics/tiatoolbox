@@ -281,7 +281,8 @@ class EngineABC(ABC):
 
             ModelIOConfigABC | None:
                 The model io configuration for TIAToolbox pretrained models.
-                Otherwise, None.
+                If the specified model is not in TIAToolbox model zoo, then the function
+                returns None.
 
         """
         if not isinstance(model, (str, nn.Module)):
