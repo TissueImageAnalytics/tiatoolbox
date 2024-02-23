@@ -113,9 +113,10 @@ class EngineABC(ABC):
             ...    model="pretrained-model",
             ...    weights="pretrained-local-weights.pth"
             ... )
+
         device (str):
-            Select the device to run the model.
-            Please see https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            Select the device to run the model. Please see
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
             for more details on input parameters for device. Default is "cpu".
         verbose (bool):
             Whether to output logging information.
@@ -311,7 +312,31 @@ class EngineABC(ABC):
         *,
         patch_mode: bool = True,
     ) -> torch.utils.data.DataLoader:
-        """Pre-process an image patch."""
+        """Pre-process images and masks and return dataloader for inference.
+
+        Args:
+            images (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list.
+            masks (list | None):
+                List of masks. Only utilised when patch_mode is False.
+                Patches are only generated within a masked area.
+                If not provided, then a tissue mask will be automatically
+                generated for whole slide images.
+            labels (list | None):
+                List of labels. Only a single label per image is supported.
+            ioconfig (ModelIOConfigABC):
+                :class:`ModelIOConfigABC` object.
+            patch_mode(bool):
+                Whether to treat input image as a patch or WSI.
+
+        Returns:
+            torch.utils.data.DataLoader:
+                :class:`torch.utils.data.DataLoader` for inference.
+
+
+        """
         if labels:
             # if a labels is provided, then return with the prediction
             self.return_labels = bool(labels)
