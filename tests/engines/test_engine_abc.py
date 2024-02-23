@@ -42,7 +42,7 @@ class TestEngineABC(EngineABC):
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
-        patch_mode: bool,
+        patch_mode: bool = True,
     ) -> torch.utils.data.DataLoader:
         """Test pre process images."""
         return super().get_dataloader(
