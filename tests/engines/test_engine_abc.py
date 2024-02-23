@@ -88,7 +88,7 @@ def test_engine_abc() -> NoReturn:
     """Test EngineABC initialization."""
     with pytest.raises(
         TypeError,
-        match=r".*Can't instantiate abstract class EngineABC with abstract methods*",
+        match=r".*Can't instantiate abstract class EngineABC*",
     ):
         # Can't instantiate abstract class with abstract methods
         EngineABC()  # skipcq
