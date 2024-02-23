@@ -88,7 +88,7 @@ def prepare_engines_save_dir(
 
 
 class EngineABC(ABC):
-    """Abstract base class for engines used in tiatoolbox.
+    """Abstract base class for engines to run CNN models in TIAToolbox.
 
     Args:
         model (str | ModelABC):
@@ -98,29 +98,34 @@ class EngineABC(ABC):
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
-            of weights.
+            of weights using the weights parameter.
+        batch_size (int):
+            Number of image patches fed into the model each time. Default = 8.
+        num_loader_workers (int):
+            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
+            Please note that they will also perform preprocessing. Default = 0
+        num_post_proc_workers (int):
+            Number of workers to postprocess the results of the model. Default = 0
         weights (str or Path):
             Path to the weight of the corresponding `model`.
 
             >>> engine = EngineABC(
-            ...    model="pretrained-model-name",
-            ...    weights="pretrained-local-weights.pth")
-
-        batch_size (int):
-            Number of images fed into the model each time.
-        num_loader_workers (int):
-            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
-            Please note that they will also perform preprocessing. default = 0
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model. default = 0
+            ...    model="pretrained-model",
+            ...    weights="pretrained-local-weights.pth"
+            ... )
         device (str):
-            Select the device to run the model. Default is "cpu".
+            Select the device to run the model.
+            Please see https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details on input parameters for device. Default is "cpu".
         verbose (bool):
             Whether to output logging information.
 
     Attributes:
         images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
             A NHWC image or a path to WSI.
+        masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+            List of tissue masks or binary masks corresponding to processing area of
+            input images.
         patch_mode (str):
             Whether to treat input image as a patch or WSI.
             default = True.
@@ -164,9 +169,15 @@ class EngineABC(ABC):
         labels (list | None):
                 List of labels. Only a single label per image is supported.
         device (str):
-            Select the device to run the model. Default is "cpu".
+            :class:`torch.device` to run the model.
         num_loader_workers (int):
-            Number of workers used in torch.utils.data.DataLoader.
+            Number of workers used in :class:`torch.utils.data.DataLoader`.
+        num_post_proc_workers (int):
+            Number of workers to postprocess the results of the model.
+        return_labels (bool):
+            Whether to return the output labels. Default = False.
+        merge_predictions (bool):
+            Whether to merge WSI predictions into a single file. Default = False.
         verbose (bool):
             Whether to output logging information.
 
@@ -209,8 +220,8 @@ class EngineABC(ABC):
         """Initialize Engine."""
         super().__init__()
 
-        self.masks = None
         self.images = None
+        self.masks = None
         self.patch_mode = None
         self.device = device
 
