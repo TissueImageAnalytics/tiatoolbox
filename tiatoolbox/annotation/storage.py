@@ -40,7 +40,7 @@ import uuid
 import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import MutableMapping
+from collections.abc import Generator, Iterable, Iterator, MutableMapping
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -50,9 +50,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Generator,
-    Iterable,
-    Iterator,
 )
 
 import numpy as np
@@ -2028,7 +2025,9 @@ class AnnotationStore(ABC, MutableMapping):
         transformed_geoms = {
             key: transform(annotation.geometry) for key, annotation in self.items()
         }
-        self.patch_many(transformed_geoms.keys(), transformed_geoms.values())
+        _keys = transformed_geoms.keys()
+        _values = transformed_geoms.values()
+        self.patch_many(_keys, _values)
 
     def __del__(self: AnnotationStore) -> None:
         """Implements destructor method.
