@@ -2770,12 +2770,17 @@ def test_read_multi_channel(source_image: Path) -> None:
     img_array = utils.misc.imread(Path(source_image))
     new_img_array = np.concatenate((img_array, img_array), axis=-1)
 
-    new_img_size = np.array(new_img_array.shape[:2][::-1])
-    double_size = tuple((new_img_size * 2).astype(int))
-    meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
+    new_img_size = new_img_array.shape[:2][::-1]
+    meta = wsireader.WSIMeta(slide_dimensions=new_img_size, axes="YXS", mpp=(0.5, 0.5))
     wsi = wsireader.VirtualWSIReader(new_img_array, info=meta)
 
-    region = wsi.read_rect(location=(0, 0), size=(50, 100), pad_mode="reflect")
+    region = wsi.read_rect(
+        location=(0, 0),
+        size=(50, 100),
+        pad_mode="reflect",
+        units="mpp",
+        resolution=0.25,
+    )
     target = cv2.resize(
         new_img_array[:50, :25, :],
         (50, 100),
