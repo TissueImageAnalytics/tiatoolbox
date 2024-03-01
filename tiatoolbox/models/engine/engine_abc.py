@@ -183,6 +183,7 @@ class EngineABC(ABC):
             Whether to output logging information.
 
     Examples:
+        >>> # Inherit from EngineABC
         >>> class TestEngineABC(EngineABC):
         >>>     def __init__(
         >>>        self,
@@ -191,7 +192,7 @@ class EngineABC(ABC):
         >>>        verbose,
         >>>     ):
         >>>       super().__init__(model=model, weights=weights, verbose=verbose)
-        >>> # define infer_wsi
+        >>> # define all the abstract classes
         >>> import numpy as np
         >>> data = np.array([np.ndarray, np.ndarray])
         >>> engine = TestEngineABC(model="resnet18-kather100k")
@@ -293,7 +294,7 @@ class EngineABC(ABC):
         if isinstance(model, str):
             # ioconfig is retrieved from the pretrained model in the toolbox.
             # list of pretrained models in the TIA Toolbox is available here:
-            # https://tia-toolbox.readthedocs.io/en/add-bokeh-app/pretrained.html
+            # https://tia-toolbox.readthedocs.io/en/latest/pretrained.html
             # no need to provide ioconfig in EngineABC.run() this case.
             return get_pretrained_model(model, weights)
 
@@ -501,8 +502,9 @@ class EngineABC(ABC):
             **kwargs (dict):
                 Keyword Args to update setup_patch_dataset() method attributes.
 
-        Returns: (dict):
-            Return patch based output after post-processing.
+        Returns:
+            dict:
+                Return patch based output after post-processing.
 
         """
         _ = kwargs.get("key_values")  # Key values required for post-processing
