@@ -300,13 +300,6 @@ The input output configuration is as follows:
 
     - micronet_hovernet-consep
 
-.. collapse:: Output Nuclear Classes
-
-    - 0: Background
-    - 1: Epithelial
-    - 2: Inflammatory
-    - 3: Spindle-Shaped
-    - 4: Miscellaneous
 
 Kumar Dataset
 -------------
