@@ -37,20 +37,18 @@ def compile_model(
     """
     if disable or sys.version_info >= (3, 12):
         logger.warning(
-            (
-                "torch-compile is currently not supported in Python 3.12+. ",
-            ),
+            ("torch-compile is currently not supported in Python 3.12+. ",),
         )
         return model
 
     # Decorator mode
     if model is None:
+
         def fn(model: nn.Module) -> nn.Module:
             if model is None:
                 msg = "Model can't be None."
                 raise ValueError(msg)
             return compile_model(model, mode, disable=disable)
-
 
     return torch.compile(model, mode=mode, disable=disable)
 
