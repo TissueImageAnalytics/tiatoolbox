@@ -13,6 +13,7 @@ import tqdm
 
 from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc, save_as_json
@@ -251,7 +252,7 @@ class PatchPredictor:
         self.ioconfig = ioconfig  # for storing original
         self._ioconfig = None  # for storing runtime
         self.model = (
-            torch.compile(  # for runtime, such as after wrapping with nn.DataParallel
+            compile_model(  # for runtime, such as after wrapping with nn.DataParallel
                 model,
                 mode=rcParam["torch_compile_mode"],
                 disable=not rcParam["enable_torch_compile"],

@@ -2,9 +2,57 @@
 
 from __future__ import annotations
 
+import sys
+from typing import Callable
+
 import numpy as np
 import torch
 from torch import nn
+
+from tiatoolbox import logger
+
+
+def compile_model(
+    model: nn.Module | None = None,
+    *,
+    mode: str,
+    disable: bool,
+) -> Callable:
+    """A decorator to compile a model using torch-compile.
+
+    Args:
+        model (torch.nn.Module):
+            Model to be compiled.
+        mode (str):
+            Mode to be used for torch-compile. Available modes are
+            `default`, `reduce-overhead`, `max-autotune`, and
+            `max-autotune-no-cudagraphs`.
+        disable (bool):
+            If True, torch-compile will be disabled.
+
+    Returns:
+        Callable:
+            Compiled model.
+
+    """
+    if disable or sys.version_info >= (3, 12):
+        logger.warning(
+            (
+                "torch-compile is currently not supported in Python 3.12+. ",
+            ),
+        )
+        return model
+
+    # Decorator mode
+    if model is None:
+        def fn(model: nn.Module) -> nn.Module:
+            if model is None:
+                msg = "Model can't be None."
+                raise ValueError(msg)
+            return compile_model(model, mode, disable=disable)
+
+
+    return torch.compile(model, mode=mode, disable=disable)
 
 
 def centre_crop(
