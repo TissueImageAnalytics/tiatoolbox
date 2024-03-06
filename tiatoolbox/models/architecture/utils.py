@@ -44,6 +44,12 @@ def compile_model(
         )
         return model
 
+    if isinstance(model, torch._dynamo.eval_frame.OptimizedModule):  # noqa: SLF001
+        logger.warning(
+            ("The model is already compiled. ",),
+        )
+        return model
+
     return torch.compile(model, mode=mode, disable=disable)
 
 
