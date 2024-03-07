@@ -699,10 +699,10 @@ def get_patch_extractor(
     sliding_window_patch_extractor_args = {
         "input_img": kwargs.get("input_img", ""),
         "patch_size": kwargs.get("patch_size", (224, 224)),
-        "input_mask": kwargs.get("input_mask", None),
+        "input_mask": kwargs.get("input_mask"),
         "resolution": kwargs.get("resolution", 0),
         "units": kwargs.get("units", "level"),
-        "stride": kwargs.get("stride", None),
+        "stride": kwargs.get("stride"),
         "pad_mode": kwargs.get("pad_mode", "constant"),
         "pad_constant_values": kwargs.get("pad_constant_values", 0),
         "min_mask_ratio": kwargs.get("min_mask_ratio", 0),
