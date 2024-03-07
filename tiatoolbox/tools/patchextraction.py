@@ -421,14 +421,6 @@ class PatchExtractor(PatchExtractorABC):
             patch_output_shape_arr = np.array(patch_output_shape)
         stride_shape_arr = np.array(stride_shape)
 
-        def validate_shape(shape: np.ndarray) -> bool:
-            """Test if the shape is valid for an image."""
-            return (
-                not np.issubdtype(shape.dtype, np.integer)
-                or np.size(shape) > 2  # noqa: PLR2004
-                or bool(np.any(shape < 0))
-            )
-
         if validate_shape(image_shape_arr):
             msg = f"Invalid `image_shape` value {image_shape_arr}."
             raise ValueError(msg)
@@ -437,20 +429,17 @@ class PatchExtractor(PatchExtractorABC):
             raise ValueError(msg)
         if validate_shape(patch_output_shape_arr):
             msg = f"Invalid `patch_output_shape` value {patch_output_shape_arr}."
-            raise ValueError(
-                msg,
-            )
+            raise ValueError(msg)
         if validate_shape(stride_shape_arr):
             msg = f"Invalid `stride_shape` value {stride_shape_arr}."
             raise ValueError(msg)
+
         if np.any(patch_input_shape_arr < patch_output_shape_arr):
             msg = (
                 f"`patch_input_shape` must larger than `patch_output_shape` "
                 f"{patch_input_shape_arr} must > {patch_output_shape_arr}."
             )
-            raise ValueError(
-                msg,
-            )
+            raise ValueError(msg)
         if np.any(stride_shape_arr < 1):
             msg = f"`stride_shape` value {stride_shape_arr} must > 1."
             raise ValueError(msg)
@@ -562,7 +551,6 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         min_mask_ratio: float = 0,
         *,
         within_bound: bool = False,
-        **kwargs: Unpack[ExtractorParams],
     ) -> None:
         """Initialize :class:`SlidingWindowPatchExtractor`."""
         super().__init__(
@@ -576,7 +564,6 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             within_bound=within_bound,
             min_mask_ratio=min_mask_ratio,
         )
-        stride = stride
         if stride is None:
             self.stride = self.patch_size
         elif isinstance(stride, (tuple, list)):
@@ -633,6 +620,7 @@ class PointsPatchExtractor(PatchExtractor):
     """
 
     def __init__(
+        # pylint: disable=PLR0913
         self: PointsPatchExtractor,
         input_img: str | Path | np.ndarray,
         locations_list: np.ndarray | DataFrame | str | Path,
@@ -643,7 +631,6 @@ class PointsPatchExtractor(PatchExtractor):
         pad_constant_values: int | tuple[int, int] = 0,
         *,
         within_bound: bool = False,
-        **kwargs: Unpack[ExtractorParams],
     ) -> None:
         """Initialize :class:`PointsPatchExtractor`."""
         super().__init__(
@@ -655,7 +642,6 @@ class PointsPatchExtractor(PatchExtractor):
             pad_constant_values=pad_constant_values,
             within_bound=within_bound,
         )
-
         self.locations_df = misc.read_locations(input_table=locations_list)
         self.locations_df["x"] = self.locations_df["x"] - int(
             (self.patch_size[1] - 1) / 2,
@@ -696,15 +682,40 @@ def get_patch_extractor(
         )
 
     if method_name.lower() == "point":
-        return PointsPatchExtractor(**kwargs)
+        point_patch_extractor_args: PointsPatchExtractorParams
+        point_patch_extractor_args = {
+            "input_img": kwargs.get("input_img", ""),
+            "locations_list": kwargs.get("locations_list", ""),
+            "patch_size": kwargs.get("patch_size", (224, 224)),
+            "resolution": kwargs.get("resolution", 0),
+            "units": kwargs.get("units", "level"),
+            "pad_mode": kwargs.get("pad_mode", "constant"),
+            "pad_constant_values": kwargs.get("pad_constant_values", 0),
+            "within_bound": kwargs.get("within_bound", False),
+        }
+        return PointsPatchExtractor(**point_patch_extractor_args)
 
-    return SlidingWindowPatchExtractor(**kwargs)
+    sliding_window_patch_extractor_args: SlidingWindowPatchExtractorParams
+    sliding_window_patch_extractor_args = {
+        "input_img": kwargs.get("input_img", ""),
+        "patch_size": kwargs.get("patch_size", (224, 224)),
+        "input_mask": kwargs.get("input_mask", None),
+        "resolution": kwargs.get("resolution", 0),
+        "units": kwargs.get("units", "level"),
+        "stride": kwargs.get("stride", None),
+        "pad_mode": kwargs.get("pad_mode", "constant"),
+        "pad_constant_values": kwargs.get("pad_constant_values", 0),
+        "min_mask_ratio": kwargs.get("min_mask_ratio", 0),
+        "within_bound": kwargs.get("within_bound", False),
+    }
+    return SlidingWindowPatchExtractor(**sliding_window_patch_extractor_args)
 
 
 class ExtractorParams(TypedDict, total=False):
     """A subclass of TypedDict.
 
-    Defines the types of the keyword arguments passed to PatchExtractor.
+    Defines the types of the keyword arguments passed into 'get_patch_extractor'.
+
     """
 
     input_img: str | Path | np.ndarray
@@ -718,3 +729,48 @@ class ExtractorParams(TypedDict, total=False):
     input_mask: str | Path | np.ndarray | wsireader.WSIReader
     stride: int | tuple[int, int]
     min_mask_ratio: float
+
+
+class PointsPatchExtractorParams(TypedDict):
+    """A subclass of TypedDict.
+
+    Defines the types of the keyword arguments passed to PointsPatchExtractor.
+
+    """
+
+    input_img: str | Path | np.ndarray
+    locations_list: np.ndarray | DataFrame | str | Path
+    patch_size: int | tuple[int, int]
+    resolution: Resolution
+    units: Units
+    pad_mode: str
+    pad_constant_values: int | tuple[int, int]
+    within_bound: bool
+
+
+class SlidingWindowPatchExtractorParams(TypedDict):
+    """A subclass of TypedDict.
+
+    Defines the types of the keyword arguments passed to SlidingWindowPatchExtractor.
+
+    """
+
+    input_img: str | Path | np.ndarray
+    patch_size: int | tuple[int, int]
+    resolution: Resolution
+    units: Units
+    pad_mode: str
+    pad_constant_values: int | tuple[int, int]
+    within_bound: bool
+    input_mask: str | Path | np.ndarray | wsireader.WSIReader | None
+    stride: int | tuple[int, int] | None
+    min_mask_ratio: float
+
+
+def validate_shape(shape: np.ndarray) -> bool:
+    """Test if the shape is valid for an image."""
+    return (
+        not np.issubdtype(shape.dtype, np.integer)
+        or np.size(shape) > 2  # noqa: PLR2004
+        or bool(np.any(shape < 0))
+    )
