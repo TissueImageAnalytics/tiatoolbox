@@ -46,4 +46,5 @@ jobs:
           tiatoolbox/tools/tissuemask.py \
           tiatoolbox/tools/graph.py \
           tiatoolbox/tools/stainnorm.py \
-          tiatoolbox/tools/stainaugment.py
+          tiatoolbox/tools/stainaugment.py \
+          tiatoolbox/tools/patchextraction.py

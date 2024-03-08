@@ -217,17 +217,12 @@ class PatchExtractor(PatchExtractorABC):
         """
         slide_dimension = self.wsi.slide_dimensions(self.resolution, self.units)
 
-        coordinates_list = self.get_coordinates(
+        self.coordinate_list = self.get_coordinates(  # type: ignore[assignment]
             image_shape=(slide_dimension[0], slide_dimension[1]),
             patch_input_shape=(self.patch_size[0], self.patch_size[1]),
             stride_shape=(self.stride[0], self.stride[1]),
             input_within_bound=self.within_bound,
         )
-
-        if isinstance(coordinates_list, np.ndarray):
-            self.coordinate_list = coordinates_list
-        else:
-            self.coordinate_list = coordinates_list[0]
 
         if self.mask is not None:
             selected_coord_indices = self.filter_coordinates(
