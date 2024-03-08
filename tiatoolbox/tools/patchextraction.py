@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable, TypedDict
+from typing import TYPE_CHECKING, Callable, TypedDict, overload
 
 import numpy as np
 from typing_extensions import Unpack
@@ -217,7 +217,8 @@ class PatchExtractor(PatchExtractorABC):
         """
         slide_dimension = self.wsi.slide_dimensions(self.resolution, self.units)
 
-        self.coordinate_list = self.get_coordinates(  # type: ignore[assignment]
+        self.coordinate_list = self.get_coordinates(
+            patch_output_shape=None,
             image_shape=(slide_dimension[0], slide_dimension[1]),
             patch_input_shape=(self.patch_size[0], self.patch_size[1]),
             stride_shape=(self.stride[0], self.stride[1]),
@@ -350,11 +351,35 @@ class PatchExtractor(PatchExtractorABC):
 
         return np.array(flag_list)
 
+    @overload
     @staticmethod
     def get_coordinates(
+        patch_output_shape: None = None,
         image_shape: tuple[int, int] | np.ndarray | None = None,
         patch_input_shape: tuple[int, int] | np.ndarray | None = None,
+        stride_shape: tuple[int, int] | np.ndarray | None = None,
+        *,
+        input_within_bound: bool = False,
+        output_within_bound: bool = False,
+    ) -> np.ndarray: ...
+
+    @overload
+    @staticmethod
+    def get_coordinates(
+        patch_output_shape: tuple[int, int] | np.ndarray,
+        image_shape: tuple[int, int] | np.ndarray | None = None,
+        patch_input_shape: tuple[int, int] | np.ndarray | None = None,
+        stride_shape: tuple[int, int] | np.ndarray | None = None,
+        *,
+        input_within_bound: bool = False,
+        output_within_bound: bool = False,
+    ) -> tuple[np.ndarray, np.ndarray]: ...
+
+    @staticmethod
+    def get_coordinates(
         patch_output_shape: tuple[int, int] | np.ndarray | None = None,
+        image_shape: tuple[int, int] | np.ndarray | None = None,
+        patch_input_shape: tuple[int, int] | np.ndarray | None = None,
         stride_shape: tuple[int, int] | np.ndarray | None = None,
         *,
         input_within_bound: bool = False,
