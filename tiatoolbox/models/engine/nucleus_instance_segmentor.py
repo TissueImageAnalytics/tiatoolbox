@@ -803,7 +803,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             # ! this will lead to discard a bunch of
             # ! inferred tiles within this current WSI
             if future.exception() is not None:
-                raise future.exception()  # noqa: RSE102
+                raise future.exception()
 
             # aggregate the result via callback
             result = future.result()
