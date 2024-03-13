@@ -11,19 +11,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -185,8 +185,8 @@ def test_get_level_by_extent() -> None:
 
 def test_roots(doc: Document) -> None:
     """Test that the document has the correct number of roots."""
-    # should be 4 roots: main window, controls, slide_info, popup table
-    assert len(doc.roots) == 4
+    # should be 5 roots: main window, controls, slide_info, popup, extra_layout
+    assert len(doc.roots) == 5
 
 
 def test_config_loaded(data_path: pytest.TempPathFactory) -> None:
