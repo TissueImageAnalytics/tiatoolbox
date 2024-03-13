@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 import tempfile
@@ -71,7 +72,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.visualization import random_colors
-from tiatoolbox.visualization.ui_utils import get_level_by_extent
+from tiatoolbox.visualization.ui_utils import UIWrapper, get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -118,16 +119,10 @@ class DummyAttr:
         self.item = val
 
 
-class UIWrapper:
-    """Wrapper class to access ui elements."""
-
-    def __init__(self: UIWrapper) -> None:
-        """Initialize the class."""
-        self.active = 0
-
-    def __getitem__(self: UIWrapper, key: str) -> Any:  # noqa: ANN401
-        """Gets ui element for the active window."""
-        return win_dicts[self.active][key]
+def to_camel(name: str) -> str:
+    """Convert a string to upper camel case."""
+    parts = name.split("_")
+    return "".join([p.capitalize() for p in parts])
 
 
 def format_info(info: dict[str, Any]) -> str:
@@ -859,6 +854,13 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     if len(new) == 0:
         return
     slide_path = Path(doc_config["slide_folder"]) / Path(new[0])
+    if doc_config["extra_layout"] is not None:
+        # create the extra layout if we can
+        extras = []
+        for cl in doc_config["extra_layout"]:
+            extras.extend(cl.create_extra_layout(slide_path, extra_layout.children))
+            cl.add_to_ui()
+        extra_layout.children = extras
     # Reset the data sources for glyph overlays
     UI["pt_source"].data = {"x": [], "y": []}
     UI["box_source"].data = {"x": [], "y": [], "width": [], "height": []}
@@ -1282,6 +1284,11 @@ slide_info = Div(
     width=800,
     height=200,
     sizing_mode="stretch_width",
+)
+extra_layout = column(
+    children=[],
+    name="extra_layout",
+    sizing_mode="stretch_both",
 )
 
 
@@ -1868,10 +1875,10 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
 
 
 # Main ui containers
-UI = UIWrapper()
 windows = []
 controls = []
 win_dicts = []
+UI = UIWrapper(win_dicts)
 
 # Popup for annotation viewing on double click
 popup_div = Div(
@@ -2045,6 +2052,23 @@ class DocConfig:
         base_folder = slide_folder.parent
         overlay_folder = Path(sys_args[2])
 
+        plugins = None
+        if len(sys_args) > 3:  # noqa: PLR2004
+            # also passed a path to a plugin file defining extra ui elements
+            plugins = []
+            for p in sys_args[3:]:
+                plugin_path = Path(p)
+
+                # should have class named (in camel case) after the filename, that
+                # handles the extra ui elements
+                spec = importlib.util.spec_from_file_location(
+                    "plugin_mod",
+                    plugin_path,
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)  # Execute the module
+                plugins.append(module.__getattribute__(to_camel(plugin_path.stem))(UI))
+
         # Load a color_dict and/or slide initial view windows from a json file
         config_file = list(overlay_folder.glob("*config.json"))
         config = self.config
@@ -2057,6 +2081,7 @@ class DocConfig:
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder
         config["overlay_folder"] = overlay_folder
+        config["extra_layout"] = plugins
         config["demo_name"] = self.config["demo_name"]
         if "initial_views" not in config:
             config["initial_views"] = {}
@@ -2130,6 +2155,7 @@ class DocConfig:
         base_doc.add_root(control_tabs)
         base_doc.add_root(popup_table)
         base_doc.add_root(slide_info)
+        base_doc.add_root(extra_layout)
         base_doc.title = "Tiatoolbox Visualization Tool"
         return slide_wins, control_tabs
 
