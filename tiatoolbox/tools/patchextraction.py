@@ -353,7 +353,7 @@ class PatchExtractor(PatchExtractorABC):
 
     @overload
     @staticmethod
-    def get_coordinates(
+    def get_coordinates(  # pragma: no cover
         patch_output_shape: None = None,
         image_shape: tuple[int, int] | np.ndarray | None = None,
         patch_input_shape: tuple[int, int] | np.ndarray | None = None,
@@ -365,7 +365,7 @@ class PatchExtractor(PatchExtractorABC):
 
     @overload
     @staticmethod
-    def get_coordinates(
+    def get_coordinates(  # pragma: no cover
         patch_output_shape: tuple[int, int] | np.ndarray,
         image_shape: tuple[int, int] | np.ndarray | None = None,
         patch_input_shape: tuple[int, int] | np.ndarray | None = None,
