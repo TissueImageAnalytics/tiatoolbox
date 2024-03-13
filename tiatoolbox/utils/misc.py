@@ -1394,7 +1394,7 @@ def wsi_batch_output_to_zarr_group(
     )
     chunks = kwargs.get("chunks", 10000)
 
-    # case 1: new zarr group
+    # case 1 - new zarr group
     if not wsi_batch_zarr_group:
         # ensure proper zarr extension and create persistant zarr group
         save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
@@ -1435,7 +1435,7 @@ def wsi_batch_output_to_zarr_group(
             )
             labels_zarr[:] = batch_output_label
 
-    # case 2: apped to exisiting zarr group
+    # case 2 - append to existing zarr group
     probabilities_zarr = wsi_batch_zarr_group["probabilities"]
     probabilities_zarr.append(batch_output_probabilities)
 
