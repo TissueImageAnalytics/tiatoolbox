@@ -785,7 +785,7 @@ def overlay_alpha_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
 
 def pt_size_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
     """Callback to change the size of the points."""
-    UI["vstate"].graph_node.size = 2 * new
+    UI["vstate"].graph_node.radius = 2 * new
 
 
 def edge_size_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
@@ -1790,7 +1790,14 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     box_source = ColumnDataSource({"x": [], "y": [], "width": [], "height": []})
     pt_source = ColumnDataSource({"x": [], "y": []})
     r = p.rect("x", "y", "width", "height", source=box_source, fill_alpha=0)
-    c = p.circle("x", "y", source=pt_source, color="red", size=5)
+    c = p.circle(
+        "x",
+        "y",
+        source=pt_source,
+        color="red",
+        radius=3,
+        radius_units="screen",
+    )
     p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
     p.add_tools(PointDrawTool(renderers=[c]))
     p.add_tools(TapTool())
@@ -1802,7 +1809,13 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     # Add graph stuff
     node_source = ColumnDataSource({"x_": [], "y_": [], "node_color_": []})
     edge_source = ColumnDataSource({"x0_": [], "y0_": [], "x1_": [], "y1_": []})
-    vstate.graph_node = Circle(x="x_", y="y_", fill_color="node_color_", size=5)
+    vstate.graph_node = Circle(
+        x="x_",
+        y="y_",
+        fill_color="node_color_",
+        radius=3,
+        radius_units="screen",
+    )
     vstate.graph_edge = Segment(x0="x0_", y0="y0_", x1="x1_", y1="y1_")
     p.add_glyph(node_source, vstate.graph_node)
     node_source.selected.on_change("indices", node_select_cb)
