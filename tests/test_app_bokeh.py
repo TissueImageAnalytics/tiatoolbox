@@ -185,8 +185,8 @@ def test_get_level_by_extent() -> None:
 
 def test_roots(doc: Document) -> None:
     """Test that the document has the correct number of roots."""
-    # should be 4 roots: main window, controls, slide_info, popup table
-    assert len(doc.roots) == 4
+    # should be 5 roots: main window, controls, slide_info, popup, extra_layout
+    assert len(doc.roots) == 5
 
 
 def test_config_loaded(data_path: pytest.TempPathFactory) -> None:
@@ -627,7 +627,7 @@ def test_pt_size_spinner(doc: Document) -> None:
     pt_size_spinner.value = 10
     # check that the point size has been set correctly
     assert (
-        main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.size
+        main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.radius
         == 2 * 10
     )
 
