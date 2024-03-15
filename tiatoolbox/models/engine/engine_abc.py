@@ -404,9 +404,9 @@ class EngineABC(ABC):
             "predictions": [],
         }
 
-        if cache_mode:
-            # raw_predictions save to zarr
-            # cache_size based
+        # if cache_mode:
+        # raw_predictions save to zarr
+        # cache_size based
 
         if self.return_labels:
             raw_predictions["labels"] = []
@@ -438,7 +438,7 @@ class EngineABC(ABC):
         processed_predictions: dict,
         output_type: str,
         save_dir: Path | None = None,
-        cache_mode: bool = False,
+        # cache_mode: bool = False,
         **kwargs: dict,
     ) -> dict | AnnotationStore | Path:
         """Save Patch predictions.
@@ -464,8 +464,8 @@ class EngineABC(ABC):
             is provided.
 
         """
-        if cache_mode:
-            return processed_predictions
+        # if cache_mode:
+        #     return processed_predictions
 
         if not save_dir and output_type != "AnnotationStore":
             return processed_predictions
@@ -500,8 +500,8 @@ class EngineABC(ABC):
     @staticmethod
     def post_process_patches(
         raw_predictions: dict,
-        cache_mode: bool,
-        cache_size: bool,
+        # cache_mode: bool,
+        # cache_size: bool,
         **kwargs: dict,
     ) -> dict:
         """Save Patch predictions.
@@ -518,8 +518,8 @@ class EngineABC(ABC):
 
         """
         _ = kwargs.get("key_values")  # Key values required for post-processing
-        _ = cache_mode # if post-processing of patches is required.
-        _ = cache_size # if post-processing of patches is required in cache_mode.
+        # _ = cache_mode # if post-processing of patches is required.
+        # _ = cache_size # if post-processing of patches is required in cache_mode.
 
         return raw_predictions
 
