@@ -58,7 +58,13 @@ class ImageGrid(UIPlugin):
                 (img_array.shape[0], img_array.shape[1]),
             )
 
-            p = figure(x_range=(0, 100), y_range=(0, 100), title=image_path.stem)
+            p = figure(
+                x_range=(0, 100),
+                y_range=(0, 100),
+                width=360,
+                height=360,
+                title=image_path.stem,
+            )
             p.axis.visible = False
             p.image_rgba(image=[img_rgba], x=0, y=0, dw=100, dh=100)
             figures.append(p)
