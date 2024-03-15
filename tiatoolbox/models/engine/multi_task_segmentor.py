@@ -451,7 +451,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             # ! this will lead to discard a whole bunch of
             # ! inferred tiles within this current WSI
             if future.exception() is not None:
-                raise future.exception()  # noqa: RSE102
+                raise future.exception()
 
             # aggregate the result via callback
             # manually call the callback rather than
