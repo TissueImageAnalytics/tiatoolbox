@@ -410,7 +410,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         ValueError,
         match=r".*Patch output must contain coordinates.",
     ):
-        out = eng.run(
+        _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
             on_gpu=False,
@@ -423,7 +423,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         ValueError,
         match=r".*Patch output must contain coordinates.",
     ):
-        out = eng.run(
+        _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
             on_gpu=False,
@@ -437,7 +437,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         ValueError,
         match=r".*Patch output must contain coordinates.",
     ):
-        out = eng.run(
+        _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
             on_gpu=False,
