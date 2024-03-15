@@ -399,9 +399,14 @@ class EngineABC(ABC):
                 ascii=True,
                 position=0,
             )
+
         raw_predictions = {
             "predictions": [],
         }
+
+        if cache_mode:
+            # raw_predictions save to zarr
+            # cache_size based
 
         if self.return_labels:
             raw_predictions["labels"] = []
@@ -433,6 +438,7 @@ class EngineABC(ABC):
         processed_predictions: dict,
         output_type: str,
         save_dir: Path | None = None,
+        cache_mode: bool = False,
         **kwargs: dict,
     ) -> dict | AnnotationStore | Path:
         """Save Patch predictions.
@@ -458,6 +464,9 @@ class EngineABC(ABC):
             is provided.
 
         """
+        if cache_mode:
+            return processed_predictions
+
         if not save_dir and output_type != "AnnotationStore":
             return processed_predictions
 
@@ -491,6 +500,8 @@ class EngineABC(ABC):
     @staticmethod
     def post_process_patches(
         raw_predictions: dict,
+        cache_mode: bool,
+        cache_size: bool,
         **kwargs: dict,
     ) -> dict:
         """Save Patch predictions.
@@ -507,6 +518,8 @@ class EngineABC(ABC):
 
         """
         _ = kwargs.get("key_values")  # Key values required for post-processing
+        _ = cache_mode # if post-processing of patches is required.
+        _ = cache_size # if post-processing of patches is required in cache_mode.
 
         return raw_predictions
 
@@ -839,7 +852,7 @@ class EngineABC(ABC):
 
         self.labels = labels
 
-        # if necessary Move model parameters to "cpu" or "gpu" and update ioconfig
+        # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
         self.model = model_to(model=self.model, device=self.device)
 
@@ -857,15 +870,20 @@ class EngineABC(ABC):
             )
             raw_predictions = self.infer_patches(
                 dataloader=dataloader,
+                # cache_mode = True | False,
+                # cache_size = 10000, # by default it can be equal to batch_size
             )
             processed_predictions = self.post_process_patches(
                 raw_predictions=raw_predictions,
+                # cache_mode = True | False,
+                # cache_size = self.batch_size,   # number of patches
                 **kwargs,
             )
             return self.save_predictions(
                 processed_predictions=processed_predictions,
                 output_type=output_type,
                 save_dir=save_dir,
+                # cache_mode = True | False,
                 **kwargs,
             )
 
