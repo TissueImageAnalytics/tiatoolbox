@@ -12,7 +12,7 @@ Each notebook contains all the information needed to run the example remotely on
 
 ### GPU or CPU runtime
 
-Processes in the notebooks can be accelerated by using a GPU. Therefore, whether you are running the notebook on your system or Colab, you need to check and specify if you are using GPU or CPU hardware acceleration. In Colab, you need to make sure that the runtime type is set to GPU in the *"Runtime→Change runtime type→Hardware accelerator"*. If you are *not* using GPU, consider changing the `ON_GPU` flag to `Flase` value, otherwise, some errors will be raised when running the following cells.
+Processes in the notebooks can be accelerated by using a GPU. Therefore, whether you are running the notebook on your system or Colab, you need to check and specify if you are using GPU or CPU hardware acceleration. In Colab, you need to make sure that the runtime type is set to GPU in the *"Runtime→Change runtime type→Hardware accelerator"*. If you are *not* using GPU, consider changing the `ON_GPU` flag to `False` value, otherwise, some errors will be raised when running the following cells.
 
 > **IMPORTANT**: If you are using Colab and install tiatoolbox, please note that you need to restart the runtime after tiatoolbox installation before proceeding through (menu) *"Runtime→Restart runtime"* . This is needed to load the latest versions of prerequisite packages installed with TIAToolbox. Doing so, you should be able to run all the remaining cells altogether (*"Runtime→Run after"* from the next cell) or one by one.
 
