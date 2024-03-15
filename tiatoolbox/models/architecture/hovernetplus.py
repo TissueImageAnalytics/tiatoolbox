@@ -85,12 +85,16 @@ class HoVerNetPlus(HoVerNet):
         num_input_channels: int = 3,
         num_types: int | None = None,
         num_layers: int | None = None,
+        nuc_type_dict: dict | None = None,
+        layer_type_dict: dict | None = None,
     ) -> None:
         """Initialize :class:`HoVerNetPlus`."""
         super().__init__(mode="fast")
         self.num_input_channels = num_input_channels
         self.num_types = num_types
         self.num_layers = num_layers
+        self.nuc_type_dict = nuc_type_dict
+        self.layer_type_dict = layer_type_dict
         ksize = 3
 
         self.decoder = nn.ModuleDict(

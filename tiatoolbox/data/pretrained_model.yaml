@@ -643,6 +643,14 @@ hovernet_fast-pannuke:
         kwargs:
             num_types: 6
             mode: "fast"
+            nuc_type_dict: {
+                0: "Background",
+                1: "Neoplastic",
+                2: "Inflammatory",
+                3: "Connective",
+                4: "Dead",
+                5: "Non-Neoplastic Epithelial",
+            }
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
@@ -666,6 +674,13 @@ hovernet_fast-monusac:
         kwargs:
             num_types: 5
             mode: "fast"
+            nuc_type_dict: {
+                0: "Background",
+                1: "Epithelial",
+                2: "Lymphocyte",
+                3: "Macrophage",
+                4: "Neutrophil",
+            }
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
@@ -689,6 +704,13 @@ hovernet_original-consep:
         kwargs:
             num_types: 5
             mode: "original"
+            nuc_type_dict: {
+                0: "Background",
+                1: "Epithelial",
+                2: "Inflammatory",
+                3: "Spindle-Shaped",
+                4: "Miscellaneous",
+            }
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
@@ -734,6 +756,18 @@ hovernetplus-oed:
         kwargs:
             num_types: 3
             num_layers: 5
+            nuc_type_dict: {
+                0: "Background",
+                1: "Other",
+                2: "Epithelial",
+            }
+            layer_type_dict: {
+                0: "Background",
+                1: "Other Tissue",
+                2: "Basal Epithelium",
+                3: "(Core) Epithelium",
+                4: "Keratin",
+            }
     ioconfig:
         class: semantic_segmentor.IOSegmentorConfig
         kwargs:
