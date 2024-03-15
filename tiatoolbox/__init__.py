@@ -125,4 +125,5 @@ if __name__ == "__main__":
     tiatoolbox = _lazy_import("tiatoolbox", location)
     tools = _lazy_import("tools", location)
     utils = _lazy_import("utils", location)
+    visualization = _lazy_import("visualization", location)
     wsicore = _lazy_import("wsicore", location)
