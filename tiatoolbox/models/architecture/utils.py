@@ -45,7 +45,7 @@ def compile_model(
         return model
 
     if isinstance(
-        model, torch._dynamo.eval_frame.OptimizedModule, # skipcq: PYL-W0212 # noqa: SLF001, E501
+        model, torch._dynamo.eval_frame.OptimizedModule,  # skipcq: PYL-W0212 # noqa: SLF001, E501
     ):
         logger.warning(
             ("The model is already compiled. ",),
