@@ -618,7 +618,7 @@ def test_pt_size_spinner(doc: Document) -> None:
     pt_size_spinner.value = 10
     # check that the point size has been set correctly
     assert (
-        main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.size
+        main.UI["p"].renderers[main.UI["vstate"].layer_dict["nodes"]].glyph.radius
         == 2 * 10
     )
 
