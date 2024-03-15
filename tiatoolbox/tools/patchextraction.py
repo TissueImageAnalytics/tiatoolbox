@@ -21,6 +21,71 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import Resolution, Units
 
 
+def validate_shape(shape: np.ndarray) -> bool:
+    """Test if the shape is valid for an image."""
+    return (
+        not np.issubdtype(shape.dtype, np.integer)
+        or np.size(shape) > 2  # noqa: PLR2004
+        or bool(np.any(shape < 0))
+    )
+
+
+class ExtractorParams(TypedDict, total=False):
+    """A subclass of TypedDict.
+
+    Defines the types of the keyword arguments passed into 'get_patch_extractor'.
+
+    """
+
+    input_img: str | Path | np.ndarray
+    locations_list: np.ndarray | DataFrame | str | Path
+    patch_size: int | tuple[int, int]
+    resolution: Resolution
+    units: Units
+    pad_mode: str
+    pad_constant_values: int | tuple[int, int]
+    within_bound: bool
+    input_mask: str | Path | np.ndarray | wsireader.WSIReader
+    stride: int | tuple[int, int]
+    min_mask_ratio: float
+
+
+class PointsPatchExtractorParams(TypedDict):
+    """A subclass of TypedDict.
+
+    Defines the types of the keyword arguments passed to PointsPatchExtractor.
+
+    """
+
+    input_img: str | Path | np.ndarray
+    locations_list: np.ndarray | DataFrame | str | Path
+    patch_size: int | tuple[int, int]
+    resolution: Resolution
+    units: Units
+    pad_mode: str
+    pad_constant_values: int | tuple[int, int]
+    within_bound: bool
+
+
+class SlidingWindowPatchExtractorParams(TypedDict):
+    """A subclass of TypedDict.
+
+    Defines the types of the keyword arguments passed to SlidingWindowPatchExtractor.
+
+    """
+
+    input_img: str | Path | np.ndarray
+    patch_size: int | tuple[int, int]
+    resolution: Resolution
+    units: Units
+    pad_mode: str
+    pad_constant_values: int | tuple[int, int]
+    within_bound: bool
+    input_mask: str | Path | np.ndarray | wsireader.WSIReader | None
+    stride: int | tuple[int, int] | None
+    min_mask_ratio: float
+
+
 class PatchExtractorABC(ABC):
     """Abstract base class for Patch Extraction in tiatoolbox."""
 
@@ -729,68 +794,3 @@ def get_patch_extractor(
         "within_bound": kwargs.get("within_bound", False),
     }
     return SlidingWindowPatchExtractor(**sliding_window_patch_extractor_args)
-
-
-class ExtractorParams(TypedDict, total=False):
-    """A subclass of TypedDict.
-
-    Defines the types of the keyword arguments passed into 'get_patch_extractor'.
-
-    """
-
-    input_img: str | Path | np.ndarray
-    locations_list: np.ndarray | DataFrame | str | Path
-    patch_size: int | tuple[int, int]
-    resolution: Resolution
-    units: Units
-    pad_mode: str
-    pad_constant_values: int | tuple[int, int]
-    within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.WSIReader
-    stride: int | tuple[int, int]
-    min_mask_ratio: float
-
-
-class PointsPatchExtractorParams(TypedDict):
-    """A subclass of TypedDict.
-
-    Defines the types of the keyword arguments passed to PointsPatchExtractor.
-
-    """
-
-    input_img: str | Path | np.ndarray
-    locations_list: np.ndarray | DataFrame | str | Path
-    patch_size: int | tuple[int, int]
-    resolution: Resolution
-    units: Units
-    pad_mode: str
-    pad_constant_values: int | tuple[int, int]
-    within_bound: bool
-
-
-class SlidingWindowPatchExtractorParams(TypedDict):
-    """A subclass of TypedDict.
-
-    Defines the types of the keyword arguments passed to SlidingWindowPatchExtractor.
-
-    """
-
-    input_img: str | Path | np.ndarray
-    patch_size: int | tuple[int, int]
-    resolution: Resolution
-    units: Units
-    pad_mode: str
-    pad_constant_values: int | tuple[int, int]
-    within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.WSIReader | None
-    stride: int | tuple[int, int] | None
-    min_mask_ratio: float
-
-
-def validate_shape(shape: np.ndarray) -> bool:
-    """Test if the shape is valid for an image."""
-    return (
-        not np.issubdtype(shape.dtype, np.integer)
-        or np.size(shape) > 2  # noqa: PLR2004
-        or bool(np.any(shape < 0))
-    )
