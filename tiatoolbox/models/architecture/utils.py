@@ -38,6 +38,7 @@ def compile_model(
     if disable:
         return model
 
+    # This check will be removed when torch.compile is supported in Python 3.12+
     if sys.version_info >= (3, 12):
         logger.warning(
             ("torch-compile is currently not supported in Python 3.12+. ",),
