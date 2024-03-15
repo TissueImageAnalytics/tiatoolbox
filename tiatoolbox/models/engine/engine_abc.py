@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
-from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -882,5 +881,4 @@ class EngineABC(ABC):
         # highest_input_resolution, implement dataloader,
         # pre-processing, post-processing and save_output
         # for WSIs separately.
-
-        return OrderedDict()
+        raise NotImplementedError

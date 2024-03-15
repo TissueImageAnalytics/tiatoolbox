@@ -258,7 +258,7 @@ def test_engine_initalization() -> NoReturn:
     assert isinstance(eng, EngineABC)
 
 
-def test_engine_run() -> NoReturn:
+def test_engine_run(tmp_path: Path) -> NoReturn:
     """Test engine run."""
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
@@ -334,6 +334,15 @@ def test_engine_run() -> NoReturn:
     )
     assert "predictions" in out
     assert "labels" in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    with pytest.raises(NotImplementedError):
+        eng.run(
+            images=np.zeros(shape=(10, 224, 224, 3)),
+            save_dir=tmp_path / "output",
+            patch_mode=False,
+        )
 
 
 def test_engine_run_with_verbose() -> NoReturn:
