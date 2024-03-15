@@ -7,6 +7,7 @@ from cmath import pi
 from typing import Any
 
 import numpy as np
+from bokeh.models import Button, CloseDialog, Column, Dialog, OpenDialog
 
 scale_factor = 2
 init_res = 40211.5 * scale_factor * (2 / (100 * pi))
@@ -86,3 +87,22 @@ class UIPlugin(ABC):
 
     def add_to_ui(self: UIPlugin) -> None:  # noqa: B027
         """Insert a UI element into the existing main UI panel."""
+
+
+def make_into_popup(layout, trigger: callable, title="popup") -> Dialog:
+    """Make a layout into a popup, that will open on trigger callback."""
+    close_plot = Button(label="Close")
+    dialog = Dialog(
+        title=title,
+        content=Column(
+            sizing_mode="stretch_both",
+            children=[
+                layout,
+                close_plot,
+            ],
+        ),
+    )
+    trigger(OpenDialog(dialog=dialog))
+    close_plot.js_on_click(CloseDialog(dialog=dialog))
+
+    return dialog

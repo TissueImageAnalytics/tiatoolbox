@@ -4,12 +4,12 @@ import json
 from pathlib import Path
 
 import numpy as np
-from bokeh.models import Button, ColumnDataSource, Row, Select
+from bokeh.models import Button, Column, ColumnDataSource, Select
 from bokeh.plotting import figure
 from scipy.stats import gaussian_kde
 
 from tiatoolbox import logger
-from tiatoolbox.visualization.ui_utils import UIPlugin
+from tiatoolbox.visualization.ui_utils import UIPlugin, make_into_popup
 
 
 def make_histogram(x: list, p: figure) -> None:
@@ -157,5 +157,11 @@ class StatsPlot(UIPlugin):
         # associate callbaks
         get_stats_btn.on_click(get_stats_cb)
         property_select.on_change("value", property_select_cb)
+        make_into_popup(
+            Column(children=[property_select, p]),
+            get_stats_btn.js_on_click,
+            "Stats",
+        )
 
-        return [Row(property_select, get_stats_btn), p]
+        # return [Row(property_select, get_stats_btn), p]
+        return [get_stats_btn]
