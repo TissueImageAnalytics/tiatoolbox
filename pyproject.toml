@@ -1,28 +1,6 @@
 [tool.pytest.ini_options]
   collect_ignore = ["setup.py", "benchmark/"]
 
-[tool.black]
-  exclude = '''
-  /(
-      \.eggs
-    | \.git
-    | \.hg
-    | \.mypy_cache
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | docs
-    | data
-    | setup.py
-  )/
-  '''
-  include = '\.pyi?$'
-  line-length = 88
-  target-version = ['py37', 'py38', 'py39', 'py310']
-
-
 [tool.coverage.run]
   branch = true
   source = ['tiatoolbox']
@@ -126,7 +104,8 @@ lint.select = [
   "SLOT",  # flake8-slots
   "ASYNC", # flake8-async
 ]
-lint.ignore = []
+# Ignore rules which conflict with ruff formatter.
+lint.ignore = ["COM812", "ISC001",]
 # Allow Ruff to discover `*.ipynb` files.
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 
@@ -171,6 +150,27 @@ convention = "google"
 
 [tool.ruff.lint.pylint]
 max-args = 10
+
+[tool.ruff.format]
+exclude = [
+    ".eggs",
+    ".git",
+    ".ruff_cache",
+    ".svn",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "build",
+    "dist",
+    "venv",
+    ".hg",
+    ".mypy_cache",
+    "buck-out",
+    "docs",
+    "data",
+    "setup.py",
+]
+skip-magic-trailing-comma = false
 
 [tool.mypy]
 ignore_missing_imports = true
