@@ -778,6 +778,8 @@ class EngineABC(ABC):
             setattr(self, key, kwargs.get(key))
 
         self.patch_mode = patch_mode
+        if self.cache_mode and self.cache_size > self.batch_size:
+            self.batch_size = self.cache_size
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
         self.images = self._validate_images_masks(images=images)
