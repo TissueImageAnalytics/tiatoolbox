@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import torch
@@ -15,7 +15,7 @@ from torch import nn
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
-from tiatoolbox.models.models_abc import load_torch_model, model_to
+from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store,
     dict_to_zarr,
@@ -84,6 +84,27 @@ def prepare_engines_save_dir(
     save_dir.mkdir(parents=True, exist_ok=overwrite)
 
     return save_dir
+
+
+class EngineABCRunParams(TypedDict, total=False):
+    """Class describing the input parameters for the run function.
+
+    Defines the expected keyword arguments for the EngineABC.run() function.
+
+    """
+
+    batch_size: int
+    device: str
+    ioconfig: ModelIOConfigABC
+    merge_predictions: bool
+    num_loader_workers: int
+    num_post_proc_workers: int
+    patch_input_shape: IntPair
+    resolution: Resolution
+    return_labels: bool
+    stride_shape: IntPair
+    units: Units
+    verbose: bool
 
 
 class EngineABC(ABC):
@@ -747,7 +768,7 @@ class EngineABC(ABC):
         save_dir: os | Path | None = None,  # None will not save output
         overwrite: bool = False,
         output_type: str = "dict",
-        **kwargs: dict,
+        **kwargs: EngineABCRunParams,
     ) -> AnnotationStore | Path | str | dict:
         """Run the engine on input images.
 
@@ -785,8 +806,8 @@ class EngineABC(ABC):
                 then the output will be intermediately saved as zarr but converted
                 to :class:`AnnotationStore` and saved as a `.db` file
                 at the end of the loop.
-            **kwargs (dict):
-                Keyword Args to update :class:`EngineABC` attributes.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update :class:`EngineABC` attributes during runtime.
 
         Returns:
             (:class:`numpy.ndarray`, dict):
@@ -853,8 +874,8 @@ class EngineABC(ABC):
         self.labels = labels
 
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
-        self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
-        self.model = model_to(model=self.model, device=self.device)
+        self._ioconfig = self._load_ioconfig(ioconfig=self.ioconfig)
+        self.model.to(device=self.device)
 
         save_dir = prepare_engines_save_dir(
             save_dir=save_dir,
