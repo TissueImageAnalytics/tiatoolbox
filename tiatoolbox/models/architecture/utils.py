@@ -15,8 +15,8 @@ from tiatoolbox import logger
 def compile_model(
     model: nn.Module | None = None,
     *,
-    mode: str,
-    disable: bool,
+    mode: str = "default",
+    disable: bool = False,
 ) -> Callable:
     """A decorator to compile a model using torch-compile.
 
