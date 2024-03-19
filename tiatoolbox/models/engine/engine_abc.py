@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, TypedDict
 import numpy as np
 import torch
 import tqdm
+import zarr
 from torch import nn
 
 from tiatoolbox import logger
@@ -19,6 +20,7 @@ from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store,
     dict_to_zarr,
+    write_to_zarr_in_cache_mode,
 )
 
 from .io_config import ModelIOConfigABC
@@ -402,12 +404,15 @@ class EngineABC(ABC):
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
+        save_path: Path | None,
     ) -> dict:
         """Runs model inference on image patches and returns output as a dictionary.
 
         Args:
             dataloader (DataLoader):
                 An :class:`torch.utils.data.DataLoader` object to run inference.
+            save_path (Path | None):
+                If cache_mode is True then path to save zarr file must be provided.
 
         Returns:
             dict:
@@ -425,16 +430,17 @@ class EngineABC(ABC):
                 position=0,
             )
 
-        raw_predictions = {
-            "predictions": [],
-        }
-
-        # if cache_mode:
-        # raw_predictions save to zarr
-        # cache_size based
+        keys = ["predictions"]
 
         if self.return_labels:
-            raw_predictions["labels"] = []
+            keys.append("labels")
+
+        raw_predictions = dict.fromkeys(keys, [])
+
+        zarr_group = None
+
+        if self.cache_mode:
+            zarr_group = zarr.open(save_path, mode="w")
 
         for _, batch_data in enumerate(dataloader):
             batch_output_predictions = self.model.infer_batch(
@@ -449,6 +455,9 @@ class EngineABC(ABC):
                 # We do not use tolist here because label may be of mixed types
                 # and hence collated as list by torch
                 raw_predictions["labels"].extend(list(batch_data["label"]))
+
+            if self.cache_mode:
+                zarr_group = write_to_zarr_in_cache_mode(zarr_group=zarr_group, output_data_to_save=raw_predictions)
 
             if progress_bar:
                 progress_bar.update()
@@ -807,7 +816,10 @@ class EngineABC(ABC):
         )
 
     def _run_patch_mode(
-        self: EngineABC, output_type: str, save_dir: Path, **kwargs: EngineABCRunParams
+        self: EngineABC,
+        output_type: str,
+        save_dir: Path,
+        **kwargs: EngineABCRunParams
     ) -> dict | AnnotationStore | Path:
         """Runs the Engine in the patch mode.
 
@@ -821,6 +833,7 @@ class EngineABC(ABC):
         )
         raw_predictions = self.infer_patches(
             dataloader=dataloader,
+            save_path=save_dir / "out.zarr"
         )
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
@@ -875,7 +888,7 @@ class EngineABC(ABC):
                 Whether to overwrite the results. Default = False.
             output_type (str):
                 The format of the output type. "output_type" can be
-                "zarr", "AnnotationStore". Default is "zarr".
+                "zarr" or "AnnotationStore". Default is "zarr".
                 When saving in the zarr format the output is saved using the
                 `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
                 as a zarr group. If the required output type is an "AnnotationStore"

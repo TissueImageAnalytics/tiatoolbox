@@ -1451,3 +1451,47 @@ def wsi_batch_output_to_zarr_group(
         labels_zarr.append(batch_output_label)
 
     return wsi_batch_zarr_group
+
+
+def write_to_zarr_in_cache_mode(
+    zarr_group: zarr.group | None,
+    output_data_to_save: dict,
+    **kwargs: dict,
+) -> zarr.group | Path:
+    """Saves the intermediate batch outputs of TIAToolbox engines to a zarr file.
+
+    Args:
+        zarr_group (zarr.group):
+            Optional zarr group name consisting of zarrs to save the batch output
+            values.
+        output_data_to_save (dict):
+            Output data from the Engine to save to Zarr.
+        **kwargs (dict):
+            Keyword Args to update zarr_group attributes.
+
+    Returns:
+        Path to zarr file storing the patch predictor output
+
+    """
+    # Default values for Compressor and Chunks set if not received from kwargs.
+    compressor = (
+        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
+    )
+
+    # case 1 - new zarr group
+    if not zarr_group:
+        for key in output_data_to_save:
+            data_to_save = output_data_to_save[key]
+            # populate the zarr group for the first time
+            zarr_dataset = zarr_group.create_dataset(
+                name=key,
+                shape=data_to_save.shape,
+                compressor=compressor,
+            )
+            zarr_dataset[:] = data_to_save
+
+    # case 2 - append to existing zarr group
+    for key in output_data_to_save:
+        zarr_group[key].append(output_data_to_save[key])
+
+    return zarr_group
