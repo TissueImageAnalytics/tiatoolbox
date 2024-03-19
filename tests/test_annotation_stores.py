@@ -1550,8 +1550,7 @@ class TestStore:
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
             # (0, 0, 1024, 1024),  # noqa: ERA001
-            where=lambda props: props.get("class")
-            == 123,
+            where=lambda props: props.get("class") == 123,
         )
         assert len(results) == 1
 

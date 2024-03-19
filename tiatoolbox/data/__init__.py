@@ -1,5 +1,6 @@
 # skipcq: PTC-W6004  # noqa: ERA001
 """Package to define datasets available to download via TIAToolbox."""
+
 from __future__ import annotations
 
 import importlib.resources as importlib_resources

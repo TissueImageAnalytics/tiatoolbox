@@ -267,10 +267,13 @@ def main(
     if tracker_filepath.is_file():
         tracker_filepath.unlink()
 
-    with NamedTemporaryFile(mode="w+") as temp_file, memray.Tracker(
-        tracker_filepath,
-        native_traces=True,
-        follow_fork=True,
+    with (
+        NamedTemporaryFile(mode="w+") as temp_file,
+        memray.Tracker(
+            tracker_filepath,
+            native_traces=True,
+            follow_fork=True,
+        ),
     ):
         io = ":memory:" if in_memory else temp_file  # Backing (memory/disk)
         print(f"Storing {size[0] * size[1]} cells")
