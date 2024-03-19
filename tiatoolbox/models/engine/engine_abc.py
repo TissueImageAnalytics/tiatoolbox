@@ -94,6 +94,8 @@ class EngineABCRunParams(TypedDict, total=False):
     """
 
     batch_size: int
+    cache_mode: bool
+    cache_size: int
     device: str
     ioconfig: ModelIOConfigABC
     merge_predictions: bool
@@ -264,16 +266,18 @@ class EngineABC(ABC):
         self._ioconfig = self.ioconfig  # runtime ioconfig
 
         self.batch_size = batch_size
+        self.cache_mode: bool = False
+        self.cache_size: int = self.batch_size if self.batch_size else 10000
+        self.labels: list | None = None
+        self.merge_predictions: bool = False
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
-        self.verbose = verbose
-        self.return_labels: bool = False
-        self.merge_predictions: bool = False
-        self.units: Units = "baseline"
-        self.resolution: Resolution = 1.0
         self.patch_input_shape: IntPair | None = None
+        self.resolution: Resolution = 1.0
+        self.return_labels: bool = False
         self.stride_shape: IntPair | None = None
-        self.labels: list | None = None
+        self.units: Units = "baseline"
+        self.verbose = verbose
 
     @staticmethod
     def _initialize_model_ioconfig(
@@ -775,7 +779,7 @@ class EngineABC(ABC):
 
         """
         for key in kwargs:
-            setattr(self, key, kwargs[key])
+            setattr(self, key, kwargs.get(key))
 
         self.patch_mode = patch_mode
 
