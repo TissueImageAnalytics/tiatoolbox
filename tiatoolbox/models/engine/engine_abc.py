@@ -457,7 +457,9 @@ class EngineABC(ABC):
                 raw_predictions["labels"].extend(list(batch_data["label"]))
 
             if self.cache_mode:
-                zarr_group = write_to_zarr_in_cache_mode(zarr_group=zarr_group, output_data_to_save=raw_predictions)
+                zarr_group = write_to_zarr_in_cache_mode(
+                    zarr_group=zarr_group, output_data_to_save=raw_predictions
+                )
 
             if progress_bar:
                 progress_bar.update()
@@ -816,10 +818,7 @@ class EngineABC(ABC):
         )
 
     def _run_patch_mode(
-        self: EngineABC,
-        output_type: str,
-        save_dir: Path,
-        **kwargs: EngineABCRunParams
+        self: EngineABC, output_type: str, save_dir: Path, **kwargs: EngineABCRunParams
     ) -> dict | AnnotationStore | Path:
         """Runs the Engine in the patch mode.
 
@@ -832,8 +831,7 @@ class EngineABC(ABC):
             patch_mode=True,
         )
         raw_predictions = self.infer_patches(
-            dataloader=dataloader,
-            save_path=save_dir / "out.zarr"
+            dataloader=dataloader, save_path=save_dir / "out.zarr"
         )
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
