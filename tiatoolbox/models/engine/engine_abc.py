@@ -757,6 +757,44 @@ class EngineABC(ABC):
             )
         return
 
+    def _update_run_params(
+        self: EngineABC,
+        images: list[os | Path | WSIReader] | np.ndarray,
+        masks: list[os | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        save_dir: os | Path | None = None,
+        *,
+        overwrite: bool = False,
+        patch_mode: bool,
+        **kwargs: EngineABCRunParams) -> Path | None:
+        """Updates runtime parameters.
+
+        Updates runtime parameters for an EngineABC for EngineABC.run().
+
+        """
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
+
+        self.patch_mode = patch_mode
+
+        self._validate_input_numbers(images=images, masks=masks, labels=labels)
+        self.images = self._validate_images_masks(images=images)
+
+        if masks is not None:
+            self.masks = self._validate_images_masks(images=masks)
+
+        self.labels = labels
+
+        # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
+        self._ioconfig = self._load_ioconfig(ioconfig=self.ioconfig)
+        self.model.to(device=self.device)
+
+        return prepare_engines_save_dir(
+            save_dir=save_dir,
+            patch_mode=patch_mode,
+            overwrite=overwrite,
+        )
+
     def run(
         self: EngineABC,
         images: list[os | Path | WSIReader] | np.ndarray,
@@ -860,27 +898,14 @@ class EngineABC(ABC):
             >>> output
             ... '/tmp/patch_output/output.zarr'
         """
-        for key in kwargs:
-            setattr(self, key, kwargs[key])
-
-        self.patch_mode = patch_mode
-
-        self._validate_input_numbers(images=images, masks=masks, labels=labels)
-        self.images = self._validate_images_masks(images=images)
-
-        if masks is not None:
-            self.masks = self._validate_images_masks(images=masks)
-
-        self.labels = labels
-
-        # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
-        self._ioconfig = self._load_ioconfig(ioconfig=self.ioconfig)
-        self.model.to(device=self.device)
-
-        save_dir = prepare_engines_save_dir(
+        save_dir = self._update_run_params(
+            images=images,
+            masks=masks,
+            labels=labels,
             save_dir=save_dir,
-            patch_mode=patch_mode,
             overwrite=overwrite,
+            patch_mode=patch_mode,
+            **kwargs
         )
 
         if patch_mode:
