@@ -1454,7 +1454,7 @@ def wsi_batch_output_to_zarr_group(
 
 
 def write_to_zarr_in_cache_mode(
-    zarr_group: zarr.group | None,
+    zarr_group: zarr.group,
     output_data_to_save: dict,
     **kwargs: dict,
 ) -> zarr.group | Path:
@@ -1462,7 +1462,7 @@ def write_to_zarr_in_cache_mode(
 
     Args:
         zarr_group (zarr.group):
-            Optional zarr group name consisting of zarrs to save the batch output
+            Zarr group name consisting of zarr(s) to save the batch output
             values.
         output_data_to_save (dict):
             Output data from the Engine to save to Zarr.

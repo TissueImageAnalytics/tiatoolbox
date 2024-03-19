@@ -109,6 +109,7 @@ class EngineABCRunParams(TypedDict, total=False):
     stride_shape: IntPair
     units: Units
     verbose: bool
+    output_file: str
 
 
 class EngineABC(ABC):
@@ -467,6 +468,34 @@ class EngineABC(ABC):
         if progress_bar:
             progress_bar.close()
 
+        return zarr_group if self.cache_mode else raw_predictions
+
+    @staticmethod
+    def post_process_patches(
+        raw_predictions: dict | zarr.group,
+        **kwargs: dict,
+    ) -> dict | zarr.group:
+        """Save Patch predictions.
+
+        A dictionary or zarr group with patch prediction information from
+        the output of :func:`infer_patches()` will be used to post process
+        the predictions. The processed output will be saved in the respective
+        format. If cache mode is True, the function process the input using
+        zarr group in a loop with size specified by cache_size.
+
+        Args:
+            raw_predictions (dict):
+                A dictionary or zarr group with patch prediction information.
+            **kwargs (dict):
+                Keyword Args to update setup_patch_dataset() method attributes.
+
+        Returns:
+            dict:
+                Return patch based output after post-processing.
+
+        """
+        _ = kwargs.get("key_values")  # Key values required for post-processing
+
         return raw_predictions
 
     def save_predictions(
@@ -499,14 +528,10 @@ class EngineABC(ABC):
             is provided.
 
         """
-        if self.cache_mode or (not save_dir and output_type != "AnnotationStore"):
+        if (self.cache_mode or not save_dir) and output_type != "AnnotationStore":
             return processed_predictions
 
-        output_file = (
-            kwargs["output_file"] and kwargs.pop("output_file")
-            if "output_file" in kwargs
-            else "output"
-        )
+        output_file = Path(kwargs.get("output_file", "output.db"))
 
         save_path = save_dir / output_file
 
@@ -516,6 +541,7 @@ class EngineABC(ABC):
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
+            # Need to add support for zarr conversion.
             return dict_to_store(
                 processed_predictions,
                 scale_factor,
@@ -523,37 +549,15 @@ class EngineABC(ABC):
                 save_path,
             )
 
-        return dict_to_zarr(
-            processed_predictions,
-            save_path,
-            **kwargs,
+        return (
+            dict_to_zarr(
+                processed_predictions,
+                save_path,
+                **kwargs,
+            )
+            if isinstance(processed_predictions, dict)
+            else processed_predictions
         )
-
-    @staticmethod
-    def post_process_patches(
-        raw_predictions: dict,
-        # cache_mode: bool,
-        # cache_size: bool,
-        **kwargs: dict,
-    ) -> dict:
-        """Save Patch predictions.
-
-        Args:
-            raw_predictions (dict):
-                A dictionary of patch prediction information.
-            **kwargs (dict):
-                Keyword Args to update setup_patch_dataset() method attributes.
-
-        Returns:
-            dict:
-                Return patch based output after post-processing.
-
-        """
-        _ = kwargs.get("key_values")  # Key values required for post-processing
-        # _ = cache_mode # if post-processing of patches is required.
-        # _ = cache_size # if post-processing of patches is required in cache_mode.
-
-        return raw_predictions
 
     @abstractmethod
     def infer_wsi(
@@ -825,13 +829,14 @@ class EngineABC(ABC):
         Input arguments are passed from :func:`EngineABC.run()`.
 
         """
+        output_file = Path(kwargs.get("output_file", "output.db"))
         dataloader = self.get_dataloader(
             images=self.images,
             labels=self.labels,
             patch_mode=True,
         )
         raw_predictions = self.infer_patches(
-            dataloader=dataloader, save_path=save_dir / "out.zarr"
+            dataloader=dataloader, save_path=save_dir / str(output_file.stem) + ".zarr"
         )
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
