@@ -763,10 +763,12 @@ class EngineABC(ABC):
         masks: list[os | Path] | np.ndarray | None = None,
         labels: list | None = None,
         save_dir: os | Path | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         *,
         overwrite: bool = False,
         patch_mode: bool,
-        **kwargs: EngineABCRunParams) -> Path | None:
+        **kwargs: EngineABCRunParams
+    ) -> Path | None:
         """Updates runtime parameters.
 
         Updates runtime parameters for an EngineABC for EngineABC.run().
@@ -788,11 +790,53 @@ class EngineABC(ABC):
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=self.ioconfig)
         self.model.to(device=self.device)
+        self._ioconfig = self._update_ioconfig(
+            ioconfig,
+            self.patch_input_shape,
+            self.stride_shape,
+            self.resolution,
+            self.units,
+        )
 
         return prepare_engines_save_dir(
             save_dir=save_dir,
             patch_mode=patch_mode,
             overwrite=overwrite,
+        )
+
+    def _run_patch_mode(
+        self: EngineABC,
+        output_type: str,
+        save_dir: Path,
+        **kwargs: EngineABCRunParams
+    ) -> dict | AnnotationStore | Path:
+        """Runs the Engine in the patch mode.
+
+        Input arguments are passed from :func:`EngineABC.run()`.
+
+        """
+        dataloader = self.get_dataloader(
+            images=self.images,
+            labels=self.labels,
+            patch_mode=True,
+        )
+        raw_predictions = self.infer_patches(
+            dataloader=dataloader,
+            # cache_mode = True | False,
+            # cache_size = 10000, # by default it can be equal to batch_size
+        )
+        processed_predictions = self.post_process_patches(
+            raw_predictions=raw_predictions,
+            # cache_mode = True | False,
+            # cache_size = self.batch_size,   # number of patches
+            **kwargs,
+        )
+        return self.save_predictions(
+            processed_predictions=processed_predictions,
+            output_type=output_type,
+            save_dir=save_dir,
+            # cache_mode = True | False,
+            **kwargs,
         )
 
     def run(
@@ -903,43 +947,18 @@ class EngineABC(ABC):
             masks=masks,
             labels=labels,
             save_dir=save_dir,
+            ioconfig=ioconfig,
             overwrite=overwrite,
             patch_mode=patch_mode,
             **kwargs
         )
 
         if patch_mode:
-            dataloader = self.get_dataloader(
-                images=self.images,
-                labels=self.labels,
-                patch_mode=patch_mode,
-            )
-            raw_predictions = self.infer_patches(
-                dataloader=dataloader,
-                # cache_mode = True | False,
-                # cache_size = 10000, # by default it can be equal to batch_size
-            )
-            processed_predictions = self.post_process_patches(
-                raw_predictions=raw_predictions,
-                # cache_mode = True | False,
-                # cache_size = self.batch_size,   # number of patches
-                **kwargs,
-            )
-            return self.save_predictions(
-                processed_predictions=processed_predictions,
+            return self._run_patch_mode(
                 output_type=output_type,
                 save_dir=save_dir,
-                # cache_mode = True | False,
                 **kwargs,
             )
-
-        self._ioconfig = self._update_ioconfig(
-            ioconfig,
-            self.patch_input_shape,
-            self.stride_shape,
-            self.resolution,
-            self.units,
-        )
 
         # All inherited classes will get scale_factors,
         # highest_input_resolution, implement dataloader,
