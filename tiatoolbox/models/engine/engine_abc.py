@@ -829,14 +829,19 @@ class EngineABC(ABC):
         Input arguments are passed from :func:`EngineABC.run()`.
 
         """
-        output_file = Path(kwargs.get("output_file", "output.db"))
+        save_path = None
+        if self.cache_mode:
+            output_file = Path(kwargs.get("output_file", "output.db"))
+            save_path = save_dir / (str(output_file.stem) + ".zarr")
+
         dataloader = self.get_dataloader(
             images=self.images,
             labels=self.labels,
             patch_mode=True,
         )
         raw_predictions = self.infer_patches(
-            dataloader=dataloader, save_path=save_dir / str(output_file.stem) + ".zarr"
+            dataloader=dataloader,
+            save_path=save_path,
         )
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
