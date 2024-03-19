@@ -2177,8 +2177,7 @@ class SQLiteStore(AnnotationStore):
         # Check if the path is a non-empty file
         exists = (
             # Use 'and' to short-circuit
-            self.path.is_file()
-            and self.path.stat().st_size > 0
+            self.path.is_file() and self.path.stat().st_size > 0
         )
         self.cons = {}
         self.con.execute("BEGIN")
@@ -2478,7 +2477,7 @@ class SQLiteStore(AnnotationStore):
         with sqlite3.connect(":memory:") as conn:
             conn.enable_load_extension(True)  # noqa: FBT003
             options = conn.execute("pragma compile_options").fetchall()
-        return [opt for opt, in options]
+        return [opt for (opt,) in options]
 
     def close(self: SQLiteStore) -> None:
         """Closes :class:`SQLiteStore` from file pointer or path."""
@@ -2861,7 +2860,7 @@ class SQLiteStore(AnnotationStore):
                 for key, properties in cur.fetchall()
                 if where(json.loads(properties))
             ]
-        return [key for key, in cur.fetchall()]
+        return [key for (key,) in cur.fetchall()]
 
     def query(
         self: SQLiteStore,
