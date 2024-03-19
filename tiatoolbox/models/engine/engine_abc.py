@@ -267,13 +267,13 @@ class EngineABC(ABC):
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.verbose = verbose
-        self.return_labels = False
-        self.merge_predictions = False
-        self.units = "baseline"
-        self.resolution = 1.0
-        self.patch_input_shape = None
-        self.stride_shape = None
-        self.labels = None
+        self.return_labels: bool = False
+        self.merge_predictions: bool = False
+        self.units: Units = "baseline"
+        self.resolution: Resolution = 1.0
+        self.patch_input_shape: IntPair | None = None
+        self.stride_shape: IntPair | None = None
+        self.labels: list | None = None
 
     @staticmethod
     def _initialize_model_ioconfig(
