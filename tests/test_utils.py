@@ -13,6 +13,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import torch
 from PIL import Image
 from requests import HTTPError
 from shapely.geometry import Polygon
@@ -21,6 +22,7 @@ from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import utils
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
@@ -1819,3 +1821,19 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
         misc.dict_to_store(patch_output, (1.0, 1.0))
+
+
+def test_torch_compile_already_compiled() -> None:
+    """Test that torch_compile does not recompile a model that is already compiled."""
+    # Create a simple model
+    model = torch.nn.Sequential(torch.nn.Linear(10, 10), torch.nn.Linear(10, 10))
+
+    # Compile the model
+    compiled_model = compile_model(model)
+
+    # Compile the model again
+    recompiled_model = compile_model(compiled_model)
+
+    # Check that the recompiled model
+    # is the same as the original compiled model
+    assert compiled_model == recompiled_model

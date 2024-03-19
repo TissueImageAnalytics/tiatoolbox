@@ -150,6 +150,7 @@ def get_pretrained_model(
     model.load_state_dict(saved_state_dict, strict=True)
 
     # !
+
     io_info = info["ioconfig"]
     creator = locate(f"tiatoolbox.models.engine.{io_info['class']}")
 
