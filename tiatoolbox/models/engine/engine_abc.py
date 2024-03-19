@@ -463,7 +463,6 @@ class EngineABC(ABC):
         processed_predictions: dict,
         output_type: str,
         save_dir: Path | None = None,
-        # cache_mode: bool = False,
         **kwargs: dict,
     ) -> dict | AnnotationStore | Path:
         """Save Patch predictions.
@@ -489,10 +488,7 @@ class EngineABC(ABC):
             is provided.
 
         """
-        # if cache_mode:
-        #     return processed_predictions
-
-        if not save_dir and output_type != "AnnotationStore":
+        if self.cache_mode or (not save_dir and output_type != "AnnotationStore"):
             return processed_predictions
 
         output_file = (
@@ -771,7 +767,7 @@ class EngineABC(ABC):
         *,
         overwrite: bool = False,
         patch_mode: bool,
-        **kwargs: EngineABCRunParams
+        **kwargs: EngineABCRunParams,
     ) -> Path | None:
         """Updates runtime parameters.
 
@@ -809,10 +805,7 @@ class EngineABC(ABC):
         )
 
     def _run_patch_mode(
-        self: EngineABC,
-        output_type: str,
-        save_dir: Path,
-        **kwargs: EngineABCRunParams
+        self: EngineABC, output_type: str, save_dir: Path, **kwargs: EngineABCRunParams
     ) -> dict | AnnotationStore | Path:
         """Runs the Engine in the patch mode.
 
@@ -826,20 +819,15 @@ class EngineABC(ABC):
         )
         raw_predictions = self.infer_patches(
             dataloader=dataloader,
-            # cache_mode = True | False,
-            # cache_size = 10000, # by default it can be equal to batch_size
         )
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
-            # cache_mode = True | False,
-            # cache_size = self.batch_size,   # number of patches
             **kwargs,
         )
         return self.save_predictions(
             processed_predictions=processed_predictions,
             output_type=output_type,
             save_dir=save_dir,
-            # cache_mode = True | False,
             **kwargs,
         )
 
@@ -954,7 +942,7 @@ class EngineABC(ABC):
             ioconfig=ioconfig,
             overwrite=overwrite,
             patch_mode=patch_mode,
-            **kwargs
+            **kwargs,
         )
 
         if patch_mode:
