@@ -32,7 +32,6 @@ from bokeh.models import (
     CustomJS,
     DataTable,
     Div,
-    Dropdown,
     FuncTickFormatter,
     Glyph,
     HoverTool,
@@ -724,7 +723,7 @@ def populate_layer_list(slide_name: str, overlay_path: Path) -> None:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
     file_list = [(str(p), str(p)) for p in sorted(file_list) if slide_name in str(p)]
-    UI["layer_drop"].menu = file_list
+    UI["layer_drop"].options = file_list
 
 
 def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> None:
@@ -884,7 +883,7 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
 
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
-        for f in UI["layer_drop"].menu:
+        for f in UI["layer_drop"].options:
             dummy_attr = DummyAttr(f[0])
             layer_drop_cb(dummy_attr)
 
@@ -998,22 +997,22 @@ def update_ui_on_new_annotations(ann_types: list[str]) -> None:
     change_tiles("overlay")
 
 
-def layer_drop_cb(attr: MenuItemClick) -> None:
+def layer_drop_cb(attr: str, old: str, new: str) -> None:
     """Set up the newly chosen overlay."""
-    if Path(attr.item).suffix == ".json":
+    if Path(new).suffix == ".json":
         # It's a graph
         handle_graph_layer(attr)
         return
 
     # Otherwise it's a tile-based overlay of some form
-    fname = make_safe_name(attr.item)
+    fname = make_safe_name(new)
     resp = UI["s"].put(
         f"http://{host2}:5000/tileserver/overlay",
         data={"overlay_path": fname},
     )
     resp = json.loads(resp.text)
 
-    if Path(attr.item).suffix in [".db", ".dat", ".geojson"]:
+    if Path(new).suffix in [".db", ".dat", ".geojson"]:
         update_ui_on_new_annotations(resp)
     else:
         add_layer(resp)
@@ -1550,10 +1549,9 @@ def gather_ui_elements(  # noqa: PLR0915
         ColorPicker(color=col[0:3], width=60, max_width=60, sizing_mode="stretch_width")
         for col in vstate.colors
     ]
-    layer_drop = Dropdown(
-        label="Add Overlay",
-        button_type="warning",
-        menu=[None],
+    layer_drop = Select(
+        title="Add Overlay",
+        options=[None],
         sizing_mode="stretch_width",
         name=f"layer_drop{win_num}",
     )
@@ -1577,7 +1575,7 @@ def gather_ui_elements(  # noqa: PLR0915
     scale_spinner.on_change("value", scale_spinner_cb)
     to_model_button.on_click(to_model_cb)
     model_drop.on_change("value", model_drop_cb)
-    layer_drop.on_click(layer_drop_cb)
+    layer_drop.on_change("value", layer_drop_cb)
     opt_buttons.on_change("active", opt_buttons_cb)
     slide_toggle.on_click(slide_toggle_cb)
     overlay_toggle.on_click(overlay_toggle_cb)
