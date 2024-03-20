@@ -671,7 +671,7 @@ class EngineABC(ABC):
             )
             raise ValueError(msg)
 
-        if ioconfig is not None:
+        if ioconfig and isinstance(ioconfig, ModelIOConfigABC):
             self.ioconfig = ioconfig
 
         return self.ioconfig
@@ -713,7 +713,7 @@ class EngineABC(ABC):
             resolution is None,
             units is None,
         )
-        if ioconfig:
+        if isinstance(ioconfig, ModelIOConfigABC):
             return ioconfig
 
         if self.ioconfig is None and any(config_flag):
@@ -831,7 +831,7 @@ class EngineABC(ABC):
         self.labels = labels
 
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
-        self._ioconfig = self._load_ioconfig(ioconfig=self.ioconfig)
+        self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
         self.model.to(device=self.device)
         self._ioconfig = self._update_ioconfig(
             ioconfig,

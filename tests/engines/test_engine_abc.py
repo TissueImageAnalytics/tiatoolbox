@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
@@ -545,3 +547,82 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
             output_type="dict",
             save_dir=tmp_path,
         )
+
+
+def test_io_config_delegation(tmp_path: Path) -> None:
+    """Test for delegating args to io config."""
+    # test not providing config / full input info for not pretrained models
+    model = CNNModel("resnet50")
+    eng = TestEngineABC(model=model)
+    with pytest.raises(ValueError, match=r".*Please provide a valid ModelIOConfigABC*"):
+        eng.run(
+            np.zeros((10, 224, 224, 3)), patch_mode=True, save_dir=tmp_path / "dump"
+        )
+
+    kwargs = {
+        "patch_input_shape": [512, 512],
+        "resolution": 1.75,
+        "units": "mpp",
+    }
+
+    # test providing config / full input info for non pretrained models
+    ioconfig = ModelIOConfigABC(
+        patch_input_shape=(512, 512),
+        stride_shape=(256, 256),
+        input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
+    )
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+        ioconfig=ioconfig,
+    )
+    assert eng._ioconfig.patch_input_shape == (512, 512)
+    assert eng._ioconfig.stride_shape == (256, 256)
+    assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+        **kwargs,
+    )
+    assert eng._ioconfig.patch_input_shape == [512, 512]
+    assert eng._ioconfig.stride_shape == [512, 512]
+    assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    # test overwriting pretrained ioconfig
+    eng = TestEngineABC(model="alexnet-kather100k")
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        resolution=1.99,
+        units="baseline",
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.patch_input_shape == (300, 300)
+    assert eng._ioconfig.stride_shape == (300, 300)
+    assert eng._ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    for key in kwargs:
+        _kwargs = copy.deepcopy(kwargs)
+        _kwargs[key] = None
+        eng.ioconfig = None
+        with pytest.raises(
+            ValueError,
+            match=r".*Must provide either `ioconfig` or "
+            r"`patch_input_shape`, `resolution`, and `units`*",
+        ):
+            eng._update_ioconfig(
+                ioconfig=None,
+                patch_input_shape=_kwargs["patch_input_shape"],
+                stride_shape=(1, 1),
+                resolution=_kwargs["resolution"],
+                units=_kwargs["units"],
+            )
