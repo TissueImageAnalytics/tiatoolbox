@@ -610,6 +610,19 @@ def test_io_config_delegation(tmp_path: Path) -> None:
     assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        resolution=None,
+        units=None,
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.patch_input_shape == (300, 300)
+    assert eng._ioconfig.stride_shape == (300, 300)
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
     eng.ioconfig = None
     _ioconfig = eng._update_ioconfig(
         ioconfig=None,
