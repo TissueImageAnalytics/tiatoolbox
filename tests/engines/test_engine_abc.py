@@ -14,6 +14,7 @@ from tiatoolbox.models.architecture import (
     get_pretrained_model,
 )
 from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.models.dataset import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
@@ -475,3 +476,29 @@ def test_cache_mode_patches(tmp_path: pytest.TempPathFactory) -> NoReturn:
     assert out.stem == output_file_name.split(".")[0]
     assert eng.batch_size == cache_size
     assert out.exists(), "Zarr output file does not exist"
+
+
+def test_get_dataloader(sample_svs: Path) -> None:
+    """Test the get_dataloader function."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    ioconfig = ModelIOConfigABC(
+        input_resolutions=[
+            {"units": "baseline", "resolution": 1.0},
+        ],
+        patch_input_shape=(224, 224),
+    )
+    dataloader = eng.get_dataloader(
+        images=np.zeros(shape=(10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        ioconfig=ioconfig,
+    )
+
+    assert isinstance(dataloader.dataset, PatchDataset)
+
+    dataloader = eng.get_dataloader(
+        images=sample_svs,
+        patch_mode=False,
+        ioconfig=ioconfig,
+    )
+
+    assert isinstance(dataloader.dataset, WSIPatchDataset)
