@@ -610,10 +610,23 @@ def test_io_config_delegation(tmp_path: Path) -> None:
     assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
+    eng.ioconfig = None
+    _ioconfig = eng._update_ioconfig(
+        ioconfig=None,
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        resolution=1.99,
+        units="baseline",
+    )
+
+    assert _ioconfig.patch_input_shape == (300, 300)
+    assert _ioconfig.stride_shape == (300, 300)
+    assert _ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert _ioconfig.input_resolutions[0]["units"] == "baseline"
+
     for key in kwargs:
         _kwargs = copy.deepcopy(kwargs)
         _kwargs[key] = None
-        eng.ioconfig = None
         with pytest.raises(
             ValueError,
             match=r".*Must provide either `ioconfig` or "
