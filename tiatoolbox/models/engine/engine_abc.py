@@ -436,7 +436,7 @@ class EngineABC(ABC):
         if self.return_labels:
             keys.append("labels")
 
-        raw_predictions = dict.fromkeys(keys, [])
+        raw_predictions = {key: [] for key in keys}
 
         zarr_group = None
 

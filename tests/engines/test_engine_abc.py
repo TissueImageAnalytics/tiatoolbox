@@ -476,7 +476,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
             )
         shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    # test providing config / full input info for non pretrained models
+    # test providing config / full input info for non-pretrained models
     ioconfig = ModelIOConfigABC(
         patch_input_shape=(512, 512),
         stride_shape=(256, 256),
