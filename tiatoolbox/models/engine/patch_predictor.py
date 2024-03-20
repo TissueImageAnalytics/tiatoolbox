@@ -5,48 +5,32 @@ from __future__ import annotations
 import copy
 from collections import OrderedDict
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, NoReturn
 
 import numpy as np
 import torch
 import tqdm
 
+import tiatoolbox.models.models_abc
 from tiatoolbox import logger
-from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
-from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
-from tiatoolbox.utils import misc, save_as_json
+from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
+from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    import os
+
+    from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.typing import IntPair, Resolution, Units
 
+    from .io_config import ModelIOConfigABC
 
-class IOPatchPredictorConfig(IOSegmentorConfig):
-    """Contains patch predictor input and output information."""
-
-    def __init__(
-        self: IOPatchPredictorConfig,
-        patch_input_shape: IntPair = None,
-        input_resolutions: Resolution = None,
-        stride_shape: IntPair = None,
-        **kwargs: dict,
-    ) -> None:
-        """Initialize :class:`IOPatchPredictorConfig`."""
-        stride_shape = patch_input_shape if stride_shape is None else stride_shape
-        super().__init__(
-            input_resolutions=input_resolutions,
-            output_resolutions=[],
-            stride_shape=stride_shape,
-            patch_input_shape=patch_input_shape,
-            patch_output_shape=patch_input_shape,
-            save_resolution=None,
-            **kwargs,
-        )
+from .engine_abc import EngineABC
+from .io_config import IOPatchPredictorConfig
 
 
-class PatchPredictor:
-    r"""Patch level predictor.
+class PatchPredictor(EngineABC):
+    r"""Patch level predictor for digital histology images.
 
     The models provided by tiatoolbox should give the following results:
 
@@ -146,12 +130,12 @@ class PatchPredictor:
             be downloaded. However, you can override with your own set
             of weights via the `pretrained_weights` argument. Argument
             is case-insensitive.
-        pretrained_weights (str):
+        weights (str):
             Path to the weight of the corresponding `pretrained_model`.
 
           >>> predictor = PatchPredictor(
           ...    pretrained_model="resnet18-kather100k",
-          ...    pretrained_weights="resnet18_local_weight")
+          ...    weights="resnet18_local_weight")
 
         batch_size (int):
             Number of images fed into the model each time.
@@ -162,14 +146,14 @@ class PatchPredictor:
             Whether to output logging information.
 
     Attributes:
-        img (:obj:`str` or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
+        images (str or :obj:`pathlib.Path` or :obj:`numpy.ndarray`):
             A HWC image or a path to WSI.
         mode (str):
             Type of input to process. Choose from either `patch`, `tile`
             or `wsi`.
         model (nn.Module):
             Defined PyTorch model.
-        pretrained_model (str):
+        model (str):
             Name of the existing models support by tiatoolbox for
             processing the data. For a full list of pretrained models,
             refer to the `docs
@@ -187,7 +171,7 @@ class PatchPredictor:
 
     Examples:
         >>> # list of 2 image patches as input
-        >>> data = [img1, img2]
+        >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
@@ -226,35 +210,39 @@ class PatchPredictor:
         self: PatchPredictor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
+        num_post_proc_workers: int = 0,
         model: torch.nn.Module = None,
         pretrained_model: str | None = None,
-        pretrained_weights: str | None = None,
+        weights: str | None = None,
         *,
         verbose: bool = True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
-        super().__init__()
+        super().__init__(
+            batch_size=batch_size,
+            num_loader_workers=num_loader_workers,
+            num_post_proc_workers=num_post_proc_workers,
+            model=model,
+            pretrained_model=pretrained_model,
+            weights=weights,
+            verbose=verbose,
+        )
 
-        self.imgs = None
-        self.mode = None
+    def pre_process_wsi(self: PatchPredictor) -> NoReturn:
+        """Pre-process a WSI."""
 
-        if model is None and pretrained_model is None:
-            msg = "Must provide either `model` or `pretrained_model`."
-            raise ValueError(msg)
+    def infer_wsi(self: PatchPredictor) -> NoReturn:
+        """Model inference on a WSI."""
 
-        if model is not None:
-            self.model = model
-            ioconfig = None  # retrieve iostate from provided model ?
-        else:
-            model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
+    def post_process_patches(
+        self: PatchPredictor,
+        raw_predictions: dict,
+        output_type: str,
+    ) -> None:
+        """Post-process an image patch."""
 
-        self.ioconfig = ioconfig  # for storing original
-        self._ioconfig = None  # for storing runtime
-        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
-        self.pretrained_model = pretrained_model
-        self.batch_size = batch_size
-        self.num_loader_worker = num_loader_workers
-        self.verbose = verbose
+    def post_process_wsi(self: PatchPredictor) -> NoReturn:
+        """Post-process a WSI."""
 
     @staticmethod
     def merge_predictions(
@@ -262,7 +250,7 @@ class PatchPredictor:
         output: dict,
         resolution: Resolution | None = None,
         units: Units | None = None,
-        postproc_func: Callable | None = None,
+        post_proc_func: Callable | None = None,
         *,
         return_raw: bool = False,
     ) -> np.ndarray:
@@ -284,7 +272,7 @@ class PatchPredictor:
             units (Units):
                 Units of resolution used when merging predictions. This
                 must be the same `units` used when processing the data.
-            postproc_func (callable):
+            post_proc_func (callable):
                 A function to post-process raw prediction from model. By
                 default, internal code uses the `np.argmax` function.
             return_raw (bool):
@@ -366,8 +354,8 @@ class PatchPredictor:
             output = output / (np.expand_dims(denominator, -1) + 1.0e-8)
             if not return_raw:
                 # convert raw probabilities to predictions
-                if postproc_func is not None:
-                    output = postproc_func(output)
+                if post_proc_func is not None:
+                    output = post_proc_func(output)
                 else:
                     output = np.argmax(output, axis=-1)
                 # to make sure background is 0 while class will be 1...N
@@ -381,7 +369,7 @@ class PatchPredictor:
         return_probabilities: bool = False,
         return_labels: bool = False,
         return_coordinates: bool = False,
-        on_gpu: bool = True,
+        device: str = "cpu",
     ) -> np.ndarray:
         """Make a prediction on a dataset. The dataset may be mutated.
 
@@ -395,8 +383,8 @@ class PatchPredictor:
                 Whether to return labels.
             return_coordinates (bool):
                 Whether to return patch coordinates.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                Select the device to run the model. Default is "cpu".
 
         Returns:
             :class:`numpy.ndarray`:
@@ -408,7 +396,7 @@ class PatchPredictor:
         # preprocessing must be defined with the dataset
         dataloader = torch.utils.data.DataLoader(
             dataset,
-            num_workers=self.num_loader_worker,
+            num_workers=self.num_loader_workers,
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
@@ -424,7 +412,7 @@ class PatchPredictor:
             )
 
         # use external for testing
-        model = misc.model_to(model=self.model, on_gpu=on_gpu)
+        model = tiatoolbox.models.models_abc.model_to(model=self.model, device=device)
 
         cum_output = {
             "probabilities": [],
@@ -436,7 +424,7 @@ class PatchPredictor:
             batch_output_probabilities = self.model.infer_batch(
                 model,
                 batch_data["image"],
-                on_gpu=on_gpu,
+                device=device,
             )
             # We get the index of the class with the maximum probability
             batch_output_predictions = self.model.postproc_func(
@@ -475,16 +463,16 @@ class PatchPredictor:
         resolution: Resolution,
         units: Units,
     ) -> IOPatchPredictorConfig:
-        """Updates the ioconfig.
+        """Update the ioconfig.
 
         Args:
-            ioconfig (IOPatchPredictorConfig):
+            ioconfig (:class:`IOPatchPredictorConfig`):
                 Input ioconfig for PatchPredictor.
-            patch_input_shape (IntPair):
+            patch_input_shape (tuple):
                 Size of patches input to the model. Patches are at
                 requested read resolution, not with respect to level 0,
                 and must be positive.
-            stride_shape (IntPair):
+            stride_shape (tuple):
                 Stride using during tile and WSI processing. Stride is
                 at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
@@ -496,8 +484,7 @@ class PatchPredictor:
                 Units of resolution used for reading the image.
 
         Returns:
-            IOPatchPredictorConfig:
-                Updated Patch Predictor IO configuration.
+            Updated Patch Predictor IO configuration.
 
         """
         config_flag = (
@@ -538,44 +525,8 @@ class PatchPredictor:
             input_resolutions=[{"resolution": resolution, "units": units}],
             patch_input_shape=patch_input_shape,
             stride_shape=stride_shape,
+            output_resolutions=[],
         )
-
-    @staticmethod
-    def _prepare_save_dir(save_dir: str | Path, imgs: list | np.ndarray) -> Path:
-        """Create directory if not defined and number of images is more than 1.
-
-        Args:
-            save_dir (str or Path):
-                Path to output directory.
-            imgs (list, ndarray):
-                List of inputs to process.
-
-        Returns:
-            :class:`Path`:
-                Path to output directory.
-
-        """
-        if save_dir is None and len(imgs) > 1:
-            logger.warning(
-                "More than 1 WSIs detected but there is no save directory set."
-                "All subsequent output will be saved to current runtime"
-                "location under folder 'output'. Overwriting may happen!",
-                stacklevel=2,
-            )
-            save_dir = Path.cwd() / "output"
-        elif save_dir is not None and len(imgs) > 1:
-            logger.warning(
-                "When providing multiple whole-slide images / tiles, "
-                "we save the outputs and return the locations "
-                "to the corresponding files.",
-                stacklevel=2,
-            )
-
-        if save_dir is not None:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=False)
-
-        return save_dir
 
     def _predict_patch(
         self: PatchPredictor,
@@ -584,7 +535,7 @@ class PatchPredictor:
         *,
         return_probabilities: bool,
         return_labels: bool,
-        on_gpu: bool,
+        device: str,
     ) -> np.ndarray:
         """Process patch mode.
 
@@ -595,7 +546,7 @@ class PatchPredictor:
                 file paths or a numpy array of an image list. When using
                 `tile` or `wsi` mode, the input must be a list of file
                 paths.
-            labels (list):
+            labels:
                 List of labels. If using `tile` or `wsi` mode, then only
                 a single label per image tile or whole-slide image is
                 supported.
@@ -603,8 +554,8 @@ class PatchPredictor:
                 Whether to return per-class probabilities.
             return_labels (bool):
                 Whether to return the labels with the predictions.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                Select the device to run the engine.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -629,7 +580,7 @@ class PatchPredictor:
             return_probabilities=return_probabilities,
             return_labels=return_labels,
             return_coordinates=return_coordinates,
-            on_gpu=on_gpu,
+            device=device,
         )
 
     def _predict_tile_wsi(  # noqa: PLR0913
@@ -656,14 +607,14 @@ class PatchPredictor:
                 file paths or a numpy array of an image list. When using
                 `tile` or `wsi` mode, the input must be a list of file
                 paths.
-            masks (list):
+            masks (list or None):
                 List of masks. Only utilised when processing image tiles
                 and whole-slide images. Patches are only processed if
                 they are within a masked area. If not provided, then a
                 tissue mask will be automatically generated for
                 whole-slide images or the entire image is processed for
                 image tiles.
-            labels (list):
+            labels:
                 List of labels. If using `tile` or `wsi` mode, then only
                 a single label per image tile or whole-slide image is
                 supported.
@@ -745,7 +696,7 @@ class PatchPredictor:
             )
             output_model["label"] = img_label
             # add extra information useful for downstream analysis
-            output_model["pretrained_model"] = self.pretrained_model
+            output_model["pretrained_model"] = self.model
             output_model["resolution"] = highest_input_resolution["resolution"]
             output_model["units"] = highest_input_resolution["units"]
 
@@ -757,7 +708,7 @@ class PatchPredictor:
                     output_model,
                     resolution=output_model["resolution"],
                     units=output_model["units"],
-                    postproc_func=self.model.postproc,
+                    post_proc_func=self.model.postproc,
                 )
                 outputs.append(merged_prediction)
 
@@ -777,6 +728,32 @@ class PatchPredictor:
                 file_dict[str(img_path_)] = save_info
 
         return file_dict if save_output else outputs
+
+    def run(
+        self: EngineABC,
+        images: list[os | Path | WSIReader] | np.ndarray,
+        masks: list[os | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+        *,
+        patch_mode: bool = True,
+        save_dir: os | Path | None = None,  # None will not save output
+        overwrite: bool = False,
+        output_type: str = "dict",
+        **kwargs: dict,
+    ) -> AnnotationStore | str:
+        """Run engine."""
+        super().run(
+            images=images,
+            masks=masks,
+            labels=labels,
+            ioconfig=ioconfig,
+            patch_mode=patch_mode,
+            save_dir=save_dir,
+            overwrite=overwrite,
+            output_type=output_type,
+            **kwargs,
+        )
 
     def predict(  # noqa: PLR0913
         self: PatchPredictor,
@@ -856,7 +833,7 @@ class PatchPredictor:
                 Whether to save output for a single file. default=False
 
         Returns:
-            (:class:`numpy.ndarray` or list or dict):
+            (:class:`numpy.ndarray`, dict):
                 Model predictions of the input dataset. If multiple
                 image tiles or whole-slide images are provided as input,
                 or save_output is True, then results are saved to
@@ -893,9 +870,9 @@ class PatchPredictor:
             return self._predict_patch(
                 imgs,
                 labels,
-                return_probabilities=return_probabilities,
-                return_labels=return_labels,
-                on_gpu=on_gpu,
+                return_probabilities,
+                return_labels,
+                on_gpu,
             )
 
         if not isinstance(imgs, list):
@@ -937,15 +914,15 @@ class PatchPredictor:
         save_dir = self._prepare_save_dir(save_dir, imgs)
 
         return self._predict_tile_wsi(
-            imgs=imgs,
-            masks=masks,
-            labels=labels,
-            mode=mode,
-            return_probabilities=return_probabilities,
-            on_gpu=on_gpu,
-            ioconfig=ioconfig,
-            merge_predictions=merge_predictions,
-            save_dir=save_dir,
-            save_output=save_output,
-            highest_input_resolution=highest_input_resolution,
+            imgs,
+            masks,
+            labels,
+            mode,
+            return_probabilities,
+            on_gpu,
+            ioconfig,
+            merge_predictions,
+            save_dir,
+            save_output,
+            highest_input_resolution,
         )
