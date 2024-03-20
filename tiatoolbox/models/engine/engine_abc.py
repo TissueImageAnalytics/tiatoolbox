@@ -12,6 +12,7 @@ import torch
 import tqdm
 import zarr
 from torch import nn
+from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
@@ -402,6 +403,18 @@ class EngineABC(ABC):
             shuffle=False,
         )
 
+    @staticmethod
+    def _update_model_output(
+        raw_predictions: dict, key: str, raw_output: np.ndarray
+    ) -> dict:
+        """Helper function to append raw output during inference."""
+        if raw_predictions[key] is None:
+            raw_predictions[key] = raw_output
+        else:
+            raw_predictions[key] = np.append(raw_predictions[key], raw_output, axis=0)
+
+        return raw_predictions
+
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
@@ -436,7 +449,7 @@ class EngineABC(ABC):
         if self.return_labels:
             keys.append("labels")
 
-        raw_predictions = {key: [] for key in keys}
+        raw_predictions = {key: None for key in keys}
 
         zarr_group = None
 
@@ -450,13 +463,18 @@ class EngineABC(ABC):
                 device=self.device,
             )
 
-            raw_predictions["predictions"].extend(batch_output_predictions.tolist())
+            raw_predictions = self._update_model_output(
+                raw_predictions=raw_predictions,
+                key="predictions",
+                raw_output=batch_output_predictions,
+            )
 
             if self.return_labels:  # be careful of `s`
-                # We do not use tolist here because label may be of mixed types
-                # and hence collated as list by torch
-                raw_predictions["labels"].extend(list(batch_data["label"]))
-
+                raw_predictions = self._update_model_output(
+                    raw_predictions=raw_predictions,
+                    key="labels",
+                    raw_output=batch_data["label"].numpy(),
+                )
             if self.cache_mode:
                 zarr_group = write_to_zarr_in_cache_mode(
                     zarr_group=zarr_group, output_data_to_save=raw_predictions
@@ -468,13 +486,13 @@ class EngineABC(ABC):
         if progress_bar:
             progress_bar.close()
 
-        return zarr_group if self.cache_mode else raw_predictions
+        return save_path if self.cache_mode else raw_predictions
 
-    @staticmethod
     def post_process_patches(
-        raw_predictions: dict | zarr.group,
+        self: EngineABC,
+        raw_predictions: dict | Path,
         **kwargs: dict,
-    ) -> dict | zarr.group:
+    ) -> dict | Path:
         """Save Patch predictions.
 
         A dictionary or zarr group with patch prediction information from
@@ -484,8 +502,8 @@ class EngineABC(ABC):
         zarr group in a loop with size specified by cache_size.
 
         Args:
-            raw_predictions (dict):
-                A dictionary or zarr group with patch prediction information.
+            raw_predictions (dict | Path):
+                A dictionary or path to zarr with patch prediction information.
             **kwargs (dict):
                 Keyword Args to update setup_patch_dataset() method attributes.
 
@@ -494,7 +512,10 @@ class EngineABC(ABC):
                 Return patch based output after post-processing.
 
         """
-        _ = kwargs.get("key_values")  # Key values required for post-processing
+        _ = kwargs.get("predictions")  # Key values required for post-processing
+
+        if self.cache_mode:  # cache mode
+            _ = zarr.open(raw_predictions, mode="w")
 
         return raw_predictions
 
@@ -782,7 +803,7 @@ class EngineABC(ABC):
         *,
         overwrite: bool = False,
         patch_mode: bool,
-        **kwargs: EngineABCRunParams,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> Path | None:
         """Updates runtime parameters.
 
@@ -793,7 +814,7 @@ class EngineABC(ABC):
             setattr(self, key, kwargs.get(key))
 
         self.patch_mode = patch_mode
-        if self.cache_mode and self.cache_size > self.batch_size:
+        if self.cache_mode and self.batch_size > self.cache_size:
             self.batch_size = self.cache_size
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
@@ -865,7 +886,7 @@ class EngineABC(ABC):
         save_dir: os | Path | None = None,  # None will not save output
         overwrite: bool = False,
         output_type: str = "dict",
-        **kwargs: EngineABCRunParams,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> AnnotationStore | Path | str | dict:
         """Run the engine on input images.
 

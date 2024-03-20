@@ -444,3 +444,34 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
             output_type="AnnotationStore",
             scale_factor=(2.0, 2.0),
         )
+
+
+def test_cache_mode_patches(tmp_path: pytest.TempPathFactory) -> NoReturn:
+    """Test the caching mode."""
+    save_dir = tmp_path / "patch_output"
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        on_gpu=False,
+        save_dir=save_dir,
+        overwrite=True,
+        cache_mode=True,
+    )
+    assert out.exists(), "Zarr output file does not exist"
+
+    output_file_name = "output2.zarr"
+    cache_size = 4
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        on_gpu=False,
+        save_dir=save_dir,
+        overwrite=True,
+        cache_mode=True,
+        cache_size=4,
+        batch_size=8,
+        output_file=output_file_name,
+    )
+    assert out.stem == output_file_name.split(".")[0]
+    assert eng.batch_size == cache_size
+    assert out.exists(), "Zarr output file does not exist"
