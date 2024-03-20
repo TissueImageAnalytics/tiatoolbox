@@ -1015,7 +1015,8 @@ class EngineABC(ABC):
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
             >>> class PatchPredictor(EngineABC):
-            >>>     # Define all Abstract methods.
+            >>> # Define all Abstract methods.
+            >>>     ...
             >>> predictor = PatchPredictor(model="resnet18-kather100k")
             >>> output = predictor.run(image_patches, patch_mode=True)
             >>> output
