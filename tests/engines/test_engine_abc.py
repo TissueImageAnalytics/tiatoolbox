@@ -626,3 +626,16 @@ def test_io_config_delegation(tmp_path: Path) -> None:
                 resolution=_kwargs["resolution"],
                 units=_kwargs["units"],
             )
+
+
+def test_notimplementederror_wsi_mode(
+    sample_svs: Path, tmp_path: pytest.TempPathFactory
+) -> None:
+    """Test that NotImplementedError is raised when wsi mode is False.
+
+    A user should implement run method when patch_mode is False.
+
+    """
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(NotImplementedError):
+        eng.run(images=[sample_svs], patch_mode=False, save_dir=tmp_path / "output")
