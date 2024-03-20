@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, NoReturn
 import numpy as np
 import pytest
 import torchvision.models as torch_models
+import zarr
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
@@ -502,3 +503,45 @@ def test_get_dataloader(sample_svs: Path) -> None:
     )
 
     assert isinstance(dataloader.dataset, WSIPatchDataset)
+
+
+def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
+    """Test the eng.save_output() function."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    save_path = tmp_path / "output.zarr"
+    _ = zarr.open(save_path, mode="w")
+    out = eng.save_output(
+        raw_output=save_path, save_path=save_path, output_type="zarr", save_dir=tmp_path
+    )
+
+    assert out.exists()
+    assert out.suffix == ".zarr"
+
+    # Test AnnotationStore
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "other": "other",
+    }
+    class_dict = {0: "class0", 1: "class1"}
+    out = eng.save_output(
+        raw_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=class_dict,
+        save_dir=tmp_path,
+        output_type="AnnotationStore",
+    )
+
+    assert out.exists()
+    assert out.suffix == ".db"
+
+    with pytest.raises(
+        ValueError,
+        match=r".*supports zarr and AnnotationStore as output_type.",
+    ):
+        eng.save_output(
+            raw_output=save_path,
+            save_path=save_path,
+            output_type="dict",
+            save_dir=tmp_path,
+        )

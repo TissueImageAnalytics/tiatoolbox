@@ -111,6 +111,8 @@ class EngineABCRunParams(TypedDict, total=False):
     units: Units
     verbose: bool
     output_file: str
+    scale_factor: tuple[float, float]
+    class_dict: dict
 
 
 class EngineABC(ABC):
@@ -596,22 +598,22 @@ class EngineABC(ABC):
     @abstractmethod
     def save_output(
         self: EngineABC,
-        raw_output: dict,
+        raw_output: dict | Path,
         save_dir: Path,
         output_type: str,
-        **kwargs: dict,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> AnnotationStore | Path:
         """Post-process a WSI.
 
         Args:
-            raw_output (dict):
-                A dictionary of patch prediction information.
+            raw_output (dict | Path):
+                A dictionary with output information or zarr file path.
             save_dir (Path):
                 Output Path to directory to save the patch dataset output to a
                 `.zarr` or `.db` file
             output_type (str):
                 The desired output type for resulting patch dataset.
-            **kwargs (dict):
+            **kwargs (EngineABCRunParams):
                 Keyword Args to update setup_patch_dataset() method attributes.
 
         Returns: (AnnotationStore or Path):
@@ -621,11 +623,14 @@ class EngineABC(ABC):
             stored in a `.zarr` file.
 
         """
-        output_file = (
-            kwargs["output_file"] and kwargs.pop("output_file")
-            if "output_file" in kwargs
-            else "output"
-        )
+        if (
+            output_type == "zarr"
+            and isinstance(raw_output, Path)
+            and raw_output.suffix == ".zarr"
+        ):
+            return raw_output
+
+        output_file = kwargs.get("output_file", "output")
         save_path = save_dir / output_file
 
         if output_type == "AnnotationStore":
@@ -636,8 +641,8 @@ class EngineABC(ABC):
 
             return dict_to_store(raw_output, scale_factor, class_dict, save_path)
 
-        # referring to the zarr group generated during the infer_wsi step
-        return save_path.parent.absolute() / (save_path.stem + ".zarr")
+        msg = "Only supports zarr and AnnotationStore as output_type."
+        raise ValueError(msg)
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.

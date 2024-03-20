@@ -1230,7 +1230,7 @@ def patch_predictions_as_annotations(
 
 def dict_to_store(
     patch_output: dict,
-    scale_factor: tuple[int, int],
+    scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
 ) -> AnnotationStore | Path:
@@ -1240,7 +1240,7 @@ def dict_to_store(
         patch_output (dict):
             A dictionary in the TIAToolbox Engines output format. Important
             keys are "probabilities", "predictions", "coordinates", and "labels".
-        scale_factor (tuple[int, int]):
+        scale_factor (tuple[float, float]):
             The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
             conversion of annotations saved at non-baseline resolution to baseline.
@@ -1299,7 +1299,7 @@ def dict_to_store(
     )
 
     store = SQLiteStore()
-    keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
     # if a save director is provided, then dump store into a file
     if save_path:
