@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import copy
-import json
-import shutil
-import sqlite3
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
 import pytest
 import torchvision.models as torch_models
-import zarr
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
@@ -38,53 +33,17 @@ class TestEngineABC(EngineABC):
         """Test EngineABC init."""
         super().__init__(model=model, weights=weights, verbose=verbose)
 
-    def get_dataloader(
-        self: EngineABC,
-        images: Path,
-        masks: Path | None = None,
-        labels: list | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
-        *,
-        patch_mode: bool,
-    ) -> torch.utils.data.DataLoader:
-        """Test pre process images."""
-        return super().get_dataloader(
-            images,
-            masks,
-            labels,
-            ioconfig,
-            patch_mode=patch_mode,
-        )
-
-    def post_process_wsi(
-        self: EngineABC,
-        raw_output: dict,
-        save_dir: Path,
-        **kwargs: dict,
-    ) -> Path:
-        """Test post_process_wsi."""
-        return super().post_process_wsi(
-            raw_output,
-            save_dir=save_dir,
-            **kwargs,
-        )
-
-    def infer_wsi(
-        self: EngineABC,
-        dataloader: torch.utils.data.DataLoader,
-        img_label: str,
-        highest_input_resolution: list[dict],
-        save_dir: Path,
-        **kwargs: dict,
-    ) -> dict | np.ndarray:
+    def infer_wsi(self: EngineABC) -> NoReturn:
         """Test infer_wsi."""
-        return super().infer_wsi(
-            dataloader,
-            img_label,
-            highest_input_resolution,
-            save_dir,
-            **kwargs,
-        )
+        # dummy function for tests.
+
+    def post_process_wsi(self: EngineABC) -> NoReturn:
+        """Test post_process_wsi."""
+        # dummy function for tests.
+
+    def pre_process_wsi(self: EngineABC) -> NoReturn:
+        """Test pre_process_wsi."""
+        # dummy function for tests.
 
 
 def test_engine_abc() -> NoReturn:
@@ -166,6 +125,7 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output",
         patch_mode=True,
+        len_images=1,
         overwrite=False,
     )
 
@@ -175,6 +135,7 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output",
         patch_mode=True,
+        len_images=1,
         overwrite=True,
     )
 
@@ -184,23 +145,35 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=None,
         patch_mode=True,
+        len_images=1,
         overwrite=False,
     )
     assert out_dir is None
 
     with pytest.raises(
         OSError,
-        match=r".*Input WSIs detected but there is no save directory provided.*",
+        match=r".*More than 1 WSIs detected but there is no save directory provided.*",
     ):
         _ = prepare_engines_save_dir(
             save_dir=None,
             patch_mode=False,
+            len_images=2,
             overwrite=False,
         )
 
     out_dir = prepare_engines_save_dir(
+        save_dir=None,
+        patch_mode=False,
+        len_images=1,
+        overwrite=False,
+    )
+
+    assert out_dir == Path.cwd()
+
+    out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_single_output",
         patch_mode=False,
+        len_images=1,
         overwrite=False,
     )
 
@@ -211,6 +184,7 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_multiple_output",
         patch_mode=False,
+        len_images=2,
         overwrite=False,
     )
 
@@ -222,6 +196,7 @@ def test_prepare_engines_save_dir(
     out_path = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
+        len_images=1,
         overwrite=True,
     )
     assert out_path.exists()
@@ -229,6 +204,7 @@ def test_prepare_engines_save_dir(
     out_path = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
+        len_images=1,
         overwrite=True,
     )
     assert out_path.exists()
@@ -237,6 +213,7 @@ def test_prepare_engines_save_dir(
         out_path = prepare_engines_save_dir(
             save_dir=tmp_path / "patch_output" / "output.zarr",
             patch_mode=True,
+            len_images=1,
             overwrite=False,
         )
 
@@ -440,210 +417,3 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
             output_type="AnnotationStore",
             scale_factor=(2.0, 2.0),
         )
-
-
-def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
-    """Test for delegating args to io config."""
-    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
-
-    # test not providing config / full input info for not pretrained models
-    model = CNNModel("resnet50")
-    eng = TestEngineABC(model=model)
-    with pytest.raises(ValueError, match=r".*Please provide a valid ModelIOConfigABC*"):
-        eng.run([mini_wsi_svs], patch_mode=False, save_dir=tmp_path / "dump")
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    kwargs = {
-        "patch_input_shape": [512, 512],
-        "resolution": 1.75,
-        "units": "mpp",
-    }
-    for key in kwargs:
-        _kwargs = copy.deepcopy(kwargs)
-        _kwargs.pop(key)
-        with pytest.raises(ValueError, match=r".*Please provide.*.ModelIOConfigABC*"):
-            eng.run(
-                [mini_wsi_svs],
-                patch_mode=False,
-                save_dir=f"{tmp_path}/dump",
-                **_kwargs,
-            )
-        shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    # test providing config / full input info for non pretrained models
-    ioconfig = ModelIOConfigABC(
-        patch_input_shape=(512, 512),
-        stride_shape=(256, 256),
-        input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
-    )
-    eng.run(
-        [mini_wsi_svs],
-        patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
-        ioconfig=ioconfig,
-    )
-    assert eng._ioconfig.patch_input_shape == (512, 512)
-    assert eng._ioconfig.stride_shape == (256, 256)
-    assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    eng.run(
-        [mini_wsi_svs],
-        patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
-        **kwargs,
-    )
-    assert eng._ioconfig.patch_input_shape == [512, 512]
-    assert eng._ioconfig.stride_shape == [512, 512]
-    assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    # test overwriting pretrained ioconfig
-    eng = TestEngineABC(model="alexnet-kather100k")
-    eng.run(
-        [mini_wsi_svs],
-        patch_input_shape=(300, 300),
-        patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
-    )
-    assert eng._ioconfig.patch_input_shape == (300, 300)
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    eng.run(
-        [mini_wsi_svs],
-        stride_shape=(300, 300),
-        patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
-    )
-    assert eng._ioconfig.stride_shape == (300, 300)
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    eng.run(
-        [mini_wsi_svs],
-        resolution=1.99,
-        patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
-    )
-    assert eng._ioconfig.input_resolutions[0]["resolution"] == 1.99
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    eng = TestEngineABC(model="alexnet-kather100k")
-    eng.run(
-        [mini_wsi_svs],
-        units="baseline",
-        patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
-    )
-    assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-
-def validate_probabilities(probabilities: list | dict) -> bool:
-    """Helper function to test if the probabilities value are valid."""
-    if isinstance(probabilities, dict):
-        return all(0 <= probability <= 1 for _, probability in probabilities.items())
-
-    for row in probabilities:
-        for element in row:
-            if not (0 <= element <= 1):
-                return False
-    return True
-
-
-def test_engine_run_wsi(
-    sample_wsi_dict: dict,
-    tmp_path: Path,
-) -> NoReturn:
-    """Test the engine run for Whole slide images."""
-    # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
-
-    eng = TestEngineABC(model="alexnet-kather100k")
-
-    patch_size = np.array([224, 224])
-    save_dir = f"{tmp_path}/model_wsi_output"
-
-    kwargs = {
-        "return_labels": True,
-        "patch_input_shape": patch_size,
-        "stride_shape": patch_size,
-        "resolution": 0.5,
-        "save_dir": save_dir,
-        "units": "mpp",
-    }
-
-    out = eng.run(
-        images=[mini_wsi_svs],
-        masks=[mini_wsi_msk],
-        patch_mode=False,
-        **kwargs,
-    )
-
-    for output_info in out.values():
-        out_zarr_group_path = output_info
-        assert Path(out_zarr_group_path).exists()
-        assert out_zarr_group_path.suffix == ".zarr"
-        eng_zarr_group = zarr.open_group(out_zarr_group_path, mode="a")
-        assert isinstance(eng_zarr_group["predictions"], zarr.core.Array)
-        assert eng_zarr_group["predictions"].ndim == 1
-        assert isinstance(eng_zarr_group["coordinates"], zarr.core.Array)
-        assert eng_zarr_group["coordinates"].ndim == 2
-        assert validate_probabilities(eng_zarr_group["probabilities"])
-    shutil.rmtree(save_dir)
-
-
-def extract_probabilities_from_annotation_store(dbfile: str) -> dict:
-    """Helper function to extract probabilities from Annotation Store."""
-    probs_dict = {}
-    con = sqlite3.connect(dbfile)
-    cur = con.cursor()
-    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
-
-    for item in annotations_properties:
-        for json_str in item:
-            probs_dict = json.loads(json_str)
-            probs_dict.pop("type")
-
-    return probs_dict
-
-
-def test_engine_run_wsi_annotation_store(
-    sample_wsi_dict: dict,
-    tmp_path: Path,
-) -> NoReturn:
-    """Test the engine run for Whole slide images."""
-    # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
-
-    eng = TestEngineABC(model="alexnet-kather100k")
-
-    patch_size = np.array([224, 224])
-    save_dir = f"{tmp_path}/model_wsi_output"
-
-    kwargs = {
-        "return_labels": True,
-        "patch_input_shape": patch_size,
-        "stride_shape": patch_size,
-        "resolution": 0.5,
-        "save_dir": save_dir,
-        "units": "mpp",
-        "scale_factor": (2.0, 2.0),
-    }
-
-    out = eng.run(
-        images=[mini_wsi_svs],
-        masks=[mini_wsi_msk],
-        patch_mode=False,
-        output_type="AnnotationStore",
-        **kwargs,
-    )
-
-    for output_info in out.values():
-        assert Path(output_info).exists()
-        assert output_info.suffix == ".db"
-        probabilities = extract_probabilities_from_annotation_store(output_info)
-        assert validate_probabilities(probabilities)
-
-    shutil.rmtree(save_dir)

@@ -64,14 +64,14 @@ from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-from tiatoolbox import logger  # noqa: E402
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (  # noqa: E402
+from tiatoolbox import logger
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
-from tiatoolbox.tools.pyramid import ZoomifyGenerator  # noqa: E402
-from tiatoolbox.utils.visualization import random_colors  # noqa: E402
-from tiatoolbox.visualization.ui_utils import get_level_by_extent  # noqa: E402
-from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: E402
+from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.visualization import random_colors
+from tiatoolbox.visualization.ui_utils import get_level_by_extent
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from bokeh.document import Document
@@ -778,7 +778,7 @@ def overlay_alpha_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
 
 def pt_size_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
     """Callback to change the size of the points."""
-    UI["vstate"].graph_node.size = 2 * new
+    UI["vstate"].graph_node.radius = 2 * new
 
 
 def edge_size_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
@@ -1771,7 +1771,14 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     box_source = ColumnDataSource({"x": [], "y": [], "width": [], "height": []})
     pt_source = ColumnDataSource({"x": [], "y": []})
     r = p.rect("x", "y", "width", "height", source=box_source, fill_alpha=0)
-    c = p.circle("x", "y", source=pt_source, color="red", size=5)
+    c = p.circle(
+        "x",
+        "y",
+        source=pt_source,
+        color="red",
+        radius=3,
+        radius_units="screen",
+    )
     p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
     p.add_tools(PointDrawTool(renderers=[c]))
     p.add_tools(TapTool())
@@ -1783,7 +1790,13 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     # Add graph stuff
     node_source = ColumnDataSource({"x_": [], "y_": [], "node_color_": []})
     edge_source = ColumnDataSource({"x0_": [], "y0_": [], "x1_": [], "y1_": []})
-    vstate.graph_node = Circle(x="x_", y="y_", fill_color="node_color_", size=5)
+    vstate.graph_node = Circle(
+        x="x_",
+        y="y_",
+        fill_color="node_color_",
+        radius=3,
+        radius_units="screen",
+    )
     vstate.graph_edge = Segment(x0="x0_", y0="y0_", x1="x1_", y1="y1_")
     p.add_glyph(node_source, vstate.graph_node)
     node_source.selected.on_change("indices", node_select_cb)

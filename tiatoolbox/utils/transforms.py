@@ -141,7 +141,7 @@ def imresize(
         scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
 
     # Return original if scale factor is 1
-    if np.all(scale_factor_array == 1.0):  # noqa: PLR2004
+    if np.all(scale_factor_array == 1.0):
         return img
 
     # Get appropriate cv2 interpolation enum

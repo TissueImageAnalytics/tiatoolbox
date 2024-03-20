@@ -11,7 +11,7 @@ import re
 from datetime import datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import openslide
@@ -31,6 +31,8 @@ from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
+
     import glymur
 
     from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
@@ -97,8 +99,8 @@ def is_zarr(path: Path) -> bool:
         _ = zarr.open(str(path), mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
-    else:
-        return True
+
+    return True
 
 
 def is_ngff(  # noqa: PLR0911
@@ -404,10 +406,9 @@ class WSIReader:
 
         Returns:
             WSIMeta:
-                An object containing normalized slide metadata
+                An object containing normalized slide metadata.
 
         """
-        # In Python>=3.8 this could be replaced with functools.cached_property
         if self._m_info is not None:
             return copy.deepcopy(self._m_info)
         self._m_info = self._info()
@@ -1577,7 +1578,7 @@ class WSIReader:
 
             # Rescale to the correct objective value
             if rescale != 1:
-                im = utils.transforms.imresize(img=im, scale_factor=(1 / rescale))
+                im = utils.transforms.imresize(img=im, scale_factor=1 / rescale)
 
             img_save_name = (
                 "_".join(
@@ -2791,8 +2792,14 @@ class VirtualWSIReader(WSIReader):
     :func:`~tiatoolbox.utils.image.sub_pixel_read`.
 
     Attributes:
-        img (:class:`numpy.ndarray`)
-        mode (str)
+        img (:class:`numpy.ndarray`):
+            Input image as :class:`numpy.ndarray`.
+        mode (str):
+            Mode of the input image. Default is 'rgb'. Allowed values
+            are: rgb, bool, feature. "rgb" mode supports bright-field color images.
+            "bool" mode supports binary masks,
+            interpolation in this case will be "nearest" instead of "bicubic".
+            "feature" mode allows multichannel features.
 
     Args:
         input_img (str, :obj:`Path`, :class:`numpy.ndarray`):
@@ -2801,7 +2808,10 @@ class VirtualWSIReader(WSIReader):
             Metadata for the virtual wsi.
         mode (str):
             Mode of the input image. Default is 'rgb'. Allowed values
-            are: rgb, bool.
+            are: rgb, bool, feature. "rgb" mode supports bright-field color images.
+            "bool" mode supports binary masks,
+            interpolation in this case will be "nearest" instead of "bicubic".
+            "feature" mode allows multichannel features.
 
     """
 
@@ -2819,14 +2829,25 @@ class VirtualWSIReader(WSIReader):
             mpp=mpp,
             power=power,
         )
-        if mode.lower() not in ["rgb", "bool"]:
+        if mode.lower() not in ["rgb", "bool", "feature"]:
             msg = "Invalid mode."
             raise ValueError(msg)
-        self.mode = mode.lower()
+
         if isinstance(input_img, np.ndarray):
             self.img = input_img
         else:
             self.img = utils.imread(self.input_path)
+
+        if mode != "bool" and (
+            self.img.ndim == 2 or self.img.shape[2] not in [3, 4]  # noqa: PLR2004
+        ):
+            logger.warning(
+                "The image mode is set to 'feature' as the input"
+                " dimensions do not match with binary mask or RGB/RGBA.",
+            )
+            mode = "feature"
+
+        self.mode = mode.lower()
 
         if info is not None:
             self._m_info = info
@@ -3276,6 +3297,9 @@ class VirtualWSIReader(WSIReader):
 
         if interpolation in [None, "none"]:
             interpolation = None
+
+        if interpolation == "optimise" and self.mode == "bool":
+            interpolation = "nearest"
 
         im_region = utils.image.sub_pixel_read(
             self.img,
@@ -5519,7 +5543,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:  # noqa: PLR2004
+            if self.alpha < 1.0:
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )
@@ -5712,7 +5736,7 @@ class AnnotationStoreReader(WSIReader):
                 utils.transforms.background_composite(base_region, alpha=True),
             )
             im_region = Image.fromarray(im_region)
-            if self.alpha < 1.0:  # noqa: PLR2004
+            if self.alpha < 1.0:
                 im_region.putalpha(
                     im_region.getchannel("A").point(lambda i: i * self.alpha),
                 )

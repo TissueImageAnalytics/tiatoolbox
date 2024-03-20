@@ -964,7 +964,7 @@ def select_cv2_interpolation(scale_factor: float | npt.NDArray[np.float64]) -> s
             interpolation type
 
     """
-    if np.any(scale_factor > 1.0):  # noqa: PLR2004
+    if np.any(scale_factor > 1.0):
         return "cubic"
     return "area"
 
@@ -1337,7 +1337,7 @@ def dict_to_zarr(
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
-    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+    chunks = kwargs.get("chunks", 10000)
 
     # ensure proper zarr extension
     save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
@@ -1392,9 +1392,9 @@ def wsi_batch_output_to_zarr_group(
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
-    chunks = kwargs["chunks"] if "chunks" in kwargs else 10000
+    chunks = kwargs.get("chunks", 10000)
 
-    # case 1: new zarr group
+    # case 1 - new zarr group
     if not wsi_batch_zarr_group:
         # ensure proper zarr extension and create persistant zarr group
         save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
@@ -1435,7 +1435,7 @@ def wsi_batch_output_to_zarr_group(
             )
             labels_zarr[:] = batch_output_label
 
-    # case 2: apped to exisiting zarr group
+    # case 2 - apped to exisiting zarr group
     probabilities_zarr = wsi_batch_zarr_group["probabilities"]
     probabilities_zarr.append(batch_output_probabilities)
 

@@ -102,7 +102,7 @@ import sys
 import warnings
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 sys.path.append("../")
 
@@ -139,18 +139,19 @@ except ImportError:
                 # Intentionally blank.
 
 
-import numpy as np  # noqa: E402
-import psutil  # noqa: E402
-from shapely.geometry import Polygon  # noqa: E402
-from tqdm import tqdm  # noqa: E402
+import numpy as np
+import psutil
+from shapely.geometry import Polygon
+from tqdm import tqdm
 
-from tiatoolbox.annotation.storage import (  # noqa: E402
+from tiatoolbox.annotation.storage import (
     Annotation,
     DictionaryStore,
     SQLiteStore,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Generator
     from numbers import Number
 
 
@@ -266,10 +267,13 @@ def main(
     if tracker_filepath.is_file():
         tracker_filepath.unlink()
 
-    with NamedTemporaryFile(mode="w+") as temp_file, memray.Tracker(
-        tracker_filepath,
-        native_traces=True,
-        follow_fork=True,
+    with (
+        NamedTemporaryFile(mode="w+") as temp_file,
+        memray.Tracker(
+            tracker_filepath,
+            native_traces=True,
+            follow_fork=True,
+        ),
     ):
         io = ":memory:" if in_memory else temp_file  # Backing (memory/disk)
         print(f"Storing {size[0] * size[1]} cells")

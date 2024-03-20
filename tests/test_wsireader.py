@@ -11,7 +11,7 @@ from copy import deepcopy
 from pathlib import Path
 
 # When no longer supporting Python <3.9 this should be collections.abc.Iterable
-from typing import TYPE_CHECKING, Callable, Iterable
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import glymur
@@ -46,7 +46,9 @@ from tiatoolbox.wsicore.wsireader import (
     is_zarr,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable
+
     import requests
     from openslide import OpenSlide
 
@@ -78,6 +80,7 @@ COLOR_DICT = {
     5: (0, 155, 155, 255),
 }
 RNG = np.random.default_rng()  # Numpy Random Generator
+
 
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
@@ -204,7 +207,7 @@ def read_bounds_level_consistency(wsi: WSIReader, bounds: IntBounds) -> None:
     # from interpolation when calculating the downsampled levels. This
     # adds some tolerance for the comparison.
     blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-    as_float = [img.astype(np.float_) for img in blurred]
+    as_float = [img.astype(np.float64) for img in blurred]
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
@@ -2108,7 +2111,6 @@ def test_store_reader_alpha(remote_sample: Callable) -> None:
         wsi_reader.info,
         base_wsi=wsi_reader,
     )
-    store_reader.renderer.info["mpp"] = store_reader.info.as_dict()["mpp"]
     wsi_thumb = wsi_reader.slide_thumbnail()
     wsi_tile = wsi_reader.read_rect((500, 500), (1000, 1000))
     store_thumb = store_reader.slide_thumbnail()
@@ -2646,7 +2648,7 @@ def test_read_rect_level_consistency(wsi: WSIReader) -> None:
     # from interpolation when calculating the downsampled levels. This
     # adds some tolerance for the comparison.
     blurred = [cv2.GaussianBlur(img, (5, 5), cv2.BORDER_REFLECT) for img in resized]
-    as_float = [img.astype(np.float_) for img in blurred]
+    as_float = [img.astype(np.float64) for img in blurred]
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
@@ -2757,3 +2759,34 @@ def test_file_path_does_not_exist() -> None:
 def test_read_mpp(wsi: WSIReader) -> None:
     """Test that the mpp is read correctly."""
     assert wsi.info.mpp == pytest.approx(0.25, 1)
+
+
+def test_read_multi_channel(source_image: Path) -> None:
+    """Test reading image with more than three channels.
+
+    Create a virtual WSI by concatenating the source_image.
+
+    """
+    img_array = utils.misc.imread(Path(source_image))
+    new_img_array = np.concatenate((img_array, img_array), axis=-1)
+
+    new_img_size = new_img_array.shape[:2][::-1]
+    meta = wsireader.WSIMeta(slide_dimensions=new_img_size, axes="YXS", mpp=(0.5, 0.5))
+    wsi = wsireader.VirtualWSIReader(new_img_array, info=meta)
+
+    region = wsi.read_rect(
+        location=(0, 0),
+        size=(50, 100),
+        pad_mode="reflect",
+        units="mpp",
+        resolution=0.25,
+    )
+    target = cv2.resize(
+        new_img_array[:50, :25, :],
+        (50, 100),
+        interpolation=cv2.INTER_CUBIC,
+    )
+
+    assert region.shape == (100, 50, (new_img_array.shape[-1]))
+    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
+    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
