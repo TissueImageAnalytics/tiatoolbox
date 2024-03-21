@@ -601,7 +601,7 @@ class EngineABC(ABC):
         raw_predictions: dict | Path,
         **kwargs: dict,
     ) -> dict | Path:
-        """Save Patch predictions.
+        """Post-process raw patch predictions from inference.
 
         The output of :func:`infer_patches()` with patch prediction information will be
         post-processed using this function. The processed output will be saved in the
