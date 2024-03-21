@@ -182,7 +182,7 @@ class EngineABC(ABC):
     Args:
         model (str | ModelABC):
             A PyTorch model. Default is `None`.
-            The user can request pretrained models from the toolbox using
+            The user can request pretrained models from the toolbox model zoo using
             the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
@@ -219,7 +219,10 @@ class EngineABC(ABC):
         masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
             A list of tissue masks or binary masks corresponding to processing area of
             input images. These can be a list of numpy arrays or paths to
-            the saved image masks.
+            the saved image masks. These are only utilized when patch_mode is False.
+            Patches are only generated within a masked area.
+            If not provided, then a tissue mask will be automatically
+            generated for whole slide images.
         patch_mode (str):
             Whether to treat input images as a set of image patches. TIAToolbox defines
             an image as a patch if HWC of the input image matches with the HWC expected
@@ -228,8 +231,8 @@ class EngineABC(ABC):
             engine to extract patches from the input image.
             In this case, when the patch_mode is False the input images are treated
             as WSIs. Default value is True.
-        model (str | nn.Module):
-            A PyTorch model or a name of an existing model supported by TIAToolbox
+        model (str | ModelABC):
+            A PyTorch model or a name of an existing model from the TIAToolbox model zoo
             for processing the data. For a full list of pretrained models,
             refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
@@ -291,11 +294,18 @@ class EngineABC(ABC):
             Whether to merge WSI predictions into a single file. Default value is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
-            :class:`WSIReader` for details. Default value is 1.0.
+            :class:`WSIReader` for details.
+            When `patch_mode` is True, the input image patches are expected to be at
+            the correct resolution and units. When `patch_mode` is False, the patches
+            are extracted at the requested resolution and units. Default value is 1.0.
         units (Units):
             Units of resolution used for reading the image. Choose
             from either `level`, `power` or `mpp`. Please see
-            :class:`WSIReader` for details. Default value is `baseline`.
+            :class:`WSIReader` for details.
+            When `patch_mode` is True, the input image patches are expected to be at
+            the correct resolution and units. When `patch_mode` is False, the patches
+            are extracted at the requested resolution and units.
+            Default value is `baseline`.
         verbose (bool):
             Whether to output logging information. Default value is False.
 
@@ -375,29 +385,35 @@ class EngineABC(ABC):
 
     @staticmethod
     def _initialize_model_ioconfig(
-        model: str | nn.Module,
+        model: str | ModelABC,
         weights: str | Path | None,
     ) -> tuple[nn.Module, ModelIOConfigABC | None]:
         """Helper function to initialize model and ioconfig attributes.
 
         If a pretrained model provided by the TIAToolbox is requested. The model
-        can be specified as a string otherwise torch.nn.Module is required.
+        can be specified as a string otherwise :class:`torch.nn.Module` is required.
         This function also loads the :class:`ModelIOConfigABC` using the information
         from the pretrained models in TIAToolbox. If ioconfig is not available then it
-        should be provided in the :func:`run` function.
+        should be provided in the :func:`run()` function.
 
         Args:
-            model (str | nn.Module):
-                A torch model which should be run by the engine.
+            model (str | ModelABC):
+                A PyTorch model. Default is `None`.
+                The user can request pretrained models from the toolbox model zoo using
+                the list of pretrained models available at this `link
+                <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+                By default, the corresponding pretrained weights will also
+                be downloaded. However, you can override with your own set
+                of weights using the `weights` parameter.
 
             weights (str | Path | None):
                 Path to pretrained weights. If no pretrained weights are provided
-                and the model is provided by TIAToolbox, then pretrained weights will
+                and the `model` is provided by TIAToolbox, then pretrained weights will
                 be automatically loaded from the TIA servers.
 
         Returns:
-            nn.Module:
-                The requested PyTorch model.
+            ModelABC:
+                The requested PyTorch model as a :class:`ModelABC` instance.
 
             ModelIOConfigABC | None:
                 The model io configuration for TIAToolbox pretrained models.
@@ -433,10 +449,10 @@ class EngineABC(ABC):
         """Pre-process images and masks and return dataloader for inference.
 
         Args:
-            images (list, ndarray):
-                List of inputs to process. when using `patch` mode, the
-                input must be either a list of images, a list of image
-                file paths or a numpy array of an image list.
+            images (list of str or :class:`Path` or :class:`numpy.ndarray`):
+                A list of image patches in NHWC format as a numpy array
+                or a list of str/paths to WSIs. When `patch_mode` is False
+                the function expects list of str/paths to WSIs.
             masks (list | None):
                 List of masks. Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
@@ -445,8 +461,8 @@ class EngineABC(ABC):
             labels (list | None):
                 List of labels. Only a single label per image is supported.
             ioconfig (ModelIOConfigABC):
-                :class:`ModelIOConfigABC` object.
-            patch_mode(bool):
+                A :class:`ModelIOConfigABC` object.
+            patch_mode (bool):
                 Whether to treat input image as a patch or WSI.
 
         Returns:
