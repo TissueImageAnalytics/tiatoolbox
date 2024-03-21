@@ -177,7 +177,7 @@ class EngineABCRunParams(TypedDict, total=False):
 
 
 class EngineABC(ABC):
-    """Abstract base class for engines to run CNN models in TIAToolbox.
+    """Abstract base class for TIAToolbox deep learning engines to run CNN models.
 
     Args:
         model (str | ModelABC):
@@ -187,20 +187,22 @@ class EngineABC(ABC):
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
-            of weights using the weights parameter.
+            of weights using the `weights` parameter.
         batch_size (int):
-            Number of image patches fed into the model each time. Default = 8.
+            Number of image patches fed into the model each time in a
+            forward/backward pass. Default value is 8.
         num_loader_workers (int):
             Number of workers to load the data using :class:`torch.utils.data.Dataset`.
-            Please note that they will also perform preprocessing. Default = 0
+            Please note that they will also perform preprocessing. Default value is 0.
         num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model. Default = 0
+            Number of workers to postprocess the results of the model.
+            Default value is 0.
         weights (str or Path):
             Path to the weight of the corresponding `model`.
 
             >>> engine = EngineABC(
             ...    model="pretrained-model",
-            ...    weights="pretrained-local-weights.pth"
+            ...    weights="/path/to/pretrained-local-weights.pth"
             ... )
 
         device (str):
@@ -208,21 +210,27 @@ class EngineABC(ABC):
             https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
             for more details on input parameters for device. Default is "cpu".
         verbose (bool):
-            Whether to output logging information.
+            Whether to output logging information. Default value is False.
 
     Attributes:
         images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
-            A NHWC image or a path to list of WSI.
+            A list of image patches in NHWC format as a numpy array
+            or a list of str/paths to WSIs.
         masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
-            List of tissue masks or binary masks corresponding to processing area of
-            input images.
+            A list of tissue masks or binary masks corresponding to processing area of
+            input images. These can be a list of numpy arrays or paths to
+            the saved image masks.
         patch_mode (str):
-            Whether to treat input image as a patch or WSI.
-            default = True.
+            Whether to treat input images as a set of image patches. TIAToolbox defines
+            an image as a patch if HWC of the input image matches with the HWC expected
+            by the model. If HWC of the input image does not match with the HWC expected
+            by the model, then the patch_mode must be set to False which will allow the
+            engine to extract patches from the input image.
+            In this case, when the patch_mode is False the input images are treated
+            as WSIs. Default value is True.
         model (str | nn.Module):
-            Defined PyTorch model.
-            Name of an existing model supported by the TIAToolbox for
-            processing the data. For a full list of pretrained models,
+            A PyTorch model or a name of an existing model supported by TIAToolbox
+            for processing the data. For a full list of pretrained models,
             refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
@@ -231,7 +239,7 @@ class EngineABC(ABC):
             is case-insensitive.
         ioconfig (ModelIOConfigABC):
             Input IO configuration of type :class:`ModelIOConfigABC` to run the Engine.
-        _ioconfig ():
+        _ioconfig (ModelIOConfigABC):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
@@ -257,23 +265,39 @@ class EngineABC(ABC):
             `stride_shape=patch_input_shape`.
         batch_size (int):
             Number of images fed into the model each time.
+        cache_mode (bool):
+            Whether to run the Engine in cache_mode. For large datasets,
+            we recommend to set this to True to avoid out of memory errors.
+            For smaller datasets, the cache_mode is set to False as
+            the results can be saved in memory. Default value is False.
+        cache_size (int):
+            Specifies how many images patches to process in a batch when
+            cache_mode is set to True. If cache_size is less than the batch_size
+            batch_size is set to cache_size. Default value is 10,000.
         labels (list | None):
                 List of labels. Only a single label per image is supported.
         device (str):
             :class:`torch.device` to run the model.
             Select the device to run the model. Please see
             https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device. Default is "cpu".
+            for more details on input parameters for device. Default value is "cpu".
         num_loader_workers (int):
             Number of workers used in :class:`torch.utils.data.DataLoader`.
         num_post_proc_workers (int):
             Number of workers to postprocess the results of the model.
         return_labels (bool):
-            Whether to return the output labels. Default is False.
+            Whether to return the output labels. Default value is False.
         merge_predictions (bool):
-            Whether to merge WSI predictions into a single file. Default is False.
+            Whether to merge WSI predictions into a single file. Default value is False.
+        resolution (Resolution):
+            Resolution used for reading the image. Please see
+            :class:`WSIReader` for details. Default value is 1.0.
+        units (Units):
+            Units of resolution used for reading the image. Choose
+            from either `level`, `power` or `mpp`. Please see
+            :class:`WSIReader` for details. Default value is `baseline`.
         verbose (bool):
-            Whether to output logging information. Default is False.
+            Whether to output logging information. Default value is False.
 
     Examples:
         >>> # Inherit from EngineABC
@@ -286,14 +310,12 @@ class EngineABC(ABC):
         >>>     ):
         >>>       super().__init__(model=model, weights=weights, verbose=verbose)
         >>> # Define all the abstract classes
-        >>>
-        >>> import numpy as np
+
         >>> data = np.array([np.ndarray, np.ndarray])
         >>> engine = TestEngineABC(model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=True)
 
         >>> # array of list of 2 image patches as input
-        >>> import numpy as np
         >>> data = np.array([np.ndarray, np.ndarray])
         >>> engine = TestEngineABC(model="resnet18-kather100k")
         >>> output = engine.run(data, patch_mode=True)
@@ -991,7 +1013,7 @@ class EngineABC(ABC):
                 Whether to overwrite the results. Default = False.
             output_type (str):
                 The format of the output type. "output_type" can be
-                "zarr" or "AnnotationStore". Default is "zarr".
+                "zarr" or "AnnotationStore". Default value is "zarr".
                 When saving in the zarr format the output is saved using the
                 `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
                 as a zarr group. If the required output type is an "AnnotationStore"
