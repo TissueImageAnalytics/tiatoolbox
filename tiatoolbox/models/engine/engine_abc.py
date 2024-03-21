@@ -603,11 +603,10 @@ class EngineABC(ABC):
     ) -> dict | Path:
         """Save Patch predictions.
 
-        A dictionary or zarr group with patch prediction information from
-        the output of :func:`infer_patches()` will be used to post process
-        the predictions. The processed output will be saved in the respective
-        format. If cache mode is True, the function process the input using
-        zarr group in a loop with size specified by cache_size.
+        The output of :func:`infer_patches()` with patch prediction information will be
+        post-processed using this function. The processed output will be saved in the
+        respective input format. If `cache_mode` is True, the function processes the
+        input using zarr group with size specified by `cache_size`.
 
         Args:
             raw_predictions (dict | Path):
@@ -617,8 +616,8 @@ class EngineABC(ABC):
 
         Returns:
             dict or Path:
-                Return patch based output after post-processing. Returns path to
-                saved zarr file if cache_mode is True.
+                Returns patch based output after post-processing. Returns path to
+                saved zarr file if `cache_mode` is True.
 
         """
         _ = kwargs.get("predictions")  # Key values required for post-processing
