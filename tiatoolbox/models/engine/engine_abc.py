@@ -634,23 +634,23 @@ class EngineABC(ABC):
         save_dir: Path | None = None,
         **kwargs: dict,
     ) -> dict | AnnotationStore | Path:
-        """Save Patch predictions.
+        """Save model predictions.
 
         Args:
-            processed_predictions (dict):
-                A dictionary of patch prediction information.
+            processed_predictions (dict | Path):
+                A dictionary or path to zarr with model prediction information.
             save_dir (Path):
-                Optional Output Path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file, provided patch_mode is True. if the patch_mode is
-                  False then save_dir is required.
+                Optional output path to directory to save the patch dataset output to a
+                `.zarr` or `.db` file, provided `patch_mode` is True. If the
+                `patch_mode` is False then `save_dir` is required.
             output_type (str):
                 The desired output type for resulting patch dataset.
-            **kwargs (dict):
-                Keyword Args to update setup_patch_dataset() method attributes.
+            **kwargs (EngineABCRunParams):
+                Keyword Args required to save the output.
 
         Returns:
             dict or Path or :class:`AnnotationStore`:
-                If the output_type is "AnnotationStore", the function returns
+                If the `output_type` is "AnnotationStore", the function returns
                 the patch predictor output as an SQLiteStore containing Annotations
                 for each or the Path to a `.db` file depending on whether a
                 save_dir Path is provided. Otherwise, the function defaults to
