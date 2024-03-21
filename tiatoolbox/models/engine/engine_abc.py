@@ -45,7 +45,11 @@ def prepare_engines_save_dir(
 ) -> Path | None:
     """Create a save directory.
 
-    If the save directory is not defined, this function will raise an error.
+    If patch_mode is False and the save directory is not defined,
+    this function will raise an error.
+
+    If patch_mode is True and the save directory is defined it will
+    create save_dir otherwise returns None.
 
     Args:
         save_dir (str or Path):
@@ -80,7 +84,8 @@ def prepare_engines_save_dir(
     logger.info(
         "When providing multiple whole slide images, "
         "the outputs will be saved and the locations of outputs "
-        "will be returned to the calling function.",
+        "will be returned to the calling function when the `run()`"
+        "finishes successfully.",
     )
 
     save_dir = Path(save_dir)
