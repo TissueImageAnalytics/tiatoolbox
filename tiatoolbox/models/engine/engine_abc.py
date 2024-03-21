@@ -95,28 +95,28 @@ def prepare_engines_save_dir(
 
 
 class EngineABCRunParams(TypedDict, total=False):
-    """Class describing the input parameters for the run function.
-
-    Defines the expected keyword arguments for the EngineABC.run() function.
+    """Class describing the input parameters for the :func:`EngineABC.run()` method.
 
     Attributes:
         batch_size (int):
-            Number of images fed into the model each time.
+            Number of image patches to feed to the model in a forward pass.
         cache_mode (bool):
             Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True. For smaller datasets, the
-            cache_mode is set to False as the results are saved in memory.
+            we recommend to set this to True to avoid out of memory errors.
+            For smaller datasets, the cache_mode is set to False as
+            the results can be saved in memory.
         cache_size (int):
             Specifies how many images patches to process in a batch when
-            cache_mode is set to True.
+            cache_mode is set to True. If cache_size is less than the batch_size
+            batch_size is set to cache_size.
         class_dict (dict):
-            Optional dictionary mapping class indices to class names.
+            Optional dictionary mapping classification outputs to class names.
         device (str):
             Select the device to run the model. Please see
             https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
             for more details on input parameters for device.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration to run the Engine.
+            Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
         return_labels (bool):
             Whether to return the labels with the predictions.
         merge_predictions (bool):
@@ -130,14 +130,14 @@ class EngineABCRunParams(TypedDict, total=False):
         output_file (str):
             Output file name to save "zarr" or "db".
         patch_input_shape (tuple):
-            Shape of patches input to the model as tupled of HW. Patches are at
-            requested read resolution, not with respect to level 0,
+            Shape of patches input to the model as tuple of height and width (HW).
+            Patches are requested at read resolution, not with respect to level 0,
             and must be positive.
         resolution (Resolution):
             Resolution used for reading the image. Please see
-            :obj:`WSIReader` for details.
+            :class:`WSIReader` for details.
         return_labels (bool):
-            Whether to return the output labels. Default = False.
+            Whether to return the output labels.
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
@@ -151,7 +151,7 @@ class EngineABCRunParams(TypedDict, total=False):
         units (Units):
             Units of resolution used for reading the image. Choose
             from either `level`, `power` or `mpp`. Please see
-            :obj:`WSIReader` for details.
+            :class:`WSIReader` for details.
         verbose (bool):
             Whether to output logging information.
 
