@@ -698,7 +698,11 @@ class EngineABC(ABC):
         save_dir: Path,
         **kwargs: dict,
     ) -> list:
-        """Model inference on a WSI."""
+        """Model inference on a WSI.
+
+        This function must be implemented by subclasses.
+
+        """
         # return coordinates of patches processed within a tile / whole-slide image
         raise NotImplementedError
 
