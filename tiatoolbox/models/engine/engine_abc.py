@@ -272,7 +272,8 @@ class EngineABC(ABC):
             Whether to run the Engine in cache_mode. For large datasets,
             we recommend to set this to True to avoid out of memory errors.
             For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory. Default value is False.
+            the results can be saved in memory. cache_mode is always True when
+            processing WSIs i.e., when `patch_mode` is False. Default value is False.
         cache_size (int):
             Specifies how many images patches to process in a batch when
             cache_mode is set to True. If cache_size is less than the batch_size
@@ -532,12 +533,12 @@ class EngineABC(ABC):
             dataloader (DataLoader):
                 An :class:`torch.utils.data.DataLoader` object to run inference.
             save_path (Path | None):
-                If cache_mode is True then path to save zarr file must be provided.
+                If `cache_mode` is True then path to save zarr file must be provided.
 
         Returns:
             dict or Path:
                 Result of model inference as a dictionary. Returns path to
-                saved zarr file if cache_mode is True.
+                saved zarr file if `cache_mode` is True.
 
         """
         progress_bar = None
