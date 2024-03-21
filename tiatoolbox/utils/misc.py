@@ -1474,9 +1474,7 @@ def write_to_zarr_in_cache_mode(
 
     """
     # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = (
-        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-    )
+    compressor = kwargs.get("compressor", numcodecs.Zstd(level=1))
 
     # case 1 - new zarr group
     if not zarr_group:
