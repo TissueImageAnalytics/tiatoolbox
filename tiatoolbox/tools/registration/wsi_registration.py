@@ -308,9 +308,12 @@ def match_histograms(
         raise ValueError(msg)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-    entropy_a, entropy_b = filters.rank.entropy(image_a, kernel), filters.rank.entropy(
-        image_b,
-        kernel,
+    entropy_a, entropy_b = (
+        filters.rank.entropy(image_a, kernel),
+        filters.rank.entropy(
+            image_b,
+            kernel,
+        ),
     )
     if np.mean(entropy_a) > np.mean(entropy_b):
         image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)

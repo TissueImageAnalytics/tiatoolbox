@@ -41,3 +41,4 @@ jobs:
           tiatoolbox/tiatoolbox.py \
           tiatoolbox/utils/*.py \
           tiatoolbox/tools/*.py
+
