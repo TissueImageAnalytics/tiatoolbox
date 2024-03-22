@@ -597,6 +597,7 @@ def timed(fn: Callable, *args: object) -> (Callable, float):
     Returns:
         A tuple containing the result of the function
         and the time taken to execute it in seconds.
+
     """
     compile_time = 0.0
     if has_gpu():
