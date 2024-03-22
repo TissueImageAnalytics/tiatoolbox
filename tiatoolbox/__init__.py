@@ -73,6 +73,8 @@ class _RcParam(TypedDict):
 
     TIATOOLBOX_HOME: Path
     pretrained_model_info: dict[str, dict]
+    enable_torch_compile: bool
+    torch_compile_mode: str
 
 
 def read_registry_files(path_to_registry: str | Path) -> dict:
@@ -102,6 +104,12 @@ rcParam: _RcParam = {  # noqa: N816
     "pretrained_model_info": read_registry_files(
         "data/pretrained_model.yaml",
     ),  # Load a dictionary of sample files data (names and urls)
+    "enable_torch_compile": False,
+    # Disable `torch-compile`` by default
+    "torch_compile_mode": "default",
+    # Set ``torch-compile`` mode to ``default`` by default
+    # Options: “default”, “reduce-overhead”, “max-autotune”
+    # or “max-autotune-no-cudagraphs”
 }
 
 

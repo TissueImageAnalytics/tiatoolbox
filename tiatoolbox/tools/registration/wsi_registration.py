@@ -431,7 +431,10 @@ class DFBRegister:
 
     """
 
-    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
+    def __init__(
+        self: DFBRegister,
+        patch_size: tuple[int, int] = (224, 224),
+    ) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale: list[float] = []

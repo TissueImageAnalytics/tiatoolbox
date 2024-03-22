@@ -563,7 +563,7 @@ class SemanticSegmentor:
         self.masks = None
 
         self.dataset_class: WSIStreamDataset = dataset_class
-        self.model = model  # original copy
+        self.model = model
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
