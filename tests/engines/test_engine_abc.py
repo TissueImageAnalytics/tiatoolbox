@@ -55,14 +55,14 @@ class TestEngineABC(EngineABC):
             patch_mode=patch_mode,
         )
 
-    def save_output(
+    def save_wsi_output(
         self: EngineABC,
         raw_output: dict,
         save_dir: Path,
         **kwargs: dict,
     ) -> Path:
         """Test post_process_wsi."""
-        return super().save_output(
+        return super().save_wsi_output(
             raw_output,
             save_dir=save_dir,
             **kwargs,
@@ -512,7 +512,7 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
     eng = TestEngineABC(model="alexnet-kather100k")
     save_path = tmp_path / "output.zarr"
     _ = zarr.open(save_path, mode="w")
-    out = eng.save_output(
+    out = eng.save_wsi_output(
         raw_output=save_path, save_path=save_path, output_type="zarr", save_dir=tmp_path
     )
 
@@ -526,7 +526,7 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
         "other": "other",
     }
     class_dict = {0: "class0", 1: "class1"}
-    out = eng.save_output(
+    out = eng.save_wsi_output(
         raw_output=patch_output,
         scale_factor=(1.0, 1.0),
         class_dict=class_dict,
@@ -541,7 +541,7 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
         ValueError,
         match=r".*supports zarr and AnnotationStore as output_type.",
     ):
-        eng.save_output(
+        eng.save_wsi_output(
             raw_output=save_path,
             save_path=save_path,
             output_type="dict",

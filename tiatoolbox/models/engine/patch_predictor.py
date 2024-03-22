@@ -241,7 +241,7 @@ class PatchPredictor(EngineABC):
     ) -> None:
         """Post-process an image patch."""
 
-    def save_output(self: PatchPredictor) -> NoReturn:
+    def save_wsi_output(self: PatchPredictor) -> NoReturn:
         """Post-process a WSI."""
 
     @staticmethod

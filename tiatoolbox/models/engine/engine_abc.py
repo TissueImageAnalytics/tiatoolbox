@@ -707,7 +707,7 @@ class EngineABC(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def save_output(
+    def save_wsi_output(
         self: EngineABC,
         raw_output: dict | Path,
         save_dir: Path,
