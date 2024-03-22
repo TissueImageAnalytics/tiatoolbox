@@ -511,14 +511,15 @@ class EngineABC(ABC):
         )
 
     @staticmethod
-    def _update_model_output(
-        raw_predictions: dict, key: str, raw_output: np.ndarray
-    ) -> dict:
+    def _update_model_output(raw_predictions: dict, raw_output: dict) -> dict:
         """Helper function to append raw output during inference."""
-        if raw_predictions[key] is None:
-            raw_predictions[key] = raw_output
-        else:
-            raw_predictions[key] = np.append(raw_predictions[key], raw_output, axis=0)
+        for key in raw_output:
+            if raw_predictions[key] is None:
+                raw_predictions[key] = raw_output[key]
+            else:
+                raw_predictions[key] = np.append(
+                    raw_predictions[key], raw_output[key], axis=0
+                )
 
         return raw_predictions
 
@@ -558,6 +559,7 @@ class EngineABC(ABC):
             keys.append("labels")
 
         raw_predictions = {key: None for key in keys}
+        batch_output = {key: None for key in keys}
 
         zarr_group = None
 
@@ -565,24 +567,20 @@ class EngineABC(ABC):
             zarr_group = zarr.open(save_path, mode="w")
 
         for _, batch_data in enumerate(dataloader):
-            batch_output_predictions = self.model.infer_batch(
+            batch_output["predictions"] = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
             )
 
+            if self.return_labels:  # be careful of `s`
+                batch_output["labels"] = batch_data["label"].numpy()
+
             raw_predictions = self._update_model_output(
                 raw_predictions=raw_predictions,
-                key="predictions",
-                raw_output=batch_output_predictions,
+                raw_output=batch_output,
             )
 
-            if self.return_labels:  # be careful of `s`
-                raw_predictions = self._update_model_output(
-                    raw_predictions=raw_predictions,
-                    key="labels",
-                    raw_output=batch_data["label"].numpy(),
-                )
             if self.cache_mode:
                 zarr_group = write_to_zarr_in_cache_mode(
                     zarr_group=zarr_group, output_data_to_save=raw_predictions
