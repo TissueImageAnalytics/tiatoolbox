@@ -1667,8 +1667,6 @@ class AffineWSITransformer:
             resolution=resolution,
             units=units,
         )
-        transformed_location: tuple[int, int]
-        max_size: tuple[int, int]
         transformed_location, max_size = self.get_transformed_location(
             location,
             level_size,
