@@ -1,4 +1,4 @@
-"""Defines Abstract Base Class for TIAToolbox Engines to run CNN models."""
+"""Defines Abstract Base Class for TIAToolbox Engines."""
 
 from __future__ import annotations
 
@@ -84,7 +84,7 @@ def prepare_engines_save_dir(
     logger.info(
         "When providing multiple whole slide images, "
         "the outputs will be saved and the locations of outputs "
-        "will be returned to the calling function when the `run()`"
+        "will be returned to the calling function when `run()`"
         "finishes successfully.",
     )
 
@@ -106,7 +106,7 @@ class EngineABCRunParams(TypedDict, total=False):
             For smaller datasets, the cache_mode is set to False as
             the results can be saved in memory.
         cache_size (int):
-            Specifies how many images patches to process in a batch when
+            Specifies how many image patches to process in a batch when
             cache_mode is set to True. If cache_size is less than the batch_size
             batch_size is set to cache_size.
         class_dict (dict):
@@ -249,7 +249,7 @@ class EngineABC(ABC):
         merge_predictions (bool):
             Whether to merge the predictions to form a 2-dimensional
             map. This is only applicable if `patch_mode` is False in inference.
-            Deafault is False.
+            Default is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
@@ -301,7 +301,7 @@ class EngineABC(ABC):
             are extracted at the requested resolution and units. Default value is 1.0.
         units (Units):
             Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
+            from either `baseline`, `level`, `power` or `mpp`. Please see
             :class:`WSIReader` for details.
             When `patch_mode` is True, the input image patches are expected to be at
             the correct resolution and units. When `patch_mode` is False, the patches
