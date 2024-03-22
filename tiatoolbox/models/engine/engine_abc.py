@@ -585,6 +585,7 @@ class EngineABC(ABC):
                 zarr_group = write_to_zarr_in_cache_mode(
                     zarr_group=zarr_group, output_data_to_save=raw_predictions
                 )
+                raw_predictions = {key: None for key in keys}
 
             if progress_bar:
                 progress_bar.update()
