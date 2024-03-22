@@ -1238,8 +1238,8 @@ def dict_to_store(
 
     Args:
         patch_output (dict):
-            A dictionary in the TIAToolbox Engines output format. Important
-            keys are "probabilities", "predictions", "coordinates", and "labels".
+            A dictionary with "probabilities", "predictions", "coordinates",
+            and "labels" keys.
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
