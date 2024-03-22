@@ -559,7 +559,6 @@ class EngineABC(ABC):
             keys.append("labels")
 
         raw_predictions = {key: None for key in keys}
-        batch_output = {key: None for key in keys}
 
         zarr_group = None
 
@@ -567,7 +566,7 @@ class EngineABC(ABC):
             zarr_group = zarr.open(save_path, mode="w")
 
         for _, batch_data in enumerate(dataloader):
-            batch_output["predictions"] = self.model.infer_batch(
+            batch_output = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
