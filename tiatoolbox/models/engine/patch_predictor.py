@@ -234,14 +234,14 @@ class PatchPredictor(EngineABC):
     def infer_wsi(self: PatchPredictor) -> NoReturn:
         """Model inference on a WSI."""
 
-    def post_process_patches(
+    def save_predictions(
         self: PatchPredictor,
         raw_predictions: dict,
         output_type: str,
     ) -> None:
         """Post-process an image patch."""
 
-    def post_process_wsi(self: PatchPredictor) -> NoReturn:
+    def save_wsi_output(self: PatchPredictor) -> NoReturn:
         """Post-process a WSI."""
 
     @staticmethod

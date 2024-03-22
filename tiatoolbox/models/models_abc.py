@@ -75,7 +75,7 @@ class ModelABC(ABC, torch.nn.Module):
 
     @staticmethod
     @abstractmethod
-    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, device: str) -> None:
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, device: str) -> dict:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as I/O aggregation.
@@ -88,6 +88,11 @@ class ModelABC(ABC, torch.nn.Module):
                 `torch.utils.data.DataLoader`.
             device (str):
                 Transfers model to the specified device. Default is "cpu".
+
+        Returns:
+            dict:
+                Returns a dictionary of predictions and other expected outputs
+                depending on the network architecture.
 
         """
         ...  # pragma: no cover

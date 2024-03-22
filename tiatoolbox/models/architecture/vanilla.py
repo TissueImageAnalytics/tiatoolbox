@@ -143,7 +143,7 @@ class CNNModel(ModelABC):
         batch_data: torch.Tensor,
         *,
         device: str = "cpu",
-    ) -> np.ndarray:
+    ) -> dict[str, np.ndarray]:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -169,7 +169,7 @@ class CNNModel(ModelABC):
         with torch.inference_mode():
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
-        return output.cpu().numpy()
+        return {"predictions": output.cpu().numpy()}
 
 
 class CNNBackbone(ModelABC):
@@ -240,7 +240,7 @@ class CNNBackbone(ModelABC):
         batch_data: torch.Tensor,
         *,
         device: str,
-    ) -> list[np.ndarray, ...]:
+    ) -> dict[str, np.ndarray]:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -266,4 +266,4 @@ class CNNBackbone(ModelABC):
         with torch.inference_mode():
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
-        return [output.cpu().numpy()]
+        return {"predictions": output.cpu().numpy()}
