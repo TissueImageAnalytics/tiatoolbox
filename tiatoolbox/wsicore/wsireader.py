@@ -4096,7 +4096,7 @@ class TIFFWSIReader(WSIReader):
             # but base image is of different scale)
             (
                 read_level,
-                _,
+                bounds_at_read_level,
                 _,
                 post_read_scale,
             ) = self._find_read_bounds_params(
@@ -4108,7 +4108,7 @@ class TIFFWSIReader(WSIReader):
             # Find parameters for optimal read
             (
                 read_level,
-                _,
+                bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
@@ -4119,7 +4119,7 @@ class TIFFWSIReader(WSIReader):
 
         im_region = utils.image.sub_pixel_read(
             image=self.level_arrays[read_level],
-            bounds=bounds_at_baseline,
+            bounds=bounds_at_read_level,
             output_size=size_at_requested,
             interpolation=interpolation,
             pad_mode=pad_mode,
