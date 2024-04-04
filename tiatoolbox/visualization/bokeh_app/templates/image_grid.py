@@ -61,8 +61,8 @@ class ImageGrid(UIPlugin):
             p = figure(
                 x_range=(0, 100),
                 y_range=(0, 100),
-                width=360,
-                height=360,
+                width=400,
+                height=400,
                 title=image_path.stem,
             )
             p.axis.visible = False
@@ -73,3 +73,11 @@ class ImageGrid(UIPlugin):
         grid = gridplot(figures, ncols=3)
 
         return [grid]
+
+    def create_extra_layout_once(
+        self: UIPlugin,
+        slide_path: str,  # noqa: ARG002
+        old_children: list,  # noqa: ARG002
+    ) -> list:
+        """Create extra layout elements on widow initialization."""
+        return []

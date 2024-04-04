@@ -98,3 +98,11 @@ class BarPlotGrid(UIPlugin):
         grid = gridplot(plots, ncols=2)
 
         return [grid]
+
+    def create_extra_layout_once(
+        self: UIPlugin,
+        slide_path: str,  # noqa: ARG002
+        old_children: list,  # noqa: ARG002
+    ) -> list:
+        """Create extra layout elements on widow initialization."""
+        return []

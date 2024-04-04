@@ -7,7 +7,7 @@ from cmath import pi
 from typing import Any
 
 import numpy as np
-from bokeh.models import Button, CloseDialog, Column, Dialog, OpenDialog
+from bokeh.models import Dialog, Model, OpenDialog
 
 scale_factor = 2
 init_res = 40211.5 * scale_factor * (2 / (100 * pi))
@@ -82,27 +82,43 @@ class UIPlugin(ABC):
         slide_path: str,
         old_children: list,
     ) -> list:
-        """Create extra layout that will be placed below the main view window."""
+        """Create extra layout that will be placed below the main view window.
+
+        Will be run every time the slide is changed.
+        """
         raise NotImplementedError
 
     def add_to_ui(self: UIPlugin) -> None:  # noqa: B027
-        """Insert a UI element into the existing main UI panel."""
+        """Insert a UI element into the existing main UI panel.
+
+        Will be run every time the slide is changed.
+        """
+
+    @abstractmethod
+    def create_extra_layout_once(
+        self: UIPlugin,
+        slide_path: str,
+        old_children: list,
+    ) -> list:
+        """Create extra layout that will be placed below the main view window.
+
+        Will be run only once on loading UI.
+        """
+        raise NotImplementedError
+
+    def add_to_ui_once(self: UIPlugin) -> None:  # noqa: B027
+        """Insert a UI element into the existing main UI panel.
+
+        Will be run only once on loading UI.
+        """
 
 
-def make_into_popup(layout, trigger: callable, title="popup") -> Dialog:
+def make_into_popup(layout: Model, trigger: callable, title: str = "popup") -> Dialog:
     """Make a layout into a popup, that will open on trigger callback."""
-    close_plot = Button(label="Close")
     dialog = Dialog(
         title=title,
-        content=Column(
-            sizing_mode="stretch_both",
-            children=[
-                layout,
-                close_plot,
-            ],
-        ),
+        content=layout,
     )
     trigger(OpenDialog(dialog=dialog))
-    close_plot.js_on_click(CloseDialog(dialog=dialog))
 
     return dialog

@@ -11,9 +11,30 @@ from scipy.stats import gaussian_kde
 from tiatoolbox import logger
 from tiatoolbox.visualization.ui_utils import UIPlugin, make_into_popup
 
+popup_list = []
 
-def make_histogram(x: list, p: figure) -> None:
+
+def make_histogram(consolidate_props: dict, prop: str, popup_layout: Column) -> None:
     """Create a histogram and probability density function for the given data."""
+    property_select = Select(title="Property", options=[])
+    p = figure(
+        width=1000,
+        height=600,
+        toolbar_location=None,
+        title="Property statistics within selected region",
+    )
+    popup_layout.children = [property_select, p]
+    property_select.options = list(consolidate_props.keys())
+    property_select.value = property_select.options[0]
+    prop = property_select.value
+
+    def property_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+        prop = property_select.value
+        update_histogram(consolidate_props[prop], p)
+
+    property_select.on_change("value", property_select_cb)
+
+    x = consolidate_props[prop]
     bins = np.linspace(np.min(x), np.max(x), 40)
     hist, edges = np.histogram(x, density=True, bins=bins)
     source = ColumnDataSource(
@@ -82,6 +103,18 @@ class StatsPlot(UIPlugin):
         slide_path: Path,  # noqa: ARG002
         old_children: list,  # noqa: ARG002
     ) -> list:
+        """Create extra layout that will be placed below the main view window."""
+        return []
+
+    def create_extra_layout_once(
+        self: UIPlugin,
+        slide_path: str,  # noqa: ARG002
+        old_children: list,  # noqa: ARG002
+    ) -> list:
+        """Create extra layout elements on widow initialization."""
+        return []
+
+    def add_to_ui_once(self: UIPlugin) -> None:
         """Creates a UI element to calculate annotation stats in a region.
 
         Calculates stats of properties of the annotations contained
@@ -102,13 +135,7 @@ class StatsPlot(UIPlugin):
             height=47,
             width=160,
         )
-        property_select = Select(title="Property", options=[])
-        p = figure(
-            width=1000,
-            height=600,
-            toolbar_location=None,
-            title="Property statistics within selected region",
-        )
+        popup_layout = Column(children=[], sizing_mode="fixed")
 
         def get_stats_cb(attr: str) -> None:  # noqa: ARG001
             box = self.UI["box_source"]
@@ -145,23 +172,15 @@ class StatsPlot(UIPlugin):
 
             self.UI["vstate"].consolidate_props = consolidate_props
             # Create a histogram of the selected property
-            property_select.options = list(consolidate_props.keys())
-            property_select.value = property_select.options[0]
-            prop = property_select.value
-            make_histogram(consolidate_props[prop], p)
-
-        def property_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
-            prop = property_select.value
-            update_histogram(self.UI["vstate"].consolidate_props[prop], p)
+            make_histogram(consolidate_props, prop, popup_layout)
 
         # associate callbaks
         get_stats_btn.on_click(get_stats_cb)
-        property_select.on_change("value", property_select_cb)
         make_into_popup(
-            Column(children=[property_select, p]),
+            popup_layout,
             get_stats_btn.js_on_click,
             "Stats",
         )
 
-        # return [Row(property_select, get_stats_btn), p]
-        return [get_stats_btn]
+        # add to extra_options column children
+        self.UI["extra_options"].children.append(get_stats_btn)

@@ -853,6 +853,7 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     if len(new) == 0:
         return
     slide_path = Path(doc_config["slide_folder"]) / Path(new[0])
+    # add any extra per-slide elements from plugins
     if doc_config["extra_layout"] is not None:
         # create the extra layout if we can
         extras = []
@@ -997,7 +998,7 @@ def update_ui_on_new_annotations(ann_types: list[str]) -> None:
     change_tiles("overlay")
 
 
-def layer_drop_cb(attr: str, old: str, new: str) -> None:
+def layer_drop_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     """Set up the newly chosen overlay."""
     if Path(new).suffix == ".json":
         # It's a graph
@@ -1869,22 +1870,35 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
         )
         slide_wins.children.append(p)
 
-    # Return a dictionary collecting all the things related to window
-    return {
-        **elements_dict,
-        "p": p,
-        "vstate": vstate,
-        "s": s,
-        "box_source": box_source,
-        "pt_source": pt_source,
-        "node_source": node_source,
-        "edge_source": edge_source,
-        "hover": hover,
-        "user": user,
-        "color_bar": color_bar,
-        "ui_layout": ui_layout,
-        "extra_options": extra_options,
-    }
+    # Add the dictionary collecting all the things related to window to UI
+    win_dicts.append(
+        {
+            **elements_dict,
+            "p": p,
+            "vstate": vstate,
+            "s": s,
+            "box_source": box_source,
+            "pt_source": pt_source,
+            "node_source": node_source,
+            "edge_source": edge_source,
+            "hover": hover,
+            "user": user,
+            "color_bar": color_bar,
+            "ui_layout": ui_layout,
+            "extra_options": extra_options,
+        },
+    )
+
+    # add in any extra one-time elements from plugins
+    if doc_config["extra_layout"] is not None:
+        # create the extra layout if we can
+        extras = []
+        for cl in doc_config["extra_layout"]:
+            extras.extend(
+                cl.create_extra_layout_once(vstate.slide_path, extra_layout.children),
+            )
+            cl.add_to_ui_once()
+        extra_layout.children = extras
 
 
 # Main ui containers
@@ -1959,13 +1973,13 @@ def control_tabs_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
     """Callback to handle selecting active window."""
     if new == 1 and len(slide_wins.children) == 1:
         # Make new window
-        win_dicts.append(make_window(ViewerState(win_dicts[0]["vstate"].slide_path)))
+        UI.active = new
+        make_window(ViewerState(win_dicts[0]["vstate"].slide_path))
         win_dicts[1]["vstate"].thickness = win_dicts[0]["vstate"].thickness
         bounds = get_view_bounds(
             UI["vstate"].dims,
             np.array([UI["p"].width, UI["p"].height]),
         )
-        UI.active = new
         setup_config_ui_settings(doc_config)
         win_dicts[0]["vstate"].init_z = get_level_by_extent(
             (0, bounds[2], bounds[1], 0),
@@ -2149,7 +2163,7 @@ class DocConfig:
             first_slide_path = self.config["slide_folder"] / self.config["first_slide"]
 
         # Make initial window
-        win_dicts.append(make_window(ViewerState(first_slide_path)))
+        make_window(ViewerState(first_slide_path))
         # Set up any initial ui settings from config file
         setup_config_ui_settings(self.config)
         UI["vstate"].init = False
