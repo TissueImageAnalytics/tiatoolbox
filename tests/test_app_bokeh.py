@@ -18,7 +18,7 @@ import pytest
 import requests
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
+from bokeh.events import ButtonClick, DoubleTap
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
@@ -262,8 +262,7 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     slide_select.value = [data_path["slide2"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the geojson file
-    click = MenuItemClick(layer_drop, str(data_path["geojson_anns"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["geojson_anns"])
     assert main.UI["vstate"].types == ["annotation"]
 
     # test the name2type function.
@@ -272,11 +271,10 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 5
+    assert len(layer_drop.options) == 5
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
     # trigger an event to select the annotation .db file
-    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["annotations"])
     # should be one more renderer now
     assert len(doc.get_model_by_name("slide_windows").children[0].renderers) == (
         n_renderers + 1
@@ -369,8 +367,7 @@ def test_load_graph(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test loading a graph."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph file
-    click = MenuItemClick(layer_drop, str(data_path["graph"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["graph"])
     # we should have 2144 nodes in the node_source now
     assert len(main.UI["node_source"].data["x_"]) == 2144
 
@@ -379,8 +376,7 @@ def test_graph_with_feats(doc: Document, data_path: pytest.TempPathFactory) -> N
     """Test loading a graph with features."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .json file
-    click = MenuItemClick(layer_drop, str(data_path["graph_feats"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["graph_feats"])
     # we should have keys for the features in node data source now
     for i in range(10):
         assert f"feat_{i}" in main.UI["node_source"].data
@@ -402,8 +398,7 @@ def test_graph_with_feats(doc: Document, data_path: pytest.TempPathFactory) -> N
     )
 
     # test graph overlay option remains on loading new overlay
-    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["annotations"])
     assert "graph_overlay" in cmap_select.options
 
 
@@ -411,8 +406,7 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     """Test loading an image overlay."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the image overlay
-    click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["img_overlay"])
     layer_slider = doc.get_model_by_name("layer2_slider")
     assert layer_slider is not None
 
@@ -474,8 +468,7 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     cprop_select = doc.get_model_by_name("cprop0")
     cprop_select.value = ["prob"]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    click = MenuItemClick(layer_drop, str(data_path["dat_anns"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["dat_anns"])
     assert main.UI["vstate"].types == ["annotation"]
     # check the per-type ui controls have been updated
     assert len(main.UI["color_column"].children) == 1
@@ -516,8 +509,7 @@ def test_type_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test selecting/deselecting specific types."""
     # load annotation layer
     layer_drop = doc.get_model_by_name("layer_drop0")
-    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["annotations"])
     time.sleep(1)
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_before = label(np.any(im[:, :, :3], axis=2))
@@ -569,8 +561,7 @@ def test_node_and_edge_alpha(doc: Document, data_path: pytest.TempPathFactory) -
     """Test sliders for adjusting graph node and edge alpha."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .db file
-    click = MenuItemClick(layer_drop, str(data_path["graph"]))
-    layer_drop._trigger_event(click)
+    layer_drop.value = str(data_path["graph"])
 
     type_column_list = doc.get_model_by_name("type_column0").children
     color_column_list = doc.get_model_by_name("color_column0").children

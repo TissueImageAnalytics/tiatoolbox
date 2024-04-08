@@ -87,10 +87,10 @@ def test_slides_available(bk_session: ClientSession) -> None:
     assert slide_select.value[0] == "CMU-1-Small-Region.svs"
 
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 2
+    assert len(layer_drop.options) == 2
     # check that the overlays are available.
     slide_select.value = ["CMU-1.ndpi"]
-    assert len(layer_drop.menu) == 2
+    assert len(layer_drop.options) == 2
 
     # check the metadata wasnt found as the column name was wrong
     desc = doc.get_model_by_name("description")

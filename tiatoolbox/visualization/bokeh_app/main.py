@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
+from bokeh.events import ButtonClick, DoubleTap
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -885,14 +885,13 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
         for f in UI["layer_drop"].options:
-            dummy_attr = DummyAttr(f[0])
-            layer_drop_cb(dummy_attr)
+            layer_drop_cb("", "", f[0])
 
 
-def handle_graph_layer(attr: MenuItemClick) -> None:  # skipcq: PY-R1000
+def handle_graph_layer(graph_path: str) -> None:  # skipcq: PY-R1000
     """Handle adding a graph layer."""
     do_feats = False
-    with Path(attr.item).open("rb") as f:
+    with Path(graph_path).open("rb") as f:
         graph_dict = json.load(f)
     # Convert the values to numpy arrays
     for k, v in graph_dict.items():
@@ -1002,7 +1001,7 @@ def layer_drop_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     """Set up the newly chosen overlay."""
     if Path(new).suffix == ".json":
         # It's a graph
-        handle_graph_layer(attr)
+        handle_graph_layer(new)
         return
 
     # Otherwise it's a tile-based overlay of some form
