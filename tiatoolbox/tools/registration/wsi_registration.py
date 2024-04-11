@@ -510,7 +510,6 @@ class DFBRegister:
         first_min = feature_dist[seq, ind_first_min]
         mask = np.zeros_like(feature_dist)
         mask[seq, ind_first_min] = 1
-        masked: np.ndarray = np.ma.masked_array(feature_dist, mask)
         second_min = np.amin(masked, axis=1)
         return np.array([seq, ind_first_min]).transpose(), np.array(
             second_min / first_min,
