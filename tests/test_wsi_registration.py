@@ -580,6 +580,7 @@ def test_affine_wsi_transformer(sample_ome_tiff: Path) -> None:
 
         assert np.sum(expected - output) == 0
 
+
 def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
     """Test DFBRFeatureExtractor with torch.compile functionality.
 
