@@ -209,9 +209,9 @@ class SQLTriplet(SQLExpression):
 
     def __init__(
         self: SQLExpression,
-        lhs: SQLTriplet | str | SQLExpression |Number,
+        lhs: SQLTriplet | str | SQLExpression | Number,
         op: Callable | str | None = None,
-        rhs: SQLTriplet | str | SQLExpression| Number | None = None,
+        rhs: SQLTriplet | str | SQLExpression | Number | None = None,
     ) -> None:
         """Initialize :class:`SQLTriplet`."""
         self.lhs = lhs
