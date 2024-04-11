@@ -587,6 +587,7 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
     Args:
         dfbr_features (Path): Path to the expected features.
     """
+
     def _extract_features() -> tuple:
         dfbr = DFBRegister()
         fixed_img = np.repeat(
