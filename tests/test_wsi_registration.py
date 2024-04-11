@@ -587,10 +587,6 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
     Args:
         dfbr_features (Path): Path to the expected features.
     """
-    torch_compile_enabled = rcParam["enable_torch_compile"]
-    torch._dynamo.reset()
-    rcParam["enable_torch_compile"] = True
-
     def _extract_features() -> tuple:
         dfbr = DFBRegister()
         fixed_img = np.repeat(
@@ -612,6 +608,9 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
 
         return pool3_feat, pool4_feat, pool5_feat
 
+    torch_compile_enabled = rcParam["enable_torch_compile"]
+    torch._dynamo.reset()
+    rcParam["enable_torch_compile"] = True
     (pool3_feat, pool4_feat, pool5_feat), compile_time = timed(_extract_features)
     _pool3_feat, _pool4_feat, _pool5_feat = np.load(
         str(dfbr_features),
@@ -620,7 +619,6 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
     assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
     assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
-    torch._dynamo.reset()
     logger.info("torch.compile default mode: %s", compile_time)
     torch._dynamo.reset()
     rcParam["torch_compile_mode"] = "reduce-overhead"
@@ -632,8 +630,8 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
     assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
     assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
-    torch._dynamo.reset()
     logger.info("torch.compile reduce-overhead mode: %s", compile_time)
+    torch._dynamo.reset()
     rcParam["torch_compile_mode"] = "max-autotune"
     (pool3_feat, pool4_feat, pool5_feat), compile_time = timed(_extract_features)
     _pool3_feat, _pool4_feat, _pool5_feat = np.load(
@@ -643,5 +641,6 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
     assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
     assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
+    logger.info("torch.compile max-autotune mode: %s", compile_time)
     torch._dynamo.reset()
     rcParam["enable_torch_compile"] = torch_compile_enabled
