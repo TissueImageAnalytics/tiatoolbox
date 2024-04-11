@@ -160,7 +160,7 @@ class SQLExpression:
         """Define how the object is compared for equality."""
         return SQLTriplet(self, operator.eq, other)
 
-    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:
+    def __ne__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Define how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.ne, other)
 
@@ -168,7 +168,7 @@ class SQLExpression:
         """Define how the object is compared for negation (not equal to)."""
         return SQLTriplet(self, operator.neg)
 
-    def __contains__(self: SQLExpression, other: object) -> bool:
+    def __contains__(self: SQLExpression, other: SQLExpression) -> bool:
         """Test whether the object contains the specified object or not."""
         return SQLTriplet(self, "contains", other)
 
@@ -180,19 +180,19 @@ class SQLExpression:
         """Implements reverse exponentiation operation."""
         return SQLTriplet(x, operator.pow, self)
 
-    def __and__(self: SQLExpression, other: object) -> SQLTriplet:
+    def __and__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements logical AND operation."""
         return SQLTriplet(self, operator.and_, other)
 
-    def __rand__(self: SQLExpression, other: object) -> SQLTriplet:
+    def __rand__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements reverse logical AND operation."""
         return SQLTriplet(other, operator.and_, self)
 
-    def __or__(self: SQLExpression, other: object) -> SQLTriplet:
+    def __or__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements logical OR operation."""
         return SQLTriplet(self, operator.or_, other)
 
-    def __ror__(self: SQLExpression, other: object) -> SQLTriplet:
+    def __ror__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
         """Implements reverse logical OR operation."""
         return SQLTriplet(other, operator.or_, self)
 
@@ -209,9 +209,9 @@ class SQLTriplet(SQLExpression):
 
     def __init__(
         self: SQLExpression,
-        lhs: SQLTriplet | str,
+        lhs: SQLTriplet | str | SQLExpression |Number,
         op: Callable | str | None = None,
-        rhs: SQLTriplet | str | None = None,
+        rhs: SQLTriplet | str | SQLExpression| Number | None = None,
     ) -> None:
         """Initialize :class:`SQLTriplet`."""
         self.lhs = lhs

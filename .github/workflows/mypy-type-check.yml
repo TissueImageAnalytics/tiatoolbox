@@ -40,4 +40,5 @@ jobs:
           tiatoolbox/typing.py \
           tiatoolbox/tiatoolbox.py \
           tiatoolbox/utils/*.py \
-          tiatoolbox/tools/*.py
+          tiatoolbox/tools/*.py \
+          tiatoolbox/data/*.py
