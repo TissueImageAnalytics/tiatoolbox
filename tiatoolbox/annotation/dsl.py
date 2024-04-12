@@ -64,6 +64,7 @@ import re
 from dataclasses import dataclass
 from numbers import Number
 from typing import Callable
+
 from typing_extensions import TypedDict
 
 
@@ -160,13 +161,13 @@ class SQLExpression:
         """Return the absolute value of the object."""
         return SQLTriplet(self, operator.abs)
 
-    def __eq__(self: SQLExpression, other: object) -> SQLTriplet: # type: ignore[override]
+    def __eq__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
         """Define how the object is compared for equality."""
         if not isinstance(other, SQLExpression):
             return NotImplemented
         return SQLTriplet(self, operator.eq, other)
 
-    def __ne__(self: SQLExpression, other: object) -> SQLTriplet: # type: ignore[override]
+    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
         """Define how the object is compared for equality (not equal to)."""
         if not isinstance(other, SQLExpression):
             return NotImplemented
@@ -443,13 +444,9 @@ def sql_has_key(dictionary: SQLJSONDictionary, key: str | int) -> SQLTriplet:
 # Constants defining the global variables for use in eval() when
 # evaluating expressions.
 COMMON_GLOBALS_Type = TypedDict(
-    'COMMON_GLOBALS_Type',
-    {
-        "__builtins__": dict[str, Callable],
-        "re": object
-    }
+    "COMMON_GLOBALS_Type", {"__builtins__": dict[str, Callable], "re": object}
 )
-_COMMON_GLOBALS : COMMON_GLOBALS_Type = {
+_COMMON_GLOBALS: COMMON_GLOBALS_Type = {
     "__builtins__": {"abs": abs},
     "re": re.RegexFlag,
 }
