@@ -14,7 +14,7 @@ from tiatoolbox.visualization.ui_utils import UIPlugin, make_into_popup
 popup_list = []
 
 
-def make_histogram(consolidate_props: dict, prop: str, popup_layout: Column) -> None:
+def make_histogram(consolidate_props: dict, popup_layout: Column) -> None:
     """Create a histogram and probability density function for the given data."""
     property_select = Select(title="Property", options=[])
     p = figure(
@@ -29,6 +29,7 @@ def make_histogram(consolidate_props: dict, prop: str, popup_layout: Column) -> 
     prop = property_select.value
 
     def property_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+        """Update the histogram and pdf line when new property is selected."""
         prop = property_select.value
         update_histogram(consolidate_props[prop], p)
 
@@ -138,6 +139,7 @@ class StatsPlot(UIPlugin):
         popup_layout = Column(children=[], sizing_mode="fixed")
 
         def get_stats_cb(attr: str) -> None:  # noqa: ARG001
+            """Get the stats of the annotations in the selected region."""
             box = self.UI["box_source"]
             if len(box.data["x"]) > 0:
                 x = round(
@@ -172,7 +174,7 @@ class StatsPlot(UIPlugin):
 
             self.UI["vstate"].consolidate_props = consolidate_props
             # Create a histogram of the selected property
-            make_histogram(consolidate_props, prop, popup_layout)
+            make_histogram(consolidate_props, popup_layout)
 
         # associate callbaks
         get_stats_btn.on_click(get_stats_cb)
