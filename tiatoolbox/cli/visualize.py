@@ -12,9 +12,6 @@ import click
 from flask_cors import CORS
 
 from tiatoolbox.cli.common import tiatoolbox_cli
-from tiatoolbox.visualization.tileserver import TileServer
-
-BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 
 
 def run_tileserver() -> None:
@@ -22,6 +19,8 @@ def run_tileserver() -> None:
 
     def run_app() -> None:
         """Run the tileserver app."""
+        from tiatoolbox.visualization.tileserver import TileServer
+
         app = TileServer(
             title="Tiatoolbox TileServer",
             layers={},
@@ -35,6 +34,7 @@ def run_tileserver() -> None:
 
 def run_bokeh(img_input: list[str], port: int, *, noshow: bool) -> None:
     """Start the bokeh server."""
+    bokeh_path = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
     cmd = [
         "bokeh",
         "serve",
@@ -43,7 +43,7 @@ def run_bokeh(img_input: list[str], port: int, *, noshow: bool) -> None:
         cmd = [*cmd, "--show"]  # pragma: no cover
     cmd = [
         *cmd,
-        BOKEH_PATH,
+        bokeh_path,
         "--port",
         str(port),
         "--unused-session-lifetime",

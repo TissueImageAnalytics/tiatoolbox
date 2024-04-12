@@ -185,6 +185,15 @@ The input output configuration is as follows:
 
     - hovernet_fast-pannuke
 
+.. collapse:: Output Nuclear Classes
+
+    - 0: Background
+    - 1: Neoplastic
+    - 2: Inflammatory
+    - 3: Connective
+    - 4: Dead
+    - 5: Non-Neoplastic Epithelial
+
 MoNuSAC Dataset
 ---------------
 
@@ -217,6 +226,14 @@ The input output configuration is as follows:
 .. collapse:: Model names
 
     - hovernet_fast-monusac
+
+.. collapse:: Output Nuclear Classes
+
+    - 0: Background
+    - 1: Epithelial
+    - 2: Lymphocyte
+    - 3: Macrophage
+    - 4: Neutrophil
 
 CoNSeP Dataset
 --------------
@@ -251,6 +268,14 @@ The input output configuration is as follows:
 
     - hovernet_original-consep
 
+.. collapse:: Output Nuclear Classes
+
+    - 0: Background
+    - 1: Epithelial
+    - 2: Inflammatory
+    - 3: Spindle-Shaped
+    - 4: Miscellaneous
+
 
 .. collapse:: Input Output Configuration Details
 
@@ -275,11 +300,13 @@ The input output configuration is as follows:
 
     - micronet_hovernet-consep
 
+
 Kumar Dataset
 -------------
 
 We provide the following models trained using the `Kumar dataset <https://monuseg.grand-challenge.org/>`_.
 All model weights trained on Kumar are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The Kumar dataset does not contain nuclear class information, and so TIAToolbox pretrained models based on Kumar for nuclear segmentation, will only perform segmentation and not classification.
 The input output configuration is as follows:
 
 .. collapse:: Input Output Configuration Details
@@ -428,3 +455,17 @@ The model uses the following input output configuration:
 .. collapse:: Model names
 
     - hovernetplus-oed
+
+.. collapse:: Output Nuclear Classes
+
+    - 0: Background
+    - 1: Other
+    - 2: Epithelial
+
+.. collapse:: Output Region Classes
+
+    - 0: Background
+    - 1: Other Tissue
+    - 2: Basal Epithelium
+    - 3: (Core) Epithelium
+    - 4: Keratin

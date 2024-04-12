@@ -329,11 +329,13 @@ class HoVerNet(ModelABC):
         num_input_channels: int = 3,
         num_types: int | None = None,
         mode: str = "original",
+        nuc_type_dict: dict | None = None,
     ) -> None:
         """Initialize :class:`HoVerNet`."""
         super().__init__()
         self.mode = mode
         self.num_types = num_types
+        self.nuc_type_dict = nuc_type_dict
 
         if mode not in ["original", "fast"]:
             msg = (
@@ -771,6 +773,7 @@ class HoVerNet(ModelABC):
         """
         if len(raw_maps) == 3:  # noqa: PLR2004
             np_map, hv_map, tp_map = raw_maps
+            tp_map = np.around(tp_map).astype("uint8")
         else:
             tp_map = None
             np_map, hv_map = raw_maps
