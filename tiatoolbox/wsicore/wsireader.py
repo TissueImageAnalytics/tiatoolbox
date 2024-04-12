@@ -232,7 +232,7 @@ class WSIReader:
         input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
-        *, # makes sure ignore_is_tiled_tiff can only be used as a keyword argument
+        *,  # makes sure ignore_is_tiled_tiff can only be used as a keyword argument
         ignore_is_tiled_tiff: bool = False,
         **kwargs: dict,
     ) -> WSIReader:
@@ -306,8 +306,9 @@ class WSIReader:
         if suffixes[-2:] in ([".ome", ".tiff"],):
             return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
-        if last_suffix in (".tif", ".tiff") and \
-            (ignore_is_tiled_tiff or is_tiled_tiff(input_path)):
+        if last_suffix in (".tif", ".tiff") and (
+            ignore_is_tiled_tiff or is_tiled_tiff(input_path)
+        ):
             try:
                 return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
             except openslide.OpenSlideError:
