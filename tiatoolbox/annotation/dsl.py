@@ -163,14 +163,10 @@ class SQLExpression:
 
     def __eq__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
         """Define how the object is compared for equality."""
-        if not isinstance(other, SQLExpression):
-            return NotImplemented
         return SQLTriplet(self, operator.eq, other)
 
     def __ne__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
         """Define how the object is compared for equality (not equal to)."""
-        if not isinstance(other, SQLExpression):
-            return NotImplemented
         return SQLTriplet(self, operator.ne, other)
 
     def __neg__(self: SQLExpression) -> SQLTriplet:
@@ -179,8 +175,6 @@ class SQLExpression:
 
     def __contains__(self: SQLExpression, other: object) -> SQLTriplet:
         """Test whether the object contains the specified object or not."""
-        if not isinstance(other, SQLExpression):
-            return NotImplemented
         return SQLTriplet(self, "contains", other)
 
     def __pow__(self: SQLExpression, x: SQLTriplet | str) -> SQLTriplet:
@@ -193,26 +187,18 @@ class SQLExpression:
 
     def __and__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements logical AND operation."""
-        if not isinstance(other, SQLExpression):
-            return NotImplemented
         return SQLTriplet(self, operator.and_, other)
 
     def __rand__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements reverse logical AND operation."""
-        if not isinstance(other, SQLExpression):
-            return NotImplemented
         return SQLTriplet(other, operator.and_, self)
 
     def __or__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements logical OR operation."""
-        if not isinstance(other, SQLExpression):
-            return NotImplemented
         return SQLTriplet(self, operator.or_, other)
 
     def __ror__(self: SQLExpression, other: object) -> SQLTriplet:
         """Implements reverse logical OR operation."""
-        if not isinstance(other, SQLExpression):
-            return NotImplemented
         return SQLTriplet(other, operator.or_, self)
 
 
