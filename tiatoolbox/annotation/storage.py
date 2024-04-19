@@ -72,12 +72,12 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 from tiatoolbox.enums import GeometryType
+from tiatoolbox.typing import Geometry
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import (
         CallablePredicate,
         CallableSelect,
-        Geometry,
         Predicate,
         Properties,
         QueryGeometry,
@@ -109,9 +109,9 @@ class Annotation:
 
     """
 
-    _geometry: Geometry | None = field(default=None, hash=True)
+    _geometry: Geometry = field(default_factory=Geometry, hash=True)
     properties: Properties = field(default_factory=dict, hash=True)
-    _wkb: bytes | None = field(default=None, hash=False)
+    _wkb: bytes = field(default_factory=bytes, hash=False)
 
     @property
     def geometry(self: Annotation) -> Geometry:
@@ -147,7 +147,7 @@ class Annotation:
     @property
     def coords(  # noqa: PLR0911 - 7 > 6 returns
         self: Annotation,
-    ) -> np.array | list[np.array] | list[list[np.array]]:
+    ) -> np.ndarray | list[np.ndarray] | list[list[np.ndarray]]:
         """The annotation geometry as a flat array of 2D coordinates.
 
         Returns a numpy array of coordinates for point and line string.
@@ -229,7 +229,7 @@ class Annotation:
 
     def __init__(
         self: Annotation,
-        geometry: Geometry | int | str | None = None,
+        geometry: Geometry | None = None,
         properties: Properties | None = None,
         wkb: bytes | None = None,
     ) -> None:
@@ -256,9 +256,9 @@ class Annotation:
             raise ValueError(msg)
         if wkb is not None:
             object.__setattr__(self, "_wkb", wkb)
-            object.__setattr__(self, "_geometry", None)
-        else:
-            object.__setattr__(self, "_wkb", None)
+            object.__setattr__(self, "_geometry", shapely_wkb.loads(wkb))
+        if geometry is not None:
+            object.__setattr__(self, "_wkb", geometry.wkb)
             object.__setattr__(self, "_geometry", geometry)
         object.__setattr__(self, "properties", properties or {})
 
@@ -496,7 +496,8 @@ class AnnotationStore(ABC, MutableMapping):
             return False
         # Check that all angles are right angles
         return all(
-            self._is_right_angle(*xyz) for xyz in ((a, b, c), (b, c, d), (c, d, a))
+            AnnotationStore._is_right_angle(*xyz)
+            for xyz in ((a, b, c), (b, c, d), (c, d, a))
         )
 
     @staticmethod
