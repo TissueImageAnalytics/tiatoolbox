@@ -84,9 +84,8 @@ class SQLNone:
 class SQLExpression:
     """SQL expression base class."""
 
-    # __hash__ = None
-
     def __hash__(self: SQLExpression) -> int:
+        """Return hash of the object (Not used)."""
         return 0
 
     def __repr__(self: SQLExpression) -> str:
@@ -214,9 +213,9 @@ class SQLTriplet(SQLExpression):
 
     def __init__(
         self: SQLExpression,
-        lhs: SQLTriplet | str | SQLExpression | Number | bool,
+        lhs: SQLTriplet | str | SQLExpression | Number | bool | object,
         op: Callable | str | None = None,
-        rhs: SQLTriplet | str | SQLExpression | Number | SQLNone | None = None,
+        rhs: SQLTriplet | str | SQLExpression | Number | SQLNone | object | None = None,
     ) -> None:
         """Initialize :class:`SQLTriplet`."""
         self.lhs = lhs
