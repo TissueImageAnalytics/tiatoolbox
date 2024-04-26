@@ -275,7 +275,7 @@ class EngineABC(ABC):
             the results can be saved in memory. cache_mode is always True when
             processing WSIs i.e., when `patch_mode` is False. Default value is False.
         cache_size (int):
-            Specifies how many images patches to process in a batch when
+            Specifies how many image patches to process in a batch when
             cache_mode is set to True. If cache_size is less than the batch_size
             batch_size is set to cache_size. Default value is 10,000.
         labels (list | None):

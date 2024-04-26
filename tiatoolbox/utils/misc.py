@@ -1385,7 +1385,7 @@ def wsi_batch_output_to_zarr_group(
             Keyword Args to update wsi_batch_output_to_zarr_group attributes.
 
     Returns:
-        Path to zarr file storing the patch predictor output
+        Path to the zarr file storing the :class:`EngineABC` output.
 
     """
     # Default values for Compressor and Chunks set if not received from kwargs.
@@ -1470,7 +1470,7 @@ def write_to_zarr_in_cache_mode(
             Keyword Args to update zarr_group attributes.
 
     Returns:
-        Path to zarr file storing the patch predictor output
+        Path to the zarr file storing the :class:`EngineABC` output.
 
     """
     # Default values for Compressor and Chunks set if not received from kwargs.
