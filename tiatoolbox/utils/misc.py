@@ -1230,7 +1230,7 @@ def patch_predictions_as_annotations(
 
 def dict_to_store(
     patch_output: dict,
-    scale_factor: tuple[int, int],
+    scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
 ) -> AnnotationStore | Path:
@@ -1238,9 +1238,9 @@ def dict_to_store(
 
     Args:
         patch_output (dict):
-            A dictionary in the TIAToolbox Engines output format. Important
-            keys are "probabilities", "predictions", "coordinates", and "labels".
-        scale_factor (tuple[int, int]):
+            A dictionary with "probabilities", "predictions", "coordinates",
+            and "labels" keys.
+        scale_factor (tuple[float, float]):
             The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
             conversion of annotations saved at non-baseline resolution to baseline.
@@ -1299,7 +1299,7 @@ def dict_to_store(
     )
 
     store = SQLiteStore()
-    keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
     # if a save director is provided, then dump store into a file
     if save_path:
@@ -1372,20 +1372,20 @@ def wsi_batch_output_to_zarr_group(
             Optional zarr group name consisting of zarrs to save the batch output
             values.
         batch_output_probabilities (np.ndarray):
-            Probability batch output from infer wsi
+            Probability batch output from infer wsi.
         batch_output_predictions (np.ndarray):
-            Predictions batch output from infer wsi
+            Predictions batch output from infer wsi.
         batch_output_coordinates (np.ndarray):
-            Coordinates batch output from infer wsi
+            Coordinates batch output from infer wsi.
         batch_output_label (np.ndarray):
-            Labels batch output from infer wsi
+            Labels batch output from infer wsi.
         save_path (str or Path):
             Path to save the zarr file.
         **kwargs (dict):
             Keyword Args to update wsi_batch_output_to_zarr_group attributes.
 
     Returns:
-        Path to zarr file storing the patch predictor output
+        Path to the zarr file storing the :class:`EngineABC` output.
 
     """
     # Default values for Compressor and Chunks set if not received from kwargs.
@@ -1435,7 +1435,7 @@ def wsi_batch_output_to_zarr_group(
             )
             labels_zarr[:] = batch_output_label
 
-    # case 2 - apped to exisiting zarr group
+    # case 2 - append to existing zarr group
     probabilities_zarr = wsi_batch_zarr_group["probabilities"]
     probabilities_zarr.append(batch_output_probabilities)
 
@@ -1451,3 +1451,45 @@ def wsi_batch_output_to_zarr_group(
         labels_zarr.append(batch_output_label)
 
     return wsi_batch_zarr_group
+
+
+def write_to_zarr_in_cache_mode(
+    zarr_group: zarr.group,
+    output_data_to_save: dict,
+    **kwargs: dict,
+) -> zarr.group | Path:
+    """Saves the intermediate batch outputs of TIAToolbox engines to a zarr file.
+
+    Args:
+        zarr_group (zarr.group):
+            Zarr group name consisting of zarr(s) to save the batch output
+            values.
+        output_data_to_save (dict):
+            Output data from the Engine to save to Zarr.
+        **kwargs (dict):
+            Keyword Args to update zarr_group attributes.
+
+    Returns:
+        Path to the zarr file storing the :class:`EngineABC` output.
+
+    """
+    # Default values for Compressor and Chunks set if not received from kwargs.
+    compressor = kwargs.get("compressor", numcodecs.Zstd(level=1))
+
+    # case 1 - new zarr group
+    if not zarr_group:
+        for key in output_data_to_save:
+            data_to_save = output_data_to_save[key]
+            # populate the zarr group for the first time
+            zarr_dataset = zarr_group.create_dataset(
+                name=key,
+                shape=data_to_save.shape,
+                compressor=compressor,
+            )
+            zarr_dataset[:] = data_to_save
+
+    # case 2 - append to existing zarr group
+    for key in output_data_to_save:
+        zarr_group[key].append(output_data_to_save[key])
+
+    return zarr_group
