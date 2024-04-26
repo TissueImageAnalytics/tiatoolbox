@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+import copy
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
 import pytest
 import torchvision.models as torch_models
+import zarr
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
 )
 from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.models.dataset import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
@@ -33,24 +37,60 @@ class TestEngineABC(EngineABC):
         """Test EngineABC init."""
         super().__init__(model=model, weights=weights, verbose=verbose)
 
-    def infer_wsi(self: EngineABC) -> NoReturn:
-        """Test infer_wsi."""
-        # dummy function for tests.
+    def get_dataloader(
+        self: EngineABC,
+        images: Path,
+        masks: Path | None = None,
+        labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+        *,
+        patch_mode: bool = True,
+    ) -> torch.utils.data.DataLoader:
+        """Test pre process images."""
+        return super().get_dataloader(
+            images,
+            masks,
+            labels,
+            ioconfig,
+            patch_mode=patch_mode,
+        )
 
-    def post_process_wsi(self: EngineABC) -> NoReturn:
+    def save_wsi_output(
+        self: EngineABC,
+        raw_output: dict,
+        save_dir: Path,
+        **kwargs: dict,
+    ) -> Path:
         """Test post_process_wsi."""
-        # dummy function for tests.
+        return super().save_wsi_output(
+            raw_output,
+            save_dir=save_dir,
+            **kwargs,
+        )
 
-    def pre_process_wsi(self: EngineABC) -> NoReturn:
-        """Test pre_process_wsi."""
-        # dummy function for tests.
+    def infer_wsi(
+        self: EngineABC,
+        dataloader: torch.utils.data.DataLoader,
+        img_label: str,
+        highest_input_resolution: list[dict],
+        save_dir: Path,
+        **kwargs: dict,
+    ) -> dict | np.ndarray:
+        """Test infer_wsi."""
+        return super().infer_wsi(
+            dataloader,
+            img_label,
+            highest_input_resolution,
+            save_dir,
+            **kwargs,
+        )
 
 
 def test_engine_abc() -> NoReturn:
     """Test EngineABC initialization."""
     with pytest.raises(
         TypeError,
-        match=r".*Can't instantiate abstract class EngineABC with abstract methods*",
+        match=r".*Can't instantiate abstract class EngineABC*",
     ):
         # Can't instantiate abstract class with abstract methods
         EngineABC()  # skipcq
@@ -125,7 +165,6 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output",
         patch_mode=True,
-        len_images=1,
         overwrite=False,
     )
 
@@ -135,7 +174,6 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output",
         patch_mode=True,
-        len_images=1,
         overwrite=True,
     )
 
@@ -145,35 +183,23 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=None,
         patch_mode=True,
-        len_images=1,
         overwrite=False,
     )
     assert out_dir is None
 
     with pytest.raises(
         OSError,
-        match=r".*More than 1 WSIs detected but there is no save directory provided.*",
+        match=r".*Input WSIs detected but no save directory provided.*",
     ):
         _ = prepare_engines_save_dir(
             save_dir=None,
             patch_mode=False,
-            len_images=2,
             overwrite=False,
         )
 
     out_dir = prepare_engines_save_dir(
-        save_dir=None,
-        patch_mode=False,
-        len_images=1,
-        overwrite=False,
-    )
-
-    assert out_dir == Path.cwd()
-
-    out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_single_output",
         patch_mode=False,
-        len_images=1,
         overwrite=False,
     )
 
@@ -184,7 +210,6 @@ def test_prepare_engines_save_dir(
     out_dir = prepare_engines_save_dir(
         save_dir=tmp_path / "wsi_multiple_output",
         patch_mode=False,
-        len_images=2,
         overwrite=False,
     )
 
@@ -196,7 +221,6 @@ def test_prepare_engines_save_dir(
     out_path = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
-        len_images=1,
         overwrite=True,
     )
     assert out_path.exists()
@@ -204,7 +228,6 @@ def test_prepare_engines_save_dir(
     out_path = prepare_engines_save_dir(
         save_dir=tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
-        len_images=1,
         overwrite=True,
     )
     assert out_path.exists()
@@ -213,7 +236,6 @@ def test_prepare_engines_save_dir(
         out_path = prepare_engines_save_dir(
             save_dir=tmp_path / "patch_output" / "output.zarr",
             patch_mode=True,
-            len_images=1,
             overwrite=False,
         )
 
@@ -238,7 +260,7 @@ def test_engine_initalization() -> NoReturn:
     assert isinstance(eng, EngineABC)
 
 
-def test_engine_run() -> NoReturn:
+def test_engine_run(tmp_path: Path) -> NoReturn:
     """Test engine run."""
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
@@ -315,6 +337,15 @@ def test_engine_run() -> NoReturn:
     assert "predictions" in out
     assert "labels" in out
 
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    with pytest.raises(NotImplementedError):
+        eng.run(
+            images=np.zeros(shape=(10, 224, 224, 3)),
+            save_dir=tmp_path / "output",
+            patch_mode=False,
+        )
+
 
 def test_engine_run_with_verbose() -> NoReturn:
     """Test engine run with verbose."""
@@ -381,7 +412,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         ValueError,
         match=r".*Patch output must contain coordinates.",
     ):
-        out = eng.run(
+        _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
             on_gpu=False,
@@ -394,7 +425,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         ValueError,
         match=r".*Patch output must contain coordinates.",
     ):
-        out = eng.run(
+        _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
             on_gpu=False,
@@ -408,7 +439,7 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         ValueError,
         match=r".*Patch output must contain coordinates.",
     ):
-        out = eng.run(
+        _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
             on_gpu=False,
@@ -417,3 +448,220 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
             output_type="AnnotationStore",
             scale_factor=(2.0, 2.0),
         )
+
+
+def test_cache_mode_patches(tmp_path: pytest.TempPathFactory) -> NoReturn:
+    """Test the caching mode."""
+    save_dir = tmp_path / "patch_output"
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        on_gpu=False,
+        save_dir=save_dir,
+        overwrite=True,
+        cache_mode=True,
+    )
+    assert out.exists(), "Zarr output file does not exist"
+
+    output_file_name = "output2.zarr"
+    cache_size = 4
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        on_gpu=False,
+        save_dir=save_dir,
+        overwrite=True,
+        cache_mode=True,
+        cache_size=4,
+        batch_size=8,
+        output_file=output_file_name,
+    )
+    assert out.stem == output_file_name.split(".")[0]
+    assert eng.batch_size == cache_size
+    assert out.exists(), "Zarr output file does not exist"
+
+
+def test_get_dataloader(sample_svs: Path) -> None:
+    """Test the get_dataloader function."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    ioconfig = ModelIOConfigABC(
+        input_resolutions=[
+            {"units": "baseline", "resolution": 1.0},
+        ],
+        patch_input_shape=(224, 224),
+    )
+    dataloader = eng.get_dataloader(
+        images=np.zeros(shape=(10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        ioconfig=ioconfig,
+    )
+
+    assert isinstance(dataloader.dataset, PatchDataset)
+
+    dataloader = eng.get_dataloader(
+        images=sample_svs,
+        patch_mode=False,
+        ioconfig=ioconfig,
+    )
+
+    assert isinstance(dataloader.dataset, WSIPatchDataset)
+
+
+def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
+    """Test the eng.save_output() function."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    save_path = tmp_path / "output.zarr"
+    _ = zarr.open(save_path, mode="w")
+    out = eng.save_wsi_output(
+        raw_output=save_path, save_path=save_path, output_type="zarr", save_dir=tmp_path
+    )
+
+    assert out.exists()
+    assert out.suffix == ".zarr"
+
+    # Test AnnotationStore
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "other": "other",
+    }
+    class_dict = {0: "class0", 1: "class1"}
+    out = eng.save_wsi_output(
+        raw_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=class_dict,
+        save_dir=tmp_path,
+        output_type="AnnotationStore",
+    )
+
+    assert out.exists()
+    assert out.suffix == ".db"
+
+    with pytest.raises(
+        ValueError,
+        match=r".*supports zarr and AnnotationStore as output_type.",
+    ):
+        eng.save_wsi_output(
+            raw_output=save_path,
+            save_path=save_path,
+            output_type="dict",
+            save_dir=tmp_path,
+        )
+
+
+def test_io_config_delegation(tmp_path: Path) -> None:
+    """Test for delegating args to io config."""
+    # test not providing config / full input info for not pretrained models
+    model = CNNModel("resnet50")
+    eng = TestEngineABC(model=model)
+    with pytest.raises(ValueError, match=r".*Please provide a valid ModelIOConfigABC*"):
+        eng.run(
+            np.zeros((10, 224, 224, 3)), patch_mode=True, save_dir=tmp_path / "dump"
+        )
+
+    kwargs = {
+        "patch_input_shape": [512, 512],
+        "resolution": 1.75,
+        "units": "mpp",
+    }
+
+    # test providing config / full input info for non pretrained models
+    ioconfig = ModelIOConfigABC(
+        patch_input_shape=(512, 512),
+        stride_shape=(256, 256),
+        input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
+    )
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+        ioconfig=ioconfig,
+    )
+    assert eng._ioconfig.patch_input_shape == (512, 512)
+    assert eng._ioconfig.stride_shape == (256, 256)
+    assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+        **kwargs,
+    )
+    assert eng._ioconfig.patch_input_shape == [512, 512]
+    assert eng._ioconfig.stride_shape == [512, 512]
+    assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    # test overwriting pretrained ioconfig
+    eng = TestEngineABC(model="alexnet-kather100k")
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        resolution=1.99,
+        units="baseline",
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.patch_input_shape == (300, 300)
+    assert eng._ioconfig.stride_shape == (300, 300)
+    assert eng._ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        resolution=None,
+        units=None,
+        patch_mode=True,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert eng._ioconfig.patch_input_shape == (300, 300)
+    assert eng._ioconfig.stride_shape == (300, 300)
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
+    eng.ioconfig = None
+    _ioconfig = eng._update_ioconfig(
+        ioconfig=None,
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        resolution=1.99,
+        units="baseline",
+    )
+
+    assert _ioconfig.patch_input_shape == (300, 300)
+    assert _ioconfig.stride_shape == (300, 300)
+    assert _ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert _ioconfig.input_resolutions[0]["units"] == "baseline"
+
+    for key in kwargs:
+        _kwargs = copy.deepcopy(kwargs)
+        _kwargs[key] = None
+        with pytest.raises(
+            ValueError,
+            match=r".*Must provide either `ioconfig` or "
+            r"`patch_input_shape`, `resolution`, and `units`*",
+        ):
+            eng._update_ioconfig(
+                ioconfig=None,
+                patch_input_shape=_kwargs["patch_input_shape"],
+                stride_shape=(1, 1),
+                resolution=_kwargs["resolution"],
+                units=_kwargs["units"],
+            )
+
+
+def test_notimplementederror_wsi_mode(
+    sample_svs: Path, tmp_path: pytest.TempPathFactory
+) -> None:
+    """Test that NotImplementedError is raised when wsi mode is False.
+
+    A user should implement run method when patch_mode is False.
+
+    """
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(NotImplementedError):
+        eng.run(images=[sample_svs], patch_mode=False, save_dir=tmp_path / "output")
