@@ -63,11 +63,12 @@ jobs:
            --durations=10 --durations-min=1.0 \
            --maxfail=1
     - name: Report test coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
       with:
         files: coverage.xml
         fail_ci_if_error: false
         verbose: true
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Report test coverage to DeepSource
       uses: deepsourcelabs/test-coverage-action@master
