@@ -792,7 +792,7 @@ class AnnotationRenderer:
         geoms = annotation.coords
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
-            cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
+            cv2.fillPoly(tile, cnt, col)
 
     def render_pt(
         self: AnnotationRenderer,
@@ -821,9 +821,7 @@ class AnnotationRenderer:
                 annotation.coords,
                 top_left,
                 scale,
-            )[
-                0
-            ][0],
+            )[0][0],
             np.maximum(self.edge_thickness, 1),
             col,
             thickness=self.thickness,
@@ -850,13 +848,14 @@ class AnnotationRenderer:
 
         """
         col = self.get_color(annotation, edge=False)
+        cnt = self.to_tile_coords(
+            list(annotation.coords),
+            top_left,
+            scale,
+        )
         cv2.polylines(
             tile,
-            self.to_tile_coords(
-                list(annotation.coords),
-                top_left,
-                scale,
-            ),
+            [np.array(cnt)],
             isClosed=False,
             color=col,
             thickness=3,
