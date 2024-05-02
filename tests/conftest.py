@@ -121,13 +121,13 @@ def sample_ome_tiff(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_non_tiled_ventana_tif(remote_sample: Callable) -> Path:
+def sample_ventana_tif(remote_sample: Callable) -> Path:
     """Sample pytest fixture for non-tiled tif Ventana images.
 
     Download Ventana tif image for pytest.
 
     """
-    return remote_sample("non-tiled-ventana-tif")
+    return remote_sample("ventana-tif")
 
 
 @pytest.fixture(scope="session")

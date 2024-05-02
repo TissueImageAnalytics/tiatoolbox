@@ -29,7 +29,7 @@ files:
     url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
   two-tiled-pages:
     url: [*wsis, "two-tiled-pages.tiff"]
-  non-tiled-ventana-tif:
+  ventana-tif:
     url: [*wsis, "ventana_sample.tif"]
   jp2-omnyx-small:
     url: [*wsis, "CMU-1-Small-Region.omnyx.jp2"]
