@@ -229,7 +229,7 @@ class Annotation:
 
     def __init__(
         self: Annotation,
-        geometry: Geometry | None = None,
+        geometry: Geometry | int | str | None = None,
         properties: Properties | None = None,
         wkb: bytes | None = None,
     ) -> None:
@@ -256,9 +256,9 @@ class Annotation:
             raise ValueError(msg)
         if wkb is not None:
             object.__setattr__(self, "_wkb", wkb)
-            object.__setattr__(self, "_geometry", shapely_wkb.loads(wkb))
+            object.__setattr__(self, "_geometry", None)
         if geometry is not None:
-            object.__setattr__(self, "_wkb", geometry.wkb)
+            object.__setattr__(self, "_wkb", None)
             object.__setattr__(self, "_geometry", geometry)
         object.__setattr__(self, "properties", properties or {})
 
