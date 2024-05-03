@@ -228,7 +228,7 @@ class WSIReader:
     """
 
     @staticmethod
-    def open(  # noqa: PLR0911
+    def open(  # noqa: PLR0911, PLR0912, C901
         input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
