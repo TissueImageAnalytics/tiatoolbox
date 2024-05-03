@@ -232,8 +232,6 @@ class WSIReader:
         input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
-        *,  # makes sure ignore_is_tiled_tiff can only be used as a keyword argument
-        ignore_is_tiled_tiff: bool = False,
         **kwargs: dict,
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
@@ -252,10 +250,6 @@ class WSIReader:
                 (x, y) tuple of the MPP in the units of the input image.
             power (float):
                 Objective power of the input image.
-            ignore_is_tiled_tiff (bool, optional):
-                If True, the function will not check if the input image is
-                a tiled TIFF if the input image is a TIFF file (.tif or .tiff).
-                Defaults to False.
             kwargs (dict):
                 Key-word arguments.
 
@@ -306,12 +300,13 @@ class WSIReader:
         if suffixes[-2:] in ([".ome", ".tiff"],):
             return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
-        if last_suffix in (".tif", ".tiff") and (
-            ignore_is_tiled_tiff or is_tiled_tiff(input_path)
-        ):
-            try:
-                return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
-            except openslide.OpenSlideError:
+        if last_suffix in (".tif", ".tiff"):
+            if openslide.OpenSlide.detect_format(input_path) is not None:
+                try:
+                    return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
+                except openslide.OpenSlideError:
+                    pass
+            if is_tiled_tiff(input_path):
                 return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
         # Handle homogeneous cases (based on final suffix)

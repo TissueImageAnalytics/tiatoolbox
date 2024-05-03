@@ -1495,7 +1495,7 @@ def test_wsireader_open(
     wsi = WSIReader.open(sample_ome_tiff)
     assert isinstance(wsi, wsireader.TIFFWSIReader)
 
-    wsi = WSIReader.open(sample_ventana_tif, ignore_is_tiled_tiff=True)
+    wsi = WSIReader.open(sample_ventana_tif)
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
     wsi = WSIReader.open(Path(source_image))
@@ -2545,6 +2545,11 @@ def test_jp2_no_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
             "kwargs": {},
         },
         {
+            "reader_class": OpenSlideWSIReader,
+            "sample_key": "ventana-tif",
+            "kwargs": {},
+        },
+        {
             "reader_class": DICOMWSIReader,
             "sample_key": "dicom-1",
             "kwargs": {},
@@ -2569,6 +2574,7 @@ def test_jp2_no_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         "AnnotationReaderOverlaid",
         "AnnotationReaderMaskOnly",
         "TIFFReader",
+        "OpenSlideReader (Ventana non-tiled tif)",
         "DICOMReader",
         "NGFFWSIReader",
         "OpenSlideWSIReader (Small SVS)",
