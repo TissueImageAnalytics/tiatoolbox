@@ -693,7 +693,7 @@ class EngineABC(ABC):
         highest_input_resolution: list[dict],
         save_dir: Path,
         **kwargs: dict,
-    ) -> list:
+    ) -> AnnotationStore | Path | str | dict:
         """Model inference on a WSI.
 
         This function must be implemented by subclasses.
@@ -1099,4 +1099,10 @@ class EngineABC(ABC):
         # highest_input_resolution, implement dataloader,
         # pre-processing, post-processing and save_output
         # for WSIs separately.
-        raise NotImplementedError
+        return self.infer_wsi(
+            dataloader=images,
+            img_label=labels,
+            highest_input_resolution=1.0,
+            save_dir=save_dir,
+            **kwargs,
+        )

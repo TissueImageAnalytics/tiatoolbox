@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections import OrderedDict
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from tiatoolbox.models.models_abc import model_to
+from typing_extensions import Unpack
+
 from tiatoolbox.utils.misc import (
     dict_to_store,
     wsi_batch_output_to_zarr_group,
 )
 
-from .engine_abc import EngineABC, prepare_engines_save_dir
+from .engine_abc import EngineABC, EngineABCRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
+    from pathlib import Path
 
     import numpy as np
     import torch
@@ -476,7 +476,7 @@ class PatchPredictor(EngineABC):
         save_dir: os | Path | None = None,  # None will not save output
         overwrite: bool = False,
         output_type: str = "dict",
-        **kwargs: dict,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> AnnotationStore | Path | str | dict:
         """Run the engine on input images.
 
@@ -507,15 +507,15 @@ class PatchPredictor(EngineABC):
                 Whether to overwrite the results. Default = False.
             output_type (str):
                 The format of the output type. "output_type" can be
-                "zarr", "AnnotationStore". Default is "zarr".
+                "zarr" or "AnnotationStore". Default value is "zarr".
                 When saving in the zarr format the output is saved using the
                 `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
                 as a zarr group. If the required output type is an "AnnotationStore"
                 then the output will be intermediately saved as zarr but converted
                 to :class:`AnnotationStore` and saved as a `.db` file
                 at the end of the loop.
-            **kwargs (dict):
-                Keyword Args to update :class:`EngineABC` attributes.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update :class:`EngineABC` attributes during runtime.
 
         Returns:
             (:class:`numpy.ndarray`, dict):
@@ -535,129 +535,34 @@ class PatchPredictor(EngineABC):
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
-            >>> predictor = EngineABC(model="resnet18-kather100k")
+            >>> class PatchPredictor(EngineABC):
+            >>> # Define all Abstract methods.
+            >>>     ...
+            >>> predictor = PatchPredictor(model="resnet18-kather100k")
+            >>> output = predictor.run(image_patches, patch_mode=True)
+            >>> output
+            ... "/path/to/Output.db"
+            >>> output = predictor.run(
+            >>>     image_patches,
+            >>>     patch_mode=True,
+            >>>     output_type="zarr")
+            >>> output
+            ... "/path/to/Output.zarr"
             >>> output = predictor.run(wsis, patch_mode=False)
             >>> output.keys()
             ... ['wsi1.svs', 'wsi2.svs']
             >>> output['wsi1.svs']
-            ... {'raw': '0.raw.json', 'merged': '0.merged.npy'}
-            >>> output['wsi2.svs']
-            ... {'raw': '1.raw.json', 'merged': '1.merged.npy'}
+            ... {'/path/to/wsi1.db'}
 
-            >>> predictor = EngineABC(model="alexnet-kather100k")
-            >>> output = predictor.run(
-            >>>     images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            >>>     labels=list(range(10)),
-            >>>     on_gpu=False,
-            >>>     )
-            >>> output
-            ... {'predictions': [[0.7716791033744812, 0.0111849969252944, ...,
-            ... 0.034451354295015335, 0.004817609209567308]],
-            ... 'labels': [tensor(0), tensor(1), tensor(2), tensor(3), tensor(4),
-            ... tensor(5), tensor(6), tensor(7), tensor(8), tensor(9)]}
-
-            >>> predictor = EngineABC(model="alexnet-kather100k")
-            >>> save_dir = Path("/tmp/patch_output/")
-            >>> output = eng.run(
-            >>>     images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            >>>     on_gpu=False,
-            >>>     verbose=False,
-            >>>     save_dir=save_dir,
-            >>>     overwrite=True
-            >>>     )
-            >>> output
-            ... '/tmp/patch_output/output.zarr'
         """
-        for key in kwargs:
-            setattr(self, key, kwargs[key])
-
-        self.patch_mode = patch_mode
-
-        self._validate_input_numbers(images=images, masks=masks, labels=labels)
-        self.images = self._validate_images_masks(images=images)
-
-        if masks is not None:
-            self.masks = self._validate_images_masks(images=masks)
-
-        self.labels = labels
-
-        # if necessary Move model parameters to "cpu" or "gpu" and update ioconfig
-        self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
-        self.model = model_to(model=self.model, device=self.device)
-
-        save_dir = prepare_engines_save_dir(
-            save_dir=save_dir,
+        return super().run(
+            images=images,
+            masks=masks,
+            labels=labels,
+            ioconfig=ioconfig,
             patch_mode=patch_mode,
+            save_dir=save_dir,
             overwrite=overwrite,
+            output_type=output_type,
+            **kwargs,
         )
-
-        if patch_mode:
-            data_loader = self.get_dataloader(
-                images=self.images,
-                labels=self.labels,
-                patch_mode=patch_mode,
-            )
-            raw_predictions = self.infer_patches(
-                data_loader=data_loader,
-            )
-            return self.post_process_patches(
-                raw_predictions=raw_predictions,
-                output_type=output_type,
-                save_dir=save_dir,
-                **kwargs,
-            )
-
-        self._ioconfig = self._update_ioconfig(
-            ioconfig,
-            self.patch_input_shape,
-            self.stride_shape,
-            self.resolution,
-            self.units,
-        )
-
-        fx_list = self._ioconfig.scale_to_highest(
-            self._ioconfig.input_resolutions,
-            self._ioconfig.input_resolutions[0]["units"],
-        )
-        fx_list = zip(fx_list, self._ioconfig.input_resolutions)
-        fx_list = sorted(fx_list, key=lambda x: x[0])
-        highest_input_resolution = fx_list[0][1]
-
-        wsi_output_dict = OrderedDict()
-
-        for idx, img_path in enumerate(self.images):
-            img_path_ = Path(img_path)
-            img_label = None if labels is None else labels[idx]
-            img_mask = None if masks is None else masks[idx]
-
-            dataloader = self.get_dataloader(
-                images=img_path_,
-                masks=img_mask,
-                ioconfig=self._ioconfig,
-                patch_mode=patch_mode,
-            )
-
-            # Only a single label per whole-slide image is supported
-            kwargs["return_labels"] = False
-
-            # custom output file name
-            output_file = img_path_.stem + f"_{idx:0{len(str(len(self.images)))}d}"
-
-            raw_output = self.infer_wsi(
-                dataloader=dataloader,
-                img_label=img_label,
-                highest_input_resolution=highest_input_resolution,
-                save_dir=save_dir,
-                output_file=output_file,
-                **kwargs,
-            )
-
-            # WSI output dict can have either Zarr paths or Annotation Stores
-            wsi_output_dict[output_file] = self.post_process_wsi(
-                raw_output,
-                save_dir=save_dir,
-                output_file=output_file,
-                output_type=output_type,
-            )
-
-        return wsi_output_dict
