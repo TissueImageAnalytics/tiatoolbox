@@ -131,6 +131,16 @@ def sample_ventana_tif(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
+def sample_regular_tif(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for non-tiled tif Ventana images.
+
+    Download Ventana tif image for pytest.
+
+    """
+    return remote_sample("regular-tif")
+
+
+@pytest.fixture(scope="session")
 def sample_jp2(remote_sample: Callable) -> Path:
     """Sample pytest fixture for JP2 images.
 

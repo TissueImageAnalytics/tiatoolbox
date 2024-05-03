@@ -1473,6 +1473,7 @@ def test_wsireader_open(
     sample_jp2: Path,
     sample_ome_tiff: Path,
     sample_ventana_tif: Path,
+    sample_regular_tif: Path,
     source_image: Path,
     tmp_path: pytest.TempPathFactory,
 ) -> None:
@@ -1497,6 +1498,9 @@ def test_wsireader_open(
 
     wsi = WSIReader.open(sample_ventana_tif)
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
+
+    wsi = WSIReader.open(sample_regular_tif)
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
 
     wsi = WSIReader.open(Path(source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
