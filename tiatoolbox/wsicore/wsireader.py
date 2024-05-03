@@ -227,7 +227,7 @@ def _handle_virtual_wsi(
 
     Returns:
         VirtualWSIReader | None:
-            :class:`VirtualWSIReader` if input_path is valide path to viruatl WSI
+            :class:`VirtualWSIReader` if input_path is valid path to virtual WSI
             otherwise None.
 
     """
@@ -260,6 +260,24 @@ def _handle_virtual_wsi(
 def _handle_tiff_wsi(
     input_path: Path, mpp: tuple[Number, Number] | None, power: Number | None
 ) -> TIFFWSIReader | OpenSlideWSIReader | None:
+    """Handle TIFF WSI cases.
+
+    Args:
+        input_path (Path):
+             Input path to virtual WSI.
+        mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
+            The MPP of the WSI. If not provided, the MPP is approximated
+            from the objective power.
+        power (:obj:`float` or :obj:`None`, optional):
+            The objective power of the WSI. If not provided, the power
+            is approximated from the MPP.
+
+    Returns:
+        OpenSlideWSIReader | TIFFWSIReader | None:
+            :class:`OpenSlideWSIReader` or :class:`TIFFWSIReader` if input_path is
+            valid path to tiff WSI otherwise None.
+
+    """
     if openslide.OpenSlide.detect_format(input_path) is not None:
         try:
             return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
