@@ -3,125 +3,175 @@
 from __future__ import annotations
 
 import copy
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-import torch
-import tqdm
-from torch import nn
 
-from tiatoolbox import logger
-from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
-from tiatoolbox.models.models_abc import load_torch_model, model_to
+from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.utils.misc import (
     dict_to_store,
-    dict_to_zarr,
     wsi_batch_output_to_zarr_group,
 )
 
+from .engine_abc import EngineABC, prepare_engines_save_dir
 from .io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
 
-    from torch.utils.data import DataLoader
+    import torch
 
     from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.typing import IntPair, Resolution, Units
     from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def prepare_engines_save_dir(
-    save_dir: os | Path | None,
-    *,
-    patch_mode: bool,
-    overwrite: bool,
-) -> Path | None:
-    """Create directory if not defined and number of images is more than 1.
+class PatchPredictor(EngineABC):
+    r"""Patch level predictor for digital histology images.
+
+    The models provided by tiatoolbox should give the following results:
+
+    .. list-table:: PatchPredictor performance on the Kather100K dataset [1]
+       :widths: 15 15
+       :header-rows: 1
+
+       * - Model name
+         - F\ :sub:`1`\ score
+       * - alexnet-kather100k
+         - 0.965
+       * - resnet18-kather100k
+         - 0.990
+       * - resnet34-kather100k
+         - 0.991
+       * - resnet50-kather100k
+         - 0.989
+       * - resnet101-kather100k
+         - 0.989
+       * - resnext50_32x4d-kather100k
+         - 0.992
+       * - resnext101_32x8d-kather100k
+         - 0.991
+       * - wide_resnet50_2-kather100k
+         - 0.989
+       * - wide_resnet101_2-kather100k
+         - 0.990
+       * - densenet121-kather100k
+         - 0.993
+       * - densenet161-kather100k
+         - 0.992
+       * - densenet169-kather100k
+         - 0.992
+       * - densenet201-kather100k
+         - 0.991
+       * - mobilenet_v2-kather100k
+         - 0.990
+       * - mobilenet_v3_large-kather100k
+         - 0.991
+       * - mobilenet_v3_small-kather100k
+         - 0.992
+       * - googlenet-kather100k
+         - 0.992
+
+    .. list-table:: PatchPredictor performance on the PCam dataset [2]
+       :widths: 15 15
+       :header-rows: 1
+
+       * - Model name
+         - F\ :sub:`1`\ score
+       * - alexnet-pcam
+         - 0.840
+       * - resnet18-pcam
+         - 0.888
+       * - resnet34-pcam
+         - 0.889
+       * - resnet50-pcam
+         - 0.892
+       * - resnet101-pcam
+         - 0.888
+       * - resnext50_32x4d-pcam
+         - 0.900
+       * - resnext101_32x8d-pcam
+         - 0.892
+       * - wide_resnet50_2-pcam
+         - 0.901
+       * - wide_resnet101_2-pcam
+         - 0.898
+       * - densenet121-pcam
+         - 0.897
+       * - densenet161-pcam
+         - 0.893
+       * - densenet169-pcam
+         - 0.895
+       * - densenet201-pcam
+         - 0.891
+       * - mobilenet_v2-pcam
+         - 0.899
+       * - mobilenet_v3_large-pcam
+         - 0.895
+       * - mobilenet_v3_small-pcam
+         - 0.890
+       * - googlenet-pcam
+         - 0.867
 
     Args:
-        save_dir (str or Path):
-            Path to output directory.
-        patch_mode(bool):
-            Whether to treat input image as a patch or WSI.
-        overwrite (bool):
-            Whether to overwrite the results. Default = False.
-
-    Returns:
-        :class:`Path`:
-            Path to output directory.
-
-    """
-    if patch_mode is True:
-        if save_dir is not None:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=overwrite)
-        return save_dir
-
-    if save_dir is None:
-        msg = (
-            "Input WSIs detected but there is no save directory provided."
-            "Please provide a 'save_dir'."
-        )
-        raise OSError(msg)
-
-    logger.info(
-        "When providing multiple whole slide images, "
-        "the outputs will be saved and the locations of outputs "
-        "will be returned to the calling function.",
-    )
-
-    save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=overwrite)
-
-    return save_dir
-
-
-class EngineABC(ABC):
-    """Abstract base class for engines used in tiatoolbox.
-
-    Args:
-        model (str | nn.Module):
+        model (str | ModelABC):
             A PyTorch model. Default is `None`.
-            The user can request pretrained models from the toolbox using
+            The user can request pretrained models from the toolbox model zoo using
             the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
-            of weights.
+            of weights using the `weights` parameter.
+        batch_size (int):
+            Number of image patches fed into the model each time in a
+            forward/backward pass. Default value is 8.
+        num_loader_workers (int):
+            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
+            Please note that they will also perform preprocessing. Default value is 0.
+        num_post_proc_workers (int):
+            Number of workers to postprocess the results of the model.
+            Default value is 0.
         weights (str or Path):
             Path to the weight of the corresponding `model`.
 
             >>> engine = EngineABC(
-            ...    model="pretrained-model-name",
-            ...    weights="pretrained-local-weights.pth")
+            ...    model="pretrained-model",
+            ...    weights="/path/to/pretrained-local-weights.pth"
+            ... )
 
-        batch_size (int):
-            Number of images fed into the model each time.
-        num_loader_workers (int):
-            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
-            Please note that they will also perform preprocessing. default = 0
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model. default = 0
         device (str):
-            Select the device to run the model. Default is "cpu".
+            Select the device to run the model. Please see
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details on input parameters for device. Default is "cpu".
         verbose (bool):
-            Whether to output logging information.
+            Whether to output logging information. Default value is False.
 
     Attributes:
         images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
-            A NHWC image or a path to WSI.
+            A list of image patches in NHWC format as a numpy array
+            or a list of str/paths to WSIs.
+        masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+            A list of tissue masks or binary masks corresponding to processing area of
+            input images. These can be a list of numpy arrays or paths to
+            the saved image masks. These are only utilized when patch_mode is False.
+            Patches are only generated within a masked area.
+            If not provided, then a tissue mask will be automatically
+            generated for whole slide images.
         patch_mode (str):
-            Whether to treat input image as a patch or WSI.
-            default = True.
-        model (str | nn.Module):
-            Defined PyTorch model.
-            Name of an existing model supported by the TIAToolbox for
-            processing the data. For a full list of pretrained models,
+            Whether to treat input images as a set of image patches. TIAToolbox defines
+            an image as a patch if HWC of the input image matches with the HWC expected
+            by the model. If HWC of the input image does not match with the HWC expected
+            by the model, then the patch_mode must be set to False which will allow the
+            engine to extract patches from the input image.
+            In this case, when the patch_mode is False the input images are treated
+            as WSIs. Default value is True.
+        model (str | ModelABC):
+            A PyTorch model or a name of an existing model from the TIAToolbox model zoo
+            for processing the data. For a full list of pretrained models,
             refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
@@ -129,14 +179,15 @@ class EngineABC(ABC):
             of weights via the `weights` argument. Argument
             is case-insensitive.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration to run the Engine.
-        _ioconfig ():
+            Input IO configuration of type :class:`ModelIOConfigABC` to run the Engine.
+        _ioconfig (ModelIOConfigABC):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
         merge_predictions (bool):
             Whether to merge the predictions to form a 2-dimensional
             map. This is only applicable if `patch_mode` is False in inference.
+            Default is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
@@ -155,129 +206,107 @@ class EngineABC(ABC):
             `stride_shape=patch_input_shape`.
         batch_size (int):
             Number of images fed into the model each time.
+        cache_mode (bool):
+            Whether to run the Engine in cache_mode. For large datasets,
+            we recommend to set this to True to avoid out of memory errors.
+            For smaller datasets, the cache_mode is set to False as
+            the results can be saved in memory. cache_mode is always True when
+            processing WSIs i.e., when `patch_mode` is False. Default value is False.
+        cache_size (int):
+            Specifies how many image patches to process in a batch when
+            cache_mode is set to True. If cache_size is less than the batch_size
+            batch_size is set to cache_size. Default value is 10,000.
         labels (list | None):
                 List of labels. Only a single label per image is supported.
         device (str):
-            Select the device to run the model. Default is "cpu".
+            :class:`torch.device` to run the model.
+            Select the device to run the model. Please see
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details on input parameters for device. Default value is "cpu".
         num_loader_workers (int):
-            Number of workers used in torch.utils.data.DataLoader.
+            Number of workers used in :class:`torch.utils.data.DataLoader`.
+        num_post_proc_workers (int):
+            Number of workers to postprocess the results of the model.
+        return_labels (bool):
+            Whether to return the output labels. Default value is False.
+        merge_predictions (bool):
+            Whether to merge WSI predictions into a single file. Default value is False.
+        resolution (Resolution):
+            Resolution used for reading the image. Please see
+            :class:`WSIReader` for details.
+            When `patch_mode` is True, the input image patches are expected to be at
+            the correct resolution and units. When `patch_mode` is False, the patches
+            are extracted at the requested resolution and units. Default value is 1.0.
+        units (Units):
+            Units of resolution used for reading the image. Choose
+            from either `baseline`, `level`, `power` or `mpp`. Please see
+            :class:`WSIReader` for details.
+            When `patch_mode` is True, the input image patches are expected to be at
+            the correct resolution and units. When `patch_mode` is False, the patches
+            are extracted at the requested resolution and units.
+            Default value is `baseline`.
         verbose (bool):
-            Whether to output logging information.
+            Whether to output logging information. Default value is False.
 
     Examples:
-        >>> # array of list of 2 image patches as input
-        >>> import numpy as np
-        >>> data = np.array([np.ndarray, np.ndarray])
-        >>> engine = EngineABC(model="resnet18-kather100k")
-        >>> output = engine.run(data, patch_mode=True)
+        >>> # list of 2 image patches as input
+        >>> data = ['path/img.svs', 'path/img.svs']
+        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> output = predictor.predict(data, mode='patch')
 
         >>> # array of list of 2 image patches as input
-        >>> import numpy as np
-        >>> data = np.array([np.ndarray, np.ndarray])
-        >>> engine = EngineABC(model="resnet18-kather100k")
-        >>> output = engine.run(data, patch_mode=True)
+        >>> data = np.array([img1, img2])
+        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> output = predictor.predict(data, mode='patch')
 
-        >>> # list of 2 image files as input
-        >>> image = ['path/image1.png', 'path/image2.png']
-        >>> engine = EngineABC(model="resnet18-kather100k")
-        >>> output = engine.run(image, patch_mode=False)
+        >>> # list of 2 image patch files as input
+        >>> data = ['path/img.png', 'path/img.png']
+        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> output = predictor.predict(data, mode='patch')
+
+        >>> # list of 2 image tile files as input
+        >>> tile_file = ['path/tile1.png', 'path/tile2.png']
+        >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> output = predictor.predict(tile_file, mode='tile')
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
-        >>> engine = EngineABC(model="resnet18-kather100k")
-        >>> output = engine.run(wsi_file, patch_mode=True)
+        >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> output = predictor.predict(wsi_file, mode='wsi')
+
+    References:
+        [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
+        histology slides using deep learning: A retrospective multicenter study."
+        PLoS medicine 16.1 (2019): e1002730.
+
+        [2] Veeling, Bastiaan S., et al. "Rotation equivariant CNNs for digital
+        pathology." International Conference on Medical image computing and
+        computer-assisted intervention. Springer, Cham, 2018.
 
     """
 
     def __init__(
-        self: EngineABC,
-        model: str | nn.Module,
+        self: PatchPredictor,
+        model: str | ModelABC,
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_post_proc_workers: int = 0,
         weights: str | Path | None = None,
         *,
-        device: str = "cpu",
-        verbose: bool = False,
+        verbose: bool = True,
     ) -> None:
-        """Initialize Engine."""
-        super().__init__()
-
-        self.masks = None
-        self.images = None
-        self.patch_mode = None
-        self.device = device
-
-        # Initialize model with specified weights and ioconfig.
-        self.model, self.ioconfig = self._initialize_model_ioconfig(
+        """Initialize :class:`PatchPredictor`."""
+        super().__init__(
             model=model,
+            batch_size=batch_size,
+            num_loader_workers=num_loader_workers,
+            num_post_proc_workers=num_post_proc_workers,
             weights=weights,
+            verbose=verbose,
         )
-        self.model = model_to(model=self.model, device=self.device)
-        self._ioconfig = self.ioconfig  # runtime ioconfig
 
-        self.batch_size = batch_size
-        self.num_loader_workers = num_loader_workers
-        self.num_post_proc_workers = num_post_proc_workers
-        self.verbose = verbose
-        self.return_labels = False
-        self.merge_predictions = False
-        self.units = "baseline"
-        self.resolution = 1.0
-        self.patch_input_shape = None
-        self.stride_shape = None
-        self.labels = None
-
-    @staticmethod
-    def _initialize_model_ioconfig(
-        model: str | nn.Module,
-        weights: str | Path | None,
-    ) -> tuple[nn.Module, ModelIOConfigABC | None]:
-        """Helper function to initialize model and ioconfig attributes.
-
-        If a pretrained model provided by the TIAToolbox is requested. The model
-        can be specified as a string otherwise torch.nn.Module is required.
-        This function also loads the :class:`ModelIOConfigABC` using the information
-        from the pretrained models in TIAToolbox. If ioconfig is not available then it
-        should be provided in the :func:`run` function.
-
-        Args:
-            model (str | nn.Module):
-                A torch model which should be run by the engine.
-
-            weights (str | Path | None):
-                Path to pretrained weights. If no pretrained weights are provided
-                and the model is provided by TIAToolbox, then pretrained weights will
-                be automatically loaded from the TIA servers.
-
-        Returns:
-            nn.Module:
-                The requested PyTorch model.
-
-            ModelIOConfigABC | None:
-                The model io configuration for TIAToolbox pretrained models.
-                Otherwise, None.
-
-        """
-        if not isinstance(model, (str, nn.Module)):
-            msg = "Input model must be a string or 'torch.nn.Module'."
-            raise TypeError(msg)
-
-        if isinstance(model, str):
-            # ioconfig is retrieved from the pretrained model in the toolbox.
-            # list of pretrained models in the TIA Toolbox is available here:
-            # https://tia-toolbox.readthedocs.io/en/add-bokeh-app/pretrained.html
-            # no need to provide ioconfig in EngineABC.run() this case.
-            return get_pretrained_model(model, weights)
-
-        if weights is not None:
-            model = load_torch_model(model=model, weights=weights)
-
-        return model, None
-
-    @abstractmethod
     def get_dataloader(
-        self: EngineABC,
+        self: PatchPredictor,
         images: Path,
         masks: Path | None = None,
         labels: list | None = None,
@@ -285,142 +314,37 @@ class EngineABC(ABC):
         *,
         patch_mode: bool = True,
     ) -> torch.utils.data.DataLoader:
-        """Pre-process an image patch."""
-        if labels:
-            # if a labels is provided, then return with the prediction
-            self.return_labels = bool(labels)
-
-        if not patch_mode:
-            dataset = WSIPatchDataset(
-                img_path=images,
-                mode="wsi",
-                mask_path=masks,
-                patch_input_shape=ioconfig.patch_input_shape,
-                stride_shape=ioconfig.stride_shape,
-                resolution=ioconfig.input_resolutions[0]["resolution"],
-                units=ioconfig.input_resolutions[0]["units"],
-            )
-
-            dataset.preproc_func = self.model.preproc_func
-
-            # preprocessing must be defined with the dataset
-            return torch.utils.data.DataLoader(
-                dataset,
-                num_workers=self.num_loader_workers,
-                batch_size=self.batch_size,
-                drop_last=False,
-                shuffle=False,
-            )
-
-        dataset = PatchDataset(inputs=images, labels=labels)
-        dataset.preproc_func = self.model.preproc_func
-
-        # preprocessing must be defined with the dataset
-        return torch.utils.data.DataLoader(
-            dataset,
-            num_workers=self.num_loader_workers,
-            batch_size=self.batch_size,
-            drop_last=False,
-            shuffle=False,
-        )
-
-    def infer_patches(
-        self: EngineABC,
-        data_loader: DataLoader,
-    ) -> dict:
-        """Model inference on an image patch."""
-        progress_bar = None
-
-        if self.verbose:
-            progress_bar = tqdm.tqdm(
-                total=int(len(data_loader)),
-                leave=True,
-                ncols=80,
-                ascii=True,
-                position=0,
-            )
-        raw_predictions = {
-            "predictions": [],
-        }
-
-        if self.return_labels:
-            raw_predictions["labels"] = []
-
-        for _, batch_data in enumerate(data_loader):
-            batch_output_predictions = self.model.infer_batch(
-                self.model,
-                batch_data["image"],
-                device=self.device,
-            )
-
-            raw_predictions["predictions"].extend(batch_output_predictions.tolist())
-
-            if self.return_labels:  # be careful of `s`
-                # We do not use tolist here because label may be of mixed types
-                # and hence collated as list by torch
-                raw_predictions["labels"].extend(list(batch_data["label"]))
-
-            if progress_bar:
-                progress_bar.update()
-
-        if progress_bar:
-            progress_bar.close()
-
-        return raw_predictions
-
-    def post_process_patches(
-        self: EngineABC,
-        raw_predictions: dict,
-        output_type: str,
-        save_dir: Path | None = None,
-        **kwargs: dict,
-    ) -> Path | AnnotationStore:
-        """Post-process image patches.
+        """Pre-process images and masks and return dataloader for inference.
 
         Args:
-            raw_predictions (dict):
-                A dictionary of patch prediction information.
-            save_dir (Path):
-                Optional Output Path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file, provided patch_mode is True. if the patch_mode is
-                  False then save_dir is required.
-            output_type (str):
-                The desired output type for resulting patch dataset.
-            **kwargs (dict):
-                Keyword Args to update setup_patch_dataset() method attributes.
+            images (list of str or :class:`Path` or :class:`numpy.ndarray`):
+                A list of image patches in NHWC format as a numpy array
+                or a list of str/paths to WSIs. When `patch_mode` is False
+                the function expects list of str/paths to WSIs.
+            masks (list | None):
+                List of masks. Only utilised when patch_mode is False.
+                Patches are only generated within a masked area.
+                If not provided, then a tissue mask will be automatically
+                generated for whole slide images.
+            labels (list | None):
+                List of labels. Only a single label per image is supported.
+            ioconfig (ModelIOConfigABC):
+                A :class:`ModelIOConfigABC` object.
+            patch_mode (bool):
+                Whether to treat input image as a patch or WSI.
 
-        Returns: (dict, Path, :class:`SQLiteStore`):
-            if the output_type is "AnnotationStore", the function returns the patch
-            predictor output as an SQLiteStore containing Annotations for each or the
-            Path to a `.db` file depending on whether a save_dir Path is provided.
-            Otherwise, the function defaults to returning patch predictor output, either
-            as a dict or the Path to a `.zarr` file depending on whether a save_dir Path
-            is provided.
+        Returns:
+            torch.utils.data.DataLoader:
+                :class:`torch.utils.data.DataLoader` for inference.
+
 
         """
-        if not save_dir and output_type != "AnnotationStore":
-            return raw_predictions
-
-        output_file = (
-            kwargs["output_file"] and kwargs.pop("output_file")
-            if "output_file" in kwargs
-            else "output"
-        )
-
-        save_path = save_dir / output_file
-
-        if output_type == "AnnotationStore":
-            # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor", None)
-            # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict", None)
-
-            return dict_to_store(raw_predictions, scale_factor, class_dict, save_path)
-
-        return dict_to_zarr(
-            raw_predictions,
-            save_path,
-            **kwargs,
+        return super().get_dataloader(
+            images,
+            masks,
+            labels,
+            ioconfig,
+            patch_mode=patch_mode,
         )
 
     @abstractmethod

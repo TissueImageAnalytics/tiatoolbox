@@ -355,8 +355,6 @@ class EngineABC(ABC):
         verbose: bool = False,
     ) -> None:
         """Initialize Engine."""
-        super().__init__()
-
         self.images = None
         self.masks = None
         self.patch_mode = None
