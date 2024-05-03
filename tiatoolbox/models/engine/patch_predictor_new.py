@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import copy
 from abc import abstractmethod
 from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-import numpy as np
 
 from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.utils.misc import (
@@ -17,17 +14,18 @@ from tiatoolbox.utils.misc import (
 )
 
 from .engine_abc import EngineABC, prepare_engines_save_dir
-from .io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
 
+    import numpy as np
     import torch
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.typing import IntPair, Resolution, Units
     from tiatoolbox.wsicore.wsireader import WSIReader
+
+    from .io_config import ModelIOConfigABC
 
 
 class PatchPredictor(EngineABC):
@@ -466,160 +464,6 @@ class PatchPredictor(EngineABC):
 
         # referring to the zarr group generated during the infer_wsi step
         return save_path.parent.absolute() / (save_path.stem + ".zarr")
-
-    def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
-        """Helper function to load ioconfig.
-
-        If the model is provided by TIAToolbox it will load the default ioconfig.
-        Otherwise, ioconfig must be specified.
-
-        Args:
-            ioconfig (ModelIOConfigABC):
-                IO configuration to run the engines.
-
-        Raises:
-             ValueError:
-                If no io configuration is provided or found in the pretrained TIAToolbox
-                models.
-
-        Returns:
-            ModelIOConfigABC:
-                The ioconfig used for the run.
-
-        """
-        if self.ioconfig is None and ioconfig is None:
-            msg = (
-                "Please provide a valid ModelIOConfigABC. "
-                "No default ModelIOConfigABC found."
-            )
-            raise ValueError(msg)
-
-        if ioconfig is not None:
-            self.ioconfig = ioconfig
-
-        return self.ioconfig
-
-    def _update_ioconfig(
-        self: EngineABC,
-        ioconfig: ModelIOConfigABC,
-        patch_input_shape: IntPair,
-        stride_shape: IntPair,
-        resolution: Resolution,
-        units: Units,
-    ) -> ModelIOConfigABC:
-        """Update the ioconfig.
-
-        Args:
-            ioconfig (:class:`ModelIOConfigABC`):
-                Input ioconfig for PatchPredictor.
-            patch_input_shape (tuple):
-                Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to level 0,
-                and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. Stride is
-                at requested read resolution, not with respect to
-                level 0, and must be positive. If not provided,
-                `stride_shape=patch_input_shape`.
-            resolution (Resolution):
-                Resolution used for reading the image. Please see
-                :obj:`WSIReader` for details.
-            units (Units):
-                Units of resolution used for reading the image.
-
-        Returns:
-            Updated Patch Predictor IO configuration.
-
-        """
-        config_flag = (
-            patch_input_shape is None,
-            resolution is None,
-            units is None,
-        )
-        if ioconfig:
-            return ioconfig
-
-        if self.ioconfig is None and any(config_flag):
-            msg = (
-                "Must provide either "
-                "`ioconfig` or `patch_input_shape`, `resolution`, and `units`."
-            )
-            raise ValueError(
-                msg,
-            )
-
-        if stride_shape is None:
-            stride_shape = patch_input_shape
-
-        if self.ioconfig:
-            ioconfig = copy.deepcopy(self.ioconfig)
-            # ! not sure if there is a nicer way to set this
-            if patch_input_shape is not None:
-                ioconfig.patch_input_shape = patch_input_shape
-            if stride_shape is not None:
-                ioconfig.stride_shape = stride_shape
-            if resolution is not None:
-                ioconfig.input_resolutions[0]["resolution"] = resolution
-            if units is not None:
-                ioconfig.input_resolutions[0]["units"] = units
-
-            return ioconfig
-
-        return ModelIOConfigABC(
-            input_resolutions=[{"resolution": resolution, "units": units}],
-            patch_input_shape=patch_input_shape,
-            stride_shape=stride_shape,
-            output_resolutions=[],
-        )
-
-    @staticmethod
-    def _validate_images_masks(images: list | np.ndarray) -> list | np.ndarray:
-        """Validate input images for a run."""
-        if not isinstance(images, (list, np.ndarray)):
-            msg = "Input must be a list of file paths or a numpy array."
-            raise TypeError(
-                msg,
-            )
-
-        if isinstance(images, np.ndarray) and images.ndim != 4:  # noqa: PLR2004
-            msg = (
-                "The input numpy array should be four dimensional."
-                "The shape of the numpy array should be NHWC."
-            )
-            raise ValueError(msg)
-
-        return images
-
-    @staticmethod
-    def _validate_input_numbers(
-        images: list | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
-        labels: list | None = None,
-    ) -> None:
-        """Validates number of input images, masks and labels."""
-        if masks is None and labels is None:
-            return
-
-        len_images = len(images)
-
-        if masks is not None and len_images != len(masks):
-            msg = (
-                f"len(masks) is not equal to len(images) "
-                f": {len(masks)} != {len(images)}"
-            )
-            raise ValueError(
-                msg,
-            )
-
-        if labels is not None and len_images != len(labels):
-            msg = (
-                f"len(labels) is not equal to len(images) "
-                f": {len(labels)} != {len(images)}"
-            )
-            raise ValueError(
-                msg,
-            )
-        return
 
     def run(
         self: EngineABC,
