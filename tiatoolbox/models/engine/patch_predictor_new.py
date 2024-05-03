@@ -411,9 +411,9 @@ class EngineABC(ABC):
 
         if output_type == "AnnotationStore":
             # scale_factor set from kwargs
-            scale_factor = kwargs["scale_factor"] if "scale_factor" in kwargs else None
+            scale_factor = kwargs.get("scale_factor", None)
             # class_dict set from kwargs
-            class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
+            class_dict = kwargs.get("class_dict", None)
 
             return dict_to_store(raw_predictions, scale_factor, class_dict, save_path)
 
@@ -451,7 +451,7 @@ class EngineABC(ABC):
         wsi_batch_zarr_group = None
 
         # get return flags from kwargs or set to False, useful in Annotation Store
-        return_labels = kwargs["return_labels"] if "return_labels" in kwargs else False
+        return_labels = kwargs.get("return_labels", False)
 
         for _, batch_data in enumerate(dataloader):
             batch_output_probabilities = self.model.infer_batch(
@@ -534,11 +534,9 @@ class EngineABC(ABC):
 
         if output_type == "AnnotationStore":
             # scale_factor set from kwargs
-            scale_factor = (
-                kwargs["scale_factor"] if "scale_factor" in kwargs else (1.0, 1.0)
-            )
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
-            class_dict = kwargs["class_dict"] if "class_dict" in kwargs else None
+            class_dict = kwargs.get("class_dict", None)
 
             return dict_to_store(raw_output, scale_factor, class_dict, save_path)
 
