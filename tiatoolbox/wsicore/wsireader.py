@@ -228,7 +228,7 @@ class WSIReader:
     """
 
     @staticmethod
-    def open(  # noqa: PLR0911
+    def open(  # noqa: PLR0911, PLR0912, C901
         input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
@@ -300,10 +300,13 @@ class WSIReader:
         if suffixes[-2:] in ([".ome", ".tiff"],):
             return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
-        if last_suffix in (".tif", ".tiff") and is_tiled_tiff(input_path):
-            try:
-                return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
-            except openslide.OpenSlideError:
+        if last_suffix in (".tif", ".tiff"):
+            if openslide.OpenSlide.detect_format(input_path) is not None:
+                try:
+                    return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
+                except openslide.OpenSlideError:
+                    pass
+            if is_tiled_tiff(input_path):
                 return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
         # Handle homogeneous cases (based on final suffix)
