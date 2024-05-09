@@ -461,8 +461,8 @@ class AnnotationStore(ABC, MutableMapping):
         """
         return np.dot(np.subtract(a, b), np.subtract(b, c)) == 0
 
+    @staticmethod
     def _is_rectangle(
-        self: ABC,
         a: list[float],
         b: list[float],
         c: list[float],

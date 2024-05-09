@@ -86,7 +86,7 @@ class SQLExpression:
 
     def __hash__(self: SQLExpression) -> int:
         """Return hash of the object (Not used)."""
-        return 0
+        return hash(str(self))
 
     def __repr__(self: SQLExpression) -> str:
         """Return a string representation of the object."""
@@ -160,11 +160,11 @@ class SQLExpression:
         """Return the absolute value of the object."""
         return SQLTriplet(self, operator.abs)
 
-    def __eq__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
+    def __eq__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override] # noqa: E501
         """Define how the object is compared for equality."""
         return SQLTriplet(self, operator.eq, other)
 
-    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
+    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override] # noqa: E501
         """Define how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.ne, other)
 
