@@ -160,11 +160,11 @@ class SQLExpression:
         """Return the absolute value of the object."""
         return SQLTriplet(self, operator.abs)
 
-    def __eq__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override] # noqa: E501
+    def __eq__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
         """Define how the object is compared for equality."""
         return SQLTriplet(self, operator.eq, other)
 
-    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override] # noqa: E501
+    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:  # type: ignore[override]
         """Define how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.ne, other)
 
