@@ -40,7 +40,14 @@ import uuid
 import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Generator, Iterable, Iterator, MutableMapping
+from collections.abc import (
+    Generator,
+    Iterable,
+    Iterator,
+    KeysView,
+    MutableMapping,
+    ValuesView,
+)
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -50,6 +57,7 @@ from typing import (
     Any,
     Callable,
     ClassVar,
+    TypeVar,
 )
 
 import numpy as np
@@ -425,10 +433,12 @@ class Annotation:
         raise ValueError(msg)
 
 
-class AnnotationStore(ABC, MutableMapping):
+class AnnotationStore(ABC, MutableMapping[str, Annotation]):
     """Annotation store abstract base class."""
 
-    def __new__(cls: ABC, *args: str, **kwargs: int) -> ABC:  # noqa: ARG003
+    A = TypeVar("A", bound="AnnotationStore")
+
+    def __new__(cls: type[A], *args: str, **kwargs: int) -> A:  # noqa: ARG003
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:
             msg = (
@@ -545,7 +555,7 @@ class AnnotationStore(ABC, MutableMapping):
         return Path(connection)
 
     @staticmethod
-    def _validate_equal_lengths(*args: str) -> None:
+    def _validate_equal_lengths(*args: list | None) -> None:
         """Validate that all given args are either None or have the same length."""
         lengths = [len(v) for v in args if v is not None]
         if lengths and any(length != lengths[0] for length in lengths):
@@ -723,7 +733,7 @@ class AnnotationStore(ABC, MutableMapping):
         annotations = list(annotations)
         keys = list(keys) if keys else None
         self._validate_equal_lengths(keys, annotations)
-        result = []
+        result: list[str] = []
         if keys:
             result.extend(
                 self.append(annotation, key)
@@ -761,12 +771,12 @@ class AnnotationStore(ABC, MutableMapping):
             self.append(Annotation(geometry, properties), key)
             return
         geometry = geometry if geometry is None else [geometry]
-        properties = properties if properties is None else [properties]
-        self.patch_many([key], geometry, properties)
+        properties_list = properties if properties is None else [properties]
+        self.patch_many([key], geometry, properties_list)
 
     def patch_many(
         self: AnnotationStore,
-        keys: Iterable[int],
+        keys: Iterable[str],
         geometries: Iterable[Geometry] | None = None,
         properties_iter: Iterable[Properties] | None = None,
     ) -> None:
@@ -860,7 +870,7 @@ class AnnotationStore(ABC, MutableMapping):
         """
         self.remove(key)
 
-    def keys(self: AnnotationStore) -> Iterable[str]:
+    def keys(self: AnnotationStore) -> KeysView[str]:
         """Return an iterable (usually generator) of all keys in the store.
 
         Returns:
@@ -868,10 +878,12 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of keys.
 
         """
+        keys_dict: dict[str, None] = {}
         for key, _ in self.items():  # noqa: PERF102
-            yield key
+            keys_dict[key] = None
+        return keys_dict.keys()
 
-    def values(self: AnnotationStore) -> Iterable[Annotation]:
+    def values(self: AnnotationStore) -> ValuesView[Annotation]:
         """Return an iterable of all annotation in the store.
 
         Returns:
@@ -879,8 +891,11 @@ class AnnotationStore(ABC, MutableMapping):
                 An iterable of annotations.
 
         """
-        for _, annotation in self.items():  # noqa: PERF102
-            yield annotation
+        values_dict: dict[int, Annotation] = {}
+
+        for i, (_, annotation) in enumerate(self.items()):
+            values_dict[i] = annotation
+        return values_dict.values()
 
     def __iter__(self: AnnotationStore) -> Iterator[str]:
         """Return an iterable of keys in the store.
@@ -1084,7 +1099,7 @@ class AnnotationStore(ABC, MutableMapping):
         geometry: QueryGeometry,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
-    ) -> list[int]:
+    ) -> list[str]:
         """Query the store for annotation keys.
 
         Acts the same as `AnnotationStore.query` except returns keys
