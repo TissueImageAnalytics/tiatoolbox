@@ -29,6 +29,10 @@ files:
     url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
   two-tiled-pages:
     url: [*wsis, "two-tiled-pages.tiff"]
+  ventana-tif:
+    url: [*wsis, "ventana-sample.tif"]
+  regular-tif:
+    url: [*wsis, "sample-regular.tif"]
   jp2-omnyx-small:
     url: [*wsis, "CMU-1-Small-Region.omnyx.jp2"]
   jp2-omnyx-1:
