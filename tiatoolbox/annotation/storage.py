@@ -42,6 +42,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import (
     Generator,
+    ItemsView,
     Iterable,
     Iterator,
     KeysView,
@@ -51,14 +52,7 @@ from collections.abc import (
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    TypeVar,
-)
+from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -563,7 +557,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             raise ValueError(msg)
 
     @staticmethod
-    def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> Callable:
+    def _geometry_predicate(name: str, a: Geometry, b: Geometry) -> bool:
         """Apply a binary geometry predicate.
 
         For more information on geometric predicates see the `Shapely
@@ -1268,7 +1262,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, object] | set[object]:
+    ) -> dict[str, object] | list[set[object]] | set[object]:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -1421,7 +1415,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         n_where: Predicate | None = None,
         distance: float = 5.0,
         geometry_predicate: str = "intersects",
-        mode: str = "poly-poly",
+        mode: tuple[str, str] | str = "poly-poly",
     ) -> dict[str, dict[str, Annotation]]:
         """Query for annotations within a distance of another annotation.
 
@@ -1562,14 +1556,18 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         if not isinstance(mode, (str, tuple)):
             msg = "mode must be a string or tuple of strings"
             raise TypeError(msg)
-        if isinstance(mode, str):
-            mode = tuple(mode.split("-"))
-        if mode not in (("box", "box"), ("boxpoint", "boxpoint"), ("poly", "poly")):
+
+        mode_tuple = tuple(mode.split("-")) if isinstance(mode, str) else mode
+        if mode_tuple not in (
+            ("box", "box"),
+            ("boxpoint", "boxpoint"),
+            ("poly", "poly"),
+        ):
             msg = "mode must be one of 'box-box', 'boxpoint-boxpoint', or 'poly-poly'"
             raise ValueError(
                 msg,
             )
-        from_mode, _ = mode
+        from_mode, _ = mode_tuple
 
         # Initial selection of annotations to query around
         selection = self.query(
@@ -1609,7 +1607,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
     @staticmethod
     def _handle_pquery_results(
         select: Select,
-        items: Generator[tuple[str, Properties], None, None],
+        items: ItemsView[str, Annotation],
         get_values: Callable[
             [Select, Annotation],
             Properties | object | tuple[object, ...],
@@ -1617,7 +1615,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         *,
         unique: bool,
         squeeze: bool,
-    ) -> dict[str, object] | dict:
+    ) -> dict[str, object] | list[set[object]] | set[object]:
         """Package the results of a pquery into the right output format.
 
         Args:
@@ -1642,8 +1640,13 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                 A function to get the values to return from an
                 annotation via a select.
 
+        Returns:
+            results (dict[str, object] | list[set] | set):
+                results
+
         """  # Q440, Q441
-        result = defaultdict(set) if unique else {}
+        result_set: defaultdict[str, set] = defaultdict(set)
+        result_dict: dict = {}
         for key, annotation in items:
             values = get_values(select, annotation)
             if unique:
@@ -1652,14 +1655,16 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                     values = (values,)
                 # Add each value to the result set
                 for i, value in enumerate(values):
-                    result[i].add(value)
+                    result_set[str(i)].add(value)
             else:
-                result[key] = values
+                result_dict[key] = values
         if unique:
-            result = list(result.values())
-        if unique and squeeze and len(result) == 1:
-            result = result[0]
-        return result  # CCR001
+            results = list(result_set.values())
+            if squeeze and len(results) == 1:
+                return results[0]
+            return results
+
+        return result_dict
 
     def features(self: AnnotationStore) -> Generator[dict[str, object], None, None]:
         """Return annotations as a list of geoJSON features.
