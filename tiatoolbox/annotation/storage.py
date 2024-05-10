@@ -52,7 +52,7 @@ from collections.abc import (
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, TypeVar
+from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -1714,7 +1714,8 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         if fp is not None:
             # It is a file-like object, write to it
             if hasattr(fp, "write"):
-                return file_fn(fp)
+                file_handle = cast(IO, fp)
+                return file_fn(file_handle)
             # Turn a path into a file handle, then write to it
             with Path(fp).open("w", encoding="utf-8") as file_handle:
                 return file_fn(file_handle)
@@ -1735,7 +1736,8 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         if isinstance(fp, (str, bytes)):
             return string_fn(fp)
         if hasattr(fp, "read"):
-            return file_fn(fp)
+            file_io = cast(IO, fp)
+            return file_fn(file_io)
         msg = "Invalid file handle or path."
         raise OSError(msg)
 
@@ -1807,7 +1809,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         fp: IO | str,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
-        transform: Callable[[Annotation], Annotation] | None = None,
+        transform: Callable[[Annotation], Annotation] = lambda x: x,
     ) -> None:
         """Add annotations from a .geojson file to an existing store.
 
@@ -1849,6 +1851,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             string_fn=json.loads,
             file_fn=json.load,
         )
+        geojson = cast(dict, geojson)
 
         annotations = [
             transform(
@@ -1887,7 +1890,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
         """
 
-        def write_geojson_to_file_handle(file_handle: IO) -> str / bytes / None:
+        def write_geojson_to_file_handle(file_handle: IO) -> None:
             """Write the store to a GeoJson file give a handle.
 
             This replaces the naive method which uses a lot of memory::
@@ -1907,11 +1910,14 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             # Write tail
             file_handle.write("]}")
 
-        return self._dump_cases(
+        result = self._dump_cases(
             fp=fp,
             file_fn=write_geojson_to_file_handle,
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
+        if result is not None:
+            return cast(str, result)
+        return result
 
     def to_ndjson(self: AnnotationStore, fp: IO | None = None) -> str | None:
         """Serialise to New Line Delimited JSON.
@@ -1956,11 +1962,14 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             + "\n"
             for key, annotation in self.items()
         )
-        return self._dump_cases(
+        result = self._dump_cases(
             fp=fp,
             file_fn=lambda fp: fp.writelines(string_lines_generator),
             none_fn=lambda: "".join(string_lines_generator),
         )
+        if result is not None:
+            return cast(str, result)
+        return result
 
     @classmethod
     def from_ndjson(cls: type[AnnotationStore], fp: IO | str) -> AnnotationStore:
@@ -1994,11 +2003,13 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
         """
         store = cls()
-        for line in cls._load_cases(
+        cases = cls._load_cases(
             fp=fp,
             string_fn=lambda fp: fp.splitlines(),
             file_fn=lambda fp: fp.readlines(),
-        ):
+        )
+        cases = cast(list, cases)
+        for line in cases:
             dictionary = json.loads(line)
             key = dictionary.get("key", uuid.uuid4().hex)
             geometry = feature2geometry(dictionary["geometry"])
@@ -2018,14 +2029,14 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
     def to_dataframe(self: AnnotationStore) -> pd.DataFrame:
         """Converts AnnotationStore to :class:`pandas.DataFrame`."""
-        features = (
-            {
-                "geometry": annotation.geometry,
-                "properties": annotation.properties,
-                "key": key,
-            }
-            for key, annotation in self.items()
-        )
+        features: list[dict] = []
+        for key, annotation in self.items():
+            feature_dict = {}
+            feature_dict["key"] = key
+            feature_dict["geometry"] = annotation.geometry
+            feature_dict["properties"] = annotation.properties
+            features.append(feature_dict)
+
         return pd.json_normalize(features).set_index("key")
 
     def transform(
