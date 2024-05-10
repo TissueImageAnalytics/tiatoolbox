@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
+import torch
 import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -73,8 +74,29 @@ class _RcParam(TypedDict):
 
     TIATOOLBOX_HOME: Path
     pretrained_model_info: dict[str, dict]
-    enable_torch_compile: bool
     torch_compile_mode: str
+
+
+def is_torch_compile_compatible() -> bool:
+    """Check if the current GPU is compatible with torch-compile.
+
+    Returns:
+        bool:
+            True if the GPU is compatible with torch-compile, False
+            otherwise.
+
+    """
+    if torch.cuda.is_available():
+        device_cap = torch.cuda.get_device_capability()
+        if device_cap not in ((7, 0), (8, 0), (9, 0)):
+            logger.warning(
+                "GPU is not compatible with torch.compile. "
+                "Compatible GPUs include NVIDIA V100, A100, and H100. "
+                "Speedup numbers may be lower than expected."
+            )
+            return False
+
+    return True
 
 
 def read_registry_files(path_to_registry: str | Path) -> dict:
@@ -104,11 +126,9 @@ rcParam: _RcParam = {  # noqa: N816
     "pretrained_model_info": read_registry_files(
         "data/pretrained_model.yaml",
     ),  # Load a dictionary of sample files data (names and urls)
-    "enable_torch_compile": False,
-    # Disable `torch-compile`` by default
-    "torch_compile_mode": "default",
-    # Set ``torch-compile`` mode to ``default`` by default
-    # Options: “default”, “reduce-overhead”, “max-autotune”
+    "torch_compile_mode": "default" if is_torch_compile_compatible() else "disable",
+    # Set `torch-compile` mode to `default`if GPU is compatible, otherwise disable
+    # Options: `disable`, `default`, `reduce-overhead`, `max-autotune`
     # or “max-autotune-no-cudagraphs”
 }
 

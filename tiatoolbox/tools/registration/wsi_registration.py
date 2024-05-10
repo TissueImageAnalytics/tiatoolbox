@@ -342,7 +342,6 @@ class DFBRFeatureExtractor(torch.nn.Module):
         self.pretrained: torch.nn.Sequential = compile_model(
             torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1),
             mode=rcParam["torch_compile_mode"],
-            disable=not rcParam["enable_torch_compile"],
         ).features
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(

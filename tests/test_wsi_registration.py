@@ -609,9 +609,9 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
 
         return pool3_feat, pool4_feat, pool5_feat
 
-    torch_compile_enabled = rcParam["enable_torch_compile"]
+    torch_compile_mode = rcParam["torch_compile_mode"]
     torch._dynamo.reset()
-    rcParam["enable_torch_compile"] = True
+    rcParam["torch_compile_mode"] = "default"
     (pool3_feat, pool4_feat, pool5_feat), compile_time = timed(_extract_features)
     _pool3_feat, _pool4_feat, _pool5_feat = np.load(
         str(dfbr_features),
@@ -644,4 +644,4 @@ def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
     logger.info("torch.compile max-autotune mode: %s", compile_time)
     torch._dynamo.reset()
-    rcParam["enable_torch_compile"] = torch_compile_enabled
+    rcParam["torch_compile_mode"] = torch_compile_mode
