@@ -52,7 +52,15 @@ from collections.abc import (
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, TypeVar, cast
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    TypeVar,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
@@ -2031,10 +2039,11 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         """Converts AnnotationStore to :class:`pandas.DataFrame`."""
         features: list[dict] = []
         for key, annotation in self.items():
-            feature_dict = {}
-            feature_dict["key"] = key
-            feature_dict["geometry"] = annotation.geometry
-            feature_dict["properties"] = annotation.properties
+            feature_dict = {
+                "key": key,
+                "geometry": annotation.geometry,
+                "properties": annotation.properties,
+            }
             features.append(feature_dict)
 
         return pd.json_normalize(features).set_index("key")
@@ -2070,6 +2079,9 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         """
         self.close()
 
+    @abstractmethod
+    def close(self: AnnotationStore) -> None: ...
+
     def clear(self: AnnotationStore) -> None:
         """Remove all annotations from the store.
 
@@ -2099,7 +2111,7 @@ class SQLiteMetadata(MutableMapping):
         )
         self.con.commit()
 
-    def __contains__(self: SQLiteMetadata, key: str) -> bool:
+    def __contains__(self: SQLiteMetadata, key: object) -> bool:
         """Test whether the object contains the specified object or not."""
         cursor = self.con.execute("SELECT 1 FROM metadata WHERE [key] = ?", (key,))
         return cursor.fetchone() is not None
@@ -2157,7 +2169,7 @@ class SQLiteStore(AnnotationStore):
     """
 
     @classmethod
-    def open(cls: type[SQLiteStore], fp: Path | str) -> SQLiteStore:
+    def open(cls: type[SQLiteStore], fp: Path | str | IO) -> SQLiteStore:
         """Opens :class:`SQLiteStore` from file pointer or path."""
         return SQLiteStore(fp)
 
@@ -2211,7 +2223,7 @@ class SQLiteStore(AnnotationStore):
             # Use 'and' to short-circuit
             self.path.is_file() and self.path.stat().st_size > 0
         )
-        self.cons = {}
+        self.cons: dict = {}
         self.con.execute("BEGIN")
 
         # Set up metadata
@@ -2223,7 +2235,12 @@ class SQLiteStore(AnnotationStore):
 
         # store locally as constantly fetching from db in (de)serialization is slow
         self.compression = self.metadata["compression"]
-        self.compression_level = self.metadata["compression_level"]
+        self.compression_level: int
+        self.compression_level = (
+            self.metadata["compression_level"]
+            if isinstance(self.metadata["compression_level"], int)
+            else compression_level
+        )
 
         if exists:
             self.table_columns = self._get_table_columns()
@@ -2348,7 +2365,7 @@ class SQLiteStore(AnnotationStore):
             return con
         return self.cons[thread_id]
 
-    def serialise_geometry(  # skipcq: PYL-W0221
+    def serialise_geometry(  # type: ignore[override]  # skipcq: PYL-W0221
         self: SQLiteStore,
         geometry: Geometry,
     ) -> str | bytes:
@@ -2415,9 +2432,8 @@ class SQLiteStore(AnnotationStore):
             else WKB_POINT_STRUCT.pack(1, GeometryType.POINT, cx, cy)
         )
 
-    def deserialize_geometry(  # skipcq: PYL-W0221
-        self: SQLiteStore,
-        data: str | bytes,
+    def deserialize_geometry(  # type: ignore[override]  # skipcq: PYL-W0221
+        self: SQLiteStore, data: bytes | str
     ) -> Geometry:
         """Deserialize a geometry from a string or bytes.
 
@@ -2435,7 +2451,7 @@ class SQLiteStore(AnnotationStore):
             return shapely_wkt.loads(data)
         return shapely_wkb.loads(data)
 
-    def _decompress_data(self: SQLiteStore, data: bytes) -> bytes:
+    def _decompress_data(self: SQLiteStore, data: Any) -> bytes:
         """Decompresses geometry data.
 
         Args:
@@ -2596,7 +2612,7 @@ class SQLiteStore(AnnotationStore):
         query_parameters: dict[str, object],
         geometry_predicate: str | None,
         columns: str,
-        where: bytes | str,
+        where: bytes | str | CallablePredicate,
         distance: float = 0,
     ) -> tuple[str, dict[str, object]]:
         """Initialises the query string and parameters."""
@@ -2759,7 +2775,7 @@ class SQLiteStore(AnnotationStore):
         if isinstance(where, Callable):
             columns = callable_columns
 
-        query_parameters = {}
+        query_parameters: dict[str, object] = {}
 
         query_string, query_parameters = self._initialize_query_string_parameters(
             query_geometry,
