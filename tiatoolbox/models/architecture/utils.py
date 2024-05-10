@@ -38,6 +38,16 @@ def compile_model(
     if disable:
         return model
 
+    # Check if GPU is compatible with torch.compile
+    if torch.cuda.is_available():
+        device_cap = torch.cuda.get_device_capability()
+        if device_cap not in ((7, 0), (8, 0), (9, 0)):
+            logger.warning(
+                "GPU is not compatible with torch.compile. "
+                "Compatible GPUs include NVIDIA V100, A100, and H100. "
+                "Speedup numbers may be lower than expected."
+            )
+
     # This check will be removed when torch.compile is supported in Python 3.12+
     if sys.version_info >= (3, 12):  # pragma: no cover
         logger.warning(
