@@ -150,3 +150,9 @@ def test_lazy_import_module_not_found() -> None:
             "nonexistent_module",
             Path(__file__).parent.parent / "tiatoolbox",
         )
+
+
+def test_torch_compile_compatibility() -> None:
+    """Test if torch-compile compatibility is checked correctly."""
+    from tiatoolbox import is_torch_compile_compatible
+    assert isinstance(is_torch_compile_compatible(), bool)
