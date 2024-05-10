@@ -86,7 +86,7 @@ class SQLExpression:
 
     def __hash__(self: SQLExpression) -> int:
         """Return hash of the object (Not used)."""
-        return hash(str(self))
+        return hash(str(self))  # pragma: no cover
 
     def __repr__(self: SQLExpression) -> str:
         """Return a string representation of the object."""
