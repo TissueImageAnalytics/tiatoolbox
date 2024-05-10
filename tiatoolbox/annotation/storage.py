@@ -52,15 +52,7 @@ from collections.abc import (
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    TypeVar,
-    cast,
-)
+from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -435,12 +427,17 @@ class Annotation:
         raise ValueError(msg)
 
 
+StoreInstanceType = TypeVar("StoreInstanceType", bound="AnnotationStore")
+
+
 class AnnotationStore(ABC, MutableMapping[str, Annotation]):
     """Annotation store abstract base class."""
 
-    A = TypeVar("A", bound="AnnotationStore")
-
-    def __new__(cls: type[A], *args: str, **kwargs: int) -> A:  # noqa: ARG003
+    def __new__(
+        cls: type[StoreInstanceType],
+        *args: str,  # noqa: ARG003
+        **kwargs: int,  # noqa: ARG003
+    ) -> StoreInstanceType:
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:
             msg = (
@@ -1927,7 +1924,15 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             return cast(str, result)
         return result
 
-    def to_ndjson(self: AnnotationStore, fp: IO | None = None) -> str | None:
+    @overload
+    def to_ndjson(self: AnnotationStore, fp: None = None) -> str: ...
+
+    @overload
+    def to_ndjson(self: AnnotationStore, fp: IO | str | Path) -> None: ...
+
+    def to_ndjson(
+        self: AnnotationStore, fp: IO | str | Path | None = None
+    ) -> str | None:
         """Serialise to New Line Delimited JSON.
 
         Each line contains a JSON object with the following format:
@@ -1980,7 +1985,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         return result
 
     @classmethod
-    def from_ndjson(cls: type[AnnotationStore], fp: IO | str) -> AnnotationStore:
+    def from_ndjson(cls: type[AnnotationStore], fp: Path | IO | str) -> AnnotationStore:
         """Load annotations from NDJSON.
 
         Expects each line to be a JSON object with the following format:
@@ -2080,7 +2085,8 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         self.close()
 
     @abstractmethod
-    def close(self: AnnotationStore) -> None: ...
+    def close(self: AnnotationStore) -> None:
+        """Closes :class:`AnnotationStore` from file pointer or path."""
 
     def clear(self: AnnotationStore) -> None:
         """Remove all annotations from the store.
@@ -2451,7 +2457,7 @@ class SQLiteStore(AnnotationStore):
             return shapely_wkt.loads(data)
         return shapely_wkb.loads(data)
 
-    def _decompress_data(self: SQLiteStore, data: Any) -> bytes:
+    def _decompress_data(self: SQLiteStore, data: bytes | str) -> bytes:
         """Decompresses geometry data.
 
         Args:
@@ -2468,7 +2474,8 @@ class SQLiteStore(AnnotationStore):
 
         """
         if self.compression == "zlib":
-            data = zlib.decompress(data)
+            # No type annotation avaliable for Buffer until Python12
+            data = zlib.decompress(data)  # type: ignore[arg-type]
         elif self.compression is not None:
             msg = "Unsupported compression method."
             raise ValueError(msg)
@@ -3069,7 +3076,7 @@ class SQLiteStore(AnnotationStore):
                 selection = (selection,)
             # Add the properties to the appropriate set
             for i, value in enumerate(selection):
-                result[i].add(value)
+                result[str(i)].add(value)
 
         # Load a pickled select function
         if isinstance(select, bytes):
@@ -3340,7 +3347,7 @@ class SQLiteStore(AnnotationStore):
         (count,) = cur.fetchone()
         return count
 
-    def __contains__(self: SQLiteStore, key: str) -> bool:
+    def __contains__(self: SQLiteStore, key: object) -> bool:
         """Test whether the object contains the specified object or not."""
         cur = self.con.cursor()
         cur.execute("SELECT EXISTS(SELECT 1 FROM annotations WHERE [key] = ?)", (key,))
@@ -3367,7 +3374,7 @@ class SQLiteStore(AnnotationStore):
             wkb=self._unpack_wkb(serialised_geometry, cx, cy),
         )
 
-    def keys(self: SQLiteStore) -> Iterable[int]:
+    def keys(self: SQLiteStore) -> KeysView[str]:
         """Return an iterable (usually generator) of all keys in the store.
 
         Returns:
@@ -3375,9 +3382,13 @@ class SQLiteStore(AnnotationStore):
                 An iterable of keys.
 
         """
-        yield from self
+        keys_dict: dict[str, None] = {}
+        for key, _ in self.items():  # noqa: PERF102
+            keys_dict[key] = None
+        return keys_dict.keys()
+        # yield from self
 
-    def __iter__(self: SQLiteStore) -> Iterator[int]:
+    def __iter__(self: SQLiteStore) -> Iterator[str]:
         """Return an iterator for the given object."""
         cur = self.con.cursor()
         cur.execute(
@@ -3392,7 +3403,7 @@ class SQLiteStore(AnnotationStore):
                 break
             yield row[0]  # The key
 
-    def values(self: SQLiteStore) -> Iterable[tuple[int, Annotation]]:
+    def values(self: SQLiteStore) -> ValuesView[Annotation]:
         """Return an iterable of all annotation in the store.
 
         Returns:
@@ -3400,10 +3411,13 @@ class SQLiteStore(AnnotationStore):
                 An iterable of annotations.
 
         """
-        for _, value in self.items():  # noqa: PERF102
-            yield value
+        values_dict: dict[int, Annotation] = {}
 
-    def items(self: SQLiteStore) -> Iterable[tuple[int, Annotation]]:
+        for i, (_, annotation) in enumerate(self.items()):
+            values_dict[i] = annotation
+        return values_dict.values()
+
+    def items(self: SQLiteStore) -> ItemsView[str, Annotation]:
         """Return iterable (generator) over key and annotations."""
         cur = self.con.cursor()
         cur.execute(
@@ -3412,6 +3426,7 @@ class SQLiteStore(AnnotationStore):
               FROM annotations
             """,
         )
+        items_dict: dict[str, Annotation] = {}
         while True:
             row = cur.fetchone()
             if row is None:
@@ -3422,11 +3437,12 @@ class SQLiteStore(AnnotationStore):
             else:
                 geometry = Point(cx, cy)
             properties = json.loads(serialised_properties)
-            yield key, Annotation(geometry, properties)
+            items_dict[key] = Annotation(geometry, properties)
+        return items_dict.items()
 
     def patch_many(
         self: SQLiteStore,
-        keys: Iterable[int],
+        keys: Iterable[str],
         geometries: Iterable[Geometry] | None = None,
         properties_iter: Iterable[Properties] | None = None,
     ) -> None:
@@ -3464,11 +3480,11 @@ class SQLiteStore(AnnotationStore):
         for key, geometry, properties in zip(keys, geometries, properties_iter):
             # Annotation is not in DB:
             if key not in self:
-                self._append(key, Annotation(geometry, properties), cur)
+                self._append(str(key), Annotation(geometry, properties), cur)
                 continue
             # Annotation is in DB:
             if geometry:
-                self._patch_geometry(key, geometry, cur)
+                self._patch_geometry(str(key), geometry, cur)
             if properties:
                 cur.execute(
                     """
@@ -3611,14 +3627,14 @@ class SQLiteStore(AnnotationStore):
     def to_dataframe(self: SQLiteStore) -> pd.DataFrame:
         """Converts AnnotationStore to :class:`pandas.DataFrame`."""
         store_to_df = pd.DataFrame()
-        df_rows = (
-            {
+        df_rows: list[dict] = []
+        for key, annotation in self.items():
+            row = {
                 "key": key,
                 "geometry": annotation.geometry,
                 "properties": annotation.properties,
             }
-            for key, annotation in self.items()
-        )
+            df_rows.append(row)
         store_to_df = pd.concat([store_to_df, pd.json_normalize(df_rows)])
         return store_to_df.set_index("key")
 
@@ -3652,6 +3668,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         if hasattr(fp, "write"):
+            fp = cast(IO, fp)
             fp = fp.name
         target = sqlite3.connect(fp)
         self.con.backup(target)
@@ -3768,15 +3785,17 @@ class DictionaryStore(AnnotationStore):
     ) -> None:
         """Initialize :class:`DictionaryStore`."""
         super().__init__()
-        self._rows = {}
+        self._rows: dict = {}
         self.connection = connection
         self.path = self._connection_to_path(connection)
         if self.connection not in [None, ":memory:"] and self.path.exists():
-            for line in self._load_cases(
+            cases = self._load_cases(
                 fp=self.connection,
                 string_fn=lambda fp: fp.splitlines(),
                 file_fn=lambda fp: fp.readlines(),
-            ):
+            )
+            cases = cast(list, cases)
+            for line in cases:
                 dictionary = json.loads(line)
                 key = dictionary.get("key", uuid.uuid4().hex)
                 geometry = feature2geometry(dictionary["geometry"])
@@ -3864,14 +3883,16 @@ class DictionaryStore(AnnotationStore):
             self._rows[key]["annotation"] = annotation
         self._rows[key] = {"annotation": annotation}
 
-    def __contains__(self: DictionaryStore, key: str) -> bool:
+    def __contains__(self: DictionaryStore, key: object) -> bool:
         """Test whether the object contains the specified object or not."""
         return key in self._rows
 
-    def items(self: DictionaryStore) -> Generator[tuple[str, Annotation], None, None]:
+    def items(self: DictionaryStore) -> ItemsView[str, Annotation]:
         """Return iterable (generator) over key and annotations."""
+        items_dict: dict[str, Annotation] = {}
         for key, row in self._rows.items():
-            yield key, row["annotation"]
+            items_dict[key] = row["annotation"]
+        return items_dict.items()
 
     def __len__(self: DictionaryStore) -> int:
         """Return the length of the instance attributes."""
@@ -3879,7 +3900,7 @@ class DictionaryStore(AnnotationStore):
 
     # flake8: noqa: A003
     @classmethod
-    def open(cls: type[DictionaryStore], fp: Path | str | IO) -> AnnotationStore:
+    def open(cls: type[AnnotationStore], fp: Path | str | IO) -> AnnotationStore:
         """Opens :class:`DictionaryStore` from file pointer or path."""
         return cls.from_ndjson(fp)
 
@@ -3892,7 +3913,7 @@ class DictionaryStore(AnnotationStore):
             self.path.touch()
         self.dump(self.connection)
 
-    def dump(self: DictionaryStore, fp: Path | str | IO) -> str:
+    def dump(self: DictionaryStore, fp: Path | str | IO) -> None:
         """Serialise a copy of the whole store to a file-like object.
 
         Args:
@@ -3900,7 +3921,7 @@ class DictionaryStore(AnnotationStore):
                 A file path or file handle object for output to disk.
 
         """
-        return self.to_ndjson(fp)
+        self.to_ndjson(fp)
 
     def dumps(self: DictionaryStore) -> str:
         """Serialise and return a copy of store as a string or bytes.
