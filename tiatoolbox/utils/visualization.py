@@ -661,7 +661,10 @@ class AnnotationRenderer:
                 Array of coordinates in tile space in the form [x, y].
 
         """
-        return ((np.reshape(coords, (-1, 2)) - top_left) / scale).astype(np.int32)
+        return [
+            ((np.reshape(ring, (-1, 2)) - top_left) / scale).astype(np.int32)
+            for ring in coords
+        ]
 
     def get_color(
         self: AnnotationRenderer,
@@ -756,19 +759,26 @@ class AnnotationRenderer:
             scale,
         )
         if self.thickness > -1:
-            cv2.drawContours(
+            cv2.polylines(
                 tile,
-                [cnt],
-                0,
-                col,
-                self.edge_thickness,
+                cnt,
+                isClosed=True,
+                color=col,
+                thickness=self.edge_thickness,
                 lineType=cv2.LINE_8,
             )
         else:
-            cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
+            cv2.fillPoly(tile, cnt, col)
         if self.thickness == -1 and self.edge_thickness > 0:
             edge_col = self.get_color(annotation, edge=True)
-            cv2.drawContours(tile, [cnt], 0, edge_col, 1, lineType=cv2.LINE_8)
+            cv2.polylines(
+                tile,
+                cnt,
+                isClosed=True,
+                color=edge_col,
+                thickness=1,
+                lineType=cv2.LINE_8,
+            )
 
     def render_multipoly(
         self: AnnotationRenderer,
@@ -782,7 +792,7 @@ class AnnotationRenderer:
         geoms = annotation.coords
         for poly in geoms:
             cnt = self.to_tile_coords(poly, top_left, scale)
-            cv2.drawContours(tile, [cnt], 0, col, self.thickness, lineType=cv2.LINE_8)
+            cv2.fillPoly(tile, cnt, col)
 
     def render_pt(
         self: AnnotationRenderer,
@@ -811,7 +821,7 @@ class AnnotationRenderer:
                 annotation.coords,
                 top_left,
                 scale,
-            )[0],
+            )[0][0],
             np.maximum(self.edge_thickness, 1),
             col,
             thickness=self.thickness,
@@ -838,15 +848,14 @@ class AnnotationRenderer:
 
         """
         col = self.get_color(annotation, edge=False)
+        cnt = self.to_tile_coords(
+            list(annotation.coords),
+            top_left,
+            scale,
+        )
         cv2.polylines(
             tile,
-            [
-                self.to_tile_coords(
-                    list(annotation.coords),
-                    top_left,
-                    scale,
-                ),
-            ],
+            [np.array(cnt)],
             isClosed=False,
             color=col,
             thickness=3,
