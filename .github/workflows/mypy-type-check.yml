@@ -30,7 +30,7 @@ jobs:
 
     - name: Setup mypy
       run: |
-        pip install mypy==1.8.0
+        pip install mypy
 
     - name: Perform type checking
       run: |
@@ -42,4 +42,5 @@ jobs:
           tiatoolbox/utils/ \
           tiatoolbox/tools/ \
           tiatoolbox/data/ \
-          tiatoolbox/annotation/
+          tiatoolbox/annotation/dsl.py \
+          tiatoolbox/annotation/storage.py
