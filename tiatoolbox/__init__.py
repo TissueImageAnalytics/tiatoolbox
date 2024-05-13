@@ -98,7 +98,7 @@ def is_torch_compile_compatible() -> bool:
             return False
     else:
         logger.warning(
-            "No GPU detected or cuda not installed. "
+            "No GPU detected or cuda not installed, "
             "torch.compile is only supported on selected NVIDIA GPUs. "
             "Speedup numbers may be lower than expected."
         )
