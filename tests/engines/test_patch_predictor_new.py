@@ -182,13 +182,12 @@ def test_wsi_predictor_api(
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
-    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=32)
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=32)
 
     save_dir = f"{save_dir_path}/model_wsi_output"
 
     # wrapper to make this more clean
     kwargs = {
-        "return_probabilities": True,
         "return_labels": True,
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
@@ -198,19 +197,19 @@ def test_wsi_predictor_api(
     }
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
-    wsi_output = predictor.predict(
-        [mini_wsi_svs],
+    wsi_output = predictor.run(
+        images=[mini_wsi_svs],
         masks=[mini_wsi_msk],
-        mode="wsi",
+        patch_mode=False,
         **kwargs,
     )
 
     shutil.rmtree(save_dir, ignore_errors=True)
 
-    tile_output = predictor.predict(
-        [mini_wsi_jpg],
+    tile_output = predictor.run(
+        images=[mini_wsi_jpg],
         masks=[mini_wsi_msk],
-        mode="tile",
+        patch_mode=False,
         **kwargs,
     )
 
@@ -224,24 +223,22 @@ def test_wsi_predictor_api(
     shutil.rmtree(save_dir, ignore_errors=True)
 
     kwargs = {
-        "return_probabilities": True,
         "return_labels": True,
-        "on_gpu": ON_GPU,
+        "device": device,
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
         "resolution": 0.5,
         "save_dir": save_dir,
-        "merge_predictions": True,  # to test the api coverage
         "units": "mpp",
     }
 
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = False
     # test reading of multiple whole-slide images
-    output = predictor.predict(
-        [mini_wsi_svs, mini_wsi_svs],
+    output = predictor.run(
+        images=[mini_wsi_svs, mini_wsi_svs],
         masks=[mini_wsi_msk, mini_wsi_msk],
-        mode="wsi",
+        patch_mode=False,
         **_kwargs,
     )
     for output_info in output.values():
@@ -253,18 +250,18 @@ def test_wsi_predictor_api(
     _kwargs = copy.deepcopy(kwargs)
     _kwargs["merge_predictions"] = True
     # test reading of multiple whole-slide images
-    predictor.predict(
-        [mini_wsi_svs, mini_wsi_svs],
+    predictor.run(
+        images=[mini_wsi_svs, mini_wsi_svs],
         masks=[mini_wsi_msk, mini_wsi_msk],
-        mode="wsi",
+        patch_mode=False,
         **_kwargs,
     )
     _kwargs = copy.deepcopy(kwargs)
     with pytest.raises(FileExistsError):
-        predictor.predict(
-            [mini_wsi_svs, mini_wsi_svs],
+        predictor.run(
+            images=[mini_wsi_svs, mini_wsi_svs],
             masks=[mini_wsi_msk, mini_wsi_msk],
-            mode="wsi",
+            patch_mode=False,
             **_kwargs,
         )
     # remove previously generated data
@@ -275,10 +272,10 @@ def test_wsi_predictor_api(
         _kwargs = copy.deepcopy(kwargs)
         _kwargs["save_dir"] = None  # default coverage
         _kwargs["return_probabilities"] = False
-        output = predictor.predict(
-            [mini_wsi_svs, mini_wsi_svs],
+        output = predictor.run(
+            images=[mini_wsi_svs, mini_wsi_svs],
             masks=[mini_wsi_msk, mini_wsi_msk],
-            mode="wsi",
+            patch_mode=False,
             **_kwargs,
         )
         assert Path.exists(Path("output"))
@@ -336,7 +333,7 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:
     assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
 
     # integration test
-    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
 
     kwargs = {
         "return_probabilities": True,
@@ -349,10 +346,10 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:
         "merge_predictions": True,
     }
     # sanity check, both output should be the same with same resolution read args
-    wsi_output = predictor.predict(
+    wsi_output = predictor.run(
         [mini_wsi_svs],
         masks=[mini_wsi_msk],
-        mode="wsi",
+        patch_mode=False,
         **kwargs,
     )
 
@@ -360,10 +357,10 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:
     # force to use the default in merge function
     # still should have the same results
     kwargs["merge_predictions"] = False
-    tile_output = predictor.predict(
+    tile_output = predictor.run(
         [mini_wsi_jpg],
         masks=[mini_wsi_msk],
-        mode="tile",
+        patch_mode=False,
         **kwargs,
     )
     merged_tile_output = predictor.merge_predictions(
@@ -393,7 +390,7 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:
 
 def _test_predictor_output(
     inputs: list,
-    pretrained_model: str,
+    model: str,
     probabilities_check: list | None = None,
     predictions_check: list | None = None,
     *,
@@ -401,12 +398,12 @@ def _test_predictor_output(
 ) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = PatchPredictor(
-        pretrained_model=pretrained_model,
+        model=model,
         batch_size=32,
         verbose=False,
     )
     # don't run test on GPU
-    output = predictor.predict(
+    output = predictor.run(
         inputs,
         return_probabilities=True,
         return_labels=False,
@@ -417,14 +414,14 @@ def _test_predictor_output(
     for idx, probabilities_ in enumerate(probabilities):
         probabilities_max = max(probabilities_)
         assert np.abs(probabilities_max - probabilities_check[idx]) <= 1e-3, (
-            pretrained_model,
+            model,
             probabilities_max,
             probabilities_check[idx],
             predictions[idx],
             predictions_check[idx],
         )
         assert predictions[idx] == predictions_check[idx], (
-            pretrained_model,
+            model,
             probabilities_max,
             probabilities_check[idx],
             predictions[idx],
@@ -457,10 +454,10 @@ def test_patch_predictor_kather100k_output(
         "mobilenet_v3_small-kather100k": [0.9999998807907104, 0.9999997615814209],
         "googlenet-kather100k": [1.0, 0.9999639987945557],
     }
-    for pretrained_model, expected_prob in pretrained_info.items():
+    for model, expected_prob in pretrained_info.items():
         _test_predictor_output(
             inputs,
-            pretrained_model,
+            model,
             probabilities_check=expected_prob,
             predictions_check=[6, 3],
             on_gpu=ON_GPU,
@@ -492,10 +489,10 @@ def test_patch_predictor_pcam_output(sample_patch3: Path, sample_patch4: Path) -
         "mobilenet_v3_small-pcam": [0.9999963045120239, 0.9747149348258972],
         "googlenet-pcam": [0.9999929666519165, 0.8701475858688354],
     }
-    for pretrained_model, expected_prob in pretrained_info.items():
+    for model, expected_prob in pretrained_info.items():
         _test_predictor_output(
             inputs,
-            pretrained_model,
+            model,
             probabilities_check=expected_prob,
             predictions_check=[1, 0],
             on_gpu=ON_GPU,
