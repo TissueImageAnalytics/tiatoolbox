@@ -71,41 +71,31 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     assert predictor._ioconfig.patch_input_shape == (300, 300)
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    predictor.predict(
-        [mini_wsi_svs],
+    predictor.run(
+        images=[mini_wsi_svs],
         stride_shape=(300, 300),
-        mode="wsi",
-        on_gpu=ON_GPU,
+        patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.stride_shape == (300, 300)
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    predictor.predict(
-        [mini_wsi_svs],
+    predictor.run(
+        images=[mini_wsi_svs],
         resolution=1.99,
-        mode="wsi",
+        patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    predictor.predict(
-        [mini_wsi_svs],
+    predictor.run(
+        images=[mini_wsi_svs],
         units="baseline",
-        mode="wsi",
+        patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
-
-    predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
-    predictor.predict(
-        [mini_wsi_svs],
-        mode="wsi",
-        merge_predictions=True,
-        save_dir=f"{tmp_path}/dump",
-    )
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
 

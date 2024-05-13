@@ -14,7 +14,7 @@ import zarr
 from torch import nn
 from typing_extensions import Unpack
 
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
@@ -578,7 +578,7 @@ class EngineABC(ABC):
                 device=self.device,
             )
             if return_coordinates:
-                batch_output["coordinates"] = batch_data["coords"]
+                batch_output["coordinates"] = batch_data["coords"].numpy()
 
             if self.return_labels:  # be careful of `s`
                 batch_output["labels"] = batch_data["label"].numpy()
@@ -1142,6 +1142,8 @@ class EngineABC(ABC):
             ... {'/path/to/wsi1.db'}
 
         """
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         save_dir = self._update_run_params(
             images=images,
             masks=masks,
