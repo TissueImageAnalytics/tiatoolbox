@@ -205,6 +205,90 @@ def is_ngff(  # noqa: PLR0911
     return is_zarr(path)
 
 
+def _handle_virtual_wsi(
+    last_suffix: str,
+    input_path: Path,
+    mpp: tuple[Number, Number] | None,
+    power: Number | None,
+) -> VirtualWSIReader | None:
+    """Handle virtual WSI cases.
+
+    Args:
+        last_suffix (str):
+            Suffix of the file to read.
+        input_path (Path):
+             Input path to virtual WSI.
+        mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
+            The MPP of the WSI. If not provided, the MPP is approximated
+            from the objective power.
+        power (:obj:`float` or :obj:`None`, optional):
+            The objective power of the WSI. If not provided, the power
+            is approximated from the MPP.
+
+    Returns:
+        VirtualWSIReader | None:
+            :class:`VirtualWSIReader` if input_path is valid path to virtual WSI
+            otherwise None.
+
+    """
+
+    # Handle homogeneous cases (based on final suffix)
+    def np_virtual_wsi(
+        input_path: np.ndarray,
+        *args: Number | tuple | str | WSIMeta | None,
+        **kwargs: dict,
+    ) -> VirtualWSIReader:
+        """Create a virtual WSI from a numpy array."""
+        return VirtualWSIReader(input_path, *args, **kwargs)
+
+    suffix_to_reader = {
+        ".npy": np_virtual_wsi,
+        ".jp2": JP2WSIReader,
+        ".jpeg": VirtualWSIReader,
+        ".jpg": VirtualWSIReader,
+        ".png": VirtualWSIReader,
+        ".tif": VirtualWSIReader,
+        ".tiff": VirtualWSIReader,
+    }
+
+    if last_suffix in suffix_to_reader:
+        return suffix_to_reader[last_suffix](input_path, mpp=mpp, power=power)
+
+    return None
+
+
+def _handle_tiff_wsi(
+    input_path: Path, mpp: tuple[Number, Number] | None, power: Number | None
+) -> TIFFWSIReader | OpenSlideWSIReader | None:
+    """Handle TIFF WSI cases.
+
+    Args:
+        input_path (Path):
+             Input path to virtual WSI.
+        mpp (:obj:`tuple` or :obj:`list` or :obj:`None`, optional):
+            The MPP of the WSI. If not provided, the MPP is approximated
+            from the objective power.
+        power (:obj:`float` or :obj:`None`, optional):
+            The objective power of the WSI. If not provided, the power
+            is approximated from the MPP.
+
+    Returns:
+        OpenSlideWSIReader | TIFFWSIReader | None:
+            :class:`OpenSlideWSIReader` or :class:`TIFFWSIReader` if input_path is
+            valid path to tiff WSI otherwise None.
+
+    """
+    if openslide.OpenSlide.detect_format(input_path) is not None:
+        try:
+            return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
+        except openslide.OpenSlideError:
+            pass
+    if is_tiled_tiff(input_path):
+        return TIFFWSIReader(input_path, mpp=mpp, power=power)
+
+    return None
+
+
 class WSIReader:
     """Base whole slide image (WSI) reader class.
 
@@ -279,7 +363,6 @@ class WSIReader:
         WSIReader.verify_supported_wsi(input_path)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
-
         if is_dicom(input_path):
             return DICOMWSIReader(input_path, mpp=mpp, power=power)
 
@@ -300,33 +383,17 @@ class WSIReader:
         if suffixes[-2:] in ([".ome", ".tiff"],):
             return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
-        if last_suffix in (".tif", ".tiff") and is_tiled_tiff(input_path):
-            try:
-                return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
-            except openslide.OpenSlideError:
-                return TIFFWSIReader(input_path, mpp=mpp, power=power)
+        if last_suffix in (".tif", ".tiff"):
+            tiff_wsi = _handle_tiff_wsi(input_path, mpp=mpp, power=power)
+            if tiff_wsi is not None:
+                return tiff_wsi
 
-        # Handle homogeneous cases (based on final suffix)
-        def np_virtual_wsi(
-            input_path: np.ndarray,
-            *args: Number | tuple | str | WSIMeta | None,
-            **kwargs: dict,
-        ) -> VirtualWSIReader:
-            """Create a virtual WSI from a numpy array."""
-            return VirtualWSIReader(input_path, *args, **kwargs)
+        virtual_wsi = _handle_virtual_wsi(
+            last_suffix=last_suffix, input_path=input_path, mpp=mpp, power=power
+        )
 
-        suffix_to_reader = {
-            ".npy": np_virtual_wsi,
-            ".jp2": JP2WSIReader,
-            ".jpeg": VirtualWSIReader,
-            ".jpg": VirtualWSIReader,
-            ".png": VirtualWSIReader,
-            ".tif": VirtualWSIReader,
-            ".tiff": VirtualWSIReader,
-        }
-
-        if last_suffix in suffix_to_reader:
-            return suffix_to_reader[last_suffix](input_path, mpp=mpp, power=power)
+        if virtual_wsi is not None:
+            return virtual_wsi
 
         # Try openslide last
         return OpenSlideWSIReader(input_path, mpp=mpp, power=power)

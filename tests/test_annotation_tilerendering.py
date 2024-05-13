@@ -33,7 +33,8 @@ RNG = np.random.default_rng(0)  # Numpy Random Generator
 def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
     return [
-        cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
+        cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100), radius=13)
+        for i, j in np.ndindex(5, 5)
     ]
 
 
@@ -168,7 +169,7 @@ def test_filter_by_expression(fill_store: Callable, tmp_path: Path) -> None:
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
-    assert num == 25  # expect 25 cell objects, as the added one is too small
+    assert num == 25  # expect 25 cell objects
 
 
 def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
@@ -190,7 +191,7 @@ def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
 
     thumb = tg.get_tile(1, 0, 0)
     _, num = label(np.array(thumb)[:, :, 1])  # default color is green
-    assert num == 25  # expect 25 cells in top left quadrant
+    assert num == 25  # expect 25 cells in top left quadrant (added one too small)
 
 
 def test_decimation(fill_store: Callable, tmp_path: Path) -> None:
@@ -434,7 +435,7 @@ def test_unfilled_polys(fill_store: Callable, tmp_path: Path) -> None:
     renderer = AnnotationRenderer(thickness=1)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tile_outline = np.array(tg.get_tile(1, 0, 0))
-    tg.renderer.edge_thickness = -1
+    tg.renderer.thickness = -1
     tile_filled = np.array(tg.get_tile(1, 0, 0))
     # expect sum of filled polys to be much greater than sum of outlines
     assert np.sum(tile_filled) > 2 * np.sum(tile_outline)
