@@ -1009,15 +1009,15 @@ class EngineABC(ABC):
         Input arguments are passed from :func:`EngineABC.run()`.
 
         """
-        output_file = kwargs.get("output_file", None)
-
         suffix = ".zarr"
         if output_type == "AnnotationStore":
             suffix = ".db"
 
         out = {image: save_dir / (str(image.stem) + suffix) for image in self.images}
 
-        save_path = output_file if output_file is not None else save_dir
+        save_path = {
+            image: save_dir / (str(image.stem) + ".zarr") for image in self.images
+        }
 
         for image_num, image in enumerate(self.images):
             mask = self.masks[image_num] if self.masks is not None else None
@@ -1029,7 +1029,7 @@ class EngineABC(ABC):
             )
             raw_predictions = self.infer_wsi(
                 dataloader=dataloader,
-                save_path=save_path,
+                save_path=save_path[image],
                 **kwargs,
             )
             processed_predictions = self.post_process_wsi(
@@ -1042,6 +1042,7 @@ class EngineABC(ABC):
                 save_dir=save_dir,
                 **kwargs,
             )
+
         return out
 
     def run(
