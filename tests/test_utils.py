@@ -1837,3 +1837,10 @@ def test_torch_compile_already_compiled() -> None:
     # Check that the recompiled model
     # is the same as the original compiled model
     assert compiled_model == recompiled_model
+
+
+def test_torch_compile_compatibility() -> None:
+    """Test if torch-compile compatibility is checked correctly."""
+    from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
+
+    assert isinstance(is_torch_compile_compatible(), bool)
