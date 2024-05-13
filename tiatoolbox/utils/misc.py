@@ -1229,7 +1229,7 @@ def patch_predictions_as_annotations(
 
 
 def dict_to_store(
-    patch_output: dict,
+    patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
@@ -1237,7 +1237,7 @@ def dict_to_store(
     """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
 
     Args:
-        patch_output (dict):
+        patch_output (dict | zarr.Group):
             A dictionary with "probabilities", "predictions", "coordinates",
             and "labels" keys.
         scale_factor (tuple[float, float]):
@@ -1465,7 +1465,8 @@ def write_to_zarr_in_cache_mode(
             Zarr group name consisting of zarr(s) to save the batch output
             values.
         output_data_to_save (dict):
-            Output data from the Engine to save to Zarr.
+            Output data from the Engine to save to Zarr. Expects the data saved in
+            dictionary to be a numpy array.
         **kwargs (dict):
             Keyword Args to update zarr_group attributes.
 

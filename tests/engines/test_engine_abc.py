@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
@@ -20,6 +21,7 @@ from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+from tiatoolbox.utils.misc import write_to_zarr_in_cache_mode
 
 if TYPE_CHECKING:
     import torch.nn
@@ -111,9 +113,10 @@ def test_incorrect_ioconfig() -> NoReturn:
     """Test EngineABC initialization with incorrect ioconfig."""
     model = torch_models.resnet18()
     engine = TestEngineABC(model=model)
+
     with pytest.raises(
         ValueError,
-        match=r".*provide a valid ModelIOConfigABC.*",
+        match=r".*Must provide.*`ioconfig`.*",
     ):
         engine.run(images=[], masks=[], ioconfig=None)
 
@@ -517,13 +520,17 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
 
     # Test AnnotationStore
     patch_output = {
-        "predictions": [1, 0, 1],
-        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "other": "other",
+        "predictions": np.array([1, 0, 1]),
+        "coordinates": np.array([(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)]),
     }
     class_dict = {0: "class0", 1: "class1"}
+    save_path = tmp_path / "output_db.zarr"
+    zarr_group = zarr.open(save_path, mode="w")
+    _ = write_to_zarr_in_cache_mode(
+        zarr_group=zarr_group, output_data_to_save=patch_output
+    )
     out = eng.save_wsi_output(
-        raw_output=patch_output,
+        raw_output=save_path,
         scale_factor=(1.0, 1.0),
         class_dict=class_dict,
         save_dir=tmp_path,
@@ -545,21 +552,28 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
         )
 
 
-def test_io_config_delegation(tmp_path: Path) -> None:
+def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test for delegating args to io config."""
     # test not providing config / full input info for not pretrained models
     model = CNNModel("resnet50")
     eng = TestEngineABC(model=model)
-    with pytest.raises(ValueError, match=r".*Please provide a valid ModelIOConfigABC*"):
-        eng.run(
-            np.zeros((10, 224, 224, 3)), patch_mode=True, save_dir=tmp_path / "dump"
-        )
 
     kwargs = {
         "patch_input_shape": [512, 512],
         "resolution": 1.75,
         "units": "mpp",
     }
+    with caplog.at_level(logging.WARNING):
+        eng.run(
+            np.zeros((10, 224, 224, 3)),
+            patch_mode=True,
+            save_dir=tmp_path / "dump",
+            patch_input_shape=kwargs["patch_input_shape"],
+            resolution=kwargs["resolution"],
+            units=kwargs["units"],
+        )
+        assert "provide a valid ModelIOConfigABC" in caplog.text
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     # test providing config / full input info for non pretrained models
     ioconfig = ModelIOConfigABC(

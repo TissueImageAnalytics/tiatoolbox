@@ -525,6 +525,8 @@ class EngineABC(ABC):
         self: EngineABC,
         dataloader: DataLoader,
         save_path: Path | None,
+        *,
+        return_coordinates: bool = False,
     ) -> dict | Path:
         """Runs model inference on image patches and returns output as a dictionary.
 
@@ -533,6 +535,9 @@ class EngineABC(ABC):
                 An :class:`torch.utils.data.DataLoader` object to run inference.
             save_path (Path | None):
                 If `cache_mode` is True then path to save zarr file must be provided.
+            return_coordinates (bool):
+                Whether to save coordinates in the output. This is required when
+                this function is called by `infer_wsi` and the `patch_mode` is False.
 
         Returns:
             dict or Path:
@@ -569,6 +574,8 @@ class EngineABC(ABC):
                 batch_data["image"],
                 device=self.device,
             )
+            if return_coordinates:
+                batch_output["coordinates"] = batch_data["coords"]
 
             if self.return_labels:  # be careful of `s`
                 batch_output["labels"] = batch_data["label"].numpy()
@@ -595,7 +602,7 @@ class EngineABC(ABC):
     def post_process_patches(
         self: EngineABC,
         raw_predictions: dict | Path,
-        **kwargs: dict,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post-process raw patch predictions from inference.
 
@@ -607,8 +614,9 @@ class EngineABC(ABC):
         Args:
             raw_predictions (dict | Path):
                 A dictionary or path to zarr with patch prediction information.
-            **kwargs (dict):
-                Keyword Args to update setup_patch_dataset() method attributes.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes. See
+                :class:`EngineRunParams` for accepted keyword arguments.
 
         Returns:
             dict or Path:
@@ -712,19 +720,15 @@ class EngineABC(ABC):
     @abstractmethod
     def save_wsi_output(
         self: EngineABC,
-        raw_output: dict | Path,
-        save_dir: Path,
+        raw_output: Path,
         output_type: str,
         **kwargs: Unpack[EngineABCRunParams],
-    ) -> AnnotationStore | Path:
-        """Post-process a WSI.
+    ) -> Path:
+        """Aggregate the output at the WSI level and save to file.
 
         Args:
-            raw_output (dict | Path):
-                A dictionary with output information or zarr file path.
-            save_dir (Path):
-                Output Path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file
+            raw_output (Path):
+                Path to Zarr file with intermediate results.
             output_type (str):
                 The desired output type for resulting patch dataset.
             **kwargs (EngineABCRunParams):
@@ -737,23 +741,22 @@ class EngineABC(ABC):
             stored in a `.zarr` file.
 
         """
-        if (
-            output_type == "zarr"
-            and isinstance(raw_output, Path)
-            and raw_output.suffix == ".zarr"
-        ):
+        if output_type == "zarr":
+            msg = "Output file saved at %s.", raw_output
+            logger.info(msg=msg)
             return raw_output
 
-        output_file = kwargs.get("output_file", "output")
-        save_path = save_dir / output_file
-
         if output_type == "AnnotationStore":
+            save_path = Path(kwargs.get("output_file", raw_output.stem + ".db"))
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+            # Read zarr file to a dict
+            raw_output_dict = zarr.open(str(raw_output), mode="r")
+
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
-            return dict_to_store(raw_output, scale_factor, class_dict, save_path)
+            return dict_to_store(raw_output_dict, scale_factor, class_dict, save_path)
 
         msg = "Only supports zarr and AnnotationStore as output_type."
         raise ValueError(msg)
@@ -783,7 +786,7 @@ class EngineABC(ABC):
                 "Please provide a valid ModelIOConfigABC. "
                 "No default ModelIOConfigABC found."
             )
-            raise ValueError(msg)
+            logger.warning(msg)
 
         if ioconfig and isinstance(ioconfig, ModelIOConfigABC):
             self.ioconfig = ioconfig

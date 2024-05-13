@@ -2,15 +2,9 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 from typing_extensions import Unpack
-
-from tiatoolbox.utils.misc import (
-    dict_to_store,
-    wsi_batch_output_to_zarr_group,
-)
 
 from .engine_abc import EngineABC, EngineABCRunParams
 
@@ -19,7 +13,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
     import numpy as np
-    import torch
+    from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
@@ -250,7 +244,7 @@ class PatchPredictor(EngineABC):
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
-        >>> output = predictor.predict(data, mode='patch')
+        >>> output = predictor.run(data, mode='patch')
 
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
@@ -260,17 +254,17 @@ class PatchPredictor(EngineABC):
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
         >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
-        >>> output = predictor.predict(data, mode='patch')
+        >>> output = predictor.run(data, mode='patch')
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
         >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
-        >>> output = predictor.predict(tile_file, mode='tile')
+        >>> output = predictor.run(tile_file, mode='tile')
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
-        >>> output = predictor.predict(wsi_file, mode='wsi')
+        >>> output = predictor.run(wsi_file, mode='wsi')
 
     References:
         [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
@@ -291,6 +285,7 @@ class PatchPredictor(EngineABC):
         num_post_proc_workers: int = 0,
         weights: str | Path | None = None,
         *,
+        device: str = "cpu",
         verbose: bool = True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
@@ -300,6 +295,7 @@ class PatchPredictor(EngineABC):
             num_loader_workers=num_loader_workers,
             num_post_proc_workers=num_post_proc_workers,
             weights=weights,
+            device=device,
             verbose=verbose,
         )
 
@@ -311,7 +307,7 @@ class PatchPredictor(EngineABC):
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         """Pre-process images and masks and return dataloader for inference.
 
         Args:
@@ -332,8 +328,8 @@ class PatchPredictor(EngineABC):
                 Whether to treat input image as a patch or WSI.
 
         Returns:
-            torch.utils.data.DataLoader:
-                :class:`torch.utils.data.DataLoader` for inference.
+            DataLoader:
+                :class:`DataLoader` for inference.
 
 
         """
@@ -345,125 +341,65 @@ class PatchPredictor(EngineABC):
             patch_mode=patch_mode,
         )
 
-    @abstractmethod
     def infer_wsi(
         self: EngineABC,
-        dataloader: torch.utils.data.DataLoader,
-        img_label: str,
-        highest_input_resolution: list[dict],
-        save_dir: Path,
-        **kwargs: dict,
-    ) -> list:
-        """Model inference on a WSI."""
-        # return coordinates of patches processed within a tile / whole-slide image
-        return_coordinates = True
-
-        # prepare a persistant zarr group file
-        output_file = (
-            kwargs["output_file"] and kwargs.pop("output_file")
-            if "output_file" in kwargs
-            else "output"
-        )
-        save_path = save_dir / output_file
-
-        # ensure proper zarr extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
-
-        cum_output = {}
-        wsi_batch_zarr_group = None
-
-        # get return flags from kwargs or set to False, useful in Annotation Store
-        return_labels = kwargs.get("return_labels", False)
-
-        for _, batch_data in enumerate(dataloader):
-            batch_output_probabilities = self.model.infer_batch(
-                self.model,
-                batch_data["image"],
-                device=self.device,
-            )
-            # We get the index of the class with the maximum probability
-            batch_output_predictions = self.model.postproc_func(
-                batch_output_probabilities,
-            )
-            batch_output_coordinates, batch_output_label = None, None
-            if return_coordinates:
-                batch_output_coordinates = batch_data["coords"]
-            if return_labels:  # be careful of `s`
-                # We do not use tolist here because label may be of mixed types
-                # and hence collated as list by torch
-                batch_output_label = batch_data["label"]
-
-            wsi_batch_zarr_group = wsi_batch_output_to_zarr_group(
-                wsi_batch_zarr_group,
-                batch_output_probabilities,
-                batch_output_predictions,
-                batch_output_coordinates,
-                batch_output_label,
-                save_path=save_path,
-                **kwargs,
-            )
-
-        cum_output["probabilities"] = wsi_batch_zarr_group["probabilities"]
-        cum_output["predictions"] = wsi_batch_zarr_group["predictions"]
-        if return_coordinates:
-            cum_output["coordinates"] = wsi_batch_zarr_group["coordinates"]
-        if return_labels:
-            # We do not use tolist here because label may be of mixed types
-            # and hence collated as list by torch
-            cum_output["labels"] = wsi_batch_zarr_group["labels"]
-
-        cum_output["label"] = img_label
-        # add extra information useful for downstream analysis
-        cum_output["resolution"] = highest_input_resolution["resolution"]
-        cum_output["units"] = highest_input_resolution["units"]
-
-        return cum_output
-
-    @abstractmethod
-    def post_process_wsi(
-        self: EngineABC,
-        raw_output: dict,
-        save_dir: Path,
-        output_type: str,
-        **kwargs: dict,
-    ) -> dict | AnnotationStore:
-        """Post-process a WSI.
+        dataloader: DataLoader,
+        save_path: Path,
+        **kwargs: EngineABCRunParams,
+    ) -> Path:
+        """Model inference on a WSI.
 
         Args:
-            raw_output (dict):
-                A dictionary of patch prediction information.
-            save_dir (Path):
-                Output Path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file
-            output_type (str):
-                The desired output type for resulting patch dataset.
-            **kwargs (dict):
-                Keyword Args to update setup_patch_dataset() method attributes.
+            dataloader (DataLoader):
+                A torch dataloader to process WSIs.
 
-        Returns: (dict or Path):
-            if the output_type is "AnnotationStore", the function returns the patch
-            predictor output as an SQLiteStore containing Annotations stored to a `.db`
-            file. Otherwise, the function defaults to returning patch predictor output
-            stored to a `.zarr` file.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes. See
+                :class:`EngineRunParams` for accepted keyword arguments.
+
+        Returns:
+            save_path (Path):
+                Path to zarr file where intermediate output is saved.
 
         """
-        output_file = (
-            kwargs["output_file"] and kwargs.pop("output_file")
-            if "output_file" in kwargs
-            else "output"
+        _ = kwargs.get("patch_mode", False)
+        return self.infer_patches(
+            dataloader=dataloader,
+            save_path=save_path,
+            return_coordinates=True,
         )
-        save_path = save_dir / output_file
 
-        if output_type == "AnnotationStore":
-            # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-            # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict", None)
+    def save_wsi_output(
+        self: EngineABC,
+        raw_output: Path,
+        output_type: str,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> Path:
+        """Aggregate the output at the WSI level and save to file.
 
-            return dict_to_store(raw_output, scale_factor, class_dict, save_path)
+        Args:
+            raw_output (Path):
+                Path to Zarr file with intermediate results.
+            output_type (str):
+                The desired output type for resulting patch dataset.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes.
 
-        # referring to the zarr group generated during the infer_wsi step
-        return save_path.parent.absolute() / (save_path.stem + ".zarr")
+        Returns: (AnnotationStore or Path):
+            If the output_type is "AnnotationStore", the function returns the patch
+            predictor output as an SQLiteStore containing Annotations stored in a `.db`
+            file. Otherwise, the function defaults to returning patch predictor output
+            stored in a `.zarr` file.
+
+        """
+        return super().save_wsi_output(
+            raw_output=raw_output,
+            output_type=output_type,
+            **kwargs,
+        )
 
     def run(
         self: EngineABC,
