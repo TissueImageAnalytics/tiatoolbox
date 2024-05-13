@@ -2779,7 +2779,7 @@ class SQLiteStore(AnnotationStore):
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
 
-        if isinstance(where, Callable):
+        if callable(where):
             columns = callable_columns
 
         query_parameters: dict[str, object] = {}
@@ -2895,7 +2895,7 @@ class SQLiteStore(AnnotationStore):
             callable_columns="[key], properties",
             distance=distance,
         )
-        if isinstance(where, Callable):
+        if callable(where):
             return [
                 key
                 for key, properties in cur.fetchall()
@@ -2908,7 +2908,7 @@ class SQLiteStore(AnnotationStore):
         geometry: QueryGeometry | None = None,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
-        min_area: float / None = None,
+        min_area: float | None = None,
         distance: float = 0,
     ) -> dict[str, Annotation]:
         """Runs Query."""
@@ -2921,7 +2921,7 @@ class SQLiteStore(AnnotationStore):
             min_area=min_area,
             distance=distance,
         )
-        if isinstance(where, Callable):
+        if callable(where):
             return {
                 key: Annotation(
                     properties=json.loads(properties),
@@ -3016,7 +3016,7 @@ class SQLiteStore(AnnotationStore):
             where=where,
             callable_columns="[key], properties, min_x, min_y, max_x, max_y",
         )
-        if isinstance(where, Callable):
+        if callable(where):
             return {
                 key: bounds
                 for key, properties, *bounds in cur.fetchall()
@@ -3031,7 +3031,7 @@ class SQLiteStore(AnnotationStore):
         cur: sqlite3.Cursor,
         *,
         unique: bool,
-    ) -> dict[str, set[Properties]] | dict[str, Properties]:
+    ) -> list[set[Properties]] | dict[str, Properties]:
         """Package the results of a pquery into the right output format.
 
         This variant is used when select and where are Callable or
@@ -3050,7 +3050,7 @@ class SQLiteStore(AnnotationStore):
 
         Returns:
             dict:
-                If unique, a dictionary of sets is returned. Otherwise,
+                If unique, a list of sets is returned. Otherwise,
                 a dictionary mapping annotation keys to JSON-like
                 property dictionaries is returned.
 
@@ -3084,7 +3084,7 @@ class SQLiteStore(AnnotationStore):
         if unique:
             # Create a dictionary of sets to store the unique properties
             # for each property key / name.
-            result = defaultdict(set)
+            result: defaultdict[str, set] = defaultdict(set)
             for (properties_string,) in cur.fetchall():
                 properties = json.loads(properties_string)
                 # Apply where filter and skip if False
@@ -3109,7 +3109,7 @@ class SQLiteStore(AnnotationStore):
         *,
         unique: bool,
         star_query: bool,
-    ) -> dict[str, set[Properties]] | dict[str, Properties]:
+    ) -> list[set[Properties]] | dict[str, Properties]:
         """Package the results of a pquery into the right output format.
 
         This variant is used when select and where are DSL strings.
@@ -3156,7 +3156,7 @@ class SQLiteStore(AnnotationStore):
                 - True if select or where are str (SQL expressions).
 
         """
-        is_callable_query = any(isinstance(x, Callable) for x in (select, where) if x)
+        is_callable_query = any(callable(x) for x in (select, where) if x)
         is_pickle_query = any(isinstance(x, bytes) for x in (select, where) if x)
         is_str_query = any(isinstance(x, str) for x in (select, where) if x)
 
@@ -3196,7 +3196,7 @@ class SQLiteStore(AnnotationStore):
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, object] | set[object]:
+    ) -> dict[str, object] | list[set] | set:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -3337,6 +3337,7 @@ class SQLiteStore(AnnotationStore):
             )
 
         if unique and squeeze and len(result) == 1:
+            result = cast(list[set], result)
             return result[0]
         return result
 
