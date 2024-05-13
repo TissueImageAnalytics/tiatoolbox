@@ -21,10 +21,9 @@ def is_torch_compile_compatible() -> bool:
             otherwise.
 
     """
-    if torch.cuda.is_available():
+    if torch.cuda.is_available():  # pragma: no cover
         device_cap = torch.cuda.get_device_capability()
-        cap_threshold = (7, 0)
-        if device_cap[0] >= cap_threshold[0] and device_cap[1] == cap_threshold[1]:
+        if device_cap not in ((7, 0), (8, 0), (9, 0)):
             logger.warning(
                 "GPU is not compatible with torch.compile. "
                 "Compatible GPUs include NVIDIA V100, A100, and H100. "
@@ -41,7 +40,7 @@ def is_torch_compile_compatible() -> bool:
         )
         return False
 
-    return True
+    return True  # pragma: no cover
 
 
 def compile_model(

@@ -19,7 +19,7 @@ from requests import HTTPError
 from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
-from tiatoolbox import utils
+from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import compile_model
@@ -1825,18 +1825,25 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
 
 def test_torch_compile_already_compiled() -> None:
     """Test that torch_compile does not recompile a model that is already compiled."""
-    # Create a simple model
+    torch_compile_modes = [
+        "disable",
+        "default",
+        "reduce-overhead",
+        "max-autotune",
+        "max-autotune-no-cudagraphs",
+    ]
+    current_torch_compile_mode = rcParam["torch_compile_mode"]
     model = torch.nn.Sequential(torch.nn.Linear(10, 10), torch.nn.Linear(10, 10))
 
-    # Compile the model
-    compiled_model = compile_model(model)
+    for mode in torch_compile_modes:
+        torch._dynamo.reset()
+        rcParam["torch_compile_mode"] = mode
+        compiled_model = compile_model(model)
+        recompiled_model = compile_model(compiled_model)
+        assert compiled_model == recompiled_model
 
-    # Compile the model again
-    recompiled_model = compile_model(compiled_model)
-
-    # Check that the recompiled model
-    # is the same as the original compiled model
-    assert compiled_model == recompiled_model
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = current_torch_compile_mode
 
 
 def test_torch_compile_compatibility() -> None:
