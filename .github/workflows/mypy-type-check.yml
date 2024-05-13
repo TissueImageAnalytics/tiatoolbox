@@ -30,7 +30,7 @@ jobs:
 
     - name: Setup mypy
       run: |
-        pip install mypy
+        pip install mypy==1.8.0
 
     - name: Perform type checking
       run: |
