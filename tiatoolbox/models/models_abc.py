@@ -13,15 +13,16 @@ if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
     import numpy as np
+    from torchvision.models import WeightsEnum
 
 
-def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
+def load_torch_model(model: nn.Module, weights: str | Path | WeightsEnum) -> nn.Module:
     """Helper function to load a torch model.
 
     Args:
         model (torch.nn.Module):
             A torch model.
-        weights (str or Path):
+        weights (str or Path or WeightsEnum):
             Path to pretrained weights.
 
     Returns:

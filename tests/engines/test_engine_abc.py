@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 import torchvision.models as torch_models
 import zarr
+from typing_extensions import Unpack
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
@@ -19,7 +20,11 @@ from tiatoolbox.models.architecture import (
 )
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import PatchDataset, WSIPatchDataset
-from tiatoolbox.models.engine.engine_abc import EngineABC, prepare_engines_save_dir
+from tiatoolbox.models.engine.engine_abc import (
+    EngineABC,
+    EngineABCRunParams,
+    prepare_engines_save_dir,
+)
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 from tiatoolbox.utils.misc import write_to_zarr_in_cache_mode
 
@@ -67,6 +72,17 @@ class TestEngineABC(EngineABC):
         return super().save_wsi_output(
             raw_output,
             save_dir=save_dir,
+            **kwargs,
+        )
+
+    def post_process_wsi(
+        self: EngineABC,
+        raw_predictions: dict | Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | Path:
+        """Post process WSI output."""
+        return super().post_process_wsi(
+            raw_predictions=raw_predictions,
             **kwargs,
         )
 

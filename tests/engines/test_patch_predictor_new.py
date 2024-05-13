@@ -9,6 +9,7 @@ from typing import Callable
 
 import numpy as np
 import pytest
+import torchvision.models
 from click.testing import CliRunner
 
 from tiatoolbox import cli
@@ -30,57 +31,42 @@ RNG = np.random.default_rng()  # Numpy Random Generator
 def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
-
-    # test not providing config / full input info for not pretrained models
     model = CNNModel("resnet50")
-    predictor = PatchPredictor(model=model)
-
+    predictor = PatchPredictor(model=model, weights=torchvision.models.ResNet50_Weights)
     kwargs = {
         "patch_input_shape": [512, 512],
         "resolution": 1.75,
         "units": "mpp",
     }
-    for key in kwargs:
-        _kwargs = copy.deepcopy(kwargs)
-        _kwargs.pop(key)
-        with pytest.raises(ValueError, match=r".*Must provide.*`ioconfig`.*"):
-            predictor.run(
-                images=[mini_wsi_svs],
-                mode="wsi",
-                save_dir=f"{tmp_path}/dump",
-                **_kwargs,
-            )
-        shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    # test providing config / full input info for not pretrained models
+    # test providing config / full input info for default models without weights
     ioconfig = IOPatchPredictorConfig(
         patch_input_shape=(512, 512),
         stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
     )
     predictor.run(
-        [mini_wsi_svs],
+        images=[mini_wsi_svs],
         ioconfig=ioconfig,
-        mode="wsi",
+        patch_mode=False,
         save_dir=f"{tmp_path}/dump",
-        on_gpu=ON_GPU,
     )
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
-        [mini_wsi_svs],
-        mode="wsi",
+        images=[mini_wsi_svs],
+        patch_mode=False,
         save_dir=f"{tmp_path}/dump",
         **kwargs,
     )
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
-    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
-    predictor.predict(
-        [mini_wsi_svs],
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
+    predictor.run(
+        images=[mini_wsi_svs],
         patch_input_shape=(300, 300),
-        mode="wsi",
+        patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.patch_input_shape == (300, 300)

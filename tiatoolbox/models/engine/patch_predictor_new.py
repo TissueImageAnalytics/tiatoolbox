@@ -14,6 +14,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     import numpy as np
     from torch.utils.data import DataLoader
+    from torchvision.models import WeightsEnum
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
@@ -283,7 +284,7 @@ class PatchPredictor(EngineABC):
         batch_size: int = 8,
         num_loader_workers: int = 0,
         num_post_proc_workers: int = 0,
-        weights: str | Path | None = None,
+        weights: str | Path | WeightsEnum | None = None,
         *,
         device: str = "cpu",
         verbose: bool = True,
