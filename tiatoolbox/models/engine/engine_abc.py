@@ -30,7 +30,6 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
 
     from torch.utils.data import DataLoader
-    from torchvision.models import WeightsEnum
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
@@ -387,7 +386,7 @@ class EngineABC(ABC):
     @staticmethod
     def _initialize_model_ioconfig(
         model: str | ModelABC,
-        weights: str | Path | WeightsEnum | None,
+        weights: str | Path | None,
     ) -> tuple[nn.Module, ModelIOConfigABC | None]:
         """Helper function to initialize model and ioconfig attributes.
 
@@ -407,7 +406,7 @@ class EngineABC(ABC):
                 be downloaded. However, you can override with your own set
                 of weights using the `weights` parameter.
 
-            weights (str | Path | WeightsEnum | None):
+            weights (str | Path | None):
                 Path to pretrained weights. If no pretrained weights are provided
                 and the `model` is provided by TIAToolbox, then pretrained weights will
                 be automatically loaded from the TIA servers.
