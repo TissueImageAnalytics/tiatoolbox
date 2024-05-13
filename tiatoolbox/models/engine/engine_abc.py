@@ -561,6 +561,9 @@ class EngineABC(ABC):
         if self.return_labels:
             keys.append("labels")
 
+        if return_coordinates:
+            keys.append("coordinates")
+
         raw_predictions = {key: None for key in keys}
 
         zarr_group = None

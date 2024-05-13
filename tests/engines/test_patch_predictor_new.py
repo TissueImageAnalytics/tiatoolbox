@@ -9,7 +9,6 @@ from typing import Callable
 
 import numpy as np
 import pytest
-import torchvision.models
 from click.testing import CliRunner
 
 from tiatoolbox import cli
@@ -32,7 +31,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
     model = CNNModel("resnet50")
-    predictor = PatchPredictor(model=model, weights=torchvision.models.ResNet50_Weights)
+    predictor = PatchPredictor(model=model, weights=None)
     kwargs = {
         "patch_input_shape": [512, 512],
         "resolution": 1.75,
