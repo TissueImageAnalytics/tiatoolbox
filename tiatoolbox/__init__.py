@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.resources as importlib_resources
 import importlib.util
 import sys
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -90,7 +91,7 @@ def is_torch_compile_compatible() -> bool:
         device_cap = torch.cuda.get_device_capability()
         cap_threshold = (7, 0)
         if device_cap[0] >= cap_threshold[0] and device_cap[1] == cap_threshold[1]:
-            logger.warning(
+            warnings.warn(
                 "GPU is not compatible with torch.compile. "
                 "Compatible GPUs include NVIDIA V100, A100, and H100. "
                 "Speedup numbers may be lower than expected.",
@@ -98,7 +99,7 @@ def is_torch_compile_compatible() -> bool:
             )
             return False
     else:
-        logger.warning(
+        warnings.warn(
             "No GPU detected or cuda not installed, "
             "torch.compile is only supported on selected NVIDIA GPUs. "
             "Speedup numbers may be lower than expected.",
