@@ -9,7 +9,39 @@ import numpy as np
 import torch
 from torch import nn
 
-from tiatoolbox import is_torch_compile_compatible, logger
+from tiatoolbox import logger
+
+
+def is_torch_compile_compatible() -> bool:
+    """Check if the current GPU is compatible with torch-compile.
+
+    Returns:
+        bool:
+            True if the GPU is compatible with torch-compile, False
+            otherwise.
+
+    """
+    if torch.cuda.is_available():
+        device_cap = torch.cuda.get_device_capability()
+        cap_threshold = (7, 0)
+        if device_cap[0] >= cap_threshold[0] and device_cap[1] == cap_threshold[1]:
+            logger.warning(
+                "GPU is not compatible with torch.compile. "
+                "Compatible GPUs include NVIDIA V100, A100, and H100. "
+                "Speedup numbers may be lower than expected.",
+                stacklevel=2,
+            )
+            return False
+    else:
+        logger.warning(
+            "No GPU detected or cuda not installed, "
+            "torch.compile is only supported on selected NVIDIA GPUs. "
+            "Speedup numbers may be lower than expected.",
+            stacklevel=2,
+        )
+        return False
+
+    return True
 
 
 def compile_model(

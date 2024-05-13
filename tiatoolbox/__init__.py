@@ -5,11 +5,9 @@ from __future__ import annotations
 import importlib.resources as importlib_resources
 import importlib.util
 import sys
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
-import torch
 import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -78,38 +76,6 @@ class _RcParam(TypedDict):
     torch_compile_mode: str
 
 
-def is_torch_compile_compatible() -> bool:
-    """Check if the current GPU is compatible with torch-compile.
-
-    Returns:
-        bool:
-            True if the GPU is compatible with torch-compile, False
-            otherwise.
-
-    """
-    if torch.cuda.is_available():
-        device_cap = torch.cuda.get_device_capability()
-        cap_threshold = (7, 0)
-        if device_cap[0] >= cap_threshold[0] and device_cap[1] == cap_threshold[1]:
-            warnings.warn(
-                "GPU is not compatible with torch.compile. "
-                "Compatible GPUs include NVIDIA V100, A100, and H100. "
-                "Speedup numbers may be lower than expected.",
-                stacklevel=2,
-            )
-            return False
-    else:
-        warnings.warn(
-            "No GPU detected or cuda not installed, "
-            "torch.compile is only supported on selected NVIDIA GPUs. "
-            "Speedup numbers may be lower than expected.",
-            stacklevel=2,
-        )
-        return False
-
-    return True
-
-
 def read_registry_files(path_to_registry: str | Path) -> dict:
     """Reads registry files using importlib_resources.
 
@@ -137,8 +103,8 @@ rcParam: _RcParam = {  # noqa: N816
     "pretrained_model_info": read_registry_files(
         "data/pretrained_model.yaml",
     ),  # Load a dictionary of sample files data (names and urls)
-    "torch_compile_mode": "default" if is_torch_compile_compatible() else "disable",
-    # Set `torch-compile` mode to `default`if GPU is compatible, otherwise disable
+    "torch_compile_mode": "default",
+    # Set `torch-compile` mode to `default`
     # Options: `disable`, `default`, `reduce-overhead`, `max-autotune`
     # or “max-autotune-no-cudagraphs”
 }
