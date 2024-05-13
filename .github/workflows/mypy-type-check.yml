@@ -42,4 +42,4 @@ jobs:
           tiatoolbox/utils/ \
           tiatoolbox/tools/ \
           tiatoolbox/data/ \
-          tiatoolbox/annotation/dsl.py
+          tiatoolbox/annotation/
