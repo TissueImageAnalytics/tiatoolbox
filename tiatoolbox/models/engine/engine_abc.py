@@ -128,7 +128,8 @@ class EngineABCRunParams(TypedDict, total=False):
         num_post_proc_workers (int):
             Number of workers to postprocess the results of the model.
         output_file (str):
-            Output file name to save "zarr" or "db".
+            Output file name to save "zarr" or "db". If None, path to output is
+            returned by the engine.
         patch_input_shape (tuple):
             Shape of patches input to the model as tuple of height and width (HW).
             Patches are requested at read resolution, not with respect to level 0,
@@ -438,7 +439,7 @@ class EngineABC(ABC):
 
     def get_dataloader(
         self: EngineABC,
-        images: Path,
+        images: str | Path | list[str | Path] | np.ndarray,
         masks: Path | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
@@ -451,7 +452,7 @@ class EngineABC(ABC):
             images (list of str or :class:`Path` or :class:`numpy.ndarray`):
                 A list of image patches in NHWC format as a numpy array
                 or a list of str/paths to WSIs. When `patch_mode` is False
-                the function expects list of str/paths to WSIs.
+                the function expects path to a single WSI.
             masks (list | None):
                 List of masks. Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
@@ -467,7 +468,6 @@ class EngineABC(ABC):
         Returns:
             torch.utils.data.DataLoader:
                 :class:`torch.utils.data.DataLoader` for inference.
-
 
         """
         if labels:
@@ -663,7 +663,7 @@ class EngineABC(ABC):
 
         if output_type == "AnnotationStore":
             # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor")
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
@@ -689,11 +689,9 @@ class EngineABC(ABC):
     def infer_wsi(
         self: EngineABC,
         dataloader: torch.utils.data.DataLoader,
-        img_label: str,
-        highest_input_resolution: list[dict],
-        save_dir: Path,
+        save_path: Path,
         **kwargs: dict,
-    ) -> AnnotationStore | Path | str | dict:
+    ) -> dict | Path:
         """Model inference on a WSI.
 
         This function must be implemented by subclasses.
@@ -701,6 +699,15 @@ class EngineABC(ABC):
         """
         # return coordinates of patches processed within a tile / whole-slide image
         raise NotImplementedError
+
+    def post_process_wsi(
+        self: EngineABC,
+        raw_predictions: dict | Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | Path:
+        """Post process WSI output."""
+        _ = kwargs.get("predictions")  # Key values required for post-processing
+        return raw_predictions
 
     @abstractmethod
     def save_wsi_output(
@@ -967,11 +974,12 @@ class EngineABC(ABC):
         """
         save_path = None
         if self.cache_mode:
-            output_file = Path(kwargs.get("output_file", "output.db"))
+            output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
 
         dataloader = self.get_dataloader(
             images=self.images,
+            masks=self.masks,
             labels=self.labels,
             patch_mode=True,
         )
@@ -989,6 +997,52 @@ class EngineABC(ABC):
             save_dir=save_dir,
             **kwargs,
         )
+
+    def _run_wsi_mode(
+        self: EngineABC,
+        output_type: str,
+        save_dir: Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | AnnotationStore | Path:
+        """Runs the Engine in the WSI mode (patch_mode = False).
+
+        Input arguments are passed from :func:`EngineABC.run()`.
+
+        """
+        output_file = kwargs.get("output_file", None)
+
+        suffix = ".zarr"
+        if output_type == "AnnotationStore":
+            suffix = ".db"
+
+        out = {image: save_dir / (str(image.stem) + suffix) for image in self.images}
+
+        save_path = output_file if output_file is not None else save_dir
+
+        for image_num, image in enumerate(self.images):
+            mask = self.masks[image_num] if self.masks is not None else None
+            dataloader = self.get_dataloader(
+                images=image,
+                masks=mask,
+                patch_mode=False,
+                ioconfig=self._ioconfig,
+            )
+            raw_predictions = self.infer_wsi(
+                dataloader=dataloader,
+                save_path=save_path,
+                **kwargs,
+            )
+            processed_predictions = self.post_process_wsi(
+                raw_predictions=raw_predictions,
+                **kwargs,
+            )
+            out[image] = self.save_predictions(
+                processed_predictions=processed_predictions,
+                output_type=output_type,
+                save_dir=save_dir,
+                **kwargs,
+            )
+        return out
 
     def run(
         self: EngineABC,
@@ -1102,10 +1156,8 @@ class EngineABC(ABC):
         # highest_input_resolution, implement dataloader,
         # pre-processing, post-processing and save_output
         # for WSIs separately.
-        return self.infer_wsi(
-            dataloader=images,
-            img_label=labels,
-            highest_input_resolution=1.0,
+        return self._run_wsi_mode(
+            output_type=output_type,
             save_dir=save_dir,
             **kwargs,
         )

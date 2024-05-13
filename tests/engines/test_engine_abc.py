@@ -71,17 +71,13 @@ class TestEngineABC(EngineABC):
     def infer_wsi(
         self: EngineABC,
         dataloader: torch.utils.data.DataLoader,
-        img_label: str,
-        highest_input_resolution: list[dict],
-        save_dir: Path,
+        save_path: Path,
         **kwargs: dict,
     ) -> dict | np.ndarray:
         """Test infer_wsi."""
         return super().infer_wsi(
             dataloader,
-            img_label,
-            highest_input_resolution,
-            save_dir,
+            save_path,
             **kwargs,
         )
 
@@ -260,7 +256,7 @@ def test_engine_initalization() -> NoReturn:
     assert isinstance(eng, EngineABC)
 
 
-def test_engine_run(tmp_path: Path) -> NoReturn:
+def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
     """Test engine run."""
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
@@ -341,7 +337,7 @@ def test_engine_run(tmp_path: Path) -> NoReturn:
 
     with pytest.raises(NotImplementedError):
         eng.run(
-            images=np.zeros(shape=(10, 224, 224, 3)),
+            images=[sample_svs],
             save_dir=tmp_path / "output",
             patch_mode=False,
         )

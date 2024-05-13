@@ -1345,7 +1345,7 @@ def dict_to_zarr(
     # save to zarr
     predictions_array = np.array(raw_predictions["predictions"])
     z = zarr.open(
-        save_path,
+        str(save_path),
         mode="w",
         shape=predictions_array.shape,
         chunks=chunks,
