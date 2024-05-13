@@ -372,6 +372,22 @@ class PatchPredictor(EngineABC):
             return_coordinates=True,
         )
 
+    def post_process_wsi(
+        self: EngineABC,
+        raw_predictions: dict | Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | Path:
+        """Post process WSI output.
+
+        Takes the raw output from patch predictions and post-process to improve the
+        results e.g., using information from neighbouring patches.
+
+        """
+        return super().post_process_wsi(
+            raw_predictions=raw_predictions,
+            **kwargs,
+        )
+
     def save_wsi_output(
         self: EngineABC,
         raw_output: Path,

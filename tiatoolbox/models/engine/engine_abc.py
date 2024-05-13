@@ -708,6 +708,7 @@ class EngineABC(ABC):
         # return coordinates of patches processed within a tile / whole-slide image
         raise NotImplementedError
 
+    @abstractmethod
     def post_process_wsi(
         self: EngineABC,
         raw_predictions: dict | Path,
