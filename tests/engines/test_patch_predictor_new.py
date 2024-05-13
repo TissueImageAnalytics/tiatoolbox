@@ -18,6 +18,7 @@ from tiatoolbox.models.engine.patch_predictor_new import PatchPredictor
 from tiatoolbox.utils import download_data, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
 
+device = "cuda" if toolbox_env.has_gpu() else "cpu"
 ON_GPU = toolbox_env.has_gpu()
 RNG = np.random.default_rng()  # Numpy Random Generator
 
@@ -109,58 +110,27 @@ def test_patch_predictor_api(
 
     # convert to pathlib Path to prevent reader complaint
     inputs = [Path(sample_patch1), Path(sample_patch2)]
-    predictor = PatchPredictor(pretrained_model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
-    output = predictor.predict(
+    # Default run
+    output = predictor.run(
         inputs,
-        on_gpu=ON_GPU,
-        save_dir=save_dir_path,
+        device="cpu",
     )
     assert sorted(output.keys()) == ["predictions"]
     assert len(output["predictions"]) == 2
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
-    output = predictor.predict(
+    # whether to return labels
+    output = predictor.run(
         inputs,
-        labels=[1, "a"],
+        labels=["1", "a"],
         return_labels=True,
-        on_gpu=ON_GPU,
-        save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions"])
     assert len(output["predictions"]) == len(output["labels"])
-    assert output["labels"] == [1, "a"]
+    assert output["labels"].tolist() == ["1", "a"]
     shutil.rmtree(save_dir_path, ignore_errors=True)
-
-    output = predictor.predict(
-        inputs,
-        return_probabilities=True,
-        on_gpu=ON_GPU,
-        save_dir=save_dir_path,
-    )
-    assert sorted(output.keys()) == sorted(["predictions", "probabilities"])
-    assert len(output["predictions"]) == len(output["probabilities"])
-    shutil.rmtree(save_dir_path, ignore_errors=True)
-
-    output = predictor.predict(
-        inputs,
-        return_probabilities=True,
-        labels=[1, "a"],
-        return_labels=True,
-        on_gpu=ON_GPU,
-        save_dir=save_dir_path,
-    )
-    assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
-    assert len(output["predictions"]) == len(output["labels"])
-    assert len(output["predictions"]) == len(output["probabilities"])
-
-    # test saving output, should have no effect
-    _ = predictor.predict(
-        inputs,
-        on_gpu=ON_GPU,
-        save_dir="special_dir_not_exist",
-    )
-    assert not Path.is_dir(Path("special_dir_not_exist"))
 
     # test loading user weight
     pretrained_weights_url = (
@@ -176,27 +146,26 @@ def test_patch_predictor_api(
 
     download_data(pretrained_weights_url, pretrained_weights)
 
-    _ = PatchPredictor(
-        pretrained_model="resnet18-kather100k",
-        pretrained_weights=pretrained_weights,
+    predictor = PatchPredictor(
+        model="resnet18-kather100k",
+        weights=pretrained_weights,
         batch_size=1,
     )
+    ioconfig = predictor.ioconfig
 
     # --- test different using user model
     model = CNNModel(backbone="resnet18", num_classes=9)
     # test prediction
     predictor = PatchPredictor(model=model, batch_size=1, verbose=False)
-    output = predictor.predict(
+    output = predictor.run(
         inputs,
-        return_probabilities=True,
-        labels=[1, "a"],
+        labels=[1, 2],
         return_labels=True,
-        on_gpu=ON_GPU,
-        save_dir=save_dir_path,
+        ioconfig=ioconfig,
     )
-    assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
+    assert sorted(output.keys()) == sorted(["labels", "predictions"])
     assert len(output["predictions"]) == len(output["labels"])
-    assert len(output["predictions"]) == len(output["probabilities"])
+    assert output["labels"].tolist() == [1, 2]
 
 
 def test_wsi_predictor_api(
@@ -221,7 +190,6 @@ def test_wsi_predictor_api(
     kwargs = {
         "return_probabilities": True,
         "return_labels": True,
-        "on_gpu": ON_GPU,
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
         "resolution": 1.0,
@@ -429,7 +397,7 @@ def _test_predictor_output(
     probabilities_check: list | None = None,
     predictions_check: list | None = None,
     *,
-    on_gpu: bool = ON_GPU,
+    on_gpu: bool = toolbox_env.has_gpu(),
 ) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = PatchPredictor(

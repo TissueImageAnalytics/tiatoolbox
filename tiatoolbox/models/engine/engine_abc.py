@@ -581,7 +581,10 @@ class EngineABC(ABC):
                 batch_output["coordinates"] = batch_data["coords"].numpy()
 
             if self.return_labels:  # be careful of `s`
-                batch_output["labels"] = batch_data["label"].numpy()
+                if isinstance(batch_data["label"], torch.Tensor):
+                    batch_output["labels"] = batch_data["label"].numpy()
+                else:
+                    batch_output["labels"] = batch_data["label"]
 
             raw_predictions = self._update_model_output(
                 raw_predictions=raw_predictions,
