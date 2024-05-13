@@ -974,6 +974,27 @@ def test_read_bounds_level_consistency_jp2(sample_jp2: Path) -> None:
     read_bounds_level_consistency(wsi, bounds)
 
 
+def test_read_bounds_tiff_wsi_reader(sample_svs: Path) -> None:
+    """Test read_bounds with TIFFWSIReader."""
+    reader = TIFFWSIReader(sample_svs)
+    slide_dimensions = reader.info.slide_dimensions
+    bounds = (0, 0, *slide_dimensions)
+    resolution = reader.info.mpp
+    coord_spaces = ["baseline", "resolution"]
+    for coord_space in coord_spaces:
+        im_region = reader.read_bounds(
+            bounds=bounds,
+            resolution=resolution,
+            units="mpp",
+            interpolation="nearest",
+            coord_space=coord_space,
+        )
+        expected_output_shape = tuple(np.round(slide_dimensions[::-1]).astype(int))
+        assert isinstance(im_region, np.ndarray)
+        assert im_region.shape[2] == 3
+        assert im_region.shape[:2] == pytest.approx(expected_output_shape, abs=1)
+
+
 def test_wsireader_save_tiles(sample_svs: Path, tmp_path: Path) -> None:
     """Test for save_tiles in wsireader as a python function."""
     tmp_path = Path(tmp_path)
