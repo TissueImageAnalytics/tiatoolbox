@@ -926,6 +926,9 @@ class EngineABC(ABC):
             setattr(self, key, kwargs.get(key))
 
         self.patch_mode = patch_mode
+        if not self.patch_mode:
+            self.cache_mode = True  # if input is WSI run using cache mode.
+
         if self.cache_mode and self.batch_size > self.cache_size:
             self.batch_size = self.cache_size
 
