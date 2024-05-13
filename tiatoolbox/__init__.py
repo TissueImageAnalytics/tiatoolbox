@@ -93,14 +93,16 @@ def is_torch_compile_compatible() -> bool:
             logger.warning(
                 "GPU is not compatible with torch.compile. "
                 "Compatible GPUs include NVIDIA V100, A100, and H100. "
-                "Speedup numbers may be lower than expected."
+                "Speedup numbers may be lower than expected.",
+                stacklevel=2,
             )
             return False
     else:
         logger.warning(
             "No GPU detected or cuda not installed, "
             "torch.compile is only supported on selected NVIDIA GPUs. "
-            "Speedup numbers may be lower than expected."
+            "Speedup numbers may be lower than expected.",
+            stacklevel=2,
         )
         return False
 
