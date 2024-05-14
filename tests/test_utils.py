@@ -1838,8 +1838,8 @@ def test_torch_compile_already_compiled() -> None:
     for mode in torch_compile_modes:
         torch._dynamo.reset()
         rcParam["torch_compile_mode"] = mode
-        compiled_model = compile_model(model)
-        recompiled_model = compile_model(compiled_model)
+        compiled_model = compile_model(model, mode=mode)
+        recompiled_model = compile_model(compiled_model, mode=mode)
         assert compiled_model == recompiled_model
 
     torch._dynamo.reset()
