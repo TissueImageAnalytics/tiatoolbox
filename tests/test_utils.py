@@ -1826,7 +1826,6 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
 def test_torch_compile_already_compiled() -> None:
     """Test that torch_compile does not recompile a model that is already compiled."""
     torch_compile_modes = [
-        "disable",
         "default",
         "reduce-overhead",
         "max-autotune",
@@ -1844,6 +1843,13 @@ def test_torch_compile_already_compiled() -> None:
 
     torch._dynamo.reset()
     rcParam["torch_compile_mode"] = current_torch_compile_mode
+
+
+def test_torch_compile_disable() -> None:
+    """Test torch_compile's disable mode."""
+    model = torch.nn.Sequential(torch.nn.Linear(10, 10), torch.nn.Linear(10, 10))
+    compiled_model = compile_model(model, mode="disable")
+    assert model == compiled_model
 
 
 def test_torch_compile_compatibility() -> None:
