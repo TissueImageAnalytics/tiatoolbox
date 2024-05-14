@@ -703,7 +703,7 @@ class EngineABC(ABC):
     def infer_wsi(
         self: EngineABC,
         dataloader: torch.utils.data.DataLoader,
-        save_path: Path,
+        save_path: Path | str,
         **kwargs: dict,
     ) -> dict | Path:
         """Model inference on a WSI.

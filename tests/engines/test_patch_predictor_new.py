@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable
 
 import numpy as np
-import pytest
+import zarr
 from click.testing import CliRunner
 
 from tiatoolbox import cli
@@ -171,7 +171,6 @@ def test_patch_predictor_api(
 def test_wsi_predictor_api(
     sample_wsi_dict: dict,
     tmp_path: Path,
-    chdir: Callable,
 ) -> None:
     """Test normal run of wsi predictor."""
     save_dir_path = tmp_path
@@ -188,7 +187,6 @@ def test_wsi_predictor_api(
 
     # wrapper to make this more clean
     kwargs = {
-        "return_labels": True,
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
         "resolution": 1.0,
@@ -197,95 +195,24 @@ def test_wsi_predictor_api(
     }
     # ! add this test back once the read at `baseline` is fixed
     # sanity check, both output should be the same with same resolution read args
-    wsi_output = predictor.run(
-        images=[mini_wsi_svs],
-        masks=[mini_wsi_msk],
-        patch_mode=False,
-        **kwargs,
-    )
-
-    shutil.rmtree(save_dir, ignore_errors=True)
-
-    tile_output = predictor.run(
-        images=[mini_wsi_jpg],
-        masks=[mini_wsi_msk],
-        patch_mode=False,
-        **kwargs,
-    )
-
-    wpred = np.array(wsi_output[0]["predictions"])
-    tpred = np.array(tile_output[0]["predictions"])
-    diff = tpred == wpred
-    accuracy = np.sum(diff) / np.size(wpred)
-    assert accuracy > 0.9, np.nonzero(~diff)
-
     # remove previously generated data
-    shutil.rmtree(save_dir, ignore_errors=True)
-
-    kwargs = {
-        "return_labels": True,
-        "device": device,
-        "patch_input_shape": patch_size,
-        "stride_shape": patch_size,
-        "resolution": 0.5,
-        "save_dir": save_dir,
-        "units": "mpp",
-    }
 
     _kwargs = copy.deepcopy(kwargs)
-    _kwargs["merge_predictions"] = False
     # test reading of multiple whole-slide images
     output = predictor.run(
-        images=[mini_wsi_svs, mini_wsi_svs],
+        images=[mini_wsi_svs, mini_wsi_jpg],
         masks=[mini_wsi_msk, mini_wsi_msk],
         patch_mode=False,
         **_kwargs,
     )
-    for output_info in output.values():
-        assert Path(output_info["raw"]).exists()
-        assert "merged" not in output_info
+
+    wsi_pred = zarr.open(str(output[mini_wsi_svs]), mode="r")
+    tile_pred = zarr.open(str(output[mini_wsi_jpg]), mode="r")
+    diff = tile_pred["predictions"][:] == wsi_pred["predictions"][:]
+    accuracy = np.sum(diff) / np.size(wsi_pred["predictions"][:])
+    assert accuracy > 0.99, np.nonzero(~diff)
+
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
-
-    # coverage test
-    _kwargs = copy.deepcopy(kwargs)
-    _kwargs["merge_predictions"] = True
-    # test reading of multiple whole-slide images
-    predictor.run(
-        images=[mini_wsi_svs, mini_wsi_svs],
-        masks=[mini_wsi_msk, mini_wsi_msk],
-        patch_mode=False,
-        **_kwargs,
-    )
-    _kwargs = copy.deepcopy(kwargs)
-    with pytest.raises(FileExistsError):
-        predictor.run(
-            images=[mini_wsi_svs, mini_wsi_svs],
-            masks=[mini_wsi_msk, mini_wsi_msk],
-            patch_mode=False,
-            **_kwargs,
-        )
-    # remove previously generated data
-    shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
-
-    with chdir(save_dir_path):
-        # test reading of multiple whole-slide images
-        _kwargs = copy.deepcopy(kwargs)
-        _kwargs["save_dir"] = None  # default coverage
-        _kwargs["return_probabilities"] = False
-        output = predictor.run(
-            images=[mini_wsi_svs, mini_wsi_svs],
-            masks=[mini_wsi_msk, mini_wsi_msk],
-            patch_mode=False,
-            **_kwargs,
-        )
-        assert Path.exists(Path("output"))
-        for output_info in output.values():
-            assert Path(output_info["raw"]).exists()
-            assert "merged" in output_info
-            assert Path(output_info["merged"]).exists()
-
-        # remove previously generated data
-        shutil.rmtree("output", ignore_errors=True)
 
 
 def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:

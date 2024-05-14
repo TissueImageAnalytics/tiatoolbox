@@ -60,8 +60,7 @@ jobs:
         pytest --basetemp={envtmpdir} \
            --cov=tiatoolbox --cov-report=term --cov-report=xml \
            --capture=sys \
-           --durations=10 --durations-min=1.0 \
-           --maxfail=1
+           --durations=10 --durations-min=1.0
     - name: Report test coverage to Codecov
       uses: codecov/codecov-action@v4
       env:
