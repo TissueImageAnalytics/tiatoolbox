@@ -645,7 +645,7 @@ class AnnotationRenderer:
         coords: list,
         top_left: tuple[float, float],
         scale: float,
-    ) -> np.ndarray:
+    ) -> list[np.ndarray]:
         """Return coords relative to top left of tile, as array suitable for cv2.
 
         Args:
@@ -657,7 +657,7 @@ class AnnotationRenderer:
                 The zoom scale at which we are rendering.
 
         Returns:
-            np.array:
+            list:
                 Array of coordinates in tile space in the form [x, y].
 
         """

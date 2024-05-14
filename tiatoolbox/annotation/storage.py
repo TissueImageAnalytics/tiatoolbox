@@ -1925,10 +1925,14 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         return result
 
     @overload
-    def to_ndjson(self: AnnotationStore, fp: None = None) -> str: ...
+    def to_ndjson(
+        self: AnnotationStore, fp: None = None
+    ) -> str: ...  # pragma: no cover
 
     @overload
-    def to_ndjson(self: AnnotationStore, fp: IO | str | Path) -> None: ...
+    def to_ndjson(
+        self: AnnotationStore, fp: IO | str | Path
+    ) -> None: ...  # pragma: no cover
 
     def to_ndjson(
         self: AnnotationStore, fp: IO | str | Path | None = None
