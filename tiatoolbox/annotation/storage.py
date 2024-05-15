@@ -52,7 +52,16 @@ from collections.abc import (
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, TypeVar, cast, overload
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -74,12 +83,10 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 from tiatoolbox.enums import GeometryType
-from tiatoolbox.typing import Geometry
+from tiatoolbox.typing import CallablePredicate, CallableSelect, Geometry
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.typing import (
-        CallablePredicate,
-        CallableSelect,
         Predicate,
         Properties,
         QueryGeometry,
@@ -111,8 +118,8 @@ class Annotation:
 
     """
 
-    _geometry: Geometry = field(default_factory=Geometry, hash=True)
-    properties: Properties = field(default_factory=dict, hash=True)
+    _geometry: Geometry = field()
+    properties: dict[str, Properties] = field(default_factory=dict, hash=True)
     _wkb: bytes = field(default_factory=bytes, hash=False)
 
     @property
@@ -746,7 +753,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         self: AnnotationStore,
         key: str,
         geometry: Geometry | None = None,
-        properties: dict[str, object] | None = None,
+        properties: dict[str, Properties] | None = None,
     ) -> None:
         """Patch an annotation at given key.
 
@@ -777,7 +784,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         self: AnnotationStore,
         keys: Iterable[str],
         geometries: Iterable[Geometry] | None = None,
-        properties_iter: Iterable[Properties] | None = None,
+        properties_iter: Iterable[dict[str, Properties]] | None = None,
     ) -> None:
         """Bulk patch of annotations.
 
@@ -911,7 +918,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
     @staticmethod
     def _eval_where(
         predicate: Predicate | None,
-        properties: dict[str, object],
+        properties: Properties,
     ) -> bool:
         """Evaluate properties predicate against properties.
 
@@ -940,6 +947,9 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             )
         if isinstance(predicate, bytes):
             predicate = pickle.loads(predicate)  # skipcq: BAN-B301  # noqa: S301
+
+        # predicate is Callable
+        predicate = cast(Callable, predicate)
         return bool(predicate(properties))
 
     def query(
@@ -1018,8 +1028,12 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         query_geometry = geometry
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
+
         if geometry_predicate == "centers_within_k":
-            query_point = Polygon.from_bounds(*query_geometry.bounds).centroid
+            if isinstance(query_geometry, (Polygon, Point, LineString)):
+                query_point = Polygon.from_bounds(*query_geometry.bounds).centroid
+            else:
+                query_point = None
 
         def bbox_intersects(
             annotation_geometry: Geometry,
@@ -1252,7 +1266,8 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             for key, annotation in self.items()
             if (
                 query_geometry is None
-                or Polygon.from_bounds(*annotation.geometry.bounds).intersects(
+                or isinstance(query_geometry, (Polygon, Point, LineString))
+                and Polygon.from_bounds(*annotation.geometry.bounds).intersects(
                     Polygon.from_bounds(*query_geometry.bounds),
                 )
                 and self._eval_where(where, annotation.properties)
@@ -1267,7 +1282,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, object] | list[set[object]] | set[object]:
+    ) -> dict[str, Properties] | list[set[Properties]] | set[Properties]:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -1597,6 +1612,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                 geometry_predicate = "centers_within_k"
             elif from_mode == "poly":  # pragma: no branch
                 geometry = ann.geometry
+                geometry = cast(Geometry, geometry)
                 geometry = geometry.buffer(distance)
             subquery_result = self.query(
                 geometry=geometry,
@@ -1620,7 +1636,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         *,
         unique: bool,
         squeeze: bool,
-    ) -> dict[str, object] | list[set[object]] | set[object]:
+    ) -> dict[str, Properties] | list[set[Properties]] | set[Properties]:
         """Package the results of a pquery into the right output format.
 
         Args:
@@ -2623,7 +2639,7 @@ class SQLiteStore(AnnotationStore):
         query_parameters: dict[str, object],
         geometry_predicate: str | None,
         columns: str,
-        where: bytes | str | CallablePredicate,
+        where: bytes | str | CallablePredicate | None,
         distance: float = 0,
     ) -> tuple[str, dict[str, object]]:
         """Initialises the query string and parameters."""
@@ -3062,7 +3078,7 @@ class SQLiteStore(AnnotationStore):
 
         def add_props_to_result(
             result: defaultdict[str, set],
-            properties: dict[str, object],
+            properties: Properties,
         ) -> None:
             """Add the properties to the appropriate set in result.
 
@@ -3077,9 +3093,11 @@ class SQLiteStore(AnnotationStore):
             selection = select(properties)
             # Wrap scalar values into a tuple
             if not isinstance(selection, tuple):
-                selection = (selection,)
+                selection_tuple = (selection,)
+            else:
+                selection_tuple = selection
             # Add the properties to the appropriate set
-            for i, value in enumerate(selection):
+            for i, value in enumerate(selection_tuple):
                 result[str(i)].add(value)
 
         # Load a pickled select function
@@ -3144,7 +3162,7 @@ class SQLiteStore(AnnotationStore):
     @staticmethod
     def _kind_of_pquery(
         select: Select,
-        where: Predicate,
+        where: Predicate | None,
     ) -> tuple[bool, bool, bool]:
         """Determine boolean flags for the kind of pquery this is.
 
@@ -3169,7 +3187,7 @@ class SQLiteStore(AnnotationStore):
     @staticmethod
     def _validate_select_where_type(
         select: Select,
-        where: Predicate,
+        where: Predicate | None,
     ) -> None:
         """Validate that select and where are valid types.
 
@@ -3200,7 +3218,7 @@ class SQLiteStore(AnnotationStore):
         *,
         unique: bool = True,
         squeeze: bool = True,
-    ) -> dict[str, object] | list[set] | set:
+    ) -> dict[str, Properties] | list[set[Properties]] | set[Properties]:
         """Query the store for annotation properties.
 
         Acts similarly to `AnnotationStore.query` but returns only the
@@ -3303,6 +3321,7 @@ class SQLiteStore(AnnotationStore):
         if not unique:
             return_columns.append("[key]")
         if is_str_query and not is_star_query:
+            select = cast(str, select)
             select_names = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
                 select,
                 SQL_GLOBALS,
@@ -3326,7 +3345,8 @@ class SQLiteStore(AnnotationStore):
         if is_pickle_query or is_callable_query:
             # Where to apply after database query
             # only done for Callable where.
-            post_where = where if is_callable_query else None
+            post_where = cast(CallablePredicate, where) if is_callable_query else None
+            select = cast(CallableSelect, select)
             result = self._handle_pickle_callable_pquery(
                 select,
                 post_where,
@@ -3838,7 +3858,7 @@ class DictionaryStore(AnnotationStore):
         self: DictionaryStore,
         key: str,
         geometry: Geometry | None = None,
-        properties: dict[str, object] | None = None,
+        properties: dict[str, Properties] | None = None,
     ) -> None:
         """Patch an annotation at given key.
 

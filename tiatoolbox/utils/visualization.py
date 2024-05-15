@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import colorsys
 import random
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, TypedDict, cast
 
 import cv2
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colormaps
+from matplotlib.cm import ScalarMappable
 from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
@@ -22,6 +23,15 @@ if TYPE_CHECKING:  # pragma: no cover
     from numpy.typing import ArrayLike
 
     from tiatoolbox.annotation import Annotation, AnnotationStore
+
+
+class ColorbarParamsDict(TypedDict, total=False):
+    mappable: ScalarMappable
+    boundaries: list[float]
+    values: list[float]
+    ticks: list[float]
+    spacing: str
+    orientation: str
 
 
 def random_colors(num_colors: int, *, bright: bool) -> np.ndarray:
@@ -165,11 +175,11 @@ def overlay_prediction_mask(
 
     # Create colorbar parameters
     name_list, color_list = zip(*label_info.values())  # Unzip values
-    color_list = np.array(color_list) / 255
+    color_list_arr = np.array(color_list) / 255
     uid_list = list(label_info.keys())
-    cmap = mpl.colors.ListedColormap(color_list)
+    cmap = mpl.colors.ListedColormap(color_list_arr)
 
-    colorbar_params = {
+    colorbar_params: ColorbarParamsDict = {
         "mappable": mpl.cm.ScalarMappable(cmap=cmap),
         "boundaries": [*uid_list, uid_list[-1] + 1],
         "values": uid_list,
@@ -316,7 +326,7 @@ def overlay_probability_map(
     if ax is None and not return_ax:
         return overlay
 
-    colorbar_params = {
+    colorbar_params: ColorbarParamsDict = {
         "mappable": mpl.cm.ScalarMappable(cmap="jet"),
         "spacing": "proportional",
         "orientation": "vertical",
@@ -707,7 +717,12 @@ class AnnotationRenderer:
                 return self.function_mapper(annotation.properties)
             if score_prop == "color":
                 # use colors directly specified in annotation properties
-                return (*[int(255 * c) for c in annotation.properties["color"]], 255)
+                rgb = []
+                for c in annotation.properties["color"]:  # type: ignore[union-attr]
+                    c = cast(int, c)
+                    rgb.append(int(255 * c))
+                # rgb = [int(255 * c) for cast(int,c) in annotation.properties["color"]]
+                return (*rgb, 255)
             if score_prop is not None:
                 return tuple(
                     int(c * 255)
@@ -754,7 +769,7 @@ class AnnotationRenderer:
         col = self.get_color(annotation, edge=False)
 
         cnt = self.to_tile_coords(
-            annotation.coords,
+            list(annotation.coords),
             top_left,
             scale,
         )
@@ -791,7 +806,7 @@ class AnnotationRenderer:
         col = self.get_color(annotation, edge=False)
         geoms = annotation.coords
         for poly in geoms:
-            cnt = self.to_tile_coords(poly, top_left, scale)
+            cnt = self.to_tile_coords(list(poly), top_left, scale)
             cv2.fillPoly(tile, cnt, col)
 
     def render_pt(
@@ -818,7 +833,7 @@ class AnnotationRenderer:
         cv2.circle(
             tile,
             self.to_tile_coords(
-                annotation.coords,
+                list(annotation.coords),
                 top_left,
                 scale,
             )[0][0],
@@ -967,7 +982,7 @@ class AnnotationRenderer:
             )
 
             for ann in anns.values():
-                self.render_by_type(tile, ann, top_left, scale / res)
+                self.render_by_type(tile, ann, (top_left[0], top_left[1]), scale / res)
 
         elif self.zoomed_out_strat == "decimate":
             # do decimation on small annotations
@@ -982,7 +997,9 @@ class AnnotationRenderer:
                 area = (box[0] - box[2]) * (box[1] - box[3])
                 if area > min_area or i % decimate == 0:
                     ann = store[key]
-                    self.render_by_type(tile, ann, top_left, scale / res)
+                    self.render_by_type(
+                        tile, ann, (top_left[0], top_left[1]), scale / res
+                    )
         else:
             # Get only annotations > min_area. Plot them all
             anns = store.query(
@@ -993,7 +1010,7 @@ class AnnotationRenderer:
             )
 
             for ann in anns.values():
-                self.render_by_type(tile, ann, top_left, scale / res)
+                self.render_by_type(tile, ann, (top_left[0], top_left[1]), scale / res)
 
         logger.removeFilter(duplicate_filter)
         if self.blur is None:
