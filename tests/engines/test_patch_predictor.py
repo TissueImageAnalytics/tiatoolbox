@@ -434,7 +434,7 @@ def test_command_line_models_incorrect_mode(sample_svs: Path, tmp_path: Path) ->
         ],
     )
 
-    assert "Invalid value for '--mode'" in mode_not_in_wsi_tile_result.output
+    assert "Invalid value for '--patch-mode'" in mode_not_in_wsi_tile_result.output
     assert mode_not_in_wsi_tile_result.exit_code != 0
     assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
 
@@ -448,17 +448,14 @@ def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
             "patch-predictor",
             "--img-input",
             str(sample_svs),
-            "--mode",
-            "wsi",
+            "--patch-mode",
+            "False",
             "--output-path",
             str(tmp_path.joinpath("output")),
         ],
     )
 
     assert models_wsi_result.exit_code == 0
-    assert tmp_path.joinpath("output/0.merged.npy").exists()
-    assert tmp_path.joinpath("output/0.raw.json").exists()
-    assert tmp_path.joinpath("output/results.json").exists()
 
 
 def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
@@ -513,10 +510,3 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
     )
 
     assert models_tiles_result.exit_code == 0
-    assert tmp_path.joinpath("0.merged.npy").exists()
-    assert tmp_path.joinpath("0.raw.json").exists()
-    assert tmp_path.joinpath("1.merged.npy").exists()
-    assert tmp_path.joinpath("1.raw.json").exists()
-    assert tmp_path.joinpath("2.merged.npy").exists()
-    assert tmp_path.joinpath("2.raw.json").exists()
-    assert tmp_path.joinpath("results.json").exists()

@@ -58,7 +58,6 @@ def patch_predictor(
 ) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
     from tiatoolbox.models.engine.patch_predictor_new import PatchPredictor
-    from tiatoolbox.utils import save_as_json
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
@@ -75,7 +74,7 @@ def patch_predictor(
         verbose=verbose,
     )
 
-    output = predictor.run(
+    _ = predictor.run(
         images=files_all,
         masks=masks_all,
         patch_mode=patch_mode,
@@ -85,5 +84,3 @@ def patch_predictor(
         save_dir=output_path,
         save_output=True,
     )
-
-    save_as_json(output, str(output_path.joinpath("results.json")))
