@@ -28,9 +28,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup mypy
+    - name: Install dependencies
       run: |
-        pip install mypy
+        sudo apt update
+        sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        python -m pip install --upgrade pip
+        pip install -r requirements/requirements_dev.txt
 
     - name: Perform type checking
       run: |
