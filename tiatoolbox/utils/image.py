@@ -384,10 +384,8 @@ def safe_padded_read(
     if np.size(stride) not in [1, 2]:
         msg = "Stride must be of size 1 or 2."
         raise ValueError(msg)
-    if np.size(stride) == 1:
-        strid_arr = np.tile(stride, 2)
-    else:
-        strid_arr = np.array(stride)
+    strid_arr = np.tile(stride, 2) if np.size(stride) == 1 else np.array(stride)
+
     x_stride, y_stride = strid_arr
 
     # Check if the padded coords are outside the image bounds

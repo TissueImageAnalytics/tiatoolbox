@@ -11,7 +11,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colormaps
-from matplotlib.cm import ScalarMappable
 from PIL import Image, ImageFilter, ImageOps
 from shapely.geometry import Polygon
 
@@ -20,12 +19,19 @@ from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.axes import Axes
+    from matplotlib.cm import ScalarMappable
     from numpy.typing import ArrayLike
 
     from tiatoolbox.annotation import Annotation, AnnotationStore
 
 
 class ColorbarParamsDict(TypedDict, total=False):
+    """A subclass of TypedDict.
+
+    Defines the types of the keyword arguments for 'colorbar_params'.
+
+    """
+
     mappable: ScalarMappable
     boundaries: list[float]
     values: list[float]
