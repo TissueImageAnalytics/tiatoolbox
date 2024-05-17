@@ -1053,11 +1053,10 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         if isinstance(query_geometry, Iterable):
             query_geometry = Polygon.from_bounds(*query_geometry)
 
-        if geometry_predicate == "centers_within_k":
-            if isinstance(query_geometry, (Polygon, Point, LineString)):
-                query_point = Polygon.from_bounds(*query_geometry.bounds).centroid
-            else:
-                query_point = None
+        if geometry_predicate == "centers_within_k" and isinstance(
+            query_geometry, (Polygon, Point, LineString)
+        ):
+            query_geometry = Polygon.from_bounds(*query_geometry.bounds).centroid
 
         def filter_function(annotation: Annotation) -> bool:
             """Filter function for querying annotations.
@@ -1088,7 +1087,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                             geometry_predicate == "centers_within_k"
                             and AnnotationStore.centers_within_k(
                                 annotation.geometry,
-                                query_point,
+                                query_geometry,
                                 distance,
                             )
                         ),
