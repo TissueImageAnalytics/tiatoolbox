@@ -273,7 +273,7 @@ def crop_and_pad_edges(
 
     # Crop the region
     slices = bounds2slices(overlap)
-    crop = region[*slices]
+    crop = region[slices]
 
     # Return if pad_mode is None
     if pad_mode in ["none", None]:
@@ -713,7 +713,7 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
             ),
         ).astype(int),
     )
-    region = region[*trimming]
+    region = region[trimming]
     region_size = region.shape[:2][::-1]
     # 4 Ensure output is the correct size
     if output_size is not None and interpolation != "none":
