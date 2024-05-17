@@ -504,6 +504,21 @@ def test_sqlite_store_compile_options_exception(monkeypatch: object) -> None:
         SQLiteStore()
 
 
+def test_sqlite_store_compile_options_exception_json_rtree(monkeypatch: object) -> None:
+    """Test SQLiteStore compile options for exceptions."""
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
+    monkeypatch.setattr(
+        SQLiteStore,
+        "compile_options",
+        lambda _x: ["ENABLE_RTREE"],
+        raising=True,
+    )
+    SQLiteStore()
+    monkeypatch.setattr(SQLiteStore, "compile_options", lambda _x: [], raising=True)
+    with pytest.raises(EnvironmentError, match="RTREE sqlite3"):
+        SQLiteStore()
+
+
 def test_sqlite_store_compile_options_exception_v3_38(monkeypatch: object) -> None:
     """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
