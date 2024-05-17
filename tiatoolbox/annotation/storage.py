@@ -952,6 +952,30 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         predicate = cast(Callable, predicate)
         return bool(predicate(properties))
 
+    @staticmethod
+    def centers_within_k(
+        annotation_geometry: Geometry,
+        query_point: Point,
+        distance: float,
+    ) -> bool:
+        """True if centre of annotation within k of query geometry center.
+
+        Here the "center" is the centroid of the bounds.
+
+        """
+        ann_centre = Polygon.from_bounds(*annotation_geometry.bounds).centroid
+        return query_point.dwithin(ann_centre, distance)
+
+    @staticmethod
+    def bbox_intersects(
+        annotation_geometry: Geometry,
+        query_geometry: Geometry,
+    ) -> bool:
+        """True if bounding box of the annotation intersects the query geometry."""
+        return Polygon.from_bounds(*query_geometry.bounds).intersects(
+            Polygon.from_bounds(*annotation_geometry.bounds),
+        )
+
     def query(
         self: AnnotationStore,
         geometry: QueryGeometry | None = None,
@@ -1035,28 +1059,6 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             else:
                 query_point = None
 
-        def bbox_intersects(
-            annotation_geometry: Geometry,
-            query_geometry: Geometry,
-        ) -> bool:
-            """True if bounding box of the annotation intersects the query geometry."""
-            return Polygon.from_bounds(*query_geometry.bounds).intersects(
-                Polygon.from_bounds(*annotation_geometry.bounds),
-            )
-
-        def centers_within_k(
-            annotation_geometry: Geometry,
-            query_point: Point,
-            distance: float,
-        ) -> bool:
-            """True if centre of annotation within k of query geometry center.
-
-            Here the "center" is the centroid of the bounds.
-
-            """
-            ann_centre = Polygon.from_bounds(*annotation_geometry.bounds).centroid
-            return query_point.dwithin(ann_centre, distance)
-
         def filter_function(annotation: Annotation) -> bool:
             """Filter function for querying annotations.
 
@@ -1078,11 +1080,13 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                     [
                         (
                             geometry_predicate == "bbox_intersects"
-                            and bbox_intersects(annotation.geometry, query_geometry)
+                            and AnnotationStore.bbox_intersects(
+                                annotation.geometry, query_geometry
+                            )
                         ),
                         (
                             geometry_predicate == "centers_within_k"
-                            and centers_within_k(
+                            and AnnotationStore.centers_within_k(
                                 annotation.geometry,
                                 query_point,
                                 distance,
