@@ -1326,11 +1326,16 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
         store.to_geojson(tmp_path / "polygon.json")
+
         # load the store translated so that origin is (100,100) and scaled by 2
+        def dummy_transform(annotation: Annotation) -> Annotation:
+            return annotation
+
         store2 = store_cls.from_geojson(
             tmp_path / "polygon.json",
             scale_factor=(2, 2),
             origin=(100, 100),
+            transform=dummy_transform,
         )
         assert len(store) == len(store2)
         com2 = annotations_center_of_mass(list(store2.values()))
