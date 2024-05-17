@@ -1055,8 +1055,9 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             msg = f"Invalid geometry predicate. Allowed values are: {allowed_values}."
             raise ValueError(msg)
 
+    @staticmethod
     def _process_geometry(
-        self: AnnotationStore, geometry: QueryGeometry | None, geometry_predicate: str
+        geometry: QueryGeometry | None, geometry_predicate: str
     ) -> QueryGeometry | None:
         """Processes input query geometry.
 

@@ -1529,7 +1529,7 @@ def test_from_dat(tmp_path: Path) -> None:
 
 
 def test_dict_store_from_dat(tmp_path: Path) -> None:
-    """Test generating an annotation store from a .dat file."""
+    """Test generating a DictionaryStore from a .dat file."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     store = utils.misc.store_from_dat(tmp_path / "test.dat", cls=DictionaryStore)
