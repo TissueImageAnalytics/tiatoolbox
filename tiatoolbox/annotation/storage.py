@@ -953,28 +953,145 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         return bool(predicate(properties))
 
     @staticmethod
-    def centers_within_k(
+    def _centers_within_k(
         annotation_geometry: Geometry,
         query_point: Point,
         distance: float,
     ) -> bool:
-        """True if centre of annotation within k of query geometry center.
+        """Checks if centre of annotation is within k of query geometry center.
 
         Here the "center" is the centroid of the bounds.
+
+        Args:
+            annotation_geometry (Geometry): Annotation geometry
+            query_point (Point): Query point
+            distance (float): distance
+
+        Returns:
+            bool:
+                True if centre of annotation within k of query geometry center
 
         """
         ann_centre = Polygon.from_bounds(*annotation_geometry.bounds).centroid
         return query_point.dwithin(ann_centre, distance)
 
     @staticmethod
-    def bbox_intersects(
+    def _bbox_intersects(
         annotation_geometry: Geometry,
         query_geometry: Geometry,
     ) -> bool:
-        """True if bounding box of the annotation intersects the query geometry."""
+        """Checks if bounding box of the annotation intersects the query geometry.
+
+        Args:
+            annotation_geometry (Geometry): Annotation geometry
+            query_geometry (Geometry): Query geometry
+
+        Returns:
+            bool:
+                True if bounding box of the annotation intersects the query geometry
+        """
         return Polygon.from_bounds(*query_geometry.bounds).intersects(
             Polygon.from_bounds(*annotation_geometry.bounds),
         )
+
+    def _validate_query_inputs(
+        self: AnnotationStore,
+        geometry: QueryGeometry | None,
+        where: Predicate | None,
+        geometry_predicate: str,
+    ) -> None:
+        """Validates query input.
+
+        Args:
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon).
+            where (str or bytes or Callable):
+                A statement which should evaluate to a boolean value.
+                Only annotations for which this predicate is true will
+                be returned. Defaults to None (assume always true). This
+                may be a string, Callable, or pickled function as bytes.
+                Callables are called to filter each result returned
+                from the annotation store backend in python before being
+                returned to the user. A pickle object is, where
+                possible, hooked into the backend as a user defined
+                function to filter results during the backend query.
+                Strings are expected to be in a domain specific language
+                and are converted to SQL on a best-effort basis. For
+                supported operators of the DSL see
+                :mod:`tiatoolbox.annotation.dsl`. E.g. a simple python
+                expression `props["class"] == 42` will be converted to a
+                valid SQLite predicate when using `SQLiteStore` and
+                inserted into the SQL query. This should be faster than
+                filtering in python after or during the query.
+                Additionally, the same string can be used across
+                different backends (e.g. the previous example predicate
+                string is valid for both `DictionaryStore `and a
+                `SQliteStore`). On the other hand it has many more
+                limitations. It is important to note that untrusted user
+                input should never be accepted to this argument as
+                arbitrary code can be run via pickle or the parsing of
+                the string statement.
+            geometry_predicate (str):
+                A string defining which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                "intersects". For more information see the `shapely
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+
+        Returns:
+            None:
+                Raises ValueError if query input is not valid
+
+        """
+        if all(x is None for x in (geometry, where)):
+            msg = "At least one of geometry or where must be set."
+            raise ValueError(msg)
+        if geometry_predicate not in self._geometry_predicate_names:
+            allowed_values = ", ".join(self._geometry_predicate_names)
+            msg = f"Invalid geometry predicate. Allowed values are: {allowed_values}."
+            raise ValueError(msg)
+
+    def _process_geometry(
+        self: AnnotationStore, geometry: QueryGeometry | None, geometry_predicate: str
+    ) -> QueryGeometry | None:
+        """Processes input query geometry.
+
+        Processes input query geometry into appropriate
+        geometry type according to geometry_predicate.
+
+        Args:
+            geometry (Geometry or Iterable):
+                Geometry to use when querying. This can be a bounds
+                (iterable of length 4) or a Shapely geometry (e.g.
+                Polygon).
+            geometry_predicate (str):
+                A string defining which binary geometry predicate to
+                use when comparing the query geometry and a geometry in
+                the store. Only annotations for which this binary
+                predicate is true will be returned. Defaults to
+                "intersects". For more information see the `shapely
+                documentation on binary predicates <https://shapely.
+                readthedocs.io/en/stable/manual.html#binary-predicates>`_.
+
+        Returns:
+            QueryGeometry | None:
+                Returns the processed geometry, None if input geometry is None
+
+        """
+        query_geometry = geometry
+        if isinstance(query_geometry, Iterable):
+            query_geometry = Polygon.from_bounds(*query_geometry)
+
+        if geometry_predicate == "centers_within_k" and isinstance(
+            query_geometry, (Polygon, Point, LineString)
+        ):
+            query_geometry = Polygon.from_bounds(*query_geometry.bounds).centroid
+
+        return query_geometry
 
     def query(
         self: AnnotationStore,
@@ -1038,25 +1155,9 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                     A list of Annotation objects.
 
         """
-        if all(x is None for x in (geometry, where)):
-            msg = "At least one of geometry or where must be set."
-            raise ValueError(msg)
-        if geometry_predicate not in self._geometry_predicate_names:
-            msg = (
-                "Invalid geometry predicate. Allowed values are: "
-                f"{', '.join(self._geometry_predicate_names)}."
-            )
-            raise ValueError(
-                msg,
-            )
-        query_geometry = geometry
-        if isinstance(query_geometry, Iterable):
-            query_geometry = Polygon.from_bounds(*query_geometry)
+        self._validate_query_inputs(geometry, where, geometry_predicate)
 
-        if geometry_predicate == "centers_within_k" and isinstance(
-            query_geometry, (Polygon, Point, LineString)
-        ):
-            query_geometry = Polygon.from_bounds(*query_geometry.bounds).centroid
+        query_geometry = self._process_geometry(geometry, geometry_predicate)
 
         def filter_function(annotation: Annotation) -> bool:
             """Filter function for querying annotations.
@@ -1079,13 +1180,13 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                     [
                         (
                             geometry_predicate == "bbox_intersects"
-                            and AnnotationStore.bbox_intersects(
+                            and self._bbox_intersects(
                                 annotation.geometry, query_geometry
                             )
                         ),
                         (
                             geometry_predicate == "centers_within_k"
-                            and AnnotationStore.centers_within_k(
+                            and self._centers_within_k(
                                 annotation.geometry,
                                 query_geometry,
                                 distance,
