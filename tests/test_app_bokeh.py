@@ -11,19 +11,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -132,6 +132,14 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     data_path["config"] = _fetch_remote_sample(
         "config_2",
         data_path["base_path"] / "overlays",
+    )
+    data_path["plugin_img"] = _fetch_remote_sample(
+        "stainnorm-source",
+        data_path["base_path"] / "slides" / "CMU-1_files",
+    )
+    data_path["plugin_csv"] = _fetch_remote_sample(
+        "test_csv",
+        data_path["base_path"] / "slides" / "CMU-1_files",
     )
     return data_path
 
