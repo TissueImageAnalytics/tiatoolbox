@@ -137,6 +137,26 @@ def test_incorrect_ioconfig() -> NoReturn:
         engine.run(images=[], masks=[], ioconfig=None)
 
 
+def test_incorrect_output_type() -> NoReturn:
+    """Test EngineABC for incorrect output type."""
+    pretrained_model = "alexnet-kather100k"
+
+    # Test engine run without ioconfig
+    eng = TestEngineABC(model=pretrained_model)
+
+    with pytest.raises(
+        TypeError,
+        match=r".*output_type must be 'dict' or 'zarr' or 'annotationstore*",
+    ):
+        _ = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            on_gpu=False,
+            patch_mode=True,
+            ioconfig=None,
+            output_type="random",
+        )
+
+
 def test_pretrained_ioconfig() -> NoReturn:
     """Test EngineABC initialization with pretrained model name in the toolbox."""
     pretrained_model = "alexnet-kather100k"

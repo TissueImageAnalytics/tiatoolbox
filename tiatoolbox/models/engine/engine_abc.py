@@ -929,6 +929,7 @@ class EngineABC(ABC):
         labels: list | None = None,
         save_dir: os | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
+        output_type: str = "dict",
         *,
         overwrite: bool = False,
         patch_mode: bool,
@@ -950,6 +951,10 @@ class EngineABC(ABC):
             self.batch_size = self.cache_size
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
+        if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
+            msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
+            raise TypeError(msg)
+
         self.images = self._validate_images_masks(images=images)
 
         if masks is not None:
@@ -1097,7 +1102,7 @@ class EngineABC(ABC):
                 Whether to overwrite the results. Default = False.
             output_type (str):
                 The format of the output type. "output_type" can be
-                "zarr" or "AnnotationStore". Default value is "zarr".
+                "dict", "zarr" or "AnnotationStore". Default value is "zarr".
                 When saving in the zarr format the output is saved using the
                 `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
                 as a zarr group. If the required output type is an "AnnotationStore"
@@ -1155,6 +1160,7 @@ class EngineABC(ABC):
             ioconfig=ioconfig,
             overwrite=overwrite,
             patch_mode=patch_mode,
+            output_type=output_type,
             **kwargs,
         )
 
