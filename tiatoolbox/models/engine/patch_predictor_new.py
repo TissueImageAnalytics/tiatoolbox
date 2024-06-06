@@ -390,14 +390,14 @@ class PatchPredictor(EngineABC):
 
     def save_wsi_output(
         self: EngineABC,
-        raw_output: Path,
+        processed_output: Path,
         output_type: str,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> Path:
         """Aggregate the output at the WSI level and save to file.
 
         Args:
-            raw_output (Path):
+            processed_output (Path):
                 Path to Zarr file with intermediate results.
             output_type (str):
                 The desired output type for resulting patch dataset.
@@ -412,7 +412,7 @@ class PatchPredictor(EngineABC):
 
         """
         return super().save_wsi_output(
-            raw_output=raw_output,
+            processed_output=processed_output,
             output_type=output_type,
             **kwargs,
         )

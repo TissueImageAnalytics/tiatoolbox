@@ -64,13 +64,13 @@ class TestEngineABC(EngineABC):
 
     def save_wsi_output(
         self: EngineABC,
-        raw_output: dict,
+        processed_output: dict,
         save_dir: Path,
         **kwargs: dict,
     ) -> Path:
         """Test post_process_wsi."""
         return super().save_wsi_output(
-            raw_output,
+            processed_output,
             save_dir=save_dir,
             **kwargs,
         )
@@ -548,7 +548,10 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
     save_path = tmp_path / "output.zarr"
     _ = zarr.open(save_path, mode="w")
     out = eng.save_wsi_output(
-        raw_output=save_path, save_path=save_path, output_type="zarr", save_dir=tmp_path
+        processed_output=save_path,
+        save_path=save_path,
+        output_type="zarr",
+        save_dir=tmp_path,
     )
 
     assert out.exists()
@@ -566,7 +569,7 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
         zarr_group=zarr_group, output_data_to_save=patch_output
     )
     out = eng.save_wsi_output(
-        raw_output=save_path,
+        processed_output=save_path,
         scale_factor=(1.0, 1.0),
         class_dict=class_dict,
         save_dir=tmp_path,
@@ -581,7 +584,7 @@ def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
         match=r".*supports zarr and AnnotationStore as output_type.",
     ):
         eng.save_wsi_output(
-            raw_output=save_path,
+            processed_output=save_path,
             save_path=save_path,
             output_type="dict",
             save_dir=tmp_path,

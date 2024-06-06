@@ -668,14 +668,16 @@ class EngineABC(ABC):
                 `.zarr` file depending on whether a save_dir Path is provided.
 
         """
-        if (self.cache_mode or not save_dir) and output_type != "AnnotationStore":
+        if (
+            self.cache_mode or not save_dir
+        ) and output_type.lower() != "annotationstore":
             return processed_predictions
 
         output_file = Path(kwargs.get("output_file", "output.db"))
 
         save_path = save_dir / output_file
 
-        if output_type == "AnnotationStore":
+        if output_type.lower() == "annotationstore":
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
@@ -727,14 +729,14 @@ class EngineABC(ABC):
     @abstractmethod
     def save_wsi_output(
         self: EngineABC,
-        raw_output: Path,
+        processed_output: Path,
         output_type: str,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> Path:
         """Aggregate the output at the WSI level and save to file.
 
         Args:
-            raw_output (Path):
+            processed_output (Path):
                 Path to Zarr file with intermediate results.
             output_type (str):
                 The desired output type for resulting patch dataset.
@@ -748,17 +750,17 @@ class EngineABC(ABC):
             stored in a `.zarr` file.
 
         """
-        if output_type == "zarr":
-            msg = "Output file saved at %s.", raw_output
+        if output_type.lower() == "zarr":
+            msg = "Output file saved at %s.", processed_output
             logger.info(msg=msg)
-            return raw_output
+            return processed_output
 
-        if output_type == "AnnotationStore":
-            save_path = Path(kwargs.get("output_file", raw_output.stem + ".db"))
+        if output_type.lower() == "annotationstore":
+            save_path = Path(kwargs.get("output_file", processed_output.stem + ".db"))
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # Read zarr file to a dict
-            raw_output_dict = zarr.open(str(raw_output), mode="r")
+            raw_output_dict = zarr.open(str(processed_output), mode="r")
 
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
