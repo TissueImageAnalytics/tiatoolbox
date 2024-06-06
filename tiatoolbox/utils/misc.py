@@ -1228,6 +1228,14 @@ def patch_predictions_as_annotations(
     return annotations
 
 
+def _get_zarr_array(zarr_array: zarr.core.Array | np.ndarray) -> np.ndarray:
+    """Converts a zarr array into a numpy array."""
+    if isinstance(zarr_array, zarr.core.Array):
+        return zarr_array[:]
+
+    return zarr_array
+
+
 def dict_to_store(
     patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
@@ -1262,9 +1270,10 @@ def dict_to_store(
         # we cant create annotations without coordinates
         msg = "Patch output must contain coordinates."
         raise ValueError(msg)
+
     # get relevant keys
-    class_probs = patch_output.get("probabilities", [])
-    preds = patch_output.get("predictions", [])
+    class_probs = _get_zarr_array(patch_output.get("probabilities", []))
+    preds = _get_zarr_array(patch_output.get("predictions", []))
 
     patch_coords = np.array(patch_output.get("coordinates", []))
     if not np.all(np.array(scale_factor) == 1):
@@ -1488,6 +1497,8 @@ def write_to_zarr_in_cache_mode(
                 compressor=compressor,
             )
             zarr_dataset[:] = data_to_save
+
+        return zarr_group
 
     # case 2 - append to existing zarr group
     for key in output_data_to_save:

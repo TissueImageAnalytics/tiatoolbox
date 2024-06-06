@@ -290,104 +290,47 @@ def test_patch_predictor_kather100k_output(
             break
 
 
-def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:
-    """Test normal run of wsi predictor with merge predictions option."""
-    # convert to pathlib Path to prevent reader complaint
+def _validate_probabilities(predictions: list | dict) -> bool:
+    """Helper function to test if the probabilities value are valid."""
+    if isinstance(predictions, dict):
+        return all(0 <= probability <= 1 for _, probability in predictions.items())
+
+    for row in predictions:
+        for element in row:
+            if not (0 <= element <= 1):
+                return False
+    return True
+
+
+def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
+    """Test normal run of patch predictor for WSIs."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_jpg = Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
-    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
-    # blind test
-    # pseudo output dict from model with 2 patches
-    output = {
-        "resolution": 1.0,
-        "units": "baseline",
-        "probabilities": [[0.45, 0.55], [0.90, 0.10]],
-        "predictions": [1, 0],
-        "coordinates": [[0, 0, 2, 2], [2, 2, 4, 4]],
-    }
-    merged = PatchPredictor.merge_predictions(
-        np.zeros([4, 4]),
-        output,
-        resolution=1.0,
-        units="baseline",
+    predictor = PatchPredictor(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
     )
-    _merged = np.array([[2, 2, 0, 0], [2, 2, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]])
-    assert np.sum(merged - _merged) == 0
-
-    # blind test for merging probabilities
-    merged = PatchPredictor.merge_predictions(
-        np.zeros([4, 4]),
-        output,
-        resolution=1.0,
-        units="baseline",
-        return_raw=True,
-    )
-    _merged = np.array(
-        [
-            [0.45, 0.45, 0, 0],
-            [0.45, 0.45, 0, 0],
-            [0, 0, 0.90, 0.90],
-            [0, 0, 0.90, 0.90],
-        ],
-    )
-    assert merged.shape == (4, 4, 2)
-    assert np.mean(np.abs(merged[..., 0] - _merged)) < 1.0e-6
-
-    # integration test
-    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
-
-    kwargs = {
-        "return_probabilities": True,
-        "return_labels": True,
-        "on_gpu": ON_GPU,
-        "patch_input_shape": np.array([224, 224]),
-        "stride_shape": np.array([224, 224]),
-        "resolution": 1.0,
-        "units": "baseline",
-        "merge_predictions": True,
-    }
-    # sanity check, both output should be the same with same resolution read args
-    wsi_output = predictor.run(
-        [mini_wsi_svs],
-        masks=[mini_wsi_msk],
+    # don't run test on GPU
+    output = predictor.run(
+        images=[mini_wsi_svs],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
         patch_mode=False,
-        **kwargs,
+        save_dir=tmp_path / "wsi_out_check",
     )
 
-    # mock up to change the preproc func and
-    # force to use the default in merge function
-    # still should have the same results
-    kwargs["merge_predictions"] = False
-    tile_output = predictor.run(
-        [mini_wsi_jpg],
-        masks=[mini_wsi_msk],
-        patch_mode=False,
-        **kwargs,
-    )
-    merged_tile_output = predictor.merge_predictions(
-        mini_wsi_jpg,
-        tile_output[0],
-        resolution=kwargs["resolution"],
-        units=kwargs["units"],
-    )
-    tile_output.append(merged_tile_output)
+    assert output[mini_wsi_svs].exists()
 
-    # first make sure nothing breaks with predictions
-    wpred = np.array(wsi_output[0]["predictions"])
-    tpred = np.array(tile_output[0]["predictions"])
-    diff = tpred == wpred
-    accuracy = np.sum(diff) / np.size(wpred)
-    assert accuracy > 0.9, np.nonzero(~diff)
+    output_ = zarr.open(output[mini_wsi_svs])
 
-    merged_wsi = wsi_output[1]
-    merged_tile = tile_output[1]
-    # ensure shape of merged predictions of tile and wsi input are the same
-    assert merged_wsi.shape == merged_tile.shape
-    # ensure consistent predictions between tile and wsi mode
-    diff = merged_tile == merged_wsi
-    accuracy = np.sum(diff) / np.size(merged_wsi)
-    assert accuracy > 0.9, np.nonzero(~diff)
+    assert output_["predictions"].shape == (244, 9)  # number of patches x classes
+    assert output_["predictions"].ndim == 2
+    # number of patches x [start_x, start_y, end_x, end_y]
+    assert output_["coordinates"].shape == (244, 4)
+    assert output_["coordinates"].ndim == 2
+    assert _validate_probabilities(predictions=output_["predictions"])
 
 
 # -------------------------------------------------------------------------------------

@@ -684,6 +684,9 @@ class EngineABC(ABC):
             class_dict = kwargs.get("class_dict")
 
             # Need to add support for zarr conversion.
+            if self.cache_mode:
+                processed_predictions = zarr.open(processed_predictions, mode="r")
+
             return dict_to_store(
                 processed_predictions,
                 scale_factor,
