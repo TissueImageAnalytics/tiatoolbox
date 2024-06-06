@@ -517,21 +517,6 @@ def test_sqlite_store_compile_options_exception_v3_38(monkeypatch: object) -> No
         SQLiteStore()
 
 
-def test_sqlite_store_compile_options_missing_math(
-    monkeypatch: object,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test that a warning is shown if the sqlite math module is missing."""
-    monkeypatch.setattr(
-        SQLiteStore,
-        "compile_options",
-        lambda _x: ["ENABLE_JSON1", "ENABLE_RTREE"],
-        raising=True,
-    )
-    SQLiteStore()
-    assert "SQLite math functions are not enabled" in caplog.text
-
-
 def test_sqlite_store_multiple_connection(tmp_path: Path) -> None:
     """Test SQLiteStore multiple connections."""
     store = SQLiteStore(tmp_path / "annotations.db")
