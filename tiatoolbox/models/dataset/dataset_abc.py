@@ -145,7 +145,7 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
 
         if path.suffix not in (".npy", ".jpg", ".jpeg", ".tif", ".tiff", ".png"):
             msg = f"Cannot load image data from `{path.suffix}` files."
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         return imread(path, as_uint8=False)
 
