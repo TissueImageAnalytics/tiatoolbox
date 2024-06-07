@@ -14,7 +14,7 @@ import zarr
 from torch import nn
 from typing_extensions import Unpack
 
-from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox import logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
@@ -997,9 +997,6 @@ class EngineABC(ABC):
             output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
 
-        duplicate_filter = DuplicateFilter()
-        logger.addFilter(duplicate_filter)
-
         dataloader = self.get_dataloader(
             images=self.images,
             masks=self.masks,
@@ -1014,7 +1011,6 @@ class EngineABC(ABC):
             raw_predictions=raw_predictions,
             **kwargs,
         )
-        logger.removeFilter(duplicate_filter)
 
         return self.save_predictions(
             processed_predictions=processed_predictions,
@@ -1045,8 +1041,6 @@ class EngineABC(ABC):
         }
 
         for image_num, image in enumerate(self.images):
-            duplicate_filter = DuplicateFilter()
-            logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
             dataloader = self.get_dataloader(
                 images=image,
@@ -1069,7 +1063,6 @@ class EngineABC(ABC):
                 save_dir=save_dir,
                 **kwargs,
             )
-            logger.removeFilter(duplicate_filter)
 
         return out
 
