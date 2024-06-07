@@ -997,6 +997,9 @@ class EngineABC(ABC):
             output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
 
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
+
         dataloader = self.get_dataloader(
             images=self.images,
             masks=self.masks,
@@ -1011,6 +1014,8 @@ class EngineABC(ABC):
             raw_predictions=raw_predictions,
             **kwargs,
         )
+        logger.removeFilter(duplicate_filter)
+
         return self.save_predictions(
             processed_predictions=processed_predictions,
             output_type=output_type,
@@ -1040,6 +1045,8 @@ class EngineABC(ABC):
         }
 
         for image_num, image in enumerate(self.images):
+            duplicate_filter = DuplicateFilter()
+            logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
             dataloader = self.get_dataloader(
                 images=image,
@@ -1062,6 +1069,7 @@ class EngineABC(ABC):
                 save_dir=save_dir,
                 **kwargs,
             )
+            logger.removeFilter(duplicate_filter)
 
         return out
 
@@ -1155,8 +1163,6 @@ class EngineABC(ABC):
             ... {'/path/to/wsi1.db'}
 
         """
-        duplicate_filter = DuplicateFilter()
-        logger.addFilter(duplicate_filter)
         save_dir = self._update_run_params(
             images=images,
             masks=masks,
