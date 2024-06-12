@@ -137,7 +137,7 @@ def imresize(
         scale_factor_array=scale_factor_array,
     )
 
-    if scale_factor is None:
+    if scale_factor_array is None:
         scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
 
     # Return original if scale factor is 1
@@ -412,4 +412,5 @@ def pad_bounds(
         padding = np.tile(padding, 2)
 
     signs = np.repeat([-1, 1], ndims)
-    return np.add(bounds, padding * signs)
+    result = np.add(bounds, padding * signs)
+    return (result[0], result[1], result[2], result[3])
