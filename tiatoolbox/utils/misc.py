@@ -31,7 +31,6 @@ from tiatoolbox.utils.exceptions import FileNotSupportedError
 if TYPE_CHECKING:  # pragma: no cover
     from os import PathLike
 
-    import numpy.typing as npt
     from shapely import geometry
 
 
@@ -952,7 +951,7 @@ def ppu2mpp(ppu: int, units: str | int) -> float:
     return 1 / ppu * microns_per_unit[units]
 
 
-def select_cv2_interpolation(scale_factor: float | npt.NDArray[np.float64]) -> str:
+def select_cv2_interpolation(scale_factor: float | np.ndarray) -> str:
     """Return appropriate interpolation method for opencv based image resize.
 
     Args:
@@ -974,7 +973,7 @@ def store_from_dat(
     scale_factor: tuple[float, float] = (1, 1),
     typedict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
-    cls: AnnotationStore = SQLiteStore,
+    cls: type[AnnotationStore] = SQLiteStore,
 ) -> AnnotationStore:
     """Load annotations from a hovernet-style .dat file.
 
@@ -1009,7 +1008,8 @@ def store_from_dat(
     """
     store = cls()
     add_from_dat(store, fp, scale_factor, typedict=typedict, origin=origin)
-    store.create_index("area", '"area"')
+    if isinstance(store, SQLiteStore):
+        store.create_index("area", '"area"')
     return store
 
 

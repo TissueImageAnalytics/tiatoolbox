@@ -44,7 +44,7 @@ class StainNormalizer:
         self.stain_matrix_target: np.ndarray
         self.target_concentrations: np.ndarray
         self.maxC_target = None
-        self.stain_matrix_target_RGB = None
+        self.stain_matrix_target_RGB: np.ndarray
 
     @staticmethod
     def get_concentrations(img: np.ndarray, stain_matrix: np.ndarray) -> np.ndarray:
@@ -415,4 +415,9 @@ def get_normalizer(
     if method_name.lower() == "vahadane":
         return VahadaneNormalizer()
 
+    if stain_matrix is None:
+        msg = '`stain_matrix` is None when using `method_name`="custom".'
+        raise ValueError(
+            msg,
+        )
     return CustomNormalizer(load_stain_matrix(stain_matrix))
