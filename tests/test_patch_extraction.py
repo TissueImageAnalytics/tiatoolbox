@@ -324,7 +324,7 @@ def test_get_coordinates() -> None:
     )
     # test when output patch shape is out of bound
     # but input is in bound
-    input_bounds, output_bounds = PatchExtractor.get_coordinates(  # noqa: PYL-E0633
+    input_bounds, output_bounds = PatchExtractor.get_coordinates(  # skipcq: PYL-E0633
         image_shape=(9, 6),
         patch_input_shape=(5, 5),
         patch_output_shape=(4, 4),
