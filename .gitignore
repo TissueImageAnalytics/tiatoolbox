@@ -109,6 +109,7 @@ ENV/
 
 # IDE settings
 .vscode/
+.idea/
 
 # Mac generated
 .DS_Store
