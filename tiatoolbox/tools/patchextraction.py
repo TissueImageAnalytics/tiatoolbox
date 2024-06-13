@@ -819,5 +819,6 @@ def get_patch_extractor(
         "pad_constant_values": kwargs.get("pad_constant_values", 0),
         "min_mask_ratio": kwargs.get("min_mask_ratio", 0),
         "within_bound": kwargs.get("within_bound", False),
+        "store_filter": kwargs.get("store_filter", None),
     }
     return SlidingWindowPatchExtractor(**sliding_window_patch_extractor_args)
