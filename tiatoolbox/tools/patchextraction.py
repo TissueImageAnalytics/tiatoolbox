@@ -49,6 +49,7 @@ class ExtractorParams(TypedDict, total=False):
     input_mask: str | Path | np.ndarray | wsireader.WSIReader
     stride: int | tuple[int, int]
     min_mask_ratio: float
+    store_filter: str | None
 
 
 class PointsPatchExtractorParams(TypedDict):
@@ -85,6 +86,7 @@ class SlidingWindowPatchExtractorParams(TypedDict):
     input_mask: str | Path | np.ndarray | wsireader.WSIReader | None
     stride: int | tuple[int, int] | None
     min_mask_ratio: float
+    store_filter: str | None
 
 
 class PatchExtractorABC(ABC):
@@ -823,6 +825,6 @@ def get_patch_extractor(
         "pad_constant_values": kwargs.get("pad_constant_values", 0),
         "min_mask_ratio": kwargs.get("min_mask_ratio", 0),
         "within_bound": kwargs.get("within_bound", False),
-        "store_filter": kwargs.get("store_filter", None),
+        "store_filter": kwargs.get("store_filter"),
     }
     return SlidingWindowPatchExtractor(**sliding_window_patch_extractor_args)
