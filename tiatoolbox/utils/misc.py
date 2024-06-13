@@ -1203,10 +1203,10 @@ def add_from_dat(
 
 
 def patch_predictions_as_annotations(
-    preds: list,
+    preds: list | np.ndarray,
     keys: list,
     class_dict: dict,
-    class_probs: list,
+    class_probs: list | np.ndarray,
     patch_coords: list,
     classes_predicted: list,
     labels: list,
