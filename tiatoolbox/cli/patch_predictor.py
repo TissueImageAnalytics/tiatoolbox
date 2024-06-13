@@ -57,7 +57,7 @@ def patch_predictor(
     verbose: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
-    from tiatoolbox.models.engine.patch_predictor_new import PatchPredictor
+    from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,

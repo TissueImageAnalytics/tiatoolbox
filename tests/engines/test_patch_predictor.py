@@ -14,7 +14,7 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.models.engine.patch_predictor_new import PatchPredictor
+from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 from tiatoolbox.utils import download_data, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
 
