@@ -641,6 +641,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         min_mask_ratio (float):
             Only patches with positive area percentage above this value are included.
             Defaults to 0.
+        store_filter (str):
+            Filter to apply to the annotations when generating the mask. Default is
+            None, which uses all annotations. Only used if the provided mask is an
+            annotation store.
 
     Attributes:
         stride(tuple(int)):
