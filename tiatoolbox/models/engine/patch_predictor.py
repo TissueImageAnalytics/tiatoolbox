@@ -255,7 +255,6 @@ class PatchPredictor:
             compile_model(  # for runtime, such as after wrapping with nn.DataParallel
                 model,
                 mode=rcParam["torch_compile_mode"],
-                disable=not rcParam["enable_torch_compile"],
             )
         )
         self.pretrained_model = pretrained_model

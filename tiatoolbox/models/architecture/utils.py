@@ -12,11 +12,41 @@ from torch import nn
 from tiatoolbox import logger
 
 
+def is_torch_compile_compatible() -> bool:
+    """Check if the current GPU is compatible with torch-compile.
+
+    Returns:
+        bool:
+            True if the GPU is compatible with torch-compile, False
+            otherwise.
+
+    """
+    if torch.cuda.is_available():  # pragma: no cover
+        device_cap = torch.cuda.get_device_capability()
+        if device_cap not in ((7, 0), (8, 0), (9, 0)):
+            logger.warning(
+                "GPU is not compatible with torch.compile. "
+                "Compatible GPUs include NVIDIA V100, A100, and H100. "
+                "Speedup numbers may be lower than expected.",
+                stacklevel=2,
+            )
+            return False
+    else:
+        logger.warning(
+            "No GPU detected or cuda not installed, "
+            "torch.compile is only supported on selected NVIDIA GPUs. "
+            "Speedup numbers may be lower than expected.",
+            stacklevel=2,
+        )
+        return False
+
+    return True  # pragma: no cover
+
+
 def compile_model(
     model: nn.Module | None = None,
     *,
     mode: str = "default",
-    disable: bool = False,
 ) -> Callable:
     """A decorator to compile a model using torch-compile.
 
@@ -25,18 +55,19 @@ def compile_model(
             Model to be compiled.
         mode (str):
             Mode to be used for torch-compile. Available modes are
-            `default`, `reduce-overhead`, `max-autotune`, and
+            `disable`, `default`, `reduce-overhead`, `max-autotune`, and
             `max-autotune-no-cudagraphs`.
-        disable (bool):
-            If True, torch-compile will be disabled.
 
     Returns:
         Callable:
             Compiled model.
 
     """
-    if disable:
+    if mode == "disable":
         return model
+
+    # Check if GPU is compatible with torch.compile
+    is_torch_compile_compatible()
 
     # This check will be removed when torch.compile is supported in Python 3.12+
     if sys.version_info >= (3, 12):  # pragma: no cover
@@ -54,7 +85,7 @@ def compile_model(
         )
         return model
 
-    return torch.compile(model, mode=mode, disable=disable)
+    return torch.compile(model, mode=mode)
 
 
 def centre_crop(
