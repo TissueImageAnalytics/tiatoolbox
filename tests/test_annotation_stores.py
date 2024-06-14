@@ -504,6 +504,21 @@ def test_sqlite_store_compile_options_exception(monkeypatch: object) -> None:
         SQLiteStore()
 
 
+def test_sqlite_store_compile_options_exception_json_rtree(monkeypatch: object) -> None:
+    """Test SQLiteStore compile options for exceptions."""
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
+    monkeypatch.setattr(
+        SQLiteStore,
+        "compile_options",
+        lambda _x: ["ENABLE_RTREE"],
+        raising=True,
+    )
+    SQLiteStore()
+    monkeypatch.setattr(SQLiteStore, "compile_options", lambda _x: [], raising=True)
+    with pytest.raises(EnvironmentError, match="RTREE sqlite3"):
+        SQLiteStore()
+
+
 def test_sqlite_store_compile_options_exception_v3_38(monkeypatch: object) -> None:
     """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
@@ -1326,11 +1341,16 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
         store.to_geojson(tmp_path / "polygon.json")
+
         # load the store translated so that origin is (100,100) and scaled by 2
+        def dummy_transform(annotation: Annotation) -> Annotation:
+            return annotation
+
         store2 = store_cls.from_geojson(
             tmp_path / "polygon.json",
             scale_factor=(2, 2),
             origin=(100, 100),
+            transform=dummy_transform,
         )
         assert len(store) == len(store2)
         com2 = annotations_center_of_mass(list(store2.values()))
