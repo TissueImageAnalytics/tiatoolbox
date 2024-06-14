@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import copy
+import json
 import shutil
+import sqlite3
 from pathlib import Path
 from typing import Callable
 
@@ -331,6 +333,62 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
     assert output_["coordinates"].shape == (244, 4)
     assert output_["coordinates"].ndim == 2
     assert _validate_probabilities(predictions=output_["predictions"])
+
+
+def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
+    """Helper function to extract probabilities from Annotation Store."""
+    probs_dict = {}
+    con = sqlite3.connect(dbfile)
+    cur = con.cursor()
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
+
+    for item in annotations_properties:
+        for json_str in item:
+            probs_dict = json.loads(json_str)
+            probs_dict.pop("type")
+
+    return probs_dict
+
+
+def test_engine_run_wsi_annotation_store(
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+) -> None:
+    """Test the engine run for Whole slide images."""
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = PatchPredictor(model="alexnet-kather100k")
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{tmp_path}/model_wsi_output"
+
+    kwargs = {
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "units": "mpp",
+        "scale_factor": (2.0, 2.0),
+    }
+
+    output = eng.run(
+        images=[mini_wsi_svs],
+        masks=[mini_wsi_msk],
+        patch_mode=False,
+        output_type="AnnotationStore",
+        **kwargs,
+    )
+
+    output_ = output[mini_wsi_svs]
+
+    assert output_.exists()
+    assert output_.suffix == ".db"
+    predictions = _extract_probabilities_from_annotation_store(output_)
+    assert _validate_probabilities(predictions)
+
+    shutil.rmtree(save_dir)
 
 
 # -------------------------------------------------------------------------------------
