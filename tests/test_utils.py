@@ -20,7 +20,7 @@ from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
-from tiatoolbox.annotation.storage import SQLiteStore
+from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.utils import misc
@@ -1526,7 +1526,15 @@ def test_from_dat(tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file."""
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat", cls=SQLiteStore)
+    assert len(store) == 2
+
+
+def test_dict_store_from_dat(tmp_path: Path) -> None:
+    """Test generating a DictionaryStore from a .dat file."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(tmp_path / "test.dat", cls=DictionaryStore)
     assert len(store) == 2
 
 
