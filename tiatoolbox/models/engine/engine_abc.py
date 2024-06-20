@@ -556,7 +556,7 @@ class EngineABC(ABC):
                 position=0,
             )
 
-        keys = ["predictions"]
+        keys = ["probabilities"]
 
         if self.return_labels:
             keys.append("labels")
@@ -630,7 +630,7 @@ class EngineABC(ABC):
                 saved zarr file if `cache_mode` is True.
 
         """
-        _ = kwargs.get("predictions")  # Key values required for post-processing
+        _ = kwargs.get("probabilities")  # Key values required for post-processing
 
         if self.cache_mode:  # cache mode
             _ = zarr.open(raw_predictions, mode="w")
@@ -726,7 +726,7 @@ class EngineABC(ABC):
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post process WSI output."""
-        _ = kwargs.get("predictions")  # Key values required for post-processing
+        _ = kwargs.get("probabilities")  # Key values required for post-processing
         return raw_predictions
 
     @abstractmethod

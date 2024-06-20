@@ -169,7 +169,7 @@ def test_pretrained_ioconfig() -> NoReturn:
         patch_mode=True,
         ioconfig=None,
     )
-    assert "predictions" in out
+    assert "probabilities" in out
     assert "labels" not in out
 
 
@@ -188,7 +188,7 @@ def test_ioconfig() -> NoReturn:
         ioconfig=ioconfig,
     )
 
-    assert "predictions" in out
+    assert "probabilities" in out
     assert "labels" not in out
 
 
@@ -351,7 +351,7 @@ def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
         on_gpu=False,
         patch_mode=True,
     )
-    assert "predictions" in out
+    assert "probabilities" in out
     assert "labels" not in out
 
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -360,7 +360,7 @@ def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
         on_gpu=False,
         verbose=False,
     )
-    assert "predictions" in out
+    assert "probabilities" in out
     assert "labels" not in out
 
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -369,7 +369,7 @@ def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
         labels=list(range(10)),
         on_gpu=False,
     )
-    assert "predictions" in out
+    assert "probabilities" in out
     assert "labels" in out
 
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -393,7 +393,7 @@ def test_engine_run_with_verbose() -> NoReturn:
         on_gpu=False,
     )
 
-    assert "predictions" in out
+    assert "probabilities" in out
     assert "labels" in out
 
 

@@ -1352,15 +1352,15 @@ def dict_to_zarr(
     save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
 
     # save to zarr
-    predictions_array = np.array(raw_predictions["predictions"])
+    probabilities_array = np.array(raw_predictions["probabilities"])
     z = zarr.open(
         str(save_path),
         mode="w",
-        shape=predictions_array.shape,
+        shape=probabilities_array.shape,
         chunks=chunks,
         compressor=compressor,
     )
-    z[:] = predictions_array
+    z[:] = probabilities_array
 
     return save_path
 
