@@ -119,8 +119,8 @@ def test_patch_predictor_api(
         inputs,
         device="cpu",
     )
-    assert sorted(output.keys()) == ["predictions"]
-    assert len(output["predictions"]) == 2
+    assert sorted(output.keys()) == ["probabilities"]
+    assert len(output["probabilities"]) == 2
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # whether to return labels
@@ -129,8 +129,8 @@ def test_patch_predictor_api(
         labels=["1", "a"],
         return_labels=True,
     )
-    assert sorted(output.keys()) == sorted(["labels", "predictions"])
-    assert len(output["predictions"]) == len(output["labels"])
+    assert sorted(output.keys()) == sorted(["labels", "probabilities"])
+    assert len(output["probabilities"]) == len(output["labels"])
     assert output["labels"].tolist() == ["1", "a"]
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
@@ -165,8 +165,8 @@ def test_patch_predictor_api(
         return_labels=True,
         ioconfig=ioconfig,
     )
-    assert sorted(output.keys()) == sorted(["labels", "predictions"])
-    assert len(output["predictions"]) == len(output["labels"])
+    assert sorted(output.keys()) == sorted(["labels", "probabilities"])
+    assert len(output["probabilities"]) == len(output["labels"])
     assert output["labels"].tolist() == [1, 2]
 
 
@@ -210,8 +210,8 @@ def test_wsi_predictor_api(
 
     wsi_pred = zarr.open(str(output[mini_wsi_svs]), mode="r")
     tile_pred = zarr.open(str(output[mini_wsi_jpg]), mode="r")
-    diff = tile_pred["predictions"][:] == wsi_pred["predictions"][:]
-    accuracy = np.sum(diff) / np.size(wsi_pred["predictions"][:])
+    diff = tile_pred["probabilities"][:] == wsi_pred["probabilities"][:]
+    accuracy = np.sum(diff) / np.size(wsi_pred["probabilities"][:])
     assert accuracy > 0.99, np.nonzero(~diff)
 
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
@@ -236,7 +236,7 @@ def _test_predictor_output(
         return_labels=False,
         device=device,
     )
-    predictions = output["predictions"]
+    predictions = output["probabilities"]
     for idx, probabilities_ in enumerate(predictions):
         probabilities_max = max(probabilities_)
         assert np.abs(probabilities_max - probabilities_check[idx]) <= 1e-3, (
@@ -327,12 +327,12 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
 
     output_ = zarr.open(output[mini_wsi_svs])
 
-    assert output_["predictions"].shape == (244, 9)  # number of patches x classes
-    assert output_["predictions"].ndim == 2
+    assert output_["probabilities"].shape == (244, 9)  # number of patches x classes
+    assert output_["probabilities"].ndim == 2
     # number of patches x [start_x, start_y, end_x, end_y]
     assert output_["coordinates"].shape == (244, 4)
     assert output_["coordinates"].ndim == 2
-    assert _validate_probabilities(predictions=output_["predictions"])
+    assert _validate_probabilities(predictions=output_["probabilities"])
 
 
 def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
