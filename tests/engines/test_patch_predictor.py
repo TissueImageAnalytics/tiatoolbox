@@ -452,11 +452,12 @@ def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
             "--patch-mode",
             "False",
             "--output-path",
-            str(tmp_path.joinpath("output")),
+            str(tmp_path / "output"),
         ],
     )
 
     assert models_wsi_result.exit_code == 0
+    assert (tmp_path / "output" / "output.db").exists()
 
 
 def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
@@ -479,20 +480,18 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
         dir_path.joinpath("2_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
         dir_path.joinpath("3_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
     except OSError:
-        shutil.copy(mini_wsi_svs, dir_path.joinpath("1_" + mini_wsi_svs.name))
-        shutil.copy(mini_wsi_svs, dir_path.joinpath("2_" + mini_wsi_svs.name))
-        shutil.copy(mini_wsi_svs, dir_path.joinpath("3_" + mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path / ("1_" + mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path / ("2_" + mini_wsi_svs.name))
+        shutil.copy(mini_wsi_svs, dir_path / ("3_" + mini_wsi_svs.name))
 
     try:
         dir_path_masks.joinpath("1_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
         dir_path_masks.joinpath("2_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
         dir_path_masks.joinpath("3_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
     except OSError:
-        shutil.copy(mini_wsi_msk, dir_path_masks.joinpath("1_" + mini_wsi_msk.name))
-        shutil.copy(mini_wsi_msk, dir_path_masks.joinpath("2_" + mini_wsi_msk.name))
-        shutil.copy(mini_wsi_msk, dir_path_masks.joinpath("3_" + mini_wsi_msk.name))
-
-    tmp_path = tmp_path.joinpath("output")
+        shutil.copy(mini_wsi_msk, dir_path_masks / ("1_" + mini_wsi_msk.name))
+        shutil.copy(mini_wsi_msk, dir_path_masks / ("2_" + mini_wsi_msk.name))
+        shutil.copy(mini_wsi_msk, dir_path_masks / ("3_" + mini_wsi_msk.name))
 
     runner = CliRunner()
     models_tiles_result = runner.invoke(
@@ -506,8 +505,13 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
             "--masks",
             str(dir_path_masks),
             "--output-path",
-            str(tmp_path),
+            str(tmp_path / "output"),
+            "--output-type",
+            "zarr",
         ],
     )
 
     assert models_tiles_result.exit_code == 0
+    assert (tmp_path / "output" / ("1_" + mini_wsi_svs.stem + ".zarr")).exists()
+    assert (tmp_path / "output" / ("2_" + mini_wsi_svs.stem + ".zarr")).exists()
+    assert (tmp_path / "output" / ("3_" + mini_wsi_svs.stem + ".zarr")).exists()

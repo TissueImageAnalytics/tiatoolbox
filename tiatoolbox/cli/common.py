@@ -86,6 +86,24 @@ def cli_file_type(
     )
 
 
+def cli_output_type(
+    usage_help: str = "The format of the output type. "
+    "'output_type' can be 'zarr' or 'AnnotationStore'. "
+    "Default value is 'AnnotationStore'.",
+    default: str = "AnnotationStore",
+    input_type: click.Choice | None = None,
+) -> callable:
+    """Enables --file-types option for cli."""
+    if input_type is None:
+        input_type = click.Choice(["zarr", "AnnotationStore"], case_sensitive=False)
+    return click.option(
+        "--output-type",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+        type=input_type,
+    )
+
+
 def cli_mode(
     usage_help: str = "Selected mode to show or save the required information.",
     default: str = "save",

@@ -11,6 +11,7 @@ from tiatoolbox.cli.common import (
     cli_model,
     cli_num_loader_workers,
     cli_output_path,
+    cli_output_type,
     cli_patch_mode,
     cli_resolution,
     cli_units,
@@ -39,6 +40,7 @@ from tiatoolbox.cli.common import (
 @cli_units(default="mpp")
 @cli_masks(default=None)
 @cli_num_loader_workers(default=0)
+@cli_output_type(default="AnnotationStore")
 @cli_verbose(default=True)
 def patch_predictor(
     model: str,
@@ -52,6 +54,7 @@ def patch_predictor(
     units: str,
     num_loader_workers: int,
     device: str,
+    output_type: str,
     *,
     patch_mode: bool,
     verbose: bool,
@@ -83,4 +86,5 @@ def patch_predictor(
         device=device,
         save_dir=output_path,
         save_output=True,
+        output_type=output_type,
     )
