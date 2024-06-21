@@ -725,7 +725,16 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     """Populate the slide list with the available slides."""
     file_list = []
     len_slidepath = len(slide_folder.parts)
-    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png", "*.tif"]:
+    for ext in [
+        "*.svs",
+        "*.ndpi",
+        "*.tiff",
+        "*.mrxs",
+        "*.jpg",
+        "*.png",
+        "*.tif",
+        "*.qptiff",
+    ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
     if search_txt is None:
@@ -2086,7 +2095,15 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in [
+            "*.svs",
+            "*.ndpi",
+            "*.tiff",
+            "*.mrxs",
+            "*.png",
+            "*.jpg",
+            "*.qptiff",
+        ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),
