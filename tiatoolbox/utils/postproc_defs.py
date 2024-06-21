@@ -25,7 +25,8 @@ class MultichannelToRGB:
         if self.default_colors is not None:
             self.default_colors = np.array(self.default_colors, dtype=np.float32)
 
-    def generate_colors(self: MultichannelToRGB, n_channels: int) -> np.ndarray:
+    @staticmethod
+    def generate_colors(n_channels: int) -> np.ndarray:
         """Generate a set of visually distinct colors.
 
         Args:
