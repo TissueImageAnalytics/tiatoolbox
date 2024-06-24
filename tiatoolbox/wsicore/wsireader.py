@@ -400,7 +400,9 @@ class WSIReader:
                 )
             return NGFFWSIReader(input_path, mpp=mpp, power=power)
 
-        if suffixes[-2:] in ([".ome", ".tiff"],):
+        if suffixes[-2:] in ([".ome", ".tiff"],) or suffixes[-2:] in (
+            [".ome", ".tif"],
+        ):
             return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
 
         if last_suffix == ".qptiff":

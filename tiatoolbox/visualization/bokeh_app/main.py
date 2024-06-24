@@ -2099,6 +2099,7 @@ class DocConfig:
             "*.svs",
             "*.ndpi",
             "*.tiff",
+            "*.tif",
             "*.mrxs",
             "*.png",
             "*.jpg",
