@@ -58,7 +58,7 @@ RNG = np.random.default_rng(0)  # Numpy Random Generator
 # ----------------------------------------------------------------------
 
 # Reset filters in logger.
-for filter_ in logger.filters:
+for filter_ in logger.filters[:]:
     logger.removeFilter(filter_)
 
 # ----------------------------------------------------------------------
