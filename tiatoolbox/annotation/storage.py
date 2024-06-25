@@ -814,7 +814,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the store
         for key, geometry, properties in zip(keys, geometries, properties_iter):
-            properties_ = copy.deepcopy(properties)
+            properties_ = cast(dict[str, Any], copy.deepcopy(properties))
             self.patch(key, geometry, properties_)
 
     def remove(self: AnnotationStore, key: str) -> None:
