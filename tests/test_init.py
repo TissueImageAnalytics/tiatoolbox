@@ -109,6 +109,14 @@ def test_logger_output() -> None:
 
 def test_duplicate_filter(caplog: pytest.LogCaptureFixture) -> None:
     """Test DuplicateFilter for warnings."""
+    # Test logger reset after applying duplicate filter.
+    duplicate_filter = DuplicateFilter()
+    logger.addFilter(duplicate_filter)
+
+    # Reset filters in logger.
+    for filter_ in logger.filters:
+        logger.removeFilter(filter_)
+
     for _ in range(2):
         logger.warning("Test duplicate filter warnings.")
     assert "Test duplicate filter warnings." in caplog.text
