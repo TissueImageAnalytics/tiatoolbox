@@ -23,7 +23,7 @@ class MultichannelToRGB:
         """
         self.colors = colors
         if self.colors is not None:
-            self.colors = np.array(self.default_colors, dtype=np.float32)
+            self.colors = np.array(self.colors, dtype=np.float32)
 
     @staticmethod
     def generate_colors(n_channels: int) -> np.ndarray:
