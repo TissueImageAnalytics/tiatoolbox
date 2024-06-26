@@ -12,18 +12,18 @@ class MultichannelToRGB:
 
     def __init__(
         self: MultichannelToRGB,
-        default_colors: list[tuple[float, float, float]] | None = None,
+        colors: list[tuple[float, float, float]] | None = None,
     ) -> None:
         """Initialize the MultichannelToRGB converter.
 
         Args:
-            default_colors: List of default RGB colors for each channel. If not
-            provided, colors will be auto-generated using the HSV color space.
+            colors: List of RGB colors for each channel. If not
+            provided, a set of distinct colors will be auto-generated.
 
         """
-        self.default_colors = default_colors
-        if self.default_colors is not None:
-            self.default_colors = np.array(self.default_colors, dtype=np.float32)
+        self.colors = colors
+        if self.colors is not None:
+            self.colors = np.array(self.default_colors, dtype=np.float32)
 
     @staticmethod
     def generate_colors(n_channels: int) -> np.ndarray:
@@ -57,13 +57,11 @@ class MultichannelToRGB:
             # assume already rgb(a) so just return image
             return image
 
-        if self.default_colors is None:
-            colors = self.generate_colors(n)
-        else:
-            colors = self.default_colors
+        if self.colors is None:
+            self.colors = self.generate_colors(n)
 
         # Convert to RGB image
-        rgb_image = np.einsum("hwn,nc->hwc", image, colors, optimize=True)
+        rgb_image = np.einsum("hwn,nc->hwc", image, self.colors, optimize=True)
 
         # Clip  to ensure in valid range and return
         return np.clip(rgb_image, 0, 255).astype(np.uint8)

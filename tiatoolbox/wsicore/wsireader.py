@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import logging
 import math
@@ -507,7 +506,7 @@ class WSIReader:
 
         """
         if self._m_info is not None:
-            return copy.deepcopy(self._m_info)
+            return self._m_info
         self._m_info = self._info()
         if self._manual_mpp:
             self._m_info.mpp = np.array(self._manual_mpp)
@@ -3588,9 +3587,16 @@ class TIFFWSIReader(WSIReader):
             group[0] = self._zarr_group
             self._zarr_group = group
         self.level_arrays = {
-            int(key): ArrayView(array, axes=self.info.axes)
+            int(key): ArrayView(array, axes=self._axes)
             for key, array in self._zarr_group.items()
         }
+        # ensure level arrays are sorted by descending area
+        self.level_arrays = dict(
+            sorted(
+                self.level_arrays.items(),
+                key=lambda x: -np.prod(self._canonical_shape(x[1].array.shape[:2])),
+            )
+        )
 
     def _canonical_shape(self: TIFFWSIReader, shape: IntPair) -> tuple:
         """Make a level shape tuple in YXS order.
@@ -3846,10 +3852,10 @@ class TIFFWSIReader(WSIReader):
                 Containing metadata.
 
         """
-        level_count = len(self._zarr_group)
+        level_count = len(self.level_arrays)
         level_dimensions = [
-            np.array(self._canonical_shape(p.shape)[:2][::-1])
-            for p in self._zarr_group.values()
+            np.array(self._canonical_shape(p.array.shape)[:2][::-1])
+            for p in self.level_arrays.values()
         ]
         slide_dimensions = level_dimensions[0]
         level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
@@ -4115,7 +4121,6 @@ class TIFFWSIReader(WSIReader):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
         )
-
         im_region = utils.transforms.imresize(
             img=im_region,
             scale_factor=post_read_scale,
