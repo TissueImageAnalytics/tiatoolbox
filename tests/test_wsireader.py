@@ -982,7 +982,6 @@ def test_read_bounds_level_consistency_tiffreader(sample_ome_tiff: Path) -> None
     read_bounds_level_consistency(wsi, bounds)
 
 
-
 def test_wsireader_save_tiles(sample_svs: Path, tmp_path: Path) -> None:
     """Test for save_tiles in wsireader as a python function."""
     tmp_path = Path(tmp_path)
