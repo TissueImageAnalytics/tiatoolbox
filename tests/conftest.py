@@ -129,6 +129,7 @@ def sample_ome_tiff_level_0(remote_sample: Callable) -> Path:
     """
     return remote_sample("ome-brightfield-small-level-0")
 
+
 @pytest.fixture(scope="session")
 def sample_ventana_tif(remote_sample: Callable) -> Path:
     """Sample pytest fixture for non-tiled tif Ventana images.
