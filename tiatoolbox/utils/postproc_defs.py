@@ -12,21 +12,18 @@ class MultichannelToRGB:
 
     def __init__(
         self: MultichannelToRGB,
-        colors: list[tuple[float, float, float]] | None = None,
+        color_dict: list[tuple[float, float, float]] | None = None,
     ) -> None:
         """Initialize the MultichannelToRGB converter.
 
         Args:
-            colors: List of RGB colors for each channel. If not
+            color_dict: Dict of channel names with RGB colors for each channel. If not
             provided, a set of distinct colors will be auto-generated.
 
         """
-        self.colors = colors
-        if self.colors is not None:
-            self.colors = np.array(self.colors, dtype=np.float32)
+        self.color_dict = color_dict
 
-    @staticmethod
-    def generate_colors(n_channels: int) -> np.ndarray:
+    def generate_colors(self: MultichannelToRGB, n_channels: int) -> np.ndarray:
         """Generate a set of visually distinct colors.
 
         Args:
@@ -36,10 +33,10 @@ class MultichannelToRGB:
             np.ndarray: Array of RGB colors
 
         """
-        return np.array(
-            [colorsys.hsv_to_rgb(i / n_channels, 1, 1) for i in range(n_channels)],
-            dtype=np.float32,
-        )
+        self.color_dict = {
+            f"channel_{i}": colorsys.hsv_to_rgb(i / n_channels, 1, 1)
+            for i in range(n_channels)
+        }
 
     def __call__(self: MultichannelToRGB, image: np.ndarray) -> np.ndarray:
         """Convert a multi-channel image to an RGB image.
@@ -65,3 +62,10 @@ class MultichannelToRGB:
 
         # Clip  to ensure in valid range and return
         return np.clip(rgb_image, 0, 255).astype(np.uint8)
+
+    def __setattr__(self: MultichannelToRGB, name: str, value: np.Any) -> None:
+        """Ensure that colors is updated if color_dict is updated."""
+        if name == "color_dict" and value is not None:
+            self.colors = np.array(list(value.values()), dtype=np.float32)
+
+        super().__setattr__(name, value)

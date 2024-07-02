@@ -12,6 +12,7 @@ from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import matplotlib.colors as mcolors
 import numpy as np
 import openslide
 import pandas as pd
@@ -3597,6 +3598,36 @@ class TIFFWSIReader(WSIReader):
                 key=lambda x: -np.prod(self._canonical_shape(x[1].array.shape[:2])),
             )
         )
+        # maybe get colors if they exist in metadata
+        self._get_colors_from_meta()
+
+    def _get_colors_from_meta(self: TIFFWSIReader) -> None:
+        """Get colors from metadata if they exist."""
+        if isinstance(self.post_proc, postproc_defs.MultichannelToRGB):
+            xml = self.info.raw["Description"]
+            try:
+                root = ElementTree.fromstring(xml)
+            except ElementTree.ParseError:
+                return
+            color_info = root.find(".//ScanColorTable")
+            if color_info is not None:
+                color_dict = {
+                    k.text.split("_")[0]: v.text
+                    for k, v in zip(
+                        color_info.iterfind("ScanColorTable-k"),
+                        color_info.iterfind("ScanColorTable-v"),
+                    )
+                }
+                # values will be either a string of 3 ints e.g 155, 128, 0, or
+                # a color name e.g Lime. Convert them all to RGB tuples.
+                for key, value in color_dict.items():
+                    if value is None:
+                        continue
+                    if "," in value:
+                        color_dict[key] = tuple(int(x) / 255 for x in value.split(","))
+                    else:
+                        color_dict[key] = mcolors.to_rgb(value)
+                self.post_proc.color_dict = color_dict
 
     def _canonical_shape(self: TIFFWSIReader, shape: IntPair) -> tuple:
         """Make a level shape tuple in YXS order.
