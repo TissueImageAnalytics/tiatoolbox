@@ -21,6 +21,7 @@ class MultichannelToRGB:
             provided, a set of distinct colors will be auto-generated.
 
         """
+        self.colors = None
         self.color_dict = color_dict
 
     def generate_colors(self: MultichannelToRGB, n_channels: int) -> np.ndarray:
@@ -55,7 +56,7 @@ class MultichannelToRGB:
             return image
 
         if self.colors is None:
-            self.colors = self.generate_colors(n)
+            self.generate_colors(n)
 
         # Convert to RGB image
         rgb_image = np.einsum("hwn,nc->hwc", image, self.colors, optimize=True)
