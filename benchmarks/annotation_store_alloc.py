@@ -307,7 +307,7 @@ def main(
             return
         regex = re.compile(r"Total memory allocated:\s*([\d.]+)MB")
         pipe = subprocess.Popen(
-            [  # noqa: S603
+            [
                 sys.executable,
                 "-m",
                 "memray",

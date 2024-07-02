@@ -73,7 +73,7 @@ def helper_logger_test(level: str) -> None:
     )
 
     proc = subprocess.Popen(
-        [  # noqa: S603, S607
+        [  # noqa: S607
             "python",
             "-c",
             run_statement,
