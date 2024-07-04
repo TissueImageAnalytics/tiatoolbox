@@ -72,7 +72,7 @@ def helper_logger_test(level: str) -> None:
         f'logger.{level.lower()}("Test if {level.lower()} is written to std{output}.")'
     )
 
-    proc = subprocess.Popen(
+    proc = subprocess.Popen(  # noqa: S603
         [  # noqa: S607
             "python",
             "-c",
