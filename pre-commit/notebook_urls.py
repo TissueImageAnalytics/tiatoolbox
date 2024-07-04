@@ -14,7 +14,7 @@ from pathlib import Path
 def git_branch_name() -> str:
     """Get the current branch name."""
     return (
-        subprocess.check_output(
+        subprocess.check_output(  # noqa: S603
             ["/usr/bin/git", "rev-parse", "--abbrev-ref", "HEAD"],
         )
         .decode()
@@ -27,7 +27,7 @@ def git_branch_modified_paths(from_ref: str, to_ref: str) -> set[Path]:
     from_to = f"{from_ref}...{to_ref}"
     return {
         Path(p)
-        for p in subprocess.check_output(
+        for p in subprocess.check_output(  # noqa: S603
             [
                 "/usr/bin/git",
                 "diff",
@@ -45,7 +45,7 @@ def git_previous_commit_modified_paths() -> set[Path]:
     """Get a set of file paths modified in the previous commit."""
     return {
         Path(p)
-        for p in subprocess.check_output(
+        for p in subprocess.check_output(  # noqa: S603
             ["/usr/bin/git", "diff", "--name-only", "HEAD~"],
         )
         .decode()
