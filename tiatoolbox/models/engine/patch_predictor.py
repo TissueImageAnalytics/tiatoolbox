@@ -253,17 +253,17 @@ class PatchPredictor(EngineABC):
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
-        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(model="resnet18-kather100k")
         >>> output = predictor.run(data, mode='patch')
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
-        >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(model="resnet18-kather100k")
         >>> output = predictor.run(tile_file, mode='tile')
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
-        >>> predictor = PatchPredictor(pretraind_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(model="resnet18-kather100k")
         >>> output = predictor.run(wsi_file, mode='wsi')
 
     References:
@@ -379,7 +379,7 @@ class PatchPredictor(EngineABC):
     ) -> dict | Path:
         """Post process WSI output.
 
-        Takes the raw output from patch predictions and post-process to improve the
+        Takes the raw output from patch predictions and post-processes it to improve the
         results e.g., using information from neighbouring patches.
 
         """

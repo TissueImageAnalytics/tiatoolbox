@@ -537,7 +537,7 @@ class EngineABC(ABC):
                 If `cache_mode` is True then path to save zarr file must be provided.
             return_coordinates (bool):
                 Whether to save coordinates in the output. This is required when
-                this function is called by `infer_wsi` and the `patch_mode` is False.
+                this function is called by `infer_wsi` and `patch_mode` is False.
 
         Returns:
             dict or Path:
