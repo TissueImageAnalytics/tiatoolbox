@@ -250,11 +250,11 @@ def check_pixman_using_anaconda(versions: list) -> tuple[list, str]:
     """Using anaconda to check for pixman."""
     using = "conda"
     try:
-        conda_list = subprocess.Popen(
+        conda_list = subprocess.Popen(  # noqa: S603
             ("conda", "list"),
             stdout=subprocess.PIPE,
         )
-        conda_pixman = subprocess.check_output(
+        conda_pixman = subprocess.check_output(  # noqa: S603
             ("grep", "pixman"),
             stdin=conda_list.stdout,
         )
@@ -276,7 +276,7 @@ def check_pixman_using_dpkg(versions: list) -> tuple[list, str]:
     """Using dpkg to check for pixman."""
     using = "dpkg"
     try:
-        dkpg_output = subprocess.check_output(
+        dkpg_output = subprocess.check_output(  # noqa: S603
             ["/usr/bin/dpkg", "-s", "libpixman-1-0"],
         )
     except subprocess.SubprocessError:
@@ -296,11 +296,11 @@ def check_pixman_using_brew(versions: list) -> tuple[list, str]:
     """Using homebrew to check for pixman."""
     using = "brew"
     try:
-        brew_list = subprocess.Popen(
+        brew_list = subprocess.Popen(  # noqa: S603
             ("brew", "list", "--versions"),
             stdout=subprocess.PIPE,
         )
-        brew_pixman = subprocess.check_output(
+        brew_pixman = subprocess.check_output(  # noqa: S603
             ("grep", "pixman"),
             stdin=brew_list.stdout,
         )
@@ -326,11 +326,11 @@ def check_pixman_using_macports(versions: list) -> tuple[list, str]:
 
     """
     using = "port"
-    port_list = subprocess.Popen(
+    port_list = subprocess.Popen(  # noqa: S603
         ("port", "installed"),
         stdout=subprocess.PIPE,
     )
-    port_pixman = subprocess.check_output(
+    port_pixman = subprocess.check_output(  # noqa: S603
         ("grep", "pixman"),
         stdin=port_list.stdout,
     )
