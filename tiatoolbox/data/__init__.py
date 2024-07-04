@@ -81,8 +81,8 @@ def _local_sample_path(path: str | Path) -> Path:
 
     """
     file_path = importlib_resources.files("tiatoolbox") / str(Path("data") / path)
-    with importlib_resources.as_file(file_path) as path:
-        return path
+    with importlib_resources.as_file(file_path) as file_path_:
+        return file_path_
 
 
 def stain_norm_target() -> np.ndarray:
