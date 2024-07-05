@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import cv2
 import numpy as np
 from PIL import Image
 
 from tiatoolbox.utils.misc import parse_cv2_interpolaton, select_cv2_interpolation
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.typing import NumPair
 
 
 def background_composite(
@@ -93,7 +98,7 @@ def _get_output_size_array(
 
 def imresize(
     img: np.ndarray,
-    scale_factor: float | tuple[float, float] | None = None,
+    scale_factor: float | tuple[float, float] | NumPair | None = None,
     output_size: int | tuple[int, int] | None = None,
     interpolation: str = "optimise",
 ) -> np.ndarray:
