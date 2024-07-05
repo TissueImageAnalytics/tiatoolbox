@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import logging
 import math
@@ -380,7 +379,9 @@ class WSIReader:
                 )
             return NGFFWSIReader(input_path, mpp=mpp, power=power)
 
-        if suffixes[-2:] in ([".ome", ".tiff"],):
+        if suffixes[-2:] in ([".ome", ".tiff"],) or suffixes[-2:] in (
+            [".ome", ".tif"],
+        ):
             return TIFFWSIReader(input_path, mpp=mpp, power=power)
 
         if last_suffix in (".tif", ".tiff"):
@@ -477,7 +478,7 @@ class WSIReader:
 
         """
         if self._m_info is not None:
-            return copy.deepcopy(self._m_info)
+            return self._m_info
         self._m_info = self._info()
         if self._manual_mpp:
             self._m_info.mpp = np.array(self._manual_mpp)
@@ -3472,7 +3473,14 @@ class TIFFWSIReader(WSIReader):
                 len(self.tiff.pages) == 1,
             ],
         )
-        if not any([self.tiff.is_svs, self.tiff.is_ome, is_single_page_tiled]):
+        if not any(
+            [
+                self.tiff.is_svs,
+                self.tiff.is_ome,
+                is_single_page_tiled,
+                self.tiff.is_bigtiff,
+            ]
+        ):
             msg = "Unsupported TIFF WSI format."
             raise ValueError(msg)
 
@@ -3503,9 +3511,16 @@ class TIFFWSIReader(WSIReader):
             group[0] = self._zarr_group
             self._zarr_group = group
         self.level_arrays = {
-            int(key): ArrayView(array, axes=self.info.axes)
+            int(key): ArrayView(array, axes=self._axes)
             for key, array in self._zarr_group.items()
         }
+        # ensure level arrays are sorted by descending area
+        self.level_arrays = dict(
+            sorted(
+                self.level_arrays.items(),
+                key=lambda x: -np.prod(self._canonical_shape(x[1].array.shape[:2])),
+            )
+        )
 
     def _canonical_shape(self: TIFFWSIReader, shape: IntPair) -> tuple:
         """Make a level shape tuple in YXS order.
@@ -3761,10 +3776,10 @@ class TIFFWSIReader(WSIReader):
                 Containing metadata.
 
         """
-        level_count = len(self._zarr_group)
+        level_count = len(self.level_arrays)
         level_dimensions = [
-            np.array(self._canonical_shape(p.shape)[:2][::-1])
-            for p in self._zarr_group.values()
+            np.array(self._canonical_shape(p.array.shape)[:2][::-1])
+            for p in self.level_arrays.values()
         ]
         slide_dimensions = level_dimensions[0]
         level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
@@ -4007,10 +4022,10 @@ class TIFFWSIReader(WSIReader):
         # Find parameters for optimal read
         (
             read_level,
-            _,
-            _,
+            level_read_location,
+            level_read_size,
             post_read_scale,
-            baseline_read_size,
+            _,
         ) = self.find_read_rect_params(
             location=location,
             size=size,
@@ -4019,8 +4034,8 @@ class TIFFWSIReader(WSIReader):
         )
 
         bounds = utils.transforms.locsize2bounds(
-            location=location,
-            size=baseline_read_size,
+            location=level_read_location,
+            size=level_read_size,
         )
         im_region = utils.image.safe_padded_read(
             image=self.level_arrays[read_level],
@@ -4028,7 +4043,6 @@ class TIFFWSIReader(WSIReader):
             pad_mode=pad_mode,
             pad_constant_values=pad_constant_values,
         )
-
         im_region = utils.transforms.imresize(
             img=im_region,
             scale_factor=post_read_scale,
@@ -4163,7 +4177,7 @@ class TIFFWSIReader(WSIReader):
             # but base image is of different scale)
             (
                 read_level,
-                _,
+                bounds_at_read_level,
                 _,
                 post_read_scale,
             ) = self._find_read_bounds_params(
@@ -4175,7 +4189,7 @@ class TIFFWSIReader(WSIReader):
             # Find parameters for optimal read
             (
                 read_level,
-                _,
+                bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
             ) = self._find_read_bounds_params(
@@ -4186,7 +4200,7 @@ class TIFFWSIReader(WSIReader):
 
         im_region = utils.image.sub_pixel_read(
             image=self.level_arrays[read_level],
-            bounds=bounds_at_baseline,
+            bounds=bounds_at_read_level,
             output_size=size_at_requested,
             interpolation=interpolation,
             pad_mode=pad_mode,
