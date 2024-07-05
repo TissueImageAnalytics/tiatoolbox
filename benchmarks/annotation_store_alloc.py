@@ -306,8 +306,8 @@ def main(
             # Skip memray if not installed
             return
         regex = re.compile(r"Total memory allocated:\s*([\d.]+)MB")
-        pipe = subprocess.Popen(
-            [  # noqa: S603
+        pipe = subprocess.Popen(  # noqa: S603
+            [
                 sys.executable,
                 "-m",
                 "memray",
