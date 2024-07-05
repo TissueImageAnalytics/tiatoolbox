@@ -28,7 +28,6 @@ def test_all() -> None:
     )
     assert np.sum(_output - output) == 0
 
-    #
     with pytest.raises(ValueError, match=r".*Unknown.*format.*"):
         centre_crop(_output[None, :, :, None], [2, 2], "NHWCT")
 

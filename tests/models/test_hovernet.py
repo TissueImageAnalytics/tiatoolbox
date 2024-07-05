@@ -124,7 +124,6 @@ def test_unit_blocks() -> None:
     output = block(sample)
     assert np.sum(output.shape - np.array([1, 32, 15, 15])) == 0, f"{output.shape}"
 
-    #
     block = DenseBlock(16, [1, 3], [16, 16], 3)
     output = block(sample)
     assert output.shape[1] == 16 * 4, f"{output.shape}"
