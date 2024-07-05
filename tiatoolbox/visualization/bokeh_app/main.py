@@ -14,6 +14,10 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -28,10 +32,10 @@ from bokeh.models import (
     Column,
     ColumnDataSource,
     CustomJS,
+    CustomJSTickFormatter,
     DataTable,
     Div,
     Dropdown,
-    FuncTickFormatter,
     Glyph,
     HoverTool,
     HTMLTemplateFormatter,
@@ -58,9 +62,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -630,7 +631,7 @@ class ViewerState:
         self.thickness = -1
         self.model_mpp = 0
         self.init = True
-        self.micron_formatter = FuncTickFormatter(
+        self.micron_formatter = CustomJSTickFormatter(
             args={"mpp": 0.1},
             code="""
                 return Math.round(tick*mpp)
