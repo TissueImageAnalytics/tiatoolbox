@@ -4126,7 +4126,7 @@ class TIFFWSIReader(WSIReader):
             )
             if self.post_proc is not None:
                 im_region = self.post_proc(im_region)
-            return utils.transforms.background_composite(im_region, alpha=False)
+            return im_region
 
         # Find parameters for optimal read
         (
@@ -4161,7 +4161,7 @@ class TIFFWSIReader(WSIReader):
 
         if self.post_proc is not None:
             im_region = self.post_proc(im_region)
-        return utils.transforms.background_composite(image=im_region, alpha=False)
+        return im_region
 
     def read_bounds(
         self: TIFFWSIReader,
