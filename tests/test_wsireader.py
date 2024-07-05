@@ -211,7 +211,7 @@ def read_bounds_level_consistency(wsi: WSIReader, bounds: IntBounds) -> None:
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
-        for b in as_float[i + 1:]:
+        for b in as_float[i + 1 :]:
             _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
             assert phase_diff < 0.125
             assert error < 0.125
@@ -2666,7 +2666,7 @@ def test_read_rect_level_consistency(wsi: WSIReader) -> None:
 
     # Pair-wise check resolutions for mean squared error
     for i, a in enumerate(as_float):
-        for b in as_float[i + 1:]:
+        for b in as_float[i + 1 :]:
             _, error, phase_diff = phase_cross_correlation(a, b, normalization=None)
             assert phase_diff < 0.125
             assert error < 0.125
@@ -2807,9 +2807,8 @@ def test_read_multi_channel(source_image: Path) -> None:
 
 
 def test_visualise_multi_channel(sample_qptiff: Path) -> None:
-    """Test visualising a multi-channel qptiff image"""
-
-    wsi = wsireader.TIFFWSIReader(sample_qptiff, post_proc='auto')
+    """Test visualising a multi-channel qptiff image."""
+    wsi = wsireader.TIFFWSIReader(sample_qptiff, post_proc="auto")
     wsi2 = wsireader.TIFFWSIReader(sample_qptiff, post_proc=None)
 
     region = wsi.read_rect(location=(0, 0), size=(50, 100))
