@@ -243,14 +243,14 @@ def _test_predictor_output(
             model,
             probabilities_max,
             probabilities_check[idx],
-            predictions[idx],
+            probabilities_,
             predictions_check[idx],
         )
-        assert np.argmax(predictions[idx]) == predictions_check[idx], (
+        assert np.argmax(probabilities_) == predictions_check[idx], (
             model,
             probabilities_max,
             probabilities_check[idx],
-            predictions[idx],
+            probabilities_,
             predictions_check[idx],
         )
 
