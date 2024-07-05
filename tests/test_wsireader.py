@@ -962,6 +962,7 @@ def test_read_bounds_level_consistency_openslide(sample_ndpi: Path) -> None:
     """Test read_bounds produces the same visual field across resolution levels.
 
     with OpenSlideWSIReader.
+
     """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
@@ -973,6 +974,7 @@ def test_read_bounds_level_consistency_jp2(sample_jp2: Path) -> None:
     """Test read_bounds produces the same visual field across resolution levels.
 
     Using JP2WSIReader.
+
     """
     bounds = JP2_TEST_TISSUE_BOUNDS
     wsi = wsireader.JP2WSIReader(sample_jp2)
