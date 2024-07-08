@@ -10,7 +10,7 @@ flask-cors>=4.0.0
 glymur>=0.12.1, ~=0.12.6 # 0.12.6 is incompatible due to a private attribute
 imagecodecs>=2022.9.26
 joblib>=1.1.1
-jupyterlab>=3.5.2
+jupyterlab>=3.1.1
 matplotlib>=3.6.2
 numba>=0.57.0
 numpy>=1.23.5
