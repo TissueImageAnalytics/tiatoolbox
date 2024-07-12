@@ -1213,16 +1213,15 @@ def patch_predictions_as_annotations(
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    for i, pred in enumerate(preds):
+    for i, probs in enumerate(class_probs):
         if "probabilities" in keys:
-            props = {
-                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
-            }
+            props = {f"prob_{class_dict[j]}": probs[j] for j in classes_predicted}
         else:
             props = {}
         if "labels" in keys:
             props["label"] = class_dict[labels[i]]
-        props["type"] = class_dict[pred]
+        if len(preds) > 0:
+            props["type"] = preds[i]
         annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
 
     return annotations

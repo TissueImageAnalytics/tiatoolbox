@@ -377,10 +377,10 @@ class EngineABC(ABC):
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.patch_input_shape: IntPair | None = None
-        self.resolution: Resolution = 1.0
+        self.resolution: Resolution | None = None
         self.return_labels: bool = False
         self.stride_shape: IntPair | None = None
-        self.units: Units = "baseline"
+        self.units: Units | None = None
         self.verbose = verbose
 
     @staticmethod
