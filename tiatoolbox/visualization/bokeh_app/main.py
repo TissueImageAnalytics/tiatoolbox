@@ -28,10 +28,10 @@ from bokeh.models import (
     Column,
     ColumnDataSource,
     CustomJS,
+    CustomJSTickFormatter,
     DataTable,
     Div,
     Dropdown,
-    FuncTickFormatter,
     Glyph,
     HoverTool,
     HTMLTemplateFormatter,
@@ -630,7 +630,7 @@ class ViewerState:
         self.thickness = -1
         self.model_mpp = 0
         self.init = True
-        self.micron_formatter = FuncTickFormatter(
+        self.micron_formatter = CustomJSTickFormatter(
             args={"mpp": 0.1},
             code="""
                 return Math.round(tick*mpp)
@@ -2086,7 +2086,7 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),
