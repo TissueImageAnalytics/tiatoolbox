@@ -335,6 +335,39 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
     assert _validate_probabilities(predictions=output_["probabilities"])
 
 
+def test_wsi_predictor_zarr_baseline(sample_wsi_dict: dict, tmp_path: Path) -> None:
+    """Test normal run of patch predictor for WSIs."""
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+
+    predictor = PatchPredictor(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
+    )
+    # don't run test on GPU
+    output = predictor.run(
+        images=[mini_wsi_svs],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "wsi_out_check",
+        units="baseline",
+        resolution=1.0,
+    )
+
+    assert output[mini_wsi_svs].exists()
+
+    output_ = zarr.open(output[mini_wsi_svs])
+
+    assert output_["probabilities"].shape == (244, 9)  # number of patches x classes
+    assert output_["probabilities"].ndim == 2
+    # number of patches x [start_x, start_y, end_x, end_y]
+    assert output_["coordinates"].shape == (244, 4)
+    assert output_["coordinates"].ndim == 2
+    assert _validate_probabilities(predictions=output_["probabilities"])
+
+
 def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
     """Helper function to extract probabilities from Annotation Store."""
     probs_dict = {}
@@ -345,7 +378,7 @@ def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
     for item in annotations_properties:
         for json_str in item:
             probs_dict = json.loads(json_str)
-            probs_dict.pop("type")
+            probs_dict.pop("prob_0")
 
     return probs_dict
 
