@@ -1646,6 +1646,7 @@ def test_patch_pred_store() -> None:
     """Test patch_pred_store."""
     # Define a mock patch_output
     patch_output = {
+        "probabilities": [(0.99, 0.01), (0.01, 0.99), (0.99, 0.01)],
         "predictions": [1, 0, 1],
         "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
         "other": "other",
@@ -1680,7 +1681,7 @@ def test_patch_pred_store_cdict() -> None:
     class_dict = {0: "class0", 1: "class1"}
     store = misc.dict_to_store(patch_output, (1.0, 1.0), class_dict=class_dict)
 
-    # Check that its an SQLiteStore containing the expected annotations
+    # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():

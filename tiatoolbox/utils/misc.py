@@ -1221,7 +1221,7 @@ def patch_predictions_as_annotations(
         if "labels" in keys:
             props["label"] = class_dict[labels[i]]
         if len(preds) > 0:
-            props["type"] = preds[i]
+            props["type"] = class_dict[preds[i]]
         annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
 
     return annotations
