@@ -327,10 +327,10 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
 
     output_ = zarr.open(output[mini_wsi_svs])
 
-    assert output_["probabilities"].shape == (244, 9)  # number of patches x classes
+    assert output_["probabilities"].shape == (70, 9)  # number of patches x classes
     assert output_["probabilities"].ndim == 2
     # number of patches x [start_x, start_y, end_x, end_y]
-    assert output_["coordinates"].shape == (244, 4)
+    assert output_["coordinates"].shape == (70, 4)
     assert output_["coordinates"].ndim == 2
     assert _validate_probabilities(predictions=output_["probabilities"])
 
