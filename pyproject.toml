@@ -16,6 +16,9 @@
   ignore_errors = true
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
+[tool.coverage.html]
+show_contexts = true
+
 [build-system]
   requires = ["setuptools"]
   build-backend = "setuptools.build_meta"
