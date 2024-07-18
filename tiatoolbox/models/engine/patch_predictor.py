@@ -111,13 +111,13 @@ class PatchPredictor(EngineABC):
 
     Args:
         model (str | ModelABC):
-            A PyTorch model. Default is `None`.
+            A PyTorch model or name of pretrained model.
             The user can request pretrained models from the toolbox model zoo using
             the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
-            of weights using the `weights` parameter.
+            of weights using the `weights` parameter. Default is `None`.
         batch_size (int):
             Number of image patches fed into the model each time in a
             forward/backward pass. Default value is 8.
