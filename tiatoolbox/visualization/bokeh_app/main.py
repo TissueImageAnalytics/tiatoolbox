@@ -14,6 +14,10 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -58,9 +62,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -511,7 +512,6 @@ def add_layer(lname: str) -> None:
             end=1,
             value=0.75,
             step=0.01,
-            title=lname,
             height=40,
             width=100,
             max_width=90,
@@ -1053,7 +1053,9 @@ def layer_slider_cb(
             UI["vstate"].layer_dict[obj.name.split("_")[0]]
         ].glyph.line_alpha = new
     else:
-        UI["p"].renderers[UI["vstate"].layer_dict[obj.name.split("_")[0]]].alpha = new
+        UI["p"].renderers[
+            UI["vstate"].layer_dict["_".join(obj.name.split("_")[0:-1])]
+        ].alpha = new
 
 
 def color_input_cb(

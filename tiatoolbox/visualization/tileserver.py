@@ -511,7 +511,7 @@ class TileServer(Flask):
         overlay_path = self.decode_safe_name(overlay_path)
 
         if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
-            layer = f"layer{len(self.pyramids[session_id])}"
+            layer = overlay_path.stem
             if overlay_path.suffix == ".tiff":
                 self.layers[session_id][layer] = OpenSlideWSIReader(
                     overlay_path,
