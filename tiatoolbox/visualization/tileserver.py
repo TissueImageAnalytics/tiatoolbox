@@ -30,6 +30,7 @@ from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, W
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.colors import Colormap
 
+    from tiatoolbox.annotation.storage import Annotation
     from tiatoolbox.wsicore import WSIMeta
 
 
@@ -529,7 +530,19 @@ class TileServer(Flask):
             )
             return json.dumps(layer)
         if overlay_path.suffix == ".geojson":
-            sq = SQLiteStore.from_geojson(overlay_path)
+
+            def unpack_qupath(ann: Annotation) -> Annotation:
+                # Helper function to unpack QuPath measurements if present.
+                props = ann.properties
+                if "measurements" in props:
+                    measurements = props.pop("measurements")
+                    for k, v in measurements.items():
+                        props[k] = v
+                if "objectType" in props:
+                    props["type"] = props.pop("objectType")
+                return ann
+
+            sq = SQLiteStore.from_geojson(overlay_path, transform=unpack_qupath)
         elif overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
         if overlay_path.suffix == ".db":
