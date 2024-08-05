@@ -510,7 +510,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
     """
 
-    def __init__(
+    def __init__(  # skipcq: PYL-W0231
         self: AnnotationTileGenerator,
         info: WSIMeta,
         store: AnnotationStore,
