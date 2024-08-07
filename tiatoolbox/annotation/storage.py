@@ -1841,10 +1841,12 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             # It is a file-like object, write to it
             if hasattr(fp, "write"):
                 file_handle = cast(IO, fp)
-                return file_fn(file_handle)
+                file_fn(file_handle)
+                return None
             # Turn a path into a file handle, then write to it
             with Path(fp).open("w", encoding="utf-8") as file_handle:
-                return file_fn(file_handle)
+                file_fn(file_handle)
+                return None
         # Return as str or bytes if no handle/path is given
         return none_fn()
 
