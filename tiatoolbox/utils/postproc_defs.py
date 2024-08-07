@@ -84,6 +84,8 @@ class MultichannelToRGB:
 
         """
         n = image.shape[2]
+        print(n)
+        print(self.color_dict)
 
         if n < 5:  # noqa: PLR2004
             # assume already rgb(a) so just return image
@@ -96,7 +98,7 @@ class MultichannelToRGB:
             self.validate(n)
 
         # Convert to RGB image
-        rgb_image = np.einsum("hwn,nc->hwc", image, self.colors, optimize=True)
+        rgb_image = np.einsum("hwn,nc->hwc", image, self.colors[:, :], optimize=True)
 
         # Clip  to ensure in valid range and return
         return np.clip(rgb_image, 0, 255).astype(np.uint8)
