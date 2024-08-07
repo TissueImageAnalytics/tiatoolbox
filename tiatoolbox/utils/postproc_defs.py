@@ -84,8 +84,6 @@ class MultichannelToRGB:
 
         """
         n = image.shape[2]
-        print(n)
-        print(self.color_dict)
 
         if n < 5:  # noqa: PLR2004
             # assume already rgb(a) so just return image
