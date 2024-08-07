@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from numbers import Number
-from typing import TYPE_CHECKING, Callable, overload
+from typing import TYPE_CHECKING, Callable, cast
 
 import numpy as np
 import torch
@@ -154,20 +154,6 @@ def edge_index_to_triangles(edge_index: np.ndarray) -> np.ndarray:
             while overlap:
                 triangles.add(frozenset({node, neighbour, overlap.pop()}))
     return np.array([list(tri) for tri in triangles], dtype=np.int32, order="C")
-
-
-@overload
-def affinity_to_edge_index(
-    affinity_matrix: torch.Tensor,
-    threshold: float = 0.5,
-) -> torch.Tensor: ...  # pragma: no cover
-
-
-@overload
-def affinity_to_edge_index(
-    affinity_matrix: np.ndarray,
-    threshold: float = 0.5,
-) -> np.ndarray: ...  # pragma: no cover
 
 
 def affinity_to_edge_index(
@@ -422,7 +408,7 @@ class SlideGraphConstructor:
             dthresh=connectivity_distance,
         )
         edge_index = affinity_to_edge_index(adjacency_matrix)
-
+        edge_index = cast(np.ndarray, edge_index)
         return {
             "x": feature_centroids_arr,
             "edge_index": edge_index,
