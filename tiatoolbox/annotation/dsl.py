@@ -67,6 +67,8 @@ from typing import Callable
 
 from typing_extensions import TypedDict
 
+from tiatoolbox import logger
+
 
 @dataclass
 class SQLNone:
@@ -426,6 +428,7 @@ def sql_has_key(dictionary: SQLJSONDictionary, key: str | int) -> SQLTriplet:
     """
     if not isinstance(dictionary, (SQLJSONDictionary,)):
         msg = "Unsupported type for has_key."
+        logger.info(type(dictionary))
         raise TypeError(msg)
     return SQLTriplet(dictionary[key], "is_not_none")
 
