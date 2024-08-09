@@ -1474,6 +1474,7 @@ def test_wsireader_open(
     sample_ome_tiff: Path,
     sample_ventana_tif: Path,
     sample_regular_tif: Path,
+    sample_qptiff: Path,
     source_image: Path,
     tmp_path: pytest.TempPathFactory,
 ) -> None:
@@ -1504,6 +1505,9 @@ def test_wsireader_open(
 
     wsi = WSIReader.open(Path(source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+    wsi = WSIReader.open(sample_qptiff)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
     img = utils.misc.imread(str(Path(source_image)))
     wsi = WSIReader.open(input_img=img)
@@ -2573,6 +2577,11 @@ def test_jp2_no_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
             "sample_key": "jp2-omnyx-small",
             "kwargs": {},
         },
+        {
+            "reader_class": TIFFWSIReader,
+            "sample_key": "qptiff_sample",
+            "kwargs": {},
+        },
     ],
     ids=[
         "AnnotationReaderOverlaid",
@@ -2804,3 +2813,16 @@ def test_read_multi_channel(source_image: Path) -> None:
     assert region.shape == (100, 50, (new_img_array.shape[-1]))
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+
+
+def test_visualise_multi_channel(sample_qptiff: Path) -> None:
+    """Test visualising a multi-channel qptiff image."""
+    wsi = wsireader.TIFFWSIReader(sample_qptiff, post_proc="auto")
+    wsi2 = wsireader.TIFFWSIReader(sample_qptiff, post_proc=None)
+
+    region = wsi.read_rect(location=(0, 0), size=(50, 100))
+    region2 = wsi2.read_rect(location=(0, 0), size=(50, 100))
+
+    assert region.shape == (100, 50, 3)
+    assert region2.shape == (100, 50, 7)
+
