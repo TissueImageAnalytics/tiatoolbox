@@ -243,7 +243,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self: MultiTaskSegmentor,
         batch_size: int = 8,
         num_loader_workers: int = 0,
