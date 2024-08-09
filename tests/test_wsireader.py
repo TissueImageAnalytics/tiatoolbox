@@ -2825,4 +2825,3 @@ def test_visualise_multi_channel(sample_qptiff: Path) -> None:
 
     assert region.shape == (100, 50, 3)
     assert region2.shape == (100, 50, 7)
-
