@@ -146,4 +146,4 @@ files:
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
   qptiff_sample:
-    url: [*wsis, "multiplexed_example.qptiff"]
+    url: [*wsis, "multiplexed_example.qptif"]

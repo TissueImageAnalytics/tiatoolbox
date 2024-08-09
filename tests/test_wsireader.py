@@ -2824,7 +2824,7 @@ def test_read_multi_channel(source_image: Path) -> None:
 
 
 def test_visualise_multi_channel(sample_qptiff: Path) -> None:
-    """Test visualising a multi-channel qptiff image."""
+    """Test visualising a multi-channel qptiff multiplex image."""
     wsi = wsireader.TIFFWSIReader(sample_qptiff, post_proc="auto")
     wsi2 = wsireader.TIFFWSIReader(sample_qptiff, post_proc=None)
 
