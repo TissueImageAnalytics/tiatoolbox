@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import colorsys
+import warnings
 
 import numpy as np
 
@@ -12,21 +13,52 @@ class MultichannelToRGB:
 
     def __init__(
         self: MultichannelToRGB,
-        colors: list[tuple[float, float, float]] | None = None,
+        color_dict: list[tuple[float, float, float]] | None = None,
     ) -> None:
         """Initialize the MultichannelToRGB converter.
 
         Args:
-            colors: List of RGB colors for each channel. If not
+            color_dict: Dict of channel names with RGB colors for each channel. If not
             provided, a set of distinct colors will be auto-generated.
 
         """
-        self.colors = colors
-        if self.colors is not None:
-            self.colors = np.array(self.colors, dtype=np.float32)
+        self.colors = None
+        self.color_dict = color_dict
+        self.is_validated = False
 
-    @staticmethod
-    def generate_colors(n_channels: int) -> np.ndarray:
+    def validate(self: MultichannelToRGB, n: int) -> None:
+        """Validate the input color_dict on first read from image.
+
+        Checks that n is either equal to the number of colors provided, or is
+        one less. In the latter case it is assumed that the last channel is background
+        autofluorescence and is not in the tiff and we will drop it from
+        the color_dict with a warning.
+
+        Args:
+            n (int): Number of channels
+
+        """
+        n_colors = len(self.color_dict)
+        if n_colors == n:
+            self.is_validated = True
+            return
+
+        if n_colors - 1 == n:
+            self.color_dict.pop(list(self.color_dict.keys())[-1])
+            self.colors = self.colors[:-1]
+            self.is_validated = True
+            warnings.warn(
+                """Number of channels in image is one less than number of channels in
+                dict. Assuming last channel is background autofluorescence and dropping
+                it. If this is not the case please provide a manual color_dict.""",
+                stacklevel=2,
+            )
+            return
+
+        msg = f"Number of colors: {n_colors} does not match channels in image: {n}."
+        raise ValueError(msg)
+
+    def generate_colors(self: MultichannelToRGB, n_channels: int) -> np.ndarray:
         """Generate a set of visually distinct colors.
 
         Args:
@@ -36,10 +68,10 @@ class MultichannelToRGB:
             np.ndarray: Array of RGB colors
 
         """
-        return np.array(
-            [colorsys.hsv_to_rgb(i / n_channels, 1, 1) for i in range(n_channels)],
-            dtype=np.float32,
-        )
+        self.color_dict = {
+            f"channel_{i}": colorsys.hsv_to_rgb(i / n_channels, 1, 1)
+            for i in range(n_channels)
+        }
 
     def __call__(self: MultichannelToRGB, image: np.ndarray) -> np.ndarray:
         """Convert a multi-channel image to an RGB image.
@@ -58,10 +90,20 @@ class MultichannelToRGB:
             return image
 
         if self.colors is None:
-            self.colors = self.generate_colors(n)
+            self.generate_colors(n)
+
+        if not self.is_validated:
+            self.validate(n)
 
         # Convert to RGB image
-        rgb_image = np.einsum("hwn,nc->hwc", image, self.colors, optimize=True)
+        rgb_image = np.einsum("hwn,nc->hwc", image, self.colors[:, :], optimize=True)
 
         # Clip  to ensure in valid range and return
         return np.clip(rgb_image, 0, 255).astype(np.uint8)
+
+    def __setattr__(self: MultichannelToRGB, name: str, value: np.Any) -> None:
+        """Ensure that colors is updated if color_dict is updated."""
+        if name == "color_dict" and value is not None:
+            self.colors = np.array(list(value.values()), dtype=np.float32)
+
+        super().__setattr__(name, value)
