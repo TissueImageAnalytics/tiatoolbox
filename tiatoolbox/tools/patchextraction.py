@@ -193,7 +193,7 @@ class PatchExtractor(PatchExtractorABC):
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self: PatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
