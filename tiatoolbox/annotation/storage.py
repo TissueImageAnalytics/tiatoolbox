@@ -1841,10 +1841,10 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             # It is a file-like object, write to it
             if hasattr(fp, "write"):
                 file_handle = cast(IO, fp)
-                return file_fn(file_handle)
+                return file_fn(file_handle)  # type: ignore[func-returns-value]
             # Turn a path into a file handle, then write to it
             with Path(fp).open("w", encoding="utf-8") as file_handle:
-                return file_fn(file_handle)
+                return file_fn(file_handle)  # type: ignore[func-returns-value]
         # Return as str or bytes if no handle/path is given
         return none_fn()
 
@@ -2840,7 +2840,7 @@ class SQLiteStore(AnnotationStore):
 
         return query_string, query_parameters
 
-    def _query(  # noqa: PLR0913
+    def _query(
         self: SQLiteStore,
         columns: str,
         geometry: Geometry | None = None,
