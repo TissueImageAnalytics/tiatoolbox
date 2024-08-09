@@ -625,7 +625,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self: SlidingWindowPatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],

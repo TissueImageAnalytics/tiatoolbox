@@ -1190,9 +1190,7 @@ def add_from_dat(
         anns = []
         for subcat in data:
             if (
-                subcat == "resolution"
-                or subcat == "proc_dimensions"
-                or subcat == "base_dimensions"
+                subcat in {"resolution", "proc_dimensions", "base_dimensions"}
                 or "resolution" in subcat
             ):
                 continue
