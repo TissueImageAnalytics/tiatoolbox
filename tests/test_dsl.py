@@ -112,19 +112,19 @@ class TestSQLite:
         )
 
 
-py_variables = {
+py_variables: dict = {
     "eval_globals": PY_GLOBALS,
     "eval_locals": {"props": SAMPLE_PROPERTIES},
     "check": lambda x: x,
 }
 
-sqlite_variables = {
+sqlite_variables: dict = {
     "eval_globals": SQL_GLOBALS,
     "eval_locals": {"props": SQLJSONDictionary()},
     "check": sqlite_eval,
 }
 
-scenario_python = (
+scenario_python: tuple = (
     "Python",
     {"scenario_variables": py_variables},
 )
@@ -142,7 +142,6 @@ def extract_variables(scenario_variables: dict) -> tuple[dict, dict, Callable]:
     return eval_globals, eval_locals, check
 
 
-# for scenario in (scenario_python, scenario_sqlite):
 class TestPredicate:
     """Test predicate statements with various backends."""
 
