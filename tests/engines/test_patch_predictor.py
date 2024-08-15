@@ -490,7 +490,7 @@ def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
     )
 
     assert models_wsi_result.exit_code == 0
-    assert (tmp_path / "output" / "output.db").exists()
+    assert (tmp_path / "output" / (sample_svs.stem + ".db")).exists()
 
 
 def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -> None:

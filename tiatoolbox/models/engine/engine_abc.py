@@ -673,9 +673,7 @@ class EngineABC(ABC):
         ) and output_type.lower() != "annotationstore":
             return processed_predictions
 
-        output_file = Path(kwargs.get("output_file", "output.db"))
-
-        save_path = save_dir / output_file
+        save_path = Path(kwargs.get("output_file", save_dir / "output.db"))
 
         if output_type.lower() == "annotationstore":
             # scale_factor set from kwargs
@@ -1063,6 +1061,7 @@ class EngineABC(ABC):
                 raw_predictions=raw_predictions,
                 **kwargs,
             )
+            kwargs["output_file"] = out[image]
             out[image] = self.save_predictions(
                 processed_predictions=processed_predictions,
                 output_type=output_type,
