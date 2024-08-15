@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from typing import cast
 
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
@@ -132,7 +133,7 @@ class StainAugmentor(ImageOnlyTransform):
 
         self.alpha: float
         self.beta: float
-        self.img_shape = None
+        self.img_shape: tuple[int, ...]
         self.tissue_mask: np.ndarray
         self.n_stains: int
         self.source_concentrations: np.ndarray
@@ -196,6 +197,7 @@ class StainAugmentor(ImageOnlyTransform):
             else:
                 augmented_concentrations[self.tissue_mask, i] *= self.alpha
                 augmented_concentrations[self.tissue_mask, i] += self.beta
+        self.stain_matrix = cast(np.ndarray, self.stain_matrix)
         img_augmented = 255 * np.exp(
             -1 * np.dot(augmented_concentrations, self.stain_matrix),
         )
