@@ -223,7 +223,7 @@ class TilePyramidGenerator:
             output_size = self.output_tile_size // 2 ** (
                 self.sub_tile_level_count - level
             )
-            output_size = np.repeat(output_size, 2).astype(int)
+            output_size = np.repeat(output_size, 2).astype(int).tolist()
             thumb = self.get_thumb_tile()
             thumb.thumbnail((output_size[0], output_size[1]))
             return thumb
@@ -236,7 +236,7 @@ class TilePyramidGenerator:
         logger.addFilter(duplicate_filter)
         tile = self.wsi.read_rect(
             coord,
-            size=[v * res for v in output_size],
+            size=(output_size[0] * res, output_size[1] * res),
             resolution=res / scale,
             units="baseline",
             pad_mode=pad_mode,
@@ -510,7 +510,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
     """
 
-    def __init__(
+    def __init__(  # skipcq: PYL-W0231
         self: AnnotationTileGenerator,
         info: WSIMeta,
         store: AnnotationStore,
@@ -520,9 +520,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         overlap: int = 0,
     ) -> None:
         """Initialize :class:`AnnotationTileGenerator`."""
-        super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store
+        self.tile_size = tile_size
+        self.downsample = downsample
+        self.overlap = overlap
         if renderer is None:
             renderer = AnnotationRenderer()
         self.renderer = renderer
