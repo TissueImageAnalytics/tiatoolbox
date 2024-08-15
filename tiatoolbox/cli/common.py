@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import click
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def add_default_to_usage_help(
     usage_help: str,
-    default: str or int or float or bool,
+    default: str | float | bool | None,
 ) -> str:
     """Adds default value to usage help string.
 
@@ -37,7 +37,7 @@ def add_default_to_usage_help(
 def cli_img_input(
     usage_help: str = "Path to WSI or directory containing WSIs.",
     multiple: bool | None = None,
-) -> callable:
+) -> Callable:
     """Enables --img-input option for cli."""
     if multiple is None:
         multiple = False
@@ -50,7 +50,7 @@ def cli_img_input(
 def cli_name(
     usage_help: str = "User defined name to be used as an identifier.",
     multiple: bool | None = None,
-) -> callable:
+) -> Callable:
     """Enable --name option for cli."""
     if multiple is None:
         multiple = False
@@ -63,7 +63,7 @@ def cli_name(
 def cli_output_path(
     usage_help: str = "Path to output directory to save the output.",
     default: str | None = None,
-) -> callable:
+) -> Callable:
     """Enables --output-path option for cli."""
     return click.option(
         "--output-path",
@@ -76,7 +76,7 @@ def cli_output_path(
 def cli_file_type(
     usage_help: str = "File types to capture from directory.",
     default: str = "*.ndpi, *.svs, *.mrxs, *.jp2",
-) -> callable:
+) -> Callable:
     """Enables --file-types option for cli."""
     return click.option(
         "--file-types",
@@ -90,7 +90,7 @@ def cli_mode(
     usage_help: str = "Selected mode to show or save the required information.",
     default: str = "save",
     input_type: click.Choice | None = None,
-) -> callable:
+) -> Callable:
     """Enables --mode option for cli."""
     if input_type is None:
         input_type = click.Choice(["show", "save"], case_sensitive=False)
@@ -105,7 +105,7 @@ def cli_mode(
 def cli_region(
     usage_help: str = "Image region in the whole slide image to read from. "
     "default=0 0 2000 2000",
-) -> callable:
+) -> Callable:
     """Enables --region option for cli."""
     return click.option(
         "--region",
@@ -119,7 +119,7 @@ def cli_units(
     usage_help: str = "Image resolution units to read the image.",
     default: str = "level",
     input_type: click.Choice | None = None,
-) -> callable:
+) -> Callable:
     """Enables --units option for cli."""
     if input_type is None:
         input_type = click.Choice(
@@ -137,7 +137,7 @@ def cli_units(
 def cli_resolution(
     usage_help: str = "Image resolution to read the image.",
     default: float = 0,
-) -> callable:
+) -> Callable:
     """Enables --resolution option for cli."""
     return click.option(
         "--resolution",
@@ -150,7 +150,7 @@ def cli_resolution(
 def cli_tile_objective(
     usage_help: str = "Objective value for the saved tiles.",
     default: int = 20,
-) -> callable:
+) -> Callable:
     """Enables --tile-objective-value option for cli."""
     return click.option(
         "--tile-objective-value",
@@ -162,7 +162,7 @@ def cli_tile_objective(
 
 def cli_tile_read_size(
     usage_help: str = "Width and Height of saved tiles. default=5000 5000",
-) -> callable:
+) -> Callable:
     """Enables --tile-read-size option for cli."""
     return click.option(
         "--tile-read-size",
@@ -175,7 +175,7 @@ def cli_tile_read_size(
 
 def cli_tile_format(
     usage_help: str = "File format to save image tiles, defaults = '.jpg'",
-) -> callable:
+) -> Callable:
     """Enables --tile-format option for cli."""
     return click.option(
         "--tile-format",
@@ -189,7 +189,7 @@ def cli_method(
     usage_help: str = "Select method of for tissue masking.",
     default: str = "Otsu",
     input_type: click.Choice | None = None,
-) -> callable:
+) -> Callable:
     """Enables --method option for cli."""
     if input_type is None:
         input_type = click.Choice(["Otsu", "Morphological"], case_sensitive=True)
@@ -212,7 +212,7 @@ def cli_pretrained_model(
     "downloaded. However, you can override with your own set of weights"
     "via the `pretrained_weights` argument. Argument is case insensitive.",
     default: str = "resnet18-kather100k",
-) -> callable:
+) -> Callable:
     """Enables --pretrained-model option for cli."""
     return click.option(
         "--pretrained-model",
@@ -225,7 +225,7 @@ def cli_pretrained_weights(
     usage_help: str = "Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default: str | None = None,
-) -> callable:
+) -> Callable:
     """Enables --pretrained-weights option for cli."""
     return click.option(
         "--pretrained-weights",
@@ -238,7 +238,7 @@ def cli_return_probabilities(
     usage_help: str = "Whether to return raw model probabilities.",
     *,
     default: bool = False,
-) -> callable:
+) -> Callable:
     """Enables --return-probabilities option for cli."""
     return click.option(
         "--return-probabilities",
@@ -252,7 +252,7 @@ def cli_merge_predictions(
     usage_help: str = "Whether to merge the predictions to form a 2-dimensional map.",
     *,
     default: bool = True,
-) -> callable:
+) -> Callable:
     """Enables --merge-predictions option for cli."""
     return click.option(
         "--merge-predictions",
@@ -266,7 +266,7 @@ def cli_return_labels(
     usage_help: str = "Whether to return raw model output as labels.",
     *,
     default: bool = True,
-) -> callable:
+) -> Callable:
     """Enables --return-labels option for cli."""
     return click.option(
         "--return-labels",
@@ -279,7 +279,7 @@ def cli_return_labels(
 def cli_batch_size(
     usage_help: str = "Number of image patches to feed into the model each time.",
     default: int = 1,
-) -> callable:
+) -> Callable:
     """Enables --batch-size option for cli."""
     return click.option(
         "--batch-size",
@@ -296,7 +296,7 @@ def cli_masks(
     "automatically generated for whole-slide images or the entire image is "
     "processed for image tiles. Supported file types are jpg, png and npy.",
     default: str | None = None,
-) -> callable:
+) -> Callable:
     """Enables --masks option for cli."""
     return click.option(
         "--masks",
@@ -309,7 +309,7 @@ def cli_auto_generate_mask(
     usage_help: str = "Automatically generate tile/WSI tissue mask.",
     *,
     default: bool = False,
-) -> callable:
+) -> Callable:
     """Enables --auto-generate-mask option for cli."""
     return click.option(
         "--auto-generate-mask",
@@ -324,7 +324,7 @@ def cli_yaml_config_path(
     "tiatoolbox.data.pretrained_model.yaml. "
     "if pretrained_model is used the ioconfig is automatically set.",
     default: str | None = None,
-) -> callable:
+) -> Callable:
     """Enables --yaml-config-path option for cli."""
     return click.option(
         "--yaml-config-path",
@@ -337,7 +337,7 @@ def cli_on_gpu(
     usage_help: str = "Run the model on GPU.",
     *,
     default: bool = False,
-) -> callable:
+) -> Callable:
     """Enables --on-gpu option for cli."""
     return click.option(
         "--on-gpu",
@@ -351,7 +351,7 @@ def cli_num_loader_workers(
     usage_help: str = "Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
     default: int = 0,
-) -> callable:
+) -> Callable:
     """Enables --num-loader-workers option for cli."""
     return click.option(
         "--num-loader-workers",
@@ -364,7 +364,7 @@ def cli_num_loader_workers(
 def cli_num_postproc_workers(
     usage_help: str = "Number of workers to post-process the network output.",
     default: int = 0,
-) -> callable:
+) -> Callable:
     """Enables --num-postproc-workers option for cli."""
     return click.option(
         "--num-postproc-workers",
@@ -378,7 +378,7 @@ def cli_verbose(
     usage_help: str = "Prints the console output.",
     *,
     default: bool = True,
-) -> callable:
+) -> Callable:
     """Enables --verbose option for cli."""
     return click.option(
         "--verbose",
@@ -399,11 +399,11 @@ class TIAToolboxCLI(click.Group):
         """Initialize TIAToolboxCLI."""
         super().__init__(*args, **kwargs)
         self.help = "Computational pathology toolbox by TIA Centre."
-        self.add_help_option = {"help_option_names": ["-h", "--help"]}
+        self.help_option_names = {"help_option_names": ["-h", "--help"]}
 
 
 def no_input_message(
-    input_file: (str or Path) | None = None,
+    input_file: str | Path | None = None,
     message: str = "No image input provided.\n",
 ) -> Path:
     """This function is called if no input is provided.
@@ -425,12 +425,12 @@ def no_input_message(
 
 
 def prepare_file_dir_cli(
-    img_input: str or Path,
-    output_path: str or Path,
+    img_input: str | Path,
+    output_path: str | Path,
     file_types: str,
     mode: str,
     sub_dirname: str,
-) -> [list, Path]:
+) -> tuple[list, Path]:
     """Prepares CLI for running code on multiple files or a directory.
 
     Checks for existing directories to run tests.
@@ -457,7 +457,7 @@ def prepare_file_dir_cli(
     from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
 
     img_input = no_input_message(input_file=img_input)
-    file_types = string_to_tuple(in_str=file_types)
+    file_types_tuple = string_to_tuple(in_str=file_types)
 
     if isinstance(output_path, str):
         output_path = Path(output_path)
@@ -470,7 +470,9 @@ def prepare_file_dir_cli(
     ]
 
     if Path.is_dir(img_input):
-        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
+        files_all = grab_files_from_dir(
+            input_path=img_input, file_types=file_types_tuple
+        )
 
     if output_path is None and mode == "save":
         input_dir = Path(img_input).parent
@@ -479,15 +481,15 @@ def prepare_file_dir_cli(
     if mode == "save":
         output_path.mkdir(parents=True, exist_ok=True)
 
-    return [files_all, output_path]
+    return (files_all, output_path)
 
 
 def prepare_model_cli(
-    img_input: str or Path,
-    output_path: str or Path,
-    masks: str or Path,
+    img_input: str | Path,
+    output_path: str | Path,
+    masks: str | Path,
     file_types: str,
-) -> [list, list, Path]:
+) -> tuple[list, list | None, Path]:
     """Prepares cli for running models.
 
     Checks for existing directories to run tests.
@@ -517,7 +519,7 @@ def prepare_model_cli(
 
     img_input = no_input_message(input_file=img_input)
     output_path = Path(output_path)
-    file_types = string_to_tuple(in_str=file_types)
+    file_types_tuple = string_to_tuple(in_str=file_types)
 
     if output_path.exists():
         msg = "Path already exists."
@@ -543,9 +545,11 @@ def prepare_model_cli(
             )
 
     if Path.is_dir(img_input):
-        files_all = grab_files_from_dir(input_path=img_input, file_types=file_types)
+        files_all = grab_files_from_dir(
+            input_path=img_input, file_types=file_types_tuple
+        )
 
-    return [files_all, masks_all, output_path]
+    return (files_all, masks_all, output_path)
 
 
 tiatoolbox_cli = TIAToolboxCLI()
@@ -553,7 +557,7 @@ tiatoolbox_cli = TIAToolboxCLI()
 
 def prepare_ioconfig_seg(
     segment_config_class: IOConfigABC,
-    pretrained_weights: str | Path,
+    pretrained_weights: str | Path | None,
     yaml_config_path: str | Path,
 ) -> IOConfigABC | None:
     """Prepare ioconfig for segmentation."""
