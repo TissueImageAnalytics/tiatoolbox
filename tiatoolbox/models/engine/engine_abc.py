@@ -1052,6 +1052,21 @@ class EngineABC(ABC):
                 patch_mode=False,
                 ioconfig=self._ioconfig,
             )
+
+            # get units and resolution from dataloader.
+            dataloader_units = dataloader.dataset.units
+            dataloader_resolution = dataloader.dataset.resolution
+
+            slide_resolution = (1.0, 1.0)
+            if dataloader_units != "baseline":
+                wsimeta_dict = dataloader.dataset.reader.info.as_dict()
+                slide_resolution = wsimeta_dict[dataloader_units]
+
+            scale_factor = tuple(np.divide(slide_resolution, dataloader_resolution))
+
+            if dataloader_units != "mpp":
+                scale_factor = tuple(np.divide(dataloader_resolution, slide_resolution))
+
             raw_predictions = self.infer_wsi(
                 dataloader=dataloader,
                 save_path=save_path[image],
@@ -1062,6 +1077,7 @@ class EngineABC(ABC):
                 **kwargs,
             )
             kwargs["output_file"] = out[image]
+            kwargs["scale_factor"] = scale_factor
             out[image] = self.save_predictions(
                 processed_predictions=processed_predictions,
                 output_type=output_type,

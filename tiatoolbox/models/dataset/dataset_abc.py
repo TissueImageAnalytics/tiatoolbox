@@ -399,10 +399,8 @@ class WSIPatchDataset(PatchDatasetABC):
                 `units`. Expected to be positive and of (height, width).
                 Note, this is not at level 0.
             resolution (Resolution):
-                Check (:class:`.WSIReader`) for details. When
-                `mode='tile'`, value is fixed to be `resolution=1.0` and
-                `units='baseline'` units: check (:class:`.WSIReader`) for
-                details.
+                Requested resolution corresponding to units. Check
+                (:class:`WSIReader`) for details.
             units (Units):
                 Units in which `resolution` is defined.
             auto_get_mask (bool):
