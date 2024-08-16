@@ -19,6 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from pandas import DataFrame
 
+    from tiatoolbox.annotation.storage import AnnotationStore
     from tiatoolbox.typing import Resolution, Units
 
 
@@ -46,7 +47,9 @@ class ExtractorParams(TypedDict, total=False):
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader
+    input_mask: (
+        str | Path | np.ndarray | wsireader.VirtualWSIReader | AnnotationStore | None
+    )
     stride: int | tuple[int, int]
     min_mask_ratio: float
     store_filter: str | None
@@ -83,7 +86,9 @@ class SlidingWindowPatchExtractorParams(TypedDict):
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None
+    input_mask: (
+        str | Path | np.ndarray | wsireader.VirtualWSIReader | AnnotationStore | None
+    )
     stride: int | tuple[int, int] | None
     min_mask_ratio: float
     store_filter: str | None
@@ -198,7 +203,12 @@ class PatchExtractor(PatchExtractorABC):
         self: PatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
+        input_mask: str
+        | Path
+        | np.ndarray
+        | wsireader.VirtualWSIReader
+        | AnnotationStore
+        | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         pad_mode: str = "constant",
