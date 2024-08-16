@@ -46,7 +46,7 @@ class ExtractorParams(TypedDict, total=False):
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.WSIReader
+    input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader
     stride: int | tuple[int, int]
     min_mask_ratio: float
     store_filter: str | None
@@ -83,7 +83,7 @@ class SlidingWindowPatchExtractorParams(TypedDict):
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.WSIReader | None
+    input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None
     stride: int | tuple[int, int] | None
     min_mask_ratio: float
     store_filter: str | None
@@ -116,7 +116,8 @@ class PatchExtractor(PatchExtractorABC):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
+        input_mask
+            (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`VirtualWSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the input_mask.
@@ -197,7 +198,7 @@ class PatchExtractor(PatchExtractorABC):
         self: PatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
+        input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         pad_mode: str = "constant",
@@ -418,7 +419,7 @@ class PatchExtractor(PatchExtractorABC):
             0,
             tissue_mask.shape[0],
         )
-        scaled_coords = list((scaled_coords).astype(np.int32))
+        scaled_coords_list = list((scaled_coords).astype(np.int32))
 
         def default_sel_func(
             tissue_mask: np.ndarray,
@@ -439,7 +440,7 @@ class PatchExtractor(PatchExtractorABC):
             ) and (pos_area > 0 and patch_area > 0)
 
         func = default_sel_func if func is None else func
-        flag_list = [func(tissue_mask, coord) for coord in scaled_coords]
+        flag_list = [func(tissue_mask, coord) for coord in scaled_coords_list]
 
         return np.array(flag_list)
 
@@ -556,7 +557,7 @@ class PatchExtractor(PatchExtractorABC):
             msg = f"`stride_shape` value {stride_shape_arr} must > 1."
             raise ValueError(msg)
 
-        def flat_mesh_grid_coord(x: int, y: int) -> np.ndarray:
+        def flat_mesh_grid_coord(x: np.ndarray, y: np.ndarray) -> np.ndarray:
             """Helper function to obtain coordinate grid."""
             xv, yv = np.meshgrid(x, y)
             return np.stack([xv.flatten(), yv.flatten()], axis=-1)
@@ -604,7 +605,8 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
+        input_mask
+            (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`VirtualWSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the `input_mask`.
@@ -658,7 +660,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         self: SlidingWindowPatchExtractor,
         input_img: str | Path | np.ndarray,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
+        input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         stride: int | tuple[int, int] | None = None,
