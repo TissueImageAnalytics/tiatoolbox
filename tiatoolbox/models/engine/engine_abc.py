@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
@@ -639,7 +640,7 @@ class EngineABC(ABC):
 
     def save_predictions(
         self: EngineABC,
-        processed_predictions: dict,
+        processed_predictions: dict | Path,
         output_type: str,
         save_dir: Path | None = None,
         **kwargs: dict,
@@ -681,16 +682,23 @@ class EngineABC(ABC):
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
+            processed_predictions_path: str | Path | None = None
+
             # Need to add support for zarr conversion.
             if self.cache_mode:
+                processed_predictions_path = processed_predictions
                 processed_predictions = zarr.open(processed_predictions, mode="r")
 
-            return dict_to_store(
+            out_file = dict_to_store(
                 processed_predictions,
                 scale_factor,
                 class_dict,
                 save_path,
             )
+            if processed_predictions_path is not None:
+                shutil.rmtree(processed_predictions_path)
+
+            return out_file
 
         return (
             dict_to_zarr(
@@ -1057,15 +1065,22 @@ class EngineABC(ABC):
             dataloader_units = dataloader.dataset.units
             dataloader_resolution = dataloader.dataset.resolution
 
-            slide_resolution = (1.0, 1.0)
-            if dataloader_units != "baseline":
+            # if dataloader units is baseline slide resolution is 1.0.
+            # in this case dataloader resolution / slide resolution will be
+            # equal to dataloader resolution.
+            scale_factor = dataloader_resolution
+
+            if dataloader_units == "mpp":
                 wsimeta_dict = dataloader.dataset.reader.info.as_dict()
                 slide_resolution = wsimeta_dict[dataloader_units]
+                scale_factor = tuple(np.divide(slide_resolution, dataloader_resolution))
 
-            scale_factor = tuple(np.divide(slide_resolution, dataloader_resolution))
-
-            if dataloader_units != "mpp":
-                scale_factor = tuple(np.divide(dataloader_resolution, slide_resolution))
+            if dataloader_units == "level":
+                wsimeta_dict = dataloader.dataset.reader.info.as_dict()
+                downsample_ratio = wsimeta_dict["level_downsamples"][
+                    dataloader_resolution
+                ]
+                scale_factor = (1.0 / downsample_ratio, 1.0 / downsample_ratio)
 
             raw_predictions = self.infer_wsi(
                 dataloader=dataloader,

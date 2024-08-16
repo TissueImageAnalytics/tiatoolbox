@@ -1309,7 +1309,7 @@ def dict_to_store(
 
     # if a save director is provided, then dump store into a file
     if save_path:
-        # ensure parent directory exisits
+        # ensure parent directory exists
         save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
         # ensure proper db extension
         save_path = save_path.parent.absolute() / (save_path.stem + ".db")
