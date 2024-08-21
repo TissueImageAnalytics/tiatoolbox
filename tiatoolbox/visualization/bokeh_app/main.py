@@ -26,6 +26,7 @@ from bokeh.models import (
     BoxEditTool,
     Button,
     CheckboxButtonGroup,
+    CheckboxEditor,
     Circle,
     ColorBar,
     ColorPicker,
@@ -50,6 +51,7 @@ from bokeh.models import (
     Select,
     Slider,
     Spinner,
+    StringEditor,
     TableColumn,
     TabPanel,
     Tabs,
@@ -136,6 +138,131 @@ def format_info(info: dict[str, Any]) -> str:
     for k, v in info.items():
         info_str += f"{k}: {v}<br>"
     return info_str
+
+
+def get_color_dictionary() -> dict[str, tuple[int, int, int]]:
+    """Get the colors for the channels."""
+    resp = UI["s"].get(f"http://{host2}:5000/tileserver/channels")
+    try:
+        return json.loads(resp.text)
+    except json.JSONDecodeError:
+        return {}
+
+
+def set_color_dictionary(colors: dict[str, tuple[int, int, int]]) -> None:
+    """Set the colors for the channels."""
+    UI["s"].put(f"http://{host2}:5000/tileserver/channels", data=json.dumps(colors))
+
+
+def set_active_channels(active_channels: list[str]) -> None:
+    """Set the active channels in the image."""
+    UI["s"].put(
+        f"http://{host2}:5000/tileserver/active_channels",
+        data=json.dumps(active_channels),
+    )
+
+
+def get_active_channels() -> list[str]:
+    """Get the active channels in the image."""
+    return [f"channel{i}" for i in range(1, 11)]
+
+
+def create_channel_color_ui() -> Column:
+    """Create the channel select/color management UI."""
+    # Start with an empty ColumnDataSource
+    source = ColumnDataSource(data={"channels": [], "colors": [], "active": []})
+
+    # Custom formatter for the color column
+    color_formatter = HTMLTemplateFormatter(
+        template="""<div style="background-color: <%= value %>;
+          color: <%= value %>; border: 1px solid #ddd;"><%= value %></div>"""
+    )
+
+    columns = [
+        TableColumn(
+            field="channels", title="Channel", editor=StringEditor(), sortable=False
+        ),
+        TableColumn(
+            field="colors",
+            title="Color",
+            editor=StringEditor(),
+            formatter=color_formatter,
+            sortable=False,
+        ),
+        TableColumn(
+            field="active", title="Active", editor=CheckboxEditor(), sortable=False
+        ),
+    ]
+    data_table = DataTable(
+        source=source, columns=columns, editable=True, width=400, height=400
+    )
+
+    color_picker = ColorPicker(title="Selected Channel Color", width=100)
+
+    def update_selected_color(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+        """Channel color picker callback."""
+        selected = source.selected.indices
+        if selected:
+            source.patch({"colors": [(selected[0], new)]})
+
+    color_picker.on_change("color", update_selected_color)
+
+    apply_button = Button(label="Apply Changes", button_type="success")
+
+    def apply_changes() -> None:
+        """Apply the changes to the image."""
+        data = source.data
+        colors = dict(zip(data["channels"], data["colors"]))
+        active_channels = [
+            channel
+            for channel, is_active in zip(data["channels"], data["active"])
+            if is_active
+        ]
+
+        set_color_dictionary(colors)
+        set_active_channels(active_channels)
+
+    apply_button.on_click(apply_changes)
+
+    def update_color_picker(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+        """Update the color picker when a new row is selected."""
+        if new:
+            selected_color = source.data["colors"][new[0]]
+            color_picker.color = selected_color
+        else:
+            color_picker.color = None
+
+    source.selected.on_change("indices", update_color_picker)
+
+    instructions = Div(
+        text="""
+        <p>Instructions:</p>
+        <ul>
+            <li>Use the table to view and edit channel properties</li>
+            <li>Click on a row to select a channel</li>
+            <li>Use the color picker to change the color of the selected channel</li>
+            <li>Check or uncheck the 'Active' column to toggle channel visibility</li>
+            <li>Click 'Apply Changes' to update the image</li>
+        </ul>
+    """
+    )
+
+    return column(instructions, row(data_table, column(color_picker, apply_button)))
+
+
+def populate_table() -> None:
+    """Populate the channel color table."""
+    # Access the ColumnDataSource from the UI dictionary
+    source = UI["channel_select"].children[1].children[0].source
+    colors = get_color_dictionary()
+    active_channels = get_active_channels()
+
+    new_data = {
+        "channels": list(colors.keys()),
+        "colors": [rgb2hex(color) for color in colors.values()],
+        "active": [channel in active_channels for channel in colors],
+    }
+    source.data = new_data
 
 
 def get_view_bounds(
@@ -877,6 +1004,7 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     initialise_slide()
     fname = make_safe_name(str(slide_path))
     UI["s"].put(f"http://{host2}:5000/tileserver/slide", data={"slide_path": fname})
+    populate_table()
     change_tiles("slide")
 
     # Load the overlay and graph automatically if set in config
@@ -1653,12 +1781,14 @@ def gather_ui_elements(  # noqa: PLR0915
                 "pt_size_spinner",
                 "edge_size_spinner",
                 "res_switch",
+                "channel_select",
             ],
             [
                 opt_buttons,
                 pt_size_spinner,
                 edge_size_spinner,
                 res_switch,
+                create_channel_color_ui(),
             ],
         ),
     )

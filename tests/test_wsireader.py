@@ -959,7 +959,11 @@ def test_read_bounds_interpolated(sample_svs: Path) -> None:
 
 
 def test_read_bounds_level_consistency_openslide(sample_ndpi: Path) -> None:
-    """Test read_bounds produces the same visual field across resolution levels."""
+    """Test read_bounds produces the same visual field across resolution levels.
+
+    with OpenSlideWSIReader.
+
+    """
     wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
 
@@ -967,7 +971,11 @@ def test_read_bounds_level_consistency_openslide(sample_ndpi: Path) -> None:
 
 
 def test_read_bounds_level_consistency_jp2(sample_jp2: Path) -> None:
-    """Test read_bounds produces the same visual field across resolution levels."""
+    """Test read_bounds produces the same visual field across resolution levels.
+
+    Using JP2WSIReader.
+
+    """
     bounds = JP2_TEST_TISSUE_BOUNDS
     wsi = wsireader.JP2WSIReader(sample_jp2)
 
@@ -1474,6 +1482,7 @@ def test_wsireader_open(
     sample_ome_tiff: Path,
     sample_ventana_tif: Path,
     sample_regular_tif: Path,
+    sample_qptiff: Path,
     source_image: Path,
     tmp_path: pytest.TempPathFactory,
 ) -> None:
@@ -1504,6 +1513,9 @@ def test_wsireader_open(
 
     wsi = WSIReader.open(Path(source_image))
     assert isinstance(wsi, wsireader.VirtualWSIReader)
+
+    wsi = WSIReader.open(sample_qptiff)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
     img = utils.misc.imread(str(Path(source_image)))
     wsi = WSIReader.open(input_img=img)
@@ -1883,11 +1895,11 @@ def test_tiffwsireader_invalid_svs_metadata(
 
 
 def test_tiffwsireader_invalid_ome_metadata(
-    sample_ome_tiff: Path,
+    sample_ome_tiff_level_0: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test exception raised for invalid OME-XML metadata instrument."""
-    wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
+    wsi = wsireader.TIFFWSIReader(sample_ome_tiff_level_0)
     monkeypatch.setattr(
         wsi.tiff.pages[0],
         "description",
@@ -2545,7 +2557,7 @@ def test_jp2_no_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         },
         {
             "reader_class": TIFFWSIReader,
-            "sample_key": "ome-brightfield-pyramid-1-small",
+            "sample_key": "ome-brightfield-small-pyramid",
             "kwargs": {},
         },
         {
@@ -2571,6 +2583,11 @@ def test_jp2_no_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         {
             "reader_class": JP2WSIReader,
             "sample_key": "jp2-omnyx-small",
+            "kwargs": {},
+        },
+        {
+            "reader_class": TIFFWSIReader,
+            "sample_key": "qptiff_sample",
             "kwargs": {},
         },
     ],
@@ -2807,7 +2824,7 @@ def test_read_multi_channel(source_image: Path) -> None:
 
 
 def test_visualise_multi_channel(sample_qptiff: Path) -> None:
-    """Test visualising a multi-channel qptiff image"""
+    """Test visualising a multi-channel qptiff multiplex image."""
     wsi = wsireader.TIFFWSIReader(sample_qptiff, post_proc="auto")
     wsi2 = wsireader.TIFFWSIReader(sample_qptiff, post_proc=None)
 

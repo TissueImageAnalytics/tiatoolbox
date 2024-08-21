@@ -332,7 +332,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self: torch.nn.Module) -> None:
+    def __init__(self: DFBRFeatureExtractor) -> None:
         """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
@@ -434,8 +434,8 @@ class DFBRegister:
     def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
-        self.x_scale: list[float] = []
-        self.y_scale: list[float] = []
+        self.x_scale: np.ndarray
+        self.y_scale: np.ndarray
         self.feature_extractor = DFBRFeatureExtractor()
 
     # Make this function private when full pipeline is implemented.
@@ -796,7 +796,7 @@ class DFBRegister:
         return PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_coord,
-            mask.shape[::-1],
+            (mask.shape[1], mask.shape[0]),
         )
 
     def filtering_matching_points(
@@ -1521,21 +1521,21 @@ class AffineWSITransformer:
         """
         width, height = size[0], size[1]
 
-        x = [
+        x_info = [
             np.linspace(1, width, width, endpoint=True),
             np.ones(height) * width,
             np.linspace(1, width, width, endpoint=True),
             np.ones(height),
         ]
-        x = np.array(list(itertools.chain.from_iterable(x)))
+        x = np.array(list(itertools.chain.from_iterable(x_info)))
 
-        y = [
+        y_info = [
             np.ones(width),
             np.linspace(1, height, height, endpoint=True),
             np.ones(width) * height,
             np.linspace(1, height, height, endpoint=True),
         ]
-        y = np.array(list(itertools.chain.from_iterable(y)))
+        y = np.array(list(itertools.chain.from_iterable(y_info)))
 
         points = np.array([x, y]).transpose()
         transform = transform * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]  # remove translation

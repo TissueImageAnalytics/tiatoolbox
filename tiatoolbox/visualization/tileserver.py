@@ -164,6 +164,8 @@ class TileServer(Flask):
         )
         self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
         self.route("/tileserver/prop_range", methods=["PUT"])(self.prop_range)
+        self.route("/tileserver/channels", methods=["GET"])(self.get_channels)
+        self.route("/tileserver/channels", methods=["PUT"])(self.set_channels)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
 
     def _get_session_id(self: TileServer) -> str:
@@ -716,6 +718,18 @@ class TileServer(Flask):
             return "done"
         minv, maxv = prop_range
         self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
+        return "done"
+
+    def get_channels(self: TileServer) -> Response:
+        """Get the channels of the slide."""
+        session_id = self._get_session_id()
+        return jsonify(self.layers[session_id]["slide"].post_proc.color_dict)
+
+    def set_channels(self: TileServer) -> str:
+        """Set the channels of the slide."""
+        session_id = self._get_session_id()
+        channels = json.loads(request.form["channels"])
+        self.layers[session_id]["slide"].post_proc.color_dict = channels
         return "done"
 
     @staticmethod
