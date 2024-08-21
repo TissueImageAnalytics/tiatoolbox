@@ -145,3 +145,5 @@ files:
     url: [ *testdata, "annotation/test2_config.json"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
+  qptiff_sample:
+    url: [*wsis, "multiplexed_example.qptiff"]
