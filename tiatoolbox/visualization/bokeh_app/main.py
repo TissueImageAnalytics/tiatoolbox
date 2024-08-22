@@ -145,7 +145,7 @@ def get_channel_info() -> dict[str, tuple[int, int, int]]:
     resp = UI["s"].get(f"http://{host2}:5000/tileserver/channels")
     try:
         resp = json.loads(resp.text)
-        return resp["channels"], resp["active"]
+        return resp.get("channels", {}), resp.get("active", [])
     except json.JSONDecodeError:
         return {}, []
 
@@ -272,12 +272,13 @@ def populate_table() -> None:
     source = UI["channel_select"].children[1].children[0].source
     colors, active_channels = get_channel_info()
 
-    new_data = {
-        "channels": list(colors.keys()),
-        "colors": [rgb2hex(color) for color in colors.values()],
-        "active": [channel in active_channels for channel in range(len(colors))],
-    }
-    source.data = new_data
+    if colors is not None:
+        new_data = {
+            "channels": list(colors.keys()),
+            "colors": [rgb2hex(color) for color in colors.values()],
+            "active": [channel in active_channels for channel in range(len(colors))],
+        }
+        source.data = new_data
 
 
 def get_view_bounds(
