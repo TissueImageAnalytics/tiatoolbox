@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Generator
 
 
-@pytest.fixture()
+@pytest.fixture
 def source_files(root_path: Path) -> Generator:
     """Recursively yield source files from the project."""
     ignore = {"__pycache__"}
