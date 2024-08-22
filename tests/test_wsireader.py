@@ -2600,6 +2600,7 @@ def test_jp2_no_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         "NGFFWSIReader",
         "OpenSlideWSIReader (Small SVS)",
         "OmnyxJP2WSIReader",
+        "TIFFReader_Multichannel",
     ],
 )
 def wsi(request: requests.request, remote_sample: Callable) -> WSIReader:

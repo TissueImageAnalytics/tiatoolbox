@@ -24,6 +24,7 @@ from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.misc import add_from_dat, store_from_dat
+from tiatoolbox.utils.postproc_defs import MultichannelToRGB
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
 from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, WSIReader
 
@@ -166,6 +167,7 @@ class TileServer(Flask):
         self.route("/tileserver/prop_range", methods=["PUT"])(self.prop_range)
         self.route("/tileserver/channels", methods=["GET"])(self.get_channels)
         self.route("/tileserver/channels", methods=["PUT"])(self.set_channels)
+        self.route("/tileserver/enhance", methods=["PUT"])(self.set_enhance)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
 
     def _get_session_id(self: TileServer) -> str:
@@ -723,13 +725,32 @@ class TileServer(Flask):
     def get_channels(self: TileServer) -> Response:
         """Get the channels of the slide."""
         session_id = self._get_session_id()
-        return jsonify(self.layers[session_id]["slide"].post_proc.color_dict)
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            return jsonify(
+                {
+                    "channels": self.layers[session_id]["slide"].post_proc.color_dict,
+                    "active": self.layers[session_id]["slide"].post_proc.channels,
+                },
+            )
+        return jsonify({"channels": {}, "active": []})
 
     def set_channels(self: TileServer) -> str:
         """Set the channels of the slide."""
         session_id = self._get_session_id()
-        channels = json.loads(request.form["channels"])
-        self.layers[session_id]["slide"].post_proc.color_dict = channels
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            channels = json.loads(request.form["channels"])
+            active = json.loads(request.form["active"])
+            self.layers[session_id]["slide"].post_proc.color_dict = channels
+            self.layers[session_id]["slide"].post_proc.channels = active
+            self.layers[session_id]["slide"].post_proc.is_validated = False
+        return "done"
+
+    def set_enhance(self: TileServer) -> str:
+        """Set the enhance factor of the slide."""
+        session_id = self._get_session_id()
+        enhance = json.loads(request.form["val"])
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            self.layers[session_id]["slide"].post_proc.enhance = enhance
         return "done"
 
     @staticmethod

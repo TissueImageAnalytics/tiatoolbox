@@ -11,19 +11,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -138,6 +138,7 @@ def run_app() -> None:
         title="Tiatoolbox TileServer",
         layers={},
     )
+    app.json.sort_keys = False
     CORS(app, send_wildcard=True)
     app.run(host="127.0.0.1", threaded=True)
 

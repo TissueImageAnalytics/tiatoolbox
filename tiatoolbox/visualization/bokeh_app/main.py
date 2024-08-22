@@ -140,31 +140,24 @@ def format_info(info: dict[str, Any]) -> str:
     return info_str
 
 
-def get_color_dictionary() -> dict[str, tuple[int, int, int]]:
+def get_channel_info() -> dict[str, tuple[int, int, int]]:
     """Get the colors for the channels."""
     resp = UI["s"].get(f"http://{host2}:5000/tileserver/channels")
     try:
-        return json.loads(resp.text)
+        resp = json.loads(resp.text)
+        return resp["channels"], resp["active"]
     except json.JSONDecodeError:
-        return {}
+        return {}, []
 
 
-def set_color_dictionary(colors: dict[str, tuple[int, int, int]]) -> None:
+def set_channel_info(
+    colors: dict[str, tuple[int, int, int]], active_channels: list
+) -> None:
     """Set the colors for the channels."""
-    UI["s"].put(f"http://{host2}:5000/tileserver/channels", data=json.dumps(colors))
-
-
-def set_active_channels(active_channels: list[str]) -> None:
-    """Set the active channels in the image."""
     UI["s"].put(
-        f"http://{host2}:5000/tileserver/active_channels",
-        data=json.dumps(active_channels),
+        f"http://{host2}:5000/tileserver/channels",
+        data={"channels": json.dumps(colors), "active": json.dumps(active_channels)},
     )
-
-
-def get_active_channels() -> list[str]:
-    """Get the active channels in the image."""
-    return [f"channel{i}" for i in range(1, 11)]
 
 
 def create_channel_color_ui() -> Column:
@@ -194,12 +187,12 @@ def create_channel_color_ui() -> Column:
         ),
     ]
     data_table = DataTable(
-        source=source, columns=columns, editable=True, width=400, height=400
+        source=source, columns=columns, editable=True, width=250, height=200
     )
 
-    color_picker = ColorPicker(title="Selected Channel Color", width=100)
+    color_picker = ColorPicker(title="Selected Color", width=100)
 
-    def update_selected_color(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+    def update_selected_color(attr: str, old: str, new: str) -> None:  # noqa: ARG001 # skipcq: PYL-W0613
         """Channel color picker callback."""
         selected = source.selected.indices
         if selected:
@@ -207,24 +200,24 @@ def create_channel_color_ui() -> Column:
 
     color_picker.on_change("color", update_selected_color)
 
-    apply_button = Button(label="Apply Changes", button_type="success")
+    apply_button = Button(
+        label="Apply Changes", button_type="success", margin=(20, 5, 5, 5)
+    )
 
     def apply_changes() -> None:
         """Apply the changes to the image."""
         data = source.data
         colors = dict(zip(data["channels"], data["colors"]))
         active_channels = [
-            channel
-            for channel, is_active in zip(data["channels"], data["active"])
-            if is_active
+            channel for channel, is_active in enumerate(data["active"]) if is_active
         ]
 
-        set_color_dictionary(colors)
-        set_active_channels(active_channels)
+        set_channel_info({ch: hex2rgb(colors[ch]) for ch in colors}, active_channels)
+        change_tiles("slide")
 
     apply_button.on_click(apply_changes)
 
-    def update_color_picker(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+    def update_color_picker(attr: str, old: str, new: str) -> None:  # noqa: ARG001 # skipcq: PYL-W0613
         """Update the color picker when a new row is selected."""
         if new:
             selected_color = source.data["colors"][new[0]]
@@ -233,6 +226,26 @@ def create_channel_color_ui() -> Column:
             color_picker.color = None
 
     source.selected.on_change("indices", update_color_picker)
+
+    enhance_slider = Slider(
+        start=0.1,
+        end=10,
+        value=1,
+        step=0.1,
+        title="Enhance",
+        width=200,
+    )
+
+    def enhance_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001 # skipcq: PYL-W0613
+        """Enhance slider callback."""
+        UI["s"].put(
+            f"http://{host2}:5000/tileserver/enhance",
+            data={"val": json.dumps(new)},
+        )
+        UI["vstate"].update_state = 1
+        UI["vstate"].to_update.update(["slide"])
+
+    enhance_slider.on_change("value", enhance_cb)
 
     instructions = Div(
         text="""
@@ -247,20 +260,22 @@ def create_channel_color_ui() -> Column:
     """
     )
 
-    return column(instructions, row(data_table, column(color_picker, apply_button)))
+    return column(
+        instructions,
+        column(data_table, row(color_picker, apply_button), enhance_slider),
+    )
 
 
 def populate_table() -> None:
     """Populate the channel color table."""
     # Access the ColumnDataSource from the UI dictionary
     source = UI["channel_select"].children[1].children[0].source
-    colors = get_color_dictionary()
-    active_channels = get_active_channels()
+    colors, active_channels = get_channel_info()
 
     new_data = {
         "channels": list(colors.keys()),
         "colors": [rgb2hex(color) for color in colors.values()],
-        "active": [channel in active_channels for channel in colors],
+        "active": [channel in active_channels for channel in range(len(colors))],
     }
     source.data = new_data
 
@@ -1004,8 +1019,8 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     initialise_slide()
     fname = make_safe_name(str(slide_path))
     UI["s"].put(f"http://{host2}:5000/tileserver/slide", data={"slide_path": fname})
-    populate_table()
     change_tiles("slide")
+    populate_table()
 
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
