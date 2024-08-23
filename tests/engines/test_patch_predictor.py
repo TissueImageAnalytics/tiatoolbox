@@ -112,6 +112,17 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 0
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
+    predictor.run(
+        images=[mini_wsi_svs],
+        units="power",
+        resolution=20,
+        patch_mode=False,
+        save_dir=f"{tmp_path}/dump",
+    )
+    assert predictor._ioconfig.input_resolutions[0]["units"] == "power"
+    assert predictor._ioconfig.input_resolutions[0]["resolution"] == 20
+    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+
 
 def test_patch_predictor_api(
     sample_patch1: Path,

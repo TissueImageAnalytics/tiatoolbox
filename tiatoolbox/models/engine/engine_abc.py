@@ -1029,6 +1029,52 @@ class EngineABC(ABC):
             **kwargs,
         )
 
+    def _calculate_scale_factor(
+        self: EngineABC, dataloader: DataLoader
+    ) -> float | tuple[float, float]:
+        """Calculates scale factor for final output.
+
+        Uses the dataloader resolution and the WSI resolution to calculate scale
+        factor for final WSI output.
+
+        Args:
+            dataloader (DataLoader):
+                Dataloader for the current run.
+
+        Returns:
+            scale_factor (float | tuple[float, float]):
+                Scale factor for final output.
+
+        """
+        # get units and resolution from dataloader.
+        dataloader_units = dataloader.dataset.units
+        dataloader_resolution = dataloader.dataset.resolution
+
+        # if dataloader units is baseline slide resolution is 1.0.
+        # in this case dataloader resolution / slide resolution will be
+        # equal to dataloader resolution.
+
+        if dataloader_units in ["mpp", "level", "objective_power"]:
+            wsimeta_dict = dataloader.dataset.reader.info.as_dict()
+
+        if dataloader_units == "mpp":
+            slide_resolution = wsimeta_dict[dataloader_units]
+            scale_factor = np.divide(slide_resolution, dataloader_resolution)
+            return scale_factor[0], scale_factor[1]
+
+        if dataloader_units == "level":
+            downsample_ratio = wsimeta_dict["level_downsamples"][dataloader_resolution]
+            return 1.0 / downsample_ratio, 1.0 / downsample_ratio
+
+        if dataloader_resolution == "objective_power":
+            slide_objective_power = wsimeta_dict["power"]
+            return (
+                dataloader_resolution / slide_objective_power,
+                dataloader_resolution / slide_objective_power,
+            )
+
+        return dataloader_resolution
+
     def _run_wsi_mode(
         self: EngineABC,
         output_type: str,
@@ -1061,26 +1107,7 @@ class EngineABC(ABC):
                 ioconfig=self._ioconfig,
             )
 
-            # get units and resolution from dataloader.
-            dataloader_units = dataloader.dataset.units
-            dataloader_resolution = dataloader.dataset.resolution
-
-            # if dataloader units is baseline slide resolution is 1.0.
-            # in this case dataloader resolution / slide resolution will be
-            # equal to dataloader resolution.
-            scale_factor = dataloader_resolution
-
-            if dataloader_units == "mpp":
-                wsimeta_dict = dataloader.dataset.reader.info.as_dict()
-                slide_resolution = wsimeta_dict[dataloader_units]
-                scale_factor = tuple(np.divide(slide_resolution, dataloader_resolution))
-
-            if dataloader_units == "level":
-                wsimeta_dict = dataloader.dataset.reader.info.as_dict()
-                downsample_ratio = wsimeta_dict["level_downsamples"][
-                    dataloader_resolution
-                ]
-                scale_factor = (1.0 / downsample_ratio, 1.0 / downsample_ratio)
+            scale_factor = self._calculate_scale_factor(dataloader=dataloader)
 
             raw_predictions = self.infer_wsi(
                 dataloader=dataloader,
