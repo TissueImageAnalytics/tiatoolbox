@@ -1029,9 +1029,8 @@ class EngineABC(ABC):
             **kwargs,
         )
 
-    def _calculate_scale_factor(
-        self: EngineABC, dataloader: DataLoader
-    ) -> float | tuple[float, float]:
+    @staticmethod
+    def _calculate_scale_factor(dataloader: DataLoader) -> float | tuple[float, float]:
         """Calculates scale factor for final output.
 
         Uses the dataloader resolution and the WSI resolution to calculate scale
