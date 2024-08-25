@@ -53,9 +53,9 @@ def background_composite(
     )
     composite.alpha_composite(image)
     if not alpha:
-        return np.asarray(composite.convert("RGB"))
+        return np.array(composite.convert("RGB"))
 
-    return np.asarray(composite)
+    return np.array(composite)
 
 
 def _convert_scalar_to_width_height(array: np.ndarray) -> np.ndarray:
