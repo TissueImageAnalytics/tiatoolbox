@@ -22,7 +22,6 @@ from bokeh.models import (
     BoxEditTool,
     Button,
     CheckboxButtonGroup,
-    CheckboxEditor,
     Circle,
     ColorBar,
     ColorPicker,
@@ -159,43 +158,64 @@ def set_channel_info(
     )
 
 
-def create_channel_color_ui() -> Column:
-    """Create the channel select/color management UI."""
-    # Start with an empty ColumnDataSource
-    source = ColumnDataSource(data={"channels": [], "colors": [], "active": []})
+def create_channel_color_ui():
+    channel_source = ColumnDataSource(
+        data={
+            "channels": [],
+            "dummy": [],
+        }
+    )
+    color_source = ColumnDataSource(
+        data={
+            "colors": [],
+            "dummy": [],
+        }
+    )
 
-    # Custom formatter for the color column
     color_formatter = HTMLTemplateFormatter(
-        template="""<div style="background-color: <%= value %>;
-          color: <%= value %>; border: 1px solid #ddd;"><%= value %></div>"""
+        template='<div style="background-color: <%= value %>; color: <%= value %>; border: 1px solid #ddd;"><%= value %></div>'
     )
 
-    columns = [
-        TableColumn(
-            field="channels", title="Channel", editor=StringEditor(), sortable=False
-        ),
-        TableColumn(
-            field="colors",
-            title="Color",
-            editor=StringEditor(),
-            formatter=color_formatter,
-            sortable=False,
-        ),
-        TableColumn(
-            field="active", title="Active", editor=CheckboxEditor(), sortable=False
-        ),
-    ]
-    data_table = DataTable(
-        source=source, columns=columns, editable=True, width=250, height=200
+    channel_table = DataTable(
+        source=channel_source,
+        columns=[
+            TableColumn(
+                field="channels", title="Channel", editor=StringEditor(), sortable=False
+            )
+        ],
+        editable=True,
+        width=200,
+        height=300,
+        selectable="checkbox",
+        autosize_mode="fit_viewport",
+        flow_mode="inline",
+    )
+    color_table = DataTable(
+        source=color_source,
+        columns=[
+            TableColumn(
+                field="colors",
+                title="Color",
+                formatter=color_formatter,
+                editor=StringEditor(),
+                sortable=False,
+            )
+        ],
+        editable=True,
+        width=130,
+        height=300,
+        selectable=True,
+        autosize_mode="none",
+        index_position=None,
+        flow_mode="inline",
     )
 
-    color_picker = ColorPicker(title="Selected Color", width=100)
+    color_picker = ColorPicker(title="Selected Channel Color", width=100)
 
-    def update_selected_color(attr: str, old: str, new: str) -> None:  # noqa: ARG001 # skipcq: PYL-W0613
-        """Channel color picker callback."""
-        selected = source.selected.indices
+    def update_selected_color(attr, old, new):
+        selected = color_source.selected.indices
         if selected:
-            source.patch({"colors": [(selected[0], new)]})
+            color_source.patch({"colors": [(selected[0], new)]})
 
     color_picker.on_change("color", update_selected_color)
 
@@ -205,26 +225,22 @@ def create_channel_color_ui() -> Column:
 
     def apply_changes() -> None:
         """Apply the changes to the image."""
-        data = source.data
-        colors = dict(zip(data["channels"], data["colors"]))
-        active_channels = [
-            channel for channel, is_active in enumerate(data["active"]) if is_active
-        ]
+        colors = dict(zip(channel_source.data["channels"], color_source.data["colors"]))
+        active_channels = channel_source.selected.indices
 
         set_channel_info({ch: hex2rgb(colors[ch]) for ch in colors}, active_channels)
         change_tiles("slide")
 
     apply_button.on_click(apply_changes)
 
-    def update_color_picker(attr: str, old: str, new: str) -> None:  # noqa: ARG001 # skipcq: PYL-W0613
-        """Update the color picker when a new row is selected."""
+    def update_color_picker(attr, old, new):
         if new:
-            selected_color = source.data["colors"][new[0]]
+            selected_color = color_source.data["colors"][new[0]]
             color_picker.color = selected_color
         else:
             color_picker.color = None
 
-    source.selected.on_change("indices", update_color_picker)
+    color_source.selected.on_change("indices", update_color_picker)
 
     enhance_slider = Slider(
         start=0.1,
@@ -250,10 +266,11 @@ def create_channel_color_ui() -> Column:
         text="""
         <p>Instructions:</p>
         <ul>
-            <li>Use the table to view and edit channel properties</li>
-            <li>Click on a row to select a channel</li>
+            <li>Double-click on the 'Active' column to toggle channel visibility</li>
+            <li>Click on a row to select it for color editing</li>
+            <li>Use 'Select All' or 'Deselect All' for quick selection</li>
+            <li>Enable 'Solo Mode' and select a channel to view it alone</li>
             <li>Use the color picker to change the color of the selected channel</li>
-            <li>Check or uncheck the 'Active' column to toggle channel visibility</li>
             <li>Click 'Apply Changes' to update the image</li>
         </ul>
     """
@@ -261,23 +278,30 @@ def create_channel_color_ui() -> Column:
 
     return column(
         instructions,
-        column(data_table, row(color_picker, apply_button), enhance_slider),
+        column(
+            row(channel_table, color_table),
+            row(color_picker, apply_button),
+            enhance_slider,
+        ),
     )
 
 
 def populate_table() -> None:
     """Populate the channel color table."""
     # Access the ColumnDataSource from the UI dictionary
-    source = UI["channel_select"].children[1].children[0].source
+    tables = UI["channel_select"].children[1].children[0].children
     colors, active_channels = get_channel_info()
 
     if colors is not None:
-        new_data = {
+        tables[0].source.data = {
             "channels": list(colors.keys()),
-            "colors": [rgb2hex(color) for color in colors.values()],
-            "active": [channel in active_channels for channel in range(len(colors))],
+            "dummy": list(colors.keys()),
         }
-        source.data = new_data
+        tables[1].source.data = {
+            "colors": [rgb2hex(color) for color in colors.values()],
+            "dummy": list(colors.keys()),
+        }
+        tables[0].source.selected.indices = active_channels
 
 
 def get_view_bounds(
