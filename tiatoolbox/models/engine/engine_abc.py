@@ -1053,7 +1053,7 @@ class EngineABC(ABC):
         # in this case dataloader resolution / slide resolution will be
         # equal to dataloader resolution.
 
-        if dataloader_units in ["mpp", "level", "objective_power"]:
+        if dataloader_units in ["mpp", "level", "power"]:
             wsimeta_dict = dataloader.dataset.reader.info.as_dict()
 
         if dataloader_units == "mpp":
@@ -1065,8 +1065,8 @@ class EngineABC(ABC):
             downsample_ratio = wsimeta_dict["level_downsamples"][dataloader_resolution]
             return 1.0 / downsample_ratio, 1.0 / downsample_ratio
 
-        if dataloader_resolution == "objective_power":
-            slide_objective_power = wsimeta_dict["power"]
+        if dataloader_units == "power":
+            slide_objective_power = wsimeta_dict["objective_power"]
             return (
                 dataloader_resolution / slide_objective_power,
                 dataloader_resolution / slide_objective_power,

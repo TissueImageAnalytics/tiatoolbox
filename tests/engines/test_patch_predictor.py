@@ -446,6 +446,46 @@ def test_engine_run_wsi_annotation_store(
     shutil.rmtree(save_dir)
 
 
+def test_engine_run_wsi_annotation_store_power(
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+) -> None:
+    """Test the engine run for Whole slide images."""
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = PatchPredictor(model="alexnet-kather100k")
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{tmp_path}/model_wsi_output"
+
+    kwargs = {
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 20,
+        "save_dir": save_dir,
+        "units": "power",
+    }
+
+    output = eng.run(
+        images=[mini_wsi_svs],
+        masks=[mini_wsi_msk],
+        patch_mode=False,
+        output_type="AnnotationStore",
+        **kwargs,
+    )
+
+    output_ = output[mini_wsi_svs]
+
+    assert output_.exists()
+    assert output_.suffix == ".db"
+    predictions = _extract_probabilities_from_annotation_store(output_)
+    assert _validate_probabilities(predictions)
+
+    shutil.rmtree(save_dir)
+
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
