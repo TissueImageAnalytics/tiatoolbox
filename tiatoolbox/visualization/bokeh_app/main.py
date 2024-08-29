@@ -14,6 +14,10 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -59,9 +63,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -180,15 +181,19 @@ def create_channel_color_ui():
         source=channel_source,
         columns=[
             TableColumn(
-                field="channels", title="Channel", editor=StringEditor(), sortable=False
+                field="channels",
+                title="Channel",
+                editor=StringEditor(),
+                sortable=False,
+                width=200,
             )
         ],
         editable=True,
         width=200,
-        height=300,
+        height=260,
         selectable="checkbox",
-        autosize_mode="fit_viewport",
-        flow_mode="inline",
+        autosize_mode="none",
+        fit_columns=True,
     )
     color_table = DataTable(
         source=color_source,
@@ -199,18 +204,19 @@ def create_channel_color_ui():
                 formatter=color_formatter,
                 editor=StringEditor(),
                 sortable=False,
+                width=130,
             )
         ],
         editable=True,
         width=130,
-        height=300,
+        height=260,
         selectable=True,
         autosize_mode="none",
         index_position=None,
-        flow_mode="inline",
+        fit_columns=True,
     )
 
-    color_picker = ColorPicker(title="Selected Channel Color", width=100)
+    color_picker = ColorPicker(title="Channel Color", width=100)
 
     def update_selected_color(attr, old, new):
         selected = color_source.selected.indices
