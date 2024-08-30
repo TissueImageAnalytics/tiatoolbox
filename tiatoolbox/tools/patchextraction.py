@@ -37,7 +37,7 @@ class ExtractorParams(TypedDict, total=False):
 
     """
 
-    input_img: str | Path | np.ndarray
+    input_img: str | Path | np.ndarray | wsireader.WSIReader
     locations_list: np.ndarray | DataFrame | str | Path
     patch_size: int | tuple[int, int]
     resolution: Resolution
@@ -57,7 +57,7 @@ class PointsPatchExtractorParams(TypedDict):
 
     """
 
-    input_img: str | Path | np.ndarray
+    input_img: str | Path | np.ndarray | wsireader.WSIReader
     locations_list: np.ndarray | DataFrame | str | Path
     patch_size: int | tuple[int, int]
     resolution: Resolution
@@ -74,7 +74,7 @@ class SlidingWindowPatchExtractorParams(TypedDict):
 
     """
 
-    input_img: str | Path | np.ndarray
+    input_img: str | Path | np.ndarray | wsireader.WSIReader
     patch_size: int | tuple[int, int]
     resolution: Resolution
     units: Units
@@ -109,7 +109,7 @@ class PatchExtractor(PatchExtractorABC):
     """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_img(str, Path, :class:`numpy.ndarray`):
+        input_img(str, Path, :class:`numpy.ndarray`, :class:`WSIReader`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
@@ -186,7 +186,7 @@ class PatchExtractor(PatchExtractorABC):
 
     def __init__(
         self: PatchExtractor,
-        input_img: str | Path | np.ndarray,
+        input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
         input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
         resolution: Resolution = 0,
@@ -574,7 +574,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
     """Extract patches using sliding fixed sized window for images and labels.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, pathlib.Path, :class:`numpy.ndarray`, :class:`WSIReader`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
@@ -627,7 +627,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     def __init__(
         self: SlidingWindowPatchExtractor,
-        input_img: str | Path | np.ndarray,
+        input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
         input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
         resolution: Resolution = 0,
@@ -665,7 +665,7 @@ class PointsPatchExtractor(PatchExtractor):
     """Extracting patches with specified points as a centre.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, pathlib.Path, :class:`numpy.ndarray`: class:`WSIReader`):
             Input image for patch extraction.
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path):
             Contains location and/or type of patch. This can be path to
@@ -709,7 +709,7 @@ class PointsPatchExtractor(PatchExtractor):
     def __init__(
         # pylint: disable=PLR0913
         self: PointsPatchExtractor,
-        input_img: str | Path | np.ndarray,
+        input_img: str | Path | np.ndarray | wsireader.WSIReader,
         locations_list: np.ndarray | DataFrame | str | Path,
         patch_size: int | tuple[int, int] = (224, 224),
         resolution: Resolution = 0,
