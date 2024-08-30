@@ -397,9 +397,9 @@ class TIAToolboxCLI(click.Group):
         **kwargs: dict[str, Any],
     ) -> None:
         """Initialize TIAToolboxCLI."""
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
         self.help = "Computational pathology toolbox by TIA Centre."
-        self.help_option_names = {"help_option_names": ["-h", "--help"]}
+        self.help_option_names = ["-h", "--help"]
 
 
 def no_input_message(
@@ -556,7 +556,7 @@ tiatoolbox_cli = TIAToolboxCLI()
 
 
 def prepare_ioconfig_seg(
-    segment_config_class: IOConfigABC,
+    segment_config_class: type[IOConfigABC],
     pretrained_weights: str | Path | None,
     yaml_config_path: str | Path,
 ) -> IOConfigABC | None:
@@ -566,7 +566,6 @@ def prepare_ioconfig_seg(
     if pretrained_weights is not None:
         with Path(yaml_config_path).open() as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
-
         return segment_config_class(**ioconfig)
 
     return None
