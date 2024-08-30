@@ -420,8 +420,8 @@ def no_input_message(
     if input_file is None:
         ctx = click.get_current_context()
         ctx.fail(message=message)
-
-    return Path(input_file)
+    else:
+        return Path(input_file)
 
 
 def prepare_file_dir_cli(
