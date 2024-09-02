@@ -109,10 +109,11 @@ def _get_timm_architecture(
     elif arch_name == "prov-gigapath":
         # ProViT-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
         # does not work with timm==0.9.8, needs timm==1.0.3: https://github.com/prov-gigapath/prov-gigapath/issues/2
-        assert (timm.__version__ > "1.0.0"), "There is a bug in version `timm==0.9.8`. Tested to work from version `timm==1.0.3`"
+        assert (
+            timm.__version__ > "1.0.0"
+        ), "There is a bug in version `timm==0.9.8`. Tested to work from version `timm==1.0.3`"
         feat_extract = timm.create_model(
-            "hf_hub:prov-gigapath/prov-gigapath",
-            pretrained=True
+            "hf_hub:prov-gigapath/prov-gigapath", pretrained=True
         )
     else:
         msg = f"Architecture {arch_name} not supported"
