@@ -99,7 +99,7 @@ def _get_timm_architecture(
         A ready-to-use timm model.
     """
     if arch_name == "uni_v1":
-        # UNI tile encoder: https://github.com/mahmoodlab/UNI
+        # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
         feat_extract = timm.create_model(
             "hf-hub:MahmoodLab/UNI",
             pretrained=True,
