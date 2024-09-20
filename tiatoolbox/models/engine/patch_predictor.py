@@ -1,4 +1,4 @@
-"""Defines PatchPrediction Engine."""
+"""Defines PatchPredictor Engine."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover
 class PatchPredictor(EngineABC):
     r"""Patch level predictor for digital histology images.
 
-    The models provided by tiatoolbox should give the following results:
+    The models provided by TIAToolbox should give the following results:
 
     .. list-table:: PatchPredictor performance on the Kather100K dataset [1]
        :widths: 15 15
