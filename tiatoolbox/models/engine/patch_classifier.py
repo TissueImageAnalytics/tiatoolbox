@@ -166,10 +166,6 @@ class PatchClassifier(PatchPredictor):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        merge_predictions (bool):
-            Whether to merge the predictions to form a 2-dimensional
-            map. This is only applicable if `patch_mode` is False in inference.
-            Default is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
@@ -211,8 +207,6 @@ class PatchClassifier(PatchPredictor):
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        merge_predictions (bool):
-            Whether to merge WSI predictions into a single file. Default value is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
