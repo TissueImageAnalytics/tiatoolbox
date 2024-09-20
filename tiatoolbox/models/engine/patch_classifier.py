@@ -393,7 +393,7 @@ class PatchClassifier(PatchPredictor):
             probabilities,
         )
 
-        if "predictions" not in raw_predictions:
+        if "predictions" in raw_predictions:
             raw_predictions["predictions"].append(predictions)
         else:
             raw_predictions["predictions"] = predictions
