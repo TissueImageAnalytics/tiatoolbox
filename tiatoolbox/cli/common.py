@@ -92,7 +92,7 @@ def cli_output_type(
     "Default value is 'AnnotationStore'.",
     default: str = "AnnotationStore",
     input_type: click.Choice | None = None,
-) -> callable:
+) -> Callable:
     """Enables --file-types option for cli."""
     if input_type is None:
         input_type = click.Choice(["zarr", "AnnotationStore"], case_sensitive=False)
@@ -124,7 +124,7 @@ def cli_patch_mode(
     usage_help: str = "Whether to run the model in patch mode or WSI mode.",
     *,
     default: bool = False,
-) -> callable:
+) -> Callable:
     """Enables --return-probabilities option for cli."""
     return click.option(
         "--patch-mode",
@@ -277,7 +277,7 @@ def cli_model(
     "downloaded. However, you can override with your own set of weights"
     "via the `pretrained_weights` argument. Argument is case insensitive.",
     default: str = "resnet18-kather100k",
-) -> callable:
+) -> Callable:
     """Enables --pretrained-model option for cli."""
     return click.option(
         "--model",
@@ -290,7 +290,7 @@ def cli_weights(
     usage_help: str = "Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default: str | None = None,
-) -> callable:
+) -> Callable:
     """Enables --pretrained-weights option for cli."""
     return click.option(
         "--weights",
@@ -302,7 +302,7 @@ def cli_weights(
 def cli_device(
     usage_help: str = "Select the device (cpu/cuda/mps) to use for inference.",
     default: str = "cpu",
-) -> callable:
+) -> Callable:
     """Enables --pretrained-weights option for cli."""
     return click.option(
         "--device",
