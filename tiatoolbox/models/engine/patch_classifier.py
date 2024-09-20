@@ -272,7 +272,7 @@ class PatchClassifier(PatchPredictor):
         device: str = "cpu",
         verbose: bool = True,
     ) -> None:
-        """Initialize :class:`PatchPredictor`."""
+        """Initialize :class:`PatchClassifier`."""
         super().__init__(
             model=model,
             batch_size=batch_size,
