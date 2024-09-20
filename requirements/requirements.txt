@@ -7,7 +7,7 @@ defusedxml>=0.7.1
 filelock>=3.9.0
 flask>=2.2.2
 flask-cors>=4.0.0
-glymur>=0.12.1, ~=0.12.6 # 0.12.6 is incompatible due to a private attribute
+glymur>=0.12.7
 imagecodecs>=2022.9.26
 joblib>=1.1.1
 jupyterlab>=3.5.2

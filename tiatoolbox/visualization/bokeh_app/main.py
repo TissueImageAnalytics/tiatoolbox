@@ -688,7 +688,7 @@ def slide_toggle_cb(attr: str) -> None:  # noqa: ARG001
         UI["p"].renderers[0].alpha = 0.0
 
 
-def node_select_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
+def node_select_cb(attr: str, old: int, new: int) -> None:
     """Placeholder callback to do something on node selection."""
     # Do something on node select if desired
 
