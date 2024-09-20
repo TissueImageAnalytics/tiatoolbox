@@ -169,7 +169,7 @@ class CNNModel(ModelABC):
         with torch.inference_mode():
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
-        return {"predictions": output.cpu().numpy()}
+        return {"probabilities": output.cpu().numpy()}
 
 
 class CNNBackbone(ModelABC):
@@ -265,5 +265,6 @@ class CNNBackbone(ModelABC):
         # Do not compute the gradient (not training)
         with torch.inference_mode():
             output = model(img_patches_device)
+
         # Output should be a single tensor or scalar
-        return {"predictions": output.cpu().numpy()}
+        return {"probabilities": output.cpu().numpy()}

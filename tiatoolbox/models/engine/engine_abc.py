@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
@@ -14,7 +15,7 @@ import zarr
 from torch import nn
 from typing_extensions import Unpack
 
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
@@ -128,7 +129,8 @@ class EngineABCRunParams(TypedDict, total=False):
         num_post_proc_workers (int):
             Number of workers to postprocess the results of the model.
         output_file (str):
-            Output file name to save "zarr" or "db".
+            Output file name to save "zarr" or "db". If None, path to output is
+            returned by the engine.
         patch_input_shape (tuple):
             Shape of patches input to the model as tuple of height and width (HW).
             Patches are requested at read resolution, not with respect to level 0,
@@ -355,8 +357,6 @@ class EngineABC(ABC):
         verbose: bool = False,
     ) -> None:
         """Initialize Engine."""
-        super().__init__()
-
         self.images = None
         self.masks = None
         self.patch_mode = None
@@ -378,10 +378,10 @@ class EngineABC(ABC):
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.patch_input_shape: IntPair | None = None
-        self.resolution: Resolution = 1.0
+        self.resolution: Resolution | None = None
         self.return_labels: bool = False
         self.stride_shape: IntPair | None = None
-        self.units: Units = "baseline"
+        self.units: Units | None = None
         self.verbose = verbose
 
     @staticmethod
@@ -440,7 +440,7 @@ class EngineABC(ABC):
 
     def get_dataloader(
         self: EngineABC,
-        images: Path,
+        images: str | Path | list[str | Path] | np.ndarray,
         masks: Path | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
@@ -453,7 +453,7 @@ class EngineABC(ABC):
             images (list of str or :class:`Path` or :class:`numpy.ndarray`):
                 A list of image patches in NHWC format as a numpy array
                 or a list of str/paths to WSIs. When `patch_mode` is False
-                the function expects list of str/paths to WSIs.
+                the function expects path to a single WSI.
             masks (list | None):
                 List of masks. Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
@@ -469,7 +469,6 @@ class EngineABC(ABC):
         Returns:
             torch.utils.data.DataLoader:
                 :class:`torch.utils.data.DataLoader` for inference.
-
 
         """
         if labels:
@@ -527,6 +526,8 @@ class EngineABC(ABC):
         self: EngineABC,
         dataloader: DataLoader,
         save_path: Path | None,
+        *,
+        return_coordinates: bool = False,
     ) -> dict | Path:
         """Runs model inference on image patches and returns output as a dictionary.
 
@@ -535,6 +536,9 @@ class EngineABC(ABC):
                 An :class:`torch.utils.data.DataLoader` object to run inference.
             save_path (Path | None):
                 If `cache_mode` is True then path to save zarr file must be provided.
+            return_coordinates (bool):
+                Whether to save coordinates in the output. This is required when
+                this function is called by `infer_wsi` and `patch_mode` is False.
 
         Returns:
             dict or Path:
@@ -553,10 +557,13 @@ class EngineABC(ABC):
                 position=0,
             )
 
-        keys = ["predictions"]
+        keys = ["probabilities"]
 
         if self.return_labels:
             keys.append("labels")
+
+        if return_coordinates:
+            keys.append("coordinates")
 
         raw_predictions = {key: None for key in keys}
 
@@ -571,9 +578,14 @@ class EngineABC(ABC):
                 batch_data["image"],
                 device=self.device,
             )
+            if return_coordinates:
+                batch_output["coordinates"] = batch_data["coords"].numpy()
 
             if self.return_labels:  # be careful of `s`
-                batch_output["labels"] = batch_data["label"].numpy()
+                if isinstance(batch_data["label"], torch.Tensor):
+                    batch_output["labels"] = batch_data["label"].numpy()
+                else:
+                    batch_output["labels"] = batch_data["label"]
 
             raw_predictions = self._update_model_output(
                 raw_predictions=raw_predictions,
@@ -597,7 +609,7 @@ class EngineABC(ABC):
     def post_process_patches(
         self: EngineABC,
         raw_predictions: dict | Path,
-        **kwargs: dict,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post-process raw patch predictions from inference.
 
@@ -609,8 +621,9 @@ class EngineABC(ABC):
         Args:
             raw_predictions (dict | Path):
                 A dictionary or path to zarr with patch prediction information.
-            **kwargs (dict):
-                Keyword Args to update setup_patch_dataset() method attributes.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes. See
+                :class:`EngineRunParams` for accepted keyword arguments.
 
         Returns:
             dict or Path:
@@ -618,7 +631,7 @@ class EngineABC(ABC):
                 saved zarr file if `cache_mode` is True.
 
         """
-        _ = kwargs.get("predictions")  # Key values required for post-processing
+        _ = kwargs.get("probabilities")  # Key values required for post-processing
 
         if self.cache_mode:  # cache mode
             _ = zarr.open(raw_predictions, mode="w")
@@ -627,7 +640,7 @@ class EngineABC(ABC):
 
     def save_predictions(
         self: EngineABC,
-        processed_predictions: dict,
+        processed_predictions: dict | Path,
         output_type: str,
         save_dir: Path | None = None,
         **kwargs: dict,
@@ -656,26 +669,36 @@ class EngineABC(ABC):
                 `.zarr` file depending on whether a save_dir Path is provided.
 
         """
-        if (self.cache_mode or not save_dir) and output_type != "AnnotationStore":
+        if (
+            self.cache_mode or not save_dir
+        ) and output_type.lower() != "annotationstore":
             return processed_predictions
 
-        output_file = Path(kwargs.get("output_file", "output.db"))
+        save_path = Path(kwargs.get("output_file", save_dir / "output.db"))
 
-        save_path = save_dir / output_file
-
-        if output_type == "AnnotationStore":
+        if output_type.lower() == "annotationstore":
             # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor")
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
+            processed_predictions_path: str | Path | None = None
+
             # Need to add support for zarr conversion.
-            return dict_to_store(
+            if self.cache_mode:
+                processed_predictions_path = processed_predictions
+                processed_predictions = zarr.open(processed_predictions, mode="r")
+
+            out_file = dict_to_store(
                 processed_predictions,
                 scale_factor,
                 class_dict,
                 save_path,
             )
+            if processed_predictions_path is not None:
+                shutil.rmtree(processed_predictions_path)
+
+            return out_file
 
         return (
             dict_to_zarr(
@@ -691,11 +714,9 @@ class EngineABC(ABC):
     def infer_wsi(
         self: EngineABC,
         dataloader: torch.utils.data.DataLoader,
-        img_label: str,
-        highest_input_resolution: list[dict],
-        save_dir: Path,
+        save_path: Path | str,
         **kwargs: dict,
-    ) -> list:
+    ) -> dict | Path:
         """Model inference on a WSI.
 
         This function must be implemented by subclasses.
@@ -705,21 +726,27 @@ class EngineABC(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def post_process_wsi(
+        self: EngineABC,
+        raw_predictions: dict | Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | Path:
+        """Post process WSI output."""
+        _ = kwargs.get("probabilities")  # Key values required for post-processing
+        return raw_predictions
+
+    @abstractmethod
     def save_wsi_output(
         self: EngineABC,
-        raw_output: dict | Path,
-        save_dir: Path,
+        processed_output: Path,
         output_type: str,
         **kwargs: Unpack[EngineABCRunParams],
-    ) -> AnnotationStore | Path:
-        """Post-process a WSI.
+    ) -> Path:
+        """Aggregate the output at the WSI level and save to file.
 
         Args:
-            raw_output (dict | Path):
-                A dictionary with output information or zarr file path.
-            save_dir (Path):
-                Output Path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file
+            processed_output (Path):
+                Path to Zarr file with intermediate results.
             output_type (str):
                 The desired output type for resulting patch dataset.
             **kwargs (EngineABCRunParams):
@@ -732,23 +759,22 @@ class EngineABC(ABC):
             stored in a `.zarr` file.
 
         """
-        if (
-            output_type == "zarr"
-            and isinstance(raw_output, Path)
-            and raw_output.suffix == ".zarr"
-        ):
-            return raw_output
+        if output_type.lower() == "zarr":
+            msg = "Output file saved at %s.", processed_output
+            logger.info(msg=msg)
+            return processed_output
 
-        output_file = kwargs.get("output_file", "output")
-        save_path = save_dir / output_file
-
-        if output_type == "AnnotationStore":
+        if output_type.lower() == "annotationstore":
+            save_path = Path(kwargs.get("output_file", processed_output.stem + ".db"))
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+            # Read zarr file to a dict
+            raw_output_dict = zarr.open(str(processed_output), mode="r")
+
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
-            return dict_to_store(raw_output, scale_factor, class_dict, save_path)
+            return dict_to_store(raw_output_dict, scale_factor, class_dict, save_path)
 
         msg = "Only supports zarr and AnnotationStore as output_type."
         raise ValueError(msg)
@@ -778,7 +804,7 @@ class EngineABC(ABC):
                 "Please provide a valid ModelIOConfigABC. "
                 "No default ModelIOConfigABC found."
             )
-            raise ValueError(msg)
+            logger.warning(msg)
 
         if ioconfig and isinstance(ioconfig, ModelIOConfigABC):
             self.ioconfig = ioconfig
@@ -914,6 +940,7 @@ class EngineABC(ABC):
         labels: list | None = None,
         save_dir: os | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
+        output_type: str = "dict",
         *,
         overwrite: bool = False,
         patch_mode: bool,
@@ -928,10 +955,17 @@ class EngineABC(ABC):
             setattr(self, key, kwargs.get(key))
 
         self.patch_mode = patch_mode
+        if not self.patch_mode:
+            self.cache_mode = True  # if input is WSI run using cache mode.
+
         if self.cache_mode and self.batch_size > self.cache_size:
             self.batch_size = self.cache_size
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
+        if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
+            msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
+            raise TypeError(msg)
+
         self.images = self._validate_images_masks(images=images)
 
         if masks is not None:
@@ -966,11 +1000,15 @@ class EngineABC(ABC):
         """
         save_path = None
         if self.cache_mode:
-            output_file = Path(kwargs.get("output_file", "output.db"))
+            output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
+
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
 
         dataloader = self.get_dataloader(
             images=self.images,
+            masks=self.masks,
             labels=self.labels,
             patch_mode=True,
         )
@@ -982,12 +1020,114 @@ class EngineABC(ABC):
             raw_predictions=raw_predictions,
             **kwargs,
         )
+        logger.removeFilter(duplicate_filter)
+
         return self.save_predictions(
             processed_predictions=processed_predictions,
             output_type=output_type,
             save_dir=save_dir,
             **kwargs,
         )
+
+    @staticmethod
+    def _calculate_scale_factor(dataloader: DataLoader) -> float | tuple[float, float]:
+        """Calculates scale factor for final output.
+
+        Uses the dataloader resolution and the WSI resolution to calculate scale
+        factor for final WSI output.
+
+        Args:
+            dataloader (DataLoader):
+                Dataloader for the current run.
+
+        Returns:
+            scale_factor (float | tuple[float, float]):
+                Scale factor for final output.
+
+        """
+        # get units and resolution from dataloader.
+        dataloader_units = dataloader.dataset.units
+        dataloader_resolution = dataloader.dataset.resolution
+
+        # if dataloader units is baseline slide resolution is 1.0.
+        # in this case dataloader resolution / slide resolution will be
+        # equal to dataloader resolution.
+
+        if dataloader_units in ["mpp", "level", "power"]:
+            wsimeta_dict = dataloader.dataset.reader.info.as_dict()
+
+        if dataloader_units == "mpp":
+            slide_resolution = wsimeta_dict[dataloader_units]
+            scale_factor = np.divide(slide_resolution, dataloader_resolution)
+            return scale_factor[0], scale_factor[1]
+
+        if dataloader_units == "level":
+            downsample_ratio = wsimeta_dict["level_downsamples"][dataloader_resolution]
+            return 1.0 / downsample_ratio, 1.0 / downsample_ratio
+
+        if dataloader_units == "power":
+            slide_objective_power = wsimeta_dict["objective_power"]
+            return (
+                dataloader_resolution / slide_objective_power,
+                dataloader_resolution / slide_objective_power,
+            )
+
+        return dataloader_resolution
+
+    def _run_wsi_mode(
+        self: EngineABC,
+        output_type: str,
+        save_dir: Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | AnnotationStore | Path:
+        """Runs the Engine in the WSI mode (patch_mode = False).
+
+        Input arguments are passed from :func:`EngineABC.run()`.
+
+        """
+        suffix = ".zarr"
+        if output_type == "AnnotationStore":
+            suffix = ".db"
+
+        out = {image: save_dir / (str(image.stem) + suffix) for image in self.images}
+
+        save_path = {
+            image: save_dir / (str(image.stem) + ".zarr") for image in self.images
+        }
+
+        for image_num, image in enumerate(self.images):
+            duplicate_filter = DuplicateFilter()
+            logger.addFilter(duplicate_filter)
+            mask = self.masks[image_num] if self.masks is not None else None
+            dataloader = self.get_dataloader(
+                images=image,
+                masks=mask,
+                patch_mode=False,
+                ioconfig=self._ioconfig,
+            )
+
+            scale_factor = self._calculate_scale_factor(dataloader=dataloader)
+
+            raw_predictions = self.infer_wsi(
+                dataloader=dataloader,
+                save_path=save_path[image],
+                **kwargs,
+            )
+            processed_predictions = self.post_process_wsi(
+                raw_predictions=raw_predictions,
+                **kwargs,
+            )
+            kwargs["output_file"] = out[image]
+            kwargs["scale_factor"] = scale_factor
+            out[image] = self.save_predictions(
+                processed_predictions=processed_predictions,
+                output_type=output_type,
+                save_dir=save_dir,
+                **kwargs,
+            )
+            logger.removeFilter(duplicate_filter)
+
+        return out
 
     def run(
         self: EngineABC,
@@ -1031,7 +1171,7 @@ class EngineABC(ABC):
                 Whether to overwrite the results. Default = False.
             output_type (str):
                 The format of the output type. "output_type" can be
-                "zarr" or "AnnotationStore". Default value is "zarr".
+                "dict", "zarr" or "AnnotationStore". Default value is "zarr".
                 When saving in the zarr format the output is saved using the
                 `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
                 as a zarr group. If the required output type is an "AnnotationStore"
@@ -1087,6 +1227,7 @@ class EngineABC(ABC):
             ioconfig=ioconfig,
             overwrite=overwrite,
             patch_mode=patch_mode,
+            output_type=output_type,
             **kwargs,
         )
 
@@ -1101,4 +1242,8 @@ class EngineABC(ABC):
         # highest_input_resolution, implement dataloader,
         # pre-processing, post-processing and save_output
         # for WSIs separately.
-        raise NotImplementedError
+        return self._run_wsi_mode(
+            output_type=output_type,
+            save_dir=save_dir,
+            **kwargs,
+        )

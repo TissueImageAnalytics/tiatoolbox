@@ -1201,33 +1201,40 @@ def add_from_dat(
 
 
 def patch_predictions_as_annotations(
-    preds: list,
+    preds: list | np.ndarray,
     keys: list,
     class_dict: dict,
-    class_probs: list,
+    class_probs: list | np.ndarray,
     patch_coords: list,
     classes_predicted: list,
     labels: list,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    for i, pred in enumerate(preds):
+    for i, probs in enumerate(class_probs):
         if "probabilities" in keys:
-            props = {
-                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
-            }
+            props = {f"prob_{class_dict[j]}": probs[j] for j in classes_predicted}
         else:
             props = {}
         if "labels" in keys:
             props["label"] = class_dict[labels[i]]
-        props["type"] = class_dict[pred]
+        if len(preds) > 0:
+            props["type"] = class_dict[preds[i]]
         annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
 
     return annotations
 
 
+def _get_zarr_array(zarr_array: zarr.core.Array | np.ndarray) -> np.ndarray:
+    """Converts a zarr array into a numpy array."""
+    if isinstance(zarr_array, zarr.core.Array):
+        return zarr_array[:]
+
+    return zarr_array
+
+
 def dict_to_store(
-    patch_output: dict,
+    patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
@@ -1235,7 +1242,7 @@ def dict_to_store(
     """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
 
     Args:
-        patch_output (dict):
+        patch_output (dict | zarr.Group):
             A dictionary with "probabilities", "predictions", "coordinates",
             and "labels" keys.
         scale_factor (tuple[float, float]):
@@ -1260,9 +1267,10 @@ def dict_to_store(
         # we cant create annotations without coordinates
         msg = "Patch output must contain coordinates."
         raise ValueError(msg)
+
     # get relevant keys
-    class_probs = patch_output.get("probabilities", [])
-    preds = patch_output.get("predictions", [])
+    class_probs = _get_zarr_array(patch_output.get("probabilities", []))
+    preds = _get_zarr_array(patch_output.get("predictions", []))
 
     patch_coords = np.array(patch_output.get("coordinates", []))
     if not np.all(np.array(scale_factor) == 1):
@@ -1301,7 +1309,7 @@ def dict_to_store(
 
     # if a save director is provided, then dump store into a file
     if save_path:
-        # ensure parent directory exisits
+        # ensure parent directory exists
         save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
         # ensure proper db extension
         save_path = save_path.parent.absolute() / (save_path.stem + ".db")
@@ -1341,15 +1349,15 @@ def dict_to_zarr(
     save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
 
     # save to zarr
-    predictions_array = np.array(raw_predictions["predictions"])
+    probabilities_array = np.array(raw_predictions["probabilities"])
     z = zarr.open(
-        save_path,
+        str(save_path),
         mode="w",
-        shape=predictions_array.shape,
+        shape=probabilities_array.shape,
         chunks=chunks,
         compressor=compressor,
     )
-    z[:] = predictions_array
+    z[:] = probabilities_array
 
     return save_path
 
@@ -1463,7 +1471,8 @@ def write_to_zarr_in_cache_mode(
             Zarr group name consisting of zarr(s) to save the batch output
             values.
         output_data_to_save (dict):
-            Output data from the Engine to save to Zarr.
+            Output data from the Engine to save to Zarr. Expects the data saved in
+            dictionary to be a numpy array.
         **kwargs (dict):
             Keyword Args to update zarr_group attributes.
 
@@ -1485,6 +1494,8 @@ def write_to_zarr_in_cache_mode(
                 compressor=compressor,
             )
             zarr_dataset[:] = data_to_save
+
+        return zarr_group
 
     # case 2 - append to existing zarr group
     for key in output_data_to_save:

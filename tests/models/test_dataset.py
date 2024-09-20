@@ -309,7 +309,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
         save_dir_path / "sample2.npy",
     ]
     with pytest.raises(
-        ValueError,
+        TypeError,
         match="Cannot load image data from",
     ):
         _ = PatchDataset(imgs)
