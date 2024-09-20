@@ -120,10 +120,6 @@ class EngineABCRunParams(TypedDict, total=False):
             Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        merge_predictions (bool):
-            Whether to merge the predictions to form a 2-dimensional
-            map into a single file from a WSI.
-            This is only applicable if `patch_mode` is False in inference.
         num_loader_workers (int):
             Number of workers used in :class:`torch.utils.data.DataLoader`.
         num_post_proc_workers (int):
@@ -165,7 +161,6 @@ class EngineABCRunParams(TypedDict, total=False):
     class_dict: dict
     device: str
     ioconfig: ModelIOConfigABC
-    merge_predictions: bool
     num_loader_workers: int
     num_post_proc_workers: int
     output_file: str
@@ -248,10 +243,6 @@ class EngineABC(ABC):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        merge_predictions (bool):
-            Whether to merge the predictions to form a 2-dimensional
-            map. This is only applicable if `patch_mode` is False in inference.
-            Default is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
@@ -293,8 +284,6 @@ class EngineABC(ABC):
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        merge_predictions (bool):
-            Whether to merge WSI predictions into a single file. Default value is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
@@ -374,7 +363,6 @@ class EngineABC(ABC):
         self.cache_mode: bool = False
         self.cache_size: int = self.batch_size if self.batch_size else 10000
         self.labels: list | None = None
-        self.merge_predictions: bool = False
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.patch_input_shape: IntPair | None = None
@@ -1194,8 +1182,6 @@ class EngineABC(ABC):
                 - img_path: path of the input image.
                 - raw: path to save location for raw prediction,
                   saved in .json.
-                - merged: path to .npy contain merged
-                  predictions if `merge_predictions` is `True`.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
