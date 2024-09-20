@@ -1225,7 +1225,7 @@ def patch_predictions_as_annotations(
     return annotations
 
 
-def _get_zarr_array(zarr_array: zarr.core.Array | np.ndarray) -> np.ndarray:
+def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray) -> np.ndarray:
     """Converts a zarr array into a numpy array."""
     if isinstance(zarr_array, zarr.core.Array):
         return zarr_array[:]
@@ -1269,8 +1269,8 @@ def dict_to_store(
         raise ValueError(msg)
 
     # get relevant keys
-    class_probs = _get_zarr_array(patch_output.get("probabilities", []))
-    preds = _get_zarr_array(patch_output.get("predictions", []))
+    class_probs = get_zarr_array(patch_output.get("probabilities", []))
+    preds = get_zarr_array(patch_output.get("predictions", []))
 
     patch_coords = np.array(patch_output.get("coordinates", []))
     if not np.all(np.array(scale_factor) == 1):

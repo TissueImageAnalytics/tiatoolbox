@@ -412,7 +412,7 @@ class PatchPredictor(EngineABC):
         )
 
     def run(
-        self: EngineABC,
+        self: PatchPredictor,
         images: list[os | Path | WSIReader] | np.ndarray,
         masks: list[os | Path] | np.ndarray | None = None,
         labels: list | None = None,
