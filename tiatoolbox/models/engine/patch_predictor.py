@@ -243,12 +243,12 @@ class PatchPredictor(EngineABC):
     Examples:
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
-        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(model="resnet18-kather100k")
         >>> output = predictor.run(data, mode='patch')
 
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
-        >>> predictor = PatchPredictor(pretrained_model="resnet18-kather100k")
+        >>> predictor = PatchPredictor(model="resnet18-kather100k")
         >>> output = predictor.predict(data, mode='patch')
 
         >>> # list of 2 image patch files as input
