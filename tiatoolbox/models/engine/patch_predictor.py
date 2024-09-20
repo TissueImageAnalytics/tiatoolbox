@@ -1,4 +1,4 @@
-"""Defines Abstract Base Class for TIAToolbox Model Engines."""
+"""Defines PatchPrediction Engine."""
 
 from __future__ import annotations
 
