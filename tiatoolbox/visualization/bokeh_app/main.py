@@ -14,10 +14,6 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -63,6 +59,9 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -862,7 +861,7 @@ def slide_toggle_cb(attr: str) -> None:  # noqa: ARG001
         UI["p"].renderers[0].alpha = 0.0
 
 
-def node_select_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
+def node_select_cb(attr: str, old: int, new: int) -> None:
     """Placeholder callback to do something on node selection."""
     # Do something on node select if desired
 
