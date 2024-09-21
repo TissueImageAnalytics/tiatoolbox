@@ -320,7 +320,11 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         elif auto_get_mask and mode == "wsi" and mask_path is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
-            mask_reader = self.reader.tissue_mask(resolution=1.25, units="power")
+            try:
+                mask_reader = self.reader.tissue_mask(resolution=1.25, units="power")
+            except:
+                # if power is None, try with mpp
+                mask_reader = self.reader.tissue_mask(resolution=6.0, units="mpp")
             # ? will this mess up  ?
             mask_reader.info = self.reader.info
 

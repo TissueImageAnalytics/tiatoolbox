@@ -3595,7 +3595,9 @@ class TIFFWSIReader(WSIReader):
         self.level_arrays = dict(
             sorted(
                 self.level_arrays.items(),
-                key=lambda x: -np.prod(self._canonical_shape(x[1].array.shape[:2])),
+                key=lambda x: -np.prod(
+                    self._canonical_shape(x[1].array.shape[:2]), dtype=float
+                ),
             )
         )
         # maybe get colors if they exist in metadata
