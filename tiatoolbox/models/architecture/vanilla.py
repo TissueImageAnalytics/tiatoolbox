@@ -116,7 +116,7 @@ def _get_timm_architecture(
             "hf_hub:prov-gigapath/prov-gigapath", pretrained=True
         )
     else:
-        msg = f"Architecture {arch_name} not supported. If you are loading timm models, only timm version > `1.0.3` are supported." 
+        msg = f"Architecture {arch_name} not supported. If you are loading timm models, only timm version > `1.0.3` are supported."
         raise ValueError(msg)
 
     return feat_extract
