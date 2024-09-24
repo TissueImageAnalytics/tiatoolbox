@@ -243,7 +243,7 @@ class PatchPredictor(EngineABC):
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.predict(data, mode='patch')
+        >>> output = predictor.run(data, mode='patch')
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']

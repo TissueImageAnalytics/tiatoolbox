@@ -308,7 +308,7 @@ class PatchClassifier(PatchPredictor):
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.predict(data, mode='patch')
+        >>> output = predictor.run(data, mode='patch')
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
@@ -361,7 +361,7 @@ class PatchClassifier(PatchPredictor):
     def post_process_patches(
         self: PatchClassifier,
         raw_predictions: dict | Path,
-        **kwargs: Unpack[EngineABCRunParams],
+        **kwargs: Unpack[ClassifierRunParams],
     ) -> dict | Path:
         """Post-process raw patch predictions from inference.
 
@@ -373,9 +373,9 @@ class PatchClassifier(PatchPredictor):
         Args:
             raw_predictions (dict | Path):
                 A dictionary or path to zarr with patch prediction information.
-            **kwargs (EngineABCRunParams):
+            **kwargs (ClassifierRunParams):
                 Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+                :class:`ClassifierRunParams` for accepted keyword arguments.
 
         Returns:
             dict or Path:
@@ -383,7 +383,8 @@ class PatchClassifier(PatchPredictor):
                 saved zarr file if `cache_mode` is True.
 
         """
-        _ = kwargs.get("key-values")  # Key values required for post-processing
+        _ = kwargs.get("return_probabilities")
+
         # Probabilities for post-processing
         probabilities = get_zarr_array(
             raw_predictions.get("probabilities", np.array([]))

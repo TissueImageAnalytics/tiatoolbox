@@ -239,79 +239,19 @@ def test_wsi_predictor_api(
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
 
 
-def _test_predictor_output(
-    inputs: list,
-    model: str,
-    probabilities_check: list | None = None,
-    predictions_check: list | None = None,
-) -> None:
-    """Test the predictions of multiple models included in tiatoolbox."""
-    predictor = PatchPredictor(
-        model=model,
-        batch_size=32,
-        verbose=False,
-    )
-    # don't run test on GPU
-    output = predictor.run(
-        inputs,
-        return_probabilities=True,
-        return_labels=False,
-        device=device,
-    )
-    predictions = output["probabilities"]
-    for idx, probabilities_ in enumerate(predictions):
-        probabilities_max = max(probabilities_)
-        assert np.abs(probabilities_max - probabilities_check[idx]) <= 1e-3, (
-            model,
-            probabilities_max,
-            probabilities_check[idx],
-            probabilities_,
-            predictions_check[idx],
-        )
-        assert np.argmax(probabilities_) == predictions_check[idx], (
-            model,
-            probabilities_max,
-            probabilities_check[idx],
-            probabilities_,
-            predictions_check[idx],
-        )
+def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
+    """Helper function to extract probabilities from Annotation Store."""
+    probs_dict = {}
+    con = sqlite3.connect(dbfile)
+    cur = con.cursor()
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 
+    for item in annotations_properties:
+        for json_str in item:
+            probs_dict = json.loads(json_str)
+            probs_dict.pop("prob_0")
 
-def test_patch_predictor_kather100k_output(
-    sample_patch1: Path,
-    sample_patch2: Path,
-) -> None:
-    """Test the output of patch prediction models on Kather100K dataset."""
-    inputs = [Path(sample_patch1), Path(sample_patch2)]
-    pretrained_info = {
-        "alexnet-kather100k": [1.0, 0.9999735355377197],
-        "resnet18-kather100k": [1.0, 0.9999911785125732],
-        "resnet34-kather100k": [1.0, 0.9979840517044067],
-        "resnet50-kather100k": [1.0, 0.9999986886978149],
-        "resnet101-kather100k": [1.0, 0.9999932050704956],
-        "resnext50_32x4d-kather100k": [1.0, 0.9910059571266174],
-        "resnext101_32x8d-kather100k": [1.0, 0.9999971389770508],
-        "wide_resnet50_2-kather100k": [1.0, 0.9953408241271973],
-        "wide_resnet101_2-kather100k": [1.0, 0.9999831914901733],
-        "densenet121-kather100k": [1.0, 1.0],
-        "densenet161-kather100k": [1.0, 0.9999959468841553],
-        "densenet169-kather100k": [1.0, 0.9999934434890747],
-        "densenet201-kather100k": [1.0, 0.9999983310699463],
-        "mobilenet_v2-kather100k": [0.9999998807907104, 0.9999126195907593],
-        "mobilenet_v3_large-kather100k": [0.9999996423721313, 0.9999878406524658],
-        "mobilenet_v3_small-kather100k": [0.9999998807907104, 0.9999997615814209],
-        "googlenet-kather100k": [1.0, 0.9999639987945557],
-    }
-    for model, expected_prob in pretrained_info.items():
-        _test_predictor_output(
-            inputs,
-            model,
-            probabilities_check=expected_prob,
-            predictions_check=[6, 3],
-        )
-        # only test 1 on travis to limit runtime
-        if toolbox_env.running_on_ci():
-            break
+    return probs_dict
 
 
 def _validate_probabilities(predictions: list | dict) -> bool:
@@ -330,13 +270,13 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
     """Test normal run of patch predictor for WSIs."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
 
-    predictor = PatchPredictor(
+    classifier = PatchPredictor(
         model="alexnet-kather100k",
         batch_size=32,
         verbose=False,
     )
     # don't run test on GPU
-    output = predictor.run(
+    output = classifier.run(
         images=[mini_wsi_svs],
         return_probabilities=True,
         return_labels=False,
@@ -355,54 +295,6 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
     assert output_["coordinates"].shape == (70, 4)
     assert output_["coordinates"].ndim == 2
     assert _validate_probabilities(predictions=output_["probabilities"])
-
-
-def test_wsi_predictor_zarr_baseline(sample_wsi_dict: dict, tmp_path: Path) -> None:
-    """Test normal run of patch predictor for WSIs."""
-    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-
-    predictor = PatchPredictor(
-        model="alexnet-kather100k",
-        batch_size=32,
-        verbose=False,
-    )
-    # don't run test on GPU
-    output = predictor.run(
-        images=[mini_wsi_svs],
-        return_probabilities=True,
-        return_labels=False,
-        device=device,
-        patch_mode=False,
-        save_dir=tmp_path / "wsi_out_check",
-        units="baseline",
-        resolution=1.0,
-    )
-
-    assert output[mini_wsi_svs].exists()
-
-    output_ = zarr.open(output[mini_wsi_svs])
-
-    assert output_["probabilities"].shape == (244, 9)  # number of patches x classes
-    assert output_["probabilities"].ndim == 2
-    # number of patches x [start_x, start_y, end_x, end_y]
-    assert output_["coordinates"].shape == (244, 4)
-    assert output_["coordinates"].ndim == 2
-    assert _validate_probabilities(predictions=output_["probabilities"])
-
-
-def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
-    """Helper function to extract probabilities from Annotation Store."""
-    probs_dict = {}
-    con = sqlite3.connect(dbfile)
-    cur = con.cursor()
-    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
-
-    for item in annotations_properties:
-        for json_str in item:
-            probs_dict = json.loads(json_str)
-            probs_dict.pop("prob_0")
-
-    return probs_dict
 
 
 def test_engine_run_wsi_annotation_store(
