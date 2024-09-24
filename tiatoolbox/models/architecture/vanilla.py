@@ -106,7 +106,7 @@ def _get_timm_architecture(
             init_values=1e-5,
             dynamic_img_size=True,
         )
-    elif arch_name == "prov-gigapath":
+    elif arch_name == "prov-gigapath" and timm.__version__ > "1.0.0":
         # ProViT-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
         # does not work with timm==0.9.8, needs timm==1.0.3: https://github.com/prov-gigapath/prov-gigapath/issues/2
         assert (
@@ -116,7 +116,7 @@ def _get_timm_architecture(
             "hf_hub:prov-gigapath/prov-gigapath", pretrained=True
         )
     else:
-        msg = f"Architecture {arch_name} not supported"
+        msg = f"Architecture {arch_name} not supported. If you are loading timm models, only timm version > `1.0.3` are supported." 
         raise ValueError(msg)
 
     return feat_extract
