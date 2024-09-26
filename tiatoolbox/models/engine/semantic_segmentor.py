@@ -564,11 +564,9 @@ class SemanticSegmentor:
         self.masks = None
 
         self.dataset_class: WSIStreamDataset = dataset_class
-        self.model = (
-            compile_model(
-                model,
-                mode=rcParam["torch_compile_mode"],
-            )
+        self.model = compile_model(
+            model,
+            mode=rcParam["torch_compile_mode"],
         )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
