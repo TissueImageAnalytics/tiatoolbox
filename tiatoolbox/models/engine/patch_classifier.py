@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
+import zarr
 from typing_extensions import Unpack
-
-from tiatoolbox.utils.misc import get_zarr_array
 
 from .engine_abc import EngineABCRunParams
 from .patch_predictor import PatchPredictor
@@ -15,6 +13,8 @@ from .patch_predictor import PatchPredictor
 if TYPE_CHECKING:  # pragma: no cover
     import os
     from pathlib import Path
+
+    import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
@@ -358,6 +358,30 @@ class PatchClassifier(PatchPredictor):
             verbose=verbose,
         )
 
+    def post_process_cache_mode(
+        self: PatchClassifier,
+        raw_predictions: Path,
+    ) -> Path:
+        """Returns an array from raw predictions."""
+        zarr_group = zarr.open(raw_predictions, mode="r+")
+        # Probabilities for post-processing
+        probabilities = zarr_group["probabilities"][:]
+        predictions = self.model.postproc_func(
+            probabilities,
+        )
+        if "predictions" in zarr_group:
+            zarr_group["predictions"].append(predictions)
+            return raw_predictions
+
+        zarr_dataset = zarr_group.create_dataset(
+            name="predictions",
+            shape=predictions.shape,
+            compressor=zarr_group["probabilities"].compressor,
+        )
+        zarr_dataset[:] = predictions
+
+        return raw_predictions
+
     def post_process_patches(
         self: PatchClassifier,
         raw_predictions: dict | Path,
@@ -384,11 +408,10 @@ class PatchClassifier(PatchPredictor):
 
         """
         _ = kwargs.get("return_probabilities")
+        if self.cache_mode:
+            return self.post_process_cache_mode(raw_predictions)
 
-        # Probabilities for post-processing
-        probabilities = get_zarr_array(
-            raw_predictions.get("probabilities", np.array([]))
-        )
+        probabilities = raw_predictions.get("probabilities")
 
         predictions = self.model.postproc_func(
             probabilities,
