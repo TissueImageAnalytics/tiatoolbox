@@ -17,8 +17,9 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.models_abc import IOConfigABC
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread, misc
@@ -563,7 +564,12 @@ class SemanticSegmentor:
         self.masks = None
 
         self.dataset_class: WSIStreamDataset = dataset_class
-        self.model = model
+        self.model = (
+            compile_model(
+                model,
+                mode=rcParam["torch_compile_mode"],
+            )
+        )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
