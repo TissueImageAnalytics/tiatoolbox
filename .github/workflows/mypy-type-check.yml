@@ -12,7 +12,7 @@ jobs:
 
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
@@ -45,4 +45,5 @@ jobs:
           tiatoolbox/utils \
           tiatoolbox/tools \
           tiatoolbox/data \
-          tiatoolbox/annotation
+          tiatoolbox/annotation \
+          tiatoolbox/cli/common.py

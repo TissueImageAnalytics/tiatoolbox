@@ -814,7 +814,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the store
         for key, geometry, properties in zip(keys, geometries, properties_iter):
-            properties_ = copy.deepcopy(properties)
+            properties_ = cast(dict[str, Any], copy.deepcopy(properties))
             self.patch(key, geometry, properties_)
 
     def remove(self: AnnotationStore, key: str) -> None:
@@ -939,7 +939,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             return True
         if isinstance(predicate, str):
             return bool(
-                eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
+                eval(  # skipcq: PYL-W0123,  # noqa: S307
                     predicate,
                     PY_GLOBALS,
                     {"props": properties},
@@ -1513,7 +1513,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
             if isinstance(select, str):
                 py_locals = {"props": annotation.properties}
-                return eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
+                return eval(  # skipcq: PYL-W0123,  # noqa: S307
                     select,
                     PY_GLOBALS,
                     py_locals,
@@ -1841,10 +1841,10 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             # It is a file-like object, write to it
             if hasattr(fp, "write"):
                 file_handle = cast(IO, fp)
-                return file_fn(file_handle)
+                return file_fn(file_handle)  # type: ignore[func-returns-value]
             # Turn a path into a file handle, then write to it
             with Path(fp).open("w", encoding="utf-8") as file_handle:
-                return file_fn(file_handle)
+                return file_fn(file_handle)  # type: ignore[func-returns-value]
         # Return as str or bytes if no handle/path is given
         return none_fn()
 
@@ -2817,7 +2817,7 @@ class SQLiteStore(AnnotationStore):
             query_parameters["where"] = where
         # Predicate is a string
         if isinstance(where, str):
-            sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
+            sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: S307
                 where,
                 SQL_GLOBALS,
                 {},
@@ -2826,7 +2826,7 @@ class SQLiteStore(AnnotationStore):
 
         return query_string, query_parameters
 
-    def _query(  # noqa: PLR0913
+    def _query(
         self: SQLiteStore,
         columns: str,
         geometry: Geometry | None = None,
@@ -3427,7 +3427,7 @@ class SQLiteStore(AnnotationStore):
             return_columns.append("[key]")
         if is_str_query and not is_star_query:
             select = cast(str, select)
-            select_names = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
+            select_names = eval(  # skipcq: PYL-W0123,  # noqa: S307
                 select,
                 SQL_GLOBALS,
                 {},
@@ -3855,7 +3855,7 @@ class SQLiteStore(AnnotationStore):
         if not isinstance(where, str):
             msg = f"Invalid type for `where` ({type(where)})."
             raise TypeError(msg)
-        sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: PGH001, S307
+        sql_predicate = eval(  # skipcq: PYL-W0123,  # noqa: S307
             where,
             SQL_GLOBALS,
         )

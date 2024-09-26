@@ -27,6 +27,7 @@ from shapely.geometry import (
     Polygon,
 )
 
+from tiatoolbox import logger
 from tiatoolbox.annotation import (
     Annotation,
     AnnotationStore,
@@ -51,6 +52,14 @@ sqlite3.enable_callback_tracebacks(True)  # noqa: FBT003
 GRID_SIZE = (10, 10)
 FILLED_LEN = 2 * (GRID_SIZE[0] * GRID_SIZE[1])
 RNG = np.random.default_rng(0)  # Numpy Random Generator
+
+# ----------------------------------------------------------------------
+# Resets
+# ----------------------------------------------------------------------
+
+# Reset filters in logger.
+for filter_ in logger.filters:
+    logger.removeFilter(filter_)
 
 # ----------------------------------------------------------------------
 # Helper Functions
@@ -185,7 +194,7 @@ def sample_triangle() -> Polygon:
     return Polygon([(0, 0), (1, 1), (2, 0)])
 
 
-@pytest.fixture()
+@pytest.fixture
 def fill_store(
     cell_grid: list[Polygon],
     points_grid: list[Point],

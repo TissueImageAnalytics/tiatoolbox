@@ -1194,7 +1194,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Number | Iterable[NumPair] = 0,
+        pad_constant_values: int | tuple[int, int] = 0,
         coord_space: str = "baseline",
         **kwargs: dict,
     ) -> np.ndarray:
@@ -1243,7 +1243,7 @@ class WSIReader:
                 Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
             pad_constant_values (int, tuple(int)):
-                Constant values to use when padding with constant pad mode.
+                Constant values to use when padding with cmonstant pad mode.
                 Passed to the :func:`numpy.pad` `constant_values` argument.
                 Default is 0.
             coord_space (str):
@@ -3595,7 +3595,9 @@ class TIFFWSIReader(WSIReader):
         self.level_arrays = dict(
             sorted(
                 self.level_arrays.items(),
-                key=lambda x: -np.prod(self._canonical_shape(x[1].array.shape[:2])),
+                key=lambda x: -np.prod(
+                    self._canonical_shape(x[1].array.shape[:2]), dtype=float
+                ),
             )
         )
         # maybe get colors if they exist in metadata
