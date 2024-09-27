@@ -45,4 +45,5 @@ jobs:
           tiatoolbox/utils \
           tiatoolbox/tools \
           tiatoolbox/data \
-          tiatoolbox/annotation
+          tiatoolbox/annotation \
+          tiatoolbox/cli/common.py
