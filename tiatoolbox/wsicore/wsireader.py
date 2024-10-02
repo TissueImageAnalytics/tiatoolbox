@@ -5825,3 +5825,148 @@ class AnnotationStoreReader(WSIReader):
             base_region = base_region.convert("RGB")
             return np.array(base_region)
         return utils.transforms.background_composite(im_region, alpha=False)
+
+
+class TransformedWSIReader(WSIReader):
+    """TransformedWSIReader
+
+    A WSIReader that applies a transformation to the output of a base reader.
+    """
+
+    def __init__(self, base_reader, transform):
+        """Initialise a transformed WSIReader.
+
+        Args:
+            base_reader (WSIReader): The base reader to transform.
+            transform (nd.array): An affine transform that transforms the incoming bounding box
+            coordinates to be read from the base reader.
+        """
+        self.base_reader = base_reader
+        self.transform = transform
+
+    def read_rect(
+        self,
+        location,
+        size,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        """Read a rectangular region from the WSI.
+
+        Args:
+            location (tuple): The top left pixel coordinate.
+            size (tuple): The size of the region to read, in pixels.
+            resolution (int, float): The desired resolution of the output image.
+            units (str): The units of the resolution. One of "level", "power" or "mpp".
+            interpolation (str): The interpolation method to use when resizing the image.
+            pad_mode (str): The padding mode to use when resizing the image.
+            pad_constant_values (int, float): The constant value to use when padding the image.
+            coord_space (str): The coordinate space of the input location and size. One of
+                "baseline", "resolution" or "level".
+
+        Returns:
+            np.ndarray: The image data.
+        """
+        # get bounds from location and size
+        bounds = utils.transforms.locsize2bounds(location, size)
+        bound_geom = Polygon.from_bounds(*bounds)
+
+        # transform the geometry
+        bound_geom = affine_transform(
+            bound_geom,
+            np.reshape(self.transform[:2, :2], (1, -1)).tolist()[0]
+            + [self.transform[0, 2], self.transform[1, 2]],
+        )
+        new_bbox = bound_geom.bounds
+
+        # get location and size from new bounds
+        new_location, new_size = utils.transforms.bounds2locsize(new_bbox)
+
+        # read the transformed region
+        base_rect = self.base_reader.read_rect(
+            new_location.astype(int),
+            new_size.astype(int),
+            resolution=resolution,
+            units=units,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            coord_space=coord_space,
+            **kwargs,
+        )
+
+        # rotate the image back
+        base_rect = Image.fromarray(base_rect)
+        base_rect = base_rect.rotate(
+            -np.rad2deg(np.arctan2(self.transform[1, 0], self.transform[0, 0])),
+            expand=True,
+        )
+        center = np.array(base_rect.size) / 2
+        # crop the image to the original size
+        base_rect = base_rect.crop(
+            (center - np.array(size) / 2).tolist()
+            + (center + np.array(size) / 2).tolist()
+        )
+        return np.array(base_rect)
+
+    def read_bounds(
+        self,
+        bounds,
+        resolution=0,
+        units="level",
+        interpolation="optimise",
+        pad_mode="constant",
+        pad_constant_values=0,
+        coord_space="baseline",
+        **kwargs,
+    ):
+        """Read a region from the WSI defined by a bounding box.
+
+        Args:
+            bounds (tuple): The bounding box to read, in the form (left, top, right, bottom).
+            resolution (int, float): The desired resolution of the output image.
+            units (str): The units of the resolution. One of "level", "power" or "mpp".
+            interpolation (str): The interpolation method to use when resizing the image.
+            pad_mode (str): The padding mode to use when resizing the image.
+            pad_constant_values (int, float): The constant value to use when padding the image.
+            coord_space (str): The coordinate space of the input bounds. One of "baseline",
+                "resolution" or "level".
+
+        Returns:
+            np.ndarray: The image data.
+        """
+        # transform the geometry
+        bound_geom = Polygon.from_bounds(*bounds)
+        bound_geom = affine_transform(bound_geom, self.transform)
+        new_bbox = bound_geom.bounds
+
+        # read the transformed region
+        base_rect = self.base_reader.read_bounds(
+            new_bbox,
+            resolution=resolution,
+            units=units,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            coord_space=coord_space,
+            **kwargs,
+        )
+
+        # rotate the image back
+        base_rect = Image.fromarray(base_rect)
+        base_rect = base_rect.rotate(
+            -np.rad2deg(np.arctan2(self.transform[1, 0], self.transform[0, 0])),
+            expand=True,
+        )
+        center = np.array(base_rect.size) / 2
+        # crop the image to the original size
+        base_rect = base_rect.crop(
+            (center - np.array(bounds[2:]) / 2).tolist()
+            + (center + np.array(bounds[2:]) / 2).tolist()
+        )
+        return np.array(base_rect)
