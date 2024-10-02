@@ -6,7 +6,7 @@ alexnet-kather100k:
             backbone: alexnet
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -20,7 +20,7 @@ resnet18-kather100k:
             backbone: resnet18
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -34,7 +34,7 @@ resnet34-kather100k:
             backbone: resnet34
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -48,7 +48,7 @@ resnet50-kather100k:
             backbone: resnet50
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -62,7 +62,7 @@ resnet101-kather100k:
             backbone: resnet101
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -76,7 +76,7 @@ resnext50_32x4d-kather100k:
             backbone: resnext50_32x4d
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -90,7 +90,7 @@ resnext101_32x8d-kather100k:
             backbone: resnext101_32x8d
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -104,7 +104,7 @@ wide_resnet50_2-kather100k:
             backbone: wide_resnet50_2
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -118,7 +118,7 @@ wide_resnet101_2-kather100k:
             backbone: wide_resnet101_2
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -132,7 +132,7 @@ densenet121-kather100k:
             backbone: densenet121
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -146,7 +146,7 @@ densenet161-kather100k:
             backbone: densenet161
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -160,7 +160,7 @@ densenet169-kather100k:
             backbone: densenet169
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -174,7 +174,7 @@ densenet201-kather100k:
             backbone: densenet201
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -188,7 +188,7 @@ mobilenet_v2-kather100k:
             backbone: mobilenet_v2
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -202,7 +202,7 @@ mobilenet_v3_large-kather100k:
             backbone: mobilenet_v3_large
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -216,7 +216,7 @@ mobilenet_v3_small-kather100k:
             backbone: mobilenet_v3_small
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -230,7 +230,7 @@ googlenet-kather100k:
             backbone: googlenet
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -245,7 +245,7 @@ alexnet-pcam:
             backbone: alexnet
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -259,7 +259,7 @@ resnet18-pcam:
             backbone: resnet18
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -273,7 +273,7 @@ resnet34-pcam:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -287,7 +287,7 @@ resnet50-pcam:
             backbone: resnet50
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -301,7 +301,7 @@ resnet101-pcam:
             backbone: resnet101
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -315,7 +315,7 @@ resnext50_32x4d-pcam:
             backbone: resnext50_32x4d
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -329,7 +329,7 @@ resnext101_32x8d-pcam:
             backbone: resnext101_32x8d
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -343,7 +343,7 @@ wide_resnet50_2-pcam:
             backbone: wide_resnet50_2
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -357,7 +357,7 @@ wide_resnet101_2-pcam:
             backbone: wide_resnet101_2
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -371,7 +371,7 @@ densenet121-pcam:
             backbone: densenet121
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -385,7 +385,7 @@ densenet161-pcam:
             backbone: densenet161
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -399,7 +399,7 @@ densenet169-pcam:
             backbone: densenet169
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -413,7 +413,7 @@ densenet201-pcam:
             backbone: densenet201
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -427,7 +427,7 @@ mobilenet_v2-pcam:
             backbone: mobilenet_v2
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -441,7 +441,7 @@ mobilenet_v3_large-pcam:
             backbone: mobilenet_v3_large
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -455,7 +455,7 @@ mobilenet_v3_small-pcam:
             backbone: mobilenet_v3_small
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -469,7 +469,7 @@ googlenet-pcam:
             backbone: googlenet
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -484,7 +484,7 @@ resnet18-idars-tumour:
             backbone: resnet18
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [512, 512]
             stride_shape: [512, 512]
@@ -497,7 +497,7 @@ resnet34-idars-msi:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -510,7 +510,7 @@ resnet34-idars-braf:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -523,7 +523,7 @@ resnet34-idars-cimp:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -536,7 +536,7 @@ resnet34-idars-cin:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -549,7 +549,7 @@ resnet34-idars-tp53:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -562,7 +562,7 @@ resnet34-idars-hm:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -579,7 +579,7 @@ fcn-tissue_mask:
             encoder: "resnet50"
             decoder_block: [3]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'mpp', 'resolution': 2.0}
@@ -600,7 +600,7 @@ fcn_resnet50_unet-bcss:
             encoder: "resnet50"
             decoder_block: [3, 3]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'mpp', 'resolution': 0.25}
@@ -625,7 +625,7 @@ unet_tissue_mask_tsef:
             encoder: "resnet50"
             decoder_block: [3, 3]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'baseline', 'resolution': 1.0}
@@ -652,7 +652,7 @@ hovernet_fast-pannuke:
                 5: "Non-Neoplastic Epithelial",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -682,7 +682,7 @@ hovernet_fast-monusac:
                 4: "Neutrophil",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -712,7 +712,7 @@ hovernet_original-consep:
                 4: "Miscellaneous",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -735,7 +735,7 @@ hovernet_original-kumar:
             num_types: null  # None in python ?, only do instance segmentation
             mode: "original"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -769,7 +769,7 @@ hovernetplus-oed:
                 4: "Keratin",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.50}
@@ -793,7 +793,7 @@ micronet-consep:
             num_input_channels: 3
             num_output_channels: 2
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
