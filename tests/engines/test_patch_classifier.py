@@ -106,3 +106,46 @@ def test_patch_predictor_kather100k_output(
             classification_check=[6, 3],
             tmp_path=tmp_path,
         )
+
+
+def _validate_probabilities(predictions: list | dict) -> bool:
+    """Helper function to test if the probabilities value are valid."""
+    if isinstance(predictions, dict):
+        return all(0 <= probability <= 1 for _, probability in predictions.items())
+
+    for row in predictions:
+        for element in row:
+            if not (0 <= element <= 1):
+                return False
+    return True
+
+
+def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
+    """Test normal run of patch predictor for WSIs."""
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+
+    classifier = PatchClassifier(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
+    )
+    # don't run test on GPU
+    output = classifier.run(
+        images=[mini_wsi_svs],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "wsi_out_check",
+    )
+
+    assert output[mini_wsi_svs].exists()
+
+    output_ = zarr.open(output[mini_wsi_svs])
+
+    assert output_["probabilities"].shape == (70, 9)  # number of patches x classes
+    assert output_["probabilities"].ndim == 2
+    # number of patches x [start_x, start_y, end_x, end_y]
+    assert output_["coordinates"].shape == (70, 4)
+    assert output_["coordinates"].ndim == 2
+    assert _validate_probabilities(predictions=output_["probabilities"])
