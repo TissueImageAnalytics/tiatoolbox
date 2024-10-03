@@ -16,6 +16,10 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -30,9 +34,9 @@ from bokeh.models import (
     Column,
     ColumnDataSource,
     CustomJS,
+    CustomJSTickFormatter,
     DataTable,
     Div,
-    FuncTickFormatter,
     Glyph,
     HoverTool,
     HTMLTemplateFormatter,
@@ -59,9 +63,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -635,7 +636,7 @@ class ViewerState:
         self.thickness = -1
         self.model_mpp = 0
         self.init = True
-        self.micron_formatter = FuncTickFormatter(
+        self.micron_formatter = CustomJSTickFormatter(
             args={"mpp": 0.1},
             code="""
                 return Math.round(tick*mpp)
@@ -694,7 +695,7 @@ def slide_toggle_cb(attr: str) -> None:  # noqa: ARG001
         UI["p"].renderers[0].alpha = 0.0
 
 
-def node_select_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
+def node_select_cb(attr: str, old: int, new: int) -> None:
     """Placeholder callback to do something on node selection."""
     # Do something on node select if desired
 
@@ -2152,7 +2153,7 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.png", "*.jpg", "*.tif"]:
+        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),

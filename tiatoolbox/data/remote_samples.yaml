@@ -25,8 +25,10 @@ files:
     url: [*wsis, "CMU-1-Small-Region.jpeg.tiff"]
   tiled-tiff-1-small-jp2k:
     url: [*wsis, "CMU-1-Small-Region.jp2k.tiff"]
-  ome-brightfield-pyramid-1-small:
-    url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
+  ome-brightfield-small-level-0:
+    url: [*wsis, "CMU-1-Small-Region-Level-0.ome.tiff"]
+  ome-brightfield-small-pyramid:
+    url: [*wsis, "CMU-1-Small-Region-Pyramid.ome.tif"]
   two-tiled-pages:
     url: [*wsis, "two-tiled-pages.tiff"]
   ventana-tif:

@@ -482,12 +482,12 @@ def __assign_unknown_class(input_table: pd.DataFrame) -> pd.DataFrame:
 
 
 def read_locations(
-    input_table: PathLike | np.ndarray | pd.DataFrame,
+    input_table: str | Path | PathLike | np.ndarray | pd.DataFrame,
 ) -> pd.DataFrame:
     """Read annotations as pandas DataFrame.
 
     Args:
-        input_table (PathLike | np.ndarray | pd.DataFrame`):
+        input_table (str| Path| PathLike | np.ndarray | pd.DataFrame`):
             Path to csv, npy or json. Input can also be a
             :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             First column in the table represents x position, second
@@ -1190,9 +1190,7 @@ def add_from_dat(
         anns = []
         for subcat in data:
             if (
-                subcat == "resolution"
-                or subcat == "proc_dimensions"
-                or subcat == "base_dimensions"
+                subcat in {"resolution", "proc_dimensions", "base_dimensions"}
                 or "resolution" in subcat
             ):
                 continue

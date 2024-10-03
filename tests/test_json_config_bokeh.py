@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 import pandas as pd
 import pytest
 import requests
-from bokeh.client.session import ClientSession, pull_session
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
 
@@ -50,7 +50,7 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, Path]:
     return data_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def bk_session(data_path: dict[str, Path]) -> ClientSession:
     """Create a bokeh session."""
     run_tileserver()

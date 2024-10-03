@@ -194,7 +194,7 @@ def sample_triangle() -> Polygon:
     return Polygon([(0, 0), (1, 1), (2, 0)])
 
 
-@pytest.fixture()
+@pytest.fixture
 def fill_store(
     cell_grid: list[Polygon],
     points_grid: list[Point],
