@@ -361,9 +361,11 @@ class PatchClassifier(PatchPredictor):
     def post_process_cache_mode(
         self: PatchClassifier,
         raw_predictions: Path,
+        **kwargs: Unpack[ClassifierRunParams],
     ) -> Path:
         """Returns an array from raw predictions."""
-        zarr_group = zarr.open(raw_predictions, mode="r+")
+        _ = kwargs.get("return_probabilities")
+        zarr_group = zarr.open(str(raw_predictions), mode="r+")
         # Probabilities for post-processing
         probabilities = zarr_group["probabilities"][:]
         predictions = self.model.postproc_func(
@@ -407,9 +409,8 @@ class PatchClassifier(PatchPredictor):
                 saved zarr file if `cache_mode` is True.
 
         """
-        _ = kwargs.get("return_probabilities")
         if self.cache_mode:
-            return self.post_process_cache_mode(raw_predictions)
+            return self.post_process_cache_mode(raw_predictions, **kwargs)
 
         probabilities = raw_predictions.get("probabilities")
 
@@ -423,6 +424,20 @@ class PatchClassifier(PatchPredictor):
             raw_predictions["predictions"] = predictions
 
         return raw_predictions
+
+    def post_process_wsi(
+        self: PatchClassifier,
+        raw_predictions: dict | Path,
+        **kwargs: Unpack[ClassifierRunParams],
+    ) -> dict | Path:
+        """Post process WSI output.
+
+        Takes the raw output from patch predictions and post-processes it to improve the
+        results e.g., using information from neighbouring patches.
+
+        """
+        _ = kwargs.get("return_probabilities")
+        return self.post_process_cache_mode(raw_predictions, **kwargs)
 
     def run(
         self: PatchClassifier,

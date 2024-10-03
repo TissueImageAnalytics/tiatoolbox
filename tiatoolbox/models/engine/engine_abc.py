@@ -720,7 +720,7 @@ class EngineABC(ABC):
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post process WSI output."""
-        _ = kwargs.get("probabilities")  # Key values required for post-processing
+        _ = kwargs.get("return_labels")  # Key values required for post-processing
         return raw_predictions
 
     @abstractmethod
