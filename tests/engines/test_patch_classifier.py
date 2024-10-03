@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import shutil
+import sqlite3
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +12,7 @@ import zarr
 
 from tiatoolbox.models.engine.patch_classifier import PatchClassifier
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.misc import get_zarr_array
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -108,6 +111,23 @@ def test_patch_predictor_kather100k_output(
         )
 
 
+def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
+    """Helper function to extract probabilities from Annotation Store."""
+    con = sqlite3.connect(dbfile)
+    cur = con.cursor()
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
+
+    output = {"probabilities": [], "predictions": []}
+
+    for item in annotations_properties:
+        for json_str in item:
+            probs_dict = json.loads(json_str)
+            output["probabilities"].append(probs_dict.pop("prob_0"))
+            output["predictions"].append(probs_dict.pop("type"))
+
+    return output
+
+
 def _validate_probabilities(output: list | dict | zarr.group) -> bool:
     """Helper function to test if the probabilities value are valid."""
     probabilities = output["probabilities"]
@@ -115,12 +135,16 @@ def _validate_probabilities(output: list | dict | zarr.group) -> bool:
     if isinstance(probabilities, dict):
         return all(0 <= probability <= 1 for _, probability in probabilities.items())
 
-    for row in probabilities:
-        for element in row:
-            if not (0 <= element <= 1):
-                return False
+    predictions = np.array(get_zarr_array(predictions)).astype(int)
+    probabilities = get_zarr_array(probabilities)
 
-    return np.all(predictions[:][0:5] == [7.0, 3.0, 2.0, 3.0, 3.0])
+    if not np.all(np.array(probabilities) <= 1):
+        return False
+
+    if not np.all(np.array(probabilities) >= 0):
+        return False
+
+    return np.all(predictions[:][0:5] == [7, 3, 2, 3, 3])
 
 
 def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
@@ -155,3 +179,47 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
     assert output_["predictions"].shape == (70,)
     assert output_["predictions"].ndim == 1
     assert _validate_probabilities(output=output_)
+
+
+def test_engine_run_wsi_annotation_store(
+    sample_wsi_dict: dict,
+    tmp_path: Path,
+) -> None:
+    """Test the engine run for Whole slide images."""
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = PatchClassifier(model="alexnet-kather100k")
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{tmp_path}/model_wsi_output"
+
+    kwargs = {
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "units": "mpp",
+        "scale_factor": (2.0, 2.0),
+    }
+
+    output = eng.run(
+        images=[mini_wsi_svs],
+        masks=[mini_wsi_msk],
+        patch_mode=False,
+        output_type="AnnotationStore",
+        **kwargs,
+    )
+
+    output_ = output[mini_wsi_svs]
+
+    assert output_.exists()
+    assert output_.suffix == ".db"
+    output_ = _extract_probabilities_from_annotation_store(output_)
+
+    # prediction for each patch
+    assert np.array(output_["predictions"]).shape == (69,)
+    assert _validate_probabilities(output_)
+
+    shutil.rmtree(save_dir)
