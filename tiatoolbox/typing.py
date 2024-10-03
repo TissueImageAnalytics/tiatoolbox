@@ -23,7 +23,7 @@ IntBounds = tuple[int, int, int, int]
 
 # Annotation Store
 Geometry = Union[Point, LineString, Polygon]
-Properties = JSON
+Properties = JSON  # Could define this using a TypedDict
 QueryGeometry = Union[Bounds, Geometry]
 CallablePredicate = Callable[[Properties], bool]
 CallableSelect = Callable[[Properties], Properties]
