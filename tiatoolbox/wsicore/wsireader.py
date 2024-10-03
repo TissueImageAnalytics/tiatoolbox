@@ -20,6 +20,8 @@ import zarr
 from defusedxml import ElementTree
 from packaging.version import Version
 from PIL import Image
+from shapely.affinity import affine_transform
+from shapely.geometry import Polygon
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -5828,7 +5830,7 @@ class AnnotationStoreReader(WSIReader):
 
 
 class TransformedWSIReader(WSIReader):
-    """TransformedWSIReader
+    """TransformedWSIReader.
 
     A WSIReader that applies a transformation to the output of a base reader.
     """
