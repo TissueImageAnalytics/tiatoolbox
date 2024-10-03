@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import openslide
 import pandas as pd
+import SimpleITK as sitk
 import tifffile
 import zarr
 from defusedxml import ElementTree
@@ -5829,7 +5830,7 @@ class AnnotationStoreReader(WSIReader):
         return utils.transforms.background_composite(im_region, alpha=False)
 
 
-class TransformedWSIReader(WSIReader):
+class TransformedWSIReaderOld(WSIReader):
     """TransformedWSIReader.
 
     A WSIReader that applies a transformation to the output of a base reader.
@@ -5972,3 +5973,325 @@ class TransformedWSIReader(WSIReader):
             + (center + np.array(bounds[2:]) / 2).tolist()
         )
         return np.array(base_rect)
+
+
+class TransformedWSIReader(WSIReader):
+    """Reader for a WSI transformed by a given displacement field.
+
+    This class wraps around an existing WSIReader and applies a given
+    transformation (provided as a SimpleITK displacement field) to it.
+    It allows reading regions from the WSI as if the transformation has
+    been applied to the entire image.
+
+    Attributes:
+        input_wsi (WSIReader): The underlying WSIReader object.
+        displacement_field (sitk.Image): The displacement field representing the transformation.
+        inverse_transform (sitk.Transform): The inverse of the displacement field transform.
+
+    Args:
+        input_wsi (WSIReader):
+            The underlying WSIReader object.
+        displacement_field (sitk.Image):
+            The displacement field representing the transformation.
+        inverse_displacement_field (Optional[sitk.Image]):
+            The inverse displacement field. If not provided, it will be computed.
+
+    """
+
+    def __init__(
+        self,
+        input_wsi: WSIReader,
+        displacement_field: sitk.Image,
+        inverse_displacement_field: Optional[sitk.Image] = None,
+    ) -> None:
+        """Initialize the TransformedWSIReader."""
+        # Initialize the base class
+        super().__init__(
+            input_img=input_wsi.input_path,
+            mpp=input_wsi.info.mpp,
+            power=input_wsi.info.objective_power,
+        )
+        self.input_wsi = input_wsi
+        self.displacement_field = displacement_field
+
+        # Get WSI spacing and origin
+        if self.info.mpp is not None:
+            self.wsi_spacing = tuple(
+                np.array(self.info.mpp) * 1e-6
+            )  # Convert microns to meters
+        else:
+            self.wsi_spacing = (1.0, 1.0)
+        self.wsi_origin = (0.0, 0.0)  # Assuming origin at (0,0)
+
+        # Get displacement field spacing and origin
+        self.displacement_field_spacing = displacement_field.GetSpacing()
+        self.displacement_field_origin = displacement_field.GetOrigin()
+
+        # Create the displacement field transform
+        self.transform = sitk.DisplacementFieldTransform(displacement_field)
+
+        if inverse_displacement_field is not None:
+            self.inverse_transform = sitk.DisplacementFieldTransform(
+                inverse_displacement_field
+            )
+        else:
+            # Compute the inverse displacement field
+            self.inverse_displacement_field = sitk.InvertDisplacementField(
+                displacementField=displacement_field,
+                # For the reference image, we can use the displacement field itself
+                referenceImage=displacement_field,
+            )
+            self.inverse_transform = sitk.DisplacementFieldTransform(
+                self.inverse_displacement_field
+            )
+
+        # Update metadata
+        self._m_info = self._info()
+
+    def _info(self) -> WSIMeta:
+        """Update WSI metadata to reflect the transformation."""
+        # The metadata remains the same as the underlying WSI
+        return self.input_wsi.info
+
+    def read_bounds(
+        self,
+        bounds: Bounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: Number | Iterable[NumPair] = 0,
+        coord_space: str = "baseline",
+        **kwargs: Dict[str, Any],
+    ) -> np.ndarray:
+        """Read a region of the transformed WSI within given bounds.
+
+        Args:
+            bounds (Bounds):
+                Tuple of (start_x, start_y, end_x, end_y) in the coordinate
+                space defined by `coord_space`.
+            resolution (Resolution):
+                Resolution at which to read the image.
+            units (Units):
+                Units of resolution.
+            interpolation (str):
+                Interpolation method.
+            pad_mode (str):
+                Padding mode at the edges.
+            pad_constant_values (Number | Iterable[NumPair]):
+                Constant values for padding.
+            coord_space (str):
+                Coordinate space of the bounds ("baseline" or "resolution").
+            **kwargs (Dict[str, Any]):
+                Additional arguments.
+
+        Returns:
+            np.ndarray:
+                The transformed image region.
+
+        """
+        # Handle the resolution and units
+        # Get the parameters for reading
+        if coord_space == "resolution":
+            # Convert bounds to baseline coordinates
+            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+                bounds, resolution, units
+            )
+        else:
+            bounds_at_baseline = bounds
+
+        # Find parameters for optimal read from the underlying WSI
+        (
+            read_level,
+            bounds_at_read_level,
+            output_size,
+            post_read_scale,
+        ) = self.input_wsi._find_read_bounds_params(
+            bounds_at_baseline, resolution, units
+        )
+
+        # Compute physical coordinates of the bounds in WSI coordinate system
+        start_x, start_y, end_x, end_y = bounds_at_baseline
+        wsi_spacing = (
+            np.array(self.wsi_spacing)
+            * self.input_wsi.info.level_downsamples[read_level]
+        )
+        wsi_origin = np.array(self.wsi_origin)
+
+        # Physical coordinates in WSI space
+        physical_start = wsi_origin + np.array([start_x, start_y]) * wsi_spacing
+        physical_end = wsi_origin + np.array([end_x, end_y]) * wsi_spacing
+
+        # Map WSI physical coordinates to displacement field physical coordinates
+        # Assuming both images cover the same physical extent
+        # If not, adjust for differences in origin and spacing
+        displacement_field_spacing = np.array(self.displacement_field_spacing)
+        displacement_field_origin = np.array(self.displacement_field_origin)
+
+        # Physical points in WSI space
+        physical_points_wsi = np.array(
+            [
+                [physical_start[0], physical_start[1]],
+                [physical_end[0], physical_start[1]],
+                [physical_start[0], physical_end[1]],
+                [physical_end[0], physical_end[1]],
+            ]
+        )
+
+        # Map these points through the inverse transform
+        mapped_points = [
+            self.inverse_transform.TransformPoint(p.tolist())
+            for p in physical_points_wsi
+        ]
+        mapped_points = np.array(mapped_points)
+
+        # Compute the bounding box of these points in the underlying WSI
+        min_coords = mapped_points.min(axis=0)
+        max_coords = mapped_points.max(axis=0)
+
+        # Convert these physical coordinates to pixel coordinates in the underlying WSI
+        underlying_wsi_spacing = (
+            (
+                np.array(self.input_wsi.info.mpp)
+                * 1e-6
+                * self.input_wsi.info.level_downsamples[read_level]
+            )
+            if self.input_wsi.info.mpp is not None
+            else np.array([1.0, 1.0])
+            * self.input_wsi.info.level_downsamples[read_level]
+        )
+        underlying_wsi_origin = np.array([0.0, 0.0])
+
+        # Compute pixel coordinates
+        start_xy_underlying = np.floor(
+            (min_coords - underlying_wsi_origin) / underlying_wsi_spacing
+        ).astype(int)
+        end_xy_underlying = np.ceil(
+            (max_coords - underlying_wsi_origin) / underlying_wsi_spacing
+        ).astype(int)
+
+        # Read that region from the underlying WSIReader
+        underlying_bounds = (
+            start_xy_underlying[0],
+            start_xy_underlying[1],
+            end_xy_underlying[0],
+            end_xy_underlying[1],
+        )
+
+        # Read the image region from the underlying WSI
+        img_region = self.input_wsi.read_bounds(
+            bounds=underlying_bounds,
+            resolution=resolution,
+            units=units,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            coord_space=coord_space,
+            **kwargs,
+        )
+
+        # Create a sitk.Image from the read region
+        img_sitk = sitk.GetImageFromArray(np.moveaxis(img_region, -1, 0))
+        img_sitk.SetSpacing(tuple(underlying_wsi_spacing.tolist()))
+        img_sitk.SetOrigin(
+            tuple((start_xy_underlying * underlying_wsi_spacing).tolist())
+        )
+
+        # Set up the resampler
+        resampler = sitk.ResampleImageFilter()
+        resampler.SetTransform(self.transform)
+        resampler.SetOutputSpacing(tuple(wsi_spacing.tolist()))
+        resampler.SetSize(
+            [
+                int(end_x - start_x),
+                int(end_y - start_y),
+                img_sitk.GetSize()[2] if img_sitk.GetDimension() > 2 else 0,
+            ]
+        )
+        resampler.SetOutputOrigin(tuple(physical_start.tolist()))
+
+        # Map 'interpolation' argument to sitk interpolators
+        interpolator_map = {
+            "linear": sitk.sitkLinear,
+            "nearest": sitk.sitkNearestNeighbor,
+            "cubic": sitk.sitkBSpline,
+            "lanczos": sitk.sitkLanczosWindowedSinc,
+            "optimise": sitk.sitkLinear,
+        }
+        resampler.SetInterpolator(interpolator_map.get(interpolation, sitk.sitkLinear))
+
+        # Resample the image
+        output_sitk = resampler.Execute(img_sitk)
+
+        # Convert back to numpy array
+        output_img = sitk.GetArrayFromImage(output_sitk)
+        output_img = np.moveaxis(output_img, 0, -1)  # Move channels back to last axis
+
+        # Handle potential differences in output size due to rounding
+        expected_size = (
+            int(end_y - start_y),
+            int(end_x - start_x),
+            img_region.shape[2],
+        )
+        if output_img.shape != expected_size:
+            output_img = utils.transforms.imresize(
+                output_img, output_size=expected_size[:2], interpolation=interpolation
+            )
+
+        return output_img
+
+    def read_rect(
+        self,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: Number | Iterable[NumPair] = 0,
+        coord_space: str = "baseline",
+        **kwargs: Dict[str, Any],
+    ) -> np.ndarray:
+        """Read a rectangular region of the transformed WSI.
+
+        Args:
+            location (IntPair):
+                (x, y) tuple giving the top left pixel in the coordinate
+                space defined by `coord_space`.
+            size (IntPair):
+                (width, height) tuple giving the desired output image size.
+            resolution (Resolution):
+                Resolution at which to read the image.
+            units (Units):
+                Units of resolution.
+            interpolation (str):
+                Interpolation method.
+            pad_mode (str):
+                Padding mode at the edges.
+            pad_constant_values (Number | Iterable[NumPair]):
+                Constant values for padding.
+            coord_space (str):
+                Coordinate space of the location ("baseline" or "resolution").
+            **kwargs (Dict[str, Any]):
+                Additional arguments.
+
+        Returns:
+            np.ndarray:
+                The transformed image region.
+
+        """
+        # Convert location and size to bounds
+        x, y = location
+        w, h = size
+        bounds = (x, y, x + w, y + h)
+
+        return self.read_bounds(
+            bounds,
+            resolution=resolution,
+            units=units,
+            interpolation=interpolation,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+            coord_space=coord_space,
+            **kwargs,
+        )
