@@ -78,6 +78,14 @@ def run_bokeh(img_input: list[str], port: int, *, noshow: bool) -> None:
     The --base-path option should not be used in this case.""",
 )
 @click.option(
+    "--plugin",
+    multiple=True,
+    help=r"""Path to a file to define an extra layout containing extra
+    resources such as graphs below each slide. Some pre-built plugins are
+    available in the tiatoolbox\visualization\templates folder. Can pass
+    multiple instances of this option to add multiple ui additions.""",
+)
+@click.option(
     "--port",
     type=int,
     help="Port to launch the visualization tool on.",
@@ -88,6 +96,7 @@ def visualize(
     base_path: str,
     slides: str,
     overlays: str,
+    plugin: list[str],
     port: int,
     *,
     noshow: bool,
@@ -101,6 +110,7 @@ def visualize(
         base_path (str): Path to base directory containing images to be displayed.
         slides (str): Path to directory containing slides to be displayed.
         overlays (str): Path to directory containing overlays to be displayed.
+        plugin (list): Paths to files containing ui plugins.
         port (int): Port to launch the visualization tool on.
         noshow (bool): Do not launch in browser (mainly intended for testing).
 
@@ -109,7 +119,7 @@ def visualize(
     if base_path is None and (slides is None or overlays is None):
         msg = "Must specify either base-path or both slides and overlays."
         raise ValueError(msg)
-    img_input = [base_path, slides, overlays]
+    img_input = [base_path, slides, overlays, *list(plugin)]
     img_input = [p for p in img_input if p is not None]
     # check that the input paths exist
     for input_path in img_input:
