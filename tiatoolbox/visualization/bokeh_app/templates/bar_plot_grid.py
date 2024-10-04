@@ -5,11 +5,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource, HoverTool
 from bokeh.plotting import figure
 from bokeh.transform import dodge
+
 from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.ui_utils import UIPlugin
 
