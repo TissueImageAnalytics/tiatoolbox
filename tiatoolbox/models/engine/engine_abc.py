@@ -730,8 +730,8 @@ class EngineABC(ABC):
         _ = kwargs.get("return_labels")  # Key values required for post-processing
         return raw_predictions
 
+    @staticmethod
     def save_wsi_output(
-        self: EngineABC,
         processed_output: Path,
         output_type: str,
         **kwargs: Unpack[EngineABCRunParams],
