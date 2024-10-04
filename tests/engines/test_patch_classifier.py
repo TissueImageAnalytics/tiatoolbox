@@ -25,6 +25,7 @@ def _test_classifier_output(
     model: str,
     probabilities_check: list | None = None,
     classification_check: list | None = None,
+    output_type: str = "dict",
     tmp_path: Path | None = None,
 ) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
@@ -42,6 +43,7 @@ def _test_classifier_output(
         device=device,
         cache_mode=cache_mode,
         save_dir=save_dir,
+        output_type=output_type,
     )
 
     if tmp_path is not None:
@@ -69,7 +71,7 @@ def _test_classifier_output(
         shutil.rmtree(save_dir)
 
 
-def test_patch_predictor_kather100k_output(
+def test_patch_classifier_kather100k_output(
     sample_patch1: Path,
     sample_patch2: Path,
     tmp_path: Path,
@@ -182,6 +184,37 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
     assert output_["predictions"].shape == (70,)
     assert output_["predictions"].ndim == 1
     assert _validate_probabilities(output=output_)
+
+
+def test_patch_classifier_patch_mode_annotation_store(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    tmp_path: Path,
+) -> None:
+    """Test the output of patch classification models on Kather100K dataset."""
+    inputs = [Path(sample_patch1), Path(sample_patch2)]
+
+    classifier = PatchClassifier(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
+    )
+    # don't run test on GPU
+    output = classifier.run(
+        images=inputs,
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=tmp_path / "patch_out_check",
+        output_type="annotationstore",
+    )
+
+    assert output.exists()
+    output = _extract_probabilities_from_annotation_store(output)
+    assert np.all(output["predictions"] == [6, 3])
+    assert np.all(np.array(output["probabilities"]) <= 1)
+    assert np.all(np.array(output["probabilities"]) >= 0)
 
 
 def test_engine_run_wsi_annotation_store(

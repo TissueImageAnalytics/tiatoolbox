@@ -510,6 +510,13 @@ class EngineABC(ABC):
 
         return raw_predictions
 
+    def _get_coordinates(self: EngineABC, batch_data: dict) -> np.ndarray:
+        """Helper function to collect coordinates for AnnotationStore."""
+        if self.patch_mode:
+            coordinates = [0, 0, *batch_data["image"].shape[1:3]]
+            return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
+        return batch_data["coords"].numpy()
+
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
@@ -567,7 +574,7 @@ class EngineABC(ABC):
                 device=self.device,
             )
             if return_coordinates:
-                batch_output["coordinates"] = batch_data["coords"].numpy()
+                batch_output["coordinates"] = self._get_coordinates(batch_data)
 
             if self.return_labels:  # be careful of `s`
                 if isinstance(batch_data["label"], torch.Tensor):
@@ -1003,6 +1010,7 @@ class EngineABC(ABC):
         raw_predictions = self.infer_patches(
             dataloader=dataloader,
             save_path=save_path,
+            return_coordinates=output_type == "annotationstore",
         )
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
