@@ -382,35 +382,6 @@ class PatchPredictor(EngineABC):
             **kwargs,
         )
 
-    def save_wsi_output(
-        self: EngineABC,
-        processed_output: Path,
-        output_type: str,
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> Path:
-        """Aggregate the output at the WSI level and save to file.
-
-        Args:
-            processed_output (Path):
-                Path to Zarr file with intermediate results.
-            output_type (str):
-                The desired output type for resulting patch dataset.
-            **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes.
-
-        Returns: (AnnotationStore or Path):
-            If the output_type is "AnnotationStore", the function returns the patch
-            predictor output as an SQLiteStore containing Annotations stored in a `.db`
-            file. Otherwise, the function defaults to returning patch predictor output
-            stored in a `.zarr` file.
-
-        """
-        return super().save_wsi_output(
-            processed_output=processed_output,
-            output_type=output_type,
-            **kwargs,
-        )
-
     def run(
         self: PatchPredictor,
         images: list[os | Path | WSIReader] | np.ndarray,
