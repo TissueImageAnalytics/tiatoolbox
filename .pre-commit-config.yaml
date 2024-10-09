@@ -1,7 +1,7 @@
 ci:
   autofix_prs: true
   autoupdate_commit_msg: ':technologist: pre-commit autoupdate'
-  autoupdate_schedule: 'weekly'
+  autoupdate_schedule: 'monthly'
 repos:
   - repo: local
     hooks:
