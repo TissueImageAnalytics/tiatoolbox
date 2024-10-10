@@ -11,10 +11,11 @@ from typing import Callable
 import joblib
 import numpy as np
 import pytest
+import torch
 import yaml
 from click.testing import CliRunner
 
-from tiatoolbox import cli
+from tiatoolbox import cli, rcParam
 from tiatoolbox.models import (
     IOSegmentorConfig,
     NucleusInstanceSegmentor,
@@ -44,7 +45,12 @@ def _crash_func(_x: object) -> None:
 
 def helper_tile_info() -> list:
     """Helper function for tile information."""
+    torch._dynamo.reset()
+    current_torch_compile_mode = rcParam["torch_compile_mode"]
+    rcParam["torch_compile_mode"] = "disable"
     predictor = NucleusInstanceSegmentor(model="A")
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = current_torch_compile_mode
     # ! assuming the tiles organized as follows (coming out from
     # ! PatchExtractor). If this is broken, need to check back
     # ! PatchExtractor output ordering first
