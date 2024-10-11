@@ -8,6 +8,7 @@ from sklearn.decomposition import DictionaryLearning
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 from tiatoolbox.utils.transforms import rgb2od
 
+import warnings
 
 def vectors_in_correct_direction(e_vectors: np.ndarray) -> np.ndarray:
     """Points the eigen vectors in the right direction.
@@ -238,6 +239,12 @@ class VahadaneExtractor:
     This class contains code inspired by StainTools
     [https://github.com/Peter554/StainTools] written by Peter Byfield.
 
+    .. warning::
+        Vahadane stain extraction/normalization algorithms are unstable
+        after the update to `dictionary learning` algorithm in scikit-learn > v0.23.0
+        (see issue #382). Please be advised and consider using other stain extraction
+        (normalization) algorithms.
+
     Args:
         luminosity_threshold (float):
             Threshold used for tissue area selection.
@@ -259,6 +266,14 @@ class VahadaneExtractor:
         regularizer: float = 0.1,
     ) -> None:
         """Initialize :class:`VahadaneExtractor`."""
+        # Issue a warning about the algorithm's stability
+        warnings.warn(
+            "Vahadane stain extraction/normalization algorithms are unstable "
+            "after the update to `dictionary learning` algorithm in scikit-learn > v0.23.0 "
+            "(see issue #382). Please be advised and consider using other stain extraction "
+            "(normalization) algorithms.",
+            UserWarning,
+        )
         self.__luminosity_threshold = luminosity_threshold
         self.__regularizer = regularizer
 
@@ -267,7 +282,7 @@ class VahadaneExtractor:
 
         Args:
             img (:class:`numpy.ndarray`):
-                Input image used for stain matrix estimation
+                Input image used for stain matrix estimation.
 
         Returns:
             :class:`numpy.ndarray`:
