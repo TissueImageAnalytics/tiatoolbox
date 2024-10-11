@@ -730,9 +730,6 @@ class EngineABC(ABC):
         _ = kwargs.get("return_labels")  # Key values required for post-processing
         return raw_predictions
 
-        msg = "Only supports zarr and AnnotationStore as output_type."
-        raise ValueError(msg)
-
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
 
