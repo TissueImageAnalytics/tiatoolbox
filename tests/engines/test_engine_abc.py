@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, NoReturn
 import numpy as np
 import pytest
 import torchvision.models as torch_models
-import zarr
 from typing_extensions import Unpack
 
 from tiatoolbox.models.architecture import (
@@ -26,7 +25,6 @@ from tiatoolbox.models.engine.engine_abc import (
     prepare_engines_save_dir,
 )
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
-from tiatoolbox.utils.misc import write_to_zarr_in_cache_mode
 
 if TYPE_CHECKING:
     import torch.nn
@@ -60,19 +58,6 @@ class TestEngineABC(EngineABC):
             labels,
             ioconfig,
             patch_mode=patch_mode,
-        )
-
-    def save_wsi_output(
-        self: EngineABC,
-        processed_output: dict,
-        save_dir: Path,
-        **kwargs: dict,
-    ) -> Path:
-        """Test post_process_wsi."""
-        return super().save_wsi_output(
-            processed_output,
-            save_dir=save_dir,
-            **kwargs,
         )
 
     def post_process_wsi(
@@ -540,55 +525,6 @@ def test_get_dataloader(sample_svs: Path) -> None:
     )
 
     assert isinstance(dataloader.dataset, WSIPatchDataset)
-
-
-def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
-    """Test the eng.save_output() function."""
-    eng = TestEngineABC(model="alexnet-kather100k")
-    save_path = tmp_path / "output.zarr"
-    _ = zarr.open(save_path, mode="w")
-    out = eng.save_wsi_output(
-        processed_output=save_path,
-        save_path=save_path,
-        output_type="zarr",
-        save_dir=tmp_path,
-    )
-
-    assert out.exists()
-    assert out.suffix == ".zarr"
-
-    # Test AnnotationStore
-    patch_output = {
-        "predictions": np.array([1, 0, 1]),
-        "coordinates": np.array([(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)]),
-    }
-    class_dict = {0: "class0", 1: "class1"}
-    save_path = tmp_path / "output_db.zarr"
-    zarr_group = zarr.open(save_path, mode="w")
-    _ = write_to_zarr_in_cache_mode(
-        zarr_group=zarr_group, output_data_to_save=patch_output
-    )
-    out = eng.save_wsi_output(
-        processed_output=save_path,
-        scale_factor=(1.0, 1.0),
-        class_dict=class_dict,
-        save_dir=tmp_path,
-        output_type="AnnotationStore",
-    )
-
-    assert out.exists()
-    assert out.suffix == ".db"
-
-    with pytest.raises(
-        ValueError,
-        match=r".*supports zarr and AnnotationStore as output_type.",
-    ):
-        eng.save_wsi_output(
-            processed_output=save_path,
-            save_path=save_path,
-            output_type="dict",
-            save_dir=tmp_path,
-        )
 
 
 def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
