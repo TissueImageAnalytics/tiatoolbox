@@ -974,12 +974,19 @@ class EngineABC(ABC):
         )
         logger.removeFilter(duplicate_filter)
 
-        return self.save_predictions(
+        out = self.save_predictions(
             processed_predictions=processed_predictions,
             output_type=output_type,
             save_dir=save_dir,
             **kwargs,
         )
+
+        if save_dir:
+            msg = f"Output file saved at {out}."
+            logger.info(msg=msg)
+            return out
+
+        return out
 
     @staticmethod
     def _calculate_scale_factor(dataloader: DataLoader) -> float | tuple[float, float]:
@@ -1078,6 +1085,8 @@ class EngineABC(ABC):
                 **kwargs,
             )
             logger.removeFilter(duplicate_filter)
+            msg = f"Output file saved at {out[image]}."
+            logger.info(msg=msg)
 
         return out
 

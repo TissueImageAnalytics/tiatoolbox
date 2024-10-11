@@ -6,7 +6,7 @@ import json
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import zarr
@@ -16,6 +16,9 @@ from tiatoolbox import cli
 from tiatoolbox.models.engine.patch_classifier import PatchClassifier
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import get_zarr_array, imwrite
+
+if TYPE_CHECKING:
+    import pytest
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -152,7 +155,9 @@ def _validate_probabilities(output: list | dict | zarr.group) -> bool:
     return np.all(predictions[:][0:5] == [7, 3, 2, 3, 3])
 
 
-def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
+def test_wsi_predictor_zarr(
+    sample_wsi_dict: dict, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Test normal run of patch predictor for WSIs."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
 
@@ -184,6 +189,7 @@ def test_wsi_predictor_zarr(sample_wsi_dict: dict, tmp_path: Path) -> None:
     assert output_["predictions"].shape == (70,)
     assert output_["predictions"].ndim == 1
     assert _validate_probabilities(output=output_)
+    assert "Output file saved at " in caplog.text
 
 
 def test_patch_classifier_patch_mode_annotation_store(
@@ -220,6 +226,7 @@ def test_patch_classifier_patch_mode_annotation_store(
 def test_engine_run_wsi_annotation_store(
     sample_wsi_dict: dict,
     tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the engine run for Whole slide images."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -258,6 +265,8 @@ def test_engine_run_wsi_annotation_store(
     # prediction for each patch
     assert np.array(output_["predictions"]).shape == (69,)
     assert _validate_probabilities(output_)
+
+    assert "Output file saved at " in caplog.text
 
     shutil.rmtree(save_dir)
 
