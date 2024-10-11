@@ -1211,9 +1211,11 @@ def patch_predictions_as_annotations(
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    for i, probs in enumerate(class_probs):
+    for i, _ in enumerate(patch_coords):
         if "probabilities" in keys:
-            props = {f"prob_{class_dict[j]}": probs[j] for j in classes_predicted}
+            props = {
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+            }
         else:
             props = {}
         if "labels" in keys:
@@ -1286,7 +1288,7 @@ def dict_to_store(
     if class_dict is None:
         # if no class dict create a default one
         if len(class_probs) == 0:
-            class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+            class_dict = {i: i for i in np.unique(np.append(preds, labels)).tolist()}
         else:
             class_dict = {i: i for i in range(len(class_probs[0]))}
 

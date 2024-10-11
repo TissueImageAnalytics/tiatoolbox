@@ -130,7 +130,8 @@ def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
     for item in annotations_properties:
         for json_str in item:
             probs_dict = json.loads(json_str)
-            output["probabilities"].append(probs_dict.pop("prob_0"))
+            if "proba_0" in probs_dict:
+                output["probabilities"].append(probs_dict.pop("prob_0"))
             output["predictions"].append(probs_dict.pop("type"))
 
     return output
@@ -221,6 +222,47 @@ def test_patch_classifier_patch_mode_annotation_store(
     assert np.all(output["predictions"] == [6, 3])
     assert np.all(np.array(output["probabilities"]) <= 1)
     assert np.all(np.array(output["probabilities"]) >= 0)
+
+
+def test_patch_classifier_patch_mode_no_probabilities(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    tmp_path: Path,
+) -> None:
+    """Test the output of patch classification models on Kather100K dataset."""
+    inputs = [Path(sample_patch1), Path(sample_patch2)]
+
+    classifier = PatchClassifier(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
+    )
+
+    output = classifier.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+    )
+
+    assert "probabilities" not in output
+
+    # don't run test on GPU
+    output = classifier.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=tmp_path / "patch_out_check",
+        output_type="annotationstore",
+    )
+
+    assert output.exists()
+    output = _extract_probabilities_from_annotation_store(output)
+    assert np.all(output["predictions"] == [6, 3])
+    assert output["probabilities"] == []
 
 
 def test_engine_run_wsi_annotation_store(

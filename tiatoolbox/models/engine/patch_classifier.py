@@ -415,6 +415,7 @@ class PatchClassifier(PatchPredictor):
                 saved zarr file if `cache_mode` is True.
 
         """
+        return_probabilities = kwargs.get("return_probabilities")
         if self.cache_mode:
             return self.post_process_cache_mode(raw_predictions, **kwargs)
 
@@ -425,6 +426,11 @@ class PatchClassifier(PatchPredictor):
         )
 
         raw_predictions["predictions"] = predictions
+
+        if return_probabilities is not False:
+            return raw_predictions
+
+        del raw_predictions["probabilities"]
 
         return raw_predictions
 
