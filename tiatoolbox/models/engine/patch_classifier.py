@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import zarr
@@ -366,21 +367,26 @@ class PatchClassifier(PatchPredictor):
         """Returns an array from raw predictions."""
         _ = kwargs.get("return_probabilities")
         zarr_group = zarr.open(str(raw_predictions), mode="r+")
-        # Probabilities for post-processing
-        probabilities = zarr_group["probabilities"][:]
-        predictions = self.model.postproc_func(
-            probabilities,
-        )
-        if "predictions" in zarr_group:
-            zarr_group["predictions"].append(predictions)
-            return raw_predictions
 
-        zarr_dataset = zarr_group.create_dataset(
-            name="predictions",
-            shape=predictions.shape,
-            compressor=zarr_group["probabilities"].compressor,
-        )
-        zarr_dataset[:] = predictions
+        num_iter = math.ceil(len(zarr_group["probabilities"]) / self.batch_size)
+        start = 0
+        for _ in range(num_iter):
+            # Probabilities for post-processing
+            probabilities = zarr_group["probabilities"][start : start + self.batch_size]
+            start = start + self.batch_size
+            predictions = self.model.postproc_func(
+                probabilities,
+            )
+            if "predictions" in zarr_group:
+                zarr_group["predictions"].append(predictions)
+                continue
+
+            zarr_dataset = zarr_group.create_dataset(
+                name="predictions",
+                shape=predictions.shape,
+                compressor=zarr_group["probabilities"].compressor,
+            )
+            zarr_dataset[:] = predictions
 
         return raw_predictions
 

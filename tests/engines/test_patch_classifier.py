@@ -245,6 +245,7 @@ def test_engine_run_wsi_annotation_store(
         masks=[mini_wsi_msk],
         patch_mode=False,
         output_type="AnnotationStore",
+        batch_size=4,
         **kwargs,
     )
 
