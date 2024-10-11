@@ -139,7 +139,11 @@ def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
 
 def _validate_probabilities(output: list | dict | zarr.group) -> bool:
     """Helper function to test if the probabilities value are valid."""
-    probabilities = output["probabilities"]
+    probabilities = np.array([0.5])
+
+    if "probabilities" in output:
+        probabilities = output["probabilities"]
+
     predictions = output["predictions"]
     if isinstance(probabilities, dict):
         return all(0 <= probability <= 1 for _, probability in probabilities.items())
@@ -183,6 +187,29 @@ def test_wsi_predictor_zarr(
 
     assert output_["probabilities"].shape == (70, 9)  # number of patches x classes
     assert output_["probabilities"].ndim == 2
+    # number of patches x [start_x, start_y, end_x, end_y]
+    assert output_["coordinates"].shape == (70, 4)
+    assert output_["coordinates"].ndim == 2
+    # prediction for each patch
+    assert output_["predictions"].shape == (70,)
+    assert output_["predictions"].ndim == 1
+    assert _validate_probabilities(output=output_)
+    assert "Output file saved at " in caplog.text
+
+    output = classifier.run(
+        images=[mini_wsi_svs],
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "wsi_out_check_no_probabilities",
+    )
+
+    assert output[mini_wsi_svs].exists()
+
+    output_ = zarr.open(output[mini_wsi_svs])
+
+    assert "probabilities" not in output_
     # number of patches x [start_x, start_y, end_x, end_y]
     assert output_["coordinates"].shape == (70, 4)
     assert output_["coordinates"].ndim == 2

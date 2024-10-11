@@ -365,7 +365,7 @@ class PatchClassifier(PatchPredictor):
         **kwargs: Unpack[ClassifierRunParams],
     ) -> Path:
         """Returns an array from raw predictions."""
-        _ = kwargs.get("return_probabilities")
+        return_probabilities = kwargs.get("return_probabilities")
         zarr_group = zarr.open(str(raw_predictions), mode="r+")
 
         num_iter = math.ceil(len(zarr_group["probabilities"]) / self.batch_size)
@@ -387,6 +387,11 @@ class PatchClassifier(PatchPredictor):
                 compressor=zarr_group["probabilities"].compressor,
             )
             zarr_dataset[:] = predictions
+
+        if return_probabilities is not False:
+            return raw_predictions
+
+        del zarr_group["probabilities"]
 
         return raw_predictions
 
