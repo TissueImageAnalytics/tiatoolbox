@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
 
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 from tiatoolbox.utils.transforms import rgb2od
 
-import warnings
 
 def vectors_in_correct_direction(e_vectors: np.ndarray) -> np.ndarray:
     """Points the eigen vectors in the right direction.
