@@ -730,46 +730,6 @@ class EngineABC(ABC):
         _ = kwargs.get("return_labels")  # Key values required for post-processing
         return raw_predictions
 
-    @staticmethod
-    def save_wsi_output(
-        processed_output: Path,
-        output_type: str,
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> Path:
-        """Aggregate the output at the WSI level and save to file.
-
-        Args:
-            processed_output (Path):
-                Path to Zarr file with intermediate results.
-            output_type (str):
-                The desired output type for resulting patch dataset.
-            **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes.
-
-        Returns: (AnnotationStore or Path):
-            If the output_type is "AnnotationStore", the function returns the patch
-            predictor output as an SQLiteStore containing Annotations stored in a `.db`
-            file. Otherwise, the function defaults to returning patch predictor output
-            stored in a `.zarr` file.
-
-        """
-        if output_type.lower() == "zarr":
-            msg = "Output file saved at %s.", processed_output
-            logger.info(msg=msg)
-            return processed_output
-
-        if output_type.lower() == "annotationstore":
-            save_path = Path(kwargs.get("output_file", processed_output.stem + ".db"))
-            # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-            # Read zarr file to a dict
-            raw_output_dict = zarr.open(str(processed_output), mode="r")
-
-            # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict")
-
-            return dict_to_store(raw_output_dict, scale_factor, class_dict, save_path)
-
         msg = "Only supports zarr and AnnotationStore as output_type."
         raise ValueError(msg)
 
