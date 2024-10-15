@@ -11,7 +11,7 @@ repos:
         files: tests/.*\btest_\w*.py
         require_serial: true
         language: system
-        stages: [push]
+        stages: [pre-push]
       - id: notebook-markdown-format
         name: notebook markdown format
         entry: python pre-commit/notebook_markdown_format.py
@@ -23,7 +23,7 @@ repos:
         - mdformat-black
         - mdformat-myst
   - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.17
+    rev: 0.7.18
     hooks:
     - id: mdformat
       # Optionally add plugins
