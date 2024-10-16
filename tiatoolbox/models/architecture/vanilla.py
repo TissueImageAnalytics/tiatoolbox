@@ -82,8 +82,6 @@ def _get_architecture(
 
 def _get_timm_architecture(
     arch_name: str,
-    weights: str or WeightsEnum = "DEFAULT",
-    **kwargs: dict,
 ) -> list[nn.Sequential, ...] | nn.Sequential:
     """Get architecture and weights for pathology-specific timm models.
 
@@ -106,14 +104,17 @@ def _get_timm_architecture(
             init_values=1e-5,
             dynamic_img_size=True,
         )
-    elif arch_name == "prov-gigapath" and timm.__version__ > "1.0.0":
+    elif arch_name == "prov-gigapath" and timm.__version__ > "1.0.3":
         # ProViT-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
-        # There is a bug in timm version 0.9.8 (https://github.com/prov-gigapath/prov-gigapath/issues/2). Version 1.0.3 has been tested successfully.
+        # Bug in earlier version: https://github.com/prov-gigapath/prov-gigapath/issues/2
         feat_extract = timm.create_model(
             "hf_hub:prov-gigapath/prov-gigapath", pretrained=True
         )
     else:
-        msg = f"Architecture {arch_name} not supported. If you are loading timm models, only timm version > `1.0.3` are supported."
+        msg = (
+            f"Architecture {arch_name} not supported. "
+            "If you are loading timm models, only timm > `1.0.3` are supported."
+        )
         raise ValueError(msg)
 
     return feat_extract
