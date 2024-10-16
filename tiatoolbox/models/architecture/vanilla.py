@@ -307,6 +307,55 @@ class CNNBackbone(ModelABC):
         return [output.cpu().numpy()]
 
 
+class TimmModel(CNNModel):
+    """Retrieve the pathology-specific tile encoder from timm.
+
+    This is a wrapper for pretrained models within timm.
+
+    Args:
+        backbone (str):
+            Model name. Currently, the tool supports following
+             model names and their default associated weights from timm.
+             - "uni_v1"
+             - "prov-gigapath"
+        num_classes (int):
+            Number of classes output by model.
+
+    Attributes:
+        num_classes (int):
+            Number of classes output by the model.
+        feat_extract (nn.Module):
+            Backbone Timm model.
+        classifier (nn.Module):
+            Linear classifier module used to map the features to the
+            output.
+    """
+
+    def __init__(self: TimmModel, backbone: str, num_classes: int = 1) -> None:
+        """Initialize :class:`TimmModel`."""
+        super().__init__()
+        self.num_classes = num_classes
+
+        self.feat_extract = _get_timm_architecture(backbone)
+
+        # Best way to retrieve channel dynamically is passing a small forward pass
+        prev_num_ch = self.feat_extract(torch.rand([2, 3, 224, 224])).shape[1]
+        self.classifier = nn.Linear(prev_num_ch, num_classes)
+
+    def forward(self: TimmModel, imgs: torch.Tensor) -> torch.Tensor:
+        """Pass input data through the model.
+
+        Args:
+            imgs (torch.Tensor):
+                Model input.
+
+        """
+        feat = self.feat_extract(imgs)
+        feat = torch.flatten(feat, 1)
+        logit = self.classifier(feat)
+        return torch.softmax(logit, -1)
+
+
 class TimmBackbone(CNNBackbone):
     """Retrieve the pathology-specific tile encoder from timm.
 
