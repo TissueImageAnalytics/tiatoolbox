@@ -332,7 +332,7 @@ class TimmBackbone(CNNBackbone):
 
     def __init__(self: TimmBackbone, backbone: str) -> None:
         """Initialize :class:`TimmBackbone`."""
-        super(CNNBackbone, self).__init__()
+        super().__init__()
         self.feat_extract = _get_timm_architecture(backbone)
 
     def forward(self: TimmBackbone, imgs: torch.Tensor) -> torch.Tensor:
