@@ -88,10 +88,6 @@ def _get_timm_architecture(
     Args:
         arch_name (str):
             Architecture name.
-        weights:
-            path to pretrained weights
-        kwargs (dict):
-            Key-word arguments.
 
     Returns:
         A ready-to-use timm model.
