@@ -333,9 +333,8 @@ class TimmModel(CNNModel):
 
     def __init__(self: TimmModel, backbone: str, num_classes: int = 1) -> None:
         """Initialize :class:`TimmModel`."""
-        super().__init__(backbone="alexnet", num_classes=num_classes)  # Fix dummy
+        ModelABC.__init__(self)
         self.num_classes = num_classes
-
         self.feat_extract = _get_timm_architecture(backbone)
 
         # Best way to retrieve channel dynamically is passing a small forward pass
@@ -381,7 +380,7 @@ class TimmBackbone(CNNBackbone):
 
     def __init__(self: TimmBackbone, backbone: str) -> None:
         """Initialize :class:`TimmBackbone`."""
-        super().__init__(backbone="alexnet")  # Fix this
+        ModelABC.__init__(self)
         self.feat_extract = _get_timm_architecture(backbone)
 
     def forward(self: TimmBackbone, imgs: torch.Tensor) -> torch.Tensor:
