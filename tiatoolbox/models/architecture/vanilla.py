@@ -111,6 +111,13 @@ def _get_timm_architecture(
             "hf_hub:prov-gigapath/prov-gigapath",
             pretrained=pretrained,
         )
+    elif arch_name == "H-optimus-0" and timm.__version__ > "1.0.3":
+        feat_extract = timm.create_model(
+            "hf-hub:bioptimus/H-optimus-0",
+            pretrained=pretrained,
+            init_values=1e-5,
+            dynamic_img_size=False,
+        )
     else:
         msg = (
             f"Backbone {arch_name} not supported. "

@@ -59,6 +59,7 @@ def test_timm_functional() -> None:
     backbones = [
         "uni_v1",
         "prov-gigapath",
+        "H-optimus-0",
     ]
     assert TimmModel.postproc([1, 2]) == 1
 
