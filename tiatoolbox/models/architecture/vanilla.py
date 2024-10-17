@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+import timm
 import torch
 import torchvision.models as torch_models
 from torch import nn
@@ -77,6 +78,55 @@ def _get_architecture(
         return nn.Sequential(*list(model.children())[:-3])
 
     return model.features
+
+
+def _get_timm_architecture(
+    arch_name: str,
+    *,
+    pretrained: bool,
+) -> list[nn.Sequential, ...] | nn.Sequential:
+    """Get architecture and weights for pathology-specific timm models.
+
+    Args:
+        arch_name (str):
+            Architecture name.
+        pretrained (bool, keyword-only):
+            Whether to load pretrained weights.
+
+    Returns:
+        A ready-to-use timm model.
+    """
+    if arch_name == "UNI":
+        # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
+        feat_extract = timm.create_model(
+            "hf-hub:MahmoodLab/UNI",
+            pretrained=pretrained,
+            init_values=1e-5,
+            dynamic_img_size=True,
+        )
+    elif arch_name == "prov-gigapath" and timm.__version__ > "1.0.3":
+        # ProViT-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
+        # Bug in earlier version: https://github.com/prov-gigapath/prov-gigapath/issues/2
+        feat_extract = timm.create_model(
+            "hf_hub:prov-gigapath/prov-gigapath",
+            pretrained=pretrained,
+        )
+    elif arch_name == "H-optimus-0" and timm.__version__ > "1.0.3":
+        # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
+        feat_extract = timm.create_model(
+            "hf-hub:bioptimus/H-optimus-0",
+            pretrained=pretrained,
+            init_values=1e-5,
+            dynamic_img_size=False,
+        )
+    else:
+        msg = (
+            f"Backbone {arch_name} not supported. "
+            "If you are loading timm models, only timm > `1.0.3` is supported."
+        )
+        raise ValueError(msg)
+
+    return feat_extract
 
 
 class CNNModel(ModelABC):
@@ -268,3 +318,109 @@ class CNNBackbone(ModelABC):
             output = model(img_patches_device)
         # Output should be a single tensor or scalar
         return [output.cpu().numpy()]
+
+
+class TimmModel(CNNModel):
+    """Retrieve the pathology-specific tile encoder from timm.
+
+    This is a wrapper for pretrained models within timm.
+
+    Args:
+        backbone (str):
+            Model name. Currently, the tool supports following
+             model names and their default associated weights from timm.
+             - "UNI"
+             - "prov-gigapath"
+        num_classes (int):
+            Number of classes output by model.
+        pretrained (bool, keyword-only):
+            Whether to load pretrained weights.
+
+    Attributes:
+        num_classes (int):
+            Number of classes output by the model.
+        pretrained (bool):
+            Whether to load pretrained weights.
+        feat_extract (nn.Module):
+            Backbone Timm model.
+        classifier (nn.Module):
+            Linear classifier module used to map the features to the
+            output.
+    """
+
+    def __init__(
+        self: TimmModel,
+        backbone: str,
+        num_classes: int = 1,
+        *,
+        pretrained: bool,
+    ) -> None:
+        """Initialize :class:`TimmModel`."""
+        ModelABC.__init__(self)
+        self.pretrained = pretrained
+        self.num_classes = num_classes
+        self.feat_extract = _get_timm_architecture(
+            arch_name=backbone, pretrained=pretrained
+        )
+
+        # Best way to retrieve channel dynamically is passing a small forward pass
+        prev_num_ch = self.feat_extract(torch.rand([2, 3, 224, 224])).shape[1]
+        self.classifier = nn.Linear(prev_num_ch, num_classes)
+
+    def forward(self: TimmModel, imgs: torch.Tensor) -> torch.Tensor:
+        """Pass input data through the model.
+
+        Args:
+            imgs (torch.Tensor):
+                Model input.
+
+        """
+        feat = self.feat_extract(imgs)
+        feat = torch.flatten(feat, 1)
+        logit = self.classifier(feat)
+        return torch.softmax(logit, -1)
+
+
+class TimmBackbone(CNNBackbone):
+    """Retrieve the pathology-specific tile encoder from timm.
+
+    This is a wrapper for pretrained models within timm.
+
+    Args:
+        backbone (str):
+            Model name. Currently, the tool supports following
+             model names and their default associated weights from timm.
+             - "UNI"
+             - "prov-gigapath"
+        pretrained (bool, keyword-only):
+            Whether to load pretrained weights.
+
+    Examples:
+        >>> # Creating UNI tile encoder
+        >>> model = TimmBackbone(backbone="UNI", pretrained=True)
+        >>> model.eval()  # set to evaluation mode
+        >>> # dummy sample in NHWC form
+        >>> samples = torch.rand(4, 3, 224, 224)
+        >>> features = model(samples)
+        >>> features.shape  # feature vector
+        torch.Size([4, 1024])
+    """
+
+    def __init__(self: TimmBackbone, backbone: str, *, pretrained: bool) -> None:
+        """Initialize :class:`TimmBackbone`."""
+        ModelABC.__init__(self)
+        self.pretrained = pretrained
+        self.feat_extract = _get_timm_architecture(
+            arch_name=backbone, pretrained=pretrained
+        )
+
+    def forward(self: TimmBackbone, imgs: torch.Tensor) -> torch.Tensor:
+        """Pass input data through the model.
+
+        Args:
+            imgs (torch.Tensor):
+                Model input.
+
+        """
+        feats = self.feat_extract(imgs)
+        return torch.flatten(feats, 1)
