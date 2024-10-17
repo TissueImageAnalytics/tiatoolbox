@@ -70,7 +70,7 @@ def test_timm_functional() -> None:
     backbone = "empty"
     try:
         for backbone in backbones:
-            model = TimmModel(backbone, num_classes=1)
+            model = TimmModel(backbone=backbone, num_classes=1, pretrained=False)
             model_ = model_to(on_gpu=ON_GPU, model=model)
             model.infer_batch(model_, samples, on_gpu=ON_GPU)
     except ValueError as exc:
@@ -79,4 +79,4 @@ def test_timm_functional() -> None:
 
     # skipcq
     with pytest.raises(ValueError, match=r".*Backbone.*not supported.*"):
-        TimmModel("shiny_model_to_crash", num_classes=2)
+        TimmModel(backbone="shiny_model_to_crash", num_classes=2, pretrained=False)
