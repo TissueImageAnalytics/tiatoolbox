@@ -112,6 +112,7 @@ def _get_timm_architecture(
             pretrained=pretrained,
         )
     elif arch_name == "H-optimus-0" and timm.__version__ > "1.0.3":
+        # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
         feat_extract = timm.create_model(
             "hf-hub:bioptimus/H-optimus-0",
             pretrained=pretrained,
