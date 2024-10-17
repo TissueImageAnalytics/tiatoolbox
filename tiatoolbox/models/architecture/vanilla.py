@@ -96,7 +96,7 @@ def _get_timm_architecture(
     Returns:
         A ready-to-use timm model.
     """
-    if arch_name == "uni_v1":
+    if arch_name == "UNI":
         # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
         feat_extract = timm.create_model(
             "hf-hub:MahmoodLab/UNI",
@@ -329,7 +329,7 @@ class TimmModel(CNNModel):
         backbone (str):
             Model name. Currently, the tool supports following
              model names and their default associated weights from timm.
-             - "uni_v1"
+             - "UNI"
              - "prov-gigapath"
         num_classes (int):
             Number of classes output by model.
@@ -390,14 +390,14 @@ class TimmBackbone(CNNBackbone):
         backbone (str):
             Model name. Currently, the tool supports following
              model names and their default associated weights from timm.
-             - "uni_v1"
+             - "UNI"
              - "prov-gigapath"
         pretrained (bool, keyword-only):
             Whether to load pretrained weights.
 
     Examples:
         >>> # Creating UNI tile encoder
-        >>> model = TimmBackbone(backbone="uni_v1", pretrained=True)
+        >>> model = TimmBackbone(backbone="UNI", pretrained=True)
         >>> model.eval()  # set to evaluation mode
         >>> # dummy sample in NHWC form
         >>> samples = torch.rand(4, 3, 224, 224)

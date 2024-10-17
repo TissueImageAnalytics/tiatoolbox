@@ -57,7 +57,7 @@ def test_functional() -> None:
 def test_timm_functional() -> None:
     """Test for creating backbone."""
     backbones = [
-        "uni_v1",
+        "UNI",
         "prov-gigapath",
         "H-optimus-0",
     ]
