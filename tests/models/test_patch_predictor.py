@@ -13,7 +13,8 @@ import pytest
 import torch
 from click.testing import CliRunner
 
-from tiatoolbox import cli
+from tests.conftest import timed
+from tiatoolbox import cli, logger, rcParam
 from tiatoolbox.models import IOPatchPredictorConfig, PatchPredictor
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import (
@@ -1226,3 +1227,53 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
     assert tmp_path.joinpath("2.merged.npy").exists()
     assert tmp_path.joinpath("2.raw.json").exists()
     assert tmp_path.joinpath("results.json").exists()
+
+
+# -------------------------------------------------------------------------------------
+# torch.compile
+# -------------------------------------------------------------------------------------
+
+
+def test_patch_predictor_torch_compile(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    tmp_path: Path,
+) -> None:
+    """Test PatchPredictor with with torch.compile functionality.
+
+    Args:
+        sample_patch1 (Path): Path to sample patch 1.
+        sample_patch2 (Path): Path to sample patch 2.
+        tmp_path (Path): Path to temporary directory.
+
+    """
+    torch_compile_mode = rcParam["torch_compile_mode"]
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "default"
+    _, compile_time = timed(
+        test_patch_predictor_api,
+        sample_patch1,
+        sample_patch2,
+        tmp_path,
+    )
+    logger.info("torch.compile default mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "reduce-overhead"
+    _, compile_time = timed(
+        test_patch_predictor_api,
+        sample_patch1,
+        sample_patch2,
+        tmp_path,
+    )
+    logger.info("torch.compile reduce-overhead mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "max-autotune"
+    _, compile_time = timed(
+        test_patch_predictor_api,
+        sample_patch1,
+        sample_patch2,
+        tmp_path,
+    )
+    logger.info("torch.compile max-autotune mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = torch_compile_mode
