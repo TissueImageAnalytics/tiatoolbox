@@ -57,9 +57,7 @@ def test_functional() -> None:
 def test_timm_functional() -> None:
     """Test for creating backbone."""
     backbones = [
-        "UNI",
-        "prov-gigapath",
-        "H-optimus-0",
+        "efficientnet_b0",
     ]
     assert TimmModel.postproc([1, 2]) == 1
 

@@ -96,7 +96,10 @@ def _get_timm_architecture(
     Returns:
         A ready-to-use timm model.
     """
-    if arch_name == "UNI":
+    if arch_name in [f"efficientnet_b{i}" for i in range(8)]:
+        model = timm.create_model(arch_name, pretrained=pretrained)
+        feat_extract = nn.Sequential(*list(model.children())[:-1])
+    elif arch_name == "UNI":
         # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
         feat_extract = timm.create_model(
             "hf-hub:MahmoodLab/UNI",
@@ -321,7 +324,7 @@ class CNNBackbone(ModelABC):
 
 
 class TimmModel(CNNModel):
-    """Retrieve the pathology-specific tile encoder from timm.
+    """Retrieve the tile encoder from timm.
 
     This is a wrapper for pretrained models within timm.
 
@@ -329,6 +332,7 @@ class TimmModel(CNNModel):
         backbone (str):
             Model name. Currently, the tool supports following
              model names and their default associated weights from timm.
+             - "efficientnet_b{i}" for i in [0, 1, ..., 7]
              - "UNI"
              - "prov-gigapath"
         num_classes (int):
@@ -382,7 +386,7 @@ class TimmModel(CNNModel):
 
 
 class TimmBackbone(CNNBackbone):
-    """Retrieve the pathology-specific tile encoder from timm.
+    """Retrieve tile encoders from timm.
 
     This is a wrapper for pretrained models within timm.
 
@@ -390,6 +394,7 @@ class TimmBackbone(CNNBackbone):
         backbone (str):
             Model name. Currently, the tool supports following
              model names and their default associated weights from timm.
+             - "efficientnet_b{i}" for i in [0, 1, ..., 7]
              - "UNI"
              - "prov-gigapath"
         pretrained (bool, keyword-only):
