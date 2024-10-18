@@ -108,8 +108,8 @@ def _get_timm_architecture(
             dynamic_img_size=True,
         )
     elif arch_name == "prov-gigapath" and timm.__version__ > "1.0.3":
-        # ProViT-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
-        # Bug in earlier version: https://github.com/prov-gigapath/prov-gigapath/issues/2
+        # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
+        # Earlier version bug: https://github.com/prov-gigapath/prov-gigapath/issues/2
         feat_extract = timm.create_model(
             "hf_hub:prov-gigapath/prov-gigapath",
             pretrained=pretrained,
