@@ -120,10 +120,6 @@ class EngineABCRunParams(TypedDict, total=False):
             Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        merge_predictions (bool):
-            Whether to merge the predictions to form a 2-dimensional
-            map into a single file from a WSI.
-            This is only applicable if `patch_mode` is False in inference.
         num_loader_workers (int):
             Number of workers used in :class:`torch.utils.data.DataLoader`.
         num_post_proc_workers (int):
@@ -165,7 +161,6 @@ class EngineABCRunParams(TypedDict, total=False):
     class_dict: dict
     device: str
     ioconfig: ModelIOConfigABC
-    merge_predictions: bool
     num_loader_workers: int
     num_post_proc_workers: int
     output_file: str
@@ -248,10 +243,6 @@ class EngineABC(ABC):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        merge_predictions (bool):
-            Whether to merge the predictions to form a 2-dimensional
-            map. This is only applicable if `patch_mode` is False in inference.
-            Default is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
@@ -293,8 +284,6 @@ class EngineABC(ABC):
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        merge_predictions (bool):
-            Whether to merge WSI predictions into a single file. Default value is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
@@ -374,7 +363,6 @@ class EngineABC(ABC):
         self.cache_mode: bool = False
         self.cache_size: int = self.batch_size if self.batch_size else 10000
         self.labels: list | None = None
-        self.merge_predictions: bool = False
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.patch_input_shape: IntPair | None = None
@@ -522,6 +510,13 @@ class EngineABC(ABC):
 
         return raw_predictions
 
+    def _get_coordinates(self: EngineABC, batch_data: dict) -> np.ndarray:
+        """Helper function to collect coordinates for AnnotationStore."""
+        if self.patch_mode:
+            coordinates = [0, 0, *batch_data["image"].shape[1:3]]
+            return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
+        return batch_data["coords"].numpy()
+
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
@@ -579,7 +574,7 @@ class EngineABC(ABC):
                 device=self.device,
             )
             if return_coordinates:
-                batch_output["coordinates"] = batch_data["coords"].numpy()
+                batch_output["coordinates"] = self._get_coordinates(batch_data)
 
             if self.return_labels:  # be careful of `s`
                 if isinstance(batch_data["label"], torch.Tensor):
@@ -732,52 +727,8 @@ class EngineABC(ABC):
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post process WSI output."""
-        _ = kwargs.get("probabilities")  # Key values required for post-processing
+        _ = kwargs.get("return_labels")  # Key values required for post-processing
         return raw_predictions
-
-    @abstractmethod
-    def save_wsi_output(
-        self: EngineABC,
-        processed_output: Path,
-        output_type: str,
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> Path:
-        """Aggregate the output at the WSI level and save to file.
-
-        Args:
-            processed_output (Path):
-                Path to Zarr file with intermediate results.
-            output_type (str):
-                The desired output type for resulting patch dataset.
-            **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes.
-
-        Returns: (AnnotationStore or Path):
-            If the output_type is "AnnotationStore", the function returns the patch
-            predictor output as an SQLiteStore containing Annotations stored in a `.db`
-            file. Otherwise, the function defaults to returning patch predictor output
-            stored in a `.zarr` file.
-
-        """
-        if output_type.lower() == "zarr":
-            msg = "Output file saved at %s.", processed_output
-            logger.info(msg=msg)
-            return processed_output
-
-        if output_type.lower() == "annotationstore":
-            save_path = Path(kwargs.get("output_file", processed_output.stem + ".db"))
-            # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-            # Read zarr file to a dict
-            raw_output_dict = zarr.open(str(processed_output), mode="r")
-
-            # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict")
-
-            return dict_to_store(raw_output_dict, scale_factor, class_dict, save_path)
-
-        msg = "Only supports zarr and AnnotationStore as output_type."
-        raise ValueError(msg)
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Helper function to load ioconfig.
@@ -1015,6 +966,7 @@ class EngineABC(ABC):
         raw_predictions = self.infer_patches(
             dataloader=dataloader,
             save_path=save_path,
+            return_coordinates=output_type == "annotationstore",
         )
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
@@ -1022,12 +974,19 @@ class EngineABC(ABC):
         )
         logger.removeFilter(duplicate_filter)
 
-        return self.save_predictions(
+        out = self.save_predictions(
             processed_predictions=processed_predictions,
             output_type=output_type,
             save_dir=save_dir,
             **kwargs,
         )
+
+        if save_dir:
+            msg = f"Output file saved at {out}."
+            logger.info(msg=msg)
+            return out
+
+        return out
 
     @staticmethod
     def _calculate_scale_factor(dataloader: DataLoader) -> float | tuple[float, float]:
@@ -1126,6 +1085,8 @@ class EngineABC(ABC):
                 **kwargs,
             )
             logger.removeFilter(duplicate_filter)
+            msg = f"Output file saved at {out[image]}."
+            logger.info(msg=msg)
 
         return out
 
@@ -1194,8 +1155,6 @@ class EngineABC(ABC):
                 - img_path: path of the input image.
                 - raw: path to save location for raw prediction,
                   saved in .json.
-                - merged: path to .npy contain merged
-                  predictions if `merge_predictions` is `True`.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']

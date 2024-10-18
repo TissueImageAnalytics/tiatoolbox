@@ -1,4 +1,4 @@
-"""Command line interface for patch_predictor."""
+"""Command line interface for patch_classifier."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from tiatoolbox.cli.common import (
     cli_output_type,
     cli_patch_mode,
     cli_resolution,
+    cli_return_probabilities,
     cli_units,
     cli_verbose,
     cli_weights,
@@ -31,7 +32,6 @@ from tiatoolbox.cli.common import (
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
-@cli_patch_mode(default=False)
 @cli_model(default="resnet18-kather100k")
 @cli_weights()
 @cli_device(default="cpu")
@@ -41,8 +41,10 @@ from tiatoolbox.cli.common import (
 @cli_masks(default=None)
 @cli_num_loader_workers(default=0)
 @cli_output_type(default="AnnotationStore")
+@cli_patch_mode(default=False)
+@cli_return_probabilities(default=True)
 @cli_verbose(default=True)
-def patch_predictor(
+def patch_classifier(
     model: str,
     weights: str,
     img_input: str,
@@ -56,11 +58,12 @@ def patch_predictor(
     device: str,
     output_type: str,
     *,
+    return_probabilities: bool,
     patch_mode: bool,
     verbose: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
-    from tiatoolbox.models.engine.patch_predictor import PatchPredictor
+    from tiatoolbox.models.engine.patch_classifier import PatchClassifier
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
@@ -69,7 +72,7 @@ def patch_predictor(
         file_types=file_types,
     )
 
-    predictor = PatchPredictor(
+    classifier = PatchClassifier(
         model=model,
         weights=weights,
         batch_size=batch_size,
@@ -77,7 +80,7 @@ def patch_predictor(
         verbose=verbose,
     )
 
-    _ = predictor.run(
+    _ = classifier.run(
         images=files_all,
         masks=masks_all,
         patch_mode=patch_mode,
@@ -86,4 +89,5 @@ def patch_predictor(
         device=device,
         save_dir=output_path,
         output_type=output_type,
+        return_probabilities=return_probabilities,
     )
