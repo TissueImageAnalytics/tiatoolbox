@@ -11,6 +11,7 @@ from typing_extensions import Unpack
 from tiatoolbox import logger
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import MethodNotSupportedError
+from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -18,6 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from pandas import DataFrame
 
+    from tiatoolbox.annotation.storage import AnnotationStore
     from tiatoolbox.typing import Resolution, Units
 
 
@@ -45,9 +47,12 @@ class ExtractorParams(TypedDict, total=False):
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader
+    input_mask: (
+        str | Path | np.ndarray | wsireader.VirtualWSIReader | AnnotationStore | None
+    )
     stride: int | tuple[int, int]
     min_mask_ratio: float
+    store_filter: str | None
 
 
 class PointsPatchExtractorParams(TypedDict):
@@ -81,9 +86,12 @@ class SlidingWindowPatchExtractorParams(TypedDict):
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None
+    input_mask: (
+        str | Path | np.ndarray | wsireader.VirtualWSIReader | AnnotationStore | None
+    )
     stride: int | tuple[int, int] | None
     min_mask_ratio: float
+    store_filter: str | None
 
 
 class PatchExtractorABC(ABC):
@@ -123,7 +131,10 @@ class PatchExtractor(PatchExtractorABC):
             'morphological' options. In case of 'otsu' or
             'morphological', a tissue mask is generated for the
             input_image using tiatoolbox :class:`TissueMasker`
-            functionality.
+            functionality. May also be an annotation store, in which case the
+            mask is generated based on the annotations. All annotations are used by
+            default; the 'store_filter' argument can be used to specify a filter for
+            a subset of annotations to use to build the mask.
         resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
@@ -150,6 +161,10 @@ class PatchExtractor(PatchExtractorABC):
         min_mask_ratio (float):
             Area in percentage that a patch needs to contain of positive
             mask to be included. Defaults to 0.
+        store_filter (str):
+            Filter to apply to the annotations when generating the mask. Default is
+            None, which uses all annotations. Only used if the provided mask is an
+            annotation store.
 
 
     Attributes:
@@ -188,12 +203,18 @@ class PatchExtractor(PatchExtractorABC):
         self: PatchExtractor,
         input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
+        input_mask: str
+        | Path
+        | np.ndarray
+        | wsireader.VirtualWSIReader
+        | AnnotationStore
+        | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
         min_mask_ratio: float = 0,
+        store_filter: str | None = None,
         *,
         within_bound: bool = False,
     ) -> None:
@@ -216,6 +237,22 @@ class PatchExtractor(PatchExtractorABC):
 
         if input_mask is None:
             self.mask = None
+        elif isinstance(input_mask, str) and input_mask.endswith(".db"):
+            # input_mask is an annotation store
+            renderer = AnnotationRenderer(
+                max_scale=10000, edge_thickness=0, where=store_filter
+            )
+            rendered_mask = wsireader.AnnotationStoreReader(
+                input_mask,
+                renderer=renderer,
+                info=self.wsi.info,
+            ).slide_thumbnail()
+            rendered_mask = rendered_mask[:, :, 0] == 0
+            self.mask = wsireader.VirtualWSIReader(
+                rendered_mask,
+                info=self.wsi.info,
+                mode="bool",
+            )
         elif isinstance(input_mask, str) and input_mask in {"otsu", "morphological"}:
             if isinstance(self.wsi, wsireader.VirtualWSIReader):
                 self.mask = None
@@ -618,6 +655,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         min_mask_ratio (float):
             Only patches with positive area percentage above this value are included.
             Defaults to 0.
+        store_filter (str):
+            Filter to apply to the annotations when generating the mask. Default is
+            None, which uses all annotations. Only used if the provided mask is an
+            annotation store.
 
     Attributes:
         stride(tuple(int)):
@@ -625,7 +666,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self: SlidingWindowPatchExtractor,
         input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
@@ -636,6 +677,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
         min_mask_ratio: float = 0,
+        store_filter: str | None = None,
         *,
         within_bound: bool = False,
     ) -> None:
@@ -650,6 +692,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             pad_constant_values=pad_constant_values,
             within_bound=within_bound,
             min_mask_ratio=min_mask_ratio,
+            store_filter=store_filter,
         )
         if stride is None:
             self.stride = self.patch_size
@@ -794,5 +837,6 @@ def get_patch_extractor(
         "pad_constant_values": kwargs.get("pad_constant_values", 0),
         "min_mask_ratio": kwargs.get("min_mask_ratio", 0),
         "within_bound": kwargs.get("within_bound", False),
+        "store_filter": kwargs.get("store_filter"),
     }
     return SlidingWindowPatchExtractor(**sliding_window_patch_extractor_args)
