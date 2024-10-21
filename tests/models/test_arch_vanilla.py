@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.models.architecture.vanilla import CNNModel, infer_batch
 from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.utils.misc import select_device
 
@@ -46,7 +46,7 @@ def test_functional() -> None:
         for backbone in backbones:
             model = CNNModel(backbone, num_classes=1)
             model_ = model_to(device=device, model=model)
-            model.infer_batch(model_, samples, device=select_device(on_gpu=ON_GPU))
+            infer_batch(model_, samples, device=select_device(on_gpu=ON_GPU))
     except ValueError as exc:
         msg = f"Model {backbone} failed."
         raise AssertionError(msg) from exc
