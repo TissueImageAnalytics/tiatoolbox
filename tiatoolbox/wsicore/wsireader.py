@@ -33,8 +33,6 @@ from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-# from tiatoolbox.tools.registration.wsi_registration import AffineWSITransformer
-
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable
 
@@ -5843,13 +5841,9 @@ class TransformedWSIReader(WSIReader):
     using transformation.
 
     Example:
-        >>> from tiatoolbox.tools.registration.wsi_registration import (
-        ... AffineWSITransformer
-        ... )
-        >>> from tiatoolbox.wsicore.wsireader import WSIReader
-        >>> wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
+        >>> from tiatoolbox.wsicore.wsireader import TransformedWSIReader
         >>> transform_level0 = np.eye(3)
-        >>> tfm = AffineWSITransformer(wsi_reader, transform_level0)
+        >>> tfm = TransformedWSIReader(input_img=sample_ome_tiff, transform=transform_level0)
         >>> output = tfm.read_rect(location, size, resolution=resolution, units="level")
 
     """
@@ -5865,10 +5859,16 @@ class TransformedWSIReader(WSIReader):
         """Initialize object.
 
         Args:
-            reader (WSIReader):
-                An object with base WSIReader as base class.
-            transform (:class:`numpy.ndarray`):
-                A 3x3 transformation matrix, or a displacement field. (or a path to one of these)
+            input_img (str | Path | np.ndarray):
+                Path to the input image or the image array.
+            mpp (tuple(Number, Number)):
+                Microns per pixel in x and y directions.
+            power (Number):
+                Objective power of the image.
+            transform (np.ndarray | Path):
+                Transformation matrix or path to a transformation file (.npy or .mha).
+            fixed_info (WSIMeta):
+                Fixed metadata to use for the transformed image.
 
         """
         super().__init__(input_img=input_img, mpp=mpp, power=power)
@@ -5876,6 +5876,7 @@ class TransformedWSIReader(WSIReader):
         # we need to set the info to be the fixed image info
         if fixed_info is not None:
             self.wsi_reader.info = fixed_info
+        self.transform_type = "affine"
         if isinstance(transform, np.ndarray):
             self.transform_level0 = transform
         elif transform.suffix == ".npy":
@@ -5891,16 +5892,10 @@ class TransformedWSIReader(WSIReader):
                 np.array(level_dims) / np.array(self.df_dims)
                 for level_dims in self.wsi_reader.info.level_dimensions
             ]
-            self.transform_level0 = VirtualWSIReader(
-                disp_array, info=self.wsi_reader.info, mode="feature"
-            )
             self.get_location_array(disp_array)
-        else:
-            raise ValueError("Unsupported transformation file format")
-        if isinstance(self.transform_level0, VirtualWSIReader):
             self.transform_type = "displacement"
         else:
-            self.transform_type = "affine"
+            raise ValueError("Unsupported transformation file format")
 
     def get_location_array(self, disp_array):
         """Transform an array of locations using the displacement field, to get an inverse showing,
@@ -5912,7 +5907,7 @@ class TransformedWSIReader(WSIReader):
         location_array = np.flip(location_array, 2)
         transformed_image = self.transform_using_disp_array(location_array, disp_array)
 
-        # Convert the transformed image back to a numpy array
+        # make a reader for convenient reading at desired locations/resolutions
         self.inverse_loc_reader = VirtualWSIReader(
             transformed_image, info=self.wsi_reader.info, mode="feature"
         )
@@ -5921,15 +5916,13 @@ class TransformedWSIReader(WSIReader):
         input_image = sitk.GetImageFromArray(input_array, isVector=True)
 
         # Convert displacement field numpy array to SimpleITK image
-        # SimpleITK expects the displacement field in vector image format
-        # The last dimension is already the component index, so no transpose is needed
         displacement_field = sitk.GetImageFromArray(disp_array, isVector=True)
 
         # Create a displacement field transform
         transform = sitk.DisplacementFieldTransform(displacement_field)
 
-        # Set the interpolator (you can change this to other interpolators if needed)
-        interpolator = sitk.sitkLinear
+        # Set the interpolator
+        interpolator = sitk.sitkLinear  # maybe others better?
 
         # Apply the transform to the input image
         transformed_image = sitk.Resample(
@@ -5942,8 +5935,7 @@ class TransformedWSIReader(WSIReader):
         return sitk.GetArrayFromImage(transformed_image)
 
     def _info(self: TransformedWSIReader) -> WSIMeta:
-        """Update WSI metadata to reflect the transformation."""
-        # The metadata remains the same as the underlying WSI
+        """Get the WSI metadata."""
         return self.wsi_reader.info
 
     @staticmethod

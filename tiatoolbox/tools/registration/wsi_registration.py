@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING, Callable
 
 import cv2
@@ -9,6 +10,7 @@ import numpy as np
 import SimpleITK as sitk  # noqa: N813
 import torch
 import torchvision
+from numpy.linalg import inv
 from skimage import exposure, filters
 from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
@@ -18,10 +20,10 @@ from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntBounds
+    from tiatoolbox.typing import IntBounds, Resolution, Units
 
 RGB_IMAGE_DIM = 3
 BIN_MASK_DIM = 2
@@ -1440,3 +1442,256 @@ def apply_bspline_transform(
 
     sitk_registered_image_sitk = resampler.Execute(moving_image_sitk)
     return sitk.GetArrayFromImage(sitk_registered_image_sitk)
+
+
+class AffineWSITransformer:
+    """Resampling regions from a whole slide image.
+
+    This class is used to resample tiles/patches from a whole slide image
+    using transformation.
+
+    Example:
+        >>> from tiatoolbox.tools.registration.wsi_registration import (
+        ... AffineWSITransformer
+        ... )
+        >>> from tiatoolbox.wsicore.wsireader import WSIReader
+        >>> wsi_reader = WSIReader.open(input_img=sample_ome_tiff)
+        >>> transform_level0 = np.eye(3)
+        >>> tfm = AffineWSITransformer(wsi_reader, transform_level0)
+        >>> output = tfm.read_rect(location, size, resolution=resolution, units="level")
+
+    """
+
+    def __init__(
+        self: AffineWSITransformer,
+        reader: WSIReader,
+        transform: np.ndarray,
+    ) -> None:
+        """Initialize object.
+
+        Args:
+            reader (WSIReader):
+                An object with base WSIReader as base class.
+            transform (:class:`numpy.ndarray`):
+                A 3x3 transformation matrix. The inverse transformation will be applied.
+
+        """
+        self.wsi_reader = reader
+        self.transform_level0 = transform
+
+    @staticmethod
+    def transform_points(points: np.ndarray, transform: np.ndarray) -> np.ndarray:
+        """Transform points using the given transformation matrix.
+
+        Args:
+            points (:class:`numpy.ndarray`):
+                A set of points of shape (N, 2).
+            transform (:class:`numpy.ndarray`):
+                Transformation matrix of shape (3, 3).
+
+        Returns:
+            :class:`numpy.ndarray`:
+                Warped points  of shape (N, 2).
+
+        """
+        points = np.array(points)
+        # Pad the data with ones, so that our transformation can do translations
+        points_pad = np.hstack([points, np.ones((points.shape[0], 1))])
+        points_warp = np.dot(points_pad, transform.T)
+        return points_warp[:, :-1]
+
+    def get_patch_dimensions(
+        self: AffineWSITransformer,
+        size: tuple[int, int],
+        transform: np.ndarray,
+    ) -> tuple[int, int]:
+        """Compute patch size needed for transformation.
+
+        Args:
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image size.
+            transform (:class:`numpy.ndarray`):
+                Transformation matrix of shape (3, 3).
+
+        Returns:
+            :py:obj:`tuple` - Maximum size of the patch needed for transformation.
+                - :py:obj:`int` - Width
+                - :py:obj:`int` - Height
+
+        """
+        width, height = size[0], size[1]
+
+        x_info = [
+            np.linspace(1, width, width, endpoint=True),
+            np.ones(height) * width,
+            np.linspace(1, width, width, endpoint=True),
+            np.ones(height),
+        ]
+        x = np.array(list(itertools.chain.from_iterable(x_info)))
+
+        y_info = [
+            np.ones(width),
+            np.linspace(1, height, height, endpoint=True),
+            np.ones(width) * height,
+            np.linspace(1, height, height, endpoint=True),
+        ]
+        y = np.array(list(itertools.chain.from_iterable(y_info)))
+
+        points = np.array([x, y]).transpose()
+        transform = transform * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]  # remove translation
+        transform_points = self.transform_points(points, transform)
+
+        width = (
+            int(np.max(transform_points[:, 0]))
+            - int(np.min(transform_points[:, 0]))
+            + 1
+        )
+        height = (
+            int(np.max(transform_points[:, 1]))
+            - int(np.min(transform_points[:, 1]))
+            + 1
+        )
+
+        return (width, height)
+
+    def get_transformed_location(
+        self: AffineWSITransformer,
+        location: tuple[int, int],
+        size: tuple[int, int],
+        level: int,
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
+        """Get corresponding location on unregistered image and the required patch size.
+
+        This function applies inverse transformation to the centre point of the region.
+        The transformed centre point is used to obtain the transformed top left pixel
+        of the region.
+
+        Args:
+            location (tuple(int)):
+                (x, y) tuple giving the top left pixel in the baseline (level 0)
+                reference frame.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image size.
+            level (int):
+                Pyramid level/resolution layer.
+
+        Returns:
+            tuple:
+                - :py:obj:`tuple` - Transformed location (top left pixel).
+                    - :py:obj:`int` - X coordinate
+                    - :py:obj:`int` - Y coordinate
+                - :py:obj:`tuple` - Maximum size suitable for transformation.
+                    - :py:obj:`int` - Width
+                    - :py:obj:`int` - Height
+
+        """
+        inv_transform = inv(self.transform_level0)
+        size_level0 = [x * (2**level) for x in size]
+        center_level0 = [x + size_level0[i] / 2 for i, x in enumerate(location)]
+        center_level0_arr = np.expand_dims(np.array(center_level0), axis=0)
+        center_level0_arr = self.transform_points(center_level0_arr, inv_transform)[0]
+
+        transformed_size = self.get_patch_dimensions(size, inv_transform)
+        transformed_location = (
+            int(center_level0_arr[0] - (transformed_size[0] * (2**level)) / 2),
+            int(center_level0_arr[1] - (transformed_size[1] * (2**level)) / 2),
+        )
+        return transformed_location, transformed_size
+
+    def transform_patch(
+        self: AffineWSITransformer,
+        patch: np.ndarray,
+        size: tuple[int, int],
+    ) -> np.ndarray:
+        """Apply transformation to the given patch.
+
+        This function applies the transformation matrix after removing the translation.
+
+        Args:
+            patch (:class:`numpy.ndarray`):
+                A region of whole slide image.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image size.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                A transformed region/patch.
+
+        """
+        transform = self.transform_level0 * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]
+        translation = (-size[0] / 2 + 0.5, -size[1] / 2 + 0.5)
+        forward_translation = np.array(
+            [[1, 0, translation[0]], [0, 1, translation[1]], [0, 0, 1]],
+        )
+        inverse_translation = np.linalg.inv(forward_translation)
+        transform = inverse_translation @ transform @ forward_translation
+        return cv2.warpAffine(patch, transform[0:-1][:], patch.shape[:2][::-1])
+
+    def read_rect(
+        self: AffineWSITransformer,
+        location: tuple[int, int],
+        size: tuple[int, int],
+        resolution: Resolution,
+        units: Units,
+    ) -> np.ndarray:
+        """Read a transformed region of the transformed whole slide image.
+
+        Location is in terms of the baseline image (level 0 / maximum resolution),
+        and size is the output image size.
+
+        Args:
+            location (tuple(int)):
+                (x, y) tuple giving the top left pixel in the baseline (level 0)
+                reference frame.
+            size (tuple(int)):
+                (width, height) tuple giving the desired output image size.
+            resolution (Resolution):
+                Resolution used for reading the image.
+            units (Units):
+                Units of resolution used for reading the image.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                A transformed region/patch.
+
+        """
+        (
+            read_level,
+            _level_location,
+            level_size,
+            post_read_scale,
+            _baseline_read_size,
+        ) = self.wsi_reader.find_read_rect_params(
+            location=location,
+            size=size,
+            resolution=resolution,
+            units=units,
+        )
+        transformed_location, max_size = self.get_transformed_location(
+            location,
+            level_size,
+            read_level,
+        )
+
+        # Read at optimal level and corrected read size
+        patch = self.wsi_reader.read_region(transformed_location, read_level, max_size)
+        patch = np.array(patch)
+
+        # Apply transformation
+        transformed_patch = self.transform_patch(patch, max_size)
+
+        # Crop to get rid of black borders due to rotation
+        start_row = int(max_size[1] / 2) - int(level_size[1] / 2)
+        end_row = int(max_size[1] / 2) + int(level_size[1] / 2)
+        start_col = int(max_size[0] / 2) - int(level_size[0] / 2)
+        end_col = int(max_size[0] / 2) + int(level_size[0] / 2)
+        transformed_patch = transformed_patch[start_row:end_row, start_col:end_col, :]
+
+        # Resize to desired size
+        post_read_scale = float(post_read_scale[0]), float(post_read_scale[1])
+        return imresize(
+            img=transformed_patch,
+            scale_factor=post_read_scale,
+            output_size=size,
+            interpolation="optimise",
+        )
