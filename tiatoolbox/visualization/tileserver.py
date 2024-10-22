@@ -26,7 +26,7 @@ from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.misc import add_from_dat, store_from_dat
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
 from tiatoolbox.wsicore.wsireader import (
-    AffineWSITransformer,
+    GeneralWSITransformer,
     OpenSlideWSIReader,
     VirtualWSIReader,
     WSIReader,
@@ -515,11 +515,11 @@ class TileServer(Flask):
         overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
 
-        if overlay_path.suffix == ".npy":
+        if overlay_path.suffix in [".npy", ".mha"]:
             # loading a registration transformation
-            self.layers[session_id]["slide"] = AffineWSITransformer(
+            self.layers[session_id]["slide"] = GeneralWSITransformer(
                 self.layers[session_id]["slide"].info.file_path,
-                transform=np.load(overlay_path),
+                transform=overlay_path,
             )
             self.pyramids[session_id]["slide"] = ZoomifyGenerator(
                 self.layers[session_id]["slide"],

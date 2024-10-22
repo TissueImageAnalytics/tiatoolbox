@@ -717,6 +717,7 @@ def populate_layer_list(slide_name: str, overlay_path: Path) -> None:
         "*.tiff",
         "*.tif",
         "*.npy",
+        "*.mha",
     ]:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
