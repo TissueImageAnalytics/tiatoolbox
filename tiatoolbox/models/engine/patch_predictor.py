@@ -1,4 +1,4 @@
-"""Defines Abstract Base Class for TIAToolbox Model Engines."""
+"""Defines PatchPredictor Engine."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover
 class PatchPredictor(EngineABC):
     r"""Patch level predictor for digital histology images.
 
-    The models provided by tiatoolbox should give the following results:
+    The models provided by TIAToolbox should give the following results:
 
     .. list-table:: PatchPredictor performance on the Kather100K dataset [1]
        :widths: 15 15
@@ -176,10 +176,6 @@ class PatchPredictor(EngineABC):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        merge_predictions (bool):
-            Whether to merge the predictions to form a 2-dimensional
-            map. This is only applicable if `patch_mode` is False in inference.
-            Default is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
@@ -221,8 +217,6 @@ class PatchPredictor(EngineABC):
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        merge_predictions (bool):
-            Whether to merge WSI predictions into a single file. Default value is False.
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
@@ -482,8 +476,6 @@ class PatchPredictor(EngineABC):
                 - img_path: path of the input image.
                 - raw: path to save location for raw prediction,
                   saved in .json.
-                - merged: path to .npy contain merged
-                  predictions if `merge_predictions` is `True`.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
