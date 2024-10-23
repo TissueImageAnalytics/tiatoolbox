@@ -372,9 +372,6 @@ class WSIReader:
         _, _, suffixes = utils.misc.split_path_name_ext(input_path)
         last_suffix = suffixes[-1]
 
-        if len(suffixes) > 1 and suffixes[-2] == ".reg" and "no_reg" not in kwargs:
-            return AffineWSITransformer(input_img, mpp=mpp, power=power, **kwargs)
-
         if last_suffix == ".db":
             return AnnotationStoreReader(input_path, **kwargs)
 
@@ -5872,7 +5869,7 @@ class TransformedWSIReader(WSIReader):
 
         """
         super().__init__(input_img=input_img, mpp=mpp, power=power)
-        self.wsi_reader = WSIReader.open(input_img=input_img, no_reg=True)
+        self.wsi_reader = WSIReader.open(input_img=input_img, mpp=mpp, power=power)
         # we need to set the info to be the fixed image info
         if fixed_info is not None:
             self.wsi_reader.info = fixed_info
@@ -5898,8 +5895,10 @@ class TransformedWSIReader(WSIReader):
             raise ValueError("Unsupported transformation file format")
 
     def get_location_array(self, disp_array):
-        """Transform an array of locations using the displacement field, to get an inverse showing,
-        for a given pixel in a transformed image, where it would come from in the original image.
+        """Transform an array of locations using the displacement field.
+
+        Gives an inverse showing, for a given pixel in a transformed image, where it
+        would come from in the original image.
         """
         location_array = np.mgrid[
             0 : disp_array.shape[0], 0 : disp_array.shape[1]
