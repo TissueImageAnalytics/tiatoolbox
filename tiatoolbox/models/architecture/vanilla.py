@@ -95,35 +95,46 @@ def _get_timm_architecture(
 
     Returns:
         A ready-to-use timm model.
+
+    Raises:
+        ValueError:
+            If the backbone architecture is not supported.
+
     """
     if arch_name in [f"efficientnet_b{i}" for i in range(8)]:
         model = timm.create_model(arch_name, pretrained=pretrained)
-        feat_extract = nn.Sequential(*list(model.children())[:-1])
-    elif arch_name == "UNI":
+        return nn.Sequential(*list(model.children())[:-1])
+
+    if arch_name == "UNI":
         # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
-        feat_extract = timm.create_model(
+        return timm.create_model(
             "hf-hub:MahmoodLab/UNI",
             pretrained=pretrained,
             init_values=1e-5,
             dynamic_img_size=True,
         )
-    elif arch_name == "prov-gigapath":
+
+    if arch_name == "prov-gigapath":
         # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
-        # Earlier version bug: https://github.com/prov-gigapath/prov-gigapath/issues/2
-        feat_extract = timm.create_model(
+        return timm.create_model(
             "hf_hub:prov-gigapath/prov-gigapath",
             pretrained=pretrained,
         )
-    elif arch_name == "H-optimus-0":
+
+    if arch_name == "H-optimus-0":
         # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
-        feat_extract = timm.create_model(
+        return timm.create_model(
             "hf-hub:bioptimus/H-optimus-0",
             pretrained=pretrained,
             init_values=1e-5,
             dynamic_img_size=False,
         )
 
-    return feat_extract
+    msg = (
+        f"Backbone {arch_name} not supported. "
+        "If you are loading timm models, only timm > `1.0.3` is supported."
+    )
+    raise ValueError(msg)
 
 
 class CNNModel(ModelABC):
