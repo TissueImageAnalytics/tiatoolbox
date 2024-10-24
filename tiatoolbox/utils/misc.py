@@ -1211,9 +1211,11 @@ def patch_predictions_as_annotations(
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    for i, probs in enumerate(class_probs):
+    for i, _ in enumerate(patch_coords):
         if "probabilities" in keys:
-            props = {f"prob_{class_dict[j]}": probs[j] for j in classes_predicted}
+            props = {
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+            }
         else:
             props = {}
         if "labels" in keys:
@@ -1225,12 +1227,12 @@ def patch_predictions_as_annotations(
     return annotations
 
 
-def _get_zarr_array(zarr_array: zarr.core.Array | np.ndarray) -> np.ndarray:
+def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
     """Converts a zarr array into a numpy array."""
     if isinstance(zarr_array, zarr.core.Array):
         return zarr_array[:]
 
-    return zarr_array
+    return np.array(zarr_array).astype(float)
 
 
 def dict_to_store(
@@ -1269,12 +1271,13 @@ def dict_to_store(
         raise ValueError(msg)
 
     # get relevant keys
-    class_probs = _get_zarr_array(patch_output.get("probabilities", []))
-    preds = _get_zarr_array(patch_output.get("predictions", []))
+    class_probs = get_zarr_array(patch_output.get("probabilities", []))
+    preds = get_zarr_array(patch_output.get("predictions", []))
 
     patch_coords = np.array(patch_output.get("coordinates", []))
     if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
+    patch_coords = patch_coords.astype(float)
     labels = patch_output.get("labels", [])
     # get classes to consider
     if len(class_probs) == 0:
@@ -1285,9 +1288,9 @@ def dict_to_store(
     if class_dict is None:
         # if no class dict create a default one
         if len(class_probs) == 0:
-            class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+            class_dict = {i: i for i in np.unique(np.append(preds, labels)).tolist()}
         else:
-            class_dict = {i: i for i in range(len(class_probs))}
+            class_dict = {i: i for i in range(len(class_probs[0]))}
 
     # find what keys we need to save
     keys = ["predictions"]
