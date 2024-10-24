@@ -107,14 +107,14 @@ def _get_timm_architecture(
             init_values=1e-5,
             dynamic_img_size=True,
         )
-    elif arch_name == "prov-gigapath" and timm.__version__ > "1.0.3":
+    elif arch_name == "prov-gigapath":
         # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
         # Earlier version bug: https://github.com/prov-gigapath/prov-gigapath/issues/2
         feat_extract = timm.create_model(
             "hf_hub:prov-gigapath/prov-gigapath",
             pretrained=pretrained,
         )
-    elif arch_name == "H-optimus-0" and timm.__version__ > "1.0.3":
+    elif arch_name == "H-optimus-0":
         # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
         feat_extract = timm.create_model(
             "hf-hub:bioptimus/H-optimus-0",
@@ -122,12 +122,6 @@ def _get_timm_architecture(
             init_values=1e-5,
             dynamic_img_size=False,
         )
-    else:
-        msg = (
-            f"Backbone {arch_name} not supported. "
-            "If you are loading timm models, only timm > `1.0.3` is supported."
-        )
-        raise ValueError(msg)
 
     return feat_extract
 
