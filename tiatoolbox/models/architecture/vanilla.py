@@ -311,6 +311,8 @@ class TimmModel(ModelABC):
         prev_num_ch = self.feat_extract(torch.rand([2, 3, 224, 224])).shape[1]
         self.classifier = nn.Linear(prev_num_ch, num_classes)
 
+    # pylint: disable=W0221
+    # because abc is generic, this is actual definition
     def forward(self: TimmModel, imgs: torch.Tensor) -> torch.Tensor:
         """Pass input data through the model.
 
@@ -481,6 +483,8 @@ class TimmBackbone(ModelABC):
             arch_name=backbone, pretrained=pretrained
         )
 
+    # pylint: disable=W0221
+    # because abc is generic, this is actual definition
     def forward(self: TimmBackbone, imgs: torch.Tensor) -> torch.Tensor:
         """Pass input data through the model.
 
