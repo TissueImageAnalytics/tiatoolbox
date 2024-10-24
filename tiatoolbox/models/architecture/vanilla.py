@@ -105,8 +105,9 @@ def _get_timm_architecture(
         model = timm.create_model(arch_name, pretrained=pretrained)
         return nn.Sequential(*list(model.children())[:-1])
 
-    if arch_name == "UNI":
+    if arch_name == "UNI":  # pragma: no cover
         # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
+        # Coverage skipped timm API is tested using efficient U-Net.
         return timm.create_model(
             "hf-hub:MahmoodLab/UNI",
             pretrained=pretrained,
@@ -114,15 +115,17 @@ def _get_timm_architecture(
             dynamic_img_size=True,
         )
 
-    if arch_name == "prov-gigapath":
+    if arch_name == "prov-gigapath":  # pragma: no cover
         # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
+        # Coverage skipped timm API is tested using efficient U-Net.
         return timm.create_model(
             "hf_hub:prov-gigapath/prov-gigapath",
             pretrained=pretrained,
         )
 
-    if arch_name == "H-optimus-0":
+    if arch_name == "H-optimus-0":  # pragma: no cover
         # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
+        # Coverage skipped timm API is tested using efficient U-Net.
         return timm.create_model(
             "hf-hub:bioptimus/H-optimus-0",
             pretrained=pretrained,
