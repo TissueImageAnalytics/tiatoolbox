@@ -16,7 +16,8 @@ from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 from torchvision.models import VGG16_Weights
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
@@ -338,8 +339,9 @@ class DFBRFeatureExtractor(torch.nn.Module):
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
         self.features: dict = dict.fromkeys(output_layers_key, None)
-        self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
-            weights=VGG16_Weights.IMAGENET1K_V1,
+        self.pretrained: torch.nn.Sequential = compile_model(
+            torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1),
+            mode=rcParam["torch_compile_mode"],
         ).features
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
@@ -431,7 +433,10 @@ class DFBRegister:
 
     """
 
-    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
+    def __init__(
+        self: DFBRegister,
+        patch_size: tuple[int, int] = (224, 224),
+    ) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
         self.x_scale: np.ndarray

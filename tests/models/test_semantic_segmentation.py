@@ -20,7 +20,8 @@ import yaml
 from click.testing import CliRunner
 from torch import nn
 
-from tiatoolbox import cli
+from tests.conftest import timed
+from tiatoolbox import cli, logger, rcParam
 from tiatoolbox.models import SemanticSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import centre_crop
@@ -897,3 +898,48 @@ def test_cli_semantic_segmentation_multi_file(
     _test_pred = (_test_pred[..., 1] > 0.50) * 255
 
     assert np.mean(np.abs(_cache_pred - _test_pred) / 255) < 1e-3
+
+
+# -------------------------------------------------------------------------------------
+# torch.compile
+# -------------------------------------------------------------------------------------
+
+
+def test_semantic_segmentor_torch_compile(
+    remote_sample: Callable,
+    tmp_path: Path,
+) -> None:
+    """Test SemanticSegmentor using pretrained model with torch.compile functionality.
+
+    Args:
+        remote_sample (Callable): Callable object used to extract remote sample.
+        tmp_path (Path): Path to temporary directory.
+
+    """
+    torch_compile_mode = rcParam["torch_compile_mode"]
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "default"
+    _, compile_time = timed(
+        test_functional_pretrained,
+        remote_sample,
+        tmp_path,
+    )
+    logger.info("torch.compile default mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "reduce-overhead"
+    _, compile_time = timed(
+        test_functional_pretrained,
+        remote_sample,
+        tmp_path,
+    )
+    logger.info("torch.compile reduce-overhead mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "max-autotune"
+    _, compile_time = timed(
+        test_functional_pretrained,
+        remote_sample,
+        tmp_path,
+    )
+    logger.info("torch.compile max-autotune mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = torch_compile_mode

@@ -6,7 +6,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 import torch
+import torch._dynamo
 from torch import device as torch_device
+
+torch._dynamo.config.suppress_errors = True  # skipcq: PYL-W0212  # noqa: SLF001
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
