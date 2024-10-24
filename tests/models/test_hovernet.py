@@ -14,6 +14,7 @@ from tiatoolbox.models.architecture.hovernet import (
     ResidualBlock,
     TFSamepaddingLayer,
 )
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -34,7 +35,7 @@ def test_functionality(remote_sample: Callable) -> None:
     weights_path = fetch_pretrained_weights("hovernet_fast-pannuke")
     pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
@@ -51,7 +52,7 @@ def test_functionality(remote_sample: Callable) -> None:
     weights_path = fetch_pretrained_weights("hovernet_fast-monusac")
     pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
@@ -68,7 +69,7 @@ def test_functionality(remote_sample: Callable) -> None:
     weights_path = fetch_pretrained_weights("hovernet_original-consep")
     pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."
@@ -85,7 +86,7 @@ def test_functionality(remote_sample: Callable) -> None:
     weights_path = fetch_pretrained_weights("hovernet_original-kumar")
     pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
     output = model.postproc(output)
     assert len(output[1]) > 0, "Must have some nuclei."

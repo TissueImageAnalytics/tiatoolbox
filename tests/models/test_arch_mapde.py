@@ -45,7 +45,7 @@ def test_functionality(remote_sample: Callable) -> None:
     model = _load_mapde(name="mapde-conic")
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
-    model = model.to(select_device(on_gpu=ON_GPU))
-    output = model.infer_batch(model, batch, on_gpu=ON_GPU)
+    model = model.to()
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[19, 171], [53, 89]])

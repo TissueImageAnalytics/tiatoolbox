@@ -8,7 +8,8 @@ import pytest
 import torch
 from torch import nn
 
-from tiatoolbox import rcParam
+import tiatoolbox.models
+from tiatoolbox import rcParam, utils
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
@@ -140,12 +141,30 @@ def test_model_abc() -> None:
     model.postproc_func = None  # skipcq: PYL-W0201
     assert model.postproc_func(2) == 0
 
+    # Test load_weights_from_file() method
+    weights_path = fetch_pretrained_weights("alexnet-kather100k")
+    with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
+        _ = model.load_weights_from_file(weights_path)
+
     # Test on CPU
     model = model.to(device="cpu")
     assert isinstance(model, nn.Module)
     assert model.dummy_param.device.type == "cpu"
 
-    # Test load_weights_from_file() method
-    weights_path = fetch_pretrained_weights("alexnet-kather100k")
-    with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
-        _ = model.load_weights_from_file(weights_path)
+
+def test_model_to() -> None:
+    """Test for placing model on device."""
+    import torchvision.models as torch_models
+    from torch import nn
+
+    # Test on GPU
+    # no GPU on Travis so this will crash
+    if not utils.env_detection.has_gpu():
+        model = torch_models.resnet18()
+        with pytest.raises((AssertionError, RuntimeError)):
+            _ = tiatoolbox.models.models_abc.model_to(device="cuda", model=model)
+
+    # Test on CPU
+    model = torch_models.resnet18()
+    model = tiatoolbox.models.models_abc.model_to(device="cpu", model=model)
+    assert isinstance(model, nn.Module)
