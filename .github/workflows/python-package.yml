@@ -30,7 +30,7 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install ruff==0.6.5 pytest pytest-cov pytest-runner
+        python -m pip install ruff==0.7.0 pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v3
