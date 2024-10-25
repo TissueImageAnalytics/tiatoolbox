@@ -133,9 +133,7 @@ def _get_timm_architecture(
             dynamic_img_size=False,
         )
 
-    msg = (
-        f"Backbone {arch_name} not supported. "
-    )
+    msg = f"Backbone {arch_name} not supported. "
     raise ValueError(msg)
 
 
