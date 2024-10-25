@@ -135,7 +135,6 @@ def _get_timm_architecture(
 
     msg = (
         f"Backbone {arch_name} not supported. "
-        "If you are loading timm models, only timm > `1.0.3` is supported."
     )
     raise ValueError(msg)
 
