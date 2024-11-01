@@ -623,12 +623,13 @@ class SemanticSegmentor:
             >>> segmentor.get_coordinates = func
 
         """
-        patch_inputs, patch_outputs = PatchExtractor.get_coordinates(
+        results = PatchExtractor.get_coordinates(
             patch_output_shape=ioconfig.patch_output_shape,
             image_shape=image_shape,
             patch_input_shape=ioconfig.patch_input_shape,
             stride_shape=ioconfig.stride_shape,
         )
+        patch_inputs, patch_outputs = results[0], results[1]
         return patch_inputs, patch_outputs
 
     @staticmethod
