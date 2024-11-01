@@ -1017,18 +1017,18 @@ class EngineABC(ABC):
 
         if dataloader_units == "mpp":
             slide_resolution = wsimeta_dict[dataloader_units]
-            scale_factor = np.divide(slide_resolution, dataloader_resolution)
+            scale_factor = np.divide(dataloader_resolution, slide_resolution)
             return scale_factor[0], scale_factor[1]
 
         if dataloader_units == "level":
             downsample_ratio = wsimeta_dict["level_downsamples"][dataloader_resolution]
-            return 1.0 / downsample_ratio, 1.0 / downsample_ratio
+            return downsample_ratio, downsample_ratio
 
         if dataloader_units == "power":
             slide_objective_power = wsimeta_dict["objective_power"]
             return (
-                dataloader_resolution / slide_objective_power,
-                dataloader_resolution / slide_objective_power,
+                slide_objective_power / dataloader_resolution,
+                slide_objective_power / dataloader_resolution,
             )
 
         return dataloader_resolution
