@@ -134,8 +134,6 @@ class EngineABCRunParams(TypedDict, total=False):
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
-        return_labels (bool):
-            Whether to return the output labels.
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow

@@ -62,8 +62,6 @@ class ClassifierRunParams(EngineABCRunParams):
         resolution (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
-        return_labels (bool):
-            Whether to return the output labels.
         return_probabilities (bool):
                 Whether to return per-class probabilities.
         scale_factor (tuple[float, float]):
