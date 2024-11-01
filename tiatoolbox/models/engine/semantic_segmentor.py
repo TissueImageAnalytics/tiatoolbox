@@ -577,9 +577,9 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_coordinates(
-        image_shape: list[int] | np.ndarray,
+        image_shape: tuple[int, int] | np.ndarray,
         ioconfig: IOSegmentorConfig,
-    ) -> tuple[list, list]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Calculate patch tiling coordinates.
 
         By default, internally, it will call the
@@ -623,10 +623,10 @@ class SemanticSegmentor:
             >>> segmentor.get_coordinates = func
 
         """
-        (patch_inputs, patch_outputs) = PatchExtractor.get_coordinates(
+        patch_inputs, patch_outputs = PatchExtractor.get_coordinates(
+            patch_output_shape=ioconfig.patch_output_shape,
             image_shape=image_shape,
             patch_input_shape=ioconfig.patch_input_shape,
-            patch_output_shape=ioconfig.patch_output_shape,
             stride_shape=ioconfig.stride_shape,
         )
         return patch_inputs, patch_outputs
