@@ -4,22 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from typing_extensions import Unpack
-
 from .engine_abc import EngineABC, EngineABCRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
-    import os
     from pathlib import Path
 
-    import numpy as np
     from torch.utils.data import DataLoader
 
-    from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.wsicore.wsireader import WSIReader
-
-    from .io_config import ModelIOConfigABC
 
 
 class PatchPredictor(EngineABC):
@@ -293,48 +285,6 @@ class PatchPredictor(EngineABC):
             verbose=verbose,
         )
 
-    def get_dataloader(
-        self: PatchPredictor,
-        images: Path,
-        masks: Path | None = None,
-        labels: list | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
-        *,
-        patch_mode: bool = True,
-    ) -> DataLoader:
-        """Pre-process images and masks and return dataloader for inference.
-
-        Args:
-            images (list of str or :class:`Path` or :class:`numpy.ndarray`):
-                A list of image patches in NHWC format as a numpy array
-                or a list of str/paths to WSIs. When `patch_mode` is False
-                the function expects list of str/paths to WSIs.
-            masks (list | None):
-                List of masks. Only utilised when patch_mode is False.
-                Patches are only generated within a masked area.
-                If not provided, then a tissue mask will be automatically
-                generated for whole slide images.
-            labels (list | None):
-                List of labels. Only a single label per image is supported.
-            ioconfig (ModelIOConfigABC):
-                A :class:`ModelIOConfigABC` object.
-            patch_mode (bool):
-                Whether to treat input image as a patch or WSI.
-
-        Returns:
-            DataLoader:
-                :class:`DataLoader` for inference.
-
-
-        """
-        return super().get_dataloader(
-            images,
-            masks,
-            labels,
-            ioconfig,
-            patch_mode=patch_mode,
-        )
-
     def infer_wsi(
         self: EngineABC,
         dataloader: DataLoader,
@@ -364,120 +314,4 @@ class PatchPredictor(EngineABC):
             dataloader=dataloader,
             save_path=save_path,
             return_coordinates=True,
-        )
-
-    def post_process_wsi(
-        self: EngineABC,
-        raw_predictions: dict | Path,
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> dict | Path:
-        """Post process WSI output.
-
-        Takes the raw output from patch predictions and post-processes it to improve the
-        results e.g., using information from neighbouring patches.
-
-        """
-        return super().post_process_wsi(
-            raw_predictions=raw_predictions,
-            **kwargs,
-        )
-
-    def run(
-        self: PatchPredictor,
-        images: list[os | Path | WSIReader] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
-        labels: list | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
-        *,
-        patch_mode: bool = True,
-        save_dir: os | Path | None = None,  # None will not save output
-        overwrite: bool = False,
-        output_type: str = "dict",
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> AnnotationStore | Path | str | dict:
-        """Run the engine on input images.
-
-        Args:
-            images (list, ndarray):
-                List of inputs to process. when using `patch` mode, the
-                input must be either a list of images, a list of image
-                file paths or a numpy array of an image list.
-            masks (list | None):
-                List of masks. Only utilised when patch_mode is False.
-                Patches are only generated within a masked area.
-                If not provided, then a tissue mask will be automatically
-                generated for whole slide images.
-            labels (list | None):
-                List of labels. Only a single label per image is supported.
-            patch_mode (bool):
-                Whether to treat input image as a patch or WSI.
-                default = True.
-            ioconfig (IOPatchPredictorConfig):
-                IO configuration.
-            save_dir (str or pathlib.Path):
-                Output directory to save the results.
-                If save_dir is not provided when patch_mode is False,
-                then for a single image the output is created in the current directory.
-                If there are multiple WSIs as input then the user must provide
-                path to save directory otherwise an OSError will be raised.
-            overwrite (bool):
-                Whether to overwrite the results. Default = False.
-            output_type (str):
-                The format of the output type. "output_type" can be
-                "zarr" or "AnnotationStore". Default value is "zarr".
-                When saving in the zarr format the output is saved using the
-                `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
-                as a zarr group. If the required output type is an "AnnotationStore"
-                then the output will be intermediately saved as zarr but converted
-                to :class:`AnnotationStore` and saved as a `.db` file
-                at the end of the loop.
-            **kwargs (EngineABCRunParams):
-                Keyword Args to update :class:`EngineABC` attributes during runtime.
-
-        Returns:
-            (:class:`numpy.ndarray`, dict):
-                Model predictions of the input dataset. If multiple
-                whole slide images are provided as input,
-                or save_output is True, then results are saved to
-                `save_dir` and a dictionary indicating save location for
-                each input is returned.
-
-                The dict has the following format:
-
-                - img_path: path of the input image.
-                - raw: path to save location for raw prediction,
-                  saved in .json.
-
-        Examples:
-            >>> wsis = ['wsi1.svs', 'wsi2.svs']
-            >>> class PatchPredictor(EngineABC):
-            >>> # Define all Abstract methods.
-            >>>     ...
-            >>> predictor = PatchPredictor(model="resnet18-kather100k")
-            >>> output = predictor.run(image_patches, patch_mode=True)
-            >>> output
-            ... "/path/to/Output.db"
-            >>> output = predictor.run(
-            >>>     image_patches,
-            >>>     patch_mode=True,
-            >>>     output_type="zarr")
-            >>> output
-            ... "/path/to/Output.zarr"
-            >>> output = predictor.run(wsis, patch_mode=False)
-            >>> output.keys()
-            ... ['wsi1.svs', 'wsi2.svs']
-            >>> output['wsi1.svs']
-            ... {'/path/to/wsi1.db'}
-
-        """
-        return super().run(
-            images=images,
-            masks=masks,
-            labels=labels,
-            ioconfig=ioconfig,
-            patch_mode=patch_mode,
-            save_dir=save_dir,
-            overwrite=overwrite,
-            output_type=output_type,
-            **kwargs,
         )

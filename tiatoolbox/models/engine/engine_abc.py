@@ -441,7 +441,7 @@ class EngineABC(ABC):
             images (list of str or :class:`Path` or :class:`numpy.ndarray`):
                 A list of image patches in NHWC format as a numpy array
                 or a list of str/paths to WSIs. When `patch_mode` is False
-                the function expects path to a single WSI.
+                the function expects list of str/paths to WSIs.
             masks (list | None):
                 List of masks. Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
@@ -720,13 +720,17 @@ class EngineABC(ABC):
         # return coordinates of patches processed within a tile / whole-slide image
         raise NotImplementedError
 
-    @abstractmethod
     def post_process_wsi(
         self: EngineABC,
         raw_predictions: dict | Path,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
-        """Post process WSI output."""
+        """Post process WSI output.
+
+        Takes the raw output from patch predictions and post-processes it to improve the
+        results e.g., using information from neighbouring patches.
+
+        """
         _ = kwargs.get("return_labels")  # Key values required for post-processing
         return raw_predictions
 
