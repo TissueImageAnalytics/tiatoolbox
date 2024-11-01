@@ -626,7 +626,7 @@ class EngineABC(ABC):
                 saved zarr file if `cache_mode` is True.
 
         """
-        _ = kwargs.get("probabilities")  # Key values required for post-processing
+        _ = kwargs.get("return_labels")  # Key values required for post-processing
 
         if self.cache_mode:  # cache mode
             _ = zarr.open(raw_predictions, mode="w")

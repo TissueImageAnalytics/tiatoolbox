@@ -450,7 +450,6 @@ class PatchClassifier(PatchPredictor):
         results e.g., using information from neighbouring patches.
 
         """
-        _ = kwargs.get("return_probabilities")
         return self.post_process_cache_mode(raw_predictions, **kwargs)
 
     def run(
