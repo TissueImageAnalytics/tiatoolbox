@@ -720,7 +720,8 @@ class EngineABC(ABC):
         # return coordinates of patches processed within a tile / whole-slide image
         raise NotImplementedError
 
-    def post_process_wsi(
+    # This is not a static model for child classes.
+    def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
         raw_predictions: dict | Path,
         **kwargs: Unpack[EngineABCRunParams],
