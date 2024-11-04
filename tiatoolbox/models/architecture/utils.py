@@ -76,16 +76,16 @@ def compile_model(
         )
         return model
 
-    if isinstance(
+    if isinstance(  # pragma: no cover
         model,
         torch._dynamo.eval_frame.OptimizedModule,  # skipcq: PYL-W0212 # noqa: SLF001
     ):
-        logger.warning(
+        logger.info(
             ("The model is already compiled. ",),
         )
         return model
 
-    return torch.compile(model, mode=mode)
+    return torch.compile(model, mode=mode)  # pragma: no cover
 
 
 def centre_crop(
