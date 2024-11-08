@@ -278,7 +278,7 @@ class PatchPredictor(PatchClassifier):
         from tiatoolbox import logger
 
         msg = (
-            "PatchPredictor will be deprecated in the next release of TIAToolbox."
+            "PatchPredictor will be deprecated in v2.1 of TIAToolbox."
             "Please use PatchClassifier instead."
         )
         logger.warning(
