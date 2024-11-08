@@ -148,7 +148,11 @@ def test_macenko_normalize(source_image: Path, norm_macenko: Path) -> None:
     assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_vahadane_normalize(source_image: Path, norm_vahadane: Path) -> None:
+def test_vahadane_normalize(
+    source_image: Path,
+    norm_vahadane: Path,
+    caplog: pytest.LogCaptureFixture
+    ) -> None:
     """Test for stain normalization with stain matrix from Vahadane et al."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -158,7 +162,7 @@ def test_vahadane_normalize(source_image: Path, norm_vahadane: Path) -> None:
     norm = get_normalizer("vahadane")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
-
+    assert "Vahadane stain extraction/normalization algorithms" in caplog.text
     assert np.shape(transform) == np.shape(source_img)
     assert np.mean(np.absolute(vahadane_img / 255.0 - transform / 255.0)) < 1e-1
 
