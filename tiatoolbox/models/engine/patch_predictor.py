@@ -15,7 +15,9 @@ if TYPE_CHECKING:  # pragma: no cover
 class PatchPredictor(PatchClassifier):
     r"""Patch level predictor for digital histology images.
 
-    Warning: This class will be deprecated in the next release.
+    .. warning::
+        PatchPredictor will be deprecated in v2.1 of TIAToolbox. Please use
+        `PatchClassifier` instead.
 
     The models provided by TIAToolbox should give the following results:
 
