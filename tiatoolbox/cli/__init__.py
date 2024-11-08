@@ -9,7 +9,6 @@ from tiatoolbox import __version__
 from tiatoolbox.cli.common import tiatoolbox_cli
 from tiatoolbox.cli.nucleus_instance_segment import nucleus_instance_segment
 from tiatoolbox.cli.patch_classifier import patch_classifier
-from tiatoolbox.cli.patch_predictor import patch_predictor
 from tiatoolbox.cli.read_bounds import read_bounds
 from tiatoolbox.cli.save_tiles import save_tiles
 from tiatoolbox.cli.semantic_segment import semantic_segment
@@ -40,7 +39,6 @@ def main() -> click.BaseCommand:
 
 
 main.add_command(nucleus_instance_segment)
-main.add_command(patch_predictor)
 main.add_command(patch_classifier)
 main.add_command(read_bounds)
 main.add_command(save_tiles)

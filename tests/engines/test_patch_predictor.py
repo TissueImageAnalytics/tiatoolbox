@@ -9,13 +9,11 @@ from typing import Callable
 
 import numpy as np
 import zarr
-from click.testing import CliRunner
 
-from tiatoolbox import cli
 from tiatoolbox.models import IOPatchClassifierConfig
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.engine.patch_predictor import PatchPredictor
-from tiatoolbox.utils import download_data, imwrite
+from tiatoolbox.utils import download_data
 from tiatoolbox.utils import env_detection as toolbox_env
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
@@ -235,129 +233,3 @@ def test_wsi_predictor_api(
     assert accuracy > 0.99, np.nonzero(~diff)
 
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
-
-
-# -------------------------------------------------------------------------------------
-# Command Line Interface
-# -------------------------------------------------------------------------------------
-
-
-def test_command_line_models_file_not_found(sample_svs: Path, tmp_path: Path) -> None:
-    """Test for models CLI file not found error."""
-    runner = CliRunner()
-    model_file_not_found_result = runner.invoke(
-        cli.main,
-        [
-            "patch-predictor",
-            "--img-input",
-            str(sample_svs)[:-1],
-            "--file-types",
-            '"*.ndpi, *.svs"',
-            "--output-path",
-            str(tmp_path.joinpath("output")),
-        ],
-    )
-
-    assert model_file_not_found_result.output == ""
-    assert model_file_not_found_result.exit_code == 1
-    assert isinstance(model_file_not_found_result.exception, FileNotFoundError)
-
-
-def test_command_line_models_incorrect_mode(sample_svs: Path, tmp_path: Path) -> None:
-    """Test for models CLI mode not in wsi, tile."""
-    runner = CliRunner()
-    mode_not_in_wsi_tile_result = runner.invoke(
-        cli.main,
-        [
-            "patch-predictor",
-            "--img-input",
-            str(sample_svs),
-            "--file-types",
-            '"*.ndpi, *.svs"',
-            "--patch-mode",
-            '"patch"',
-            "--output-path",
-            str(tmp_path.joinpath("output")),
-        ],
-    )
-
-    assert "Invalid value for '--patch-mode'" in mode_not_in_wsi_tile_result.output
-    assert mode_not_in_wsi_tile_result.exit_code != 0
-    assert isinstance(mode_not_in_wsi_tile_result.exception, SystemExit)
-
-
-def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
-    """Test for models CLI single file."""
-    runner = CliRunner()
-    models_wsi_result = runner.invoke(
-        cli.main,
-        [
-            "patch-predictor",
-            "--img-input",
-            str(sample_svs),
-            "--patch-mode",
-            "False",
-            "--output-path",
-            str(tmp_path / "output"),
-        ],
-    )
-
-    assert models_wsi_result.exit_code == 0
-    assert (tmp_path / "output" / (sample_svs.stem + ".db")).exists()
-
-
-def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
-    """Test for models CLI multiple file with mask."""
-    mini_wsi_svs = Path(remote_sample("svs-1-small"))
-    sample_wsi_msk = remote_sample("small_svs_tissue_mask")
-    sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    mini_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
-
-    # Make multiple copies for test
-    dir_path = tmp_path.joinpath("new_copies")
-    dir_path.mkdir()
-
-    dir_path_masks = tmp_path.joinpath("new_copies_masks")
-    dir_path_masks.mkdir()
-
-    try:
-        dir_path.joinpath("1_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
-        dir_path.joinpath("2_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
-        dir_path.joinpath("3_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
-    except OSError:
-        shutil.copy(mini_wsi_svs, dir_path / ("1_" + mini_wsi_svs.name))
-        shutil.copy(mini_wsi_svs, dir_path / ("2_" + mini_wsi_svs.name))
-        shutil.copy(mini_wsi_svs, dir_path / ("3_" + mini_wsi_svs.name))
-
-    try:
-        dir_path_masks.joinpath("1_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
-        dir_path_masks.joinpath("2_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
-        dir_path_masks.joinpath("3_" + mini_wsi_msk.name).symlink_to(mini_wsi_msk)
-    except OSError:
-        shutil.copy(mini_wsi_msk, dir_path_masks / ("1_" + mini_wsi_msk.name))
-        shutil.copy(mini_wsi_msk, dir_path_masks / ("2_" + mini_wsi_msk.name))
-        shutil.copy(mini_wsi_msk, dir_path_masks / ("3_" + mini_wsi_msk.name))
-
-    runner = CliRunner()
-    models_tiles_result = runner.invoke(
-        cli.main,
-        [
-            "patch-predictor",
-            "--img-input",
-            str(dir_path),
-            "--patch-mode",
-            str(False),
-            "--masks",
-            str(dir_path_masks),
-            "--output-path",
-            str(tmp_path / "output"),
-            "--output-type",
-            "zarr",
-        ],
-    )
-
-    assert models_tiles_result.exit_code == 0
-    assert (tmp_path / "output" / ("1_" + mini_wsi_svs.stem + ".zarr")).exists()
-    assert (tmp_path / "output" / ("2_" + mini_wsi_svs.stem + ".zarr")).exists()
-    assert (tmp_path / "output" / ("3_" + mini_wsi_svs.stem + ".zarr")).exists()
