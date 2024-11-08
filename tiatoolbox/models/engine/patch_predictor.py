@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .engine_abc import EngineABC, EngineABCRunParams
+from .engine_abc import EngineABC
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
-
-    from torch.utils.data import DataLoader
 
     from tiatoolbox.models.models_abc import ModelABC
 
@@ -283,35 +281,4 @@ class PatchPredictor(EngineABC):
             weights=weights,
             device=device,
             verbose=verbose,
-        )
-
-    def infer_wsi(
-        self: EngineABC,
-        dataloader: DataLoader,
-        save_path: Path,
-        **kwargs: EngineABCRunParams,
-    ) -> Path:
-        """Model inference on a WSI.
-
-        Args:
-            dataloader (DataLoader):
-                A torch dataloader to process WSIs.
-
-            save_path (Path):
-                Path to save the intermediate output. The intermediate output is saved
-                in a zarr file.
-            **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
-
-        Returns:
-            save_path (Path):
-                Path to zarr file where intermediate output is saved.
-
-        """
-        _ = kwargs.get("patch_mode", False)
-        return self.infer_patches(
-            dataloader=dataloader,
-            save_path=save_path,
-            return_coordinates=True,
         )

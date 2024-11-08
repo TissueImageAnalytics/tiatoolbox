@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 import shutil
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -171,7 +171,7 @@ class EngineABCRunParams(TypedDict, total=False):
     verbose: bool
 
 
-class EngineABC(ABC):
+class EngineABC(ABC):  # noqa: B024
     """Abstract base class for TIAToolbox deep learning engines to run CNN models.
 
     Args:
@@ -703,20 +703,36 @@ class EngineABC(ABC):
             else processed_predictions
         )
 
-    @abstractmethod
     def infer_wsi(
         self: EngineABC,
-        dataloader: torch.utils.data.DataLoader,
-        save_path: Path | str,
-        **kwargs: dict,
-    ) -> dict | Path:
+        dataloader: DataLoader,
+        save_path: Path,
+        **kwargs: EngineABCRunParams,
+    ) -> Path:
         """Model inference on a WSI.
 
-        This function must be implemented by subclasses.
+        Args:
+            dataloader (DataLoader):
+                A torch dataloader to process WSIs.
+
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes. See
+                :class:`EngineRunParams` for accepted keyword arguments.
+
+        Returns:
+            save_path (Path):
+                Path to zarr file where intermediate output is saved.
 
         """
-        # return coordinates of patches processed within a tile / whole-slide image
-        raise NotImplementedError
+        _ = kwargs.get("patch_mode", False)
+        return self.infer_patches(
+            dataloader=dataloader,
+            save_path=save_path,
+            return_coordinates=True,
+        )
 
     # This is not a static model for child classes.
     def post_process_wsi(  # skipcq: PYL-R0201
