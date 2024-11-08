@@ -300,27 +300,27 @@ class PatchClassifier(EngineABC):
     Examples:
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
-        >>> predictor = PatchPredictor(model="resnet18-kather100k")
+        >>> predictor = PatchClassifier(model="resnet18-kather100k")
         >>> output = predictor.run(data, mode='patch')
 
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
-        >>> predictor = PatchPredictor(model="resnet18-kather100k")
+        >>> predictor = PatchClassifier(model="resnet18-kather100k")
         >>> output = predictor.run(data, mode='patch')
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
-        >>> predictor = PatchPredictor(model="resnet18-kather100k")
+        >>> predictor = PatchClassifier(model="resnet18-kather100k")
         >>> output = predictor.run(data, mode='patch')
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
-        >>> predictor = PatchPredictor(model="resnet18-kather100k")
+        >>> predictor = PatchClassifier(model="resnet18-kather100k")
         >>> output = predictor.run(tile_file, mode='tile')
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
-        >>> predictor = PatchPredictor(model="resnet18-kather100k")
+        >>> predictor = PatchClassifier(model="resnet18-kather100k")
         >>> output = predictor.run(wsi_file, mode='wsi')
 
     References:
@@ -517,7 +517,7 @@ class PatchClassifier(EngineABC):
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
-            >>> class PatchClassifier(PatchPredictor):
+            >>> class PatchClassifier(EngineABC):
             >>> # Define all Abstract methods.
             >>>     ...
             >>> classifier = PatchClassifier(model="resnet18-kather100k")
