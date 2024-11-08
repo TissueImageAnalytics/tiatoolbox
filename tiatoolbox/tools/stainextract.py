@@ -243,7 +243,8 @@ class VahadaneExtractor:
         Vahadane stain extraction/normalization algorithms are unstable
         after the update to `dictionary learning` algorithm in
         scikit-learn > v0.23.0 (see issue #382). Please be advised and
-        consider using other stain extraction (normalization) algorithms.
+        consider using other stain extraction (normalization) algorithms
+        or toolboxes, such as https://github.com/CielAl/torch-staintools
 
     Args:
         luminosity_threshold (float):
