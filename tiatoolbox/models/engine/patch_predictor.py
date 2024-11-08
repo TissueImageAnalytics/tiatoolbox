@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .engine_abc import EngineABC
+from .patch_classifier import PatchClassifier
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
@@ -12,8 +12,10 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
 
 
-class PatchPredictor(EngineABC):
+class PatchPredictor(PatchClassifier):
     r"""Patch level predictor for digital histology images.
+
+    Warning: This class will be deprecated in the next release.
 
     The models provided by TIAToolbox should give the following results:
 
@@ -120,7 +122,7 @@ class PatchPredictor(EngineABC):
         weights (str or Path):
             Path to the weight of the corresponding `model`.
 
-            >>> engine = EngineABC(
+            >>> engine = PatchPredictor(
             ...    model="pretrained-model",
             ...    weights="/path/to/pretrained-local-weights.pth"
             ... )
@@ -273,6 +275,15 @@ class PatchPredictor(EngineABC):
         verbose: bool = True,
     ) -> None:
         """Initialize :class:`PatchPredictor`."""
+        from tiatoolbox import logger
+
+        msg = (
+            "PatchPredictor will be deprecated in the next release of TIAToolbox."
+            "Please use PatchClassifier instead."
+        )
+        logger.warning(
+            msg=msg,
+        )
         super().__init__(
             model=model,
             batch_size=batch_size,
