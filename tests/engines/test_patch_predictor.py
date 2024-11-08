@@ -12,7 +12,7 @@ import zarr
 from click.testing import CliRunner
 
 from tiatoolbox import cli
-from tiatoolbox.models import IOPatchPredictorConfig
+from tiatoolbox.models import IOPatchClassifierConfig
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 from tiatoolbox.utils import download_data, imwrite
@@ -40,7 +40,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     }
 
     # test providing config / full input info for default models without weights
-    ioconfig = IOPatchPredictorConfig(
+    ioconfig = IOPatchClassifierConfig(
         patch_input_shape=(512, 512),
         stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
