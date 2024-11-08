@@ -85,16 +85,6 @@ class TestEngineABC(EngineABC):
         )
 
 
-def test_engine_abc() -> NoReturn:
-    """Test EngineABC initialization."""
-    with pytest.raises(
-        TypeError,
-        match=r".*Can't instantiate abstract class EngineABC*",
-    ):
-        # Can't instantiate abstract class with abstract methods
-        EngineABC()  # skipcq
-
-
 def test_engine_abc_incorrect_model_type() -> NoReturn:
     """Test EngineABC initialization with incorrect model type."""
     with pytest.raises(
@@ -280,7 +270,7 @@ def test_engine_initalization() -> NoReturn:
     assert isinstance(eng, EngineABC)
 
 
-def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
+def test_engine_run() -> NoReturn:
     """Test engine run."""
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
@@ -356,15 +346,6 @@ def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
     )
     assert "probabilities" in out
     assert "labels" in out
-
-    eng = TestEngineABC(model="alexnet-kather100k")
-
-    with pytest.raises(NotImplementedError):
-        eng.run(
-            images=[sample_svs],
-            save_dir=tmp_path / "output",
-            patch_mode=False,
-        )
 
 
 def test_engine_run_with_verbose() -> NoReturn:
@@ -637,16 +618,3 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
                 resolution=_kwargs["resolution"],
                 units=_kwargs["units"],
             )
-
-
-def test_notimplementederror_wsi_mode(
-    sample_svs: Path, tmp_path: pytest.TempPathFactory
-) -> None:
-    """Test that NotImplementedError is raised when wsi mode is False.
-
-    A user should implement run method when patch_mode is False.
-
-    """
-    eng = TestEngineABC(model="alexnet-kather100k")
-    with pytest.raises(NotImplementedError):
-        eng.run(images=[sample_svs], patch_mode=False, save_dir=tmp_path / "output")

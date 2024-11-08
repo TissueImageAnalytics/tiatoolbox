@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 import zarr
 from typing_extensions import Unpack
 
-from .engine_abc import EngineABCRunParams
-from .patch_predictor import PatchPredictor
+from .engine_abc import EngineABC, EngineABCRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -86,7 +85,7 @@ class ClassifierRunParams(EngineABCRunParams):
     return_probabilities: bool
 
 
-class PatchClassifier(PatchPredictor):
+class PatchClassifier(EngineABC):
     r"""Patch level classifier for digital histology images.
 
     The models provided by TIAToolbox should give the following results:
