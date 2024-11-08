@@ -149,10 +149,8 @@ def test_macenko_normalize(source_image: Path, norm_macenko: Path) -> None:
 
 
 def test_vahadane_normalize(
-    source_image: Path,
-    norm_vahadane: Path,
-    caplog: pytest.LogCaptureFixture
-    ) -> None:
+    source_image: Path, norm_vahadane: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Test for stain normalization with stain matrix from Vahadane et al."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
