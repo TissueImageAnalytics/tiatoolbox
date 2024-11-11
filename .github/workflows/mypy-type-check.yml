@@ -6,7 +6,7 @@ on:
   push:
     branches: [ develop, pre-release, master, main ]
   pull_request:
-    branches: [ develop, pre-release, master, main, enhance-torch-compile ]
+    branches: [ develop, pre-release, master, main]
 
 jobs:
 

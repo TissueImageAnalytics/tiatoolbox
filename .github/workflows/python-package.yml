@@ -8,7 +8,7 @@ on:
     branches: [ develop, pre-release, master, main ]
     tags: v*
   pull_request:
-    branches: [ develop, pre-release, master, main, enhance-torch-compile ]
+    branches: [ develop, pre-release, master, main]
 
 jobs:
   build:
