@@ -629,8 +629,7 @@ class SemanticSegmentor:
             patch_input_shape=ioconfig.patch_input_shape,
             stride_shape=ioconfig.stride_shape,
         )
-        patch_inputs, patch_outputs = results[0], results[1]
-        return patch_inputs, patch_outputs
+        return results[0], results[1]
 
     @staticmethod
     def filter_coordinates(
