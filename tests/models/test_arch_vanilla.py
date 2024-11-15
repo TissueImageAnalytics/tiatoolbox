@@ -4,9 +4,8 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.models.models_abc import model_to
-from tiatoolbox.utils.misc import select_device
+from tiatoolbox.models.architecture.vanilla import CNNModel, TimmModel
+from tiatoolbox.utils.misc import model_to, select_device
 
 ON_GPU = False
 RNG = np.random.default_rng()  # Numpy Random Generator
@@ -54,3 +53,30 @@ def test_functional() -> None:
     # skipcq
     with pytest.raises(ValueError, match=r".*Backbone.*not supported.*"):
         CNNModel("shiny_model_to_crash", num_classes=2)
+
+
+def test_timm_functional() -> None:
+    """Test for creating backbone."""
+    backbones = [
+        "efficientnet_b0",
+    ]
+    assert TimmModel.postproc([1, 2]) == 1
+
+    b = 4
+    h = w = 224
+    samples = torch.from_numpy(RNG.random((b, h, w, 3)))
+
+    # Dummy entry, will generate ValueError if "try" fails without running the loop.
+    backbone = "empty"
+    try:
+        for backbone in backbones:
+            model = TimmModel(backbone=backbone, num_classes=1, pretrained=False)
+            model_ = model_to(on_gpu=ON_GPU, model=model)
+            model.infer_batch(model_, samples, on_gpu=ON_GPU)
+    except ValueError as exc:
+        msg = f"Model {backbone} failed."
+        raise AssertionError(msg) from exc
+
+    # skipcq
+    with pytest.raises(ValueError, match=r".*Backbone.*not supported.*"):
+        TimmModel(backbone="shiny_model_to_crash", num_classes=2, pretrained=False)
