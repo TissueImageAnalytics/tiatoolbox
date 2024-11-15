@@ -17,9 +17,6 @@ def is_torch_compile_compatible() -> NoReturn:
 
     Raises:
         Warning if GPU is not compatible with `torch.compile`.
-        bool:
-            True if the GPU is compatible with torch-compile, False
-            otherwise.
 
     """
     if torch.cuda.is_available():  # pragma: no cover
