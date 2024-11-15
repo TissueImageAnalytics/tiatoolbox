@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Callable
+from typing import Callable, NoReturn
 
 import numpy as np
 import torch
@@ -48,12 +48,16 @@ def compile_model(
         model (torch.nn.Module):
             Model to be compiled.
         mode (str):
-            Mode to be used for torch-compile. Available modes are
+            Mode to be used for torch-compile. Available modes are:
+
             - `disable` disables torch-compile
             - `default` balances performance and overhead
-            - `reduce-overhead` reduces overhead of CUDA graphs (useful for small batches)
-            - `max-autotune` leverages Triton/template based matrix multiplications on GPUs
-            - `max-autotune-no-cudagraphs` similar to “max-autotune” but without CUDA graphs
+            - `reduce-overhead` reduces overhead of CUDA graphs (useful for small
+              batches)
+            - `max-autotune` leverages Triton/template based matrix multiplications
+              on GPUs
+            - `max-autotune-no-cudagraphs` similar to “max-autotune” but without
+              CUDA graphs
 
     Returns:
         Callable:
