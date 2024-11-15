@@ -13,7 +13,7 @@ from .architecture.sccnn import SCCNN
 from .dataset import PatchDataset, WSIPatchDataset, WSIStreamDataset
 from .engine.io_config import (
     IOInstanceSegmentorConfig,
-    IOPatchClassifierConfig,
+    IOPatchPredictorConfig,
     IOSegmentorConfig,
     ModelIOConfigABC,
 )
@@ -38,7 +38,7 @@ __all__ = [
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",
-    "IOPatchClassifierConfig",
+    "IOPatchPredictorConfig",
     "IOSegmentorConfig",
     "IOInstanceSegmentorConfig",
     "ModelIOConfigABC",

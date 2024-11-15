@@ -1,4 +1,4 @@
-"""Test for Patch Classifier."""
+"""Test for Patch Predictor."""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ import zarr
 from click.testing import CliRunner
 
 from tiatoolbox import cli
-from tiatoolbox.models import IOPatchClassifierConfig
+from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.models.engine.patch_classifier import PatchClassifier
+from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, get_zarr_array, imwrite
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
-def _test_classifier_output(
+def _test_predictor_output(
     inputs: list,
     model: str,
     probabilities_check: list | None = None,
@@ -37,13 +37,13 @@ def _test_classifier_output(
     """Test the predictions of multiple models included in tiatoolbox."""
     cache_mode = None if tmp_path is None else True
     save_dir = None if tmp_path is None else tmp_path / "output"
-    classifier = PatchClassifier(
+    predictor = PatchPredictor(
         model=model,
         batch_size=32,
         verbose=False,
     )
     # don't run test on GPU
-    output = classifier.run(
+    output = predictor.run(
         inputs,
         return_labels=False,
         device=device,
@@ -81,7 +81,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
     model = CNNModel("resnet50")
-    classifier = PatchClassifier(model=model, weights=None)
+    predictor = PatchPredictor(model=model, weights=None)
     kwargs = {
         "patch_input_shape": [512, 512],
         "resolution": 1.75,
@@ -89,12 +89,12 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     }
 
     # test providing config / full input info for default models without weights
-    ioconfig = IOPatchClassifierConfig(
+    ioconfig = IOPatchPredictorConfig(
         patch_input_shape=(512, 512),
         stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
     )
-    classifier.run(
+    predictor.run(
         images=[mini_wsi_svs],
         ioconfig=ioconfig,
         patch_mode=False,
@@ -102,7 +102,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     )
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    classifier.run(
+    predictor.run(
         images=[mini_wsi_svs],
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
@@ -111,80 +111,80 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
-    classifier = PatchClassifier(model="resnet18-kather100k", batch_size=1)
-    classifier.run(
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
+    predictor.run(
         images=[mini_wsi_svs],
         patch_input_shape=(300, 300),
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
-    assert classifier._ioconfig.patch_input_shape == (300, 300)
+    assert predictor._ioconfig.patch_input_shape == (300, 300)
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    classifier.run(
+    predictor.run(
         images=[mini_wsi_svs],
         stride_shape=(300, 300),
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
-    assert classifier._ioconfig.stride_shape == (300, 300)
+    assert predictor._ioconfig.stride_shape == (300, 300)
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    classifier.run(
+    predictor.run(
         images=[mini_wsi_svs],
         resolution=1.99,
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
-    assert classifier._ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    classifier.run(
+    predictor.run(
         images=[mini_wsi_svs],
         units="baseline",
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
-    assert classifier._ioconfig.input_resolutions[0]["units"] == "baseline"
+    assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    classifier.run(
+    predictor.run(
         images=[mini_wsi_svs],
         units="level",
         resolution=0,
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
-    assert classifier._ioconfig.input_resolutions[0]["units"] == "level"
-    assert classifier._ioconfig.input_resolutions[0]["resolution"] == 0
+    assert predictor._ioconfig.input_resolutions[0]["units"] == "level"
+    assert predictor._ioconfig.input_resolutions[0]["resolution"] == 0
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
-    classifier.run(
+    predictor.run(
         images=[mini_wsi_svs],
         units="power",
         resolution=20,
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
-    assert classifier._ioconfig.input_resolutions[0]["units"] == "power"
-    assert classifier._ioconfig.input_resolutions[0]["resolution"] == 20
+    assert predictor._ioconfig.input_resolutions[0]["units"] == "power"
+    assert predictor._ioconfig.input_resolutions[0]["resolution"] == 20
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
 
-def test_patch_classifier_api(
+def test_patch_predictor_api(
     sample_patch1: Path,
     sample_patch2: Path,
     tmp_path: Path,
 ) -> None:
-    """Test Patch Classifier API."""
+    """Test PatchPredictor API."""
     save_dir_path = tmp_path
 
     # convert to pathlib Path to prevent reader complaint
     inputs = [Path(sample_patch1), Path(sample_patch2)]
-    classifier = PatchClassifier(model="resnet18-kather100k", batch_size=1)
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
     # Default run
-    output = classifier.run(
+    output = predictor.run(
         inputs,
         device="cpu",
     )
@@ -193,7 +193,7 @@ def test_patch_classifier_api(
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # whether to return labels
-    output = classifier.run(
+    output = predictor.run(
         inputs,
         labels=["1", "a"],
         return_labels=True,
@@ -217,17 +217,17 @@ def test_patch_classifier_api(
 
     download_data(pretrained_weights_url, pretrained_weights)
 
-    classifier = PatchClassifier(
+    predictor = PatchPredictor(
         model="resnet18-kather100k",
         weights=pretrained_weights,
         batch_size=1,
     )
-    ioconfig = classifier.ioconfig
+    ioconfig = predictor.ioconfig
 
     # --- test different using user model
     model = CNNModel(backbone="resnet18", num_classes=9)
     # test prediction
-    predictor = PatchClassifier(model=model, batch_size=1, verbose=False)
+    predictor = PatchPredictor(model=model, batch_size=1, verbose=False)
     output = predictor.run(
         inputs,
         labels=[1, 2],
@@ -239,7 +239,7 @@ def test_patch_classifier_api(
     assert output["labels"].tolist() == [1, 2]
 
 
-def test_wsi_classifier_api(
+def test_wsi_predictor_api(
     sample_wsi_dict: dict,
     tmp_path: Path,
 ) -> None:
@@ -252,7 +252,7 @@ def test_wsi_classifier_api(
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
-    predictor = PatchClassifier(model="resnet18-kather100k", batch_size=32)
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=32)
 
     save_dir = f"{save_dir_path}/model_wsi_output"
 
@@ -290,7 +290,7 @@ def test_wsi_classifier_api(
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
 
 
-def test_patch_classifier_kather100k_output(
+def test_patch_predictor_kather100k_output(
     sample_patch1: Path,
     sample_patch2: Path,
     tmp_path: Path,
@@ -317,7 +317,7 @@ def test_patch_classifier_kather100k_output(
         "googlenet-kather100k": [1.0, 0.9999639987945557],
     }
     for model, expected_prob in pretrained_info.items():
-        _test_classifier_output(
+        _test_predictor_output(
             inputs,
             model,
             probabilities_check=expected_prob,
@@ -326,7 +326,7 @@ def test_patch_classifier_kather100k_output(
 
     # cache mode
     for model, expected_prob in pretrained_info.items():
-        _test_classifier_output(
+        _test_predictor_output(
             inputs,
             model,
             probabilities_check=expected_prob,
@@ -376,19 +376,19 @@ def _validate_probabilities(output: list | dict | zarr.group) -> bool:
     return np.all(predictions[:][0:5] == [7, 3, 2, 3, 3])
 
 
-def test_wsi_classifier_zarr(
+def test_wsi_predictor_zarr(
     sample_wsi_dict: dict, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test normal run of patch classifier for WSIs."""
+    """Test normal run of patch predictor for WSIs."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
 
-    classifier = PatchClassifier(
+    predictor = PatchPredictor(
         model="alexnet-kather100k",
         batch_size=32,
         verbose=False,
     )
     # don't run test on GPU
-    output = classifier.run(
+    output = predictor.run(
         images=[mini_wsi_svs],
         return_probabilities=True,
         return_labels=False,
@@ -412,7 +412,7 @@ def test_wsi_classifier_zarr(
     assert _validate_probabilities(output=output_)
     assert "Output file saved at " in caplog.text
 
-    output = classifier.run(
+    output = predictor.run(
         images=[mini_wsi_svs],
         return_probabilities=False,
         return_labels=False,
@@ -436,7 +436,7 @@ def test_wsi_classifier_zarr(
     assert "Output file saved at " in caplog.text
 
 
-def test_patch_classifier_patch_mode_annotation_store(
+def test_patch_predictor_patch_mode_annotation_store(
     sample_patch1: Path,
     sample_patch2: Path,
     tmp_path: Path,
@@ -444,13 +444,13 @@ def test_patch_classifier_patch_mode_annotation_store(
     """Test the output of patch classification models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
 
-    classifier = PatchClassifier(
+    predictor = PatchPredictor(
         model="alexnet-kather100k",
         batch_size=32,
         verbose=False,
     )
     # don't run test on GPU
-    output = classifier.run(
+    output = predictor.run(
         images=inputs,
         return_probabilities=True,
         return_labels=False,
@@ -467,7 +467,7 @@ def test_patch_classifier_patch_mode_annotation_store(
     assert np.all(np.array(output["probabilities"]) >= 0)
 
 
-def test_patch_classifier_patch_mode_no_probabilities(
+def test_patch_predictor_patch_mode_no_probabilities(
     sample_patch1: Path,
     sample_patch2: Path,
     tmp_path: Path,
@@ -475,13 +475,13 @@ def test_patch_classifier_patch_mode_no_probabilities(
     """Test the output of patch classification models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
 
-    classifier = PatchClassifier(
+    predictor = PatchPredictor(
         model="alexnet-kather100k",
         batch_size=32,
         verbose=False,
     )
 
-    output = classifier.run(
+    output = predictor.run(
         images=inputs,
         return_probabilities=False,
         return_labels=False,
@@ -492,7 +492,7 @@ def test_patch_classifier_patch_mode_no_probabilities(
     assert "probabilities" not in output
 
     # don't run test on GPU
-    output = classifier.run(
+    output = predictor.run(
         images=inputs,
         return_probabilities=False,
         return_labels=False,
@@ -518,7 +518,7 @@ def test_engine_run_wsi_annotation_store(
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
-    eng = PatchClassifier(model="alexnet-kather100k")
+    eng = PatchPredictor(model="alexnet-kather100k")
 
     patch_size = np.array([224, 224])
     save_dir = f"{tmp_path}/model_wsi_output"
@@ -567,7 +567,7 @@ def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
     models_wsi_result = runner.invoke(
         cli.main,
         [
-            "patch-classifier",
+            "patch-predictor",
             "--img-input",
             str(sample_svs),
             "--patch-mode",
@@ -618,7 +618,7 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
     models_tiles_result = runner.invoke(
         cli.main,
         [
-            "patch-classifier",
+            "patch-predictor",
             "--img-input",
             str(dir_path),
             "--patch-mode",

@@ -1,4 +1,4 @@
-"""Command line interface for patch_classifier."""
+"""Command line interface for patch_predictor."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ from tiatoolbox.cli.common import (
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
 @cli_verbose(default=True)
-def patch_classifier(
+def patch_predictor(
     model: str,
     weights: str,
     img_input: str,
@@ -63,7 +63,7 @@ def patch_classifier(
     verbose: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
-    from tiatoolbox.models.engine.patch_classifier import PatchClassifier
+    from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
@@ -72,7 +72,7 @@ def patch_classifier(
         file_types=file_types,
     )
 
-    classifier = PatchClassifier(
+    predictor = PatchPredictor(
         model=model,
         weights=weights,
         batch_size=batch_size,
@@ -80,7 +80,7 @@ def patch_classifier(
         verbose=verbose,
     )
 
-    _ = classifier.run(
+    _ = predictor.run(
         images=files_all,
         masks=masks_all,
         patch_mode=patch_mode,

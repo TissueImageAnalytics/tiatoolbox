@@ -311,7 +311,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
         )
 
 
-class IOPatchClassifierConfig(ModelIOConfigABC):
+class IOPatchPredictorConfig(ModelIOConfigABC):
     """Contains patch predictor input and output information.
 
     Args:
@@ -344,7 +344,7 @@ class IOPatchClassifierConfig(ModelIOConfigABC):
 
     Examples:
         >>> # Defining io for a patch predictor network
-        >>> ioconfig = IOPatchClassifierConfig(
+        >>> ioconfig = IOPatchPredictorConfig(
         ...     input_resolutions=[{"units": "mpp", "resolution": 0.5}],
         ...     output_resolutions=[{"units": "mpp", "resolution": 0.5}],
         ...     patch_input_shape=(224, 224),
