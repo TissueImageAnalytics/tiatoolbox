@@ -12,10 +12,11 @@ from torch import nn
 from tiatoolbox import logger
 
 
-def is_torch_compile_compatible() -> bool:
+def is_torch_compile_compatible() -> NoReturn:
     """Check if the current GPU is compatible with torch-compile.
 
-    Returns:
+    Raises:
+        Warning if GPU is not compatible with `torch.compile`.
         bool:
             True if the GPU is compatible with torch-compile, False
             otherwise.
@@ -30,7 +31,6 @@ def is_torch_compile_compatible() -> bool:
                 "Speedup numbers may be lower than expected.",
                 stacklevel=2,
             )
-            return False
     else:
         logger.warning(
             "No GPU detected or cuda not installed, "
@@ -38,9 +38,7 @@ def is_torch_compile_compatible() -> bool:
             "Speedup numbers may be lower than expected.",
             stacklevel=2,
         )
-        return False
 
-    return True  # pragma: no cover
 
 
 def compile_model(
