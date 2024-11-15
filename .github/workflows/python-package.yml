@@ -58,7 +58,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --basetemp={envtmpdir} \
-           --cov=tiatoolbox --cov-report=term --cov-report=xml \
+           --cov=tiatoolbox --cov-report=term --cov-report=xml --cov-config=pyproject.toml \
            --capture=sys \
            --durations=10 --durations-min=1.0 \
            --maxfail=1

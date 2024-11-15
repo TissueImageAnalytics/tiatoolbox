@@ -11,8 +11,9 @@ import numpy as np
 import torch
 import tqdm
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
 from tiatoolbox.utils import misc, save_as_json
@@ -250,7 +251,12 @@ class PatchPredictor:
 
         self.ioconfig = ioconfig  # for storing original
         self._ioconfig = None  # for storing runtime
-        self.model = model  # for runtime, such as after wrapping with nn.DataParallel
+        self.model = (
+            compile_model(  # for runtime, such as after wrapping with nn.DataParallel
+                model,
+                mode=rcParam["torch_compile_mode"],
+            )
+        )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_worker = num_loader_workers
