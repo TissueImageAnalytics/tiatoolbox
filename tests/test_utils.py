@@ -1860,8 +1860,9 @@ def test_torch_compile_disable() -> None:
     assert model == compiled_model
 
 
-def test_torch_compile_compatibility() -> None:
+def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
     """Test if torch-compile compatibility is checked correctly."""
     from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
 
-    assert isinstance(is_torch_compile_compatible(), bool)
+    is_torch_compile_compatible()
+    assert "torch.compile" in caplog.text
