@@ -49,8 +49,11 @@ def compile_model(
             Model to be compiled.
         mode (str):
             Mode to be used for torch-compile. Available modes are
-            `disable`, `default`, `reduce-overhead`, `max-autotune`, and
-            `max-autotune-no-cudagraphs`.
+            - `disable` disables torch-compile
+            - `default` balances performance and overhead
+            - `reduce-overhead` reduces overhead of CUDA graphs (useful for small batches)
+            - `max-autotune` leverages Triton/template based matrix multiplications on GPUs
+            - `max-autotune-no-cudagraphs` similar to “max-autotune” but without CUDA graphs
 
     Returns:
         Callable:
