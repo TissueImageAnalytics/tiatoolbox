@@ -40,7 +40,6 @@ def is_torch_compile_compatible() -> NoReturn:
         )
 
 
-
 def compile_model(
     model: nn.Module | None = None,
     *,
