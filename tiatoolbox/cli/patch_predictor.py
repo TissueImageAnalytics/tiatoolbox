@@ -45,11 +45,11 @@ from tiatoolbox.cli.common import (
 @cli_num_loader_workers(default=0)
 @cli_output_type(
     default="AnnotationStore",
-    input_type=click.Choice(["show", "save"], case_sensitive=False),
+    input_type=click.Choice(["zarr", "AnnotationStore"], case_sensitive=False),
 )
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
-@cli_return_labels(default=True)
+@cli_return_labels(default=False)
 @cli_verbose(default=True)
 def patch_predictor(
     model: str,
