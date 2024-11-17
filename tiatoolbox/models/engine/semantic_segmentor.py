@@ -18,8 +18,9 @@ import torch.utils.data as torch_data
 import tqdm
 
 import tiatoolbox.models.models_abc
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
@@ -243,7 +244,10 @@ class SemanticSegmentor:
         self.masks = None
 
         self.dataset_class: WSIStreamDataset = dataset_class
-        self.model = model  # original copy
+        self.model = compile_model(
+            model,
+            mode=rcParam["torch_compile_mode"],
+        )
         self.pretrained_model = pretrained_model
         self.batch_size = batch_size
         self.num_loader_workers = num_loader_workers
@@ -253,9 +257,9 @@ class SemanticSegmentor:
 
     @staticmethod
     def get_coordinates(
-        image_shape: list[int] | np.ndarray,
+        image_shape: tuple[int, int] | np.ndarray,
         ioconfig: IOSegmentorConfig,
-    ) -> tuple[list, list]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Calculate patch tiling coordinates.
 
         By default, internally, it will call the
@@ -299,13 +303,13 @@ class SemanticSegmentor:
             >>> segmentor.get_coordinates = func
 
         """
-        (patch_inputs, patch_outputs) = PatchExtractor.get_coordinates(
+        results = PatchExtractor.get_coordinates(
+            patch_output_shape=ioconfig.patch_output_shape,
             image_shape=image_shape,
             patch_input_shape=ioconfig.patch_input_shape,
-            patch_output_shape=ioconfig.patch_output_shape,
             stride_shape=ioconfig.stride_shape,
         )
-        return patch_inputs, patch_outputs
+        return results[0], results[1]
 
     @staticmethod
     def filter_coordinates(
