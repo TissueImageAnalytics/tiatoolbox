@@ -5,7 +5,8 @@ import pytest
 import torch
 
 from tiatoolbox.models.architecture.vanilla import CNNModel, TimmModel
-from tiatoolbox.utils.misc import model_to, select_device
+from tiatoolbox.models.models_abc import model_to
+from tiatoolbox.utils.misc import select_device
 
 ON_GPU = False
 RNG = np.random.default_rng()  # Numpy Random Generator
