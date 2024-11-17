@@ -557,52 +557,53 @@ def test_engine_run_wsi_annotation_store(
 
     shutil.rmtree(save_dir)
 
-    # ----------------------------------------------------------------------------------
-    # torch.compile
-    # ----------------------------------------------------------------------------------
-    def test_patch_predictor_torch_compile(
-        sample_patch1: Path,
-        sample_patch2: Path,
-        tmp_path: Path,
-    ) -> None:
-        """Test PatchPredictor with torch.compile functionality.
 
-        Args:
-            sample_patch1 (Path): Path to sample patch 1.
-            sample_patch2 (Path): Path to sample patch 2.
-            tmp_path (Path): Path to temporary directory.
+# --------------------------------------------------------------------------------------
+# torch.compile
+# --------------------------------------------------------------------------------------
+def test_patch_predictor_torch_compile(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    tmp_path: Path,
+) -> None:
+    """Test PatchPredictor with torch.compile functionality.
 
-        """
-        torch_compile_mode = rcParam["torch_compile_mode"]
-        torch._dynamo.reset()
-        rcParam["torch_compile_mode"] = "default"
-        _, compile_time = timed(
-            test_patch_predictor_api,
-            sample_patch1,
-            sample_patch2,
-            tmp_path,
-        )
-        logger.info("torch.compile default mode: %s", compile_time)
-        torch._dynamo.reset()
-        rcParam["torch_compile_mode"] = "reduce-overhead"
-        _, compile_time = timed(
-            test_patch_predictor_api,
-            sample_patch1,
-            sample_patch2,
-            tmp_path,
-        )
-        logger.info("torch.compile reduce-overhead mode: %s", compile_time)
-        torch._dynamo.reset()
-        rcParam["torch_compile_mode"] = "max-autotune"
-        _, compile_time = timed(
-            test_patch_predictor_api,
-            sample_patch1,
-            sample_patch2,
-            tmp_path,
-        )
-        logger.info("torch.compile max-autotune mode: %s", compile_time)
-        torch._dynamo.reset()
-        rcParam["torch_compile_mode"] = torch_compile_mode
+    Args:
+        sample_patch1 (Path): Path to sample patch 1.
+        sample_patch2 (Path): Path to sample patch 2.
+        tmp_path (Path): Path to temporary directory.
+
+    """
+    torch_compile_mode = rcParam["torch_compile_mode"]
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "default"
+    _, compile_time = timed(
+        test_patch_predictor_api,
+        sample_patch1,
+        sample_patch2,
+        tmp_path,
+    )
+    logger.info("torch.compile default mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "reduce-overhead"
+    _, compile_time = timed(
+        test_patch_predictor_api,
+        sample_patch1,
+        sample_patch2,
+        tmp_path,
+    )
+    logger.info("torch.compile reduce-overhead mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "max-autotune"
+    _, compile_time = timed(
+        test_patch_predictor_api,
+        sample_patch1,
+        sample_patch2,
+        tmp_path,
+    )
+    logger.info("torch.compile max-autotune mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = torch_compile_mode
 
 
 # -------------------------------------------------------------------------------------

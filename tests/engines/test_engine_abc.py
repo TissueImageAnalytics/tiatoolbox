@@ -347,6 +347,11 @@ def test_engine_run() -> NoReturn:
     assert "probabilities" in out
     assert "labels" in out
 
+    pred = eng.post_process_wsi(
+        raw_predictions=Path("/path/to/raw_predictions.npy"),
+    )
+    assert str(pred) == "/path/to/raw_predictions.npy"
+
 
 def test_engine_run_with_verbose() -> NoReturn:
     """Test engine run with verbose."""
