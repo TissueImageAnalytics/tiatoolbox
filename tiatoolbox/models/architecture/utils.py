@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Callable, NoReturn
+from typing import NoReturn
 
 import numpy as np
 import torch
@@ -41,7 +41,7 @@ def compile_model(
     model: nn.Module | None = None,
     *,
     mode: str = "default",
-) -> Callable:
+) -> nn.Module:
     """A decorator to compile a model using torch-compile.
 
     Args:
@@ -60,7 +60,7 @@ def compile_model(
               CUDA graphs
 
     Returns:
-        Callable:
+        torch.nn.Module:
             Compiled model.
 
     """
@@ -71,7 +71,7 @@ def compile_model(
     is_torch_compile_compatible()
 
     # This check will be removed when torch.compile is supported in Python 3.12+
-    if sys.version_info >= (3, 12):  # pragma: no cover
+    if sys.version_info > (3, 12):  # pragma: no cover
         logger.warning(
             ("torch-compile is currently not supported in Python 3.12+. ",),
         )

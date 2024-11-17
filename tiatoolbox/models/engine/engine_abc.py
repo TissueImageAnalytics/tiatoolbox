@@ -15,8 +15,9 @@ import zarr
 from torch import nn
 from typing_extensions import Unpack
 
-from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox import DuplicateFilter, logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
@@ -355,6 +356,12 @@ class EngineABC(ABC):  # noqa: B024
             weights=weights,
         )
         self.model.to(device=self.device)
+        self.model = (
+            compile_model(  # for runtime, such as after wrapping with nn.DataParallel
+                model,
+                mode=rcParam["torch_compile_mode"],
+            )
+        )
         self._ioconfig = self.ioconfig  # runtime ioconfig
 
         self.batch_size = batch_size
