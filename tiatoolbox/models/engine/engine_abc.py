@@ -358,7 +358,7 @@ class EngineABC(ABC):  # noqa: B024
         self.model.to(device=self.device)
         self.model = (
             compile_model(  # for runtime, such as after wrapping with nn.DataParallel
-                model,
+                self.model,
                 mode=rcParam["torch_compile_mode"],
             )
         )
