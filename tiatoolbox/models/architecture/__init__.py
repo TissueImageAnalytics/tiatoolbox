@@ -146,6 +146,7 @@ def get_pretrained_model(
     model = load_torch_model(model=model, weights=pretrained_weights)
 
     # !
+
     io_info = info["ioconfig"]
     creator = locate(f"tiatoolbox.models.engine.{io_info['class']}")
 
