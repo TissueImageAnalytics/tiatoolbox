@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, NoReturn
 import numpy as np
 import pytest
 import torchvision.models as torch_models
-import zarr
 from typing_extensions import Unpack
 
 from tiatoolbox.models.architecture import (
@@ -26,7 +25,6 @@ from tiatoolbox.models.engine.engine_abc import (
     prepare_engines_save_dir,
 )
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
-from tiatoolbox.utils.misc import write_to_zarr_in_cache_mode
 
 if TYPE_CHECKING:
     import torch.nn
@@ -62,19 +60,6 @@ class TestEngineABC(EngineABC):
             patch_mode=patch_mode,
         )
 
-    def save_wsi_output(
-        self: EngineABC,
-        processed_output: dict,
-        save_dir: Path,
-        **kwargs: dict,
-    ) -> Path:
-        """Test post_process_wsi."""
-        return super().save_wsi_output(
-            processed_output,
-            save_dir=save_dir,
-            **kwargs,
-        )
-
     def post_process_wsi(
         self: EngineABC,
         raw_predictions: dict | Path,
@@ -98,16 +83,6 @@ class TestEngineABC(EngineABC):
             save_path,
             **kwargs,
         )
-
-
-def test_engine_abc() -> NoReturn:
-    """Test EngineABC initialization."""
-    with pytest.raises(
-        TypeError,
-        match=r".*Can't instantiate abstract class EngineABC*",
-    ):
-        # Can't instantiate abstract class with abstract methods
-        EngineABC()  # skipcq
 
 
 def test_engine_abc_incorrect_model_type() -> NoReturn:
@@ -295,7 +270,7 @@ def test_engine_initalization() -> NoReturn:
     assert isinstance(eng, EngineABC)
 
 
-def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
+def test_engine_run() -> NoReturn:
     """Test engine run."""
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
@@ -372,14 +347,10 @@ def test_engine_run(tmp_path: Path, sample_svs: Path) -> NoReturn:
     assert "probabilities" in out
     assert "labels" in out
 
-    eng = TestEngineABC(model="alexnet-kather100k")
-
-    with pytest.raises(NotImplementedError):
-        eng.run(
-            images=[sample_svs],
-            save_dir=tmp_path / "output",
-            patch_mode=False,
-        )
+    pred = eng.post_process_wsi(
+        raw_predictions=Path("/path/to/raw_predictions.npy"),
+    )
+    assert str(pred) == "/path/to/raw_predictions.npy"
 
 
 def test_engine_run_with_verbose() -> NoReturn:
@@ -542,55 +513,6 @@ def test_get_dataloader(sample_svs: Path) -> None:
     assert isinstance(dataloader.dataset, WSIPatchDataset)
 
 
-def test_eng_save_output(tmp_path: pytest.TempPathFactory) -> None:
-    """Test the eng.save_output() function."""
-    eng = TestEngineABC(model="alexnet-kather100k")
-    save_path = tmp_path / "output.zarr"
-    _ = zarr.open(save_path, mode="w")
-    out = eng.save_wsi_output(
-        processed_output=save_path,
-        save_path=save_path,
-        output_type="zarr",
-        save_dir=tmp_path,
-    )
-
-    assert out.exists()
-    assert out.suffix == ".zarr"
-
-    # Test AnnotationStore
-    patch_output = {
-        "predictions": np.array([1, 0, 1]),
-        "coordinates": np.array([(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)]),
-    }
-    class_dict = {0: "class0", 1: "class1"}
-    save_path = tmp_path / "output_db.zarr"
-    zarr_group = zarr.open(save_path, mode="w")
-    _ = write_to_zarr_in_cache_mode(
-        zarr_group=zarr_group, output_data_to_save=patch_output
-    )
-    out = eng.save_wsi_output(
-        processed_output=save_path,
-        scale_factor=(1.0, 1.0),
-        class_dict=class_dict,
-        save_dir=tmp_path,
-        output_type="AnnotationStore",
-    )
-
-    assert out.exists()
-    assert out.suffix == ".db"
-
-    with pytest.raises(
-        ValueError,
-        match=r".*supports zarr and AnnotationStore as output_type.",
-    ):
-        eng.save_wsi_output(
-            processed_output=save_path,
-            save_path=save_path,
-            output_type="dict",
-            save_dir=tmp_path,
-        )
-
-
 def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test for delegating args to io config."""
     # test not providing config / full input info for not pretrained models
@@ -701,16 +623,3 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
                 resolution=_kwargs["resolution"],
                 units=_kwargs["units"],
             )
-
-
-def test_notimplementederror_wsi_mode(
-    sample_svs: Path, tmp_path: pytest.TempPathFactory
-) -> None:
-    """Test that NotImplementedError is raised when wsi mode is False.
-
-    A user should implement run method when patch_mode is False.
-
-    """
-    eng = TestEngineABC(model="alexnet-kather100k")
-    with pytest.raises(NotImplementedError):
-        eng.run(images=[sample_svs], patch_mode=False, save_dir=tmp_path / "output")
