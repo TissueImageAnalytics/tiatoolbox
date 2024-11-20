@@ -2,9 +2,91 @@
 
 from __future__ import annotations
 
+import sys
+from typing import Callable, NoReturn
+
 import numpy as np
 import torch
 from torch import nn
+
+from tiatoolbox import logger
+
+
+def is_torch_compile_compatible() -> NoReturn:
+    """Check if the current GPU is compatible with torch-compile.
+
+    Raises:
+        Warning if GPU is not compatible with `torch.compile`.
+
+    """
+    if torch.cuda.is_available():  # pragma: no cover
+        device_cap = torch.cuda.get_device_capability()
+        if device_cap not in ((7, 0), (8, 0), (9, 0)):
+            logger.warning(
+                "GPU is not compatible with torch.compile. "
+                "Compatible GPUs include NVIDIA V100, A100, and H100. "
+                "Speedup numbers may be lower than expected.",
+                stacklevel=2,
+            )
+    else:
+        logger.warning(
+            "No GPU detected or cuda not installed, "
+            "torch.compile is only supported on selected NVIDIA GPUs. "
+            "Speedup numbers may be lower than expected.",
+            stacklevel=2,
+        )
+
+
+def compile_model(
+    model: nn.Module | None = None,
+    *,
+    mode: str = "default",
+) -> Callable:
+    """A decorator to compile a model using torch-compile.
+
+    Args:
+        model (torch.nn.Module):
+            Model to be compiled.
+        mode (str):
+            Mode to be used for torch-compile. Available modes are:
+
+            - `disable` disables torch-compile
+            - `default` balances performance and overhead
+            - `reduce-overhead` reduces overhead of CUDA graphs (useful for small
+              batches)
+            - `max-autotune` leverages Triton/template based matrix multiplications
+              on GPUs
+            - `max-autotune-no-cudagraphs` similar to “max-autotune” but without
+              CUDA graphs
+
+    Returns:
+        Callable:
+            Compiled model.
+
+    """
+    if mode == "disable":
+        return model
+
+    # Check if GPU is compatible with torch.compile
+    is_torch_compile_compatible()
+
+    # This check will be removed when torch.compile is supported in Python 3.12+
+    if sys.version_info >= (3, 12):  # pragma: no cover
+        logger.warning(
+            ("torch-compile is currently not supported in Python 3.12+. ",),
+        )
+        return model
+
+    if isinstance(  # pragma: no cover
+        model,
+        torch._dynamo.eval_frame.OptimizedModule,  # skipcq: PYL-W0212 # noqa: SLF001
+    ):
+        logger.info(
+            ("The model is already compiled. ",),
+        )
+        return model
+
+    return torch.compile(model, mode=mode)  # pragma: no cover
 
 
 def centre_crop(
