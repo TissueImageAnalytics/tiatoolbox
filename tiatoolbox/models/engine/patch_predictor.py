@@ -16,7 +16,8 @@ from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.classification import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.engine.semantic_segmentor import IOSegmentorConfig
-from tiatoolbox.utils import misc, save_as_json
+from tiatoolbox.models.models_abc import model_to
+from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -383,11 +384,11 @@ class PatchPredictor:
     def _predict_engine(
         self: PatchPredictor,
         dataset: torch.utils.data.Dataset,
+        device: str = "cpu",
         *,
         return_probabilities: bool = False,
         return_labels: bool = False,
         return_coordinates: bool = False,
-        on_gpu: bool = True,
     ) -> np.ndarray:
         """Make a prediction on a dataset. The dataset may be mutated.
 
@@ -401,8 +402,11 @@ class PatchPredictor:
                 Whether to return labels.
             return_coordinates (bool):
                 Whether to return patch coordinates.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                :class:`torch.device` to run the model.
+                Select the device to run the model. Please see
+                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                for more details on input parameters for device. Default value is "cpu".
 
         Returns:
             :class:`numpy.ndarray`:
@@ -430,7 +434,7 @@ class PatchPredictor:
             )
 
         # use external for testing
-        model = misc.model_to(model=self.model, on_gpu=on_gpu)
+        model = model_to(model=self.model, device=device)
 
         cum_output = {
             "probabilities": [],
@@ -442,7 +446,7 @@ class PatchPredictor:
             batch_output_probabilities = self.model.infer_batch(
                 model,
                 batch_data["image"],
-                on_gpu=on_gpu,
+                device=device,
             )
             # We get the index of the class with the maximum probability
             batch_output_predictions = self.model.postproc_func(
@@ -587,10 +591,10 @@ class PatchPredictor:
         self: PatchPredictor,
         imgs: list | np.ndarray,
         labels: list,
+        device: str = "cpu",
         *,
         return_probabilities: bool,
         return_labels: bool,
-        on_gpu: bool,
     ) -> np.ndarray:
         """Process patch mode.
 
@@ -609,8 +613,11 @@ class PatchPredictor:
                 Whether to return per-class probabilities.
             return_labels (bool):
                 Whether to return the labels with the predictions.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                :class:`torch.device` to run the model.
+                Select the device to run the model. Please see
+                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                for more details on input parameters for device. Default value is "cpu".
 
         Returns:
             :class:`numpy.ndarray`:
@@ -635,7 +642,7 @@ class PatchPredictor:
             return_probabilities=return_probabilities,
             return_labels=return_labels,
             return_coordinates=return_coordinates,
-            on_gpu=on_gpu,
+            device=device,
         )
 
     def _predict_tile_wsi(  # noqa: PLR0913
@@ -647,11 +654,11 @@ class PatchPredictor:
         ioconfig: IOPatchPredictorConfig,
         save_dir: str | Path,
         highest_input_resolution: list[dict],
+        device: str = "cpu",
         *,
         save_output: bool,
         return_probabilities: bool,
         merge_predictions: bool,
-        on_gpu: bool,
     ) -> list | dict:
         """Predict on Tile and WSIs.
 
@@ -678,8 +685,11 @@ class PatchPredictor:
                 `tile` or `wsi`.
             return_probabilities (bool):
                 Whether to return per-class probabilities.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                :class:`torch.device` to run the model.
+                Select the device to run the model. Please see
+                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                for more details on input parameters for device. Default value is "cpu".
             ioconfig (IOPatchPredictorConfig):
                 Patch Predictor IO configuration..
             merge_predictions (bool):
@@ -747,7 +757,7 @@ class PatchPredictor:
                 return_labels=False,
                 return_probabilities=return_probabilities,
                 return_coordinates=return_coordinates,
-                on_gpu=on_gpu,
+                device=device,
             )
             output_model["label"] = img_label
             # add extra information useful for downstream analysis
