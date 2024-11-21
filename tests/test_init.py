@@ -114,7 +114,7 @@ def test_duplicate_filter(caplog: pytest.LogCaptureFixture) -> None:
     logger.addFilter(duplicate_filter)
 
     # Reset filters in logger.
-    for filter_ in logger.filters:
+    for filter_ in logger.filters[:]:
         logger.removeFilter(filter_)
 
     for _ in range(2):

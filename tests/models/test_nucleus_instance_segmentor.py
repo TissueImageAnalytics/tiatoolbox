@@ -28,6 +28,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imwrite
 from tiatoolbox.utils.metrics import f1_detection
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
@@ -278,7 +279,7 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
             masks=[sample_wsi_msk],
             mode="wsi",
             ioconfig=ioconfig,
-            on_gpu=ON_GPU,
+            device=select_device(on_gpu=ON_GPU),
             crash_on_exception=True,
             save_dir=save_dir,
         )
@@ -326,7 +327,7 @@ def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
         [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -373,7 +374,7 @@ def test_functionality_merge_tile_predictions_ci(
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=save_dir,
@@ -453,7 +454,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     output = inst_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=True,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -471,7 +472,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     output = inst_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=True,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -496,7 +497,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=True,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )

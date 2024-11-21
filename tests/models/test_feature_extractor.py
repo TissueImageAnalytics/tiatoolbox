@@ -14,6 +14,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
@@ -35,7 +36,7 @@ def test_engine(remote_sample: Callable, tmp_path: Path) -> None:
     output_list = extractor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -82,7 +83,7 @@ def test_full_inference(
         [mini_wsi_svs],
         mode="wsi",
         ioconfig=ioconfig,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
