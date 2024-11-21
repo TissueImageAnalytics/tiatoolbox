@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import click
+
 from tiatoolbox.cli.common import (
     cli_batch_size,
     cli_device,
@@ -14,6 +16,8 @@ from tiatoolbox.cli.common import (
     cli_output_type,
     cli_patch_mode,
     cli_resolution,
+    cli_return_labels,
+    cli_return_probabilities,
     cli_units,
     cli_verbose,
     cli_weights,
@@ -31,7 +35,6 @@ from tiatoolbox.cli.common import (
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
-@cli_patch_mode(default=False)
 @cli_model(default="resnet18-kather100k")
 @cli_weights()
 @cli_device(default="cpu")
@@ -40,7 +43,13 @@ from tiatoolbox.cli.common import (
 @cli_units(default="mpp")
 @cli_masks(default=None)
 @cli_num_loader_workers(default=0)
-@cli_output_type(default="AnnotationStore")
+@cli_output_type(
+    default="AnnotationStore",
+    input_type=click.Choice(["zarr", "AnnotationStore"], case_sensitive=False),
+)
+@cli_patch_mode(default=False)
+@cli_return_probabilities(default=True)
+@cli_return_labels(default=False)
 @cli_verbose(default=True)
 def patch_predictor(
     model: str,
@@ -56,6 +65,8 @@ def patch_predictor(
     device: str,
     output_type: str,
     *,
+    return_probabilities: bool,
+    return_labels: bool,
     patch_mode: bool,
     verbose: bool,
 ) -> None:
@@ -85,6 +96,7 @@ def patch_predictor(
         units=units,
         device=device,
         save_dir=output_path,
-        save_output=True,
         output_type=output_type,
+        return_probabilities=return_probabilities,
+        return_labels=return_labels,
     )

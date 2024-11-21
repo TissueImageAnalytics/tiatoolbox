@@ -342,7 +342,7 @@ def cli_merge_predictions(
 def cli_return_labels(
     usage_help: str = "Whether to return raw model output as labels.",
     *,
-    default: bool = True,
+    default: bool = False,
 ) -> Callable:
     """Enables --return-labels option for cli."""
     return click.option(
