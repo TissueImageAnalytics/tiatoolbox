@@ -17,11 +17,11 @@ import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
-import tiatoolbox.models.models_abc
 from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
+from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
@@ -234,7 +234,7 @@ class SemanticSegmentor:
         self._cache_dir = None
         self._loader = None
         self._model = None
-        self._on_gpu = None
+        self._device = None
         self._mp_shared_space = None
         self._postproc_workers = None
         self.num_postproc_workers = num_postproc_workers
@@ -498,7 +498,7 @@ class SemanticSegmentor:
             sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
-                on_gpu=self._on_gpu,
+                device=self._device,
             )
             # repackage so that it's an N list, each contains
             # L x etc. output
@@ -838,7 +838,7 @@ class SemanticSegmentor:
         self._cache_dir = None
         self._model = None
         self._loader = None
-        self._on_gpu = None
+        self._device = None
         self._futures = None
         self._mp_shared_space = None
         if self._postproc_workers is not None:
@@ -936,8 +936,8 @@ class SemanticSegmentor:
         resolution: Resolution = 1.0,
         units: Units = "baseline",
         save_dir: str | Path | None = None,
-        *,
         device: str = "cpu",
+        *,
         crash_on_exception: bool = False,
     ) -> list[tuple[Path, Path]]:
         """Make a prediction for a list of input data.
@@ -976,7 +976,10 @@ class SemanticSegmentor:
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
             device (str):
-                Select the device to run the model. Default is "cpu".
+                :class:`torch.device` to run the model.
+                Select the device to run the model. Please see
+                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                for more details on input parameters for device. Default value is "cpu".
             patch_input_shape (tuple):
                 Size of patches input to the model. The values
                 are at requested read resolution and must be positive.
@@ -1059,10 +1062,7 @@ class SemanticSegmentor:
 
         # use external for testing
         self._device = device
-        self._model = tiatoolbox.models.models_abc.model_to(
-            model=self.model,
-            device=device,
-        )
+        self._model = model_to(model=self.model, device=device)
 
         # workers should be > 0 else Value Error will be thrown
         self._prepare_workers()
@@ -1097,13 +1097,13 @@ class SemanticSegmentor:
         # => may not be able to retrieve the result dict
         for wsi_idx, img_path in enumerate(imgs):
             self._predict_wsi_handle_exception(
-                imgs,
-                wsi_idx,
-                img_path,
-                mode,
-                ioconfig,
-                save_dir,
-                crash_on_exception,
+                imgs=imgs,
+                wsi_idx=wsi_idx,
+                img_path=img_path,
+                mode=mode,
+                ioconfig=ioconfig,
+                save_dir=save_dir,
+                crash_on_exception=crash_on_exception,
             )
 
         # clean up the cache directories
@@ -1261,8 +1261,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
         resolution: Resolution = 1.0,
         units: Units = "baseline",
         save_dir: str | Path | None = None,
-        *,
         device: str = "cpu",
+        *,
         crash_on_exception: bool = False,
     ) -> list[tuple[Path, Path]]:
         """Make a prediction for a list of input data.
@@ -1301,8 +1301,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
             device (str):
-                Select the device to run the model. Default is "cpu".
-            patch_input_shape (tuple):
+                :class:`torch.device` to run the model.
+                Select the device to run the model. Please see
+                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                for more details on input parameters for device. Default value is "cpu".
+            patch_input_shape (IntPair):
                 Size of patches input to the model. The values are at
                 requested read resolution and must be positive.
             patch_output_shape (tuple):

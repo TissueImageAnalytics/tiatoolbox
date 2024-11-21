@@ -624,7 +624,7 @@ class MicroNet(ModelABC):
         return np.transpose(image.numpy(), axes=(1, 2, 0))
 
     @staticmethod
-    def infer_batch(
+    def infer_batch(  # skipcq: PYL-W0221
         model: torch.nn.Module,
         batch_data: torch.Tensor,
         *,

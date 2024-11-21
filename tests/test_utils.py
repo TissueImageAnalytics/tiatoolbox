@@ -1656,7 +1656,7 @@ def test_patch_pred_store() -> None:
 
     store = misc.dict_to_store(patch_output, (1.0, 1.0))
 
-    # Check that its an SQLiteStore containing the expected annotations
+    # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
