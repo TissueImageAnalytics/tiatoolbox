@@ -40,7 +40,7 @@ class IOConfigABC(ABC):
 
 
 def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
-    """Transfers model to cpu/gpu.
+    """Transfers model to specified device e.g., "cpu" or "cuda".
 
     Args:
         model (torch.nn.Module):
@@ -50,7 +50,7 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
 
     Returns:
         torch.nn.Module:
-            The model after being moved to cpu/gpu.
+            The model after being moved to specified device.
 
     """
     if device != "cpu":
