@@ -1025,7 +1025,7 @@ def test_patch_predictor_kather100k_output(
             pretrained_model,
             probabilities_check=expected_prob,
             predictions_check=[6, 3],
-            on_gpu=ON_GPU,
+            device=select_device(on_gpu=ON_GPU),
         )
         # only test 1 on travis to limit runtime
         if toolbox_env.running_on_ci():
@@ -1060,7 +1060,7 @@ def test_patch_predictor_pcam_output(sample_patch3: Path, sample_patch4: Path) -
             pretrained_model,
             probabilities_check=expected_prob,
             predictions_check=[1, 0],
-            on_gpu=ON_GPU,
+            device=select_device(on_gpu=ON_GPU),
         )
         # only test 1 on travis to limit runtime
         if toolbox_env.running_on_ci():

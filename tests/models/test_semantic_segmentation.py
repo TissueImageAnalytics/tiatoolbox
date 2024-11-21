@@ -552,7 +552,7 @@ def test_functional_segmentor(
     output_list = semantic_segmentor.predict(
         file_list,
         mode="tile",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
@@ -581,7 +581,7 @@ def test_functional_segmentor(
         [mini_wsi_svs],
         masks=[mini_wsi_msk],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
@@ -605,7 +605,7 @@ def test_functional_segmentor(
         [mini_wsi_svs],
         masks=[mini_wsi_msk],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         ioconfig=ioconfig,
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
@@ -631,7 +631,7 @@ def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         patch_input_shape=(1024, 1024),
         patch_output_shape=(512, 512),
         stride_shape=(256, 256),
@@ -661,7 +661,7 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
     semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -672,7 +672,7 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -699,7 +699,7 @@ def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> 
     semantic_segmentor.predict(
         [wsi_with_artifacts],
         mode="wsi",
-        on_gpu=True,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir / "raw",
     )
@@ -715,7 +715,7 @@ def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> 
     semantic_segmentor.predict(
         [mini_wsi_jpg],
         mode="tile",
-        on_gpu=True,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=f"{save_dir}/raw/",
     )
@@ -738,7 +738,7 @@ def test_behavior_bcss_local(remote_sample: Callable, tmp_path: Path) -> None:
     semantic_segmentor.predict(
         [wsi_breast],
         mode="wsi",
-        on_gpu=True,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir / "raw",
     )
