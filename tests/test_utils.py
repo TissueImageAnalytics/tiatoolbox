@@ -1648,7 +1648,6 @@ def test_patch_pred_store() -> None:
     """Test patch_pred_store."""
     # Define a mock patch_output
     patch_output = {
-        "probabilities": [(0.99, 0.01), (0.01, 0.99), (0.99, 0.01)],
         "predictions": [1, 0, 1],
         "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
         "other": "other",

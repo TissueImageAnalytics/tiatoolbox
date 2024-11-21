@@ -8,7 +8,7 @@ import pytest
 import torch
 from torch import nn
 
-from tiatoolbox import rcParam
+from tiatoolbox import rcParam, utils
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
@@ -149,3 +149,23 @@ def test_model_abc() -> None:
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
     with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
         _ = model.load_weights_from_file(weights_path)
+
+
+def test_model_to() -> None:
+    """Test for placing model on device."""
+    import torchvision.models as torch_models
+    from torch import nn
+
+    from tiatoolbox.models.models_abc import model_to
+
+    # Test on GPU
+    # no GPU on GitHub Actions so this will crash
+    if not utils.env_detection.has_gpu():
+        model = torch_models.resnet18()
+        with pytest.raises((AssertionError, RuntimeError)):
+            _ = model_to(device="cuda", model=model)
+
+    # Test on CPU
+    model = torch_models.resnet18()
+    model = model_to(device="cpu", model=model)
+    assert isinstance(model, nn.Module)

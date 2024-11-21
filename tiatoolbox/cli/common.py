@@ -345,20 +345,6 @@ def cli_yaml_config_path(
     )
 
 
-def cli_on_gpu(
-    usage_help: str = "Run the model on GPU.",
-    *,
-    default: bool = False,
-) -> Callable:
-    """Enables --on-gpu option for cli."""
-    return click.option(
-        "--on-gpu",
-        type=bool,
-        default=default,
-        help=add_default_to_usage_help(usage_help, default),
-    )
-
-
 def cli_num_loader_workers(
     usage_help: str = "Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
