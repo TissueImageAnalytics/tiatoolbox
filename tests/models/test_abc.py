@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import torch
+import torchvision.models as torch_models
 from torch import nn
 
 from tiatoolbox import rcParam, utils
@@ -13,7 +14,7 @@ from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
 )
-from tiatoolbox.models.models_abc import ModelABC
+from tiatoolbox.models.models_abc import ModelABC, model_to
 from tiatoolbox.utils import env_detection as toolbox_env
 
 if TYPE_CHECKING:
@@ -153,11 +154,6 @@ def test_model_abc() -> None:
 
 def test_model_to() -> None:
     """Test for placing model on device."""
-    import torchvision.models as torch_models
-    from torch import nn
-
-    from tiatoolbox.models.models_abc import model_to
-
     # Test on GPU
     # no GPU on GitHub Actions so this will crash
     if not utils.env_detection.has_gpu():
