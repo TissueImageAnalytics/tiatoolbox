@@ -25,6 +25,7 @@ from tiatoolbox.models.dataset import (
 )
 from tiatoolbox.utils import download_data, imread, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
@@ -547,7 +548,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
                 [mini_wsi_svs],
                 mode="wsi",
                 save_dir=f"{tmp_path}/dump",
-                on_gpu=ON_GPU,
+                device=select_device(on_gpu=ON_GPU),
                 **_kwargs,
             )
         shutil.rmtree(tmp_path / "dump", ignore_errors=True)
@@ -563,7 +564,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         ioconfig=ioconfig,
         mode="wsi",
         save_dir=f"{tmp_path}/dump",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
     )
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
@@ -571,7 +572,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         [mini_wsi_svs],
         mode="wsi",
         save_dir=f"{tmp_path}/dump",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         **kwargs,
     )
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
@@ -582,7 +583,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         [mini_wsi_svs],
         patch_input_shape=(300, 300),
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.patch_input_shape == (300, 300)
@@ -592,7 +593,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         [mini_wsi_svs],
         stride_shape=(300, 300),
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.stride_shape == (300, 300)
@@ -602,7 +603,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         [mini_wsi_svs],
         resolution=1.99,
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
@@ -612,7 +613,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         [mini_wsi_svs],
         units="baseline",
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=f"{tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
@@ -624,7 +625,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         mode="wsi",
         merge_predictions=True,
         save_dir=f"{tmp_path}/dump",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
     )
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
@@ -643,7 +644,7 @@ def test_patch_predictor_api(
     # don't run test on GPU
     output = predictor.predict(
         inputs,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == ["predictions"]
@@ -654,7 +655,7 @@ def test_patch_predictor_api(
         inputs,
         labels=[1, "a"],
         return_labels=True,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions"])
@@ -665,7 +666,7 @@ def test_patch_predictor_api(
     output = predictor.predict(
         inputs,
         return_probabilities=True,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["predictions", "probabilities"])
@@ -677,7 +678,7 @@ def test_patch_predictor_api(
         return_probabilities=True,
         labels=[1, "a"],
         return_labels=True,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
@@ -687,7 +688,7 @@ def test_patch_predictor_api(
     # test saving output, should have no effect
     _ = predictor.predict(
         inputs,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir="special_dir_not_exist",
     )
     assert not Path.is_dir(Path("special_dir_not_exist"))
@@ -721,7 +722,7 @@ def test_patch_predictor_api(
         return_probabilities=True,
         labels=[1, "a"],
         return_labels=True,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         save_dir=save_dir_path,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
@@ -751,7 +752,7 @@ def test_wsi_predictor_api(
     kwargs = {
         "return_probabilities": True,
         "return_labels": True,
-        "on_gpu": ON_GPU,
+        "device": select_device(on_gpu=ON_GPU),
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
         "resolution": 1.0,
@@ -788,7 +789,7 @@ def test_wsi_predictor_api(
     kwargs = {
         "return_probabilities": True,
         "return_labels": True,
-        "on_gpu": ON_GPU,
+        "device": select_device(on_gpu=ON_GPU),
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
         "resolution": 0.5,
@@ -903,7 +904,7 @@ def test_wsi_predictor_merge_predictions(sample_wsi_dict: dict) -> None:
     kwargs = {
         "return_probabilities": True,
         "return_labels": True,
-        "on_gpu": ON_GPU,
+        "device": select_device(on_gpu=ON_GPU),
         "patch_input_shape": np.array([224, 224]),
         "stride_shape": np.array([224, 224]),
         "resolution": 1.0,
@@ -958,8 +959,7 @@ def _test_predictor_output(
     pretrained_model: str,
     probabilities_check: list | None = None,
     predictions_check: list | None = None,
-    *,
-    on_gpu: bool = ON_GPU,
+    device: str = select_device(on_gpu=ON_GPU),
 ) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
     predictor = PatchPredictor(
@@ -972,7 +972,7 @@ def _test_predictor_output(
         inputs,
         return_probabilities=True,
         return_labels=False,
-        on_gpu=on_gpu,
+        device=device,
     )
     predictions = output["predictions"]
     probabilities = output["probabilities"]

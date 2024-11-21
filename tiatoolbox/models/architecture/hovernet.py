@@ -765,7 +765,7 @@ class HoVerNet(ModelABC):
             >>> pretrained = torch.load(weights_path)
             >>> model = HoVerNet(num_types=6, mode="fast")
             >>> model.load_state_dict(pretrained)
-            >>> output = model.infer_batch(model, batch, on_gpu=False)
+            >>> output = model.infer_batch(model, batch, device="cuda")
             >>> output = [v[0] for v in output]
             >>> output = model.postproc(output)
 
