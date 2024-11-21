@@ -62,8 +62,6 @@ from matplotlib import colormaps
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
-from tiatoolbox.utils.misc import select_device
-
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
@@ -71,6 +69,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
