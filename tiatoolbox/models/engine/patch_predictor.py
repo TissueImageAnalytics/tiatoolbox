@@ -795,10 +795,10 @@ class PatchPredictor:
         stride_shape: tuple[int, int] | None = None,
         resolution: Resolution | None = None,
         units: Units = None,
+        device: str = "cpu",
         *,
         return_probabilities: bool = False,
         return_labels: bool = False,
-        on_gpu: bool = True,
         merge_predictions: bool = False,
         save_dir: str | Path | None = None,
         save_output: bool = False,
@@ -830,8 +830,11 @@ class PatchPredictor:
                 Whether to return per-class probabilities.
             return_labels (bool):
                 Whether to return the labels with the predictions.
-            on_gpu (bool):
-                Whether to run model on the GPU.
+            device (str):
+                :class:`torch.device` to run the model.
+                Select the device to run the model. Please see
+                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                for more details on input parameters for device. Default value is "cpu".
             ioconfig (IOPatchPredictorConfig):
                 Patch Predictor IO configuration.
             patch_input_shape (tuple):
@@ -901,7 +904,7 @@ class PatchPredictor:
                 labels,
                 return_probabilities=return_probabilities,
                 return_labels=return_labels,
-                on_gpu=on_gpu,
+                device=device,
             )
 
         if not isinstance(imgs, list):
@@ -948,7 +951,7 @@ class PatchPredictor:
             labels=labels,
             mode=mode,
             return_probabilities=return_probabilities,
-            on_gpu=on_gpu,
+            device=device,
             ioconfig=ioconfig,
             merge_predictions=merge_predictions,
             save_dir=save_dir,

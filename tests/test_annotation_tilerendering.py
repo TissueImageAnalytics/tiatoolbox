@@ -462,6 +462,7 @@ def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
 
     def color_fn(props: dict[str, str]) -> tuple[int, int, int]:
+        """Tests Red for cells, otherwise green."""
         # simple test function that returns red for cells, otherwise green.
         if props["type"] == "cell":
             return 1, 0, 0
