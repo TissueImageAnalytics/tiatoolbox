@@ -559,7 +559,7 @@ def plot_graph(
     return canvas
 
 
-def _find_minimum_mpp_sf(mpp: tuple[float, float]) -> float:
+def _find_minimum_mpp_sf(mpp: tuple[float, float] | None) -> float:
     """Calculates minimum mpp scale factor."""
     if mpp is not None:
         return np.minimum(mpp[0] / 0.25, 1)
