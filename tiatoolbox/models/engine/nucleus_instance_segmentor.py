@@ -450,7 +450,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             * ioconfig.patch_output_shape
         ).astype(np.int32)
         image_shape = np.array(image_shape)
-        (_, tile_outputs) = PatchExtractor.get_coordinates(
+        tile_outputs = PatchExtractor.get_coordinates(
             image_shape=image_shape,
             patch_input_shape=tile_shape,
             patch_output_shape=tile_shape,
@@ -459,7 +459,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
         # * === Now generating the flags to indicate which side should
         # * === be removed in postproc callback
-        boxes = tile_outputs
+        boxes = tile_outputs[1]
 
         # This saves computation time if the image is smaller than the expected tile
         if np.all(image_shape <= tile_shape):
@@ -485,7 +485,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             return removal_flag
 
         w, h = image_shape
-        boxes = tile_outputs
+        boxes = tile_outputs[1]
         #  expand to full four corners
         boxes_br = boxes[:, 2:]
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
