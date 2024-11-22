@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import click
-
 from tiatoolbox.cli.common import (
     cli_batch_size,
     cli_device,
@@ -45,7 +43,6 @@ from tiatoolbox.cli.common import (
 @cli_num_loader_workers(default=0)
 @cli_output_type(
     default="AnnotationStore",
-    input_type=click.Choice(["zarr", "AnnotationStore"], case_sensitive=False),
 )
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
