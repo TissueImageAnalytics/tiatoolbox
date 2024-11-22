@@ -1656,7 +1656,7 @@ def test_patch_pred_store() -> None:
 
     store = misc.dict_to_store(patch_output, (1.0, 1.0))
 
-    # Check that its an SQLiteStore containing the expected annotations
+    # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
@@ -1668,6 +1668,17 @@ def test_patch_pred_store() -> None:
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
         misc.dict_to_store(patch_output, (1.0, 1.0))
+
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "other": "other",
+    }
+
+    store = misc.dict_to_store(patch_output, (1.0, 1.0))
+
+    # Check that it is an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
 
 
 def test_patch_pred_store_cdict() -> None:

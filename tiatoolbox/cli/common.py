@@ -94,8 +94,10 @@ def cli_output_type(
     input_type: click.Choice | None = None,
 ) -> Callable:
     """Enables --file-types option for cli."""
-    if input_type is None:
-        input_type = click.Choice(["zarr", "AnnotationStore"], case_sensitive=False)
+    click_choices = click.Choice(
+        choices=["zarr", "AnnotationStore"], case_sensitive=False
+    )
+    input_type = click_choices if input_type is None else input_type
     return click.option(
         "--output-type",
         help=add_default_to_usage_help(usage_help, default),
@@ -407,20 +409,6 @@ def cli_yaml_config_path(
         "--yaml-config-path",
         help=add_default_to_usage_help(usage_help, default),
         default=default,
-    )
-
-
-def cli_on_gpu(
-    usage_help: str = "Run the model on GPU.",
-    *,
-    default: bool = False,
-) -> Callable:
-    """Enables --on-gpu option for cli."""
-    return click.option(
-        "--on-gpu",
-        type=bool,
-        default=default,
-        help=add_default_to_usage_help(usage_help, default),
     )
 
 
