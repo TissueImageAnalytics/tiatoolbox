@@ -23,7 +23,7 @@ from tests.test_annotation_stores import cell_polygon
 from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator
 from tiatoolbox.utils.env_detection import running_on_travis
-from tiatoolbox.utils.visualization import AnnotationRenderer
+from tiatoolbox.utils.visualization import AnnotationRenderer, _find_minimum_mpp_sf
 from tiatoolbox.wsicore import wsireader
 
 RNG = np.random.default_rng(0)  # Numpy Random Generator
@@ -462,6 +462,7 @@ def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
 
     def color_fn(props: dict[str, str]) -> tuple[int, int, int]:
+        """Tests Red for cells, otherwise green."""
         # simple test function that returns red for cells, otherwise green.
         if props["type"] == "cell":
             return 1, 0, 0
@@ -480,3 +481,15 @@ def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     assert num == 50  # expect 50 green objects
     _, num = label(np.array(thumb)[:, :, 2])
     assert num == 0  # expect 0 blue objects
+
+
+def test_minimum_mpp_sf() -> None:
+    """Test minimum mpp_sf."""
+    mpp_sf = _find_minimum_mpp_sf((0.5, 0.5))
+    assert mpp_sf == 1.0
+
+    mpp_sf = _find_minimum_mpp_sf((0.20, 0.20))
+    assert mpp_sf == 0.20 / 0.25
+
+    mpp_sf = _find_minimum_mpp_sf(None)
+    assert mpp_sf == 1.0

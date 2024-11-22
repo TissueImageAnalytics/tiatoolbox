@@ -17,6 +17,7 @@ from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor, SemanticSeg
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imwrite
 from tiatoolbox.utils.metrics import f1_detection
+from tiatoolbox.utils.misc import select_device
 
 ON_GPU = toolbox_env.has_gpu()
 BATCH_SIZE = 1 if not ON_GPU else 8  # 16
@@ -64,7 +65,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     output = multi_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -83,7 +84,7 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     output = multi_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -117,7 +118,7 @@ def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> 
     output = multi_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -148,7 +149,7 @@ def test_functionality_hovernet(remote_sample: Callable, tmp_path: Path) -> None
     output = multi_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -195,7 +196,7 @@ def test_masked_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         masks=[sample_wsi_msk],
         mode="wsi",
         ioconfig=ioconfig,
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -230,7 +231,7 @@ def test_functionality_process_instance_predictions(
     output = semantic_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -268,7 +269,7 @@ def test_empty_image(tmp_path: Path) -> None:
     _ = multi_segmentor.predict(
         [sample_patch_path],
         mode="tile",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -284,7 +285,7 @@ def test_empty_image(tmp_path: Path) -> None:
     _ = multi_segmentor.predict(
         [sample_patch_path],
         mode="tile",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
     )
@@ -312,7 +313,7 @@ def test_empty_image(tmp_path: Path) -> None:
     _ = multi_segmentor.predict(
         [sample_patch_path],
         mode="tile",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
         ioconfig=bcc_wsi_ioconfig,
@@ -361,7 +362,7 @@ def test_functionality_semantic(remote_sample: Callable, tmp_path: Path) -> None
     output = multi_segmentor.predict(
         [mini_wsi_svs],
         mode="wsi",
-        on_gpu=ON_GPU,
+        device=select_device(on_gpu=ON_GPU),
         crash_on_exception=True,
         save_dir=save_dir,
         ioconfig=bcc_wsi_ioconfig,
@@ -413,7 +414,7 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
             masks=[sample_wsi_msk],
             mode="wsi",
             ioconfig=ioconfig,
-            on_gpu=ON_GPU,
+            device=select_device(on_gpu=ON_GPU),
             crash_on_exception=True,
             save_dir=save_dir,
         )

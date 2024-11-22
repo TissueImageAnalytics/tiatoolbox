@@ -16,7 +16,6 @@ import numcodecs
 import numpy as np
 import pandas as pd
 import requests
-import torch
 import yaml
 import zarr
 from filelock import FileLock
@@ -876,24 +875,6 @@ def select_device(*, on_gpu: bool) -> str:
         return "cuda"
 
     return "cpu"
-
-
-def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
-    """Transfers model to cpu/gpu.
-
-    Args:
-        model (torch.nn.Module): PyTorch defined model.
-        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
-
-    Returns:
-        torch.nn.Module:
-            The model after being moved to cpu/gpu.
-    """
-    if on_gpu:  # DataParallel work only for cuda
-        model = torch.nn.DataParallel(model)
-        return model.to("cuda")
-
-    return model.to("cpu")
 
 
 def get_bounding_box(img: np.ndarray) -> np.ndarray:

@@ -143,6 +143,8 @@ files:
     url: [ *testdata, "annotation/test1_config.json"]
   config_2:
     url: [ *testdata, "annotation/test2_config.json"]
+  patch_annotations:
+    url: [ *testdata, "annotation/sample_wsi_patch_preds.db"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
   qptiff_sample:

@@ -39,7 +39,7 @@ def test_functionality(
     model = model.to(map_location)
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=ON_GPU)
+    output = model.infer_batch(model, batch, device=map_location)
     output, _ = model.postproc(output[0])
     assert np.max(np.unique(output)) == 46
 
