@@ -6,15 +6,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 import torch
+import torchvision.models as torch_models
 from torch import nn
 
-import tiatoolbox.models
 from tiatoolbox import rcParam, utils
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
 )
-from tiatoolbox.models.models_abc import ModelABC
+from tiatoolbox.models.models_abc import ModelABC, model_to
 from tiatoolbox.utils import env_detection as toolbox_env
 
 if TYPE_CHECKING:
@@ -154,19 +154,16 @@ def test_model_abc() -> None:
 
 def test_model_to() -> None:
     """Test for placing model on device."""
-    import torchvision.models as torch_models
-    from torch import nn
-
     # Test on GPU
-    # no GPU on Travis so this will crash
+    # no GPU on GitHub Actions so this will crash
     if not utils.env_detection.has_gpu():
         model = torch_models.resnet18()
         with pytest.raises((AssertionError, RuntimeError)):
-            _ = tiatoolbox.models.models_abc.model_to(device="cuda", model=model)
+            _ = model_to(device="cuda", model=model)
 
     # Test on CPU
     model = torch_models.resnet18()
-    model = tiatoolbox.models.models_abc.model_to(device="cpu", model=model)
+    model = model_to(device="cpu", model=model)
     assert isinstance(model, nn.Module)
 
 
