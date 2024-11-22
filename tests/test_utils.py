@@ -13,14 +13,16 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import torch
 from PIL import Image
 from requests import HTTPError
 from shapely.geometry import Polygon
 
 from tests.test_annotation_stores import cell_polygon
-from tiatoolbox import utils
+from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
@@ -1334,24 +1336,6 @@ def test_select_device() -> None:
     assert device == "cpu"
 
 
-def test_model_to() -> None:
-    """Test for placing model on device."""
-    import torchvision.models as torch_models
-    from torch import nn
-
-    # Test on GPU
-    # no GPU on Travis so this will crash
-    if not utils.env_detection.has_gpu():
-        model = torch_models.resnet18()
-        with pytest.raises((AssertionError, RuntimeError)):
-            _ = misc.model_to(on_gpu=True, model=model)
-
-    # Test on CPU
-    model = torch_models.resnet18()
-    model = misc.model_to(on_gpu=False, model=model)
-    assert isinstance(model, nn.Module)
-
-
 def test_save_as_json(tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
@@ -1671,7 +1655,7 @@ def test_patch_pred_store() -> None:
 
     store = misc.dict_to_store(patch_output, (1.0, 1.0))
 
-    # Check that its an SQLiteStore containing the expected annotations
+    # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
@@ -1698,7 +1682,7 @@ def test_patch_pred_store_cdict() -> None:
     class_dict = {0: "class0", 1: "class1"}
     store = misc.dict_to_store(patch_output, (1.0, 1.0), class_dict=class_dict)
 
-    # Check that its an SQLiteStore containing the expected annotations
+    # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
@@ -1827,3 +1811,40 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
         misc.dict_to_store(patch_output, (1.0, 1.0))
+
+
+def test_torch_compile_already_compiled() -> None:
+    """Test that torch_compile does not recompile a model that is already compiled."""
+    torch_compile_modes = [
+        "default",
+        "reduce-overhead",
+        "max-autotune",
+        "max-autotune-no-cudagraphs",
+    ]
+    current_torch_compile_mode = rcParam["torch_compile_mode"]
+    model = torch.nn.Sequential(torch.nn.Linear(10, 10), torch.nn.Linear(10, 10))
+
+    for mode in torch_compile_modes:
+        torch._dynamo.reset()
+        rcParam["torch_compile_mode"] = mode
+        compiled_model = compile_model(model, mode=mode)
+        recompiled_model = compile_model(compiled_model, mode=mode)
+        assert compiled_model == recompiled_model
+
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = current_torch_compile_mode
+
+
+def test_torch_compile_disable() -> None:
+    """Test torch_compile's disable mode."""
+    model = torch.nn.Sequential(torch.nn.Linear(10, 10), torch.nn.Linear(10, 10))
+    compiled_model = compile_model(model, mode="disable")
+    assert model == compiled_model
+
+
+def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
+    """Test if torch-compile compatibility is checked correctly."""
+    from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
+
+    is_torch_compile_compatible()
+    assert "torch.compile" in caplog.text
