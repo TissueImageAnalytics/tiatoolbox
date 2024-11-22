@@ -663,3 +663,21 @@ def test_mask_based_patch_extractor_ndpi(
     len_region1 = len(patches)
 
     assert len_all > len_region2 > len_region1
+
+
+def test_invalid_points_type() -> None:
+    """Test invalid locations_list type for PointsPatchExtractor."""
+    img = np.zeros((256, 256, 3))
+    coords = [[10, 10]]
+    with pytest.raises(
+        TypeError,
+        match="Please input correct locations_list",
+    ):
+        patchextraction.get_patch_extractor(
+            "point", input_img=img, locations_list=coords, patch_size=38
+        )
+
+    patches = patchextraction.get_patch_extractor(
+        "point", input_img=img, locations_list=np.array(coords), patch_size=38
+    )
+    assert len(patches) > 0

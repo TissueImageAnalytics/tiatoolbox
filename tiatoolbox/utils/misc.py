@@ -540,7 +540,7 @@ def read_locations(
     if isinstance(input_table, pd.DataFrame):
         return __assign_unknown_class(input_table)
 
-    msg = "Please input correct image path or an ndarray image."
+    msg = "File type not supported."
     raise TypeError(msg)
 
 
