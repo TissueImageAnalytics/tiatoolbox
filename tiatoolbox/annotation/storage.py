@@ -2570,7 +2570,21 @@ class SQLiteStore(AnnotationStore):
         cx: float,
         cy: float,
     ) -> bytes:
-        """Unpack WKB data."""
+        """Return the geometry as bytes using WKB.
+
+        Args:
+            data (bytes or str):
+                The WKB/WKT data to be unpacked.
+            cx (int):
+                The X coordinate of the centroid/representative point.
+            cy (float):
+                The Y coordinate of the centroid/representative point.
+
+        Returns:
+            bytes:
+                The geometry as bytes.
+
+        """
         return (
             self._decompress_data(data)
             if data
