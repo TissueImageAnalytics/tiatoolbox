@@ -6,13 +6,13 @@ import click
 
 from tiatoolbox.cli.common import (
     cli_batch_size,
+    cli_device,
     cli_file_type,
     cli_img_input,
     cli_masks,
     cli_merge_predictions,
     cli_mode,
     cli_num_loader_workers,
-    cli_on_gpu,
     cli_output_path,
     cli_pretrained_model,
     cli_pretrained_weights,
@@ -45,7 +45,7 @@ from tiatoolbox.cli.common import (
 @cli_return_probabilities(default=False)
 @cli_merge_predictions(default=True)
 @cli_return_labels(default=True)
-@cli_on_gpu(default=False)
+@cli_device(default="cpu")
 @cli_batch_size(default=1)
 @cli_resolution(default=0.5)
 @cli_units(default="mpp")
@@ -64,11 +64,11 @@ def patch_predictor(
     resolution: float,
     units: str,
     num_loader_workers: int,
+    device: str,
     *,
     return_probabilities: bool,
     return_labels: bool,
     merge_predictions: bool,
-    on_gpu: bool,
     verbose: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
@@ -100,7 +100,7 @@ def patch_predictor(
         return_labels=return_labels,
         resolution=resolution,
         units=units,
-        on_gpu=on_gpu,
+        device=device,
         save_dir=output_path,
         save_output=True,
     )

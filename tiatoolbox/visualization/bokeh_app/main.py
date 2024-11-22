@@ -70,6 +70,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.ui_utils import UIWrapper, get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -1249,7 +1250,7 @@ def segment_on_box() -> None:
         [tmp_mask_dir / "mask.png"],
         save_dir=tmp_save_dir / "hover_out",
         mode="wsi",
-        on_gpu=torch.cuda.is_available(),
+        device=select_device(on_gpu=torch.cuda.is_available()),
         crash_on_exception=True,
     )
 

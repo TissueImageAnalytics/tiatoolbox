@@ -147,5 +147,7 @@ files:
     url: [ *testdata, "annotation/test_meta.csv"]
   test_csv:
     url: [ *testdata, "annotation/metrics_10.csv"]
+  patch_annotations:
+    url: [ *testdata, "annotation/sample_wsi_patch_preds.db"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]

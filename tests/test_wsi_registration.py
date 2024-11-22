@@ -5,7 +5,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+import torch
 
+from tests.conftest import timed
+from tiatoolbox import logger, rcParam
 from tiatoolbox.tools.registration.wsi_registration import (
     AffineWSITransformer,
     DFBRegister,
@@ -576,3 +579,70 @@ def test_affine_wsi_transformer(sample_ome_tiff: Path) -> None:
         expected = cv2.rotate(expected, cv2.ROTATE_90_CLOCKWISE)
 
         assert np.sum(expected - output) == 0
+
+
+def test_dfbr_feature_extractor_torch_compile(dfbr_features: Path) -> None:
+    """Test DFBRFeatureExtractor with torch.compile functionality.
+
+    Args:
+        dfbr_features (Path): Path to the expected features.
+
+    """
+
+    def _extract_features() -> tuple:
+        dfbr = DFBRegister()
+        fixed_img = np.repeat(
+            np.expand_dims(
+                np.repeat(
+                    np.expand_dims(np.arange(0, 64, 1, dtype=np.uint8), axis=1),
+                    64,
+                    axis=1,
+                ),
+                axis=2,
+            ),
+            3,
+            axis=2,
+        )
+        output = dfbr.extract_features(fixed_img, fixed_img)
+        pool3_feat = output["block3_pool"][0, :].detach().numpy()
+        pool4_feat = output["block4_pool"][0, :].detach().numpy()
+        pool5_feat = output["block5_pool"][0, :].detach().numpy()
+
+        return pool3_feat, pool4_feat, pool5_feat
+
+    torch_compile_mode = rcParam["torch_compile_mode"]
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "default"
+    (pool3_feat, pool4_feat, pool5_feat), compile_time = timed(_extract_features)
+    _pool3_feat, _pool4_feat, _pool5_feat = np.load(
+        str(dfbr_features),
+        allow_pickle=True,
+    )
+    assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
+    logger.info("torch.compile default mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "reduce-overhead"
+    (pool3_feat, pool4_feat, pool5_feat), compile_time = timed(_extract_features)
+    _pool3_feat, _pool4_feat, _pool5_feat = np.load(
+        str(dfbr_features),
+        allow_pickle=True,
+    )
+    assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
+    logger.info("torch.compile reduce-overhead mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = "max-autotune"
+    (pool3_feat, pool4_feat, pool5_feat), compile_time = timed(_extract_features)
+    _pool3_feat, _pool4_feat, _pool5_feat = np.load(
+        str(dfbr_features),
+        allow_pickle=True,
+    )
+    assert np.mean(np.abs(pool3_feat - _pool3_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool4_feat - _pool4_feat)) < 1.0e-4
+    assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
+    logger.info("torch.compile max-autotune mode: %s", compile_time)
+    torch._dynamo.reset()
+    rcParam["torch_compile_mode"] = torch_compile_mode

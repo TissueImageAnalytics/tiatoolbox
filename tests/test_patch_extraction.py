@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+from shapely.geometry import Polygon
 
+from tiatoolbox.annotation.storage import Annotation, SQLiteStore
 from tiatoolbox.tools import patchextraction
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import misc
@@ -322,7 +324,7 @@ def test_get_coordinates() -> None:
     )
     # test when output patch shape is out of bound
     # but input is in bound
-    input_bounds, output_bounds = PatchExtractor.get_coordinates(
+    input_bounds, output_bounds = PatchExtractor.get_coordinates(  # skipcq: PYL-E0633
         image_shape=(9, 6),
         patch_input_shape=(5, 5),
         patch_output_shape=(4, 4),
@@ -512,6 +514,7 @@ def test_filter_coordinates() -> None:
 def test_mask_based_patch_extractor_ndpi(
     sample_ndpi: Path,
     caplog: pytest.LogCaptureFixture,
+    tmp_path: Path,
 ) -> None:
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
@@ -607,3 +610,56 @@ def test_mask_based_patch_extractor_ndpi(
         stride=stride,
     )
     assert "No candidate coordinates left" in caplog.text
+
+    # test passing an annotation mask
+    ann = Annotation(
+        Polygon.from_bounds(0, 0, slide_dimensions[0], int(slide_dimensions[1] / 4)),
+        {"label": "region1"},
+    )
+    ann2 = Annotation(
+        Polygon.from_bounds(
+            0, int(slide_dimensions[1] / 2), slide_dimensions[0], slide_dimensions[1]
+        ),
+        {"label": "region2"},
+    )
+    store = SQLiteStore(tmp_path / "test.db")
+    store.append_many([ann, ann2])
+    store.close()
+
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=str(tmp_path / "test.db"),
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=None,
+        store_filter=None,
+    )
+    len_all = len(patches)
+
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=str(tmp_path / "test.db"),
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=None,
+        store_filter="props['label'] == 'region2'",
+    )
+    len_region2 = len(patches)
+
+    patches = patchextraction.get_patch_extractor(
+        input_img=input_img,
+        input_mask=str(tmp_path / "test.db"),
+        method_name="slidingwindow",
+        patch_size=patch_size,
+        resolution=res,
+        units="level",
+        stride=None,
+        store_filter="props['label'] == 'region1'",
+    )
+    len_region1 = len(patches)
+
+    assert len_all > len_region2 > len_region1
