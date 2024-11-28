@@ -669,9 +669,11 @@ def test_invalid_points_type() -> None:
     """Test invalid locations_list type for PointsPatchExtractor."""
     img = np.zeros((256, 256, 3))
     coords = [[10, 10]]
+    msg = "Please input correct locations_list. "
+    msg += "Supported types: np.ndarray, DataFrame, str, Path."
     with pytest.raises(
         TypeError,
-        match="Please input correct locations_list",
+        match=msg,
     ):
         patchextraction.get_patch_extractor(
             "point", input_img=img, locations_list=coords, patch_size=38

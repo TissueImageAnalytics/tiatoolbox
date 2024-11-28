@@ -775,7 +775,8 @@ class PointsPatchExtractor(PatchExtractor):
         try:
             self.locations_df = misc.read_locations(input_table=locations_list)
         except (TypeError, FileNotSupportedError) as exc:
-            msg = "Please input correct locations_list"
+            msg = "Please input correct locations_list. "
+            msg += "Supported types: np.ndarray, DataFrame, str, Path."
             raise TypeError(msg) from exc
         self.locations_df["x"] = self.locations_df["x"] - int(
             (self.patch_size[1] - 1) / 2,
