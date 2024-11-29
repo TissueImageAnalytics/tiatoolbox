@@ -25,14 +25,14 @@ from .engine.semantic_segmentor import (
 )
 
 __all__ = [
+    "SCCNN",
     "HoVerNet",
     "HoVerNetPlus",
     "IDaRS",
     "MapDe",
     "MicroNet",
-    "NuClick",
-    "SCCNN",
     "MultiTaskSegmentor",
+    "NuClick",
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",

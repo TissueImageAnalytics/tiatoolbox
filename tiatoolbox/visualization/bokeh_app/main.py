@@ -308,10 +308,8 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str,
     prop_vals = json.loads(resp.text)
     # If auto, guess what cmap should be
     if (
-        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0)
-        and mapper_type == "auto"
-        or mapper_type == "continuous"
-    ):
+        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0) and mapper_type == "auto"
+    ) or mapper_type == "continuous":
         cmap = (
             "viridis" if UI["cmap_select"].value == "dict" else UI["cmap_select"].value
         )
