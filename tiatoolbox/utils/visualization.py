@@ -914,26 +914,27 @@ class AnnotationRenderer:
 
     def __setattr__(
         self: AnnotationRenderer,
-        __name: str,
-        __value: str | list | dict | None,
+        name: str,
+        value: str | list | dict | None,
+        /,
     ) -> None:
         """Set attribute each time an attribute is set."""
-        if __name == "mapper":
+        if name == "mapper":
             # save a more readable version of the mapper too
-            _ = self._set_mapper(__value)
+            _ = self._set_mapper(value)
             return
-        if __name == "blur_radius" and isinstance(__value, int):
+        if name == "blur_radius" and isinstance(value, int):
             # need to change additional settings
-            if __value > 0:
-                self.__dict__["blur"] = ImageFilter.GaussianBlur(__value)
+            if value > 0:
+                self.__dict__["blur"] = ImageFilter.GaussianBlur(value)
                 self.__dict__["edge_thickness"] = 0
             else:
                 self.__dict__["blur"] = None
                 self.__dict__["edge_thickness"] = self.__dict__["edge_thickness_old"]
-        elif __name == "edge_thickness":
-            self.__dict__["edge_thickness_old"] = __value
+        elif name == "edge_thickness":
+            self.__dict__["edge_thickness_old"] = value
 
-        self.__dict__[__name] = __value
+        self.__dict__[name] = value
 
     def render_annotations(
         self: AnnotationRenderer,
