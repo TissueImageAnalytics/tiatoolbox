@@ -10,7 +10,7 @@ pytest>=7.2.0
 pytest-cov>=4.0.0
 pytest-runner>=6.0
 pytest-xdist[psutil]
-ruff==0.7.4  # This will be updated by pre-commit bot to latest version
+ruff==0.8.1  # This will be updated by pre-commit bot to latest version
 toml>=0.10.2
 twine>=4.0.1
 wheel>=0.37.1
