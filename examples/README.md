@@ -101,7 +101,7 @@ In this example, the affine transformation is computed using thumbnails of the f
 
 This Jupyter notebook in TIAToolbox explains how to extract features from whole slide images (WSI) using pre-trained models from the `timm` library. It guides users through selecting appropriate model architectures, visualizing the extracted features using `UMAP` feature embedding, and verifying the model's performance by checking if different tissue types are correctly identified and separated in the feature map.
 
-[![image](../docs/images/feature-extraction.png)](./11-import-foundation-models.ipynb)
+[![image](../docs/images/feature_extraction.png)](./11-import-foundation-models.ipynb)
 
 ## B) Examples of high-level analysis (pipelines) using TIAToolbox
 
