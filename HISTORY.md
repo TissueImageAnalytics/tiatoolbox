@@ -358,7 +358,7 @@ None
 
 ### Bug Fixes and Other Changes
 
-- Fixes Fix `filter_coordinates` read wrong resolutions for patch extraction
+- Fixes `filter_coordinates` read wrong resolutions for patch extraction
 - For `PatchPredictor`
   - `ioconfig` will supersede everything
   - if `ioconfig` is not provided
