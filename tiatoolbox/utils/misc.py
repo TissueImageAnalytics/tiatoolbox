@@ -531,7 +531,7 @@ def read_locations(
             out_table = pd.read_json(input_table)
             return __assign_unknown_class(out_table)
 
-        msg = "File type not supported."
+        msg = "File type not supported. Supported types: .npy, .csv, .json"
         raise FileNotSupportedError(msg)
 
     if isinstance(input_table, np.ndarray):
@@ -540,7 +540,9 @@ def read_locations(
     if isinstance(input_table, pd.DataFrame):
         return __assign_unknown_class(input_table)
 
-    msg = "Please input correct image path or an ndarray image."
+    msg = "File type not supported. "
+    msg += "Supported types: str, Path, PathLike, np.ndarray, pd.DataFrame"
+
     raise TypeError(msg)
 
 
