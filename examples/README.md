@@ -99,7 +99,7 @@ In this example, the affine transformation is computed using thumbnails of the f
 
 ### 11- Feature extraction with foundation models ([11-feature-extraction](./11-feature-extraction.ipynb))
 
-This notebook presents an example to show how to use TIAToolbox to extract features from WSIs using foundation models. 
+This notebook presents an example to show how to use TIAToolbox to extract features from WSIs using foundation models.
 
 [![image](../docs/images/feature-extraction.png)](./11-feature-extraction.ipynb)
 
