@@ -97,6 +97,12 @@ In this example, the affine transformation is computed using thumbnails of the f
 
 [![image](../docs/images/wsi-registration.png)](./10-wsi-registration.ipynb)
 
+### 11- Feature extraction with foundation models ([11-feature-extraction](./11-feature-extraction.ipynb))
+
+This notebook presents an example to show how to use TIAToolbox to extract features from WSIs using foundation models. 
+
+[![image](../docs/images/feature-extraction.png)](./11-feature-extraction.ipynb)
+
 ## B) Examples of high-level analysis (pipelines) using TIAToolbox
 
 List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.
