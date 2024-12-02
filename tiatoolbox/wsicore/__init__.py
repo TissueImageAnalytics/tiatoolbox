@@ -7,6 +7,6 @@ from .wsireader import WSIReader
 
 # Top level imports
 __all__ = [
-    "WSIReader",
     "WSIMeta",
+    "WSIReader",
 ]

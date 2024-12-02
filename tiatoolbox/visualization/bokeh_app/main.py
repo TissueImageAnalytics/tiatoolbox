@@ -308,10 +308,8 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str,
     prop_vals = json.loads(resp.text)
     # If auto, guess what cmap should be
     if (
-        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0)
-        and mapper_type == "auto"
-        or mapper_type == "continuous"
-    ):
+        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0) and mapper_type == "auto"
+    ) or mapper_type == "continuous":
         cmap = (
             "viridis" if UI["cmap_select"].value == "dict" else UI["cmap_select"].value
         )
@@ -647,24 +645,25 @@ class ViewerState:
 
     def __setattr__(
         self: ViewerState,
-        __name: str,
-        __value: Any,  # noqa: ANN401
+        name: str,
+        value: Any,  # noqa: ANN401
+        /,
     ) -> None:
         """Set an attribute of the viewer state."""
-        if __name == "types":
-            self.__dict__["mapper"] = make_color_dict(__value)
+        if name == "types":
+            self.__dict__["mapper"] = make_color_dict(value)
             self.__dict__["colors"] = list(self.mapper.values())
             if self.cprop == "type":
                 update_mapper()
             # We will standardise the types to strings, keep dict of originals
-            self.__dict__["orig_types"] = {str(x): x for x in __value}
-            __value = [str(x) for x in __value]
+            self.__dict__["orig_types"] = {str(x): x for x in value}
+            value = [str(x) for x in value]
 
-        if __name == "wsi":
-            z = ZoomifyGenerator(__value, tile_size=256)
+        if name == "wsi":
+            z = ZoomifyGenerator(value, tile_size=256)
             self.__dict__["num_zoom_levels"] = z.level_count
 
-        self.__dict__[__name] = __value
+        self.__dict__[name] = value
 
 
 # endregion
