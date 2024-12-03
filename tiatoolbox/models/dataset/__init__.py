@@ -11,11 +11,11 @@ from .dataset_abc import (
 from .info import DatasetInfoABC, KatherPatchDataset
 
 __all__ = [
-    "predefined_preproc_func",
-    "PatchDatasetABC",
-    "WSIPatchDataset",
-    "PatchDataset",
-    "WSIStreamDataset",
     "DatasetInfoABC",
     "KatherPatchDataset",
+    "PatchDataset",
+    "PatchDatasetABC",
+    "WSIPatchDataset",
+    "WSIStreamDataset",
+    "predefined_preproc_func",
 ]
