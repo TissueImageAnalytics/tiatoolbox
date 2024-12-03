@@ -97,6 +97,12 @@ In this example, the affine transformation is computed using thumbnails of the f
 
 [![image](../docs/images/wsi-registration.png)](./10-wsi-registration.ipynb)
 
+### 11- Feature Extraction using Foundation Models ([11-import-foundation-models](./11-import-foundation-models.ipynb))
+
+This Jupyter notebook in TIAToolbox explains how to extract features from whole slide images (WSI) using pre-trained models from the `timm` library. It guides users through selecting appropriate model architectures, visualizing the extracted features using `UMAP` feature embedding, and verifying the model's performance by checking if different tissue types are correctly identified and separated in the feature map.
+
+[![image](../docs/images/feature_extraction.png)](./11-import-foundation-models.ipynb)
+
 ## B) Examples of high-level analysis (pipelines) using TIAToolbox
 
 List of Jupyter notebooks that demonstrate how you can use TIAToolbox to simplify high-level analysis in computational pathology.
