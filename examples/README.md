@@ -97,7 +97,7 @@ In this example, the affine transformation is computed using thumbnails of the f
 
 [![image](../docs/images/wsi-registration.png)](./10-wsi-registration.ipynb)
 
-### 11- Feature extraction with foundation models ([11-feature-extraction](./11-import-foundation-models.ipynb))
+### 11- Feature Extraction using Foundation Models ([11-import-foundation-models](./11-import-foundation-models.ipynb))
 
 This Jupyter notebook in TIAToolbox explains how to extract features from whole slide images (WSI) using pre-trained models from the `timm` library. It guides users through selecting appropriate model architectures, visualizing the extracted features using `UMAP` feature embedding, and verifying the model's performance by checking if different tissue types are correctly identified and separated in the feature map.
 
