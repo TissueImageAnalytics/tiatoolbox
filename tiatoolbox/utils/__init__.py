@@ -20,10 +20,10 @@ from .misc import (
 )
 
 __all__ = [
+    "download_data",
     "imread",
     "imwrite",
-    "save_yaml",
     "save_as_json",
-    "download_data",
+    "save_yaml",
     "unzip_data",
 ]

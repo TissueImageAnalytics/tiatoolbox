@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
-__all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
+__all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 

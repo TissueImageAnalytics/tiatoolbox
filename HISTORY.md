@@ -64,7 +64,7 @@
 
 ### Major Updates and Feature Improvements
 
-- Adds Python 3.11 support \[experimental\] #500
+- Adds Python 3.11 support [experimental] #500
   - Python 3.11 is not fully supported by `pytorch` https://github.com/pytorch/pytorch/issues/86566 and `openslide` https://github.com/openslide/openslide-python/pull/188
 - Removes Python 3.7 support
   - This allows upgrading all the dependencies which were dependent on an older version of Python.
@@ -181,7 +181,7 @@ None
   - Adds DICE metric
 - Adds [SCCNN](https://doi.org/10.1109/tmi.2016.2525803) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.sccnn.SCCNN.html)\]
 - Adds [MapDe](https://arxiv.org/abs/1806.06970) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.mapde.MapDe.html)\]
-- Adds support for reading MPP metadata from  NGFF v0.4
+- Adds support for reading MPP metadata from NGFF v0.4
 - Adds enhancements to tiatoolbox.annotation.storage that are useful when using an AnnotationStore for visualization purposes.
 
 ### Changes to API
@@ -196,7 +196,7 @@ None
 - Fixes nucleus_segmentor_engine for boundary artefacts
 - Fixes the colorbar cropping in tests
 - Adds citation in README.md and CITATION.cff to Nature Communications Medicine paper
-- Fixes a bug #452 raised by @rogertrullo  where only the numerator of the TIFF resolution tags was being read.
+- Fixes a bug #452 raised by @rogertrullo where only the numerator of the TIFF resolution tags was being read.
 - Fixes HoVer-Net+ post-processing to be inline with original work.
 - Fixes a bug where an exception would be raised if the OME XML is missing objective power.
 
@@ -337,7 +337,7 @@ None
 ### Major Updates and Feature Improvements
 
 - Adds nucleus instance segmentation base class
-  - Adds  [HoVerNet](https://www.sciencedirect.com/science/article/abs/pii/S1361841519301045) architecture
+  - Adds [HoVerNet](https://www.sciencedirect.com/science/article/abs/pii/S1361841519301045) architecture
 - Adds multi-task segmentor [HoVerNet+](https://arxiv.org/abs/2108.13904) model
 - Adds <a href="https://www.thelancet.com/journals/landig/article/PIIS2589-7500(2100180-1/fulltext">IDaRS</a> pipeline
 - Adds [SlideGraph](https://arxiv.org/abs/2110.06042) pipeline
@@ -358,7 +358,7 @@ None
 
 ### Bug Fixes and Other Changes
 
-- Fixes  Fix `filter_coordinates` read wrong resolutions for patch extraction
+- Fixes `filter_coordinates` read wrong resolutions for patch extraction
 - For `PatchPredictor`
   - `ioconfig` will supersede everything
   - if `ioconfig` is not provided
@@ -410,7 +410,7 @@ None
 - Adds dependencies for tiffile, imagecodecs, zarr.
 - Adds more stringent pre-commit checks
 - Moved local test files into `tiatoolbox/data`.
-- Fixed `Manifest.ini` and added  `tiatoolbox/data`. This means that this directory will be downloaded with the package.
+- Fixed `Manifest.ini` and added `tiatoolbox/data`. This means that this directory will be downloaded with the package.
 - Using `pkg_resources` to properly load bundled resources (e.g. `target_image.png`) in `tiatoolbox.data`.
 - Removed duplicate code in `conftest.py` for downloading remote files. This is now in `tiatoolbox.data._fetch_remote_file`.
 - Fixes errors raised by new flake8 rules.
@@ -513,9 +513,9 @@ ______________________________________________________________________
   - `read_bounds` takes a tuple (left, top, right, bottom) of coordinates in baseline (level 0) reference frame and returns a region bounded by those.
   - `read_rect` takes one coordinate in baseline reference frame and an output size in pixels.
 - Adds `VirtualWSIReader` as a subclass of WSIReader which can be used to read visual fields (tiles).
-  - `VirtualWSIReader`  accepts ndarray or image path as input.
-- Adds MPP fall back to standard TIFF resolution tags  with warning.
-  - If OpenSlide cannot determine microns per pixel (`mpp`) from the metadata, checks the TIFF resolution units (TIFF tags: `ResolutionUnit`, `XResolution` and  `YResolution`) to calculate MPP. Additionally, add function to estimate missing objective power if MPP is known of derived from TIFF resolution tags.
+  - `VirtualWSIReader` accepts ndarray or image path as input.
+- Adds MPP fall back to standard TIFF resolution tags with warning.
+  - If OpenSlide cannot determine microns per pixel (`mpp`) from the metadata, checks the TIFF resolution units (TIFF tags: `ResolutionUnit`, `XResolution` and `YResolution`) to calculate MPP. Additionally, add function to estimate missing objective power if MPP is known of derived from TIFF resolution tags.
 - Estimates missing objective power from MPP with warning.
 - Adds example notebooks for stain normalisation and WSI reader.
 - Adds caching to slide info property. This is done by checking if a private `self._m_info` exists and returning it if so, otherwise `self._info` is called to create the info for the first time (or to force regenerating) and the result is assigned to `self._m_info`. This could in future be made much simpler with the `functools.cached_property` decorator in Python 3.8+.
