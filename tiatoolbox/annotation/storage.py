@@ -1371,11 +1371,13 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             for key, annotation in self.items()
             if (
                 query_geometry is None
-                or isinstance(query_geometry, (Polygon, Point, LineString))
-                and Polygon.from_bounds(*annotation.geometry.bounds).intersects(
-                    Polygon.from_bounds(*query_geometry.bounds),
+                or (
+                    isinstance(query_geometry, (Polygon, Point, LineString))
+                    and Polygon.from_bounds(*annotation.geometry.bounds).intersects(
+                        Polygon.from_bounds(*query_geometry.bounds),
+                    )
+                    and self._eval_where(where, annotation.properties)
                 )
-                and self._eval_where(where, annotation.properties)
             )
         }
 
