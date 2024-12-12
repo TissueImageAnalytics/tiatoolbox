@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Pytests for `tiatoolbox` package."""
+
 from __future__ import annotations
 
 from click.testing import CliRunner

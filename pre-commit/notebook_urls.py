@@ -1,4 +1,5 @@
 """Simple check to ensure each code cell in a notebook is valid Python."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,8 +14,8 @@ from pathlib import Path
 def git_branch_name() -> str:
     """Get the current branch name."""
     return (
-        subprocess.check_output(
-            ["/usr/bin/git", "rev-parse", "--abbrev-ref", "HEAD"],  # noqa: S603
+        subprocess.check_output(  # noqa: S603
+            ["/usr/bin/git", "rev-parse", "--abbrev-ref", "HEAD"],
         )
         .decode()
         .strip()
@@ -26,8 +27,8 @@ def git_branch_modified_paths(from_ref: str, to_ref: str) -> set[Path]:
     from_to = f"{from_ref}...{to_ref}"
     return {
         Path(p)
-        for p in subprocess.check_output(
-            [  # noqa: S603
+        for p in subprocess.check_output(  # noqa: S603
+            [
                 "/usr/bin/git",
                 "diff",
                 "--name-only",
@@ -44,8 +45,8 @@ def git_previous_commit_modified_paths() -> set[Path]:
     """Get a set of file paths modified in the previous commit."""
     return {
         Path(p)
-        for p in subprocess.check_output(
-            ["/usr/bin/git", "diff", "--name-only", "HEAD~"],  # noqa: S603
+        for p in subprocess.check_output(  # noqa: S603
+            ["/usr/bin/git", "diff", "--name-only", "HEAD~"],
         )
         .decode()
         .strip()

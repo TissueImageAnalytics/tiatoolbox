@@ -1,4 +1,5 @@
 """Define a set of models to be used within tiatoolbox."""
+
 from __future__ import annotations
 
 import os
@@ -17,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import IOConfigABC
 
 
-__all__ = ["get_pretrained_model", "fetch_pretrained_weights"]
+__all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 
@@ -149,6 +150,7 @@ def get_pretrained_model(
     model.load_state_dict(saved_state_dict, strict=True)
 
     # !
+
     io_info = info["ioconfig"]
     creator = locate(f"tiatoolbox.models.engine.{io_info['class']}")
 

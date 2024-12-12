@@ -14,6 +14,7 @@ as accurate as can be reasonably be expected depending on what is being
 detected.
 
 """
+
 from __future__ import annotations
 
 import os
@@ -249,12 +250,12 @@ def check_pixman_using_anaconda(versions: list) -> tuple[list, str]:
     """Using anaconda to check for pixman."""
     using = "conda"
     try:
-        conda_list = subprocess.Popen(
-            ("conda", "list"),  # noqa: S603
+        conda_list = subprocess.Popen(  # noqa: S603
+            ("conda", "list"),
             stdout=subprocess.PIPE,
         )
-        conda_pixman = subprocess.check_output(
-            ("grep", "pixman"),  # noqa: S603
+        conda_pixman = subprocess.check_output(  # noqa: S603
+            ("grep", "pixman"),
             stdin=conda_list.stdout,
         )
         conda_list.wait()
@@ -275,8 +276,8 @@ def check_pixman_using_dpkg(versions: list) -> tuple[list, str]:
     """Using dpkg to check for pixman."""
     using = "dpkg"
     try:
-        dkpg_output = subprocess.check_output(
-            ["/usr/bin/dpkg", "-s", "libpixman-1-0"],  # noqa: S603
+        dkpg_output = subprocess.check_output(  # noqa: S603
+            ["/usr/bin/dpkg", "-s", "libpixman-1-0"],
         )
     except subprocess.SubprocessError:
         dkpg_output = b""
@@ -295,12 +296,12 @@ def check_pixman_using_brew(versions: list) -> tuple[list, str]:
     """Using homebrew to check for pixman."""
     using = "brew"
     try:
-        brew_list = subprocess.Popen(
-            ("brew", "list", "--versions"),  # noqa: S603
+        brew_list = subprocess.Popen(  # noqa: S603
+            ("brew", "list", "--versions"),
             stdout=subprocess.PIPE,
         )
-        brew_pixman = subprocess.check_output(
-            ("grep", "pixman"),  # noqa: S603
+        brew_pixman = subprocess.check_output(  # noqa: S603
+            ("grep", "pixman"),
             stdin=brew_list.stdout,
         )
         brew_list.wait()
@@ -325,12 +326,12 @@ def check_pixman_using_macports(versions: list) -> tuple[list, str]:
 
     """
     using = "port"
-    port_list = subprocess.Popen(
-        ("port", "installed"),  # noqa: S603
+    port_list = subprocess.Popen(  # noqa: S603
+        ("port", "installed"),
         stdout=subprocess.PIPE,
     )
-    port_pixman = subprocess.check_output(
-        ("grep", "pixman"),  # noqa: S603
+    port_pixman = subprocess.check_output(  # noqa: S603
+        ("grep", "pixman"),
         stdin=port_list.stdout,
     )
     port_list.wait()

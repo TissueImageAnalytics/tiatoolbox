@@ -1,4 +1,5 @@
 """Miscellaneous utilities which operate on image data."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
@@ -28,7 +29,7 @@ applies the padding to the bounds.
 PADDING_TO_BOUNDS.flags.writeable = False
 
 
-def normalize_padding_size(padding: int | tuple[int, int]) -> np.ndarray:
+def normalize_padding_size(padding: int | tuple[int, int] | np.ndarray) -> np.ndarray:
     """Normalizes padding to be length 4 (left, top, right, bottom).
 
     Given a scalar value, this is assumed to apply to all sides and
@@ -185,8 +186,8 @@ def make_bounds_size_positive(bounds: IntBounds) -> tuple:
     if height < 0:
         top, bottom = bottom, top
         flip_ud = True
-    bounds = np.array([left, top, right, bottom])
-    return bounds, flip_lr, flip_ud
+    output_bounds = np.array([left, top, right, bottom])
+    return output_bounds, flip_lr, flip_ud
 
 
 def crop_and_pad_edges(
@@ -271,7 +272,7 @@ def crop_and_pad_edges(
         padding = padding + zero_tuple
 
     # Crop the region
-    slices = (*bounds2slices(overlap), ...)
+    slices = bounds2slices(overlap)
     crop = region[slices]
 
     # Return if pad_mode is None
@@ -383,9 +384,9 @@ def safe_padded_read(
     if np.size(stride) not in [1, 2]:
         msg = "Stride must be of size 1 or 2."
         raise ValueError(msg)
-    if np.size(stride) == 1:
-        stride = np.tile(stride, 2)
-    x_stride, y_stride = np.array(stride)
+    strid_arr = np.tile(stride, 2) if np.size(stride) == 1 else np.array(stride)
+
+    x_stride, y_stride = strid_arr
 
     # Check if the padded coords are outside the image bounds
     # (over the width/height or under 0)
@@ -407,11 +408,11 @@ def safe_padded_read(
     left, top, right, bottom = clamped_bounds
     region = image[top:bottom:y_stride, left:right:x_stride, ...]
     # Reduce bounds an img_size for the stride
-    if not np.all(np.isin(stride, [None, 1])):
+    if not np.all(np.isin(strid_arr, np.array([None, 1]))):
         # This if is not required but avoids unnecessary calculations
-        bounds = conv_out_size(np.array(bounds), stride=np.tile(stride, 2))
+        bounds = conv_out_size(np.array(bounds), stride=np.tile(strid_arr, 2))
         padded_bounds = bounds + (padding_array * np.array([-1, -1, 1, 1]))
-        img_size = conv_out_size(img_size, stride=stride)
+        img_size = conv_out_size(img_size, stride=strid_arr)
 
     # Return without padding if pad_mode is none
     if pad_mode in ["none", None]:
@@ -622,7 +623,7 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
         image_size=image_size,
     )
     if pad_mode is None:
-        read_bounds = overlap_bounds
+        read_bounds = tuple(overlap_bounds)
 
     baseline_padding = normalized_padding
     if not pad_at_baseline:
@@ -699,18 +700,20 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
         region = np.pad(region, pad_width.astype(int), mode=pad_mode or "constant")
     # 2 Re-scaling
     if output_size is not None and interpolation != "none":
-        region = imresize(region, scale_factor=scaling, interpolation=interpolation)
+        region = imresize(
+            region, scale_factor=tuple(scaling), interpolation=interpolation
+        )
     # 3 Trim interpolation padding
-    region_size = np.flip(region.shape[:2])
+    region_size = tuple(np.flip(region.shape[:2]))
     trimming = bounds2slices(
         np.round(
             pad_bounds(
-                locsize2bounds((0, 0), region_size),
+                locsize2bounds((0, 0), (region_size[0], region_size[1])),
                 (-(interpolation_padding + residuals) * np.tile(scaling, 2)),
             ),
         ).astype(int),
     )
-    region = region[(*trimming, ...)]
+    region = region[trimming]
     region_size = region.shape[:2][::-1]
     # 4 Ensure output is the correct size
     if output_size is not None and interpolation != "none":

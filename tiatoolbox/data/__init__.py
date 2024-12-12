@@ -1,18 +1,15 @@
 # skipcq: PTC-W6004  # noqa: ERA001
 """Package to define datasets available to download via TIAToolbox."""
+
 from __future__ import annotations
 
+import importlib.resources as importlib_resources
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
-
-if sys.version_info >= (3, 9):  # pragma: no cover
-    import importlib.resources as importlib_resources
-else:  # pragma: no cover
-    import importlib_resources  # To support Python 3.8
 
 from tiatoolbox import logger, read_registry_files
 
@@ -84,8 +81,8 @@ def _local_sample_path(path: str | Path) -> Path:
 
     """
     file_path = importlib_resources.files("tiatoolbox") / str(Path("data") / path)
-    with importlib_resources.as_file(file_path) as path:
-        return path
+    with importlib_resources.as_file(file_path) as file_path_:
+        return file_path_
 
 
 def stain_norm_target() -> np.ndarray:

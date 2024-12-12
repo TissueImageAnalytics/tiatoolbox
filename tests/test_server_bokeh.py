@@ -1,4 +1,5 @@
 """Test the bokeh app from command line."""
+
 from __future__ import annotations
 
 import time
@@ -45,7 +46,7 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, Path]:
     return data_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def bk_session(data_path: dict[str, Path]) -> ClientSession:
     """Create a bokeh session."""
     run_tileserver()

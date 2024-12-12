@@ -1,28 +1,6 @@
 [tool.pytest.ini_options]
   collect_ignore = ["setup.py", "benchmark/"]
 
-[tool.black]
-  exclude = '''
-  /(
-      \.eggs
-    | \.git
-    | \.hg
-    | \.mypy_cache
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | docs
-    | data
-    | setup.py
-  )/
-  '''
-  include = '\.pyi?$'
-  line-length = 88
-  target-version = ['py37', 'py38', 'py39', 'py310']
-
-
 [tool.coverage.run]
   branch = true
   source = ['tiatoolbox']
@@ -47,7 +25,7 @@
 
 [tool.poetry]
 name = "TIA Centre"
-version = "1.5.1"
+version = "1.6.0"
 description = "test"
 authors = ["TIA Centre <tialab@dcs.warwick.ac.uk>"]
 
@@ -72,7 +50,7 @@ search = 'TOOLBOX_VER: {current_version}'
 replace = 'TOOLBOX_VER: {new_version}'
 
 [tool.ruff]
-select = [
+lint.select = [
   "A",     # flake8-builtins
   "B",     # flake8-bugbear
   "D",     # pydocstyle, need to enable for docstrings check.
@@ -126,13 +104,14 @@ select = [
   "SLOT",  # flake8-slots
   "ASYNC", # flake8-async
 ]
-ignore = []
+# Ignore rules which conflict with ruff formatter.
+lint.ignore = ["COM812", "ISC001",]
 # Allow Ruff to discover `*.ipynb` files.
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
-unfixable = []
+lint.fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+lint.unfixable = []
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
@@ -149,29 +128,50 @@ exclude = [
 ]
 
 # Ignore `F401` (import violations) in all `__init__.py` files.
-per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001", "S101", "PLR2004"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"], "tiatoolbox/cli/*" = ["PLR0913"]}
+lint.per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001", "S101", "PLR2004"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"], "tiatoolbox/cli/*" = ["PLR0913"]}
 
 # Same as Black.
 line-length = 88
 
 # Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
-# Minimum Python version 3.8.
-target-version = "py38"
+# Minimum Python version 3.9.
+target-version = "py39"
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
 max-complexity = 14
 
 # need to enable for docstrings check.
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
  # Use Google-style docstrings.
 convention = "google"
 
-[tool.ruff.pylint]
+[tool.ruff.lint.pylint]
 max-args = 10
+
+[tool.ruff.format]
+exclude = [
+    ".eggs",
+    ".git",
+    ".ruff_cache",
+    ".svn",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "build",
+    "dist",
+    "venv",
+    ".hg",
+    ".mypy_cache",
+    "buck-out",
+    "docs",
+    "data",
+    "setup.py",
+]
+skip-magic-trailing-comma = false
 
 [tool.mypy]
 ignore_missing_imports = true
-python_version = 3.8
+python_version = 3.9

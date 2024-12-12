@@ -1,4 +1,5 @@
 """Command line interface for slide_thumbnail."""
+
 from pathlib import Path
 
 from tiatoolbox.cli.common import (

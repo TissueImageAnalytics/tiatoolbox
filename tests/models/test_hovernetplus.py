@@ -7,6 +7,7 @@ import torch
 from tiatoolbox.models import HoVerNetPlus
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import imread
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.transforms import imresize
 
 
@@ -28,7 +29,7 @@ def test_functionality(remote_sample: Callable) -> None:
     weights_path = fetch_pretrained_weights("hovernetplus-oed")
     pretrained = torch.load(weights_path)
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=False)
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     assert len(output) == 4, "Must contain predictions for: np, hv, tp and ls branches."
     output = [v[0] for v in output]
     output = model.postproc(output)

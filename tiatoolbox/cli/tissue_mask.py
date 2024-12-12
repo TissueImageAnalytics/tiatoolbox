@@ -1,4 +1,5 @@
 """Command line interface for tissue_mask."""
+
 from __future__ import annotations
 
 from pathlib import Path

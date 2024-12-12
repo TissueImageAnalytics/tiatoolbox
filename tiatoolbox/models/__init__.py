@@ -1,4 +1,5 @@
 """Models package for the models implemented in tiatoolbox."""
+
 from tiatoolbox.models import architecture, dataset, engine, models_abc
 
 from .architecture.hovernet import HoVerNet
@@ -24,14 +25,14 @@ from .engine.semantic_segmentor import (
 )
 
 __all__ = [
+    "SCCNN",
     "HoVerNet",
     "HoVerNetPlus",
     "IDaRS",
     "MapDe",
     "MicroNet",
-    "NuClick",
-    "SCCNN",
     "MultiTaskSegmentor",
+    "NuClick",
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",

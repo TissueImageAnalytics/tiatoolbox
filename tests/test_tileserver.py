@@ -1,4 +1,5 @@
 """Test for tileserver."""
+
 from __future__ import annotations
 
 import json
@@ -86,7 +87,7 @@ def fill_store(cell_grid: SQLiteStore, points_grid: str) -> Callable:
     return _fill_store
 
 
-@pytest.fixture()
+@pytest.fixture
 def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     """Create a testing TileServer WSGI app."""
     # Make a low-res .jpg of the right shape to be used as
@@ -121,7 +122,7 @@ def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_alt(fill_store: Callable) -> TileServer:
     """Create a testing TileServer WSGI app, with a different setup."""
     sample_slide = WSIReader.open(np.zeros((1000, 1000, 3), dtype=np.uint8))
@@ -146,7 +147,7 @@ def app_alt(fill_store: Callable) -> TileServer:
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def empty_app() -> TileServer:
     """Create a testing TileServer WSGI app with no layers."""
     app = TileServer(

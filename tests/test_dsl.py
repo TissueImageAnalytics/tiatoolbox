@@ -1,10 +1,11 @@
 """Test for predicate module."""
+
 from __future__ import annotations
 
 import json
 import sqlite3
 from numbers import Number
-from typing import Callable, ClassVar, Mapping
+from typing import Callable, ClassVar
 
 import pytest
 
@@ -46,6 +47,7 @@ SAMPLE_PROPERTIES = {
     "neg": -1,
     "bool": True,
     "nesting": {"fib": [1, 1, 2, 3, 5], "foo": {"bar": "baz"}},
+    "dot.key": 3.14,
 }
 
 
@@ -99,49 +101,61 @@ class TestSQLite:
     @staticmethod
     def test_prop_or_prop() -> None:
         """Test OR operator between two prop accesses."""
-        query = eval(  # skipcq: PYL-W0123  # noqa: S307
+        query = eval(  # skipcq: PYL-W0123
             "(props['int'] == 2) | (props['int'] == 3)",
             SQL_GLOBALS,
             {},
         )
         assert str(query) == (
-            '((json_extract(properties, "$.int") == 2) OR '
-            '(json_extract(properties, "$.int") == 3))'
+            """((json_extract(properties, '$."int"') == 2) OR """
+            """(json_extract(properties, '$."int"') == 3))"""
         )
 
 
-class TestPredicate:
-    """Test predicate statments with various backends."""
+py_variables: dict = {
+    "eval_globals": PY_GLOBALS,
+    "eval_locals": {"props": SAMPLE_PROPERTIES},
+    "check": lambda x: x,
+}
 
-    scenarios: ClassVar[list[str, dict]] = [
-        (
-            "Python",
-            {
-                "eval_globals": PY_GLOBALS,
-                "eval_locals": {"props": SAMPLE_PROPERTIES},
-                "check": lambda x: x,
-            },
-        ),
-        (
-            "SQLite",
-            {
-                "eval_globals": SQL_GLOBALS,
-                "eval_locals": {"props": SQLJSONDictionary()},
-                "check": sqlite_eval,
-            },
-        ),
-    ]
+sqlite_variables: dict = {
+    "eval_globals": SQL_GLOBALS,
+    "eval_locals": {"props": SQLJSONDictionary()},
+    "check": sqlite_eval,
+}
+
+scenario_python: tuple = (
+    "Python",
+    {"scenario_variables": py_variables},
+)
+scenario_sqlite = (
+    "SQLite",
+    {"scenario_variables": sqlite_variables},
+)
+
+
+def extract_variables(scenario_variables: dict) -> tuple[dict, dict, Callable]:
+    """Extract variables from scenario variables."""
+    eval_globals = scenario_variables["eval_globals"]
+    eval_locals = scenario_variables["eval_locals"]
+    check = scenario_variables["check"]
+    return eval_globals, eval_locals, check
+
+
+class TestPredicate:
+    """Test predicate statements with various backends."""
+
+    scenarios: ClassVar[list[str, dict]] = [scenario_python, scenario_sqlite]
 
     @staticmethod
     def test_number_binary_operations(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Check that binary operations between ints does not error."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} 2"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -150,14 +164,13 @@ class TestPredicate:
 
     @staticmethod
     def test_property_binary_operations(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Check that binary operations between properties does not error."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         for op in BINARY_OP_STRINGS:
             query = f"props['int'] {op} props['int']"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -166,14 +179,13 @@ class TestPredicate:
 
     @staticmethod
     def test_r_binary_operations(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test right hand binary operations between numbers and properties."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         for op in BINARY_OP_STRINGS:
             query = f"2 {op} props['int']"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -182,14 +194,13 @@ class TestPredicate:
 
     @staticmethod
     def test_number_prefix_operations(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test prefix operations on numbers."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         for op in PREFIX_OP_STRINGS:
             query = f"{op}1"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -198,14 +209,13 @@ class TestPredicate:
 
     @staticmethod
     def test_property_prefix_operations(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test prefix operations on properties."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         for op in PREFIX_OP_STRINGS:
             query = f"{op}props['int']"
-            result = eval(  # skipcq: PYL-W0123  # noqa: S307
+            result = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -214,13 +224,12 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_nested_props(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test regex on nested properties."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "props['nesting']['fib'][4]"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -229,13 +238,12 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_str_props(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test regex on string properties."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "regexp('Hello', props['string'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -244,13 +252,12 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_str_str(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test regex on string and string."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "regexp('Hello', 'Hello world!')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -259,13 +266,12 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_props_str(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test regex on property and string."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "regexp(props['string'], 'Hello world!')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -274,13 +280,12 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_ignore_case(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test regex with ignorecase flag."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "regexp('hello', props['string'], re.IGNORECASE)"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -289,13 +294,12 @@ class TestPredicate:
 
     @staticmethod
     def test_regex_no_match(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test regex with no match."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "regexp('Yello', props['string'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -304,13 +308,12 @@ class TestPredicate:
 
     @staticmethod
     def test_has_key(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test has_key function."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "has_key(props, 'foo')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -319,13 +322,12 @@ class TestPredicate:
 
     @staticmethod
     def test_is_none(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test is_none function."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "is_none(props['null'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -334,13 +336,12 @@ class TestPredicate:
 
     @staticmethod
     def test_is_not_none(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test is_not_none function."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "is_not_none(props['int'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -349,13 +350,12 @@ class TestPredicate:
 
     @staticmethod
     def test_nested_has_key(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test nested has_key function."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "has_key(props['dict'], 'a')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -364,13 +364,12 @@ class TestPredicate:
 
     @staticmethod
     def test_list_sum(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test sum function on a list."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "sum(props['list'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -379,13 +378,12 @@ class TestPredicate:
 
     @staticmethod
     def test_abs(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test abs function."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "abs(props['neg'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -394,13 +392,12 @@ class TestPredicate:
 
     @staticmethod
     def test_not(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test not operator."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "not props['bool']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -409,13 +406,12 @@ class TestPredicate:
 
     @staticmethod
     def test_props_int_keys(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test props with int keys."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "props['list'][1]"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -424,13 +420,12 @@ class TestPredicate:
 
     @staticmethod
     def test_props_get(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test props.get function."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "is_none(props.get('foo'))"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -439,13 +434,12 @@ class TestPredicate:
 
     @staticmethod
     def test_props_get_default(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test props.get function with default."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "props.get('foo', 42)"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -454,13 +448,12 @@ class TestPredicate:
 
     @staticmethod
     def test_in_list(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test in operator for list."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "1 in props.get('list')"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -469,14 +462,13 @@ class TestPredicate:
 
     @staticmethod
     def test_has_key_exception(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,  # noqa: ARG004
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test has_key function with exception."""
+        eval_globals, eval_locals, _ = extract_variables(scenario_variables)
         query = "has_key(1, 'a')"
         with pytest.raises(TypeError, match="(not iterable)|(Unsupported type)"):
-            _ = eval(  # skipcq: PYL-W0123  # noqa: S307
+            _ = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
                 eval_locals,
@@ -484,13 +476,12 @@ class TestPredicate:
 
     @staticmethod
     def test_logical_and(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test logical and operator."""
         query = "props['bool'] & is_none(props['null'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -499,13 +490,12 @@ class TestPredicate:
 
     @staticmethod
     def test_logical_or(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test logical or operator."""
         query = "props['bool'] | (props['int'] < 2)"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -514,13 +504,12 @@ class TestPredicate:
 
     @staticmethod
     def test_nested_logic(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test nested logical operators."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "(props['bool'] | (props['int'] < 2)) & abs(props['neg'])"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -529,13 +518,12 @@ class TestPredicate:
 
     @staticmethod
     def test_contains_list(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test contains operator for list."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "1 in props['list']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -544,13 +532,12 @@ class TestPredicate:
 
     @staticmethod
     def test_contains_dict(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test contains operator for dict."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "'a' in props['dict']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
@@ -559,15 +546,29 @@ class TestPredicate:
 
     @staticmethod
     def test_contains_str(
-        eval_globals: dict[str, object],
-        eval_locals: Mapping[str, object],
-        check: Callable,
+        scenario_variables: dict[str, dict],
     ) -> None:
         """Test contains operator for str."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
         query = "'Hello' in props['string']"
-        result = eval(  # skipcq: PYL-W0123  # noqa: S307
+        result = eval(  # skipcq: PYL-W0123
             query,
             eval_globals,
             eval_locals,
         )
         assert bool(check(result)) is True
+
+    @staticmethod
+    def test_key_with_period(
+        scenario_variables: dict[str, dict],
+    ) -> None:
+        """Test key with period."""
+        eval_globals, eval_locals, check = extract_variables(scenario_variables)
+        query = "props['dot.key']"
+        result = eval(  # skipcq: PYL-W0123
+            query,
+            eval_globals,
+            eval_locals,
+        )
+
+        assert check(result) == 3.14

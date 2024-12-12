@@ -1,4 +1,5 @@
 """Command line interface for TileServer."""
+
 import click
 
 from tiatoolbox.cli.common import cli_img_input, cli_name, tiatoolbox_cli

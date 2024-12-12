@@ -25,10 +25,16 @@ files:
     url: [*wsis, "CMU-1-Small-Region.jpeg.tiff"]
   tiled-tiff-1-small-jp2k:
     url: [*wsis, "CMU-1-Small-Region.jp2k.tiff"]
-  ome-brightfield-pyramid-1-small:
-    url: [*wsis, "CMU-1-Small-Region.ome.tiff"]
+  ome-brightfield-small-level-0:
+    url: [*wsis, "CMU-1-Small-Region-Level-0.ome.tiff"]
+  ome-brightfield-small-pyramid:
+    url: [*wsis, "CMU-1-Small-Region-Pyramid.ome.tif"]
   two-tiled-pages:
     url: [*wsis, "two-tiled-pages.tiff"]
+  ventana-tif:
+    url: [*wsis, "ventana-sample.tif"]
+  regular-tif:
+    url: [*wsis, "sample-regular.tif"]
   jp2-omnyx-small:
     url: [*wsis, "CMU-1-Small-Region.omnyx.jp2"]
   jp2-omnyx-1:
@@ -137,5 +143,7 @@ files:
     url: [ *testdata, "annotation/test1_config.json"]
   config_2:
     url: [ *testdata, "annotation/test2_config.json"]
+  patch_annotations:
+    url: [ *testdata, "annotation/sample_wsi_patch_preds.db"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]

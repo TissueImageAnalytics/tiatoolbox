@@ -1,4 +1,5 @@
 """Test TIFFWSIReader."""
+
 from typing import Callable
 
 import pytest
@@ -12,7 +13,7 @@ def test_ome_missing_instrument_ref(
     remote_sample: Callable,
 ) -> None:
     """Test that an OME-TIFF can be read without instrument reference."""
-    sample = remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-small-level-0")
     wsi = wsireader.TIFFWSIReader(sample)
     page = wsi.tiff.pages[0]
     description = page.description
@@ -36,7 +37,7 @@ def test_ome_missing_physicalsize(
     remote_sample: Callable,
 ) -> None:
     """Test that an OME-TIFF can be read without physical size."""
-    sample = remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-small-level-0")
     wsi = wsireader.TIFFWSIReader(sample)
     page = wsi.tiff.pages[0]
     description = page.description
@@ -61,7 +62,7 @@ def test_ome_missing_physicalsizey(
     remote_sample: Callable,
 ) -> None:
     """Test that an OME-TIFF can be read without physical size."""
-    sample = remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-small-level-0")
     wsi = wsireader.TIFFWSIReader(sample)
     page = wsi.tiff.pages[0]
     description = page.description
@@ -85,7 +86,7 @@ def test_tiffreader_non_tiled_metadata(
     remote_sample: Callable,
 ) -> None:
     """Test that fetching metadata for non-tiled TIFF works."""
-    sample = remote_sample("ome-brightfield-pyramid-1-small")
+    sample = remote_sample("ome-brightfield-small-level-0")
     wsi = wsireader.TIFFWSIReader(sample)
     monkeypatch.setattr(wsi.tiff, "is_ome", False)
     monkeypatch.setattr(

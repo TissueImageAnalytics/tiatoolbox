@@ -3,6 +3,7 @@
 Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerator.
 
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,7 +23,7 @@ from tests.test_annotation_stores import cell_polygon
 from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator
 from tiatoolbox.utils.env_detection import running_on_travis
-from tiatoolbox.utils.visualization import AnnotationRenderer
+from tiatoolbox.utils.visualization import AnnotationRenderer, _find_minimum_mpp_sf
 from tiatoolbox.wsicore import wsireader
 
 RNG = np.random.default_rng(0)  # Numpy Random Generator
@@ -32,7 +33,8 @@ RNG = np.random.default_rng(0)  # Numpy Random Generator
 def cell_grid() -> list[Polygon]:
     """Generate a grid of fake cell boundary polygon annotations."""
     return [
-        cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100)) for i, j in np.ndindex(5, 5)
+        cell_polygon(((i + 0.5) * 100, (j + 0.5) * 100), radius=13)
+        for i, j in np.ndindex(5, 5)
     ]
 
 
@@ -167,7 +169,7 @@ def test_filter_by_expression(fill_store: Callable, tmp_path: Path) -> None:
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     thumb = tg.get_thumb_tile()
     _, num = label(np.array(thumb)[:, :, 1])
-    assert num == 25  # expect 25 cell objects, as the added one is too small
+    assert num == 25  # expect 25 cell objects
 
 
 def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
@@ -189,7 +191,7 @@ def test_zoomed_out_rendering(fill_store: Callable, tmp_path: Path) -> None:
 
     thumb = tg.get_tile(1, 0, 0)
     _, num = label(np.array(thumb)[:, :, 1])  # default color is green
-    assert num == 25  # expect 25 cells in top left quadrant
+    assert num == 25  # expect 25 cells in top left quadrant (added one too small)
 
 
 def test_decimation(fill_store: Callable, tmp_path: Path) -> None:
@@ -433,7 +435,7 @@ def test_unfilled_polys(fill_store: Callable, tmp_path: Path) -> None:
     renderer = AnnotationRenderer(thickness=1)
     tg = AnnotationTileGenerator(wsi.info, store, renderer, tile_size=256)
     tile_outline = np.array(tg.get_tile(1, 0, 0))
-    tg.renderer.edge_thickness = -1
+    tg.renderer.thickness = -1
     tile_filled = np.array(tg.get_tile(1, 0, 0))
     # expect sum of filled polys to be much greater than sum of outlines
     assert np.sum(tile_filled) > 2 * np.sum(tile_outline)
@@ -460,6 +462,7 @@ def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
 
     def color_fn(props: dict[str, str]) -> tuple[int, int, int]:
+        """Tests Red for cells, otherwise green."""
         # simple test function that returns red for cells, otherwise green.
         if props["type"] == "cell":
             return 1, 0, 0
@@ -478,3 +481,15 @@ def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     assert num == 50  # expect 50 green objects
     _, num = label(np.array(thumb)[:, :, 2])
     assert num == 0  # expect 0 blue objects
+
+
+def test_minimum_mpp_sf() -> None:
+    """Test minimum mpp_sf."""
+    mpp_sf = _find_minimum_mpp_sf((0.5, 0.5))
+    assert mpp_sf == 1.0
+
+    mpp_sf = _find_minimum_mpp_sf((0.20, 0.20))
+    assert mpp_sf == 0.20 / 0.25
+
+    mpp_sf = _find_minimum_mpp_sf(None)
+    assert mpp_sf == 1.0

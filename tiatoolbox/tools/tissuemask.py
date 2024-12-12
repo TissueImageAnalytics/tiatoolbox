@@ -1,4 +1,5 @@
 """Methods of masking tissue and background."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -16,11 +17,6 @@ class TissueMasker(ABC):
     Takes an image as in put and outputs a mask.
 
     """
-
-    def __init__(self: TissueMasker) -> None:
-        """Initialize :class:`TissueMasker`."""
-        super().__init__()
-        self.fitted = False
 
     @abstractmethod
     def fit(
@@ -54,9 +50,6 @@ class TissueMasker(ABC):
                 e.g. regions of tissue vs background.
 
         """
-        if not self.fitted:
-            msg = "Fit must be called before transform."
-            raise SyntaxError(msg)
 
     def fit_transform(
         self: TissueMasker,
@@ -75,7 +68,7 @@ class TissueMasker(ABC):
             **kwargs (dict):
                 Other key word arguments passed to fit.
         """
-        self.fit(images, **kwargs)
+        self.fit(images, masks=None, **kwargs)
         return self.transform(images)
 
 
@@ -96,13 +89,15 @@ class OtsuTissueMasker(TissueMasker):
 
     """
 
-    def __init__(self: TissueMasker) -> None:
+    def __init__(self: OtsuTissueMasker) -> None:
         """Initialize :class:`OtsuTissueMasker`."""
-        super().__init__()
+        self.threshold: float | None
+        self.fitted: bool
         self.threshold = None
+        self.fitted = False
 
     def fit(
-        self: TissueMasker,
+        self: OtsuTissueMasker,
         images: np.ndarray,
         masks: np.ndarray | None = None,  # noqa: ARG002
     ) -> None:
@@ -129,7 +124,7 @@ class OtsuTissueMasker(TissueMasker):
         # Convert RGB images to greyscale
         grey_images = [x[..., 0] for x in images]
         if images_shape[-1] == 3:  # noqa: PLR2004
-            grey_images = np.zeros(images_shape[:-1], dtype=np.uint8)
+            grey_images = np.zeros(images_shape[:-1], dtype=np.uint8).tolist()
             for n, image in enumerate(images):
                 grey_images[n] = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -140,7 +135,7 @@ class OtsuTissueMasker(TissueMasker):
 
         self.fitted = True
 
-    def transform(self: TissueMasker, images: np.ndarray) -> np.ndarray:
+    def transform(self: OtsuTissueMasker, images: np.ndarray) -> np.ndarray:
         """Create masks using the threshold found during :func:`fit`.
 
         Args:
@@ -154,7 +149,9 @@ class OtsuTissueMasker(TissueMasker):
                 channels).
 
         """
-        super().transform(images)
+        if not self.fitted:
+            msg = "Fit must be called before transform."
+            raise SyntaxError(msg)
 
         masks = []
         for image in images:
@@ -164,7 +161,7 @@ class OtsuTissueMasker(TissueMasker):
             mask = (grey < self.threshold).astype(bool)
             masks.append(mask)
 
-        return masks
+        return np.array(masks)
 
 
 class MorphologicalMasker(OtsuTissueMasker):
@@ -205,11 +202,11 @@ class MorphologicalMasker(OtsuTissueMasker):
     """
 
     def __init__(
-        self: TissueMasker,
+        self: MorphologicalMasker,
         *,
         mpp: float | tuple[float, float] | None = None,
         power: float | tuple[float, float] | None = None,
-        kernel_size: int | tuple[int, int] | None = None,
+        kernel_size: int | tuple[int, int] | np.ndarray | None = None,
         min_region_size: int | None = None,
     ) -> None:
         """Initialise a morphological masker.
@@ -249,18 +246,19 @@ class MorphologicalMasker(OtsuTissueMasker):
 
         # Convert MPP to an integer kernel_size
         if mpp is not None:
-            mpp = np.array(mpp)
-            if mpp.size != 2:  # noqa: PLR2004
-                mpp = mpp.repeat(2)
-            kernel_size = np.max([32 / mpp, [1, 1]], axis=0)
+            mpp_array = np.array(mpp)
+            if mpp_array.size != 2:  # noqa: PLR2004
+                mpp_array = mpp_array.repeat(2)
+            kernel_size = np.max([32 / mpp_array, np.array([1, 1])], axis=0)
 
         # Ensure kernel_size is a length 2 numpy array
-        kernel_size = np.array(kernel_size)
-        if kernel_size.size != 2:  # noqa: PLR2004
-            kernel_size = kernel_size.repeat(2)
+        kernel_size_array = np.array(kernel_size)
+        if kernel_size_array.size != 2:  # noqa: PLR2004
+            kernel_size_array = kernel_size_array.repeat(2)
 
         # Convert to an integer double/ pair
-        self.kernel_size = tuple(np.round(kernel_size).astype(int))
+        self.kernel_size: tuple[int, int]
+        self.kernel_size = tuple(np.round(kernel_size_array).astype(int))
 
         # Create structuring element for morphological operations
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, self.kernel_size)
@@ -269,7 +267,7 @@ class MorphologicalMasker(OtsuTissueMasker):
         if self.min_region_size is None:
             self.min_region_size = np.sum(self.kernel)
 
-    def transform(self: TissueMasker, images: np.ndarray) -> None:
+    def transform(self: MorphologicalMasker, images: np.ndarray) -> np.ndarray:
         """Create masks using the found threshold followed by morphological operations.
 
         Args:
@@ -283,7 +281,9 @@ class MorphologicalMasker(OtsuTissueMasker):
                 channels).
 
         """
-        super().transform(images)
+        if not self.fitted:
+            msg = "Fit must be called before transform."
+            raise SyntaxError(msg)
 
         results = []
         for image in images:
@@ -303,4 +303,4 @@ class MorphologicalMasker(OtsuTissueMasker):
             mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, self.kernel)
 
             results.append(mask.astype(bool))
-        return results
+        return np.array(results)

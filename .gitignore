@@ -109,9 +109,13 @@ ENV/
 
 # IDE settings
 .vscode/
+.idea/
 
 # Mac generated
 .DS_Store
 
 # vim/vi generated
 *.swp
+
+# output zarr generated
+*.zarr

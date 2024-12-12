@@ -1,4 +1,5 @@
 """Command line interface for save_tiles."""
+
 import logging
 
 from tiatoolbox import logger

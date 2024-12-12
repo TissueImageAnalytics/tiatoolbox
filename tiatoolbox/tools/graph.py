@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from numbers import Number
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, cast
 
 import numpy as np
 import torch
@@ -18,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from numpy.typing import ArrayLike
 
 
-def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
+def delaunay_adjacency(points: np.ndarray, dthresh: float) -> np.ndarray:
     """Create an adjacency matrix via Delaunay triangulation from a list of coordinates.
 
     Points which are further apart than dthresh will not be connected.
@@ -26,9 +26,9 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     See https://en.wikipedia.org/wiki/Adjacency_matrix.
 
     Args:
-        points (ArrayLike):
+        points (np.ndarray):
             An nxm list of coordinates.
-        dthresh (int):
+        dthresh (float):
             Distance threshold for triangulation.
 
     Returns:
@@ -57,6 +57,7 @@ def delaunay_adjacency(points: ArrayLike, dthresh: Number) -> list:
     tessellation = Delaunay(points)
     # Find all connected neighbours for each point in the set of
     # triangles. Starting with an empty dictionary.
+    triangle_neighbours: defaultdict
     triangle_neighbours = defaultdict(set)
     # Iterate over each triplet of point indexes which denotes a
     # triangle within the tessellation.
@@ -112,11 +113,11 @@ def triangle_signed_area(triangle: ArrayLike) -> int:
     )
 
 
-def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
+def edge_index_to_triangles(edge_index: np.ndarray) -> np.ndarray:
     """Convert an edged index to triangle simplices (triplets of coordinate indices).
 
     Args:
-        edge_index (ArrayLike):
+        edge_index (np.ndarray):
             An Nx2 array of edges.
 
     Returns:
@@ -156,9 +157,9 @@ def edge_index_to_triangles(edge_index: ArrayLike) -> ArrayLike:
 
 
 def affinity_to_edge_index(
-    affinity_matrix: torch.Tensor | ArrayLike,
-    threshold: Number = 0.5,
-) -> torch.tensor | ArrayLike:
+    affinity_matrix: torch.Tensor | np.ndarray,
+    threshold: float = 0.5,
+) -> torch.Tensor | np.ndarray:
     """Convert an affinity matrix (similarity matrix) to an edge index.
 
     Converts an NxN affinity matrix to a 2xM edge index, where M is the
@@ -166,14 +167,14 @@ def affinity_to_edge_index(
     value (defaults to 0.5).
 
     Args:
-        affinity_matrix:
+        affinity_matrix (torch.Tensor | np.ndarray):
             An NxN matrix of affinities between nodes.
         threshold (Number):
             Threshold above which to be considered connected. Defaults
             to 0.5.
 
     Returns:
-        ArrayLike or torch.Tensor:
+        torch.Tensor | np.ndarray:
             The edge index of shape (2, M).
 
     Example:
@@ -190,9 +191,9 @@ def affinity_to_edge_index(
         raise ValueError(msg)
     # Handle cases for pytorch and numpy inputs
     if isinstance(affinity_matrix, torch.Tensor):
-        return (affinity_matrix > threshold).nonzero().t().contiguous()
+        return (affinity_matrix > threshold).nonzero().t().contiguous().to(torch.int64)
     return np.ascontiguousarray(
-        np.stack((affinity_matrix > threshold).nonzero(), axis=1).T,
+        np.stack((affinity_matrix > threshold).nonzero(), axis=1).T.astype(np.int64),
     )
 
 
@@ -207,7 +208,7 @@ class SlideGraphConstructor:
     """
 
     @staticmethod
-    def _umap_reducer(graph: dict[str, ArrayLike]) -> ArrayLike:
+    def _umap_reducer(graph: dict[str, np.ndarray]) -> np.ndarray:
         """Default reduction which reduces `graph["x"]` to 3D values.
 
         Reduces graph features to 3D values using UMAP which are suitable
@@ -219,7 +220,7 @@ class SlideGraphConstructor:
                 "coordinates".
 
         Returns:
-            ArrayLike:
+            np.ndarray:
                 A UMAP embedding of `graph["x"]` with shape (N, 3) and
                 values ranging from 0 to 1.
         """
@@ -231,15 +232,15 @@ class SlideGraphConstructor:
 
     @staticmethod
     def build(
-        points: ArrayLike,
-        features: ArrayLike,
-        lambda_d: Number = 3.0e-3,
-        lambda_f: Number = 1.0e-3,
-        lambda_h: Number = 0.8,
-        connectivity_distance: Number = 4000,
-        neighbour_search_radius: Number = 2000,
-        feature_range_thresh: Number | None = 1e-4,
-    ) -> dict[str, ArrayLike]:
+        points: np.ndarray,
+        features: np.ndarray,
+        lambda_d: float = 3.0e-3,
+        lambda_f: float = 1.0e-3,
+        lambda_h: float = 0.8,
+        connectivity_distance: int = 4000,
+        neighbour_search_radius: int = 2000,
+        feature_range_thresh: float | None = 1e-4,
+    ) -> dict[str, np.ndarray]:
         """Build a graph via hybrid clustering in spatial and feature space.
 
         The graph is constructed via hybrid hierarchical clustering
@@ -265,10 +266,10 @@ class SlideGraphConstructor:
         connected.
 
         Args:
-            points (ArrayLike):
+            points (np.ndarray):
                 A list of (x, y) spatial coordinates, e.g. pixel
                 locations within a WSI.
-            features (ArrayLike):
+            features (np.ndarray):
                 A list of features associated with each coordinate in
                 `points`. Must be the same length as `points`.
             lambda_d (Number):
@@ -377,13 +378,13 @@ class SlideGraphConstructor:
             # (most un-similar).
             i_vs_all_similarities = np.ones(len(points))
             # Set the neighbours similarity to calculated values (similarity/fd)
-            i_vs_all_similarities[
-                neighbour_indexes_single_point
-            ] = neighbour_similarities
+            i_vs_all_similarities[neighbour_indexes_single_point] = (
+                neighbour_similarities
+            )
             i_vs_all_similarities = i_vs_all_similarities[i + 1 :]
-            condensed_distance_matrix[
-                index : index + len(i_vs_all_similarities)
-            ] = i_vs_all_similarities
+            condensed_distance_matrix[index : index + len(i_vs_all_similarities)] = (
+                i_vs_all_similarities
+            )
             index = index + len(i_vs_all_similarities)
 
         # Perform hierarchical clustering (using similarity as distance)
@@ -399,27 +400,27 @@ class SlideGraphConstructor:
             # Find the xy and feature space averages of the cluster
             point_centroids.append(np.round(points[idx, :].mean(axis=0)))
             feature_centroids.append(features[idx, :].mean(axis=0))
-        point_centroids = np.array(point_centroids)
-        feature_centroids = np.array(feature_centroids)
+        point_centroids_arr = np.array(point_centroids)
+        feature_centroids_arr = np.array(feature_centroids)
 
         adjacency_matrix = delaunay_adjacency(
-            points=point_centroids,
+            points=point_centroids_arr,
             dthresh=connectivity_distance,
         )
         edge_index = affinity_to_edge_index(adjacency_matrix)
-
+        edge_index = cast(np.ndarray, edge_index)
         return {
-            "x": feature_centroids,
-            "edge_index": edge_index.astype(np.int64),
-            "coordinates": point_centroids,
+            "x": feature_centroids_arr,
+            "edge_index": edge_index,
+            "coordinates": point_centroids_arr,
         }
 
     @classmethod
     def visualise(
-        cls: SlideGraphConstructor,
-        graph: dict[str, ArrayLike],
-        color: ArrayLike | str | Callable | None = None,
-        node_size: Number | ArrayLike | Callable = 25,
+        cls: type[SlideGraphConstructor],
+        graph: dict[str, np.ndarray],
+        color: np.ndarray | str | Callable | None = None,
+        node_size: int | np.ndarray | Callable = 25,
         edge_color: str | ArrayLike = (0, 0, 0, 0.33),
         ax: Axes | None = None,
     ) -> Axes:
@@ -509,9 +510,10 @@ class SlideGraphConstructor:
 
         # Plot the nodes
         plt.scatter(
-            *nodes.T,
-            c=color(graph) if isinstance(color, Callable) else color,
-            s=node_size(graph) if isinstance(node_size, Callable) else node_size,
+            x=nodes.T[0],
+            y=nodes.T[1],
+            c=color(graph) if callable(color) else color,
+            s=node_size(graph) if callable(node_size) else node_size,
             zorder=2,
         )
 

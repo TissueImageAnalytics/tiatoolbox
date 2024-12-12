@@ -1,17 +1,20 @@
 """pytest fixtures."""
+
 from __future__ import annotations
 
 import os
 import shutil
+import time
 from pathlib import Path
 from typing import Callable
 
 import pytest
+import torch
 
 import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
-from tiatoolbox.utils.env_detection import running_on_ci
+from tiatoolbox.utils.env_detection import has_gpu, running_on_ci
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
@@ -116,7 +119,37 @@ def sample_ome_tiff(remote_sample: Callable) -> Path:
     Download ome-tiff image for pytest.
 
     """
-    return remote_sample("ome-brightfield-pyramid-1-small")
+    return remote_sample("ome-brightfield-small-pyramid")
+
+
+@pytest.fixture(scope="session")
+def sample_ome_tiff_level_0(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for ome-tiff image with one level.
+
+    Download ome-tiff image for pytest.
+
+    """
+    return remote_sample("ome-brightfield-small-level-0")
+
+
+@pytest.fixture(scope="session")
+def sample_ventana_tif(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for non-tiled tif Ventana images.
+
+    Download Ventana tif image for pytest.
+
+    """
+    return remote_sample("ventana-tif")
+
+
+@pytest.fixture(scope="session")
+def sample_regular_tif(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for non-tiled tif Ventana images.
+
+    Download Ventana tif image for pytest.
+
+    """
+    return remote_sample("regular-tif")
 
 
 @pytest.fixture(scope="session")
@@ -577,3 +610,37 @@ def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
     (tmp_path / "slides").mkdir()
     (tmp_path / "overlays").mkdir()
     return {"base_path": tmp_path}
+
+
+# -------------------------------------------------------------------------------------
+# Utility functions
+# -------------------------------------------------------------------------------------
+
+
+def timed(fn: Callable, *args: object) -> (Callable, float):
+    """A decorator that times the execution of a function.
+
+    Args:
+        fn (Callable): The function to be timed.
+        args (object): Arguments to be passed to the function.
+
+    Returns:
+        A tuple containing the result of the function
+        and the time taken to execute it in seconds.
+
+    """
+    compile_time = 0.0
+    if has_gpu():
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
+        start.record()
+        result = fn(*args)
+        end.record()
+        torch.cuda.synchronize()
+        compile_time = start.elapsed_time(end) / 1000
+    else:
+        start = time.time()
+        result = fn(*args)
+        end = time.time()
+        compile_time = end - start
+    return result, compile_time

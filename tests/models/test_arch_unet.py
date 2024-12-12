@@ -1,4 +1,5 @@
 """Unit test package for Unet."""
+
 from pathlib import Path
 from typing import Callable
 
@@ -8,6 +9,7 @@ import torch
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.unet import UNetModel
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = False
@@ -47,7 +49,7 @@ def test_functional_unet(remote_sample: Callable) -> None:
     model = UNetModel(3, 2, encoder="resnet50", decoder_block=[3])
     pretrained = torch.load(pretrained_weights, map_location="cpu")
     model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, on_gpu=ON_GPU)
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     _ = output[0]
 
     # run untrained network to test for architecture
@@ -59,4 +61,4 @@ def test_functional_unet(remote_sample: Callable) -> None:
         encoder_levels=[32, 64],
         skip_type="concat",
     )
-    _ = model.infer_batch(model, batch, on_gpu=ON_GPU)
+    _ = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))

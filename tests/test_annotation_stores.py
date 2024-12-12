@@ -1,14 +1,16 @@
 """Test for annotation store classes."""
+
 from __future__ import annotations
 
 import json
 import pickle
 import sqlite3
 import sys
+from collections.abc import Generator
 from itertools import repeat, zip_longest
 from pathlib import Path
 from timeit import timeit
-from typing import TYPE_CHECKING, Callable, ClassVar, Generator
+from typing import TYPE_CHECKING, Callable, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -25,6 +27,7 @@ from shapely.geometry import (
     Polygon,
 )
 
+from tiatoolbox import logger
 from tiatoolbox.annotation import (
     Annotation,
     AnnotationStore,
@@ -183,7 +186,7 @@ def sample_triangle() -> Polygon:
     return Polygon([(0, 0), (1, 1), (2, 0)])
 
 
-@pytest.fixture()
+@pytest.fixture
 def fill_store(
     cell_grid: list[Polygon],
     points_grid: list[Point],
@@ -502,6 +505,21 @@ def test_sqlite_store_compile_options_exception(monkeypatch: object) -> None:
         SQLiteStore()
 
 
+def test_sqlite_store_compile_options_exception_json_rtree(monkeypatch: object) -> None:
+    """Test SQLiteStore compile options for exceptions."""
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
+    monkeypatch.setattr(
+        SQLiteStore,
+        "compile_options",
+        lambda _x: ["ENABLE_RTREE"],
+        raising=True,
+    )
+    SQLiteStore()
+    monkeypatch.setattr(SQLiteStore, "compile_options", lambda _x: [], raising=True)
+    with pytest.raises(EnvironmentError, match="RTREE sqlite3"):
+        SQLiteStore()
+
+
 def test_sqlite_store_compile_options_exception_v3_38(monkeypatch: object) -> None:
     """Test SQLiteStore compile options for exceptions."""
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 38, 0))
@@ -520,6 +538,9 @@ def test_sqlite_store_compile_options_missing_math(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that a warning is shown if the sqlite math module is missing."""
+    # Reset filters in logger.
+    for filter_ in logger.filters[:]:
+        logger.removeFilter(filter_)
     monkeypatch.setattr(
         SQLiteStore,
         "compile_options",
@@ -595,11 +616,17 @@ def test_sqlite_pquery_warn_no_index(
     _, store = fill_store(SQLiteStore, ":memory:")
     store.pquery("*", unique=False)
     assert "Query is not using an index." in caplog.text
-    # Check that there is no warning after creating the index
+
+
+def test_sqlite_pquery_nowarn_index(
+    fill_store: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that after making index, does not warn."""
+    _, store = fill_store(SQLiteStore, ":memory:")
     store.create_index("test_index", "props['class']")
-    with pytest.warns(None) as record:
-        store.pquery("props['class']")
-        assert len(record) == 0
+    store.pquery("props['class']")
+    assert "Query is not using an index." not in caplog.text
 
 
 def test_sqlite_store_indexes(fill_store: Callable, tmp_path: Path) -> None:
@@ -1318,11 +1345,16 @@ class TestStore:
         _, store = fill_store(store_cls, tmp_path / "polygon.db")
         com = annotations_center_of_mass(list(store.values()))
         store.to_geojson(tmp_path / "polygon.json")
+
         # load the store translated so that origin is (100,100) and scaled by 2
+        def dummy_transform(annotation: Annotation) -> Annotation:
+            return annotation
+
         store2 = store_cls.from_geojson(
             tmp_path / "polygon.json",
             scale_factor=(2, 2),
             origin=(100, 100),
+            transform=dummy_transform,
         )
         assert len(store) == len(store2)
         com2 = annotations_center_of_mass(list(store2.values()))
@@ -1542,8 +1574,7 @@ class TestStore:
         store.patch(keys[0], properties={"class": 123})
         results = store.query(
             # (0, 0, 1024, 1024),  # noqa: ERA001
-            where=lambda props: props.get("class")
-            == 123,
+            where=lambda props: props.get("class") == 123,
         )
         assert len(results) == 1
 
@@ -1794,13 +1825,13 @@ class TestStore:
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py38_init(
+    def test_py39_init(
         fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
         monkeypatch: object,
     ) -> None:
-        """Test that __init__ is compatible with Python 3.8."""
-        py38_version = (3, 8, 0)
+        """Test that __init__ is compatible with Python 3.9."""
+        py39_version = (3, 9, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""
@@ -1814,7 +1845,7 @@ class TestStore:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 
-        monkeypatch.setattr(sys, "version_info", py38_version)
+        monkeypatch.setattr(sys, "version_info", py39_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
 

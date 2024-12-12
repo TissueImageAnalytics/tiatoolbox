@@ -1,4 +1,5 @@
 """Module initialisation."""
+
 from tiatoolbox.annotation import dsl, storage
 from tiatoolbox.annotation.storage import (
     Annotation,
@@ -7,4 +8,4 @@ from tiatoolbox.annotation.storage import (
     SQLiteStore,
 )
 
-__all__ = ["AnnotationStore", "SQLiteStore", "DictionaryStore", "Annotation"]
+__all__ = ["Annotation", "AnnotationStore", "DictionaryStore", "SQLiteStore"]

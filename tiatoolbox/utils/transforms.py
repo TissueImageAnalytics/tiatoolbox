@@ -1,4 +1,5 @@
 """Define Image transforms."""
+
 from __future__ import annotations
 
 import cv2
@@ -52,9 +53,9 @@ def background_composite(
     )
     composite.alpha_composite(image)
     if not alpha:
-        return np.asarray(composite.convert("RGB"))
+        return np.array(composite.convert("RGB"))
 
-    return np.asarray(composite)
+    return np.array(composite)
 
 
 def _convert_scalar_to_width_height(array: np.ndarray) -> np.ndarray:
@@ -136,11 +137,11 @@ def imresize(
         scale_factor_array=scale_factor_array,
     )
 
-    if scale_factor is None:
+    if scale_factor_array is None:
         scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
 
     # Return original if scale factor is 1
-    if np.all(scale_factor_array == 1.0):  # noqa: PLR2004
+    if np.all(scale_factor_array == 1.0):
         return img
 
     # Get appropriate cv2 interpolation enum
@@ -411,4 +412,5 @@ def pad_bounds(
         padding = np.tile(padding, 2)
 
     signs = np.repeat([-1, 1], ndims)
-    return np.add(bounds, padding * signs)
+    result = np.add(bounds, padding * signs)
+    return (result[0], result[1], result[2], result[3])

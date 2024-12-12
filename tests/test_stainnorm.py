@@ -108,6 +108,16 @@ def test_get_normalizer_assertion() -> None:
         _ = get_normalizer("ruifrok", stain_matrix)
 
 
+def test_get_custom_normalizer_assertion() -> None:
+    """Test get custom normalizer assertion error."""
+    stain_matrix = None
+    with pytest.raises(
+        ValueError,
+        match=r"`stain_matrix` is None when using `method_name`=\"custom\".",
+    ):
+        _ = get_normalizer("custom", stain_matrix)
+
+
 def test_ruifrok_normalize(source_image: Path, norm_ruifrok: Path) -> None:
     """Test for stain normalization with stain matrix from Ruifrok and Johnston."""
     source_img = imread(Path(source_image))
@@ -138,7 +148,9 @@ def test_macenko_normalize(source_image: Path, norm_macenko: Path) -> None:
     assert np.mean(np.absolute(macenko_img / 255.0 - transform / 255.0)) < 1e-2
 
 
-def test_vahadane_normalize(source_image: Path, norm_vahadane: Path) -> None:
+def test_vahadane_normalize(
+    source_image: Path, norm_vahadane: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Test for stain normalization with stain matrix from Vahadane et al."""
     source_img = imread(Path(source_image))
     target_img = stain_norm_target()
@@ -148,7 +160,7 @@ def test_vahadane_normalize(source_image: Path, norm_vahadane: Path) -> None:
     norm = get_normalizer("vahadane")
     norm.fit(target_img)  # get stain information of target image
     transform = norm.transform(source_img)  # transform source image
-
+    assert "Vahadane stain extraction/normalization algorithms" in caplog.text
     assert np.shape(transform) == np.shape(source_img)
     assert np.mean(np.absolute(vahadane_img / 255.0 - transform / 255.0)) < 1e-1
 
@@ -248,7 +260,7 @@ def test_cli_stainnorm_dir(source_image: Path, tmp_path: Path) -> None:
             "--output-path",
             str(tmp_path / "stainnorm_ouput"),
             "--method",
-            "vahadane",
+            "ruifrok",
         ],
     )
 

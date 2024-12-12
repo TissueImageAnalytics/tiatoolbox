@@ -1,4 +1,5 @@
 """Custom Errors and Exceptions for TIAToolbox."""
+
 from __future__ import annotations
 
 

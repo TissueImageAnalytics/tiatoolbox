@@ -6,6 +6,7 @@ Based on version 0.4 of the specification:
 https://ngff.openmicroscopy.org/0.4/
 
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -100,7 +101,7 @@ class CoordinateTransform:
 
     """
 
-    type: str = "identity"  # noqa: A003
+    type: str = "identity"
     scale: list[float] | None = None
 
 
@@ -140,7 +141,7 @@ class Axis:
     """
 
     name: TCZYX
-    type: Literal["time", "space", "channel"]  # noqa: A003
+    type: Literal["time", "space", "channel"]
     unit: SpaceUnits | TimeUnits | None = None
 
 
@@ -186,8 +187,8 @@ class Window:
     """
 
     end: Number = 255
-    max: Number = 255  # noqa: A003
-    min: Number = 0  # noqa: A003
+    max: Number = 255
+    min: Number = 0
     start: Number = 0
 
 
@@ -257,7 +258,7 @@ class Omero:
     """
 
     name: str | None = None
-    id: int = 1  # noqa: A003
+    id: int = 1
     channels: list = field(
         default_factory=lambda: [
             Channel(label="Red", color="FF0000"),

@@ -1,7 +1,7 @@
 ci:
   autofix_prs: true
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
-  autoupdate_schedule: 'weekly'
+  autoupdate_commit_msg: ':technologist: pre-commit autoupdate'
+  autoupdate_schedule: 'monthly'
 repos:
   - repo: local
     hooks:
@@ -11,7 +11,7 @@ repos:
         files: tests/.*\btest_\w*.py
         require_serial: true
         language: system
-        stages: [push]
+        stages: [pre-push]
       - id: notebook-markdown-format
         name: notebook markdown format
         entry: python pre-commit/notebook_markdown_format.py
@@ -23,7 +23,7 @@ repos:
         - mdformat-black
         - mdformat-myst
   - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.17
+    rev: 0.7.19
     hooks:
     - id: mdformat
       # Optionally add plugins
@@ -31,7 +31,7 @@ repos:
       - mdformat-gfm  # GitHub flavoured markdown
       - mdformat-black  # Black formatting for python verbatim blocks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-ast               # Simply checks whether the files parse as valid Python.
       - id: fix-byte-order-marker   # Removes utf-8 byte order marker.
@@ -58,18 +58,13 @@ repos:
       - id: rst-backticks           # Detect common mistake of using single backticks when writing rst.
       - id: rst-directive-colons    # Detect mistake of rst directive not ending with double colon.
       - id: rst-inline-touching-normal # Detect mistake of inline code touching normal text in rst.
-  - repo: https://github.com/psf/black
-    rev: 23.11.0 # Replace with any tag/version: https://github.com/psf/black/tags
-    hooks:
-      - id: black
-        language_version: python3 # Should be a command that runs python3.+
-        additional_dependencies: ['click==8.0.4']  # Currently >8.0.4 breaks black
-      - id: black-jupyter
-        language: python
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.1.7
+    rev: v0.8.2
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi, jupyter]
+      # Run the formatter.
+      - id: ruff-format
+        types_or: [ python, pyi, jupyter ]

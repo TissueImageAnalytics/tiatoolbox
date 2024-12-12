@@ -1,4 +1,5 @@
 """Test docstring examples and imports are valid."""
+
 from __future__ import annotations
 
 import ast
@@ -8,12 +9,15 @@ import os
 import sys
 from doctest import DocTest
 from pathlib import Path
-from typing import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Generator
 
-@pytest.fixture()
+
+@pytest.fixture
 def source_files(root_path: Path) -> Generator:
     """Recursively yield source files from the project."""
     ignore = {"__pycache__"}

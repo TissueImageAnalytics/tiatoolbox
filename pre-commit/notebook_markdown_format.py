@@ -1,4 +1,5 @@
 """Check markdown cells in notebooks for common mistakes."""
+
 from __future__ import annotations
 
 import argparse

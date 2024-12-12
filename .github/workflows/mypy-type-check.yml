@@ -12,11 +12,11 @@ jobs:
 
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
 
@@ -28,9 +28,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup mypy
+    - name: Install dependencies
       run: |
-        pip install mypy
+        sudo apt update
+        sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        python -m pip install --upgrade pip
+        pip install -r requirements/requirements_dev.txt
 
     - name: Perform type checking
       run: |
@@ -39,4 +42,8 @@ jobs:
           tiatoolbox/__main__.py \
           tiatoolbox/typing.py \
           tiatoolbox/tiatoolbox.py \
-          tiatoolbox/utils/*.py
+          tiatoolbox/utils \
+          tiatoolbox/tools \
+          tiatoolbox/data \
+          tiatoolbox/annotation \
+          tiatoolbox/cli/common.py

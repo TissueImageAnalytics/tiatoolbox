@@ -1,4 +1,5 @@
 """Command line interface for slide_info."""
+
 import logging
 from pathlib import Path
 

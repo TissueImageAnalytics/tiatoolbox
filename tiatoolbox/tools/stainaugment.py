@@ -1,7 +1,9 @@
 """Stain augmentation."""
+
 from __future__ import annotations
 
 import copy
+from typing import cast
 
 import numpy as np
 from albumentations.core.transforms_interface import ImageOnlyTransform
@@ -129,12 +131,12 @@ class StainAugmentor(ImageOnlyTransform):
             )
         self.stain_normalizer = get_normalizer(self.method.lower())
 
-        self.alpha = None
-        self.beta = None
-        self.img_shape = None
-        self.tissue_mask = None
-        self.n_stains = None
-        self.source_concentrations = None
+        self.alpha: float
+        self.beta: float
+        self.img_shape: tuple[int, ...]
+        self.tissue_mask: np.ndarray
+        self.n_stains: int
+        self.source_concentrations: np.ndarray
 
     def fit(self: StainAugmentor, img: np.ndarray, threshold: float = 0.85) -> None:
         """Fit function to extract information needed for stain augmentation.
@@ -195,12 +197,13 @@ class StainAugmentor(ImageOnlyTransform):
             else:
                 augmented_concentrations[self.tissue_mask, i] *= self.alpha
                 augmented_concentrations[self.tissue_mask, i] += self.beta
+        self.stain_matrix = cast(np.ndarray, self.stain_matrix)
         img_augmented = 255 * np.exp(
             -1 * np.dot(augmented_concentrations, self.stain_matrix),
         )
         img_augmented = img_augmented.reshape(self.img_shape)
         img_augmented = np.clip(img_augmented, 0, 255)
-        return np.uint8(img_augmented)
+        return img_augmented.astype(np.uint8)
 
     def apply(
         self: StainAugmentor,  # skipcq: PYL-W0613

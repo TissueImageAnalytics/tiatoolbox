@@ -1,4 +1,5 @@
 """Hooks to be executed upon specific events in bokeh app."""
+
 import sys
 from contextlib import suppress
 

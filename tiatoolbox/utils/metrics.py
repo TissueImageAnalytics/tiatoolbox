@@ -1,4 +1,5 @@
 """This module defines several metrics used in computational pathology."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -102,5 +103,5 @@ def dice(gt_mask: np.ndarray, pred_mask: np.ndarray) -> float:
     pred_mask = pred_mask.astype(np.bool_)
     sum_masks = gt_mask.sum() + pred_mask.sum()
     if sum_masks == 0:
-        return np.NAN
+        return np.nan
     return 2 * np.logical_and(gt_mask, pred_mask).sum() / sum_masks

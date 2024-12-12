@@ -9,6 +9,7 @@ easily serialised via the use of an io.BytesIO object or saved directly
 to disk.
 
 """
+
 from __future__ import annotations
 
 import tarfile
@@ -16,7 +17,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING
 
 import defusedxml
 import numpy as np
@@ -27,6 +28,8 @@ from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
+
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
@@ -128,7 +131,7 @@ class TilePyramidGenerator:
         total_level_count = super_level_count + 1 + self.sub_tile_level_count
         return int(total_level_count)
 
-    def get_thumb_tile(self: TilePyramidGenerator) -> Image:
+    def get_thumb_tile(self: TilePyramidGenerator) -> Image.Image:
         """Return a thumbnail which fits the whole slide in one tile.
 
         The thumbnail output size has the longest edge equal to the tile
@@ -156,7 +159,7 @@ class TilePyramidGenerator:
         pad_mode: str = "constant",
         interpolation: str = "optimise",
         transparent_value: int | None = None,
-    ) -> Image:
+    ) -> Image.Image:
         """Get a tile at a given level and coordinate.
 
         Note that levels are in the reverse order of those in WSIReader.
@@ -220,9 +223,9 @@ class TilePyramidGenerator:
             output_size = self.output_tile_size // 2 ** (
                 self.sub_tile_level_count - level
             )
-            output_size = np.repeat(output_size, 2).astype(int)
+            output_size = np.repeat(output_size, 2).astype(int).tolist()
             thumb = self.get_thumb_tile()
-            thumb.thumbnail(output_size)
+            thumb.thumbnail((output_size[0], output_size[1]))
             return thumb
         slide_dimensions = np.array(self.wsi.info.slide_dimensions)
         if all(slide_dimensions < [baseline_x, baseline_y]):
@@ -233,7 +236,7 @@ class TilePyramidGenerator:
         logger.addFilter(duplicate_filter)
         tile = self.wsi.read_rect(
             coord,
-            size=[v * res for v in output_size],
+            size=(output_size[0] * res, output_size[1] * res),
             resolution=res / scale,
             units="baseline",
             pad_mode=pad_mode,
@@ -330,7 +333,7 @@ class TilePyramidGenerator:
                 msg = "Unsupported compression for zip."
                 raise ValueError(msg)
 
-            archive = zipfile.ZipFile(
+            zip_archive = zipfile.ZipFile(
                 path,
                 mode="w",
                 compression=compression2enum[compression],
@@ -342,7 +345,7 @@ class TilePyramidGenerator:
                 tile.save(bio, format="jpeg")
                 bio.seek(0)
                 data = bio.read()
-                archive.writestr(
+                zip_archive.writestr(
                     str(tile_path),
                     data,
                     compress_type=compression2enum[compression],
@@ -359,7 +362,7 @@ class TilePyramidGenerator:
                 msg = "Unsupported compression for tar."
                 raise ValueError(msg)
 
-            archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
+            tar_archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output zip."""
@@ -367,9 +370,9 @@ class TilePyramidGenerator:
                 tile.save(bio, format="jpeg")
                 bio.seek(0)
                 tar_info = tarfile.TarInfo(name=str(tile_path))
-                tar_info.mtime = time.time()
+                tar_info.mtime = int(time.time())
                 tar_info.size = bio.tell()
-                archive.addfile(tarinfo=tar_info, fileobj=bio)
+                tar_archive.addfile(tarinfo=tar_info, fileobj=bio)
 
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
@@ -377,13 +380,17 @@ class TilePyramidGenerator:
                 tile_path = self.tile_path(level, x, y)
                 save_tile(tile_path, tile)
 
-        if container is not None:
-            archive.close()
+        if container == "zip":
+            zip_archive.close()
+        if container == "tar":
+            tar_archive.close()
 
     def __len__(self: TilePyramidGenerator) -> int:
         """Return length of instance attributes."""
-        return sum(
-            np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
+        return int(
+            sum(
+                np.prod(self.tile_grid_size(level)) for level in range(self.level_count)
+            ),
         )
 
     def __iter__(self: TilePyramidGenerator) -> Iterator:
@@ -451,7 +458,7 @@ class ZoomifyGenerator(TilePyramidGenerator):
         cumulative_sum = sum(np.prod(self.tile_grid_size(n)) for n in range(level))
         index_in_level = np.ravel_multi_index((y, x), self.tile_grid_size(level)[::-1])
         tile_index = cumulative_sum + index_in_level
-        return tile_index // 256  # the tile group
+        return int(tile_index // 256)  # the tile group
 
     def tile_path(self: ZoomifyGenerator, level: int, x: int, y: int) -> Path:
         """Generate the Zoomify path for a specified tile.
@@ -503,7 +510,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
     """
 
-    def __init__(
+    def __init__(  # skipcq: PYL-W0231
         self: AnnotationTileGenerator,
         info: WSIMeta,
         store: AnnotationStore,
@@ -513,9 +520,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         overlap: int = 0,
     ) -> None:
         """Initialize :class:`AnnotationTileGenerator`."""
-        super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store
+        self.tile_size = tile_size
+        self.downsample = downsample
+        self.overlap = overlap
         if renderer is None:
             renderer = AnnotationRenderer()
         self.renderer = renderer
@@ -536,7 +545,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             mapper = {key: (*color, 1) for key, color in zip(types, colors)}
             self.renderer.mapper = lambda x: mapper[x]
 
-    def get_thumb_tile(self: AnnotationTileGenerator) -> Image:
+    def get_thumb_tile(self: AnnotationTileGenerator) -> Image.Image:
         """Return a thumbnail which fits the whole slide in one tile.
 
         The thumbnail output size has the longest edge equal to the tile
@@ -586,7 +595,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         pad_mode: str | None = None,
         interpolation: str | None = None,
         transparent_value: int | None = None,  # noqa: ARG002
-    ) -> Image:
+    ) -> Image.Image:
         """Render a tile at a given level and coordinate.
 
         Note that levels are in the reverse order of those in WSIReader.
@@ -645,20 +654,21 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         scale = self.level_downsample(level)
         baseline_x = (x * self.tile_size * scale) - (self.overlap * scale)
         baseline_y = (y * self.tile_size * scale) - (self.overlap * scale)
-        coord = [baseline_x, baseline_y]
+        coord = (int(baseline_x), int(baseline_y))
         if level < self.sub_tile_level_count:
             output_size = self.output_tile_size // 2 ** (
                 self.sub_tile_level_count - level
             )
             output_size = np.repeat(output_size, 2).astype(int)
             thumb = self.get_thumb_tile()
-            thumb.thumbnail(output_size)
+            thumb.thumbnail((output_size[0], output_size[1]))
             return thumb
         slide_dimensions = np.array(self.info.slide_dimensions)
         if all(slide_dimensions < [baseline_x, baseline_y]):
             raise IndexError
 
-        bounds = locsize2bounds(coord, [self.output_tile_size * scale] * 2)
+        size = [self.output_tile_size * scale] * 2
+        bounds = locsize2bounds(coord, (int(size[0]), int(size[1])))
         tile = self.renderer.render_annotations(
             self.store,
             bounds,

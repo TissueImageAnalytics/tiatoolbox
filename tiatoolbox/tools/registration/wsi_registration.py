@@ -1,8 +1,9 @@
 """Define wsi_registration classes and methods."""
+
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import numpy as np
@@ -15,7 +16,8 @@ from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 from torchvision.models import VGG16_Weights
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
@@ -175,8 +177,8 @@ def prealignment(
     if len(moving_mask.shape) != BIN_MASK_DIM:
         moving_mask = moving_mask[:, :, 0]
 
-    fixed_mask = np.uint8(fixed_mask > 0)
-    moving_mask = np.uint8(moving_mask > 0)
+    fixed_mask = (fixed_mask > 0).astype(np.uint8)
+    moving_mask = (moving_mask > 0).astype(np.uint8)
 
     fixed_img = np.squeeze(fixed_img)
     moving_img = np.squeeze(moving_img)
@@ -194,8 +196,8 @@ def prealignment(
     moving_img = exposure.rescale_intensity(img_as_float(moving_img), in_range=(0, 1))
 
     # Resizing of fixed and moving masks so that dice can be computed
-    height = np.max((fixed_mask.shape[0], moving_mask.shape[0]))
-    width = np.max((fixed_mask.shape[1], moving_mask.shape[1]))
+    height = int(np.max((fixed_mask.shape[0], moving_mask.shape[0])))
+    width = int(np.max((fixed_mask.shape[1], moving_mask.shape[1])))
     padded_fixed_mask = np.pad(
         fixed_mask,
         pad_width=[(0, height - fixed_mask.shape[0]), (0, width - fixed_mask.shape[1])],
@@ -307,9 +309,12 @@ def match_histograms(
         raise ValueError(msg)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-    entropy_a, entropy_b = filters.rank.entropy(image_a, kernel), filters.rank.entropy(
-        image_b,
-        kernel,
+    entropy_a, entropy_b = (
+        filters.rank.entropy(image_a, kernel),
+        filters.rank.entropy(
+            image_b,
+            kernel,
+        ),
     )
     if np.mean(entropy_a) > np.mean(entropy_b):
         image_b = exposure.match_histograms(image_b, image_a).astype(np.uint8)
@@ -328,14 +333,15 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self: torch.nn.Module) -> None:
+    def __init__(self: DFBRFeatureExtractor) -> None:
         """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
         self.features: dict = dict.fromkeys(output_layers_key, None)
-        self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
-            weights=VGG16_Weights.IMAGENET1K_V1,
+        self.pretrained: torch.nn.Sequential = compile_model(
+            torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1),
+            mode=rcParam["torch_compile_mode"],
         ).features
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
@@ -344,7 +350,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             for i, layer in enumerate(output_layers_id)
         ]
 
-    def forward_hook(self: torch.nn.Module, layer_name: str) -> None:
+    def forward_hook(self: torch.nn.Module, layer_name: str) -> Callable:
         """Register a hook.
 
         Args:
@@ -352,7 +358,8 @@ class DFBRFeatureExtractor(torch.nn.Module):
                 User-defined name for a layer.
 
         Returns:
-            None
+            hook (Callable):
+                Forward hook for feature extraction.
 
         """
 
@@ -426,10 +433,14 @@ class DFBRegister:
 
     """
 
-    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
+    def __init__(
+        self: DFBRegister,
+        patch_size: tuple[int, int] = (224, 224),
+    ) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
-        self.x_scale, self.y_scale = [], []
+        self.x_scale: np.ndarray
+        self.y_scale: np.ndarray
         self.feature_extractor = DFBRFeatureExtractor()
 
     # Make this function private when full pipeline is implemented.
@@ -504,7 +515,7 @@ class DFBRegister:
         first_min = feature_dist[seq, ind_first_min]
         mask = np.zeros_like(feature_dist)
         mask[seq, ind_first_min] = 1
-        masked = np.ma.masked_array(feature_dist, mask)
+        masked: np.ma.MaskedArray = np.ma.masked_array(feature_dist, mask)
         second_min = np.amin(masked, axis=1)
         return np.array([seq, ind_first_min]).transpose(), np.array(
             second_min / first_min,
@@ -630,7 +641,7 @@ class DFBRegister:
         moving_points = (moving_points - 112.0) / 224.0
 
         matching_points, quality = self.finding_match(feature_dist)
-        max_quality = np.max(quality)
+        max_quality: float = np.max(quality)
         while np.where(quality >= max_quality)[0].shape[0] <= num_matching_points:
             max_quality -= 0.01
 
@@ -696,7 +707,7 @@ class DFBRegister:
         fixed_mask: np.ndarray,
         moving_image: np.ndarray,
         moving_mask: np.ndarray,
-    ) -> tuple[np.array, np.array, np.array, np.array, IntBounds]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, IntBounds]:
         """Extract tissue region.
 
         This function uses binary mask for extracting tissue
@@ -734,6 +745,10 @@ class DFBRegister:
         moving_minc, moving_min_r, width, height = cv2.boundingRect(moving_mask)
         moving_max_c, moving_max_r = moving_minc + width, moving_min_r + height
 
+        minc: int
+        max_c: int
+        min_r: int
+        max_r: int
         minc, max_c, min_r, max_r = (
             np.min([fixed_minc, moving_minc]),
             np.max([fixed_max_c, moving_max_c]),
@@ -786,7 +801,7 @@ class DFBRegister:
         return PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_coord,
-            mask.shape[::-1],
+            (mask.shape[1], mask.shape[0]),
         )
 
     def filtering_matching_points(
@@ -841,14 +856,14 @@ class DFBRegister:
         )
 
         # remove duplicate matching points
-        duplicate_ind = []
+        duplicate_ind: list[int] = []
         unq, count = np.unique(fixed_matched_points, axis=0, return_counts=True)
         repeated_points = unq[count > 1]
         for repeated_point in repeated_points:
             repeated_idx = np.argwhere(
                 np.all(fixed_matched_points == repeated_point, axis=1),
             )
-            duplicate_ind = np.hstack([duplicate_ind, repeated_idx.ravel()])
+            duplicate_ind.extend(repeated_idx.ravel())
 
         unq, count = np.unique(moving_matched_points, axis=0, return_counts=True)
         repeated_points = unq[count > 1]
@@ -856,10 +871,9 @@ class DFBRegister:
             repeated_idx = np.argwhere(
                 np.all(moving_matched_points == repeated_point, axis=1),
             )
-            duplicate_ind = np.hstack([duplicate_ind, repeated_idx.ravel()])
+            duplicate_ind.extend(repeated_idx.ravel())
 
         if len(duplicate_ind) > 0:
-            duplicate_ind = duplicate_ind.astype(int)
             fixed_matched_points = np.delete(
                 fixed_matched_points,
                 duplicate_ind,
@@ -1001,7 +1015,9 @@ class DFBRegister:
             right_lower_bounding_bbox,
         ]
 
-        fixed_matched_points, moving_matched_points, quality = [], [], []
+        fixed_matched_points: list[np.ndarray] = []
+        moving_matched_points: list[np.ndarray] = []
+        quality: list[np.ndarray] = []
         for _index, bounding_box in enumerate(blocks_bounding_box):
             fixed_block = fixed_img[
                 bounding_box[0] : bounding_box[1],
@@ -1027,26 +1043,26 @@ class DFBRegister:
                 moving_block_matched_points + bounding_box_2_0,
             )
             quality.append(block_quality)
-        fixed_matched_points, moving_matched_points, quality = (
+        fixed_matched_points_arr, moving_matched_points_arr, quality_arr = (
             np.concatenate(fixed_matched_points),
             np.concatenate(moving_matched_points),
             np.concatenate(quality),
         )
         (
-            fixed_matched_points,
-            moving_matched_points,
+            fixed_matched_points_arr,
+            moving_matched_points_arr,
             _,
         ) = self.filtering_matching_points(
             fixed_mask,
             moving_mask,
-            fixed_matched_points,
-            moving_matched_points,
-            quality,
+            fixed_matched_points_arr,
+            moving_matched_points_arr,
+            quality_arr,
         )
 
         block_transform = DFBRegister.estimate_affine_transform(
-            fixed_matched_points,
-            moving_matched_points,
+            fixed_matched_points_arr,
+            moving_matched_points_arr,
         )
 
         # Apply transformation
@@ -1107,8 +1123,8 @@ class DFBRegister:
         if len(moving_mask.shape) > BIN_MASK_DIM:
             moving_mask = moving_mask[:, :, 0]
 
-        fixed_mask = np.uint8(fixed_mask > 0)
-        moving_mask = np.uint8(moving_mask > 0)
+        fixed_mask = (fixed_mask > 0).astype(np.uint8)
+        moving_mask = (moving_mask > 0).astype(np.uint8)
 
         # Perform Pre-alignment
         if transform_initializer is None:
@@ -1510,29 +1526,36 @@ class AffineWSITransformer:
         """
         width, height = size[0], size[1]
 
-        x = [
+        x_info = [
             np.linspace(1, width, width, endpoint=True),
             np.ones(height) * width,
             np.linspace(1, width, width, endpoint=True),
             np.ones(height),
         ]
-        x = np.array(list(itertools.chain.from_iterable(x)))
+        x = np.array(list(itertools.chain.from_iterable(x_info)))
 
-        y = [
+        y_info = [
             np.ones(width),
             np.linspace(1, height, height, endpoint=True),
             np.ones(width) * height,
             np.linspace(1, height, height, endpoint=True),
         ]
-        y = np.array(list(itertools.chain.from_iterable(y)))
+        y = np.array(list(itertools.chain.from_iterable(y_info)))
 
         points = np.array([x, y]).transpose()
         transform = transform * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]  # remove translation
         transform_points = self.transform_points(points, transform)
 
-        width = np.max(transform_points[:, 0]) - np.min(transform_points[:, 0]) + 1
-        height = np.max(transform_points[:, 1]) - np.min(transform_points[:, 1]) + 1
-        width, height = np.ceil(width).astype(int), np.ceil(height).astype(int)
+        width = (
+            int(np.max(transform_points[:, 0]))
+            - int(np.min(transform_points[:, 0]))
+            + 1
+        )
+        height = (
+            int(np.max(transform_points[:, 1]))
+            - int(np.min(transform_points[:, 1]))
+            + 1
+        )
 
         return (width, height)
 
@@ -1541,7 +1564,7 @@ class AffineWSITransformer:
         location: tuple[int, int],
         size: tuple[int, int],
         level: int,
-    ) -> tuple[int, int]:
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
         """Get corresponding location on unregistered image and the required patch size.
 
         This function applies inverse transformation to the centre point of the region.
@@ -1570,16 +1593,13 @@ class AffineWSITransformer:
         inv_transform = inv(self.transform_level0)
         size_level0 = [x * (2**level) for x in size]
         center_level0 = [x + size_level0[i] / 2 for i, x in enumerate(location)]
-        center_level0 = np.expand_dims(np.array(center_level0), axis=0)
-        center_level0 = self.transform_points(center_level0, inv_transform)[0]
+        center_level0_arr = np.expand_dims(np.array(center_level0), axis=0)
+        center_level0_arr = self.transform_points(center_level0_arr, inv_transform)[0]
 
         transformed_size = self.get_patch_dimensions(size, inv_transform)
-        transformed_location = [
-            center_level0[0] - (transformed_size[0] * (2**level)) / 2,
-            center_level0[1] - (transformed_size[1] * (2**level)) / 2,
-        ]
-        transformed_location = tuple(
-            np.round(x).astype(int) for x in transformed_location
+        transformed_location = (
+            int(center_level0_arr[0] - (transformed_size[0] * (2**level)) / 2),
+            int(center_level0_arr[1] - (transformed_size[1] * (2**level)) / 2),
         )
         return transformed_location, transformed_size
 
@@ -1673,6 +1693,7 @@ class AffineWSITransformer:
         transformed_patch = transformed_patch[start_row:end_row, start_col:end_col, :]
 
         # Resize to desired size
+        post_read_scale = float(post_read_scale[0]), float(post_read_scale[1])
         return imresize(
             img=transformed_patch,
             scale_factor=post_read_scale,

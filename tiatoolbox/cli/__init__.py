@@ -1,4 +1,5 @@
 """Console script for tiatoolbox."""
+
 import sys
 from platform import platform, python_version
 

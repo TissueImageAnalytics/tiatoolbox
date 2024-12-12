@@ -55,6 +55,7 @@ Compile options:
     - `//` (floor division)
 
 """
+
 from __future__ import annotations
 
 import json
@@ -63,6 +64,8 @@ import re
 from dataclasses import dataclass
 from numbers import Number
 from typing import Callable
+
+from typing_extensions import TypedDict
 
 
 @dataclass
@@ -81,7 +84,9 @@ class SQLNone:
 class SQLExpression:
     """SQL expression base class."""
 
-    __hash__ = None
+    def __hash__(self: SQLExpression) -> int:
+        """Return hash of the object (Not used)."""
+        return hash(str(self))  # pragma: no cover
 
     def __repr__(self: SQLExpression) -> str:
         """Return a string representation of the object."""
@@ -155,11 +160,15 @@ class SQLExpression:
         """Return the absolute value of the object."""
         return SQLTriplet(self, operator.abs)
 
-    def __eq__(self: SQLExpression, other: SQLExpression) -> SQLTriplet:
+    def __eq__(  # type: ignore[override]
+        self: SQLExpression, other: object
+    ) -> SQLTriplet:
         """Define how the object is compared for equality."""
         return SQLTriplet(self, operator.eq, other)
 
-    def __ne__(self: SQLExpression, other: object) -> SQLTriplet:
+    def __ne__(  # type: ignore[override]
+        self: SQLExpression, other: object
+    ) -> SQLTriplet:
         """Define how the object is compared for equality (not equal to)."""
         return SQLTriplet(self, operator.ne, other)
 
@@ -167,7 +176,7 @@ class SQLExpression:
         """Define how the object is compared for negation (not equal to)."""
         return SQLTriplet(self, operator.neg)
 
-    def __contains__(self: SQLExpression, other: object) -> bool:
+    def __contains__(self: SQLExpression, other: object) -> SQLTriplet:
         """Test whether the object contains the specified object or not."""
         return SQLTriplet(self, "contains", other)
 
@@ -208,9 +217,9 @@ class SQLTriplet(SQLExpression):
 
     def __init__(
         self: SQLExpression,
-        lhs: SQLTriplet | str,
+        lhs: SQLTriplet | str | SQLExpression | Number | bool | object,
         op: Callable | str | None = None,
-        rhs: SQLTriplet | str | None = None,
+        rhs: SQLTriplet | str | SQLExpression | Number | SQLNone | object | None = None,
     ) -> None:
         """Initialize :class:`SQLTriplet`."""
         self.lhs = lhs
@@ -243,7 +252,7 @@ class SQLTriplet(SQLExpression):
             "bool": lambda x, _: f"({x} != 0)",
         }
 
-    def __str__(self: SQLExpression) -> str:
+    def __str__(self: SQLTriplet) -> str:
         """Return a human-readable, or informal, string representation of an object."""
         lhs = self.lhs
         rhs = self.rhs
@@ -265,14 +274,14 @@ class SQLJSONDictionary(SQLExpression):
 
     def __str__(self: SQLJSONDictionary) -> str:
         """Return a human-readable, or informal, string representation of an object."""
-        return f"json_extract(properties, {json.dumps(f'$.{self.acc}')})"
+        return f"json_extract(properties, '$.{self.acc}')"
 
-    def __getitem__(self: SQLJSONDictionary, key: str) -> SQLJSONDictionary:
+    def __getitem__(self: SQLJSONDictionary, key: str | int) -> SQLJSONDictionary:
         """Get an item from the dataset."""
-        key_str = f"[{key}]" if isinstance(key, (int,)) else str(key)
+        key_str = f"[{key}]" if isinstance(key, (int,)) else f'"{key}"'
 
         joiner = "." if self.acc and not isinstance(key, int) else ""
-        return SQLJSONDictionary(acc=self.acc + joiner + f"{key_str}")
+        return SQLJSONDictionary(acc=self.acc + joiner + key_str)
 
     def get(
         self: SQLJSONDictionary,
@@ -423,11 +432,14 @@ def sql_has_key(dictionary: SQLJSONDictionary, key: str | int) -> SQLTriplet:
 
 # Constants defining the global variables for use in eval() when
 # evaluating expressions.
-
-_COMMON_GLOBALS = {
+COMMON_GLOBALS_Type = TypedDict(
+    "COMMON_GLOBALS_Type", {"__builtins__": dict[str, Callable], "re": object}
+)
+_COMMON_GLOBALS: COMMON_GLOBALS_Type = {
     "__builtins__": {"abs": abs},
     "re": re.RegexFlag,
 }
+
 SQL_GLOBALS = {
     "__builtins__": {**_COMMON_GLOBALS["__builtins__"], "sum": sql_list_sum},
     "props": SQLJSONDictionary(),

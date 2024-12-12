@@ -1,4 +1,5 @@
 """Main module for the tiatoolbox visualization bokeh app."""
+
 from __future__ import annotations
 
 import json
@@ -27,10 +28,10 @@ from bokeh.models import (
     Column,
     ColumnDataSource,
     CustomJS,
+    CustomJSTickFormatter,
     DataTable,
     Div,
     Dropdown,
-    FuncTickFormatter,
     Glyph,
     HoverTool,
     HTMLTemplateFormatter,
@@ -63,14 +64,15 @@ from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-from tiatoolbox import logger  # noqa: E402
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (  # noqa: E402
+from tiatoolbox import logger
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
-from tiatoolbox.tools.pyramid import ZoomifyGenerator  # noqa: E402
-from tiatoolbox.utils.visualization import random_colors  # noqa: E402
-from tiatoolbox.visualization.ui_utils import get_level_by_extent  # noqa: E402
-from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: E402
+from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.misc import select_device
+from tiatoolbox.utils.visualization import random_colors
+from tiatoolbox.visualization.ui_utils import get_level_by_extent
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from bokeh.document import Document
@@ -306,10 +308,8 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str,
     prop_vals = json.loads(resp.text)
     # If auto, guess what cmap should be
     if (
-        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0)
-        and mapper_type == "auto"
-        or mapper_type == "continuous"
-    ):
+        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0) and mapper_type == "auto"
+    ) or mapper_type == "continuous":
         cmap = (
             "viridis" if UI["cmap_select"].value == "dict" else UI["cmap_select"].value
         )
@@ -629,7 +629,7 @@ class ViewerState:
         self.thickness = -1
         self.model_mpp = 0
         self.init = True
-        self.micron_formatter = FuncTickFormatter(
+        self.micron_formatter = CustomJSTickFormatter(
             args={"mpp": 0.1},
             code="""
                 return Math.round(tick*mpp)
@@ -645,24 +645,25 @@ class ViewerState:
 
     def __setattr__(
         self: ViewerState,
-        __name: str,
-        __value: Any,  # noqa: ANN401
+        name: str,
+        value: Any,  # noqa: ANN401
+        /,
     ) -> None:
         """Set an attribute of the viewer state."""
-        if __name == "types":
-            self.__dict__["mapper"] = make_color_dict(__value)
+        if name == "types":
+            self.__dict__["mapper"] = make_color_dict(value)
             self.__dict__["colors"] = list(self.mapper.values())
             if self.cprop == "type":
                 update_mapper()
             # We will standardise the types to strings, keep dict of originals
-            self.__dict__["orig_types"] = {str(x): x for x in __value}
-            __value = [str(x) for x in __value]
+            self.__dict__["orig_types"] = {str(x): x for x in value}
+            value = [str(x) for x in value]
 
-        if __name == "wsi":
-            z = ZoomifyGenerator(__value, tile_size=256)
+        if name == "wsi":
+            z = ZoomifyGenerator(value, tile_size=256)
             self.__dict__["num_zoom_levels"] = z.level_count
 
-        self.__dict__[__name] = __value
+        self.__dict__[name] = value
 
 
 # endregion
@@ -688,7 +689,7 @@ def slide_toggle_cb(attr: str) -> None:  # noqa: ARG001
         UI["p"].renderers[0].alpha = 0.0
 
 
-def node_select_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
+def node_select_cb(attr: str, old: int, new: int) -> None:
     """Placeholder callback to do something on node selection."""
     # Do something on node select if desired
 
@@ -777,7 +778,7 @@ def overlay_alpha_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
 
 def pt_size_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
     """Callback to change the size of the points."""
-    UI["vstate"].graph_node.size = 2 * new
+    UI["vstate"].graph_node.radius = 2 * new
 
 
 def edge_size_cb(attr: str, old: float, new: float) -> None:  # noqa: ARG001
@@ -1236,7 +1237,7 @@ def segment_on_box() -> None:
         [tmp_mask_dir / "mask.png"],
         save_dir=tmp_save_dir / "hover_out",
         mode="wsi",
-        on_gpu=torch.cuda.is_available(),
+        device=select_device(on_gpu=torch.cuda.is_available()),
         crash_on_exception=True,
     )
 
@@ -1770,7 +1771,14 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     box_source = ColumnDataSource({"x": [], "y": [], "width": [], "height": []})
     pt_source = ColumnDataSource({"x": [], "y": []})
     r = p.rect("x", "y", "width", "height", source=box_source, fill_alpha=0)
-    c = p.circle("x", "y", source=pt_source, color="red", size=5)
+    c = p.circle(
+        "x",
+        "y",
+        source=pt_source,
+        color="red",
+        radius=3,
+        radius_units="screen",
+    )
     p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
     p.add_tools(PointDrawTool(renderers=[c]))
     p.add_tools(TapTool())
@@ -1782,7 +1790,13 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     # Add graph stuff
     node_source = ColumnDataSource({"x_": [], "y_": [], "node_color_": []})
     edge_source = ColumnDataSource({"x0_": [], "y0_": [], "x1_": [], "y1_": []})
-    vstate.graph_node = Circle(x="x_", y="y_", fill_color="node_color_", size=5)
+    vstate.graph_node = Circle(
+        x="x_",
+        y="y_",
+        fill_color="node_color_",
+        radius=3,
+        radius_units="screen",
+    )
     vstate.graph_edge = Segment(x0="x0_", y0="y0_", x1="x1_", y1="y1_")
     p.add_glyph(node_source, vstate.graph_node)
     node_source.selected.on_change("indices", node_select_cb)
@@ -2072,7 +2086,7 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),

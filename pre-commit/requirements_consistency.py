@@ -1,4 +1,5 @@
 """Test for ensuring that requirements files are valid and consistent."""
+
 from __future__ import annotations
 
 import importlib
@@ -87,8 +88,8 @@ def parse_conda(file_path: Path) -> dict[str, Requirement]:
         # pip-style dependency
         if isinstance(dependency, dict):
             pip = parse_pip(lines=dependency["pip"])
-            for package_name, requirement in pip.items():
-                packages[package_name] = requirement
+            packages = dict(pip.items())
+
             continue
         requirement = Requirement.parse(dependency)
         # Check for duplicate packages

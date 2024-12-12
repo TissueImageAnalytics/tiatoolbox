@@ -1,4 +1,5 @@
 """Test for graph construction tools."""
+
 from __future__ import annotations
 
 from typing import ClassVar, NoReturn
@@ -86,7 +87,7 @@ def test_affinity_to_edge_index_fuzz_output_shape() -> None:
     for _ in range(1000):
         # Generate some random square inputs
         input_shape = [rng.integers(2, 10)] * 2
-        affinity_matrix = np.random.sample(input_shape)
+        affinity_matrix = rng.random(input_shape)
         threshold = rng.random()
         # Convert to torch randomly
         if rng.random() > 0.5:
@@ -107,7 +108,7 @@ def test_affinity_to_edge_index_invalid_fuzz_input_shape() -> None:
     for _ in range(100):
         input_shape = [rng.integers(2, 10)] * 2
         input_shape[1] -= 1
-        affinity_matrix = np.random.sample(input_shape)
+        affinity_matrix = rng.random(input_shape)
         threshold = rng.random()
         # Convert to torch randomly
         if rng.random() > 0.5:

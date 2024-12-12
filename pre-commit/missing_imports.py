@@ -5,6 +5,7 @@ Any found bad imports will be printed and the script will exit with a non-zero
 status.
 
 """
+
 from __future__ import annotations
 
 import argparse
