@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNModel, TimmModel
+from tiatoolbox.models.architecture.vanilla import CNNModel, TimmModel, infer_batch
 from tiatoolbox.models.models_abc import model_to
 
 ON_GPU = False
@@ -45,7 +45,7 @@ def test_functional() -> None:
         for backbone in backbones:
             model = CNNModel(backbone, num_classes=1)
             model_ = model_to(device=device, model=model)
-            model.infer_batch(model_, samples, device=device)
+            infer_batch(model_, samples, device=device)
     except ValueError as exc:
         msg = f"Model {backbone} failed."
         raise AssertionError(msg) from exc
@@ -72,7 +72,7 @@ def test_timm_functional() -> None:
         for backbone in backbones:
             model = TimmModel(backbone=backbone, num_classes=1, pretrained=False)
             model_ = model_to(device=device, model=model)
-            model.infer_batch(model_, samples, device=device)
+            infer_batch(model_, samples, device=device)
     except ValueError as exc:
         msg = f"Model {backbone} failed."
         raise AssertionError(msg) from exc

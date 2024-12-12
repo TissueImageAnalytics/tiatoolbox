@@ -18,6 +18,7 @@ from typing_extensions import Unpack
 from tiatoolbox import DuplicateFilter, logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.vanilla import infer_batch
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
@@ -573,7 +574,7 @@ class EngineABC(ABC):  # noqa: B024
             zarr_group = zarr.open(save_path, mode="w")
 
         for _, batch_data in enumerate(dataloader):
-            batch_output = self.model.infer_batch(
+            batch_output = infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
