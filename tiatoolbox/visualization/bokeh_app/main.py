@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 import tempfile
@@ -12,9 +13,10 @@ from shutil import rmtree
 from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 
 import numpy as np
+import pandas as pd
 import requests
 import torch
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
+from bokeh.events import ButtonClick, DoubleTap
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -31,7 +33,6 @@ from bokeh.models import (
     CustomJSTickFormatter,
     DataTable,
     Div,
-    Dropdown,
     Glyph,
     HoverTool,
     HTMLTemplateFormatter,
@@ -71,7 +72,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
-from tiatoolbox.visualization.ui_utils import get_level_by_extent
+from tiatoolbox.visualization.ui_utils import UIWrapper, get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -118,23 +119,27 @@ class DummyAttr:
         self.item = val
 
 
-class UIWrapper:
-    """Wrapper class to access ui elements."""
-
-    def __init__(self: UIWrapper) -> None:
-        """Initialize the class."""
-        self.active = 0
-
-    def __getitem__(self: UIWrapper, key: str) -> Any:  # noqa: ANN401
-        """Gets ui element for the active window."""
-        return win_dicts[self.active][key]
+def to_camel(name: str) -> str:
+    """Convert a string to upper camel case."""
+    parts = name.split("_")
+    return "".join([p.capitalize() for p in parts])
 
 
 def format_info(info: dict[str, Any]) -> str:
     """Format the slide info for display."""
-    info_str = f"<b>Slide Name: {info.pop('file_path').name}</b><br>"
+    slide_name = info.pop("file_path").name
+    info_str = f"<b>Slide Name: {slide_name}</b><br>"
     for k, v in info.items():
         info_str += f"{k}: {v}<br>"
+    # if there is metadata, add it
+    if doc_config.metadata is not None:
+        try:
+            row_data = doc_config.metadata.loc[slide_name]
+            info_str += "<br><b>Metadata:</b><br>"
+            for k, v in row_data.items():
+                info_str += f"{k}: {v}<br>"
+        except KeyError:
+            info_str += "<br><b>No metadata found.</b><br>"
     return info_str
 
 
@@ -718,7 +723,7 @@ def populate_layer_list(slide_name: str, overlay_path: Path) -> None:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
     file_list = [(str(p), str(p)) for p in sorted(file_list) if slide_name in str(p)]
-    UI["layer_drop"].menu = file_list
+    UI["layer_drop"].options = file_list
 
 
 def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> None:
@@ -848,6 +853,14 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     if len(new) == 0:
         return
     slide_path = Path(doc_config["slide_folder"]) / Path(new[0])
+    # add any extra per-slide elements from plugins
+    if doc_config["extra_layout"] is not None:
+        # create the extra layout if we can
+        extras = []
+        for cl in doc_config["extra_layout"]:
+            extras.extend(cl.create_extra_layout(slide_path, extra_layout.children))
+            cl.add_to_ui()
+        extra_layout.children = extras
     # Reset the data sources for glyph overlays
     UI["pt_source"].data = {"x": [], "y": []}
     UI["box_source"].data = {"x": [], "y": [], "width": [], "height": []}
@@ -871,15 +884,14 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
 
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
-        for f in UI["layer_drop"].menu:
-            dummy_attr = DummyAttr(f[0])
-            layer_drop_cb(dummy_attr)
+        for f in UI["layer_drop"].options:
+            layer_drop_cb("", "", f[0])
 
 
-def handle_graph_layer(attr: MenuItemClick) -> None:  # skipcq: PY-R1000
+def handle_graph_layer(graph_path: str) -> None:  # skipcq: PY-R1000
     """Handle adding a graph layer."""
     do_feats = False
-    with Path(attr.item).open("rb") as f:
+    with Path(graph_path).open("rb") as f:
         graph_dict = json.load(f)
     # Convert the values to numpy arrays
     for k, v in graph_dict.items():
@@ -985,22 +997,22 @@ def update_ui_on_new_annotations(ann_types: list[str]) -> None:
     change_tiles("overlay")
 
 
-def layer_drop_cb(attr: MenuItemClick) -> None:
+def layer_drop_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     """Set up the newly chosen overlay."""
-    if Path(attr.item).suffix == ".json":
+    if Path(new).suffix == ".json":
         # It's a graph
-        handle_graph_layer(attr)
+        handle_graph_layer(new)
         return
 
     # Otherwise it's a tile-based overlay of some form
-    fname = make_safe_name(attr.item)
+    fname = make_safe_name(new)
     resp = UI["s"].put(
         f"http://{host2}:5000/tileserver/overlay",
         data={"overlay_path": fname},
     )
     resp = json.loads(resp.text)
 
-    if Path(attr.item).suffix in [".db", ".dat", ".geojson"]:
+    if Path(new).suffix in [".db", ".dat", ".geojson"]:
         update_ui_on_new_annotations(resp)
     else:
         add_layer(resp)
@@ -1272,6 +1284,11 @@ slide_info = Div(
     height=200,
     sizing_mode="stretch_width",
 )
+extra_layout = column(
+    children=[],
+    name="extra_layout",
+    sizing_mode="stretch_both",
+)
 
 
 def gather_ui_elements(  # noqa: PLR0915
@@ -1532,10 +1549,9 @@ def gather_ui_elements(  # noqa: PLR0915
         ColorPicker(color=col[0:3], width=60, max_width=60, sizing_mode="stretch_width")
         for col in vstate.colors
     ]
-    layer_drop = Dropdown(
-        label="Add Overlay",
-        button_type="warning",
-        menu=[None],
+    layer_drop = Select(
+        title="Add Overlay",
+        options=[None],
         sizing_mode="stretch_width",
         name=f"layer_drop{win_num}",
     )
@@ -1559,7 +1575,7 @@ def gather_ui_elements(  # noqa: PLR0915
     scale_spinner.on_change("value", scale_spinner_cb)
     to_model_button.on_click(to_model_cb)
     model_drop.on_change("value", model_drop_cb)
-    layer_drop.on_click(layer_drop_cb)
+    layer_drop.on_change("value", layer_drop_cb)
     opt_buttons.on_change("active", opt_buttons_cb)
     slide_toggle.on_click(slide_toggle_cb)
     overlay_toggle.on_click(overlay_toggle_cb)
@@ -1853,27 +1869,42 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
         )
         slide_wins.children.append(p)
 
-    # Return a dictionary collecting all the things related to window
-    return {
-        **elements_dict,
-        "p": p,
-        "vstate": vstate,
-        "s": s,
-        "box_source": box_source,
-        "pt_source": pt_source,
-        "node_source": node_source,
-        "edge_source": edge_source,
-        "hover": hover,
-        "user": user,
-        "color_bar": color_bar,
-    }
+    # Add the dictionary collecting all the things related to window to UI
+    win_dicts.append(
+        {
+            **elements_dict,
+            "p": p,
+            "vstate": vstate,
+            "s": s,
+            "box_source": box_source,
+            "pt_source": pt_source,
+            "node_source": node_source,
+            "edge_source": edge_source,
+            "hover": hover,
+            "user": user,
+            "color_bar": color_bar,
+            "ui_layout": ui_layout,
+            "extra_options": extra_options,
+        },
+    )
+
+    # add in any extra one-time elements from plugins
+    if doc_config["extra_layout"] is not None:
+        # create the extra layout if we can
+        extras = []
+        for cl in doc_config["extra_layout"]:
+            extras.extend(
+                cl.create_extra_layout_once(vstate.slide_path, extra_layout.children),
+            )
+            cl.add_to_ui_once()
+        extra_layout.children = extras
 
 
 # Main ui containers
-UI = UIWrapper()
 windows = []
 controls = []
 win_dicts = []
+UI = UIWrapper(win_dicts)
 
 # Popup for annotation viewing on double click
 popup_div = Div(
@@ -1941,13 +1972,13 @@ def control_tabs_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
     """Callback to handle selecting active window."""
     if new == 1 and len(slide_wins.children) == 1:
         # Make new window
-        win_dicts.append(make_window(ViewerState(win_dicts[0]["vstate"].slide_path)))
+        UI.active = new
+        make_window(ViewerState(win_dicts[0]["vstate"].slide_path))
         win_dicts[1]["vstate"].thickness = win_dicts[0]["vstate"].thickness
         bounds = get_view_bounds(
             UI["vstate"].dims,
             np.array([UI["p"].width, UI["p"].height]),
         )
-        UI.active = new
         setup_config_ui_settings(doc_config)
         win_dicts[0]["vstate"].init_z = get_level_by_extent(
             (0, bounds[2], bounds[1], 0),
@@ -2017,6 +2048,7 @@ class DocConfig:
             "overlay_folder": Path("/app_data").joinpath("overlays"),
         }
         self.sys_args = None
+        self.metadata = None
 
     def __getitem__(self: DocConfig, key: str) -> Any:  # noqa: ANN401
         """Get an item from the config."""
@@ -2046,6 +2078,23 @@ class DocConfig:
         base_folder = slide_folder.parent
         overlay_folder = Path(sys_args[2])
 
+        plugins = None
+        if len(sys_args) > 3:  # noqa: PLR2004
+            # also passed a path to a plugin file defining extra ui elements
+            plugins = []
+            for p in sys_args[3:]:
+                plugin_path = Path(p)
+
+                # should have class named (in camel case) after the filename, that
+                # handles the extra ui elements
+                spec = importlib.util.spec_from_file_location(
+                    "plugin_mod",
+                    plugin_path,
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)  # Execute the module
+                plugins.append(module.__getattribute__(to_camel(plugin_path.stem))(UI))
+
         # Load a color_dict and/or slide initial view windows from a json file
         config_file = list(overlay_folder.glob("*config.json"))
         config = self.config
@@ -2058,6 +2107,7 @@ class DocConfig:
         config["base_folder"] = base_folder
         config["slide_folder"] = slide_folder
         config["overlay_folder"] = overlay_folder
+        config["extra_layout"] = plugins
         config["demo_name"] = self.config["demo_name"]
         if "initial_views" not in config:
             config["initial_views"] = {}
@@ -2083,6 +2133,22 @@ class DocConfig:
 
         """
         self._get_config()
+        # see if there's a metadata .csv file in slides folder
+        metadata_file = list(doc_config["slide_folder"].glob("*.csv"))
+        if len(metadata_file) > 0:
+            metadata_file = metadata_file[0]
+            with metadata_file.open() as f:
+                metadata = pd.read_csv(f, encoding="utf-8")
+                # must have an 'Image File' column to associate with slides
+                if "Image File" in metadata.columns:
+                    metadata = metadata.set_index("Image File")
+                else:
+                    # can't use it so set to None
+                    metadata = None
+        else:
+            # no metadata file
+            metadata = None
+        self.metadata = metadata
 
         # Set initial slide to first one in base folder
         slide_list = []
@@ -2096,7 +2162,7 @@ class DocConfig:
             first_slide_path = self.config["slide_folder"] / self.config["first_slide"]
 
         # Make initial window
-        win_dicts.append(make_window(ViewerState(first_slide_path)))
+        make_window(ViewerState(first_slide_path))
         # Set up any initial ui settings from config file
         setup_config_ui_settings(self.config)
         UI["vstate"].init = False
@@ -2115,6 +2181,7 @@ class DocConfig:
         base_doc.add_root(control_tabs)
         base_doc.add_root(popup_table)
         base_doc.add_root(slide_info)
+        base_doc.add_root(extra_layout)
         base_doc.title = "Tiatoolbox Visualization Tool"
         return slide_wins, control_tabs
 

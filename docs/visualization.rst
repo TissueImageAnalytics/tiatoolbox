@@ -218,6 +218,10 @@ Additional features can be added to nodes by adding extra keys to the dictionary
 
 It will be possible to color the nodes by these features in the interface, and the top 10 will appear in a tooltip when hovering over a node (you will have to turn on the hovertool in the small toolbar to the right of the main window to enable this, it is disabled by default.)
 
+Slide Level Information
+^^^^^^^^^^^^^^^^^^^^^^^
+
+If you have slide-level predictions, ground truth labels, or other metadata you wish to be able to see associated with slides in the interface, this can be provided as a .csv formatted table placed in the slides folder, with "Image File" as the first column. The other columns can be anything you like. When loading a slide in the UI, if the slide name appears in the "Image File" column of the provided .csv, any other entries in that row will be displayed in the interface below the main view window when the slide is selected.
 
 .. _examples:
 
@@ -422,7 +426,7 @@ and the ability to toggle on or off specific UI elements:
 
 ::
 
-    "UI_elements_1": {              # controls which UI elements are visible
+    "ui_elements_1": {              # controls which UI elements are visible
         "slide_select": 1,          # slide select box
         "layer_drop": 1,            # overlay select drop down
         "slide_row": 1,             # slide alpha toggle and slider
@@ -437,7 +441,7 @@ and the ability to toggle on or off specific UI elements:
 
 ::
 
-    "UI_elements_2": {              # controls visible UI elements on second tab in UI
+    "ui_elements_2": {              # controls visible UI elements on second tab in UI
         "opt_buttons": 1,           # UI elements providing a few options including if annotations should be filled/outline only
         "pt_size_spinner": 1,       # control for point size and graph node size
         "edge_size_spinner": 1,     # control for edge thickness

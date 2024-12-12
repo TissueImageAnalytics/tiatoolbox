@@ -85,7 +85,7 @@ def test_slides_available(bk_session: ClientSession) -> None:
     # check that the overlays are available.
     slide_select.value = ["CMU-1-Small-region.svs"]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 2
+    assert len(layer_drop.options) == 2
 
     bk_session.document.clear()
     assert len(bk_session.document.roots) == 0

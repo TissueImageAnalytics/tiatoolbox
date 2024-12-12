@@ -7,6 +7,7 @@ from contextlib import suppress
 from threading import Thread
 from typing import TYPE_CHECKING
 
+import pandas as pd
 import pytest
 import requests
 from bokeh.client.session import ClientSession, pull_session
@@ -29,6 +30,15 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, Path]:
         "ndpi-1",
         data_path["base_path"] / "slides",
     )
+    data_path["meta"] = _fetch_remote_sample(
+        "test_meta",
+        data_path["base_path"] / "slides",
+    )
+    meta_df = pd.read_csv(data_path["meta"])
+    # change 'Image File' column name to 'Wrong Name'
+    meta_df = meta_df.rename(columns={"Image File": "Wrong Name"})
+    # save so we can test behaviour if required column isn't there
+    meta_df.to_csv(data_path["meta"], index=False)
     data_path["annotations"] = _fetch_remote_sample(
         "annotation_store_svs_1",
         data_path["base_path"] / "overlays",
@@ -77,10 +87,14 @@ def test_slides_available(bk_session: ClientSession) -> None:
     assert slide_select.value[0] == "CMU-1-Small-Region.svs"
 
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 2
+    assert len(layer_drop.options) == 2
     # check that the overlays are available.
     slide_select.value = ["CMU-1.ndpi"]
-    assert len(layer_drop.menu) == 2
+    assert len(layer_drop.options) == 2
+
+    # check the metadata wasnt found as the column name was wrong
+    desc = doc.get_model_by_name("description")
+    assert "Metadata:" not in desc.text
 
     bk_session.document.clear()
     assert len(bk_session.document.roots) == 0

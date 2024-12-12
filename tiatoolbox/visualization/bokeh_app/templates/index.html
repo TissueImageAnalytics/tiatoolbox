@@ -85,7 +85,10 @@
   </div>
 </div>
 <div class="slide"> {{ embed(roots.slide_windows) }} </div><div class="ui"> {{ embed(roots.ui_layout) }} </div>
-<div class="description"> {{ embed(roots.description) }} </div>
+<div class="description">
+  {{ embed(roots.description) }}
+  {{ embed(roots.extra_layout) }}
+ </div>
 <script>
   const closePopupBtn = document.getElementById('close-popup');
   const popup = document.getElementById('popup');
