@@ -6,7 +6,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: TissueImageAnalytics/tiatoolbox
   image: ghcr.io/tissueimageanalytics/tiatoolbox
-  TOOLBOX_VER: 1.5.1
+  TOOLBOX_VER: 1.6.0
 
 jobs:
   build-and-push-image:
