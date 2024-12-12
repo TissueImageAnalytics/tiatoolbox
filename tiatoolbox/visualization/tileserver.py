@@ -25,7 +25,12 @@ from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.misc import add_from_dat, store_from_dat
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
-from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import (
+    OpenSlideWSIReader,
+    TransformedWSIReader,
+    VirtualWSIReader,
+    WSIReader,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.colors import Colormap
@@ -509,6 +514,17 @@ class TileServer(Flask):
         session_id = self._get_session_id()
         overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
+
+        if overlay_path.suffix in [".npy", ".mha"]:
+            # loading a registration transformation
+            self.layers[session_id]["slide"] = TransformedWSIReader(
+                self.layers[session_id]["slide"].info.file_path,
+                transform=overlay_path,
+            )
+            self.pyramids[session_id]["slide"] = ZoomifyGenerator(
+                self.layers[session_id]["slide"],
+            )
+            return json.dumps("slide")
 
         if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
             layer = f"layer{len(self.pyramids[session_id])}"
