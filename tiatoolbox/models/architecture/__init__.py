@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-import os
 from pydoc import locate
-from typing import TYPE_CHECKING, Optional, Union
-
-import torch
+from typing import TYPE_CHECKING
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
+from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils import download_data
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
-    from tiatoolbox.models.models_abc import IOConfigABC
+    import torch
 
+    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 __all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
@@ -64,7 +63,7 @@ def get_pretrained_model(
     pretrained_weights: str | Path | None = None,
     *,
     overwrite: bool = False,
-) -> tuple[torch.nn.Module, IOConfigABC]:
+) -> tuple[torch.nn.Module, ModelIOConfigABC]:
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
@@ -144,15 +143,12 @@ def get_pretrained_model(
             overwrite=overwrite,
         )
 
-    # ! assume to be saved in single GPU mode
-    # always load on to the CPU
-    saved_state_dict = torch.load(pretrained_weights, map_location="cpu")
-    model.load_state_dict(saved_state_dict, strict=True)
+    model = load_torch_model(model=model, weights=pretrained_weights)
 
     # !
 
     io_info = info["ioconfig"]
     creator = locate(f"tiatoolbox.models.engine.{io_info['class']}")
 
-    iostate = creator(**io_info["kwargs"])
-    return model, iostate
+    ioconfig = creator(**io_info["kwargs"])
+    return model, ioconfig

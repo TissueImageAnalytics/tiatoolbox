@@ -141,15 +141,15 @@ def test_model_abc() -> None:
     model.postproc_func = None  # skipcq: PYL-W0201
     assert model.postproc_func(2) == 0
 
-    # Test on CPU
-    model = model.to(device="cpu")
-    assert isinstance(model, nn.Module)
-    assert model.dummy_param.device.type == "cpu"
-
     # Test load_weights_from_file() method
     weights_path = fetch_pretrained_weights("alexnet-kather100k")
     with pytest.raises(RuntimeError, match=r".*loading state_dict*"):
         _ = model.load_weights_from_file(weights_path)
+
+    # Test on CPU
+    model = model.to(device="cpu")
+    assert isinstance(model, nn.Module)
+    assert model.dummy_param.device.type == "cpu"
 
 
 def test_model_to() -> None:
@@ -165,3 +165,15 @@ def test_model_to() -> None:
     model = torch_models.resnet18()
     model = model_to(device="cpu", model=model)
     assert isinstance(model, nn.Module)
+
+
+def test_get_pretrained_model_not_str() -> None:
+    """Test TypeError is raised if input is not str."""
+    with pytest.raises(TypeError, match="pretrained_model must be a string."):
+        _ = get_pretrained_model(1)
+
+
+def test_get_pretrained_model_not_in_info() -> None:
+    """Test ValueError is raised if input is not in info."""
+    with pytest.raises(ValueError, match="Pretrained model `alexnet` does not exist."):
+        _ = get_pretrained_model("alexnet")

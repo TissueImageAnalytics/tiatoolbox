@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import torch
 import torch._dynamo
 from torch import device as torch_device
+from torch import nn
 
 torch._dynamo.config.suppress_errors = True  # skipcq: PYL-W0212  # noqa: SLF001
 
@@ -18,29 +19,29 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
 
-class IOConfigABC(ABC):
-    """Define an abstract class for holding predictor I/O information.
+def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
+    """Helper function to load a torch model.
 
-    Enforcing such that following attributes must always be defined by
-    the subclass.
+    Args:
+        model (torch.nn.Module):
+            A torch model.
+        weights (str or Path):
+            Path to pretrained weights.
+
+    Returns:
+        torch.nn.Module:
+            Torch model with pretrained weights loaded on CPU.
 
     """
-
-    @property
-    @abstractmethod
-    def input_resolutions(self: IOConfigABC) -> None:
-        """Abstract method to update input_resolution."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def output_resolutions(self: IOConfigABC) -> None:
-        """Abstract method to update output_resolutions."""
-        raise NotImplementedError
+    # ! assume to be saved in single GPU mode
+    # always load on to the CPU
+    saved_state_dict = torch.load(weights, map_location="cpu")
+    model.load_state_dict(saved_state_dict, strict=True)
+    return model
 
 
 def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
-    """Transfers model to specified device e.g., "cpu" or "cuda".
+    """Transfers model to cpu/gpu.
 
     Args:
         model (torch.nn.Module):
@@ -50,7 +51,7 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
 
     Returns:
         torch.nn.Module:
-            The model after being moved to specified device.
+            The model after being moved to cpu/gpu.
 
     """
     if device != "cpu":
@@ -78,11 +79,7 @@ class ModelABC(ABC, torch.nn.Module):
 
     @staticmethod
     @abstractmethod
-    def infer_batch(
-        model: torch.nn.Module,
-        batch_data: np.ndarray,
-        device: str,
-    ) -> None:
+    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, device: str) -> dict:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as I/O aggregation.
@@ -179,7 +176,7 @@ class ModelABC(ABC, torch.nn.Module):
         """Transfers model to cpu/gpu.
 
         Args:
-            model (torch.nn.Module):
+            self (ModelABC):
                 PyTorch defined model.
             device (str):
                 Transfers model to the specified device. Default is "cpu".

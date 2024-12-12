@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections import deque
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 # replace with the sql database once the PR in place
 import joblib
@@ -14,12 +14,12 @@ import tqdm
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-    SemanticSegmentor,
-    WSIStreamDataset,
-)
+from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
+from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.tools.patchextraction import PatchExtractor
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .io_config import IOInstanceSegmentorConfig, IOSegmentorConfig
 
 
 def _process_instance_predictions(
@@ -406,7 +406,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
     @staticmethod
     def _get_tile_info(
         image_shape: list[int] | np.ndarray,
-        ioconfig: IOSegmentorConfig,
+        ioconfig: IOInstanceSegmentorConfig,
     ) -> list[list, ...]:
         """Generating tile information.
 
@@ -424,7 +424,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             image_shape (:class:`numpy.ndarray`, list(int)):
                 The shape of WSI to extract the tile from, assumed to be
                 in `[width, height]`.
-            ioconfig (:obj:IOSegmentorConfig):
+            ioconfig (:obj:IOInstanceSegmentorConfig):
                 The input and output configuration objects.
 
         Returns:
@@ -439,7 +439,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                     - :class:`numpy.ndarray` - Horizontal strip tiles
                     - :class:`numpy.ndarray` - Removal flags
                 - :py:obj:`list` - Tiles and flags
-                    - :class:`numpy.ndarray` - Cross-section tiles
+                    - :class:`numpy.ndarray` - Cross section tiles
                     - :class:`numpy.ndarray` - Removal flags
 
         """
@@ -675,7 +675,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         Args:
             wsi_idx (int):
                 Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOSegmentorConfig):
+            ioconfig (IOInstanceSegmentorConfig):
                 Object which defines I/O placement during inference and
                 when assembling back to full tile/wsi.
             save_path (str):

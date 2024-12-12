@@ -31,19 +31,18 @@ import numpy as np
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
 
+from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
     _process_instance_predictions,
-)
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-    WSIStreamDataset,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
     import torch
 
     from tiatoolbox.typing import IntBounds
+
+    from .io_config import IOInstanceSegmentorConfig, IOSegmentorConfig
 
 
 # Python is yet to be able to natively pickle Object method/static method.
@@ -293,19 +292,23 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
     def _predict_one_wsi(
         self: MultiTaskSegmentor,
         wsi_idx: int,
-        ioconfig: IOSegmentorConfig,
+        ioconfig: IOInstanceSegmentorConfig,
         save_path: str,
         mode: str,
     ) -> None:
         """Make a prediction on tile/wsi.
 
         Args:
-            wsi_idx (int): Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOSegmentorConfig): Object which defines I/O placement during
-                inference and when assembling back to full tile/wsi.
-            save_path (str): Location to save output prediction as well as possible
+            wsi_idx (int):
+                Index of the tile/wsi to be processed within `self`.
+            ioconfig (IOInstanceSegmentorConfig):
+                Object which defines I/O placement
+                during inference and when assembling back to full tile/wsi.
+            save_path (str):
+                Location to save output prediction as well as possible
                 intermediate results.
-            mode (str): `tile` or `wsi` to indicate run mode.
+            mode (str):
+                `tile` or `wsi` to indicate run mode.
 
         """
         cache_dir = f"{self._cache_dir}/"

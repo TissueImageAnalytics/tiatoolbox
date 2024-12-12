@@ -86,6 +86,26 @@ def cli_file_type(
     )
 
 
+def cli_output_type(
+    usage_help: str = "The format of the output type. "
+    "'output_type' can be 'zarr' or 'AnnotationStore'. "
+    "Default value is 'AnnotationStore'.",
+    default: str = "AnnotationStore",
+    input_type: click.Choice | None = None,
+) -> Callable:
+    """Enables --file-types option for cli."""
+    click_choices = click.Choice(
+        choices=["zarr", "AnnotationStore"], case_sensitive=False
+    )
+    input_type = click_choices if input_type is None else input_type
+    return click.option(
+        "--output-type",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+        type=input_type,
+    )
+
+
 def cli_mode(
     usage_help: str = "Selected mode to show or save the required information.",
     default: str = "save",
@@ -99,6 +119,20 @@ def cli_mode(
         help=add_default_to_usage_help(usage_help, default),
         default=default,
         type=input_type,
+    )
+
+
+def cli_patch_mode(
+    usage_help: str = "Whether to run the model in patch mode or WSI mode.",
+    *,
+    default: bool = False,
+) -> Callable:
+    """Enables --return-probabilities option for cli."""
+    return click.option(
+        "--patch-mode",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
     )
 
 
@@ -215,7 +249,7 @@ def cli_pretrained_model(
 ) -> Callable:
     """Enables --pretrained-model option for cli."""
     return click.option(
-        "--pretrained-model",
+        "--model",
         help=add_default_to_usage_help(usage_help, default),
         default=default,
     )
@@ -229,6 +263,39 @@ def cli_pretrained_weights(
     """Enables --pretrained-weights option for cli."""
     return click.option(
         "--pretrained-weights",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_model(
+    usage_help: str = "Name of the predefined model used to process the data. "
+    "The format is <model_name>_<dataset_trained_on>. For example, "
+    "`resnet18-kather100K` is a resnet18 model trained on the Kather dataset. "
+    "Please see "
+    "https://tia-toolbox.readthedocs.io/en/latest/usage.html#deep-learning-models "
+    "for a detailed list of available pretrained models."
+    "By default, the corresponding pretrained weights will also be"
+    "downloaded. However, you can override with your own set of weights"
+    "via the `pretrained_weights` argument. Argument is case insensitive.",
+    default: str = "resnet18-kather100k",
+) -> Callable:
+    """Enables --pretrained-model option for cli."""
+    return click.option(
+        "--model",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
+def cli_weights(
+    usage_help: str = "Path to the model weight file. If not supplied, the default "
+    "pretrained weight will be used.",
+    default: str | None = None,
+) -> Callable:
+    """Enables --pretrained-weights option for cli."""
+    return click.option(
+        "--weights",
         help=add_default_to_usage_help(usage_help, default),
         default=default,
     )
@@ -277,7 +344,7 @@ def cli_merge_predictions(
 def cli_return_labels(
     usage_help: str = "Whether to return raw model output as labels.",
     *,
-    default: bool = True,
+    default: bool = False,
 ) -> Callable:
     """Enables --return-labels option for cli."""
     return click.option(

@@ -20,14 +20,15 @@ import tqdm
 from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
 from tiatoolbox.models.architecture.utils import compile_model
-from tiatoolbox.models.models_abc import IOConfigABC, model_to
+from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
+from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+
+from .io_config import IOSegmentorConfig
 
 if TYPE_CHECKING:  # pragma: no cover
-    from multiprocessing.managers import Namespace
-
     from tiatoolbox.typing import IntPair, Resolution, Units
 
 
@@ -109,327 +110,6 @@ def _prepare_save_output(
         count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
 
     return is_on_drive, count_canvas, cum_canvas
-
-
-class IOSegmentorConfig(IOConfigABC):
-    """Contain semantic segmentor input and output information.
-
-    Args:
-        input_resolutions (list):
-            Resolution of each input head of model inference, must be in
-            the same order as `target model.forward()`.
-        output_resolutions (list):
-            Resolution of each output head from model inference, must be
-            in the same order as target model.infer_batch().
-        patch_input_shape (:class:`numpy.ndarray`, list(int)):
-            Shape of the largest input in (height, width).
-        patch_output_shape (:class:`numpy.ndarray`, list(int)):
-            Shape of the largest output in (height, width).
-        save_resolution (dict):
-            Resolution to save all output.
-
-    Examples:
-        >>> # Defining io for a network having 1 input and 1 output at the
-        >>> # same resolution
-        >>> ioconfig = IOSegmentorConfig(
-        ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
-        ... )
-
-    Examples:
-        >>> # Defining io for a network having 3 input and 2 output
-        >>> # at the same resolution, the output is then merged at a
-        >>> # different resolution.
-        >>> ioconfig = IOSegmentorConfig(
-        ...     input_resolutions=[
-        ...         {"units": "mpp", "resolution": 0.25},
-        ...         {"units": "mpp", "resolution": 0.50},
-        ...         {"units": "mpp", "resolution": 0.75},
-        ...     ],
-        ...     output_resolutions=[
-        ...         {"units": "mpp", "resolution": 0.25},
-        ...         {"units": "mpp", "resolution": 0.50},
-        ...     ],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
-        ...     save_resolution={"units": "mpp", "resolution": 4.0},
-        ... )
-
-    """
-
-    # We pre-define to follow enforcement, actual initialisation in init
-    input_resolutions = None
-    output_resolutions = None
-
-    def __init__(
-        self: IOSegmentorConfig,
-        input_resolutions: list[dict],
-        output_resolutions: list[dict],
-        patch_input_shape: IntPair,
-        patch_output_shape: IntPair,
-        save_resolution: dict | None = None,
-        **kwargs: dict,
-    ) -> None:
-        """Initialize :class:`IOSegmentorConfig`."""
-        self._kwargs = kwargs
-        self.patch_input_shape = patch_input_shape
-        self.patch_output_shape = patch_output_shape
-        self.stride_shape = None
-        self.input_resolutions = input_resolutions
-        self.output_resolutions = output_resolutions
-
-        self.resolution_unit = input_resolutions[0]["units"]
-        self.save_resolution = save_resolution
-
-        for variable, value in kwargs.items():
-            self.__setattr__(variable, value)
-
-        self._validate()
-
-        if self.resolution_unit == "mpp":
-            self.highest_input_resolution = min(
-                self.input_resolutions,
-                key=lambda x: x["resolution"],
-            )
-        else:
-            self.highest_input_resolution = max(
-                self.input_resolutions,
-                key=lambda x: x["resolution"],
-            )
-
-    def _validate(self: IOSegmentorConfig) -> None:
-        """Validate the data format."""
-        resolutions = self.input_resolutions + self.output_resolutions
-        units = [v["units"] for v in resolutions]
-        units = np.unique(units)
-        if len(units) != 1 or units[0] not in [
-            "power",
-            "baseline",
-            "mpp",
-        ]:
-            msg = f"Invalid resolution units `{units[0]}`."
-            raise ValueError(msg)
-
-    @staticmethod
-    def scale_to_highest(resolutions: list[dict], units: Units) -> np.ndarray:
-        """Get the scaling factor from input resolutions.
-
-        This will convert resolutions to a scaling factor with respect to
-        the highest resolution found in the input resolutions list.
-
-        Args:
-            resolutions (list):
-                A list of resolutions where one is defined as
-                `{'resolution': value, 'unit': value}`
-            units (Units):
-                Units that the resolutions are at.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                A 1D array of scaling factors having the same length as
-                `resolutions`
-
-        """
-        old_val = [v["resolution"] for v in resolutions]
-        if units not in ["baseline", "mpp", "power"]:
-            msg = (
-                f"Unknown units `{units}`. "
-                f"Units should be one of 'baseline', 'mpp' or 'power'."
-            )
-            raise ValueError(
-                msg,
-            )
-        if units == "baseline":
-            return old_val
-        if units == "mpp":
-            return np.min(old_val) / np.array(old_val)
-        return np.array(old_val) / np.max(old_val)
-
-    def to_baseline(self: IOSegmentorConfig) -> IOSegmentorConfig:
-        """Return a new config object converted to baseline form.
-
-        This will return a new :class:`IOSegmentorConfig` where
-        resolutions have been converted to baseline format with the
-        highest possible resolution found in both input and output as
-        reference.
-
-        """
-        resolutions = self.input_resolutions + self.output_resolutions
-        if self.save_resolution is not None:
-            resolutions.append(self.save_resolution)
-
-        scale_factors = self.scale_to_highest(resolutions, self.resolution_unit)
-        num_input_resolutions = len(self.input_resolutions)
-        num_output_resolutions = len(self.output_resolutions)
-
-        end_idx = num_input_resolutions
-        input_resolutions = [
-            {"units": "baseline", "resolution": v} for v in scale_factors[:end_idx]
-        ]
-        end_idx = num_input_resolutions + num_output_resolutions
-        output_resolutions = [
-            {"units": "baseline", "resolution": v}
-            for v in scale_factors[num_input_resolutions:end_idx]
-        ]
-
-        save_resolution = None
-        if self.save_resolution is not None:
-            save_resolution = {"units": "baseline", "resolution": scale_factors[-1]}
-        return IOSegmentorConfig(
-            input_resolutions=input_resolutions,
-            output_resolutions=output_resolutions,
-            patch_input_shape=self.patch_input_shape,
-            patch_output_shape=self.patch_output_shape,
-            save_resolution=save_resolution,
-            **self._kwargs,
-        )
-
-
-class WSIStreamDataset(torch_data.Dataset):
-    """Reading a wsi in parallel mode with persistent workers.
-
-    To speed up the inference process for multiple WSIs. The
-    `torch.utils.data.Dataloader` is set to run in persistent mode.
-    Normally, this will prevent workers from altering their initial
-    states (such as provided input etc.). To sidestep this, we use a
-    shared parallel workspace context manager to send data and signal
-    from the main thread, thus allowing each worker to load a new wsi as
-    well as corresponding patch information.
-
-    Args:
-        mp_shared_space (:class:`Namespace`):
-            A shared multiprocessing space, must be from
-            `torch.multiprocessing`.
-        ioconfig (:class:`IOSegmentorConfig`):
-            An object which contains I/O placement for patches.
-        wsi_paths (list): List of paths pointing to a WSI or tiles.
-        preproc (Callable):
-            Pre-processing function to be applied to a patch.
-        mode (str):
-            Either `"wsi"` or `"tile"` to indicate the format of images
-            in `wsi_paths`.
-
-    Examples:
-        >>> ioconfig = IOSegmentorConfig(
-        ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
-        ... )
-        >>> mp_manager = torch_mp.Manager()
-        >>> mp_shared_space = mp_manager.Namespace()
-        >>> mp_shared_space.signal = 1  # adding variable to the shared space
-        >>> wsi_paths = ['A.svs', 'B.svs']
-        >>> wsi_dataset = WSIStreamDataset(ioconfig, wsi_paths, mp_shared_space)
-
-    """
-
-    def __init__(
-        self: WSIStreamDataset,
-        ioconfig: IOSegmentorConfig,
-        wsi_paths: list[str | Path],
-        mp_shared_space: Namespace,
-        preproc: Callable[[np.ndarray], np.ndarray] | None = None,
-        mode: str = "wsi",
-    ) -> None:
-        """Initialize :class:`WSIStreamDataset`."""
-        super().__init__()
-        self.mode = mode
-        self.preproc = preproc
-        self.ioconfig = copy.deepcopy(ioconfig)
-
-        if mode == "tile":
-            logger.warning(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"`. Resolutions will be converted '
-                "to baseline value.",
-                stacklevel=2,
-            )
-            self.ioconfig = self.ioconfig.to_baseline()
-
-        self.mp_shared_space = mp_shared_space
-        self.wsi_paths = wsi_paths
-        self.wsi_idx = None  # to be received externally via thread communication
-        self.reader = None
-
-    def _get_reader(self: WSIStreamDataset, img_path: str | Path) -> WSIReader:
-        """Get appropriate reader for input path."""
-        img_path = Path(img_path)
-        if self.mode == "wsi":
-            return WSIReader.open(img_path)
-        img = imread(img_path)
-        # initialise metadata for VirtualWSIReader.
-        # here, we simulate a whole-slide image, but with a single level.
-        metadata = WSIMeta(
-            mpp=np.array([1.0, 1.0]),
-            objective_power=10,
-            axes="YXS",
-            slide_dimensions=np.array(img.shape[:2][::-1]),
-            level_downsamples=[1.0],
-            level_dimensions=[np.array(img.shape[:2][::-1])],
-        )
-        return VirtualWSIReader(
-            img,
-            info=metadata,
-        )
-
-    def __len__(self: WSIStreamDataset) -> int:
-        """Return the length of the instance attributes."""
-        return len(self.mp_shared_space.patch_inputs)
-
-    @staticmethod
-    def collate_fn(batch: list | np.ndarray) -> torch.Tensor:
-        """Prototype to handle reading exception.
-
-        This will exclude any sample with `None` from the batch. As
-        such, wrapping `__getitem__` with try-catch and return `None`
-        upon exceptions will prevent crashing the entire program. But as
-        a side effect, the batch may not have the size as defined.
-
-        """
-        batch = [v for v in batch if v is not None]
-        return torch.utils.data.dataloader.default_collate(batch)
-
-    def __getitem__(self: WSIStreamDataset, idx: int) -> tuple:
-        """Get an item from the dataset."""
-        # ! no need to lock as we do not modify source value in shared space
-        if self.wsi_idx != self.mp_shared_space.wsi_idx:
-            self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
-            self.reader = self._get_reader(self.wsi_paths[self.wsi_idx])
-
-        # this is in XY and at requested resolution (not baseline)
-        bounds = self.mp_shared_space.patch_inputs[idx]
-        bounds = bounds.numpy()  # expected to be a torch.Tensor
-
-        # be the same as bounds br-tl, unless bounds are of float
-        patch_data_ = []
-        scale_factors = self.ioconfig.scale_to_highest(
-            self.ioconfig.input_resolutions,
-            self.ioconfig.resolution_unit,
-        )
-        for idy, resolution in enumerate(self.ioconfig.input_resolutions):
-            resolution_bounds = np.round(bounds * scale_factors[idy])
-            patch_data = self.reader.read_bounds(
-                resolution_bounds.astype(np.int32),
-                coord_space="resolution",
-                pad_constant_values=0,  # expose this ?
-                **resolution,
-            )
-
-            if self.preproc is not None:
-                patch_data = patch_data.copy()
-                patch_data = self.preproc(patch_data)
-            patch_data_.append(patch_data)
-        if len(patch_data_) == 1:
-            patch_data_ = patch_data_[0]
-
-        bound = self.mp_shared_space.patch_outputs[idx]
-        return patch_data_, bound
 
 
 class SemanticSegmentor:
@@ -1075,8 +755,8 @@ class SemanticSegmentor:
 
         return save_dir, cache_dir
 
+    @staticmethod
     def _update_ioconfig(
-        self: SemanticSegmentor,
         ioconfig: IOSegmentorConfig,
         mode: str,
         patch_input_shape: IntPair,
@@ -1124,17 +804,7 @@ class SemanticSegmentor:
         if stride_shape is None:
             stride_shape = patch_output_shape
 
-        if ioconfig is None and patch_input_shape is None:
-            if self.ioconfig is None:
-                msg = (
-                    "Must provide either `ioconfig` or `patch_input_shape` "
-                    "and `patch_output_shape`"
-                )
-                raise ValueError(
-                    msg,
-                )
-            ioconfig = copy.deepcopy(self.ioconfig)
-        elif ioconfig is None:
+        if ioconfig is None:
             ioconfig = IOSegmentorConfig(
                 input_resolutions=[{"resolution": resolution, "units": units}],
                 output_resolutions=[{"resolution": resolution, "units": units}],
@@ -1197,7 +867,7 @@ class SemanticSegmentor:
                 of file paths.
             wsi_idx (int):
                 index of current WSI being processed.
-            img_path(str or Path):
+            img_path(str):
                 Path to current image.
             mode (str):
                 Type of input to process. Choose from either `tile` or
@@ -1209,7 +879,7 @@ class SemanticSegmentor:
                 `stride_shape`, `resolution`, and `units` arguments are
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
-            save_dir (str or Path):
+            save_dir (str or pathlib.Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
@@ -1357,6 +1027,28 @@ class SemanticSegmentor:
             raise ValueError(msg)
 
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
+
+        if ioconfig is None:
+            ioconfig = copy.deepcopy(self.ioconfig)
+
+        if ioconfig is None and patch_input_shape is None:
+            msg = (
+                "Must provide either `ioconfig` or "
+                "`patch_input_shape` and `patch_output_shape`"
+            )
+            raise ValueError(
+                msg,
+            )
+
+        if resolution is None and units is None:
+            if ioconfig is None:
+                msg = f"Invalid resolution: `{resolution}` and units: `{units}`. "
+                raise ValueError(
+                    msg,
+                )
+
+            resolution = ioconfig.input_resolutions[0]["resolution"]
+            units = ioconfig.input_resolutions[0]["units"]
 
         ioconfig = self._update_ioconfig(
             ioconfig,
@@ -1628,7 +1320,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Resolution used for reading the image.
             units (Units):
                 Units of resolution used for reading the image.
-            save_dir (str):
+            save_dir (str or pathlib.Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
