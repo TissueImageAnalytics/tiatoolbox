@@ -1185,7 +1185,7 @@ class WSIReader:
                 Defaults to 'constant'. See :func:`numpy.pad` for
                 available modes.
             pad_constant_values (int, tuple(int)):
-                Constant values to use when padding with cmonstant pad mode.
+                Constant values to use when padding with constant pad mode.
                 Passed to the :func:`numpy.pad` `constant_values` argument.
                 Default is 0.
             coord_space (str):
