@@ -1992,6 +1992,20 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             )
             for feature in geojson["features"]
         ]
+        # check for presence of 'nucleusGeometry' key in features
+        # if present, add them (qupath export format)
+        annotations += [
+            transform(
+                Annotation(
+                    transform_geometry(
+                        feature2geometry(feature["nucleusGeometry"]),
+                    ),
+                    {},
+                ),
+            )
+            for feature in geojson["features"]
+            if "nucleusGeometry" in feature
+        ]
 
         logger.info("Adding %d annotations.", len(annotations))
         self.append_many(annotations)

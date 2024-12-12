@@ -850,10 +850,40 @@ class AnnotationRenderer:
                 top_left,
                 scale,
             )[0][0],
-            np.maximum(self.edge_thickness, 1),
+            np.maximum(int(16 / scale**0.5), 1),
             col,
-            thickness=self.thickness,
+            thickness=-1,
         )
+
+    def render_pts(
+        self: AnnotationRenderer,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: tuple[float, float],
+        scale: float,
+    ) -> None:
+        """Render a multipoint annotation onto a tile using cv2.
+
+        Args:
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
+                The annotation to render.
+            top_left (tuple):
+                The top left corner of the tile in wsi.
+            scale (float):
+                The zoom scale at which we are rendering.
+
+        """
+        col = self.get_color(annotation, edge=False)
+        for pt in annotation.coords:
+            cv2.circle(
+                tile,
+                self.to_tile_coords([pt], top_left, scale)[0][0],
+                np.maximum(int(16 / scale**0.5), 1),
+                col,
+                thickness=-1,
+            )
 
     def render_line(
         self: AnnotationRenderer,
@@ -1058,5 +1088,7 @@ class AnnotationRenderer:
             self.render_poly(tile, annotation, top_left, scale)
         elif geom_type == GeometryType.LINE_STRING:
             self.render_line(tile, annotation, top_left, scale)
+        elif geom_type == GeometryType.MULTI_POINT:
+            self.render_pts(tile, annotation, top_left, scale)
         else:
             logger.warning("Unknown geometry: %s", geom_type, stacklevel=3)
