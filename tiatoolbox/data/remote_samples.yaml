@@ -147,3 +147,7 @@ files:
     url: [ *testdata, "annotation/sample_wsi_patch_preds.db"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
+  qptiff_sample:
+    url: [*wsis, "multiplexed_example.qptiff"]
+  qptiff_sample_small:
+    url: [ *wsis, "multiplexed_example_small.qptiff" ]

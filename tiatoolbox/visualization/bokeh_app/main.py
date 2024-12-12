@@ -46,6 +46,7 @@ from bokeh.models import (
     Select,
     Slider,
     Spinner,
+    StringEditor,
     TableColumn,
     TabPanel,
     Tabs,
@@ -136,6 +137,177 @@ def format_info(info: dict[str, Any]) -> str:
     for k, v in info.items():
         info_str += f"{k}: {v}<br>"
     return info_str
+
+
+def get_channel_info() -> dict[str, tuple[int, int, int]]:
+    """Get the colors for the channels."""
+    resp = UI["s"].get(f"http://{host2}:5000/tileserver/channels")
+    try:
+        resp = json.loads(resp.text)
+        return resp.get("channels", {}), resp.get("active", [])
+    except json.JSONDecodeError:
+        return {}, []
+
+
+def set_channel_info(
+    colors: dict[str, tuple[int, int, int]], active_channels: list
+) -> None:
+    """Set the colors for the channels."""
+    UI["s"].put(
+        f"http://{host2}:5000/tileserver/channels",
+        data={"channels": json.dumps(colors), "active": json.dumps(active_channels)},
+    )
+
+
+def create_channel_color_ui():
+    channel_source = ColumnDataSource(
+        data={
+            "channels": [],
+            "dummy": [],
+        }
+    )
+    color_source = ColumnDataSource(
+        data={
+            "colors": [],
+            "dummy": [],
+        }
+    )
+
+    color_formatter = HTMLTemplateFormatter(
+        template='<div style="background-color: <%= value %>; color: <%= value %>; border: 1px solid #ddd;"><%= value %></div>'
+    )
+
+    channel_table = DataTable(
+        source=channel_source,
+        columns=[
+            TableColumn(
+                field="channels",
+                title="Channel",
+                editor=StringEditor(),
+                sortable=False,
+                width=200,
+            )
+        ],
+        editable=True,
+        width=200,
+        height=260,
+        selectable="checkbox",
+        autosize_mode="none",
+        fit_columns=True,
+    )
+    color_table = DataTable(
+        source=color_source,
+        columns=[
+            TableColumn(
+                field="colors",
+                title="Color",
+                formatter=color_formatter,
+                editor=StringEditor(),
+                sortable=False,
+                width=130,
+            )
+        ],
+        editable=True,
+        width=130,
+        height=260,
+        selectable=True,
+        autosize_mode="none",
+        index_position=None,
+        fit_columns=True,
+    )
+
+    color_picker = ColorPicker(title="Channel Color", width=100)
+
+    def update_selected_color(attr, old, new):
+        selected = color_source.selected.indices
+        if selected:
+            color_source.patch({"colors": [(selected[0], new)]})
+
+    color_picker.on_change("color", update_selected_color)
+
+    apply_button = Button(
+        label="Apply Changes", button_type="success", margin=(20, 5, 5, 5)
+    )
+
+    def apply_changes() -> None:
+        """Apply the changes to the image."""
+        colors = dict(zip(channel_source.data["channels"], color_source.data["colors"]))
+        active_channels = channel_source.selected.indices
+
+        set_channel_info({ch: hex2rgb(colors[ch]) for ch in colors}, active_channels)
+        change_tiles("slide")
+
+    apply_button.on_click(apply_changes)
+
+    def update_color_picker(attr, old, new):
+        if new:
+            selected_color = color_source.data["colors"][new[0]]
+            color_picker.color = selected_color
+        else:
+            color_picker.color = None
+
+    color_source.selected.on_change("indices", update_color_picker)
+
+    enhance_slider = Slider(
+        start=0.1,
+        end=10,
+        value=1,
+        step=0.1,
+        title="Enhance",
+        width=200,
+    )
+
+    def enhance_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001 # skipcq: PYL-W0613
+        """Enhance slider callback."""
+        UI["s"].put(
+            f"http://{host2}:5000/tileserver/enhance",
+            data={"val": json.dumps(new)},
+        )
+        UI["vstate"].update_state = 1
+        UI["vstate"].to_update.update(["slide"])
+
+    enhance_slider.on_change("value", enhance_cb)
+
+    instructions = Div(
+        text="""
+        <p>Instructions:</p>
+        <ul>
+            <li>Double-click on the 'Active' column to toggle channel visibility</li>
+            <li>Click on a row to select it for color editing</li>
+            <li>Use 'Select All' or 'Deselect All' for quick selection</li>
+            <li>Enable 'Solo Mode' and select a channel to view it alone</li>
+            <li>Use the color picker to change the color of the selected channel</li>
+            <li>Click 'Apply Changes' to update the image</li>
+        </ul>
+    """
+    )
+
+    return column(
+        instructions,
+        column(
+            row(channel_table, color_table),
+            row(color_picker, apply_button),
+            enhance_slider,
+        ),
+    )
+
+
+def populate_table() -> None:
+    """Populate the channel color table."""
+    # Access the ColumnDataSource from the UI dictionary
+    tables = UI["channel_select"].children[1].children[0].children
+    colors, active_channels = get_channel_info()
+
+    if colors is not None:
+        tables[0].source.data = {
+            "channels": list(colors.keys()),
+            "dummy": list(colors.keys()),
+        }
+        tables[1].source.data = {
+            "colors": [rgb2hex(color) for color in colors.values()],
+            "dummy": list(colors.keys()),
+        }
+        tables[0].source.selected.indices = active_channels
 
 
 def get_view_bounds(
@@ -725,7 +897,16 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     """Populate the slide list with the available slides."""
     file_list = []
     len_slidepath = len(slide_folder.parts)
-    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png", "*.tif"]:
+    for ext in [
+        "*.svs",
+        "*.ndpi",
+        "*.tiff",
+        "*.mrxs",
+        "*.jpg",
+        "*.png",
+        "*.tif",
+        "*.qptiff",
+    ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
     if search_txt is None:
@@ -868,6 +1049,7 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     fname = make_safe_name(str(slide_path))
     UI["s"].put(f"http://{host2}:5000/tileserver/slide", data={"slide_path": fname})
     change_tiles("slide")
+    populate_table()
 
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
@@ -1643,12 +1825,14 @@ def gather_ui_elements(  # noqa: PLR0915
                 "pt_size_spinner",
                 "edge_size_spinner",
                 "res_switch",
+                "channel_select",
             ],
             [
                 opt_buttons,
                 pt_size_spinner,
                 edge_size_spinner,
                 res_switch,
+                create_channel_color_ui(),
             ],
         ),
     )
@@ -2086,7 +2270,16 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in [
+            "*.svs",
+            "*.ndpi",
+            "*.tiff",
+            "*.tif",
+            "*.mrxs",
+            "*.png",
+            "*.jpg",
+            "*.qptiff",
+        ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),
