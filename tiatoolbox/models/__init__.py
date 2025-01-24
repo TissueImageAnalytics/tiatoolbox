@@ -35,7 +35,10 @@ __all__ = [
     "MicroNet",
     "MultiTaskSegmentor",
     "NuClick",
+<<<<<<< HEAD
     "SAM",
+=======
+>>>>>>> dab26936bea13a4a12a4cda7dd1746395b5ebbb6
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",
