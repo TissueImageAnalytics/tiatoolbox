@@ -505,13 +505,11 @@ class EngineABC(ABC):  # noqa: B024
     @staticmethod
     def _update_model_output(raw_predictions: dict, raw_output: dict) -> dict:
         """Helper function to append raw output during inference."""
-        for key in raw_output.items():
+        for key, value in raw_output.items():
             if raw_predictions[key] is None:
-                raw_predictions[key] = raw_output[key]
+                raw_predictions[key] = value
             else:
-                raw_predictions[key] = np.append(
-                    raw_predictions[key], raw_output[key], axis=0
-                )
+                raw_predictions[key] = np.append(raw_predictions[key], value, axis=0)
 
         return raw_predictions
 
