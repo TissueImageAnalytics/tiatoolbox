@@ -5,7 +5,7 @@ Welcome to TIA Toolbox's documentation!
    :parser: myst_parser.sphinx_
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     Readme <readme.rst>
     Installation <installation.rst>
