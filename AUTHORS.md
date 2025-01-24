@@ -11,11 +11,11 @@
 - Mostafa Jahanifar \<@mostafajahanifar>
 - David Epstein \<@DavidBAEpstein>
 - Adam Shephard \<@adamshephard>
-- Ruqayya Awan \<@ruqayya>
 - Abdullah Alsalemi \<@Abdol>
+- Ruqayya Awan \<@ruqayya>
+- Jiaqi Lv \<@Jiaqi-Lv>
 - Dmitrii Blaginin \<@blaginin>
 - Srijay Deshpande \<@Srijay-lab>
-- Jiaqi Lv\<@Jiaqi-Lv>
 - George Hadjigeorgiou \<@ghadjigeorghiou>
 - Abishekraj Vinayagar Gnanasambandam \<@AbishekRajVG>
 - Wenqi Lu \<@wenqi006>
@@ -23,6 +23,7 @@
 
 ## Contributors
 
+- George Batchkala \<@GeorgeBatch>
 - Rob Jewsbury \<@R-J96>
 - Mohsin Bilal \<@mbhahsmi>
 - Fayyaz Minhas \<@foxtrotmike>

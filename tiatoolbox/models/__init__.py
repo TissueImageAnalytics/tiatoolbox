@@ -9,8 +9,10 @@ from .architecture.mapde import MapDe
 from .architecture.micronet import MicroNet
 from .architecture.nuclick import NuClick
 from .architecture.sccnn import SCCNN
+from .architecture.sam import SAM
 from .engine.multi_task_segmentor import MultiTaskSegmentor
 from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from .engine.general_segmentor import GeneralSegmentor
 from .engine.patch_predictor import (
     IOPatchPredictorConfig,
     PatchDataset,
@@ -25,15 +27,17 @@ from .engine.semantic_segmentor import (
 )
 
 __all__ = [
+    "SCCNN",
     "HoVerNet",
     "HoVerNetPlus",
     "IDaRS",
     "MapDe",
     "MicroNet",
-    "NuClick",
-    "SCCNN",
     "MultiTaskSegmentor",
+    "NuClick",
+    "SAM",
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",
+    "GeneralSegmentor",
 ]

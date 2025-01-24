@@ -49,7 +49,7 @@ if TYPE_CHECKING:  # pragma: no cover
 # Python is yet to be able to natively pickle Object method/static method.
 # Only top-level function is passable to multi-processing as caller.
 # May need 3rd party libraries to use method/static method otherwise.
-def _process_tile_predictions(
+def _process_tile_predictions(  # skipcq: PY-R1000
     ioconfig: IOSegmentorConfig,
     tile_bounds: IntBounds,
     tile_flag: list,

@@ -6,12 +6,12 @@ import click
 
 from tiatoolbox.cli.common import (
     cli_batch_size,
+    cli_device,
     cli_file_type,
     cli_img_input,
     cli_masks,
     cli_mode,
     cli_num_loader_workers,
-    cli_on_gpu,
     cli_output_path,
     cli_pretrained_model,
     cli_pretrained_weights,
@@ -39,7 +39,7 @@ from tiatoolbox.cli.common import (
 )
 @cli_pretrained_model(default="fcn-tissue_mask")
 @cli_pretrained_weights(default=None)
-@cli_on_gpu()
+@cli_device()
 @cli_batch_size()
 @cli_masks(default=None)
 @cli_yaml_config_path()
@@ -56,8 +56,8 @@ def semantic_segment(
     batch_size: int,
     yaml_config_path: str,
     num_loader_workers: int,
+    device: str,
     *,
-    on_gpu: bool,
     verbose: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
@@ -89,7 +89,7 @@ def semantic_segment(
         imgs=files_all,
         masks=masks_all,
         mode=mode,
-        on_gpu=on_gpu,
+        device=device,
         save_dir=output_path,
         ioconfig=ioconfig,
     )

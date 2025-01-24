@@ -1371,11 +1371,13 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             for key, annotation in self.items()
             if (
                 query_geometry is None
-                or isinstance(query_geometry, (Polygon, Point, LineString))
-                and Polygon.from_bounds(*annotation.geometry.bounds).intersects(
-                    Polygon.from_bounds(*query_geometry.bounds),
+                or (
+                    isinstance(query_geometry, (Polygon, Point, LineString))
+                    and Polygon.from_bounds(*annotation.geometry.bounds).intersects(
+                        Polygon.from_bounds(*query_geometry.bounds),
+                    )
+                    and self._eval_where(where, annotation.properties)
                 )
-                and self._eval_where(where, annotation.properties)
             )
         }
 
@@ -2556,7 +2558,21 @@ class SQLiteStore(AnnotationStore):
         cx: float,
         cy: float,
     ) -> bytes:
-        """Unpack WKB data."""
+        """Return the geometry as bytes using WKB.
+
+        Args:
+            data (bytes or str):
+                The WKB/WKT data to be unpacked.
+            cx (int):
+                The X coordinate of the centroid/representative point.
+            cy (float):
+                The Y coordinate of the centroid/representative point.
+
+        Returns:
+            bytes:
+                The geometry as bytes.
+
+        """
         return (
             self._decompress_data(data)
             if data

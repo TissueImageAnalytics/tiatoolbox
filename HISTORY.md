@@ -1,6 +1,69 @@
 # History
 
-## 1.5.1 (2023-12-16)
+## TIAToolbox v1.6.0 (2024-12-12)
+
+### Major Updates and Feature Improvements
+
+- **Foundation Models Support via `timm` API** (#856, contributed by @GeorgeBatch)
+  - Introduced `TimmBackbone` for running additional PyTorch Image Models.
+  - Tested models include `UNI`, `Prov-GigaPath`, and `H-optimus-0`.
+  - Added an example notebook demonstrating feature extraction with foundation models.
+  - `timm` added as a dependency.
+- **Performance Enhancements with `torch.compile`** (#716)
+  - Improved performance on newer GPUs using `torch.compile`.
+- **Multichannel Input Support in `WSIReader`** (#742)
+- **AnnotationStore Filtering for Patch Extraction** (#822)
+- **Python 3.12 Support**
+- **Deprecation of Python 3.8 Support**
+- **CLI Response Time Improvements** (#795)
+
+### API Changes
+
+- **Device Specification Update** (#882)
+  - Replaced `has_gpu` with `device` for specifying GPU or CPU usage, aligning with PyTorch's `Model.to()` functionality.
+- **Windows Compatibility Enhancement** (#769)
+  - Replaced `POWER` with explicit multiplication.
+
+### Bug Fixes and Other Changes
+
+- **TIFFWSIReader Bound Reading Adjustment** (#777)
+  - Fixed `read_bound` to use adjusted bounds.
+  - Reduced code complexity in `WSIReader` (#814).
+- **Annotation Rendering Fixes** (#813)
+  - Corrected rendering of annotations with holes.
+- **Non-Tiled TIFF Support in `WSIReader`** (#807, contributed by @GeorgeBatch)
+- **HoVer-Net Documentation Update** (#751)
+  - Corrected class output information.
+- **Citation File Fix for `cffconvert`** (#869, contributed by @Alon-Alexander)
+- **Bokeh Compatibility Updates**
+  - Updated `bokeh_app` for compatibility with `bokeh>=3.5.0`.
+  - Switched from `size` to `radius` for `bokeh>3.4.0` compatibility (#796).
+- **JSON Extraction Fixes** (#772)
+  - Restructured SQL expression construction for JSON properties with dots in keys.
+- **VahadaneExtractor Warning** (#871)
+  - Added warning due to changes in `scikit-learn>0.23.0` dictionary learning (#382).
+- **PatchExtractor Error Message Refinement** (#883)
+- **Immutable Output Fix in `WSIReader`** (#850)
+
+### Development-Related Changes
+
+- **Mypy Checks Added**
+  - Applied to `utils`, `tools`, `data`, `annotation`, and `cli/common`.
+- **ReadTheDocs PDF Build Deprecation**
+- **Formatter Update**
+  - Replaced `black` with `ruff-format`.
+- **Dependency Removal**
+  - Removed `jinja2`.
+- **Test Environment Update**
+  - Updated to `Ubuntu 24.04`.
+- **Conda Environment Workflow Update**
+  - Implemented `micromamba` setup.
+- **Codecov Reporting Fix** (#811)
+  **Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v1.5.1...v1.6.0
+
+______________________________________________________________________
+
+## TIAToolbox v1.5.1 (2023-12-16)
 
 ### Development related changes
 
@@ -9,7 +72,9 @@
 
 **Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v1.5.0...v1.5.1
 
-## 1.5.0 (2023-12-15)
+______________________________________________________________________
+
+## TIAToolbox v1.5.0 (2023-12-15)
 
 ### Major Updates and Feature Improvements
 
@@ -54,17 +119,21 @@
 
 **Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v1.4.0...v1.5.0
 
-## 1.4.1 (2023-07-25)
+______________________________________________________________________
+
+## TIAToolbox v1.4.1 (2023-07-25)
 
 ### Bug Fixes and Other Changes
 
 - Fix dictionary changed size Error #626 (#605)
 
-## 1.4.0 (2023-04-24)
+______________________________________________________________________
+
+## TIAToolbox v1.4.0 (2023-04-24)
 
 ### Major Updates and Feature Improvements
 
-- Adds Python 3.11 support \[experimental\] #500
+- Adds Python 3.11 support [experimental] #500
   - Python 3.11 is not fully supported by `pytorch` https://github.com/pytorch/pytorch/issues/86566 and `openslide` https://github.com/openslide/openslide-python/pull/188
 - Removes Python 3.7 support
   - This allows upgrading all the dependencies which were dependent on an older version of Python.
@@ -109,7 +178,9 @@
 - Uses `pyproject.toml` for `bdist_wheel`, `pytest` and `isort`
 - Adds `joblib` and `numba` as dependencies.
 
-## 1.3.3 (2023-03-02)
+______________________________________________________________________
+
+## TIAToolbox v1.3.3 (2023-03-02)
 
 ### Major Updates and Feature Improvements
 
@@ -127,7 +198,9 @@ None
 
 - Restricts dependency versions for compatibility
 
-## 1.3.2 (2023-02-17)
+______________________________________________________________________
+
+## TIAToolbox v1.3.2 (2023-02-17)
 
 ### Major Updates and Feature Improvements
 
@@ -145,7 +218,9 @@ None
 
 - Restricts wsidicom version to \<0.7.0 for compatibility
 
-## 1.3.1 (2022-12-20)
+______________________________________________________________________
+
+## TIAToolbox v1.3.1 (2022-12-20)
 
 ### Major Updates and Feature Improvements
 
@@ -172,7 +247,9 @@ None
 - Prevent test dumping file to root
 - Removes duplicate functions to generate parameterized test scenarios
 
-## 1.3.0 (2022-10-20)
+______________________________________________________________________
+
+## TIAToolbox v1.3.0 (2022-10-20)
 
 ### Major Updates and Feature Improvements
 
@@ -181,7 +258,7 @@ None
   - Adds DICE metric
 - Adds [SCCNN](https://doi.org/10.1109/tmi.2016.2525803) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.sccnn.SCCNN.html)\]
 - Adds [MapDe](https://arxiv.org/abs/1806.06970) architecture. \[[read the docs](https://tia-toolbox.readthedocs.io/en/develop/_autosummary/tiatoolbox.models.architecture.mapde.MapDe.html)\]
-- Adds support for reading MPP metadata from  NGFF v0.4
+- Adds support for reading MPP metadata from NGFF v0.4
 - Adds enhancements to tiatoolbox.annotation.storage that are useful when using an AnnotationStore for visualization purposes.
 
 ### Changes to API
@@ -196,7 +273,7 @@ None
 - Fixes nucleus_segmentor_engine for boundary artefacts
 - Fixes the colorbar cropping in tests
 - Adds citation in README.md and CITATION.cff to Nature Communications Medicine paper
-- Fixes a bug #452 raised by @rogertrullo  where only the numerator of the TIFF resolution tags was being read.
+- Fixes a bug #452 raised by @rogertrullo where only the numerator of the TIFF resolution tags was being read.
 - Fixes HoVer-Net+ post-processing to be inline with original work.
 - Fixes a bug where an exception would be raised if the OME XML is missing objective power.
 
@@ -214,7 +291,9 @@ None
 - Adds pip install workflow to resolve dependencies when requirements file is updated
 - Improves tiatoolbox import using LazyLoader
 
-## 1.2.1 (2022-07-07)
+______________________________________________________________________
+
+## TIAToolbox v1.2.1 (2022-07-07)
 
 ### Major Updates and Feature Improvements
 
@@ -238,7 +317,9 @@ None
 - Adds pre-commit hooks to check requirements consistency.
 - Adds GitHub Action to resolve conda environment checks on Windows and Ubuntu.
 
-## 1.2.0 (2022-07-05)
+______________________________________________________________________
+
+## TIAToolbox v1.2.0 (2022-07-05)
 
 ### Major Updates and Feature Improvements
 
@@ -270,7 +351,9 @@ None
 - Sets up GitHub Actions Workflow.
   - Travis CI will be removed in future release.
 
-## 1.1.0 (2022-05-07)
+______________________________________________________________________
+
+## TIAToolbox v1.1.0 (2022-05-07)
 
 ### Major Updates and Feature Improvements
 
@@ -311,7 +394,9 @@ None
 - Improves CLI definitions to make it easier to integrate new functions.
 - Fixes compile options for test_annotation_stores.py
 
-## 1.0.1 (2022-01-31)
+______________________________________________________________________
+
+## TIAToolbox v1.0.1 (2022-01-31)
 
 ### Major Updates and Feature Improvements
 
@@ -332,12 +417,14 @@ None
 - Fixes flake8 linting issues and typos
 - Conditional pytest.skipif to skip GPU tests on travis while running them locally or elsewhere
 
-## 1.0.0 (2021-12-23)
+______________________________________________________________________
+
+## TIAToolbox v1.0.0 (2021-12-23)
 
 ### Major Updates and Feature Improvements
 
 - Adds nucleus instance segmentation base class
-  - Adds  [HoVerNet](https://www.sciencedirect.com/science/article/abs/pii/S1361841519301045) architecture
+  - Adds [HoVerNet](https://www.sciencedirect.com/science/article/abs/pii/S1361841519301045) architecture
 - Adds multi-task segmentor [HoVerNet+](https://arxiv.org/abs/2108.13904) model
 - Adds <a href="https://www.thelancet.com/journals/landig/article/PIIS2589-7500(2100180-1/fulltext">IDaRS</a> pipeline
 - Adds [SlideGraph](https://arxiv.org/abs/2110.06042) pipeline
@@ -358,7 +445,7 @@ None
 
 ### Bug Fixes and Other Changes
 
-- Fixes  Fix `filter_coordinates` read wrong resolutions for patch extraction
+- Fixes `filter_coordinates` read wrong resolutions for patch extraction
 - For `PatchPredictor`
   - `ioconfig` will supersede everything
   - if `ioconfig` is not provided
@@ -375,7 +462,9 @@ None
 - On demand imports for some libraries for performance
 - Improves performance of mask based patch extraction
 
-## 0.8.0 (2021-10-27)
+______________________________________________________________________
+
+## TIAToolbox v0.8.0 (2021-10-27)
 
 ### Major Updates and Feature Improvements
 
@@ -410,7 +499,7 @@ None
 - Adds dependencies for tiffile, imagecodecs, zarr.
 - Adds more stringent pre-commit checks
 - Moved local test files into `tiatoolbox/data`.
-- Fixed `Manifest.ini` and added  `tiatoolbox/data`. This means that this directory will be downloaded with the package.
+- Fixed `Manifest.ini` and added `tiatoolbox/data`. This means that this directory will be downloaded with the package.
 - Using `pkg_resources` to properly load bundled resources (e.g. `target_image.png`) in `tiatoolbox.data`.
 - Removed duplicate code in `conftest.py` for downloading remote files. This is now in `tiatoolbox.data._fetch_remote_file`.
 - Fixes errors raised by new flake8 rules.
@@ -421,7 +510,9 @@ None
 - Updates to new GitHub organisation name in the repo
   - Fixes related links
 
-## 0.7.0 (2021-09-16)
+______________________________________________________________________
+
+## TIAToolbox v0.7.0 (2021-09-16)
 
 ### Major and Feature Improvements
 
@@ -455,7 +546,9 @@ None
   - Removes conda build on readthedocs build
 - Adds extra checks to pre-commit, e.g., import sorting, spellcheck etc. Detailed list can be found on this [commit](https://github.com/TissueImageAnalytics/tiatoolbox/commit/662a143e915fa55416badd992d8e7358211730a6).
 
-## 0.6.0 (2021-05-11)
+______________________________________________________________________
+
+## TIAToolbox v0.6.0 (2021-05-11)
 
 ### Major and Feature Improvements
 
@@ -481,7 +574,7 @@ None
 
 ______________________________________________________________________
 
-## 0.5.2 (2021-03-12)
+## TIAToolbox v0.5.2 (2021-03-12)
 
 ### Bug Fixes and Other Changes
 
@@ -490,7 +583,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.5.1 (2020-12-31)
+## TIAToolbox v0.5.1 (2020-12-31)
 
 ### Bug Fixes and Other Changes
 
@@ -499,7 +592,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.5.0 (2020-12-30)
+## TIAToolbox v0.5.0 (2020-12-30)
 
 ### Major and Feature Improvements
 
@@ -513,9 +606,9 @@ ______________________________________________________________________
   - `read_bounds` takes a tuple (left, top, right, bottom) of coordinates in baseline (level 0) reference frame and returns a region bounded by those.
   - `read_rect` takes one coordinate in baseline reference frame and an output size in pixels.
 - Adds `VirtualWSIReader` as a subclass of WSIReader which can be used to read visual fields (tiles).
-  - `VirtualWSIReader`  accepts ndarray or image path as input.
-- Adds MPP fall back to standard TIFF resolution tags  with warning.
-  - If OpenSlide cannot determine microns per pixel (`mpp`) from the metadata, checks the TIFF resolution units (TIFF tags: `ResolutionUnit`, `XResolution` and  `YResolution`) to calculate MPP. Additionally, add function to estimate missing objective power if MPP is known of derived from TIFF resolution tags.
+  - `VirtualWSIReader` accepts ndarray or image path as input.
+- Adds MPP fall back to standard TIFF resolution tags with warning.
+  - If OpenSlide cannot determine microns per pixel (`mpp`) from the metadata, checks the TIFF resolution units (TIFF tags: `ResolutionUnit`, `XResolution` and `YResolution`) to calculate MPP. Additionally, add function to estimate missing objective power if MPP is known of derived from TIFF resolution tags.
 - Estimates missing objective power from MPP with warning.
 - Adds example notebooks for stain normalisation and WSI reader.
 - Adds caching to slide info property. This is done by checking if a private `self._m_info` exists and returning it if so, otherwise `self._info` is called to create the info for the first time (or to force regenerating) and the result is assigned to `self._m_info`. This could in future be made much simpler with the `functools.cached_property` decorator in Python 3.8+.
@@ -557,7 +650,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.4.0 (2020-10-25)
+## TIAToolbox v0.4.0 (2020-10-25)
 
 ### Major and Feature Improvements
 
@@ -584,7 +677,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.3.0 (2020-07-19)
+## TIAToolbox v0.3.0 (2020-07-19)
 
 ### Major and Feature Improvements
 
@@ -603,7 +696,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.2.2 (2020-07-12)
+## TIAToolbox v0.2.2 (2020-07-12)
 
 ### Major and Feature Improvements
 
@@ -619,7 +712,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.2.1 (2020-07-10)
+## TIAToolbox v0.2.1 (2020-07-10)
 
 ### Major and Feature Improvements
 
@@ -635,7 +728,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.2.0 (2020-07-10)
+## TIAToolbox v0.2.0 (2020-07-10)
 
 ### Major and Feature Improvements
 
@@ -661,6 +754,6 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 0.1.0 (2020-05-28)
+## TIAToolbox v0.1.0 (2020-05-28)
 
 - First release on PyPI.

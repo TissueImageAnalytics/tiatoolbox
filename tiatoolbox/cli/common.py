@@ -234,6 +234,18 @@ def cli_pretrained_weights(
     )
 
 
+def cli_device(
+    usage_help: str = "Select the device (cpu/cuda/mps) to use for inference.",
+    default: str = "cpu",
+) -> Callable:
+    """Enables --pretrained-weights option for cli."""
+    return click.option(
+        "--device",
+        help=add_default_to_usage_help(usage_help, default),
+        default=default,
+    )
+
+
 def cli_return_probabilities(
     usage_help: str = "Whether to return raw model probabilities.",
     *,
@@ -330,20 +342,6 @@ def cli_yaml_config_path(
         "--yaml-config-path",
         help=add_default_to_usage_help(usage_help, default),
         default=default,
-    )
-
-
-def cli_on_gpu(
-    usage_help: str = "Run the model on GPU.",
-    *,
-    default: bool = False,
-) -> Callable:
-    """Enables --on-gpu option for cli."""
-    return click.option(
-        "--on-gpu",
-        type=bool,
-        default=default,
-        help=add_default_to_usage_help(usage_help, default),
     )
 
 

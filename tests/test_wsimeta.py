@@ -8,7 +8,6 @@ import pytest
 from tiatoolbox.wsicore import WSIMeta, wsimeta, wsireader
 
 
-# noinspection PyTypeChecker
 def test_wsimeta_init_fail() -> None:
     """Test incorrect init for WSIMeta raises TypeError."""
     with pytest.raises(TypeError):

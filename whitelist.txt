@@ -96,6 +96,7 @@ coord
 coords
 csv
 cuda
+customizable
 cv2
 dataframe
 dataset

@@ -40,7 +40,7 @@ jobs:
           cp ./requirements/requirements*.txt /tmp/
           mkdir /tmp/docs/
           cp ./docs/requirements*.txt /tmp/docs/
-      - uses: mamba-org/provision-with-micromamba@main
+      - uses: mamba-org/setup-micromamba@v1
         with:
           environment-name: tiatoolbox
           environment-file: ${{ matrix.requirements }}
