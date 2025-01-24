@@ -12,7 +12,7 @@ from .architecture.sccnn import SCCNN
 from .architecture.sam import SAM
 from .engine.multi_task_segmentor import MultiTaskSegmentor
 from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
-from .engine.sam_engine import GeneralSegmentor
+from .engine.general_segmentor import GeneralSegmentor
 from .engine.patch_predictor import (
     IOPatchPredictorConfig,
     PatchDataset,
@@ -35,7 +35,9 @@ __all__ = [
     "MicroNet",
     "MultiTaskSegmentor",
     "NuClick",
+    "SAM",
     "NucleusInstanceSegmentor",
     "PatchPredictor",
     "SemanticSegmentor",
+    "GeneralSegmentor",
 ]
