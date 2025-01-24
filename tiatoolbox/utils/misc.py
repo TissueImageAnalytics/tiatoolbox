@@ -1490,7 +1490,7 @@ def write_to_zarr_in_cache_mode(
 
     # case 1 - new zarr group
     if not zarr_group:
-        for key in output_data_to_save:
+        for key in output_data_to_save.items():
             data_to_save = output_data_to_save[key]
             # populate the zarr group for the first time
             zarr_dataset = zarr_group.create_dataset(
@@ -1503,7 +1503,7 @@ def write_to_zarr_in_cache_mode(
         return zarr_group
 
     # case 2 - append to existing zarr group
-    for key in output_data_to_save:
+    for key in output_data_to_save.items():
         zarr_group[key].append(output_data_to_save[key])
 
     return zarr_group
