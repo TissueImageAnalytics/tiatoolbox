@@ -80,7 +80,7 @@ myst_enable_extensions = ["colon_fence"]
 nb_execution_mode = "off"
 
 # The master toctree document.
-master_doc = "readme"
+master_doc = "index"
 
 # General information about the project.
 project = "TIA Toolbox"

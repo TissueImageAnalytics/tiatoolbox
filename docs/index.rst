@@ -1,9 +1,8 @@
 Welcome to TIA Toolbox's documentation!
 =======================================
 
-.. image:: tia_logo.png
-    :alt: alternate text
-    :align: center
+.. include:: ../README.md
+   :parser: myst_parser.sphinx_
 
 .. toctree::
     :maxdepth: 2
