@@ -1,4 +1,7 @@
+from pathlib import Path
+import shutil
 import cv2
+import joblib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,17 +18,65 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
 )
 
-from tiatoolbox.models.architecture.sam import SAM
+from tiatoolbox.models.architecture.sam import SAM, SAMPrompts
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import download_data, imread, select_device
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
+from tiatoolbox.models.engine.semantic_segmentor import _prepare_save_output
+
+def _prepare_save_output(
+    save_path: str | Path,
+    img_shape: tuple[int, ...],
+) -> tuple:
+    """Prepares for saving the cached output."""
+    if save_path is not None:
+        save_path = Path(save_path)
+        #if Path.exists(save_path):
+            # Return error
+        #else:
+        memmap = np.lib.format.open_memmap(
+            save_path,
+            mode="w+",
+            shape=img_shape,
+            dtype=np.float32,
+        )
+    #else:
+        # Return error
+        
+    return memmap
+
+def _prepare_save_dir( save_dir: str | Path | None) -> tuple[Path, Path]:
+    """Prepare save directory and cache."""
+    if save_dir is None:
+        logger.warning(
+            "Segmentor will only output to directory. "
+            "All subsequent output will be saved to current runtime "
+            "location under folder 'output'. Overwriting may happen! ",
+            stacklevel=2,
+        )
+        save_dir = Path.cwd() / "output"
+
+    save_dir = Path(save_dir).resolve()
+    # if save_dir.is_dir():
+    #     msg = f"`save_dir` already exists! {save_dir}"
+    #     raise ValueError(msg)
+    save_dir.mkdir(parents=True)
+    cache_dir = Path(f"{save_dir}/cache")
+    Path.mkdir(cache_dir, parents=True)
+    return save_dir, cache_dir
 
 class GeneralSegmentor:
+
+    """ Model designed for general segmentation of WSIs. 
+        Uses the SAM2 model architecture. """
+
     def __init__(self, 
-                 model: SAM):
-        self.model = model
+                 model: SAM = None):
+        
+        self.model = model if model is not None else SAM() 
+ 
         # Defining ioconfig
-        self.iostate = IOSegmentorConfig(
+        self.ioconfig = IOSegmentorConfig(
             input_resolutions=[
                 {"units": "mpp", "resolution": 1.0},
             ],
@@ -41,15 +92,49 @@ class GeneralSegmentor:
     def load_wsi(self, file_name):
         reader = WSIReader.open(file_name)
         self.img = reader.slide_thumbnail(
-            resolution=self.iostate.save_resolution["resolution"],
-            units=self.iostate.save_resolution["units"],
+            resolution=self.ioconfig.save_resolution["resolution"],
+            units=self.ioconfig.save_resolution["units"],
         )
         return self.img
 
-    def predict(self, file_name, prompts = None, device = "cpu"):
+
+    def predict(self, file_name, prompts: SAMPrompts = None, device = "cpu", save_path = None):
+        """Predict on a WSI using prompts.
+        Args:
+            file_name (str): 
+                Path to WSI file.
+            prompts (SAMPrompts): 
+                Prompts for SAM model.
+            device (str): 
+                Device to run inference on.
+            save_path (str): 
+                Location to save output prediction.
+        """
+        
+
+        save_dir = _prepare_save_dir(save_dir=save_path)
+        wsi_save_dir = f"{save_dir}/0.npy"
+
         batch_data = self.load_wsi(file_name)
         self.prediction = self.model.infer_batch(model=self.model, batch_data=batch_data, prompts=prompts, device=device)
+
+        save_memmap = _prepare_save_output(save_path=wsi_save_dir, img_shape=batch_data.shape)
+        np.copyto(save_memmap, self.prediction)
+
+        self._outputs = [str(file_name), str(wsi_save_dir)]
+
+        # ? will this corrupt old version if control + c midway?
+        map_file_path = save_dir / "file_map.dat"
+        # backup old version first
+        if Path.exists(map_file_path):
+            old_map_file_path = save_dir / "file_map_old.dat"
+            shutil.copy(map_file_path, old_map_file_path)
+        joblib.dump(self._outputs, map_file_path)
+
         return self.prediction
+    
+    def predict_wsi(self, file_name, device="cpu", save_path=None):
+        return self.predict(file_name, device=device, save_path=save_path)
     
     def display_prediction(self, prediction=None):
         if prediction is None:

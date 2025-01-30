@@ -5,17 +5,18 @@ from __future__ import annotations
 from collections import OrderedDict
 
 import numpy as np
-from tiatoolbox.models.models_abc import ModelABC
 import torch
 import torch.nn.functional as F  # noqa: N812
 from skimage import morphology
 from torch import nn
 
 from tiatoolbox.utils import misc
+from tiatoolbox.models.models_abc import ModelABC
 
-from sam2.build_sam import build_sam2
+from sam2.build_sam import build_sam2, build_sam2_hf
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
+
 
 class SAMPrompts():
     """Structure of prompts for SAM."""
@@ -54,7 +55,7 @@ class SAM(ModelABC):
     def infer_batch(
         model: torch.nn.Module,
         batch_data: list,
-        prompts: SAMPrompts,
+        prompts: SAMPrompts = None,
         *,
         device,
     ) -> np.ndarray:

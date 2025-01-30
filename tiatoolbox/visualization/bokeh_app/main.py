@@ -68,6 +68,10 @@ from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
+from tiatoolbox.models.engine.general_segmentor import (
+    GeneralSegmentor,
+    SAMPrompts
+)
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
@@ -1099,6 +1103,8 @@ def to_model_cb(attr: ButtonClick) -> None:  # noqa: ARG001
     """Callback to run currently selected model."""
     if UI["vstate"].current_model == "hovernet":
         segment_on_box()
+    elif UI["vstate"].current_model == "SAM":
+        segment_on_point()
     # Add any other models here
     else:  # pragma: no cover
         logger.warning("unknown model")
@@ -1253,6 +1259,45 @@ def segment_on_box() -> None:
     rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
 
+def segment_on_point() -> None:
+    """Callback to run SAM using a point on the slide.
+
+    Will run GeneralSegmentor on selected region of wsi defined
+    by the point in pt_source.
+
+    """
+    # Make a mask defining the box
+    thumb = UI["vstate"].wsi.slide_thumbnail()
+    conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
+    msg = f'pt tl: {UI["pt_source"].data["x"][0]}, {UI["pt_source"].data["y"][0]}'
+    logger.info(msg)
+    x = UI["pt_source"].data["x"]
+    y = -UI["pt_source"].data["y"]
+
+    prompts = SAMPrompts(point_coords=[(x,y)])
+
+    gen_segmentor = GeneralSegmentor()
+    tmp_save_dir = Path(tempfile.mkdtemp())
+
+    # Run SAM on the point
+    UI["vstate"].model_mpp = gen_segmentor.ioconfig.save_resolution["resolution"]
+    gen_segmentor.predict(
+        UI["vstate"].slide_path,
+        save_dir=tmp_save_dir / "sam_out",
+        device=select_device(on_gpu=torch.cuda.is_available()),
+        prompts=prompts
+    )
+
+    fname = make_safe_name(tmp_save_dir / "sam_out" / "0.dat")
+    resp = UI["s"].put(
+        f"http://{host2}:{port}/tileserver/annotations",
+        data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
+    )
+    ann_types = json.loads(resp.text)
+    update_ui_on_new_annotations(ann_types)
+
+    # Clean up temp files
+    rmtree(tmp_save_dir)
 
 # endregion
 
@@ -1482,7 +1527,7 @@ def gather_ui_elements(  # noqa: PLR0915
     )
     model_drop = Select(
         title="choose model:",
-        options=["hovernet"],
+        options=["hovernet","SAM"],
         height=25,
         width=120,
         max_width=120,
