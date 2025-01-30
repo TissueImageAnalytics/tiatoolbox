@@ -1269,7 +1269,7 @@ def segment_on_point() -> None:
     # Make a mask defining the box
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
-    msg = f'pt tl: {UI["pt_source"].data["x"][0]}, {UI["pt_source"].data["y"][0]}'
+    msg = f'pt: {UI["pt_source"].data["x"]}, {UI["pt_source"].data["y"]}'
     logger.info(msg)
     x = UI["pt_source"].data["x"]
     y = -UI["pt_source"].data["y"]
@@ -1288,7 +1288,7 @@ def segment_on_point() -> None:
         prompts=prompts
     )
 
-    fname = make_safe_name(tmp_save_dir / "sam_out" / "0.dat")
+    fname = make_safe_name(tmp_save_dir / "sam_out" / "file_map.dat")
     resp = UI["s"].put(
         f"http://{host2}:{port}/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},

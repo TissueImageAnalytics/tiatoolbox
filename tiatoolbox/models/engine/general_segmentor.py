@@ -61,9 +61,7 @@ def _prepare_save_dir( save_dir: str | Path | None) -> tuple[Path, Path]:
     #     msg = f"`save_dir` already exists! {save_dir}"
     #     raise ValueError(msg)
     save_dir.mkdir(parents=True)
-    cache_dir = Path(f"{save_dir}/cache")
-    Path.mkdir(cache_dir, parents=True)
-    return save_dir, cache_dir
+    return save_dir
 
 class GeneralSegmentor:
 
@@ -110,15 +108,14 @@ class GeneralSegmentor:
             save_path (str): 
                 Location to save output prediction.
         """
-        
 
         save_dir = _prepare_save_dir(save_dir=save_path)
-        wsi_save_dir = f"{save_dir}/0.npy"
+        wsi_save_dir = save_dir / "0.npy"
 
         batch_data = self.load_wsi(file_name)
         self.prediction = self.model.infer_batch(model=self.model, batch_data=batch_data, prompts=prompts, device=device)
 
-        save_memmap = _prepare_save_output(save_path=wsi_save_dir, img_shape=batch_data.shape)
+        save_memmap = _prepare_save_output(save_path=wsi_save_dir, img_shape=self.prediction.shape)
         np.copyto(save_memmap, self.prediction)
 
         self._outputs = [str(file_name), str(wsi_save_dir)]
