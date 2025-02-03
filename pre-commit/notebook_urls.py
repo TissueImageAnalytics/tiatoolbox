@@ -197,7 +197,9 @@ def check_notebook(
         for line_num, line in enumerate(cell["source"]):
             new_line = replace_line(line, to_ref, replacements)
             if new_line != line:
-                print(f"{path.name}: Changed (cell {cell_num+1}, line {line_num+1})")
+                print(
+                    f"{path.name}: Changed (cell {cell_num + 1}, line {line_num + 1})"
+                )
                 changed = True
                 cell["source"][line_num] = new_line
     return changed, notebook

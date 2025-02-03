@@ -128,9 +128,9 @@ def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> 
 
     assert len(inst_dict) > 0, "Must have some nuclei."
     assert layer_map is not None, "Must have some layers."
-    assert (
-        layer_map.shape == required_dims
-    ), "Output layer map dimensions must be same as the expected output shape"
+    assert layer_map.shape == required_dims, (
+        "Output layer map dimensions must be same as the expected output shape"
+    )
 
 
 def test_functionality_hovernet(remote_sample: Callable, tmp_path: Path) -> None:

@@ -461,7 +461,7 @@ def test_change_overlay(  # noqa: PLR0915
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id])-1}"
+        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == overlay_path
 
@@ -493,7 +493,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(jpg_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id])-1}"
+        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
         layer = empty_app.pyramids[session_id][lname]
         assert np.all(layer.wsi.img == imread(jpg_path))
 
@@ -517,7 +517,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(tiff_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id])-1}"
+        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
 
