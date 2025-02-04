@@ -88,14 +88,6 @@ def compile_model(
         logger.warning(msg=msg)
         return model
 
-    # This check will be removed when torch.compile is supported in Python 3.12+
-    if sys.version_info > (3, 12):  # pragma: no cover
-        msg = "torch-compile is currently not supported in Python 3.12+."
-        logger.warning(
-            msg=msg,
-        )
-        return model
-
     if isinstance(  # pragma: no cover
         model,
         torch._dynamo.eval_frame.OptimizedModule,  # skipcq: PYL-W0212 # noqa: SLF001
