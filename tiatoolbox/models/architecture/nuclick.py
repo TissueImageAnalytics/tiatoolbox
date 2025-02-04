@@ -24,7 +24,7 @@ from tiatoolbox import logger
 from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntPair
+    from tiatoolbox.type_hints import IntPair
 
 bn_axis = 1
 

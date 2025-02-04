@@ -24,7 +24,7 @@ from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntBounds, Resolution, Units
+    from tiatoolbox.type_hints import IntBounds, Resolution, Units
 
 RGB_IMAGE_DIM = 3
 BIN_MASK_DIM = 2

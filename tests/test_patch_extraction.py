@@ -21,7 +21,7 @@ from tiatoolbox.wsicore.wsireader import (
 )
 
 if TYPE_CHECKING:
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
 def read_points_patches(
