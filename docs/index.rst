@@ -9,9 +9,8 @@ Welcome to TIA Toolbox's documentation!
 
     Readme <readme.rst>
     Installation <installation.rst>
-    Usage <usage.rst>
     Pre-trained Models <pretrained.rst>
-    Jupyter Notebooks <notebooks.rst>
+    Usage Examples <notebooks.rst>
     Algorithms <algorithms.rst>
     Visualization <visualization.rst>
     API Reference <_autosummary/tiatoolbox>

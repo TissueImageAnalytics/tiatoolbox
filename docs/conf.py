@@ -2016,8 +2016,8 @@ with open("../examples/README.md", "r") as file:
 # Replace the target string
 file_data = file_data.replace(".rst", ".html")
 file_data = file_data.replace(".ipynb", ".html")
-file_data = file_data.replace("../docs/", "../")
 file_data = file_data.replace("](./", "](./jnb/")
+file_data = file_data.replace("../docs/", "./")
 
 # Write the file out again
 with open("_notebooks/README.md", "w") as file:
