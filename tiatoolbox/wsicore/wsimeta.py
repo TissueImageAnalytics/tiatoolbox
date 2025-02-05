@@ -20,7 +20,7 @@ from tiatoolbox import logger
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Mapping, Sequence
 
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.type_hints import Resolution, Units
 
 
 class WSIMeta:

@@ -141,7 +141,7 @@ def raise_source_exception(
         for n, line in enumerate(source.splitlines())
     ]
     if source_offset:
-        source_lines.insert(source_lineno, f"{' '*(source_offset+3)}^ {message}")
+        source_lines.insert(source_lineno, f"{' ' * (source_offset + 3)}^ {message}")
     annotated_source = "\n".join(source_lines)
     exception = type(exception) if exception else SyntaxError
     msg = f"{rel_path}:{file_lineno}: {message}\n{annotated_source}"

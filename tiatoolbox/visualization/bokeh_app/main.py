@@ -1204,7 +1204,7 @@ def segment_on_box() -> None:
     # Make a mask defining the box
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
-    msg = f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}'
+    msg = f"box tl: {UI['box_source'].data['x'][0]}, {UI['box_source'].data['y'][0]}"
     logger.info(msg)
     x = round(
         (UI["box_source"].data["x"][0] - 0.5 * UI["box_source"].data["width"][0])

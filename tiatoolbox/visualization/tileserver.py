@@ -102,7 +102,7 @@ class TileServer(Flask):
         if isinstance(layers, list):
             layers_dict = {"slide": layers[0]}
             for i, p in enumerate(layers[1:]):
-                layers_dict[f"layer-{i+1}"] = p
+                layers_dict[f"layer-{i + 1}"] = p
             layers = layers_dict
         # Set up the layer dict.
         meta = None
