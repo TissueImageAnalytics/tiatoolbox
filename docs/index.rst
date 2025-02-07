@@ -4,11 +4,12 @@ Welcome to TIA Toolbox's documentation!
 .. include:: ../README.md
    :parser: myst_parser.sphinx_
 
+Index
+-----
+
 .. toctree::
     :maxdepth: 1
 
-Index
------
     Readme <readme.rst>
     Installation <installation.rst>
     Pre-trained Models <pretrained.rst>
