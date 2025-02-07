@@ -2005,8 +2005,8 @@ shutil.copytree(
 )
 
 # shutil.copy(
-#     os.path.join(PROJ_ROOT, "docs/notebooks.rst"),
-#     os.path.join(PROJ_ROOT, "docs/_notebooks/notebooks.rst"),
+#     os.path.join(PROJ_ROOT, "docs/usage_examples.rst"),
+#     os.path.join(PROJ_ROOT, "docs/_notebooks/usage_examples.rst"),
 # )
 
 # Read in the file

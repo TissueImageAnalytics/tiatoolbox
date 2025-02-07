@@ -4,7 +4,8 @@ Jupyter Notebooks
 .. include:: _notebooks/README.md
    :parser: myst_parser.sphinx_
 
-|
+Index
+-----
 
 .. toctree::
     :maxdepth: 2

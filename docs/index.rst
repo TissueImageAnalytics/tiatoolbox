@@ -7,10 +7,12 @@ Welcome to TIA Toolbox's documentation!
 .. toctree::
     :maxdepth: 1
 
+Index
+-----
     Readme <readme.rst>
     Installation <installation.rst>
     Pre-trained Models <pretrained.rst>
-    Usage Examples <notebooks.rst>
+    Usage Examples <usage_examples.rst>
     Algorithms <algorithms.rst>
     Visualization <visualization.rst>
     API Reference <_autosummary/tiatoolbox>
