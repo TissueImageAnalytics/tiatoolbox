@@ -51,13 +51,6 @@ TIAToolbox is a computational pathology toolbox developed by the TIA Centre. It 
 
 This package is designed for those interested in digital pathology, including graduate students, medical staff, members of the TIA Centre and PathLAKE, and anyone who may find it useful. We will continue to improve this package, taking into account developments in pathology, microscopy, computing, and related disciplines. Please send comments and feedback to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
 
-**[`tiatoolbox`](tiatoolbox)** refers to:
-
-1. A specific computer program.
-1. A Python package of related programs created by the TIA Centre to help people get started in Digital Pathology.
-1. This repository.
-1. A specific virtual environment.
-
 ### Developers
 
 If you want to contribute to this repository, please first look at our [Wiki](https://github.com/TissueImageAnalytics/tiatoolbox/wiki) and our [contributor guidelines](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/CONTRIBUTING.rst). Also, see the *Prepare for development* section of this document.
