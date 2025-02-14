@@ -409,9 +409,12 @@ class WSIReader:
             return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
 
         if last_suffix in (".tif", ".tiff"):
-            tiff_wsi = _handle_tiff_wsi(
+            tiff_wsi = TIFFWSIReader(
                 input_path, mpp=mpp, power=power, post_proc=post_proc
             )
+            # tiff_wsi = _handle_tiff_wsi(
+            #    input_path, mpp=mpp, power=power, post_proc=post_proc
+            # )
             if tiff_wsi is not None:
                 return tiff_wsi
 
@@ -3792,8 +3795,11 @@ class TIFFWSIReader(WSIReader):
             return None
 
         objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
+        if objective_settings is None:
+            # try alternative tag
+            objective_settings = xml_series.find("ome:Objective", namespaces)
         instrument_ref_id = instrument_ref.attrib["ID"]
-        objective_settings_id = objective_settings.attrib["ID"]
+        objective_settings_id = "Objective:0"  # objective_settings.attrib["ID"]
         instruments = {
             instrument.attrib["ID"]: instrument
             for instrument in xml.findall("ome:Instrument", namespaces)
