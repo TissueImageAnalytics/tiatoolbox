@@ -69,8 +69,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
 from tiatoolbox.models.engine.general_segmentor import (
-    GeneralSegmentor,
-    SAMPrompts
+    GeneralSegmentor
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
@@ -1266,33 +1265,41 @@ def segment_on_point() -> None:
     by the point in pt_source.
 
     """
-    # Make a mask defining the box
-    thumb = UI["vstate"].wsi.slide_thumbnail()
-    conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
-    msg = f'pt: {UI["pt_source"].data["x"]}, {UI["pt_source"].data["y"]}'
-    logger.info(msg)
-    x = UI["pt_source"].data["x"]
-    y = -UI["pt_source"].data["y"]
 
-    prompts = SAMPrompts(point_coords=[(x,y)])
+    msg = f'pt: {UI["pt_source"].data["x"][0]}, {UI["pt_source"].data["y"][0]}'
+    logger.info(msg)
+    x = UI["pt_source"].data["x"][0]
+    y = -UI["pt_source"].data["y"][0]
 
     gen_segmentor = GeneralSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
 
+    prompts = gen_segmentor.create_prompts(point_coords=[[x,y]])
+
     # Run SAM on the point
     UI["vstate"].model_mpp = gen_segmentor.ioconfig.save_resolution["resolution"]
-    gen_segmentor.predict(
+    prediction = gen_segmentor.predict(
         UI["vstate"].slide_path,
-        save_dir=tmp_save_dir / "sam_out",
+        save_path=tmp_save_dir / "sam_out",
         device=select_device(on_gpu=torch.cuda.is_available()),
         prompts=prompts
     )
 
-    fname = make_safe_name(tmp_save_dir / "sam_out" / "file_map.dat")
+    import ntpath
+    slide_filename = Path(ntpath.basename(UI["vstate"].slide_path))
+    print(slide_filename)
+
+    #tmp_save_dir / "sam_out" / slide_filename
+
+    ann_loc = gen_segmentor.to_annotation(prediction[0][1], doc_config["overlay_folder"] / slide_filename)
+    print(f"Annotation saved to {ann_loc}")
+
+    fname = make_safe_name(ann_loc)
     resp = UI["s"].put(
-        f"http://{host2}:{port}/tileserver/annotations",
-        data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
+        f"http://{host2}:{port}/tileserver/overlay",
+        data={"overlay_path": fname},
     )
+    print(f"resp.text:{resp.text}")
     ann_types = json.loads(resp.text)
     update_ui_on_new_annotations(ann_types)
 

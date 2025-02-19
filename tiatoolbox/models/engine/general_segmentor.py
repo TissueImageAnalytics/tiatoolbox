@@ -24,6 +24,9 @@ from tiatoolbox.utils.misc import download_data, imread, select_device
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 from tiatoolbox.models.engine.semantic_segmentor import _prepare_save_output
 
+from tiatoolbox.annotation.storage import Annotation, SQLiteStore
+from shapely.geometry import Polygon
+
 def _prepare_save_output(
     save_path: str | Path,
     img_shape: tuple[int, ...],
@@ -87,8 +90,8 @@ class GeneralSegmentor:
             save_resolution={"units": "mpp", "resolution": 1.0},
         )
 
-    def load_wsi(self, file_name):
-        reader = WSIReader.open(file_name)
+    def load_wsi(self, file_name): # Should include MPP as parameter
+        reader = WSIReader.open(file_name,(1,1), 1.0)
         self.img = reader.slide_thumbnail(
             resolution=self.ioconfig.save_resolution["resolution"],
             units=self.ioconfig.save_resolution["units"],
@@ -96,7 +99,7 @@ class GeneralSegmentor:
         return self.img
 
 
-    def predict(self, file_name, prompts: SAMPrompts = None, device = "cpu", save_path = None):
+    def predict(self, file_name, prompts: SAMPrompts = None, device = "cpu", save_path: Path = None):
         """Predict on a WSI using prompts.
         Args:
             file_name (str): 
@@ -108,7 +111,7 @@ class GeneralSegmentor:
             save_path (str): 
                 Location to save output prediction.
         """
-
+        file_name = Path(file_name)
         save_dir = _prepare_save_dir(save_dir=save_path)
         wsi_save_dir = save_dir / "0.npy"
 
@@ -118,7 +121,7 @@ class GeneralSegmentor:
         save_memmap = _prepare_save_output(save_path=wsi_save_dir, img_shape=self.prediction.shape)
         np.copyto(save_memmap, self.prediction)
 
-        self._outputs = [str(file_name), str(wsi_save_dir)]
+        self._outputs = [[str(file_name), str(wsi_save_dir)]]
 
         # ? will this corrupt old version if control + c midway?
         map_file_path = save_dir / "file_map.dat"
@@ -128,79 +131,48 @@ class GeneralSegmentor:
             shutil.copy(map_file_path, old_map_file_path)
         joblib.dump(self._outputs, map_file_path)
 
-        return self.prediction
+        print(f"Prediction stored at {wsi_save_dir}")
+
+        return self._outputs
     
     def predict_wsi(self, file_name, device="cpu", save_path=None):
         return self.predict(file_name, device=device, save_path=save_path)
     
-    def display_prediction(self, prediction=None):
-        if prediction is None:
-            prediction = self.prediction
-        plt.figure(figsize=(20, 20))
-        plt.imshow(self.img)
-        self.show_anns(prediction)
-        plt.axis('off')
-        plt.show()
+    def to_annotation(self, mask_path, save_filename: Path | str = None):
+        """Converts the prediction output to annotation format."""
+        
+        masks = np.load(mask_path)
 
-    # Imported from SAM2 example Jupyter notebook
-    def show_anns(self, anns, borders=True):
-        if len(anns) == 0:
-            return
-        sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
-        ax = plt.gca()
-        ax.set_autoscale_on(False)
+        def mask_to_polygons(mask):
+            """Extract polygons from a binary mask using OpenCV."""
+            contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            polygons = [Polygon(c.squeeze()) for c in contours if len(c) > 2]  # Avoid single-point contours
+            return polygons
+        
+        for mask in masks:
+            polygons = mask_to_polygons(mask)
 
-        img = np.ones((sorted_anns[0]['segmentation'].shape[0], sorted_anns[0]['segmentation'].shape[1], 4))
-        img[:, :, 3] = 0
-        for ann in sorted_anns:
-            m = ann['segmentation']
-            color_mask = np.concatenate([np.random.random(3), [0.5]])
-            img[m] = color_mask 
-            if borders:
-                import cv2
-                contours, _ = cv2.findContours(m.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
-                # Try to smooth contours
-                contours = [cv2.approxPolyDP(contour, epsilon=0.01, closed=True) for contour in contours]
-                cv2.drawContours(img, contours, -1, (0, 0, 1, 0.4), thickness=1) 
-        ax.imshow(img)
-        ax.axis('off')
+        # Define annotation store path
+        store_path = save_filename.with_suffix(".db")
+        store = SQLiteStore()
 
-    def show_mask(self, mask, ax, random_color=False, borders = True):
-        if random_color:
-            color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
-        else:
-            color = np.array([30/255, 144/255, 255/255, 0.6])
-        h, w = mask.shape[-2:]
-        mask = mask.astype(np.uint8)
-        mask_image =  mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
-        if borders:
-            import cv2
-            contours, _ = cv2.findContours(mask,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
-            # Try to smooth contours
-            contours = [cv2.approxPolyDP(contour, epsilon=0.01, closed=True) for contour in contours]
-            mask_image = cv2.drawContours(mask_image, contours, -1, (1, 1, 1, 0.5), thickness=2) 
-        ax.imshow(mask_image)
+        # Add extracted polygons to the annotation store
+        props = {"score": 1, "type": "Mask"}
+        for poly in polygons:
+            annotation = Annotation(geometry=poly, properties=props)
+            store.append(annotation)
 
-    def show_points(self, coords, labels, ax, marker_size=20):
-        pos_points = coords[labels==1]
-        neg_points = coords[labels==0]
-        ax.scatter(pos_points[:, 0], pos_points[:, 1], color='green', marker='*', s=marker_size, edgecolor='white', linewidth=0.05)
-        ax.scatter(neg_points[:, 0], neg_points[:, 1], color='red', marker='*', s=marker_size, edgecolor='white', linewidth=1.25)   
+        store.create_index("area", '"area"')
+        
+        store.commit()
+        store.dump(store_path)
+        store.close()
+        print(f"Annotations stored at {store_path}")
+        return store_path
+    
+    def create_prompts(self, point_coords = None, point_labels = None, box_coords = None):
+        return SAMPrompts(point_coords, point_labels, box_coords)
 
-    def show_box(self, box, ax):
-        x0, y0 = box[0], box[1]
-        w, h = box[2] - box[0], box[3] - box[1]
-        ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0, 0, 0, 0), lw=1))    
-
-    def show_masks(self, image, masks, scores, point_coords=None, box_coords=None, input_labels=None, borders=True):
-        for i, (mask, score) in enumerate(zip(masks, scores)):
-            plt.figure(figsize=(2, 2))
-            plt.imshow(image)
-            self.show_mask(mask, plt.gca(), borders=borders)
-            if point_coords is not None:
-                assert input_labels is not None
-                self.show_points(point_coords, input_labels, plt.gca())
-            if box_coords is not None:
-                self.show_box(box_coords, plt.gca())
-            plt.axis('off')
-            plt.show()
+        
+        
+    
