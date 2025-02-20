@@ -1266,18 +1266,30 @@ def segment_on_point() -> None:
 
     """
 
-    msg = f'pt: {UI["pt_source"].data["x"][0]}, {UI["pt_source"].data["y"][0]}'
-    logger.info(msg)
-    x = UI["pt_source"].data["x"][0]
-    y = -UI["pt_source"].data["y"][0]
+    # Get point coordinates
+    x = UI["pt_source"].data["x"]
+    y = UI["pt_source"].data["y"] 
+    point_coords = [[x[i], -y[i]] for i in range(len(x))]
+
+    # Get box coordinates
+    x = UI["box_source"].data["x"]
+    y = UI["box_source"].data["y"]
+    height = [UI["box_source"].data["height"]]
+    width = [UI["box_source"].data["width"]]
+    box_coords = [[x[i], -y[i], x[i]-width[i], -(y[i]+height[i])] for i in range(len(x))]
+
+    print(f"point_coords: {point_coords}")
+    print(f"box_coords: {box_coords}")
 
     gen_segmentor = GeneralSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
 
-    prompts = gen_segmentor.create_prompts(point_coords=[[x,y]])
+    prompts = gen_segmentor.create_prompts(point_coords=point_coords, box_coords=box_coords)
 
     # Run SAM on the point
     UI["vstate"].model_mpp = gen_segmentor.ioconfig.save_resolution["resolution"]
+    print(f"Running SAM on {UI['vstate'].slide_path}")
+
     prediction = gen_segmentor.predict(
         UI["vstate"].slide_path,
         save_path=tmp_save_dir / "sam_out",

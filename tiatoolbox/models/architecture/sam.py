@@ -21,11 +21,13 @@ from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
 class SAMPrompts():
     """Structure of prompts for SAM."""
     def __init__(self, point_coords = None, point_labels = None, box_coords = None):
-        self.point_coords = point_coords
-        self.point_labels = point_labels
+        self.point_coords = None if point_coords == [] else point_coords
+        self.box_coords = None if box_coords == [] else box_coords
         if(point_coords and point_labels is None):
-            self.point_labels = np.arange(1,len(point_coords)+1) # Default labels
-        self.box_coords = box_coords
+            self.point_labels = [1] * len(point_coords)
+        else: 
+            self.point_labels = point_labels
+
 
 class SAM(ModelABC):
     def __init__(
