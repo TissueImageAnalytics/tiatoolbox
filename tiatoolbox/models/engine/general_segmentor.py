@@ -29,7 +29,8 @@ from shapely.geometry import Polygon
 
 def _prepare_save_output(
     save_path: str | Path,
-    img_shape: tuple[int, ...],
+    mask_shape: tuple[int, ...],
+    scores_shape: tuple[int, ...],
 ) -> tuple:
     """Prepares for saving the cached output."""
     if save_path is not None:
@@ -37,16 +38,22 @@ def _prepare_save_output(
         #if Path.exists(save_path):
             # Return error
         #else:
-        memmap = np.lib.format.open_memmap(
-            save_path,
+        mask_memmap = np.lib.format.open_memmap(
+            save_path / "0.npy",
             mode="w+",
-            shape=img_shape,
+            shape=mask_shape,
+            dtype=np.uint8,
+        )
+        score_memmap = np.lib.format.open_memmap(
+            save_path / "1.npy",
+            mode="w+",
+            shape=scores_shape,
             dtype=np.float32,
         )
     #else:
         # Return error
         
-    return memmap
+    return mask_memmap, score_memmap
 
 def _prepare_save_dir( save_dir: str | Path | None) -> tuple[Path, Path]:
     """Prepare save directory and cache."""
@@ -113,15 +120,17 @@ class GeneralSegmentor:
         """
         file_name = Path(file_name)
         save_dir = _prepare_save_dir(save_dir=save_path)
-        wsi_save_dir = save_dir / "0.npy"
 
         batch_data = self.load_wsi(file_name)
-        self.prediction = self.model.infer_batch(model=self.model, batch_data=batch_data, prompts=prompts, device=device)
+        masks, scores = self.model.infer_batch(model=self.model, batch_data=batch_data, prompts=prompts, device=device)
 
-        save_memmap = _prepare_save_output(save_path=wsi_save_dir, img_shape=self.prediction.shape)
-        np.copyto(save_memmap, self.prediction)
+        print(masks)
+        
+        mask_memmap, score_memmap = _prepare_save_output(save_path=save_dir, mask_shape=masks.shape, scores_shape=scores.shape)
+        np.copyto(mask_memmap, masks)
+        np.copyto(score_memmap, scores)
 
-        self._outputs = [[str(file_name), str(wsi_save_dir)]]
+        self._outputs = [[str(file_name), str(save_dir / "0.npy"), str(save_dir / "1.npy")]]
 
         # ? will this corrupt old version if control + c midway?
         map_file_path = save_dir / "file_map.dat"
@@ -131,17 +140,22 @@ class GeneralSegmentor:
             shutil.copy(map_file_path, old_map_file_path)
         joblib.dump(self._outputs, map_file_path)
 
-        print(f"Prediction stored at {wsi_save_dir}")
+        print(f"Prediction stored at {save_dir}")
 
         return self._outputs
     
     def predict_wsi(self, file_name, device="cpu", save_path=None):
         return self.predict(file_name, device=device, save_path=save_path)
     
-    def to_annotation(self, mask_path, save_filename: Path | str = None):
+    def to_annotation(self, mask_path, score_path, save_filename: Path | str = None):
         """Converts the prediction output to annotation format."""
         
         masks = np.load(mask_path)
+        scores = np.load(score_path).round(2)
+
+        # Define annotation store path
+        store_path = save_filename.with_suffix(".db")
+        store = SQLiteStore()
 
         def mask_to_polygons(mask):
             """Extract polygons from a binary mask using OpenCV."""
@@ -149,20 +163,15 @@ class GeneralSegmentor:
             polygons = [Polygon(c.squeeze()) for c in contours if len(c) > 2]  # Avoid single-point contours
             return polygons
         
-        for mask in masks:
-            polygons = mask_to_polygons(mask)
+        for i in range(len(masks)):
+            polygons = mask_to_polygons(masks[i])
+            # Add extracted polygons to the annotation store
+            props = {"score": f"{scores[i]}", "type": f"Mask {i+1}"}
+            for poly in polygons:
+                annotation = Annotation(geometry=poly, properties=props)
+                store.append(annotation)
 
-        # Define annotation store path
-        store_path = save_filename.with_suffix(".db")
-        store = SQLiteStore()
-
-        # Add extracted polygons to the annotation store
-        props = {"score": 1, "type": "Mask"}
-        for poly in polygons:
-            annotation = Annotation(geometry=poly, properties=props)
-            store.append(annotation)
-
-        store.create_index("area", '"area"')
+        store.create_index("id", '"id"')
         
         store.commit()
         store.dump(store_path)

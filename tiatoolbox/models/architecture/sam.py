@@ -84,9 +84,9 @@ class SAM(ModelABC):
 
         with torch.inference_mode():
             batch_data = model.preproc(batch_data)
-            output = model(batch_data, prompts)
-            output = model.postproc(output)
-        return output
+            masks, scores = model(batch_data, prompts)
+            masks = model.postproc(masks)
+        return masks, scores
 
     @staticmethod
     def encode_image(self, image: np.ndarray) -> np.ndarray:
@@ -105,10 +105,12 @@ class SAM(ModelABC):
                 multimask_output=False,
             )
             sorted_ind = np.argsort(scores)[::-1]
-            masks = masks[sorted_ind]
+            masks = np.array(masks[sorted_ind], dtype=np.uint8)
+            scores = np.around(scores[sorted_ind], 2)
         else:
             masks = self.generator.generate(features)
-        return masks
+            scores = np.array([mask['predicted_iou'] for mask in masks])
+        return masks, scores
     
     @staticmethod
     def load_weights(self, checkpoint_path: str) -> None:

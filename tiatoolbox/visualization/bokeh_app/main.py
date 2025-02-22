@@ -1301,9 +1301,7 @@ def segment_on_point() -> None:
     slide_filename = Path(ntpath.basename(UI["vstate"].slide_path))
     print(slide_filename)
 
-    #tmp_save_dir / "sam_out" / slide_filename
-
-    ann_loc = gen_segmentor.to_annotation(prediction[0][1], doc_config["overlay_folder"] / slide_filename)
+    ann_loc = gen_segmentor.to_annotation(prediction[0][1], prediction[0][2], doc_config["overlay_folder"] / slide_filename)
     print(f"Annotation saved to {ann_loc}")
 
     fname = make_safe_name(ann_loc)
