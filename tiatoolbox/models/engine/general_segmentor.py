@@ -2,27 +2,13 @@ from pathlib import Path
 import shutil
 import cv2
 import joblib
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import torch.nn.functional as F  # noqa: N812
-import torchvision
-from PIL import Image
-from skimage.io import imread as skimread
-from torchvision import transforms
-from torchvision.models import inception_v3
+import numpy as np 
 
 from tiatoolbox import logger
-from tiatoolbox.models.engine.semantic_segmentor import (
-    IOSegmentorConfig,
-)
 
 from tiatoolbox.models.architecture.sam import SAM, SAMPrompts
-from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import download_data, imread, select_device
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
-from tiatoolbox.models.engine.semantic_segmentor import _prepare_save_output
+from tiatoolbox.typing import IntPair, IntBounds
+from tiatoolbox.wsicore.wsireader import WSIReader, WSIMeta
 
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
 from shapely.geometry import Polygon
@@ -67,9 +53,10 @@ def _prepare_save_dir( save_dir: str | Path | None) -> tuple[Path, Path]:
         save_dir = Path.cwd() / "output"
 
     save_dir = Path(save_dir).resolve()
-    # if save_dir.is_dir():
-    #     msg = f"`save_dir` already exists! {save_dir}"
-    #     raise ValueError(msg)
+    if save_dir.is_dir():
+        # msg = f"`save_dir` already exists! {save_dir}"
+        # raise ValueError(msg)
+        save_dir.rmdir()
     save_dir.mkdir(parents=True)
     return save_dir
 
@@ -80,33 +67,61 @@ class GeneralSegmentor:
 
     def __init__(self, 
                  model: SAM = None):
-        
-        self.model = model if model is not None else SAM() 
- 
-        # Defining ioconfig
-        self.ioconfig = IOSegmentorConfig(
-            input_resolutions=[
-                {"units": "mpp", "resolution": 1.0},
-            ],
-            output_resolutions=[
-                {"units": "mpp", "resolution": 1.0},
-            ],
-            patch_input_shape=[512, 512],
-            patch_output_shape=[512, 512],
-            stride_shape=[512, 512],
-            save_resolution={"units": "mpp", "resolution": 1.0},
-        )
+        self.model = SAM() if model is None else model
 
-    def load_wsi(self, file_name): # Should include MPP as parameter
-        reader = WSIReader.open(file_name,(1,1), 1.0)
-        self.img = reader.slide_thumbnail(
-            resolution=self.ioconfig.save_resolution["resolution"],
-            units=self.ioconfig.save_resolution["units"],
-        )
+    def load_wsi(
+            self, 
+            file_name, 
+            bounds: IntBounds = None,
+            resolution: float = 1.0, 
+            units: str = "mpp",
+            ):
+        self.reader = WSIReader.open(file_name)
+        if bounds is not None:
+            self.img = self.reader.read_bounds(bounds, resolution, units)
+            self.base_img = self.reader.read_bounds(bounds, 1.0, "baseline")
+            self.wsi = self.reader.slide_thumbnail(1.0,"baseline")
+            self.base_mpp = self.reader._info().mpp
+        else:
+            self.img = self.reader.slide_thumbnail(resolution=1.0, units="baseline")
         return self.img
-
-
-    def predict(self, file_name, prompts: SAMPrompts = None, device = "cpu", save_path: Path = None):
+    
+    def bound_prompts(self, prompts, bounds):
+        if prompts is not None and bounds is not None:
+            print(self.img.shape[:2])
+            print(self.base_img.shape[:2])
+            scale_factor = np.divide(self.img.shape[:2],self.base_img.shape[:2])
+            print(scale_factor)
+            if prompts.point_coords is not None:
+                print(prompts.point_coords)
+                temp = (np.array(prompts.point_coords) - np.array(bounds[:2])) 
+                print(temp)
+                prompts.point_coords = temp * np.array(scale_factor)
+                print(prompts.point_coords)
+            if prompts.box_coords is not None:
+                prompts.box_coords = (np.array(prompts.box_coords) - np.array(bounds[:2])) * np.array(scale_factor)
+        return prompts
+    
+    def unbound_masks(self, masks, bounds):
+        new_masks = []
+        desired_shape = np.array(self.base_img.shape[:2]).transpose()
+        for mask in masks:
+            resized_mask = cv2.resize(mask, desired_shape, interpolation=cv2.INTER_NEAREST) # Resizes the mask into the box at base resolution
+            new_mask = np.zeros(self.wsi.shape[:2], dtype=np.uint8)
+            new_mask[bounds[0]:bounds[2],bounds[1]:bounds[3]] = resized_mask # Stores mask into base resolution whole image
+            new_masks.append(new_mask)
+        return np.array(new_masks, dtype=np.uint8)
+                                                                             
+    def predict(
+            self, 
+            file_name, 
+            prompts: SAMPrompts = None, 
+            device = "cpu", 
+            save_path: Path = None, 
+            bounds: IntBounds = None, 
+            resolution = 1.0,
+            units = "mpp"
+    ) -> list[tuple[Path, Path, Path]]:
         """Predict on a WSI using prompts.
         Args:
             file_name (str): 
@@ -117,12 +132,24 @@ class GeneralSegmentor:
                 Device to run inference on.
             save_path (str): 
                 Location to save output prediction.
+            bounds (tuple):
+                Bounds for the region of interest.
+        Returns:
+            list: 
+                List of paths to the saved output prediction.
         """
         file_name = Path(file_name)
         save_dir = _prepare_save_dir(save_dir=save_path)
 
-        batch_data = self.load_wsi(file_name)
+        batch_data = self.load_wsi(file_name, resolution=resolution, units=units, bounds=bounds)
+        prompts = self.bound_prompts(prompts, bounds=bounds)
+
         masks, scores = self.model.infer_batch(model=self.model, batch_data=batch_data, prompts=prompts, device=device)
+        
+        print(masks)
+
+        if bounds is not None:
+            masks = self.unbound_masks(masks, bounds)
 
         print(masks)
         
@@ -151,7 +178,7 @@ class GeneralSegmentor:
         """Converts the prediction output to annotation format."""
         
         masks = np.load(mask_path)
-        scores = np.load(score_path).round(2)
+        scores = np.load(score_path)
 
         # Define annotation store path
         store_path = save_filename.with_suffix(".db")

@@ -1284,17 +1284,53 @@ def segment_on_point() -> None:
     gen_segmentor = GeneralSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
 
+    print(f"Visible Range: {UI['p'].x_range.start},{-UI['p'].y_range.end}, {UI['p'].x_range.end}, {-UI['p'].y_range.start}")
+
+    x_start = max(0, UI["p"].x_range.start)
+    y_start = max(0, -UI["p"].y_range.end)
+    x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
+    y_end = min(-UI["p"].y_range.start, UI["vstate"].dims[1])
+
+    bounds = np.array([x_start, y_start, x_end, y_end], dtype=np.int32)
+
+    print(f"Capped Visible Range: {bounds}")
+
+    curr_tl = np.array([x_start,y_start], dtype=np.int32)
+    curr_br = np.array([x_end,y_end], dtype=np.int32)
+    plot_size = np.array([UI["p"].width, UI["p"].height], dtype=np.int32)
+
+    print(f"Visible Top-Left: {curr_tl}")
+    print(f"Visible Bottom-Right: {curr_br}")
+    print(f"Window Size: {plot_size}")
+
+    print(f"Slide Dimensions: {UI['vstate'].dims}")
+
+    zoom_level = np.log2(np.array(UI["vstate"].dims) / (curr_br - curr_tl))
+
+    print(f"Zoom Level: {zoom_level}")
+
+    base_mpp = UI["vstate"].mpp 
+
+    print(UI["vstate"].num_zoom_levels)
+    print(UI["vstate"].init_z)
+    
+    current_mpp = np.maximum(base_mpp, base_mpp / (2 ** (zoom_level - UI["vstate"].num_zoom_levels)))
+    print(f"Base MPP: {base_mpp}")
+    print(f"Current MPP: {current_mpp}")
+    
     prompts = gen_segmentor.create_prompts(point_coords=point_coords, box_coords=box_coords)
 
     # Run SAM on the point
-    UI["vstate"].model_mpp = gen_segmentor.ioconfig.save_resolution["resolution"]
     print(f"Running SAM on {UI['vstate'].slide_path}")
 
     prediction = gen_segmentor.predict(
         UI["vstate"].slide_path,
-        save_path=tmp_save_dir / "sam_out",
-        device=select_device(on_gpu=torch.cuda.is_available()),
-        prompts=prompts
+        prompts,
+        select_device(on_gpu=torch.cuda.is_available()),
+        tmp_save_dir / "sam_out",
+        bounds,
+        current_mpp,
+        "mpp"
     )
 
     import ntpath
