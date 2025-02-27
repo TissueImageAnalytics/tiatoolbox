@@ -1274,8 +1274,8 @@ def segment_on_point() -> None:
     # Get box coordinates
     x = UI["box_source"].data["x"]
     y = UI["box_source"].data["y"]
-    height = [UI["box_source"].data["height"]]
-    width = [UI["box_source"].data["width"]]
+    height = UI["box_source"].data["height"]
+    width = UI["box_source"].data["width"]
     box_coords = [[x[i], -y[i], x[i]-width[i], -(y[i]+height[i])] for i in range(len(x))]
 
     print(f"point_coords: {point_coords}")
@@ -1284,8 +1284,6 @@ def segment_on_point() -> None:
     gen_segmentor = GeneralSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
 
-    print(f"Visible Range: {UI['p'].x_range.start},{-UI['p'].y_range.end}, {UI['p'].x_range.end}, {-UI['p'].y_range.start}")
-
     x_start = max(0, UI["p"].x_range.start)
     y_start = max(0, -UI["p"].y_range.end)
     x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
@@ -1293,28 +1291,21 @@ def segment_on_point() -> None:
 
     bounds = np.array([x_start, y_start, x_end, y_end], dtype=np.int32)
 
+    width = x_end - x_start
+    height = y_end - y_start
+
     print(f"Capped Visible Range: {bounds}")
-
-    curr_tl = np.array([x_start,y_start], dtype=np.int32)
-    curr_br = np.array([x_end,y_end], dtype=np.int32)
-    plot_size = np.array([UI["p"].width, UI["p"].height], dtype=np.int32)
-
-    print(f"Visible Top-Left: {curr_tl}")
-    print(f"Visible Bottom-Right: {curr_br}")
-    print(f"Window Size: {plot_size}")
-
     print(f"Slide Dimensions: {UI['vstate'].dims}")
 
-    zoom_level = np.log2(np.array(UI["vstate"].dims) / (curr_br - curr_tl))
-
-    print(f"Zoom Level: {zoom_level}")
+    if max(width, height) > 1500:
+        # we will resize the region to 1500px max by reading at lower res
+        scale = max(width, height) / 1500
+    else:
+        scale = 1.0
 
     base_mpp = UI["vstate"].mpp 
-
-    print(UI["vstate"].num_zoom_levels)
-    print(UI["vstate"].init_z)
     
-    current_mpp = np.maximum(base_mpp, base_mpp / (2 ** (zoom_level - UI["vstate"].num_zoom_levels)))
+    current_mpp = base_mpp * scale
     print(f"Base MPP: {base_mpp}")
     print(f"Current MPP: {current_mpp}")
     

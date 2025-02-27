@@ -68,6 +68,7 @@ class GeneralSegmentor:
     def __init__(self, 
                  model: SAM = None):
         self.model = SAM() if model is None else model
+        self.scale_factor = 1.0
 
     def load_wsi(
             self, 
@@ -77,38 +78,40 @@ class GeneralSegmentor:
             units: str = "mpp",
             ):
         self.reader = WSIReader.open(file_name)
+        self.slide_dims = self.reader.slide_dimensions(1.0, "baseline")
+        print(self.slide_dims)
+        print(self.reader._info().slide_dimensions)
         if bounds is not None:
             self.img = self.reader.read_bounds(bounds, resolution, units)
-            self.base_img = self.reader.read_bounds(bounds, 1.0, "baseline")
-            self.wsi = self.reader.slide_thumbnail(1.0,"baseline")
-            self.base_mpp = self.reader._info().mpp
+            if units == "mpp":
+                base_mpp = self.reader._info().mpp
+                self.scale_factor = base_mpp / resolution
         else:
-            self.img = self.reader.slide_thumbnail(resolution=1.0, units="baseline")
+            self.img = self.reader.slide_thumbnail(1.0, "baseline")
         return self.img
     
     def bound_prompts(self, prompts, bounds):
         if prompts is not None and bounds is not None:
-            print(self.img.shape[:2])
-            print(self.base_img.shape[:2])
-            scale_factor = np.divide(self.img.shape[:2],self.base_img.shape[:2])
-            print(scale_factor)
             if prompts.point_coords is not None:
-                print(prompts.point_coords)
-                temp = (np.array(prompts.point_coords) - np.array(bounds[:2])) 
-                print(temp)
-                prompts.point_coords = temp * np.array(scale_factor)
-                print(prompts.point_coords)
+                prompts.point_coords = (np.array(prompts.point_coords) - np.array(bounds[:2])) * np.array(self.scale_factor)
+
             if prompts.box_coords is not None:
-                prompts.box_coords = (np.array(prompts.box_coords) - np.array(bounds[:2])) * np.array(scale_factor)
+                prompts.box_coords = (np.array(prompts.box_coords) - np.array(bounds[:2])) * np.array(self.scale_factor)
+
         return prompts
     
     def unbound_masks(self, masks, bounds):
         new_masks = []
-        desired_shape = np.array(self.base_img.shape[:2]).transpose()
+
         for mask in masks:
-            resized_mask = cv2.resize(mask, desired_shape, interpolation=cv2.INTER_NEAREST) # Resizes the mask into the box at base resolution
-            new_mask = np.zeros(self.wsi.shape[:2], dtype=np.uint8)
-            new_mask[bounds[0]:bounds[2],bounds[1]:bounds[3]] = resized_mask # Stores mask into base resolution whole image
+            new_size = (bounds[2]-bounds[0],bounds[3]-bounds[1])
+            print(new_size)
+
+            resized_mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST) # Resizes the mask into the box at base resolution
+        
+            new_mask = np.zeros(np.array(self.slide_dims)[::-1], dtype=np.uint8)
+
+            new_mask[bounds[1]:bounds[3],bounds[0]:bounds[2]] = resized_mask # Stores mask into base resolution whole image
             new_masks.append(new_mask)
         return np.array(new_masks, dtype=np.uint8)
                                                                              
