@@ -6313,6 +6313,15 @@ class TransformedWSIReader(WSIReader):
             )
         patch = np.array(patch)
 
+        # Apply padding outside the slide area
+        patch = utils.image.crop_and_pad_edges(
+            bounds=utils.transforms.locsize2bounds(transformed_location, max_size),
+            max_dimensions=self.info.level_dimensions[read_level],
+            region=patch,
+            pad_mode=pad_mode,
+            pad_constant_values=pad_constant_values,
+        )
+
         # Apply transformation
         if self.transform_type == "displacement":
             transformed_patch = self.sample_image_opencv(patch, transformed_grid)
