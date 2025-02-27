@@ -84,7 +84,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "TIA Toolbox"
-copyright = "2023, TIA Lab"
+copyright = "2025, TIA Lab"
 author = "TIA Lab"
 
 # The version info for the project you're documenting, acts as replacement
@@ -2005,8 +2005,8 @@ shutil.copytree(
 )
 
 # shutil.copy(
-#     os.path.join(PROJ_ROOT, "docs/notebooks.rst"),
-#     os.path.join(PROJ_ROOT, "docs/_notebooks/notebooks.rst"),
+#     os.path.join(PROJ_ROOT, "docs/usage_examples.rst"),
+#     os.path.join(PROJ_ROOT, "docs/_notebooks/usage_examples.rst"),
 # )
 
 # Read in the file
@@ -2016,8 +2016,8 @@ with open("../examples/README.md", "r") as file:
 # Replace the target string
 file_data = file_data.replace(".rst", ".html")
 file_data = file_data.replace(".ipynb", ".html")
-file_data = file_data.replace("../docs/", "../")
 file_data = file_data.replace("](./", "](./jnb/")
+file_data = file_data.replace("../docs/", "./")
 
 # Write the file out again
 with open("_notebooks/README.md", "w") as file:
