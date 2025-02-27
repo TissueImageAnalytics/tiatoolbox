@@ -5923,8 +5923,9 @@ class TransformedWSIReader(WSIReader):
             transformed_image, info=self.wsi_reader.info, mode="feature"
         )
 
+    @staticmethod
     def transform_using_disp_array(
-        self, input_array: np.ndarray, disp_array: np.ndarray
+        input_array: np.ndarray, disp_array: np.ndarray
     ) -> np.ndarray:
         """Transform an array of locations using the displacement field."""
         input_image = sitk.GetImageFromArray(input_array, isVector=True)
@@ -6071,8 +6072,8 @@ class TransformedWSIReader(WSIReader):
         )
         return transformed_location, transformed_size
 
+    @staticmethod
     def sample_image_opencv(
-        self,
         a: np.ndarray,
         b: np.ndarray,
     ) -> np.ndarray:
