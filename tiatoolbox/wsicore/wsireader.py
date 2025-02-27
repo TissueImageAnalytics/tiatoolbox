@@ -5847,8 +5847,9 @@ class TransformedWSIReader(WSIReader):
     Example:
         >>> from tiatoolbox.wsicore.wsireader import TransformedWSIReader
         >>> transform_level0 = np.eye(3)
-        >>> tfm = TransformedWSIReader(input_img=sample_ome_tiff,
-        transform=transform_level0)
+        >>> tfm = TransformedWSIReader(
+        ...     input_img=sample_ome_tiff, transform=transform_level0
+        ... )
         >>> output = tfm.read_rect(location, size, resolution=resolution, units="level")
 
     """
@@ -6250,11 +6251,11 @@ class TransformedWSIReader(WSIReader):
             >>> from tiatoolbox.wsicore.wsireader import TransformedWSIReader
             >>> transform_level0 = np.eye(3)
             >>> tfm = TransformedWSIReader(
-                    input_img=sample_ome_tiff, transform=transform_level0
-                )
+            ...     input_img=sample_ome_tiff, transform=transform_level0
+            ... )
             >>> output = tfm.read_rect(
-                    location, size, resolution=resolution, units="level"
-                )
+            ...     location, size, resolution=resolution, units="level"
+            ... )
 
         """
         if coord_space == "resolution":
@@ -6430,8 +6431,9 @@ class TransformedWSIReader(WSIReader):
 
         Example:
             >>> from tiatoolbox.wsicore import TransformedWSIReader
-            >>> wsi = TransformedWSIReader(input_img="cmu-1.ndpi",
-                transform="transform.mha")
+            >>> wsi = TransformedWSIReader(
+            ...    input_img="cmu-1.ndpi", transform="transform.mha"
+            ... )
             >>> # read a region of size 1000x1000 at 1.25x scale
             >>> # from (10000, 10000) at level 0
             >>> img = wsi.read_bounds(25000,25000,27000,27000)
