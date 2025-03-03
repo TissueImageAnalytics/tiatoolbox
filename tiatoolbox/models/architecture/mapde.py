@@ -199,8 +199,11 @@ class MapDe(MicroNet):
             dtype=np.float32,
         )
 
-        dist_filter = np.expand_dims(dist_filter, axis=(0, 1))  # NCHW
+        # For conv2d, filter shape = (out_channels, in_channels//groups, H, W)
+        dist_filter = np.expand_dims(dist_filter, axis=(0, 1))
         dist_filter = np.repeat(dist_filter, repeats=num_classes * 2, axis=1)
+        # Need to repeat for out_channels
+        dist_filter = np.repeat(dist_filter, repeats=num_classes, axis=0)
 
         self.min_distance = min_distance
         self.threshold_abs = threshold_abs
