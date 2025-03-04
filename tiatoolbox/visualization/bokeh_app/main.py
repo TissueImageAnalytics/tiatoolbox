@@ -1103,7 +1103,7 @@ def to_model_cb(attr: ButtonClick) -> None:  # noqa: ARG001
     if UI["vstate"].current_model == "hovernet":
         segment_on_box()
     elif UI["vstate"].current_model == "SAM":
-        segment_on_point()
+        sam_segment()
     # Add any other models here
     else:  # pragma: no cover
         logger.warning("unknown model")
@@ -1258,7 +1258,7 @@ def segment_on_box() -> None:
     rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
 
-def segment_on_point() -> None:
+def sam_segment() -> None:
     """Callback to run SAM using a point on the slide.
 
     Will run GeneralSegmentor on selected region of wsi defined
@@ -1291,24 +1291,10 @@ def segment_on_point() -> None:
 
     bounds = np.array([x_start, y_start, x_end, y_end], dtype=np.int32)
 
-    width = x_end - x_start
-    height = y_end - y_start
+    bounds_dim = bounds[2:] - bounds[:2]
+    base_mpp = UI["vstate"].mpp
 
-    print(f"Capped Visible Range: {bounds}")
-    print(f"Slide Dimensions: {UI['vstate'].dims}")
-
-    if max(width, height) > 1500:
-        # we will resize the region to 1500px max by reading at lower res
-        scale = max(width, height) / 1500
-    else:
-        scale = 1.0
-
-    base_mpp = UI["vstate"].mpp 
-    
-    current_mpp = base_mpp * scale
-    print(f"Base MPP: {base_mpp}")
-    print(f"Current MPP: {current_mpp}")
-    
+    current_mpp = gen_segmentor.calc_mpp(bounds_dim, base_mpp)
     prompts = gen_segmentor.create_prompts(point_coords=point_coords, box_coords=box_coords)
 
     # Run SAM on the point

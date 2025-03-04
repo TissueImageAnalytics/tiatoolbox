@@ -70,6 +70,29 @@ class GeneralSegmentor:
         self.model = SAM() if model is None else model
         self.scale_factor = 1.0
 
+    def calc_mpp(self, area_dims: IntPair, base_mpp: float, fixed_size: int = 1500):
+        """Calculates the microns per pixel required for an area of the slide 
+          to have a fixed size. MPP can then be used to scale the image to a fixed size
+          for inference.
+        Args:
+            area_dims (tuple):
+                Dimensions of the area to be scaled.
+            base_mpp (float):
+                Microns per pixel of the base image.
+            fixed_size (int):
+                Fixed size of the area.
+        Returns:
+            float:
+                Microns per pixel required to scale the area to a fixed size.
+        """
+        
+        if max(area_dims) > fixed_size:
+            scale = max(area_dims) / fixed_size
+        else:
+            scale = 1.0
+
+        return base_mpp * scale
+
     def load_wsi(
             self, 
             file_name, 
