@@ -102,7 +102,8 @@ def _get_timm_architecture(
 
     Args:
         arch_name (str):
-            Architecture name.
+            Name of the architecture (e.g. 'UNI', 'UN2', 'H-optimus-0',
+            'efficientnet_b0', etc.).
         pretrained (bool, keyword-only):
             Whether to load pretrained weights.
 
@@ -112,7 +113,7 @@ def _get_timm_architecture(
 
     Raises:
         ValueError:
-            If the backbone architecture is not supported.
+            If the backbone architecture `arch_name` is not supported.
 
     Example:
         >>> model = _get_timm_architecture("UNI", pretrained=True)
@@ -143,6 +144,14 @@ def _get_timm_architecture(
             "model": "hf-hub:bioptimus/H-optimus-1",
             "init_values": 1e-5,
             "dynamic_img_size": False,
+        },
+        # HO-mini tile encoder: https://huggingface.co/bioptimus/H0-mini
+        "H0-mini": {
+            "model": "hf-hub:bioptimus/H0-mini",
+            "init_values": 1e-5,
+            "dynamic_img_size": False,
+            "mlp_layer": timm.layers.SwiGLUPacked,
+            "act_layer": torch.nn.SiLU,
         },
         # UNI2-h tile encoder: https://huggingface.co/MahmoodLab/UNI2-h
         "UNI2": {
@@ -377,6 +386,7 @@ class TimmModel(ModelABC):
              - "kaiko"
              - "H-optimus-0"
              - "H-optimus-1"
+             - "H0-mini"
         num_classes (int):
             Number of classes output by model.
         pretrained (bool, keyword-only):
@@ -606,6 +616,7 @@ class TimmBackbone(ModelABC):
                 - "kaiko"
                 - "H-optimus-0"
                 - "H-optimus-1"
+                - "H0-mini"
         pretrained (bool, keyword-only):
             Whether to load pretrained weights.
 
