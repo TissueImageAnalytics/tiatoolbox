@@ -86,7 +86,7 @@ class SemanticSegmentorRunParams(PredictorRunParams):
 
 
 class SemanticSegmentor(PatchPredictor):
-    """Pixel-wise segmentation predictor.
+    r"""Semantic Segmentor Engine for processing digital histology images.
 
     The tiatoolbox model should produce the following results on the BCSS dataset
     using fcn_resnet50_unet-bcss.
@@ -117,16 +117,18 @@ class SemanticSegmentor(PatchPredictor):
          - 0.581
          - 0.763
 
-    Note, if `model` is supplied in the arguments, it will ignore the
-    `pretrained_model` and `pretrained_weights` arguments.
-
     Args:
-        model (nn.Module):
-            Use externally defined PyTorch model for prediction with
-            weights already loaded. Default is `None`. If provided,
-            `pretrained_model` argument is ignored.
+        model (str | ModelABC):
+            A PyTorch model or name of pretrained model.
+            The user can request pretrained models from the toolbox model zoo using
+            the list of pretrained models available at this `link
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights using the `weights` parameter. Default is `None`.
         batch_size (int):
-            Number of images fed into the model each time.
+            Number of image patches fed into the model each time in a
+            forward/backward pass. Default value is 8.
         num_loader_workers (int):
             Number of workers to load the data using :class:`torch.utils.data.Dataset`.
             Please note that they will also perform preprocessing. Default value is 0.
@@ -141,8 +143,6 @@ class SemanticSegmentor(PatchPredictor):
             ...    weights="/path/to/pretrained-local-weights.pth"
             ... )
 
-        verbose (bool):
-            Whether to output logging information.
         device (str):
             Select the device to run the model. Please see
             https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
@@ -243,14 +243,35 @@ class SemanticSegmentor(PatchPredictor):
             Whether to output logging information. Default value is False.
 
     Examples:
-        >>> # Sample output of a network
-        >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> segmentor = SemanticSegmentor(model='fcn-tissue_mask')
-        >>> output = segmentor.run(wsis, mode='wsi')
-        >>> list(output.keys())
-        [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
-        >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
-        >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
+        >>> # list of 2 image patches as input
+        >>> wsis = ['path/img.svs', 'path/img.svs']
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(wsis, patch_mode=False)
+
+        >>> # array of list of 2 image patches as input
+        >>> image_patches = [np.ndarray, np.ndarray]
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(data, patch_mode=True)
+
+        >>> # list of 2 image patch files as input
+        >>> data = ['path/img.png', 'path/img.png']
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(data, patch_mode=False)
+
+        >>> # list of 2 image tile files as input
+        >>> tile_file = ['path/tile1.png', 'path/tile2.png']
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(tile_file, patch_mode=False)
+
+        >>> # list of 2 wsi files as input
+        >>> wsis = ['path/wsi1.svs', 'path/wsi2.svs']
+        >>> segmentor = SemanticSegmentor(model="resnet18-kather100k")
+        >>> output = segmentor.run(wsis, patch_mode=False)
+
+    References:
+        [1] Amgad M, Elfandy H, ..., Gutman DA, Cooper LAD. Structured crowdsourcing
+        enables convolutional segmentation of histology images. Bioinformatics 2019.
+        doi: 10.1093/bioinformatics/btz083
 
     """
 
@@ -325,7 +346,7 @@ class SemanticSegmentor(PatchPredictor):
                 then the output will be intermediately saved as zarr but converted
                 to :class:`AnnotationStore` and saved as a `.db` file
                 at the end of the loop.
-            **kwargs (PredictorRunParams):
+            **kwargs (SemanticSegmentorRunParams):
                 Keyword Args to update :class:`EngineABC` attributes during runtime.
 
         Returns:

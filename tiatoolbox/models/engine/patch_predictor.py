@@ -301,27 +301,27 @@ class PatchPredictor(EngineABC):
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=False)
 
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=True)
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=True)
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(tile_file, mode='tile')
+        >>> output = predictor.run(tile_file, patch_mode=False)
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(wsi_file, mode='wsi')
+        >>> output = predictor.run(wsi_file, patch_mode=False)
 
     References:
         [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
