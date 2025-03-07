@@ -4,12 +4,85 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .patch_predictor import PatchPredictor
+from typing_extensions import Unpack
+
+from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
+    import os
     from pathlib import Path
 
+    import numpy as np
+
+    from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
+    from tiatoolbox.type_hints import Resolution
+    from tiatoolbox.wsicore import WSIReader
+
+
+class SemanticSegmentorRunParams(PredictorRunParams):
+    """Class describing the input parameters for the :func:`EngineABC.run()` method.
+
+    Attributes:
+        batch_size (int):
+            Number of image patches to feed to the model in a forward pass.
+        cache_mode (bool):
+            Whether to run the Engine in cache_mode. For large datasets,
+            we recommend to set this to True to avoid out of memory errors.
+            For smaller datasets, the cache_mode is set to False as
+            the results can be saved in memory.
+        cache_size (int):
+            Specifies how many image patches to process in a batch when
+            cache_mode is set to True. If cache_size is less than the batch_size
+            batch_size is set to cache_size.
+        class_dict (dict):
+            Optional dictionary mapping classification outputs to class names.
+        device (str):
+            Select the device to run the model. Please see
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details on input parameters for device.
+        ioconfig (ModelIOConfigABC):
+            Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
+        return_labels (bool):
+            Whether to return the labels with the predictions.
+        num_loader_workers (int):
+            Number of workers used in :class:`torch.utils.data.DataLoader`.
+        num_post_proc_workers (int):
+            Number of workers to postprocess the results of the model.
+        output_file (str):
+            Output file name to save "zarr" or "db". If None, path to output is
+            returned by the engine.
+        patch_input_shape (tuple):
+            Shape of patches input to the model as tuple of height and width (HW).
+            Patches are requested at read resolution, not with respect to level 0,
+            and must be positive.
+        resolution (Resolution):
+            Resolution used for reading the image. Please see
+            :class:`WSIReader` for details.
+        return_probabilities (bool):
+                Whether to return per-class probabilities.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the
+            annotations. All coordinates will be multiplied by this factor to allow
+            conversion of annotations saved at non-baseline resolution to baseline.
+            Should be model_mpp/slide_mpp.
+        stride_shape (tuple):
+            Stride used during WSI processing. Stride is
+            at requested read resolution, not with respect to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
+        units (Units):
+            Units of resolution used for reading the image. Choose
+            from either `level`, `power` or `mpp`. Please see
+            :class:`WSIReader` for details.
+        verbose (bool):
+            Whether to output logging information.
+
+    """
+
+    patch_output_shape: tuple
+    output_resolution: Resolution
 
 
 class SemanticSegmentor(PatchPredictor):
@@ -52,44 +125,128 @@ class SemanticSegmentor(PatchPredictor):
             Use externally defined PyTorch model for prediction with
             weights already loaded. Default is `None`. If provided,
             `pretrained_model` argument is ignored.
-        pretrained_model (str):
-            Name of the existing models support by tiatoolbox for
-            processing the data. For a full list of pretrained models,
-            refer to the `docs
-            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
-            By default, the corresponding pretrained weights will also
-            be downloaded. However, you can override with your own set
-            of weights via the `pretrained_weights` argument. Argument
-            is case-insensitive.
-        pretrained_weights (str):
-            Path to the weight of the corresponding `pretrained_model`.
         batch_size (int):
             Number of images fed into the model each time.
         num_loader_workers (int):
-            Number of workers to load the data. Take note that they will
-            also perform preprocessing.
-        num_postproc_workers (int):
-            This value is there to maintain input compatibility with
-            `tiatoolbox.models.classification` and is not used.
+            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
+            Please note that they will also perform preprocessing. Default value is 0.
+        num_post_proc_workers (int):
+            Number of workers to postprocess the results of the model.
+            Default value is 0.
+        weights (str or Path):
+            Path to the weight of the corresponding `model`.
+
+            >>> engine = SemanticSegmentor(
+            ...    model="pretrained-model",
+            ...    weights="/path/to/pretrained-local-weights.pth"
+            ... )
+
         verbose (bool):
             Whether to output logging information.
-        dataset_class (obj):
-            Dataset class to be used instead of default.
-        auto_generate_mask (bool):
-            To automatically generate tile/WSI tissue mask if is not
-            provided.
+        device (str):
+            Select the device to run the model. Please see
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details on input parameters for device. Default is "cpu".
+        verbose (bool):
+            Whether to output logging information. Default value is False.
 
     Attributes:
-        process_prediction_per_batch (bool):
-            A flag to denote whether post-processing for inference
-            output is applied after each batch or after finishing an entire
-            tile or WSI.
+        images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+            A list of image patches in NHWC format as a numpy array
+            or a list of str/paths to WSIs.
+        masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+            A list of tissue masks or binary masks corresponding to processing area of
+            input images. These can be a list of numpy arrays or paths to
+            the saved image masks. These are only utilized when patch_mode is False.
+            Patches are only generated within a masked area.
+            If not provided, then a tissue mask will be automatically
+            generated for whole slide images.
+        patch_mode (str):
+            Whether to treat input images as a set of image patches. TIAToolbox defines
+            an image as a patch if HWC of the input image matches with the HWC expected
+            by the model. If HWC of the input image does not match with the HWC expected
+            by the model, then the patch_mode must be set to False which will allow the
+            engine to extract patches from the input image.
+            In this case, when the patch_mode is False the input images are treated
+            as WSIs. Default value is True.
+        model (str | ModelABC):
+            A PyTorch model or a name of an existing model from the TIAToolbox model zoo
+            for processing the data. For a full list of pretrained models,
+            refer to the `docs
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights via the `weights` argument. Argument
+            is case-insensitive.
+        ioconfig (IOSegmentorConfig):
+            Input IO configuration of type :class:`IOSegmentorConfig` to run the Engine.
+        _ioconfig (IOSegmentorConfig):
+            Runtime ioconfig.
+        return_labels (bool):
+            Whether to return the labels with the predictions.
+        resolution (Resolution):
+            Resolution used for reading the image. Please see
+            :obj:`WSIReader` for details.
+        units (Units):
+            Units of resolution used for reading the image. Choose
+            from either `level`, `power` or `mpp`. Please see
+            :obj:`WSIReader` for details.
+        patch_input_shape (tuple):
+            Shape of patches input to the model as tupled of HW. Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
+        stride_shape (tuple):
+            Stride used during WSI processing. Stride is
+            at requested read resolution, not with respect to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
+        batch_size (int):
+            Number of images fed into the model each time.
+        cache_mode (bool):
+            Whether to run the Engine in cache_mode. For large datasets,
+            we recommend to set this to True to avoid out of memory errors.
+            For smaller datasets, the cache_mode is set to False as
+            the results can be saved in memory. cache_mode is always True when
+            processing WSIs i.e., when `patch_mode` is False. Default value is False.
+        cache_size (int):
+            Specifies how many image patches to process in a batch when
+            cache_mode is set to True. If cache_size is less than the batch_size
+            batch_size is set to cache_size. Default value is 10,000.
+        labels (list | None):
+                List of labels. Only a single label per image is supported.
+        device (str):
+            :class:`torch.device` to run the model.
+            Select the device to run the model. Please see
+            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details on input parameters for device. Default value is "cpu".
+        num_loader_workers (int):
+            Number of workers used in :class:`torch.utils.data.DataLoader`.
+        num_post_proc_workers (int):
+            Number of workers to postprocess the results of the model.
+        return_labels (bool):
+            Whether to return the output labels. Default value is False.
+        resolution (Resolution):
+            Resolution used for reading the image. Please see
+            :class:`WSIReader` for details.
+            When `patch_mode` is True, the input image patches are expected to be at
+            the correct resolution and units. When `patch_mode` is False, the patches
+            are extracted at the requested resolution and units. Default value is 1.0.
+        units (Units):
+            Units of resolution used for reading the image. Choose
+            from either `baseline`, `level`, `power` or `mpp`. Please see
+            :class:`WSIReader` for details.
+            When `patch_mode` is True, the input image patches are expected to be at
+            the correct resolution and units. When `patch_mode` is False, the patches
+            are extracted at the requested resolution and units.
+            Default value is `baseline`.
+        verbose (bool):
+            Whether to output logging information. Default value is False.
 
     Examples:
         >>> # Sample output of a network
         >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
-        >>> output = predictor.predict(wsis, mode='wsi')
+        >>> segmentor = SemanticSegmentor(model='fcn-tissue_mask')
+        >>> output = segmentor.run(wsis, mode='wsi')
         >>> list(output.keys())
         [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
         >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
@@ -117,4 +274,105 @@ class SemanticSegmentor(PatchPredictor):
             weights=weights,
             device=device,
             verbose=verbose,
+        )
+
+    def run(
+        self: SemanticSegmentor,
+        images: list[os | Path | WSIReader] | np.ndarray,
+        masks: list[os | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
+        *,
+        patch_mode: bool = True,
+        save_dir: os | Path | None = None,  # None will not save output
+        overwrite: bool = False,
+        output_type: str = "dict",
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> AnnotationStore | Path | str | dict:
+        """Run the engine on input images.
+
+        Args:
+            images (list, ndarray):
+                List of inputs to process. when using `patch` mode, the
+                input must be either a list of images, a list of image
+                file paths or a numpy array of an image list.
+            masks (list | None):
+                List of masks. Only utilised when patch_mode is False.
+                Patches are only generated within a masked area.
+                If not provided, then a tissue mask will be automatically
+                generated for whole slide images.
+            labels (list | None):
+                List of labels. Only a single label per image is supported.
+            patch_mode (bool):
+                Whether to treat input image as a patch or WSI.
+                default = True.
+            ioconfig (IOSegmentorConfig):
+                IO configuration.
+            save_dir (str or pathlib.Path):
+                Output directory to save the results.
+                If save_dir is not provided when patch_mode is False,
+                then for a single image the output is created in the current directory.
+                If there are multiple WSIs as input then the user must provide
+                path to save directory otherwise an OSError will be raised.
+            overwrite (bool):
+                Whether to overwrite the results. Default = False.
+            output_type (str):
+                The format of the output type. "output_type" can be
+                "zarr" or "AnnotationStore". Default value is "zarr".
+                When saving in the zarr format the output is saved using the
+                `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
+                as a zarr group. If the required output type is an "AnnotationStore"
+                then the output will be intermediately saved as zarr but converted
+                to :class:`AnnotationStore` and saved as a `.db` file
+                at the end of the loop.
+            **kwargs (PredictorRunParams):
+                Keyword Args to update :class:`EngineABC` attributes during runtime.
+
+        Returns:
+            (:class:`numpy.ndarray`, dict):
+                Model predictions of the input dataset. If multiple
+                whole slide images are provided as input,
+                or save_output is True, then results are saved to
+                `save_dir` and a dictionary indicating save location for
+                each input is returned.
+
+                The dict has the following format:
+
+                - img_path: path of the input image.
+                - raw: path to save location for raw prediction,
+                  saved in .json.
+
+        Examples:
+            >>> wsis = ['wsi1.svs', 'wsi2.svs']
+            >>> image_patches = [np.ndarray, np.ndarray]
+            >>> class SemanticSegmentor(PatchPredictor):
+            >>> # Define all Abstract methods.
+            >>>     ...
+            >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+            >>> output = segmentor.run(image_patches, patch_mode=True)
+            >>> output
+            ... "/path/to/Output.db"
+            >>> output = segmentor.run(
+            >>>     image_patches,
+            >>>     patch_mode=True,
+            >>>     output_type="zarr")
+            >>> output
+            ... "/path/to/Output.zarr"
+            >>> output = segmentor.run(wsis, patch_mode=False)
+            >>> output.keys()
+            ... ['wsi1.svs', 'wsi2.svs']
+            >>> output['wsi1.svs']
+            ... {'/path/to/wsi1.db'}
+
+        """
+        return super().run(
+            images=images,
+            masks=masks,
+            labels=labels,
+            ioconfig=ioconfig,
+            patch_mode=patch_mode,
+            save_dir=save_dir,
+            overwrite=overwrite,
+            output_type=output_type,
+            **kwargs,
         )

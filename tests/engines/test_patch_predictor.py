@@ -1,4 +1,4 @@
-"""Test for Patch Predictor."""
+"""Test PatchPredictor."""
 
 from __future__ import annotations
 

@@ -517,6 +517,7 @@ class PatchPredictor(EngineABC):
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
+            >>> image_patches = [np.ndarray, np.ndarray]
             >>> class PatchPredictor(EngineABC):
             >>> # Define all Abstract methods.
             >>>     ...
