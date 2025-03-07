@@ -442,8 +442,8 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
     def __new__(
         cls: type[StoreInstanceType],
-        *args: str,  # noqa: ARG003
-        **kwargs: int,  # noqa: ARG003
+        *args: str,  # noqa: ARG004
+        **kwargs: int,  # noqa: ARG004
     ) -> StoreInstanceType:
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:
