@@ -22,9 +22,9 @@ import SimpleITK as sitk  # noqa: N813
 import tifffile
 import zarr
 from defusedxml import ElementTree
-from numpy.linalg import inv
 from imagecodecs.numcodecs import Delta, Jpeg, Jpeg2k, Lzw
 from numcodecs import register_codec
+from numpy.linalg import inv
 from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
