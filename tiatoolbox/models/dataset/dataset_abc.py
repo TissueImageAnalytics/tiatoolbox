@@ -15,6 +15,7 @@ import torch.utils.data as torch_data
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
+from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -22,7 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from multiprocessing.managers import Namespace
 
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
     try:
         from typing import TypeGuard
@@ -572,6 +573,10 @@ class PatchDataset(PatchDatasetABC):
         labels (list):
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
+        patch_input_shape (tuple):
+                Size of patches input to the model. Patches are at
+                requested read resolution, not with respect to level 0,
+                and must be positive.
 
     Examples:
         >>> # A user defined preproc func and expected behavior
@@ -581,6 +586,7 @@ class PatchDataset(PatchDatasetABC):
         >>> ds = PatchDataset(
         ...     inputs=['/A/B/C/img1.png', '/A/B/C/img2.png'],
         ...     labels=["labels1", "labels2"],
+        ...     patch_input_shape=(224, 224),
         ... )
 
     """
@@ -589,6 +595,7 @@ class PatchDataset(PatchDatasetABC):
         self: PatchDataset,
         inputs: np.ndarray | list,
         labels: list | None = None,
+        patch_input_shape: IntPair | None = None,
     ) -> None:
         """Initialize :class:`PatchDataset`."""
         super().__init__()
@@ -597,6 +604,7 @@ class PatchDataset(PatchDatasetABC):
 
         self.inputs = inputs
         self.labels = labels
+        self.patch_input_shape = patch_input_shape
 
         # perform check on the input
         self._check_input_integrity(mode="patch")
@@ -608,6 +616,14 @@ class PatchDataset(PatchDatasetABC):
         # Mode 0 is list of paths
         if not self.data_is_npy_alike:
             patch = self.load_img(patch)
+
+        if patch.shape[:-1] != tuple(self.patch_input_shape):
+            msg = (
+                "Patch size not compatible with the model. Resizing patch to make "
+                "it compatible with model input size."
+            )
+            logger.warning(msg=msg)
+            patch = imresize(patch, output_size=self.patch_input_shape)
 
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)

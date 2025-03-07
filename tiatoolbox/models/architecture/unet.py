@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 import torch.nn.functional as F  # noqa: N812
@@ -12,6 +12,9 @@ from torchvision.models.resnet import ResNet
 
 from tiatoolbox.models.architecture.utils import UpSample2x, centre_crop
 from tiatoolbox.models.models_abc import ModelABC
+
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
 
 
 class ResNetEncoder(ResNet):
@@ -416,7 +419,7 @@ class UNetModel(ModelABC):
         batch_data: torch.Tensor,
         *,
         device: str,
-    ) -> list:
+    ) -> dict[str, np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as i/o
@@ -432,9 +435,8 @@ class UNetModel(ModelABC):
                 Transfers model to the specified device. Default is "cpu".
 
         Returns:
-            list:
-                List of network output head, each output is an
-                :class:`numpy.ndarray`.
+            dict:
+                A dict with "probabilities" key and a :class:`numpy.ndarray` as output.
 
         """
         model.eval()
@@ -457,7 +459,6 @@ class UNetModel(ModelABC):
                 align_corners=False,
             )
             probs = centre_crop(probs, crop_shape)
-            probs = probs.permute(0, 2, 3, 1)  # to NHWC
+            output = probs.permute(0, 2, 3, 1)  # to NHWC
 
-        probs = probs.cpu().numpy()
-        return [probs]
+        return {"probabilities": output.cpu().numpy()}

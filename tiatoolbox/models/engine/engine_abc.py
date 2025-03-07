@@ -479,7 +479,10 @@ class EngineABC(ABC):  # noqa: B024
                 shuffle=False,
             )
 
-        dataset = PatchDataset(inputs=images, labels=labels)
+        dataset = PatchDataset(
+            inputs=images, labels=labels, patch_input_shape=ioconfig.patch_input_shape
+        )
+
         dataset.preproc_func = self.model.preproc_func
 
         # preprocessing must be defined with the dataset
@@ -971,6 +974,7 @@ class EngineABC(ABC):  # noqa: B024
             masks=self.masks,
             labels=self.labels,
             patch_mode=True,
+            ioconfig=self._ioconfig,
         )
         raw_predictions = self.infer_patches(
             dataloader=dataloader,
