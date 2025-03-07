@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 from torch import nn
 
 from tiatoolbox import logger
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.models.models_abc import ModelABC
 
 
 def is_torch_compile_compatible() -> bool:
@@ -45,10 +49,10 @@ def is_torch_compile_compatible() -> bool:
 
 
 def compile_model(
-    model: nn.Module | None = None,
+    model: nn.Module | ModelABC | None = None,
     *,
     mode: str = "default",
-) -> nn.Module:
+) -> torch.nn.Module | ModelABC:
     """A decorator to compile a model using torch-compile.
 
     Args:
@@ -67,7 +71,7 @@ def compile_model(
               CUDA graphs
 
     Returns:
-        torch.nn.Module:
+        torch.nn.Module or ModelABC:
             Compiled model.
 
     """

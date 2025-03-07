@@ -86,8 +86,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     predictor = PatchPredictor(model=model, weights=None)
     kwargs = {
         "patch_input_shape": [512, 512],
-        "resolution": 1.75,
-        "units": "mpp",
+        "input_resolutions": [{"units": "mpp", "resolution": 1.75}],
     }
 
     # test providing config / full input info for default models without weights
@@ -134,7 +133,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
 
     predictor.run(
         images=[mini_wsi_svs],
-        input_resolutions=1.99,
+        input_resolutions=[{"units": "mpp", "resolution": 1.99}],
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
@@ -143,7 +142,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
 
     predictor.run(
         images=[mini_wsi_svs],
-        units="baseline",
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
@@ -152,8 +151,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
 
     predictor.run(
         images=[mini_wsi_svs],
-        units="level",
-        input_resolutions=0,
+        input_resolutions=[{"units": "level", "resolution": 0}],
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
@@ -163,8 +161,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
 
     predictor.run(
         images=[mini_wsi_svs],
-        units="power",
-        input_resolutions=20,
+        input_resolutions=[{"units": "power", "resolution": 20}],
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
@@ -262,8 +259,7 @@ def test_wsi_predictor_api(
     kwargs = {
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
-        "resolution": 1.0,
-        "units": "baseline",
+        "input_resolutions": [{"units": "baseline", "resolution": 1.0}],
         "save_dir": save_dir,
     }
     # ! add this test back once the read at `baseline` is fixed
