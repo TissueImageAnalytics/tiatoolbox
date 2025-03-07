@@ -530,7 +530,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
             patch_mode=True,
             save_dir=tmp_path / "dump",
             patch_input_shape=kwargs["patch_input_shape"],
-            resolution=kwargs["resolution"],
+            input_resolutions=kwargs["resolution"],
             units=kwargs["units"],
         )
         assert "provide a valid ModelIOConfigABC" in caplog.text
@@ -570,7 +570,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
-        resolution=1.99,
+        input_resolutions=1.99,
         units="baseline",
         patch_mode=True,
         save_dir=f"{tmp_path}/dump",
@@ -585,7 +585,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
-        resolution=None,
+        input_resolutions=None,
         units=None,
         patch_mode=True,
         save_dir=f"{tmp_path}/dump",
@@ -599,7 +599,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         ioconfig=None,
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
-        resolution=1.99,
+        input_resolutions=1.99,
         units="baseline",
     )
 
@@ -620,6 +620,6 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
                 ioconfig=None,
                 patch_input_shape=_kwargs["patch_input_shape"],
                 stride_shape=(1, 1),
-                resolution=_kwargs["resolution"],
+                input_resolutions=_kwargs["resolution"],
                 units=_kwargs["units"],
             )

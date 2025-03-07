@@ -58,7 +58,7 @@ class PredictorRunParams(EngineABCRunParams):
             Shape of patches input to the model as tuple of height and width (HW).
             Patches are requested at read resolution, not with respect to level 0,
             and must be positive.
-        resolution (Resolution):
+        input_resolutions (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
         return_probabilities (bool):
@@ -239,7 +239,7 @@ class PatchPredictor(EngineABC):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        resolution (Resolution):
+        input_resolutions (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
         units (Units):
@@ -280,7 +280,7 @@ class PatchPredictor(EngineABC):
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        resolution (Resolution):
+        input_resolutions (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
             When `patch_mode` is True, the input image patches are expected to be at
@@ -301,27 +301,27 @@ class PatchPredictor(EngineABC):
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=False)
 
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=True)
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=True)
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(tile_file, mode='tile')
+        >>> output = predictor.run(tile_file, patch_mode=False)
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(wsi_file, mode='wsi')
+        >>> output = predictor.run(wsi_file, patch_mode=False)
 
     References:
         [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
@@ -517,6 +517,7 @@ class PatchPredictor(EngineABC):
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
+            >>> image_patches = [np.ndarray, np.ndarray]
             >>> class PatchPredictor(EngineABC):
             >>> # Define all Abstract methods.
             >>>     ...
