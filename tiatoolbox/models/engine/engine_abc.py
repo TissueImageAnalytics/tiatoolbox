@@ -35,7 +35,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -132,7 +132,7 @@ class EngineABCRunParams(TypedDict, total=False):
             Shape of patches input to the model as tuple of height and width (HW).
             Patches are requested at read resolution, not with respect to level 0,
             and must be positive.
-        resolution (Resolution):
+        input_resolutions (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
         scale_factor (tuple[float, float]):
@@ -164,7 +164,7 @@ class EngineABCRunParams(TypedDict, total=False):
     num_post_proc_workers: int
     output_file: str
     patch_input_shape: IntPair
-    resolution: Resolution
+    input_resolutions: Resolution
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
@@ -242,7 +242,7 @@ class EngineABC(ABC):  # noqa: B024
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        resolution (Resolution):
+        input_resolutions (Resolution):
             Resolution used for reading the image. Please see
             :obj:`WSIReader` for details.
         units (Units):
@@ -283,7 +283,7 @@ class EngineABC(ABC):  # noqa: B024
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        resolution (Resolution):
+        input_resolutions (Resolution):
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
             When `patch_mode` is True, the input image patches are expected to be at
@@ -371,7 +371,7 @@ class EngineABC(ABC):  # noqa: B024
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.patch_input_shape: IntPair | None = None
-        self.resolution: Resolution | None = None
+        self.input_resolutions: Resolution | None = None
         self.return_labels: bool = False
         self.stride_shape: IntPair | None = None
         self.units: Units | None = None
@@ -791,7 +791,7 @@ class EngineABC(ABC):  # noqa: B024
         ioconfig: ModelIOConfigABC,
         patch_input_shape: IntPair,
         stride_shape: IntPair,
-        resolution: Resolution,
+        input_resolutions: Resolution,
         units: Units,
     ) -> ModelIOConfigABC:
         """Update IOConfig.
@@ -808,7 +808,7 @@ class EngineABC(ABC):  # noqa: B024
                 at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
                 `stride_shape=patch_input_shape`.
-            resolution (Resolution):
+            input_resolutions (Resolution):
                 Resolution used for reading the image. Please see
                 :obj:`WSIReader` for details.
             units (Units):
@@ -820,7 +820,7 @@ class EngineABC(ABC):  # noqa: B024
         """
         config_flag = (
             patch_input_shape is None,
-            resolution is None,
+            input_resolutions is None,
             units is None,
         )
         if isinstance(ioconfig, ModelIOConfigABC):
@@ -845,15 +845,15 @@ class EngineABC(ABC):  # noqa: B024
                 ioconfig.patch_input_shape = patch_input_shape
             if stride_shape is not None:
                 ioconfig.stride_shape = stride_shape
-            if resolution is not None:
-                ioconfig.input_resolutions[0]["resolution"] = resolution
+            if input_resolutions is not None:
+                ioconfig.input_resolutions[0]["resolution"] = input_resolutions
             if units is not None:
                 ioconfig.input_resolutions[0]["units"] = units
 
             return ioconfig
 
         return ModelIOConfigABC(
-            input_resolutions=[{"resolution": resolution, "units": units}],
+            input_resolutions=[{"resolution": input_resolutions, "units": units}],
             patch_input_shape=patch_input_shape,
             stride_shape=stride_shape,
             output_resolutions=[],
@@ -955,7 +955,7 @@ class EngineABC(ABC):  # noqa: B024
             ioconfig,
             self.patch_input_shape,
             self.stride_shape,
-            self.resolution,
+            self.input_resolutions,
             self.units,
         )
 

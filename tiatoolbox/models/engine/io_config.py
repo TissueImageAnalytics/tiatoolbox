@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import Units
+    from tiatoolbox.type_hints import Units
 
 
 @dataclass
@@ -69,6 +69,7 @@ class ModelIOConfigABC:
             self.stride_shape = self.patch_input_shape
 
         self.resolution_unit = self.input_resolutions[0]["units"]
+        self.highest_input_resolution = self.input_resolutions[0]["resolution"]
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(

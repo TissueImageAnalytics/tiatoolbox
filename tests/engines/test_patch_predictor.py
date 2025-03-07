@@ -134,7 +134,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
 
     predictor.run(
         images=[mini_wsi_svs],
-        resolution=1.99,
+        input_resolutions=1.99,
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
@@ -153,7 +153,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     predictor.run(
         images=[mini_wsi_svs],
         units="level",
-        resolution=0,
+        input_resolutions=0,
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
@@ -164,7 +164,7 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
     predictor.run(
         images=[mini_wsi_svs],
         units="power",
-        resolution=20,
+        input_resolutions=20,
         patch_mode=False,
         save_dir=f"{tmp_path}/dump",
     )
