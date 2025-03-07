@@ -48,3 +48,12 @@ def test_functionality(remote_sample: Callable) -> None:
     output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[19, 171], [53, 89]])
+
+
+def test_multiclass_output() -> None:
+    """Test the architecture for multi-class output."""
+    multiclass_model = MapDe(num_input_channels=3, num_classes=3)
+    test_input = torch.rand((1, 3, 252, 252))
+
+    output = multiclass_model(test_input)
+    assert output.shape == (1, 3, 252, 252)
