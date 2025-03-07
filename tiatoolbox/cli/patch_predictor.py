@@ -13,12 +13,12 @@ from tiatoolbox.cli.common import (
     cli_output_path,
     cli_output_type,
     cli_patch_mode,
-    cli_resolution,
     cli_return_labels,
     cli_return_probabilities,
-    cli_units,
     cli_verbose,
     cli_weights,
+    cli_yaml_config_path,
+    prepare_ioconfig,
     prepare_model_cli,
     tiatoolbox_cli,
 )
@@ -37,8 +37,7 @@ from tiatoolbox.cli.common import (
 @cli_weights()
 @cli_device(default="cpu")
 @cli_batch_size(default=1)
-@cli_resolution(default=0.5)
-@cli_units(default="mpp")
+@cli_yaml_config_path()
 @cli_masks(default=None)
 @cli_num_loader_workers(default=0)
 @cli_output_type(
@@ -56,8 +55,7 @@ def patch_predictor(
     masks: str | None,
     output_path: str,
     batch_size: int,
-    resolution: float,
-    units: str,
+    yaml_config_path: str,
     num_loader_workers: int,
     device: str,
     output_type: str,
@@ -68,6 +66,7 @@ def patch_predictor(
     verbose: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification CNN."""
+    from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig
     from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 
     files_all, masks_all, output_path = prepare_model_cli(
@@ -85,11 +84,17 @@ def patch_predictor(
         verbose=verbose,
     )
 
+    ioconfig = prepare_ioconfig(
+        IOPatchPredictorConfig,
+        pretrained_weights=weights,
+        yaml_config_path=yaml_config_path,
+    )
+
     _ = predictor.run(
         images=files_all,
         masks=masks_all,
         patch_mode=patch_mode,
-        input_resolutions=[{"units": units, "resolution": resolution}],
+        ioconfig=ioconfig,
         device=device,
         save_dir=output_path,
         output_type=output_type,

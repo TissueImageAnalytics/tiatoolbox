@@ -11,12 +11,14 @@ from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
+import yaml
 import zarr
 from click.testing import CliRunner
 
 from tests.conftest import timed
 from tiatoolbox import cli, logger, rcParam
 from tiatoolbox.models import IOPatchPredictorConfig
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 from tiatoolbox.utils import env_detection as toolbox_env
@@ -642,6 +644,17 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
     dir_path_masks = tmp_path.joinpath("new_copies_masks")
     dir_path_masks.mkdir()
 
+    config = {
+        "input_resolutions": [{"units": "mpp", "resolution": 0.5}],
+        "patch_input_shape": [224, 224],
+    }
+
+    with Path.open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+        yaml.dump(config, fptr)
+
+    model = "alexnet-kather100k"
+    weights = fetch_pretrained_weights(model)
+
     try:
         dir_path.joinpath("1_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
         dir_path.joinpath("2_" + mini_wsi_svs.name).symlink_to(mini_wsi_svs)
@@ -671,6 +684,12 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
             str(False),
             "--masks",
             str(dir_path_masks),
+            "--model",
+            model,
+            "--weights",
+            str(weights),
+            "--yaml-config-path",
+            tmp_path / "config.yaml",
             "--output-path",
             str(tmp_path / "output"),
             "--output-type",

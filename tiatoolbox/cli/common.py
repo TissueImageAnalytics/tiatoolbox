@@ -619,17 +619,17 @@ def prepare_model_cli(
 tiatoolbox_cli = TIAToolboxCLI()
 
 
-def prepare_ioconfig_seg(
-    segment_config_class: type[IOConfigABC],
+def prepare_ioconfig(
+    config_class: type[IOConfigABC],
     pretrained_weights: str | Path | None,
     yaml_config_path: str | Path,
 ) -> IOConfigABC | None:
-    """Prepare ioconfig for segmentation."""
+    """Prepare ioconfig for CLI."""
     import yaml
 
     if pretrained_weights is not None:
         with Path(yaml_config_path).open() as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
-        return segment_config_class(**ioconfig)
+        return config_class(**ioconfig)
 
     return None
