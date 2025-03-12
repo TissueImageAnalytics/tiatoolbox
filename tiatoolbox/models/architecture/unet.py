@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import numpy as np
 import torch
 import torch.nn.functional as F  # noqa: N812
 from torch import nn
@@ -12,9 +13,6 @@ from torchvision.models.resnet import ResNet
 
 from tiatoolbox.models.architecture.utils import UpSample2x, centre_crop
 from tiatoolbox.models.models_abc import ModelABC
-
-if TYPE_CHECKING:  # pragma: no cover
-    import numpy as np
 
 
 class ResNetEncoder(ResNet):
@@ -462,3 +460,12 @@ class UNetModel(ModelABC):
             output = probs.permute(0, 2, 3, 1)  # to NHWC
 
         return {"probabilities": output.cpu().numpy()}
+
+    @staticmethod
+    def postproc(image: np.ndarray) -> np.ndarray:
+        """Define the post-processing of this class of model.
+
+        This simply applies argmax along last axis of the input.
+
+        """
+        return np.argmax(image, axis=-1)

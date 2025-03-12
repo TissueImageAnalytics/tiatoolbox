@@ -28,6 +28,8 @@ def test_semantic_segmentor_patches(sample_patch1: Path, sample_patch2: Path) ->
 
     inputs = [Path(sample_patch1), Path(sample_patch2)]
 
+    assert segmentor.cache_mode is False
+
     output = segmentor.run(
         images=inputs,
         return_probabilities=True,
@@ -38,5 +40,9 @@ def test_semantic_segmentor_patches(sample_patch1: Path, sample_patch2: Path) ->
 
     assert (
         tuple(segmentor._ioconfig.patch_output_shape)
-        == output["predictions"][0].shape[:-1]
+        == output["probabilities"][0].shape[:-1]
+    )
+
+    assert (
+        tuple(segmentor._ioconfig.patch_output_shape) == output["predictions"][0].shape
     )
