@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
 import timm
 import torch
 import torchvision.models as torch_models
 from timm.layers import SwiGLUPacked
 from torch import nn
 
+from tiatoolbox.models.architecture.utils import argmax_last_axis
 from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
     from torchvision.models import WeightsEnum
 
 
@@ -205,23 +206,6 @@ def _get_timm_architecture(
     raise ValueError(msg)
 
 
-def _postproc(image: np.ndarray) -> np.ndarray:
-    """Define the post-processing of this class of model.
-
-    This simply applies argmax along last axis of the input.
-
-    Args:
-        image (np.ndarray):
-            The input image array.
-
-    Returns:
-        np.ndarray:
-            The post-processed image array.
-
-    """
-    return np.argmax(image, axis=-1)
-
-
 def _infer_batch(
     model: nn.Module,
     batch_data: torch.Tensor,
@@ -339,7 +323,7 @@ class CNNModel(ModelABC):
                 The post-processed image array.
 
         """
-        return _postproc(image=image)
+        return argmax_last_axis(image=image)
 
     @staticmethod
     def infer_batch(
@@ -463,7 +447,7 @@ class TimmModel(ModelABC):
                 The post-processed image array.
 
         """
-        return _postproc(image=image)
+        return argmax_last_axis(image=image)
 
     @staticmethod
     def infer_batch(
