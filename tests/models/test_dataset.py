@@ -120,7 +120,9 @@ def test_kather_dataset(tmp_path: Path) -> None:
     assert len(dataset.inputs) == len(dataset.labels)
 
     # to actually get the image, we feed it to PatchDataset
-    actual_ds = PatchDataset(dataset.inputs, dataset.labels)
+    actual_ds = PatchDataset(
+        dataset.inputs, dataset.labels, patch_input_shape=(224, 224)
+    )
     sample_patch = actual_ds[89]
     assert isinstance(sample_patch["image"], np.ndarray)
     assert sample_patch["label"] is not None
@@ -136,7 +138,9 @@ def test_patch_dataset_path_imgs(
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
-    dataset = PatchDataset([Path(sample_patch1), Path(sample_patch2)])
+    dataset = PatchDataset(
+        [Path(sample_patch1), Path(sample_patch2)], patch_input_shape=size[:-1]
+    )
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -152,7 +156,7 @@ def test_patch_dataset_list_imgs(tmp_path: Path) -> None:
     size = (5, 5, 3)
     img = RNG.integers(low=0, high=255, size=size)
     list_imgs = [img, img, img]
-    dataset = PatchDataset(list_imgs)
+    dataset = PatchDataset(list_imgs, patch_input_shape=size[:-1])
 
     dataset.preproc_func = lambda x: x
 
@@ -197,14 +201,14 @@ def test_patch_datasetarray_imgs() -> None:
     array_imgs = np.array(list_imgs)
 
     # test different setter for label
-    dataset = PatchDataset(array_imgs, labels=labels)
+    dataset = PatchDataset(array_imgs, labels=labels, patch_input_shape=(224, 224))
     an_item = dataset[2]
     assert an_item["label"] == 3
-    dataset = PatchDataset(array_imgs, labels=None)
+    dataset = PatchDataset(array_imgs, labels=None, patch_input_shape=(224, 224))
     an_item = dataset[2]
     assert "label" not in an_item
 
-    dataset = PatchDataset(array_imgs)
+    dataset = PatchDataset(array_imgs, patch_input_shape=size[:-1])
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
         assert sampled_img_shape[0] == size[0]
