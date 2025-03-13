@@ -6621,11 +6621,16 @@ class TransformedWSIReader(WSIReader):
         else:
             transformed_location, max_size = self.get_transformed_location(
                 location,
-                level_size,
+                size,
                 read_level,
             )
             patch = self.wsi_reader.read_region(
                 transformed_location, read_level, max_size
+            )
+            # convert location to read resolution
+            transformed_location = (
+                int(transformed_location[0] / (2**read_level)),
+                int(transformed_location[1] / (2**read_level)),
             )
         patch = np.array(patch)
 
@@ -6644,16 +6649,6 @@ class TransformedWSIReader(WSIReader):
             transformed_patch = transformed_patch[pad:-pad, pad:-pad, :]
         else:
             transformed_patch = self.transform_patch(patch, max_size)
-
-        # Crop to get rid of black borders due to rotation
-        if self.transform_type == "affine":
-            start_row = int(max_size[1] / 2) - int(level_size[1] / 2)
-            end_row = int(max_size[1] / 2) + int(level_size[1] / 2)
-            start_col = int(max_size[0] / 2) - int(level_size[0] / 2)
-            end_col = int(max_size[0] / 2) + int(level_size[0] / 2)
-            transformed_patch = transformed_patch[
-                start_row:end_row, start_col:end_col, :
-            ]
 
         # Resize to desired size
         post_read_scale = float(post_read_scale[0]), float(post_read_scale[1])
@@ -6757,7 +6752,7 @@ class TransformedWSIReader(WSIReader):
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -6772,7 +6767,7 @@ class TransformedWSIReader(WSIReader):
                 bounds_at_read_level,
                 _,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -6784,7 +6779,7 @@ class TransformedWSIReader(WSIReader):
                 bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -6836,10 +6831,6 @@ class TransformedWSIReader(WSIReader):
             transformed_patch = transformed_patch[pad:-pad, pad:-pad, :]
         else:
             transformed_patch = self.transform_patch(patch, max_size)
-
-        # Crop to get rid of black borders due to rotation
-        if self.transform_type == "affine":
-            raise NotImplementedError
 
         # Resize to desired size
         post_read_scale = float(post_read_scale[0]), float(post_read_scale[1])
