@@ -58,8 +58,11 @@ class PredictorRunParams(EngineABCRunParams):
             Shape of patches input to the model as tuple of height and width (HW).
             Patches are requested at read resolution, not with respect to level 0,
             and must be positive.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
+        input_resolutions (list(dict(Units, Resolution))):
+            List of Python dictionaries with units and resolution for each
+            input head for model inference for reading the image. Supported
+            units are `level`, `power` and `mpp`. Keys should be "units" and
+            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
             :class:`WSIReader` for details.
         return_probabilities (bool):
                 Whether to return per-class probabilities.
@@ -73,10 +76,6 @@ class PredictorRunParams(EngineABCRunParams):
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
-            :class:`WSIReader` for details.
         verbose (bool):
             Whether to output logging information.
 
@@ -239,13 +238,12 @@ class PatchPredictor(EngineABC):
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
-            :obj:`WSIReader` for details.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
-            :obj:`WSIReader` for details.
+        input_resolutions (list(dict(Units, Resolution))):
+            List of Python dictionaries with units and resolution for each
+            input head for model inference for reading the image. Supported
+            units are `level`, `power` and `mpp`. Keys should be "units" and
+            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
+            :class:`WSIReader` for details.
         patch_input_shape (tuple):
             Shape of patches input to the model as tupled of HW. Patches are at
             requested read resolution, not with respect to level 0,
@@ -280,20 +278,14 @@ class PatchPredictor(EngineABC):
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
-            :class:`WSIReader` for details.
-            When `patch_mode` is True, the input image patches are expected to be at
-            the correct resolution and units. When `patch_mode` is False, the patches
-            are extracted at the requested resolution and units. Default value is 1.0.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `baseline`, `level`, `power` or `mpp`. Please see
-            :class:`WSIReader` for details.
-            When `patch_mode` is True, the input image patches are expected to be at
-            the correct resolution and units. When `patch_mode` is False, the patches
-            are extracted at the requested resolution and units.
-            Default value is `baseline`.
+        input_resolutions (list(dict(Units, Resolution))):
+            List of Python dictionaries with units and resolution for each
+            input head for model inference for reading the image. Supported
+            units are `level`, `power` and `mpp`. When `patch_mode` is `True`,
+            the input image patches are expected to be at the correct resolution and
+            units. When `patch_mode` is `False`, the patches are extracted at the
+            requested resolution and units. Default value is [{"units": "baseline",
+            "resolution": 1.0}].
         verbose (bool):
             Whether to output logging information. Default value is False.
 
@@ -301,27 +293,27 @@ class PatchPredictor(EngineABC):
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=False)
 
         >>> # array of list of 2 image patches as input
         >>> data = np.array([img1, img2])
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=True)
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(data, mode='patch')
+        >>> output = predictor.run(data, patch_mode=True)
 
         >>> # list of 2 image tile files as input
         >>> tile_file = ['path/tile1.png', 'path/tile2.png']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(tile_file, mode='tile')
+        >>> output = predictor.run(tile_file, patch_mode=False)
 
         >>> # list of 2 wsi files as input
         >>> wsi_file = ['path/wsi1.svs', 'path/wsi2.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
-        >>> output = predictor.run(wsi_file, mode='wsi')
+        >>> output = predictor.run(wsi_file, patch_mode=False)
 
     References:
         [1] Kather, Jakob Nikolas, et al. "Predicting survival from colorectal cancer
@@ -517,6 +509,7 @@ class PatchPredictor(EngineABC):
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
+            >>> image_patches = [np.ndarray, np.ndarray]
             >>> class PatchPredictor(EngineABC):
             >>> # Define all Abstract methods.
             >>>     ...
