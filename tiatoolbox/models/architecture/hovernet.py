@@ -338,8 +338,7 @@ class HoVerNet(ModelABC):
 
         if mode not in ["original", "fast"]:
             msg = (
-                f"Invalid mode {mode} for HoVerNet. "
-                f"Only support `original` or `fast`."
+                f"Invalid mode {mode} for HoVerNet. Only support `original` or `fast`."
             )
             raise ValueError(
                 msg,

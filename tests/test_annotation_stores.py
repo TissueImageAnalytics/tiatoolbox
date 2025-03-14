@@ -40,7 +40,7 @@ from tiatoolbox.enums import GeometryType
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
-    from tiatoolbox.typing import Geometry
+    from tiatoolbox.type_hints import Geometry
 
 
 sqlite3.enable_callback_tracebacks(True)  # noqa: FBT003

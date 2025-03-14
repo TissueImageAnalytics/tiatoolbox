@@ -52,7 +52,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import requests
     from openslide import OpenSlide
 
-    from tiatoolbox.typing import IntBounds, IntPair
+    from tiatoolbox.type_hints import IntBounds, IntPair
     from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 # -------------------------------------------------------------------------------------

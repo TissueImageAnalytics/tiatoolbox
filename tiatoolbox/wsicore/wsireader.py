@@ -36,7 +36,14 @@ if TYPE_CHECKING:  # pragma: no cover
 
     import glymur
 
-    from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
+    from tiatoolbox.type_hints import (
+        Bounds,
+        IntBounds,
+        IntPair,
+        NumPair,
+        Resolution,
+        Units,
+    )
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()

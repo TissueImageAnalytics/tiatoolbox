@@ -45,25 +45,21 @@
 
 ## Getting Started
 
-TIAToolbox is a computational pathology toolbox developed by TIA Centre that provides an end-to-end API for pathology image analysis using best practices. It is based on **[PyTorch](https://pytorch.org/)**, a popular deep learning framework that enables efficient and flexible implementation of state-of-the-art algorithms. TIAToolbox supports many features through a command-line interface and can integrate with standard PyTorch modules. It also offers tools for data loading, pre-processing, model inference, post-processing, and visualization. Whether you are a computational, biomedical, or clinical researcher, TIAToolbox can help you get started in digital pathology with minimal effort.
+TIAToolbox is a computational pathology toolbox developed by the TIA Centre. It provides an end-to-end API for pathology image analysis using best practices. Based on **[PyTorch](https://pytorch.org/)**, a popular deep learning framework, TIAToolbox enables efficient and flexible implementation of state-of-the-art algorithms. It supports many features through a command-line interface and can integrate with standard PyTorch modules. The toolbox offers tools for data loading, pre-processing, model inference, post-processing, and visualization. Whether you are a computational, biomedical, or clinical researcher, TIAToolbox can help you get started in digital pathology with minimal effort.
 
 ### All Users
 
-This package is for those interested in digital pathology: including graduate students, medical staff, members of the TIA Centre and of PathLAKE, and anyone, anywhere, who may find it useful. We will continue to improve this package, taking account of developments in pathology, microscopy, computing and related disciplines. Please send comments and criticisms to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
-
-**`tiatoolbox`** is a multipurpose name that we use for 1) a certain computer program, 2) a Python package of related programs, created by us at the TIA Centre to help people get started in Digital Pathology, 3) this repository, 4) a certain virtual environment.
+This package is designed for those interested in digital pathology, including graduate students, medical staff, members of the TIA Centre and PathLAKE, and anyone who may find it useful. We will continue to improve this package, taking into account developments in pathology, microscopy, computing, and related disciplines. Please send comments and feedback to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
 
 ### Developers
 
-Anyone wanting to contribute to this repository, please first look at our [Wiki](https://github.com/TissueImageAnalytics/tiatoolbox/wiki) and at our web page for [contributors](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/CONTRIBUTING.rst). See also the *Prepare for development* section of this document.
+If you want to contribute to this repository, please first look at our [Wiki](https://github.com/TissueImageAnalytics/tiatoolbox/wiki) and our [contributor guidelines](https://github.com/TissueImageAnalytics/tiatoolbox/blob/master/CONTRIBUTING.rst). Also, see the *Prepare for development* section of this document.
 
-### Links, if needed
+### Useful Links
 
-The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Commands in this README are in bash. Windows users can use the command prompt to install conda and python packages.
+The [bash](https://www.gnu.org/software/bash) shell is available on all commonly encountered platforms. Commands in this README are in bash. Windows users can use the command prompt to install conda and Python packages.
 
-[conda](https://github.com/conda/conda) is a management system for software packages and [virtual environments](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html). To get `conda`, download [Anaconda](https://www.anaconda.com/), which includes hundreds of the most useful Python packages, using 2GB disk space. Alternatively, [miniconda](https://docs.conda.io/en/latest/miniconda.html) uses 400MB, and packages can be added as needed.
-
-[GitHub](https://github.com/about) is powered by the version control system [git](https://git-scm.com/), which has many users and uses. In GitHub, it is used to track versions of code and other documents.
+[conda](https://github.com/conda/conda) is a management system for software packages and [virtual environments](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html). To get `conda`, download [Anaconda](https://www.anaconda.com/), which includes hundreds of the most useful Python packages, using 2GB of disk space. Alternatively, [miniconda](https://docs.conda.io/en/latest/miniconda.html) uses 400MB, and packages can be added as needed.
 
 ### Examples Taster
 

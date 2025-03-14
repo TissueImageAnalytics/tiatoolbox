@@ -21,7 +21,7 @@ from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
 class IOPatchPredictorConfig(IOSegmentorConfig):

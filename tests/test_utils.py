@@ -28,7 +28,7 @@ from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
 
 if TYPE_CHECKING:
-    from tiatoolbox.typing import IntBounds
+    from tiatoolbox.type_hints import IntBounds
 
 RNG = np.random.default_rng()  # Numpy Random Generator
 

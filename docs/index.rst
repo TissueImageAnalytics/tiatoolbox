@@ -1,18 +1,19 @@
 Welcome to TIA Toolbox's documentation!
 =======================================
 
-.. image:: tia_logo.png
-    :alt: alternate text
-    :align: center
+.. include:: ../README.md
+   :parser: myst_parser.sphinx_
+
+Index
+-----
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     Readme <readme.rst>
     Installation <installation.rst>
-    Usage <usage.rst>
     Pre-trained Models <pretrained.rst>
-    Jupyter Notebooks <notebooks.rst>
+    Usage Examples <usage_examples.rst>
     Algorithms <algorithms.rst>
     Visualization <visualization.rst>
     API Reference <_autosummary/tiatoolbox>
