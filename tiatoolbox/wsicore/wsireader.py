@@ -412,6 +412,8 @@ class WSIReader:
             tiff_wsi = TIFFWSIReader(
                 input_path, mpp=mpp, power=power, post_proc=post_proc
             )
+            # temporary force to use TIFFWSIReader for tiffs as openslide doesnt work with comet
+            # remove before merging
             # tiff_wsi = _handle_tiff_wsi(
             #    input_path, mpp=mpp, power=power, post_proc=post_proc
             # )
@@ -3633,6 +3635,64 @@ class TIFFWSIReader(WSIReader):
                     else:
                         color_dict[key] = mcolors.to_rgb(value)
                 self.post_proc.color_dict = color_dict
+                return
+
+            # try alternate metadata format
+            # Build a map from filter pair string -> color label or RGB string
+            # from the <FilterColors> section
+            filter_colors = {}
+            filter_colors_section = root.find(".//FilterColors")
+            if filter_colors_section is not None:
+                keys = filter_colors_section.findall(".//FilterColors-k")
+                vals = filter_colors_section.findall(".//FilterColors-v")
+                for k, v in zip(keys, vals):
+                    filter_colors[k.text] = v.text
+
+            # Helper function to convert color strings like "Lime" or "255, 128, 0" into (R,G,B)
+            def color_string_to_rgb(s):
+                if "," in s:
+                    return tuple(int(x.strip()) / 255 for x in s.split(","))
+                return mcolors.to_rgb(s)
+
+            # 2) For each <ScanBands-i>, find the channel's name and figure out
+            #    which filter pair it uses, then match that to a color.
+            channel_dict = {}
+
+            for scan_band in root.findall(".//ScanBands-i"):
+                # Inside a <ScanBands-i> there is a <Bands-i> with a <Name> tag
+                bands_i = scan_band.find(".//Bands-i")
+                if bands_i is not None:
+                    band_name_element = bands_i.find("Name")
+                    if band_name_element is not None:
+                        channel_name = band_name_element.text.strip()
+
+                        # Grab the filter pair manufacturer info
+                        filter_pair = scan_band.find(".//FilterPair")
+                        if filter_pair is not None:
+                            emission_part = filter_pair.find(
+                                ".//EmissionFilter/FixedFilter/PartNumber"
+                            )
+                            excitation_part = filter_pair.find(
+                                ".//ExcitationFilter/FixedFilter/PartNumber"
+                            )
+                            if (
+                                emission_part is not None
+                                and excitation_part is not None
+                            ):
+                                matching_rgb = (1.0, 1.0, 1.0)  # default white
+                                for fc_key, fc_val in filter_colors.items():
+                                    # if both part numbers appear in the FilterColors-k string, assume it's the match
+                                    if (
+                                        emission_part.text in fc_key
+                                        and excitation_part.text in fc_key
+                                    ):
+                                        matching_rgb = color_string_to_rgb(fc_val)
+                                        break
+
+                                channel_dict[channel_name] = matching_rgb
+
+            if len(channel_dict) > 0:
+                self.post_proc.color_dict = channel_dict
 
     def _canonical_shape(self: TIFFWSIReader, shape: IntPair) -> tuple:
         """Make a level shape tuple in YXS order.
