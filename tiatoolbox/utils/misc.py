@@ -1262,6 +1262,9 @@ def dict_to_store_semantic_segmentor(
     layer_list = np.delete(layer_list, np.where(layer_list == 0))
     layer_info_dict = {}
     count = 1
+    store = SQLiteStore()
+
+    annotations = []
 
     for type_class in layer_list:
         layer = np.where(preds == type_class, 1, 0).astype("uint8")
@@ -1277,6 +1280,23 @@ def dict_to_store_semantic_segmentor(
                 "type": class_dict[type_class],
             }
             count += 1
+
+            origin = (0, 0)
+
+            annotations.append(
+                Annotation(
+                    geometry=make_valid_poly(
+                        feature2geometry(
+                            {
+                                "type": "Polygon",
+                                "coordinates": scale_factor * coords,
+                            },
+                        ),
+                        origin=origin,
+                    ),
+                    properties={},
+                )
+            )
 
     # return layer_info_dict
 
@@ -1323,19 +1343,18 @@ def dict_to_store_semantic_segmentor(
     # )
     #
     # store = SQLiteStore()
-    # _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
-    #
-    # # if a save director is provided, then dump store into a file
-    # if save_path:
-    #     # ensure parent directory exists
-    #     save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-    #     # ensure proper db extension
-    #     save_path = save_path.parent.absolute() / (save_path.stem + ".db")
-    #     store.dump(save_path)
-    #     return save_path
-    #
-    # return store
+    _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
 
+    # # if a save director is provided, then dump store into a file
+    if save_path:
+        # ensure parent directory exists
+        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+        # ensure proper db extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.dump(save_path)
+        return save_path
+
+    return store
 
 
 def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
