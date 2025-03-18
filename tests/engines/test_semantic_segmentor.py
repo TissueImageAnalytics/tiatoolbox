@@ -85,3 +85,10 @@ def test_semantic_segmentor_patches(
     output = zarr.open(output, mode="r")
     assert 0.24 < np.mean(output["predictions"][:]) < 0.25
     assert "probabilities" not in output.keys()  # noqa: SIM118
+
+
+# def test_hovernet_dat() -> None:
+#     from tiatoolbox.utils.misc import store_from_dat
+#     from pathlib import Path
+#     path_to_file = Path.cwd().parent.parent / "output" / "0.dat"
+#     out = store_from_dat(path_to_file, scale_factor=(1.0, 1.0))

@@ -1228,6 +1228,116 @@ def patch_predictions_as_annotations(
     return annotations
 
 
+def dict_to_store_semantic_segmentor(
+    patch_output: dict | zarr.group,
+    scale_factor: tuple[float, float],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+) -> AnnotationStore | Path:
+    """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
+
+    Args:
+        patch_output (dict | zarr.Group):
+            A dictionary with "probabilities", "predictions", and "labels" keys.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the
+            annotations. All coordinates will be multiplied by this factor to allow
+            conversion of annotations saved at non-baseline resolution to baseline.
+            Should be model_mpp/slide_mpp.
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
+            Store results.
+
+    Returns:
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
+
+    """
+    preds = patch_output["predictions"]
+    layer_list = np.unique(preds)
+    layer_list = np.delete(layer_list, np.where(layer_list == 0))
+    layer_info_dict = {}
+    count = 1
+
+    for type_class in layer_list:
+        layer = np.where(preds == type_class, 1, 0).astype("uint8")
+        contours, _ = cv2.findContours(
+            layer.astype("uint8"),
+            cv2.RETR_TREE,
+            cv2.CHAIN_APPROX_NONE,
+        )
+        for layer in contours:
+            coords = layer[:, 0, :]
+            layer_info_dict[count] = {
+                "contours": coords,
+                "type": class_dict[type_class],
+            }
+            count += 1
+
+    # return layer_info_dict
+
+    # if "coordinates" not in patch_output:
+    #     # we cant create annotations without coordinates
+    #     msg = "Patch output must contain coordinates."
+    #     raise ValueError(msg)
+    #
+    # # get relevant keys
+    # class_probs = get_zarr_array(patch_output.get("probabilities", []))
+    # preds = get_zarr_array(patch_output.get("predictions", []))
+    #
+    # patch_coords = np.array(patch_output.get("coordinates", []))
+    # if not np.all(np.array(scale_factor) == 1):
+    #     patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
+    # patch_coords = patch_coords.astype(float)
+    # labels = patch_output.get("labels", [])
+    # # get classes to consider
+    # if len(class_probs) == 0:
+    #     classes_predicted = np.unique(preds).tolist()
+    # else:
+    #     classes_predicted = range(len(class_probs[0]))
+    #
+    # if class_dict is None:
+    #     # if no class dict create a default one
+    #     if len(class_probs) == 0:
+    #         class_dict = {i: i for i in np.unique(np.append(preds, labels)).tolist()}
+    #     else:
+    #         class_dict = {i: i for i in range(len(class_probs[0]))}
+    #
+    # # find what keys we need to save
+    # keys = ["predictions"]
+    # keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
+    #
+    # # put patch predictions into a store
+    # annotations = patch_predictions_as_annotations(
+    #     preds,
+    #     keys,
+    #     class_dict,
+    #     class_probs,
+    #     patch_coords,
+    #     classes_predicted,
+    #     labels,
+    # )
+    #
+    # store = SQLiteStore()
+    # _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    #
+    # # if a save director is provided, then dump store into a file
+    # if save_path:
+    #     # ensure parent directory exists
+    #     save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+    #     # ensure proper db extension
+    #     save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+    #     store.dump(save_path)
+    #     return save_path
+    #
+    # return store
+
+
+
 def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
     """Converts a zarr array into a numpy array."""
     if isinstance(zarr_array, zarr.core.Array):
@@ -1236,13 +1346,13 @@ def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarra
     return np.array(zarr_array).astype(float)
 
 
-def dict_to_store(
+def dict_to_store_patch_predictions(
     patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
 ) -> AnnotationStore | Path:
-    """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
+    """Converts output of TIAToolbox PatchPredictor engines to AnnotationStore.
 
     Args:
         patch_output (dict | zarr.Group):

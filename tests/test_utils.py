@@ -1654,7 +1654,7 @@ def test_patch_pred_store() -> None:
         "other": "other",
     }
 
-    store = misc.dict_to_store(patch_output, (1.0, 1.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1667,7 +1667,7 @@ def test_patch_pred_store() -> None:
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
     patch_output = {
         "predictions": [1, 0, 1],
@@ -1675,7 +1675,7 @@ def test_patch_pred_store() -> None:
         "other": "other",
     }
 
-    store = misc.dict_to_store(patch_output, (1.0, 1.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1692,7 +1692,7 @@ def test_patch_pred_store_cdict() -> None:
         "other": "other",
     }
     class_dict = {0: "class0", 1: "class1"}
-    store = misc.dict_to_store(patch_output, (1.0, 1.0), class_dict=class_dict)
+    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0), class_dict=class_dict)
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1713,7 +1713,7 @@ def test_patch_pred_store_sf() -> None:
         "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
         "labels": [1, 0, 1],
     }
-    store = misc.dict_to_store(patch_output, (2.0, 2.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (2.0, 2.0))
 
     # Check that its an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1770,7 +1770,7 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     }
     save_path = tmp_path / "patch_output" / "output.db"
 
-    store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0), save_path=save_path)
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
@@ -1788,7 +1788,7 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
 
 def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
@@ -1804,7 +1804,7 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     # sends the path of a jpeg source image, expects .db file in the same directory
     save_path = tmp_path / "patch_output" / "output.jpeg"
 
-    store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0), save_path=save_path)
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
@@ -1822,7 +1822,7 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
 
 def test_torch_compile_already_compiled() -> None:

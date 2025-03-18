@@ -21,7 +21,7 @@ from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
-    dict_to_store,
+    dict_to_store_patch_predictions,
     dict_to_zarr,
     write_to_zarr_in_cache_mode,
 )
@@ -633,7 +633,7 @@ class EngineABC(ABC):  # noqa: B024
         processed_predictions: dict | Path,
         output_type: str,
         save_dir: Path | None = None,
-        **kwargs: dict,
+        **kwargs: EngineABCRunParams,
     ) -> dict | AnnotationStore | Path:
         """Save model predictions.
 
@@ -679,7 +679,7 @@ class EngineABC(ABC):  # noqa: B024
                 processed_predictions_path = processed_predictions
                 processed_predictions = zarr.open(processed_predictions, mode="r")
 
-            out_file = dict_to_store(
+            out_file = dict_to_store_patch_predictions(
                 processed_predictions,
                 scale_factor,
                 class_dict,

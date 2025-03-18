@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 
+import zarr
 from typing_extensions import Unpack
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
+from ...utils.misc import dict_to_zarr, dict_to_store_semantic_segmentor
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -295,6 +298,78 @@ class SemanticSegmentor(PatchPredictor):
             weights=weights,
             device=device,
             verbose=verbose,
+        )
+
+    def save_predictions(
+        self: PatchPredictor,
+        processed_predictions: dict | Path,
+        output_type: str,
+        save_dir: Path | None = None,
+        **kwargs: SemanticSegmentorRunParams,
+    ) -> dict | AnnotationStore | Path:
+        """Save semantic segmentation predictions to disk.
+
+        Args:
+            processed_predictions (dict | Path):
+                A dictionary or path to zarr with model prediction information.
+            save_dir (Path):
+                Optional output path to directory to save the patch dataset output to a
+                `.zarr` or `.db` file, provided `patch_mode` is True. If the
+                `patch_mode` is False then `save_dir` is required.
+            output_type (str):
+                The desired output type for resulting patch dataset.
+            **kwargs (SemanticSegmentorRunParams):
+                Keyword Args required to save the output.
+
+        Returns:
+            dict or Path or :class:`AnnotationStore`:
+                If the `output_type` is "AnnotationStore", the function returns
+                the patch predictor output as an SQLiteStore containing Annotations
+                for each or the Path to a `.db` file depending on whether a
+                save_dir Path is provided. Otherwise, the function defaults to
+                returning patch predictor output, either as a dict or the Path to a
+                `.zarr` file depending on whether a save_dir Path is provided.
+
+        """
+        if (
+            self.cache_mode or not save_dir
+        ) and output_type.lower() != "annotationstore":
+            return processed_predictions
+
+        save_path = Path(kwargs.get("output_file", save_dir / "output.db"))
+
+        if output_type.lower() == "annotationstore":
+            # scale_factor set from kwargs
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+            # class_dict set from kwargs
+            class_dict = kwargs.get("class_dict")
+
+            processed_predictions_path: str | Path | None = None
+
+            # Need to add support for zarr conversion.
+            if self.cache_mode:
+                processed_predictions_path = processed_predictions
+                processed_predictions = zarr.open(processed_predictions, mode="r")
+
+            out_file = dict_to_store_semantic_segmentor(
+                processed_predictions,
+                scale_factor,
+                class_dict,
+                save_path,
+            )
+            if processed_predictions_path is not None:
+                shutil.rmtree(processed_predictions_path)
+
+            return out_file
+
+        return (
+            dict_to_zarr(
+                processed_predictions,
+                save_path,
+                **kwargs,
+            )
+            if isinstance(processed_predictions, dict)
+            else processed_predictions
         )
 
     def run(
