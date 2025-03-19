@@ -1285,11 +1285,11 @@ def dict_to_store_semantic_segmentor(
             origin = (0, 0)
             scaled_coords = np.array([scale_factor * coords])
             feature_geom = feature2geometry(
-                            {
-                                "type": "Polygon",
-                                "coordinates": scaled_coords,
-                            },
-                        )
+                {
+                    "type": "Polygon",
+                    "coordinates": scaled_coords,
+                },
+            )
             annotations.append(
                 Annotation(
                     geometry=make_valid_poly(

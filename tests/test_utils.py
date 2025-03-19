@@ -1692,7 +1692,9 @@ def test_patch_pred_store_cdict() -> None:
         "other": "other",
     }
     class_dict = {0: "class0", 1: "class1"}
-    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0), class_dict=class_dict)
+    store = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), class_dict=class_dict
+    )
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1770,7 +1772,9 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     }
     save_path = tmp_path / "patch_output" / "output.db"
 
-    store_path = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), save_path=save_path
+    )
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
@@ -1804,7 +1808,9 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     # sends the path of a jpeg source image, expects .db file in the same directory
     save_path = tmp_path / "patch_output" / "output.jpeg"
 
-    store_path = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), save_path=save_path
+    )
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
