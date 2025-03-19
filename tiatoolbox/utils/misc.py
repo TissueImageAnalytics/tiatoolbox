@@ -1265,6 +1265,8 @@ def dict_to_store_semantic_segmentor(
     count = 1
     store = SQLiteStore()
 
+    _ = class_dict  # use it once overlay is working
+
     annotations = []
 
     for type_class in layer_list:
@@ -1290,14 +1292,16 @@ def dict_to_store_semantic_segmentor(
                     "coordinates": scaled_coords,
                 },
             )
-            annotations.append(
-                Annotation(
-                    geometry=make_valid_poly(
-                        feature_geom,
-                        origin=origin,
-                    ),
-                    properties={"type": "mask"},
-                )
+            annotations.extend(
+                [
+                    Annotation(
+                        geometry=make_valid_poly(
+                            feature_geom,
+                            origin=origin,
+                        ),
+                        properties={"type": "mask"},
+                    )
+                ]
             )
 
     _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])

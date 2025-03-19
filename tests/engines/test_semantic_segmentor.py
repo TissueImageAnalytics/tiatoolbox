@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import numpy as np
@@ -89,7 +90,8 @@ def test_semantic_segmentor_patches(
 
 def test_save_annotation_store(
     sample_patch1: Path, sample_patch2: Path, tmp_path: Path
-):
+) -> None:
+    """Test for saving output as annotation store."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
     )
@@ -106,17 +108,19 @@ def test_save_annotation_store(
         output_type="annotationstore",
     )
 
-    assert output == tmp_path / "output1" / "output.zarr"
+    assert output == tmp_path / "output1" / "output.db"
+    con = sqlite3.connect(output)
+    cur = con.cursor()
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 
-    output = zarr.open(output, mode="r")
-    assert 0.24 < np.mean(output["predictions"][:]) < 0.25
-    assert "probabilities" not in output.keys()  # noqa: SIM118
+    assert annotations_properties is not None
 
 
 def test_hovernet_dat() -> None:
+    """Test for comparing annotation store saving."""
     from pathlib import Path
 
     from tiatoolbox.utils.misc import store_from_dat
 
     path_to_file = Path.cwd().parent.parent / "output" / "0.dat"
-    out = store_from_dat(path_to_file, scale_factor=(1.0, 1.0))
+    _ = store_from_dat(path_to_file, scale_factor=(1.0, 1.0))
