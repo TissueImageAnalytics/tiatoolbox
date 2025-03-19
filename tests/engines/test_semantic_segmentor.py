@@ -87,6 +87,30 @@ def test_semantic_segmentor_patches(
     assert "probabilities" not in output.keys()  # noqa: SIM118
 
 
+def test_save_annotation_store(sample_patch1: Path, sample_patch2: Path, tmp_path: Path):
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
+    )
+
+    inputs = [Path(sample_patch1), Path(sample_patch2)]
+    output = segmentor.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        cache_mode=True,
+        save_dir=tmp_path / "output1",
+        output_type="annotationstore",
+    )
+
+    assert output == tmp_path / "output1" / "output.zarr"
+
+    output = zarr.open(output, mode="r")
+    assert 0.24 < np.mean(output["predictions"][:]) < 0.25
+    assert "probabilities" not in output.keys()  # noqa: SIM118
+
+
 def test_hovernet_dat() -> None:
     from tiatoolbox.utils.misc import store_from_dat
     from pathlib import Path

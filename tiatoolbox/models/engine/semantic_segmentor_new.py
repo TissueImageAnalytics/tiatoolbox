@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import zarr
 from typing_extensions import Unpack
+from pathlib import Path
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 from ...utils.misc import dict_to_zarr, dict_to_store_semantic_segmentor
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
-    from pathlib import Path
 
     import numpy as np
 
