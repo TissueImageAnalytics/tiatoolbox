@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING
 import zarr
 from typing_extensions import Unpack
 
-from ...utils.misc import dict_to_store_semantic_segmentor, dict_to_zarr
+from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor, dict_to_zarr
+
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover

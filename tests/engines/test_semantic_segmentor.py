@@ -118,8 +118,6 @@ def test_save_annotation_store(
 
 def test_hovernet_dat() -> None:
     """Test for comparing annotation store saving."""
-    from pathlib import Path
-
     from tiatoolbox.utils.misc import store_from_dat
 
     path_to_file = Path.cwd().parent.parent / "output" / "0.dat"
