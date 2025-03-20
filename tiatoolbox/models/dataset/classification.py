@@ -20,7 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import torch
     from PIL.Image import Image
 
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
 class _TorchPreprocCaller:

@@ -40,7 +40,7 @@ jobs:
         mypy --install-types --non-interactive --follow-imports=skip \
           tiatoolbox/__init__.py \
           tiatoolbox/__main__.py \
-          tiatoolbox/typing.py \
+          tiatoolbox/type_hints.py \
           tiatoolbox/tiatoolbox.py \
           tiatoolbox/utils \
           tiatoolbox/tools \

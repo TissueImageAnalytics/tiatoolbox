@@ -12,14 +12,18 @@ from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import fsspec
 import numpy as np
 import openslide
 import pandas as pd
 import tifffile
 import zarr
 from defusedxml import ElementTree
+from imagecodecs.numcodecs import Delta, Jpeg, Jpeg2k, Lzw
+from numcodecs import register_codec
 from packaging.version import Version
 from PIL import Image
+from tifffile import TiffPages
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -34,7 +38,14 @@ if TYPE_CHECKING:  # pragma: no cover
 
     import glymur
 
-    from tiatoolbox.typing import Bounds, IntBounds, IntPair, NumPair, Resolution, Units
+    from tiatoolbox.type_hints import (
+        Bounds,
+        IntBounds,
+        IntPair,
+        NumPair,
+        Resolution,
+        Units,
+    )
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()
@@ -368,6 +379,9 @@ class WSIReader:
         _, _, suffixes = utils.misc.split_path_name_ext(input_path)
         last_suffix = suffixes[-1]
 
+        if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
+            return FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
+
         if last_suffix == ".db":
             return AnnotationStoreReader(input_path, **kwargs)
 
@@ -430,6 +444,7 @@ class WSIReader:
             ".jpeg",
             ".zarr",
             ".db",
+            ".json",
         ]:
             msg = f"File {input_path} is not a supported file format."
             raise FileNotSupportedError(
@@ -743,7 +758,7 @@ class WSIReader:
         output = tuple(np.ceil(v).astype(np.int64) for v in output)
         return (read_level, read_level_to_resolution_scale_factor, *output)
 
-    def _bounds_at_resolution_to_baseline(
+    def bounds_at_resolution_to_baseline(
         self: WSIReader,
         bounds: Bounds,
         resolution: Resolution,
@@ -812,7 +827,7 @@ class WSIReader:
             _,
             wsi_shape_at_resolution,
             _,
-        ) = self._find_read_bounds_params(
+        ) = self.find_read_bounds_params(
             [0, 0, *list(wsi_shape_at_baseline)],
             resolution,
             units,
@@ -820,7 +835,7 @@ class WSIReader:
         )
         return wsi_shape_at_resolution
 
-    def _find_read_bounds_params(
+    def find_read_bounds_params(
         self: WSIReader,
         bounds: Bounds,
         resolution: Resolution,
@@ -1096,7 +1111,7 @@ class WSIReader:
 
         return level, slide_dimension, rescale, tile_objective_value
 
-    def _read_rect_at_resolution(
+    def read_rect_at_resolution(
         self: WSIReader,
         location: NumPair,
         size: NumPair,
@@ -1107,7 +1122,7 @@ class WSIReader:
         pad_constant_values: Number | Iterable[NumPair] = 0,
         **kwargs: dict,
     ) -> np.ndarray:
-        """Internal helper to perform `read_rect` at resolution.
+        """Helper to perform `read_rect` at resolution.
 
         In actuality, `read_rect` at resolution is synonymous with
         calling `read_bound` at resolution because `size` has always
@@ -1923,7 +1938,7 @@ class OpenSlideWSIReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            return self._read_rect_at_resolution(
+            return self.read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -2086,7 +2101,7 @@ class OpenSlideWSIReader(WSIReader):
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -2101,7 +2116,7 @@ class OpenSlideWSIReader(WSIReader):
                 bounds_at_read_level,
                 _,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -2113,7 +2128,7 @@ class OpenSlideWSIReader(WSIReader):
                 bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -2222,7 +2237,7 @@ class OpenSlideWSIReader(WSIReader):
 
         # Fallback to calculating objective power from mpp
         if objective_power is None:
-            if mpp is not None:
+            if mpp is not None:  # pragma: no cover
                 objective_power = utils.misc.mpp2common_objective_power(
                     float(np.mean(mpp)),
                 )
@@ -2464,7 +2479,7 @@ class JP2WSIReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            return self._read_rect_at_resolution(
+            return self.read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -2624,7 +2639,7 @@ class JP2WSIReader(WSIReader):
         """
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -2639,7 +2654,7 @@ class JP2WSIReader(WSIReader):
                 _,
                 _,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -2651,7 +2666,7 @@ class JP2WSIReader(WSIReader):
                 _,  # bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -3170,7 +3185,7 @@ class VirtualWSIReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            return self._read_rect_at_resolution(
+            return self.read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -3334,7 +3349,7 @@ class VirtualWSIReader(WSIReader):
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -3345,14 +3360,14 @@ class VirtualWSIReader(WSIReader):
             # because the rounding error at `bounds_at_baseline` leads to
             # different `size_at_requested` (keeping same read resolution
             # but base image is of different scale)
-            _, _, _, post_read_scale = self._find_read_bounds_params(
+            _, _, _, post_read_scale = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
             )
         else:
             # * Find parameters for optimal read
-            _, _, size_at_requested, post_read_scale = self._find_read_bounds_params(
+            _, _, size_at_requested, post_read_scale = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -3494,7 +3509,9 @@ class TIFFWSIReader(WSIReader):
 
             def page_area(page: tifffile.TiffPage) -> float:
                 """Calculate the area of a page."""
-                return np.prod(self._canonical_shape(page.shape)[:2])
+                return np.prod(
+                    TIFFWSIReaderDelegate.canonical_shape(self._axes, page.shape)[:2]
+                )
 
             series_areas = [page_area(s.pages[0]) for s in all_series]  # skipcq
             self.series_n = np.argmax(series_areas)
@@ -3506,7 +3523,7 @@ class TIFFWSIReader(WSIReader):
         )
         self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
         self._zarr_group = zarr.open(self._zarr_lru_cache)
-        if not isinstance(self._zarr_group, zarr.hierarchy.Group):
+        if not isinstance(self._zarr_group, zarr.hierarchy.Group):  # pragma: no cover
             group = zarr.hierarchy.group()
             group[0] = self._zarr_group
             self._zarr_group = group
@@ -3518,110 +3535,14 @@ class TIFFWSIReader(WSIReader):
         self.level_arrays = dict(
             sorted(
                 self.level_arrays.items(),
-                key=lambda x: -np.prod(self._canonical_shape(x[1].array.shape[:2])),
+                key=lambda x: -np.prod(
+                    TIFFWSIReaderDelegate.canonical_shape(
+                        self._axes, x[1].array.shape[:2]
+                    )
+                ),
             )
         )
-
-    def _canonical_shape(self: TIFFWSIReader, shape: IntPair) -> tuple:
-        """Make a level shape tuple in YXS order.
-
-        Args:
-            shape (IntPair):
-                Input shape tuple.
-
-        Returns:
-            tuple:
-                Shape in YXS order.
-
-        """
-        if self._axes == "YXS":
-            return shape
-        if self._axes == "SYX":
-            return np.roll(shape, -1)
-        msg = f"Unsupported axes `{self._axes}`."
-        raise ValueError(msg)
-
-    def _parse_svs_metadata(self: TIFFWSIReader) -> dict:
-        """Extract SVS specific metadata.
-
-        Returns:
-            dict:
-                Dictionary of kwargs for WSIMeta.
-
-        """
-        raw = {}
-        mpp = None
-        objective_power = None
-        vendor = "Aperio"
-
-        description = self.tiff.pages[0].description
-        raw["Description"] = description
-        parts = description.split("|")
-        description_headers, key_value_pairs = parts[0], parts[1:]
-        description_headers = description_headers.split(";")
-
-        software, photometric_info = description_headers[0].splitlines()
-        raw["Software"] = software
-        raw["Photometric Info"] = photometric_info
-
-        def parse_svs_tag(string: str) -> tuple[str, Number | str]:
-            """Parse SVS key-value string.
-
-            Infers type(s) of data by trial and error with a fallback to
-            the original string type.
-
-            Args:
-                string (str):
-                    Key-value string in SVS format: "key=value".
-
-            Returns:
-                tuple:
-                    Key-value pair.
-
-            """
-            pair = string.split("=")
-            if len(pair) != 2:  # noqa: PLR2004
-                msg = "Invalid metadata. Expected string of the format 'key=value'."
-                raise ValueError(
-                    msg,
-                )
-            key, value_string = pair
-            key = key.strip()
-            value_string = value_string.strip()
-
-            def us_date(string: str) -> datetime:
-                """Return datetime parsed according to US date format."""
-                return datetime.strptime(string, r"%m/%d/%y").astimezone()
-
-            def time(string: str) -> datetime:
-                """Return datetime parsed according to HMS format."""
-                return datetime.strptime(string, r"%H:%M:%S").astimezone()
-
-            casting_precedence = [us_date, time, int, float]
-            value = value_string
-            for cast in casting_precedence:
-                try:
-                    value = cast(value_string)
-                except ValueError:  # noqa: PERF203
-                    continue
-                else:
-                    return key, value
-
-            return key, value
-
-        svs_tags = dict(parse_svs_tag(string) for string in key_value_pairs)
-        raw["SVS Tags"] = svs_tags
-        mpp = svs_tags.get("MPP")
-        if mpp is not None:
-            mpp = [mpp] * 2
-        objective_power = svs_tags.get("AppMag")
-
-        return {
-            "objective_power": objective_power,
-            "vendor": vendor,
-            "mpp": mpp,
-            "raw": raw,
-        }
+        self.tiff_reader_delegate = TIFFWSIReaderDelegate(self, self.level_arrays)
 
     def _get_ome_xml(self: TIFFWSIReader) -> ElementTree.Element:
         """Parse OME-XML from the description of the first IFD (page).
@@ -3734,40 +3655,6 @@ class TIFFWSIReader(WSIReader):
 
         return None
 
-    def _parse_generic_tiff_metadata(self: TIFFWSIReader) -> dict:
-        """Extract generic tiled metadata.
-
-        Returns:
-            dict: Dictionary of kwargs for WSIMeta.
-
-        """
-        mpp = None
-        objective_power = None
-        vendor = "Generic"
-
-        description = self.tiff.pages[0].description
-        raw = {"Description": description}
-        # Check for MPP in the tiff resolution tags
-        # res_units: 1 = undefined, 2 = inch, 3 = centimeter
-        res_units = self.tiff.pages[0].tags.get("ResolutionUnit")
-        res_x = self.tiff.pages[0].tags.get("XResolution")
-        res_y = self.tiff.pages[0].tags.get("YResolution")
-        if (
-            all(x is not None for x in [res_units, res_x, res_y])
-            and res_units.value != 1
-        ):
-            mpp = [
-                utils.misc.ppu2mpp(res_x.value[0] / res_x.value[1], res_units.value),
-                utils.misc.ppu2mpp(res_y.value[0] / res_y.value[1], res_units.value),
-            ]
-
-        return {
-            "objective_power": objective_power,
-            "vendor": vendor,
-            "mpp": mpp,
-            "raw": raw,
-        }
-
     def _info(self: TIFFWSIReader) -> WSIMeta:
         """TIFF metadata constructor.
 
@@ -3778,7 +3665,11 @@ class TIFFWSIReader(WSIReader):
         """
         level_count = len(self.level_arrays)
         level_dimensions = [
-            np.array(self._canonical_shape(p.array.shape)[:2][::-1])
+            np.array(
+                TIFFWSIReaderDelegate.canonical_shape(self._axes, p.array.shape)[:2][
+                    ::-1
+                ]
+            )
             for p in self.level_arrays.values()
         ]
         slide_dimensions = level_dimensions[0]
@@ -3798,11 +3689,13 @@ class TIFFWSIReader(WSIReader):
         }
 
         if self.tiff.is_svs:
-            filetype_params = self._parse_svs_metadata()
+            filetype_params = TIFFWSIReaderDelegate.parse_svs_metadata(self.tiff.pages)
         elif self.tiff.is_ome:
             filetype_params = self._parse_ome_metadata()
         else:
-            filetype_params = self._parse_generic_tiff_metadata()
+            filetype_params = TIFFWSIReaderDelegate.parse_generic_tiff_metadata(
+                self.tiff.pages
+            )
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
         return WSIMeta(
@@ -3817,6 +3710,399 @@ class TIFFWSIReader(WSIReader):
 
     def read_rect(
         self: TIFFWSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
+        """See TIFFWSIReaderDelegate.read_rect docs for details."""
+        return self.tiff_reader_delegate.read_rect(
+            location,
+            size,
+            resolution,
+            units,
+            interpolation,
+            pad_mode,
+            pad_constant_values,
+            coord_space,
+            **kwargs,
+        )
+
+    def read_bounds(
+        self: TIFFWSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
+        """See TIFFWSIReaderDelegate.read_bounds docs for details."""
+        return self.tiff_reader_delegate.read_bounds(
+            bounds,
+            resolution,
+            units,
+            interpolation,
+            pad_mode,
+            pad_constant_values,
+            coord_space,
+            **kwargs,
+        )
+
+
+class FsspecJsonWSIReader(WSIReader):
+    """Reader for fsspec zarr json generated by: tiatoolbox/utils/tiff_to_fsspec.py.
+
+    The fsspec zarr json file represents a SVS or TIFF file
+    that be accessed using byte range HTTP API.
+
+    All the information on the chunk locations in the SVS or TIFF file
+    is outlined as byte-ranges in the JSON,
+    so the reader requests only chunks that are needed to display requested tiles,
+    rather than the entire SVS or TIFF file.
+
+    """
+
+    def __init__(
+        self: FsspecJsonWSIReader,
+        input_img: str | Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
+        cache_size: int = 2**28,
+    ) -> None:
+        """Initialize :class:`FsspecJsonWSIReader`."""
+        super().__init__(input_img=input_img, mpp=mpp, power=power)
+        jpeg_codec = Jpeg()
+        register_codec(jpeg_codec, "imagecodecs_jpeg")
+
+        jpeg2k_codec = Jpeg2k()
+        register_codec(jpeg2k_codec, "imagecodecs_jpeg2k")
+
+        lzw_codec = Lzw()
+        register_codec(lzw_codec, "imagecodecs_lzw")
+
+        delta_codec = Delta()
+        register_codec(delta_codec, "imagecodecs_delta")
+
+        mapper = fsspec.get_mapper(
+            "reference://", fo=str(input_img), target_protocol="file"
+        )
+
+        self._zarr_array = zarr.open(mapper, mode="r")
+
+        self.__set_axes()
+
+        self._zarr_store = self._zarr_array.store
+
+        self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
+        self._zarr_group = zarr.open(self._zarr_lru_cache)
+        if not isinstance(self._zarr_group, zarr.hierarchy.Group):  # pragma: no cover
+            group = zarr.hierarchy.group()
+            group[0] = self._zarr_group
+            self._zarr_group = group
+        self.level_arrays = {
+            int(key): ArrayView(array, axes=self._axes)
+            for key, array in self._zarr_group.items()
+        }
+        # ensure level arrays are sorted by descending area
+        self.level_arrays = dict(
+            sorted(
+                self.level_arrays.items(),
+                key=lambda x: -np.prod(
+                    TIFFWSIReaderDelegate.canonical_shape(
+                        self._axes, x[1].array.shape[:2]
+                    )
+                ),
+            )
+        )
+        self.tiff_reader_delegate = TIFFWSIReaderDelegate(self, self.level_arrays)
+
+    def __set_axes(self) -> None:  # pragma: no cover
+        """Loads axes from the json file.
+
+        In case zarr array has a group 0 at root,
+        loads axes from the layer 0.
+
+        In case the zarr array doesn't have a group 0 at
+        root, loads axes from attrs at root.
+
+        """
+        if isinstance(self._zarr_array, zarr.hierarchy.Group):
+            if "0" in self._zarr_array:
+                zattrs = self._zarr_array["0"].attrs
+                if "_ARRAY_DIMENSIONS" in zattrs:
+                    self._axes = "".join(
+                        zattrs["_ARRAY_DIMENSIONS"]
+                    )  # Concatenate dimensions
+                else:
+                    msg = "'_ARRAY_DIMENSIONS' does not exist in the group '0'."
+                    raise ValueError(msg)
+            else:
+                msg = "The group '0' does not exist in the zarr_array."
+                raise ValueError(msg)
+        else:
+            zattrs_path = self._zarr_array.attrs
+            if "_ARRAY_DIMENSIONS" in zattrs_path:
+                self._axes = "".join(
+                    zattrs_path["_ARRAY_DIMENSIONS"]
+                )  # Concatenate dimensions
+            else:
+                msg = "'_ARRAY_DIMENSIONS' does not exist in the root .zattrs."
+                raise ValueError(msg)
+
+    @staticmethod
+    def is_valid_zarr_fsspec(file_path: str) -> bool:
+        """Check if the input path is a valid Zarr fsspec JSON file.
+
+        Checks if the file_path is a valid Zarr fsspec JSON file generated by:
+        tiatoolbox/utils/tiff_to_fsspec.py
+
+        Args:
+            file_path: str Path to the file to check.
+
+        Returns:
+            bool: True if the file is a valid Zarr fsspec JSON file
+        """
+        path = Path(file_path)
+
+        if path.suffix.lower() != ".json":
+            logger.error("File does not have a .json extension.")
+            return False
+
+        try:
+            with fsspec.open(file_path, "r") as file:
+                data = json.load(file)
+
+            # Basic validation for fsspec Zarr JSON structure
+            if ".zattrs" not in data:
+                logger.error("Field .zattrs missing in '%s'.", file_path)
+                return False
+
+            return True  # noqa: TRY300
+
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON file: %s", e)
+            return False
+        except (OSError, ValueError) as e:
+            logger.error("An error occurred: %s", e)
+            return False
+
+    def _info(self: FsspecJsonWSIReader) -> WSIMeta:
+        """TIFF metadata constructor.
+
+        Returns:
+            WSIMeta:
+                Containing metadata.
+
+        """
+        level_count = len(self.level_arrays)
+        level_dimensions = [
+            np.array(
+                TIFFWSIReaderDelegate.canonical_shape(self._axes, p.array.shape)[:2][
+                    ::-1
+                ]
+            )
+            for p in self.level_arrays.values()
+        ]
+        slide_dimensions = level_dimensions[0]
+        level_downsamples = [(level_dimensions[0] / x)[0] for x in level_dimensions]
+
+        zarr_attrs = self._zarr_array.attrs
+
+        filetype_params = {}
+        # Check for "multiscales" and extract metadata
+        if "multiscales" in zarr_attrs:  # pragma: no cover
+            multiscales = zarr_attrs[
+                "multiscales"
+            ]  # List of multiscale metadata entries
+            for entry in multiscales:
+                filetype_params = entry.get("metadata", {})
+
+        return WSIMeta(
+            file_path=self.input_path,
+            slide_dimensions=slide_dimensions,
+            axes=self._axes,
+            level_count=level_count,
+            level_dimensions=level_dimensions,
+            level_downsamples=level_downsamples,
+            **filetype_params,
+        )
+
+    def read_rect(
+        self: FsspecJsonWSIReader,
+        location: IntPair,
+        size: IntPair,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
+        """See TIFFWSIReaderDelegate.read_rect docs for details."""
+        return self.tiff_reader_delegate.read_rect(
+            location,
+            size,
+            resolution,
+            units,
+            interpolation,
+            pad_mode,
+            pad_constant_values,
+            coord_space,
+            **kwargs,
+        )
+
+    def read_bounds(
+        self: FsspecJsonWSIReader,
+        bounds: IntBounds,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        interpolation: str = "optimise",
+        pad_mode: str = "constant",
+        pad_constant_values: int | IntPair = 0,
+        coord_space: str = "baseline",
+        **kwargs: dict,
+    ) -> np.ndarray:
+        """See TIFFWSIReaderDelegate.read_bounds docs for details."""
+        return self.tiff_reader_delegate.read_bounds(
+            bounds,
+            resolution,
+            units,
+            interpolation,
+            pad_mode,
+            pad_constant_values,
+            coord_space,
+            **kwargs,
+        )
+
+
+class TIFFWSIReaderDelegate:
+    """Delegate class to handle image reading operations.
+
+    Currently used in FsspecJsonWSIReader and TIFFWSIReader.
+    """
+
+    def __init__(self, reader: WSIReader, level_arrays: dict[int, ArrayView]) -> None:
+        """Initialize the delegate with a reader and level arrays.
+
+        Args:
+            reader (WSIReader): An instance of FsspecJsonWSIReader or TIFFWSIReader.
+            level_arrays (dict[int, ArrayView]): Dictionary of level arrays.
+        """
+        self.reader = reader
+        self.level_arrays = level_arrays
+
+    @staticmethod
+    def parse_svs_metadata(pages: TiffPages) -> dict:
+        """Extract SVS specific metadata.
+
+        Returns:
+            dict:
+                Dictionary of kwargs for WSIMeta.
+
+        """
+        raw = {}
+        mpp = None
+        objective_power = None
+        vendor = "Aperio"
+
+        description = pages[0].description
+        raw["Description"] = description
+        parts = description.split("|")
+        description_headers, key_value_pairs = parts[0], parts[1:]
+        description_headers = description_headers.split(";")
+
+        software, photometric_info = description_headers[0].splitlines()
+        raw["Software"] = software
+        raw["Photometric Info"] = photometric_info
+
+        def parse_svs_tag(string: str) -> tuple[str, Number | str]:
+            """Parse SVS key-value string.
+
+            Infers type(s) of data by trial and error with a fallback to
+            the original string type.
+
+            Args:
+                string (str):
+                    Key-value string in SVS format: "key=value".
+
+            Returns:
+                tuple:
+                    Key-value pair.
+
+            """
+            pair = string.split("=")
+            if len(pair) != 2:  # noqa: PLR2004
+                msg = "Invalid metadata. Expected string of the format 'key=value'."
+                raise ValueError(
+                    msg,
+                )
+            key, value_string = pair
+            key = key.strip()
+            value_string = value_string.strip()
+
+            def us_date(string: str) -> datetime:
+                """Return datetime parsed according to US date format."""
+                return datetime.strptime(string, r"%m/%d/%y").astimezone()
+
+            def time(string: str) -> datetime:
+                """Return datetime parsed according to HMS format."""
+                return datetime.strptime(string, r"%H:%M:%S").astimezone()
+
+            casting_precedence = [us_date, time, int, float]
+            value = value_string
+            for cast in casting_precedence:
+                try:
+                    value = cast(value_string)
+                except ValueError:  # noqa: PERF203
+                    continue
+                else:
+                    return key, value
+
+            return key, value
+
+        svs_tags = dict(parse_svs_tag(string) for string in key_value_pairs)
+        raw["SVS Tags"] = svs_tags
+        mpp = svs_tags.get("MPP")
+        if mpp is not None:  # pragma: no cover
+            mpp = [mpp] * 2
+        objective_power = svs_tags.get("AppMag")
+
+        return {
+            "objective_power": objective_power,
+            "vendor": vendor,
+            "mpp": mpp,
+            "raw": raw,
+        }
+
+    @staticmethod
+    def canonical_shape(axes: str, shape: tuple[int, int]) -> tuple[int, int]:
+        """Make a level shape tuple in YXS order.
+
+        Args:
+            axes (str): The axes format.
+            shape (tuple[int, int]): Input shape tuple.
+
+        Returns:
+            tuple[int, int]: Shape in YXS order.
+        """
+        if axes == "YXS":
+            return shape
+        if axes == "SYX":
+            return np.roll(shape, -1)
+        msg = f"Unsupported axes `{axes}`."
+        raise ValueError(msg)
+
+    def read_rect(
+        self,
         location: IntPair,
         size: IntPair,
         resolution: Resolution = 0,
@@ -4008,7 +4294,7 @@ class TIFFWSIReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            im_region = self._read_rect_at_resolution(
+            im_region = self.reader.read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -4026,7 +4312,7 @@ class TIFFWSIReader(WSIReader):
             level_read_size,
             post_read_scale,
             _,
-        ) = self.find_read_rect_params(
+        ) = self.reader.find_read_rect_params(
             location=location,
             size=size,
             resolution=resolution,
@@ -4053,7 +4339,7 @@ class TIFFWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
-        self: TIFFWSIReader,
+        self: TIFFWSIReaderDelegate,
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
@@ -4165,7 +4451,7 @@ class TIFFWSIReader(WSIReader):
         """
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.reader.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -4180,7 +4466,7 @@ class TIFFWSIReader(WSIReader):
                 bounds_at_read_level,
                 _,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.reader.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -4192,7 +4478,7 @@ class TIFFWSIReader(WSIReader):
                 bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.reader.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -4223,6 +4509,41 @@ class TIFFWSIReader(WSIReader):
             )
 
         return im_region
+
+    @staticmethod
+    def parse_generic_tiff_metadata(pages: TiffPages) -> dict:
+        """Extract generic tiled metadata.
+
+        Returns:
+            dict: Dictionary of kwargs for WSIMeta.
+
+        """
+        mpp = None
+        objective_power = None
+        vendor = "Generic"
+
+        description = pages[0].description
+        raw = {"Description": description}
+        # Check for MPP in the tiff resolution tags
+        # res_units: 1 = undefined, 2 = inch, 3 = centimeter
+        res_units = pages[0].tags.get("ResolutionUnit")
+        res_x = pages[0].tags.get("XResolution")
+        res_y = pages[0].tags.get("YResolution")
+        if (  # pragma: no cover
+            all(x is not None for x in [res_units, res_x, res_y])
+            and res_units.value != 1
+        ):
+            mpp = [
+                utils.misc.ppu2mpp(res_x.value[0] / res_x.value[1], res_units.value),
+                utils.misc.ppu2mpp(res_y.value[0] / res_y.value[1], res_units.value),
+            ]
+
+        return {
+            "objective_power": objective_power,
+            "vendor": vendor,
+            "mpp": mpp,
+            "raw": raw,
+        }
 
 
 class DICOMWSIReader(WSIReader):
@@ -4470,7 +4791,7 @@ class DICOMWSIReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            return self._read_rect_at_resolution(
+            return self.read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -4647,7 +4968,7 @@ class DICOMWSIReader(WSIReader):
         # convert from requested to `baseline`
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -4662,7 +4983,7 @@ class DICOMWSIReader(WSIReader):
                 bounds_at_read_level,
                 _,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -4674,7 +4995,7 @@ class DICOMWSIReader(WSIReader):
                 bounds_at_read_level,
                 size_at_requested,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -5040,7 +5361,7 @@ class NGFFWSIReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            im_region = self._read_rect_at_resolution(
+            im_region = self.read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -5198,7 +5519,7 @@ class NGFFWSIReader(WSIReader):
         """
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -5213,7 +5534,7 @@ class NGFFWSIReader(WSIReader):
                 _,
                 _,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -5225,7 +5546,7 @@ class NGFFWSIReader(WSIReader):
                 _,
                 size_at_requested,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -5566,7 +5887,7 @@ class AnnotationStoreReader(WSIReader):
 
         """
         if coord_space == "resolution":
-            return self._read_rect_at_resolution(
+            return self.read_rect_at_resolution(
                 location,
                 size,
                 resolution=resolution,
@@ -5750,7 +6071,7 @@ class AnnotationStoreReader(WSIReader):
         """
         bounds_at_baseline = bounds
         if coord_space == "resolution":
-            bounds_at_baseline = self._bounds_at_resolution_to_baseline(
+            bounds_at_baseline = self.bounds_at_resolution_to_baseline(
                 bounds,
                 resolution,
                 units,
@@ -5765,7 +6086,7 @@ class AnnotationStoreReader(WSIReader):
                 _,
                 _,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,
@@ -5777,7 +6098,7 @@ class AnnotationStoreReader(WSIReader):
                 _,
                 size_at_requested,
                 post_read_scale,
-            ) = self._find_read_bounds_params(
+            ) = self.find_read_bounds_params(
                 bounds_at_baseline,
                 resolution=resolution,
                 units=units,

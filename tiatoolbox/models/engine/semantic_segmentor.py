@@ -28,7 +28,7 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 if TYPE_CHECKING:  # pragma: no cover
     from multiprocessing.managers import Namespace
 
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
 def _estimate_canvas_parameters(

@@ -43,7 +43,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 if TYPE_CHECKING:  # pragma: no cover
     import torch
 
-    from tiatoolbox.typing import IntBounds
+    from tiatoolbox.type_hints import IntBounds
 
 
 # Python is yet to be able to natively pickle Object method/static method.

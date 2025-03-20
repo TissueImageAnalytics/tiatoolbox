@@ -2,30 +2,24 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
-
 import numpy as np
 import torch
-import torch.nn.functional as F  # noqa: N812
-from skimage import morphology
-from torch import nn
-
-from tiatoolbox.utils import misc
-from tiatoolbox.models.models_abc import ModelABC
-
+from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
 from sam2.build_sam import build_sam2, build_sam2_hf
 from sam2.sam2_image_predictor import SAM2ImagePredictor
-from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
+
+from tiatoolbox.models.models_abc import ModelABC
 
 
-class SAMPrompts():
+class SAMPrompts:
     """Structure of prompts for SAM."""
-    def __init__(self, point_coords = None, point_labels = None, box_coords = None):
+
+    def __init__(self, point_coords=None, point_labels=None, box_coords=None):
         self.point_coords = None if point_coords == [] else point_coords
         self.box_coords = None if box_coords == [] else box_coords
-        if(point_coords and point_labels is None):
+        if point_coords and point_labels is None:
             self.point_labels = [1] * len(point_coords)
-        else: 
+        else:
             self.point_labels = point_labels
 
 
@@ -44,7 +38,7 @@ class SAM(ModelABC):
             self.model = build_sam2_hf(model_hf_path, device="cpu")
         else:
             self.model = build_sam2(model_cfg_path, checkpoint_path)
-    
+
         self.predictor = SAM2ImagePredictor(self.model)
         self.generator = SAM2AutomaticMaskGenerator(self.model)
 
@@ -52,7 +46,7 @@ class SAM(ModelABC):
         """Torch method, this contains logic for using layers defined in init."""
         mask = self.generate_mask(self, image, prompts)
         return mask
-    
+
     @staticmethod
     def infer_batch(
         model: torch.nn.Module,
@@ -78,7 +72,9 @@ class SAM(ModelABC):
         model.eval()
         model = model.to(device)
 
-        if isinstance(batch_data, torch.Tensor): # Move the tensor to the CPU if it's a PyTorch tensor
+        if isinstance(
+            batch_data, torch.Tensor
+        ):  # Move the tensor to the CPU if it's a PyTorch tensor
             batch_data = batch_data.to(device).type(torch.float32)
             batch_data = batch_data.cpu().numpy()
 
@@ -92,7 +88,7 @@ class SAM(ModelABC):
     def encode_image(self, image: np.ndarray) -> np.ndarray:
         """Encodes the image for feature extraction."""
         self.predictor.set_image(image)
-    
+
     @staticmethod
     def generate_mask(self, features: np.ndarray, prompts: SAMPrompts) -> np.ndarray:
         """Generates a segmentation mask using SAM 2, optionally guided by a prompt."""
@@ -109,24 +105,33 @@ class SAM(ModelABC):
             scores = np.around(scores[sorted_ind], 2)
         else:
             masks = self.generator.generate(features)
-            scores = np.array([mask['predicted_iou'] for mask in masks])
+            scores = np.array([mask["predicted_iou"] for mask in masks])
         return masks, scores
-    
+
     @staticmethod
     def load_weights(self, checkpoint_path: str) -> None:
         """Loads model weights from specified checkpoint."""
-        self.model.load_state_dict(torch.load(checkpoint_path, map_location=self.device))
+        self.model.load_state_dict(
+            torch.load(checkpoint_path, map_location=self.device)
+        )
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
         """Pre-processes images - Converts them into a format accepted by SAM (HWC) from NCHW."""
-        if isinstance(image, torch.Tensor): # Move the tensor to the CPU if it's a PyTorch tensor
+        if isinstance(
+            image, torch.Tensor
+        ):  # Move the tensor to the CPU if it's a PyTorch tensor
             image = image.cpu().numpy()
-        
+
         # Handle different shapes
-        if image.ndim == 4 and image.shape == (1,512,512,3):  # Case 1: (N, H, W, C)
+        if image.ndim == 4 and image.shape == (1, 512, 512, 3):  # Case 1: (N, H, W, C)
             image = np.squeeze(image, axis=0)  # Remove batch dimension
-        elif image.ndim == 4 and image.shape == (1,3,512,512):  # Case 2: (N, C, H, W)
+        elif image.ndim == 4 and image.shape == (
+            1,
+            3,
+            512,
+            512,
+        ):  # Case 2: (N, C, H, W)
             image = np.squeeze(image, axis=0)  # Remove batch dimension
             image = np.transpose(image, (1, 2, 0))  # (C, H, W) -> (H, W, C)
 
