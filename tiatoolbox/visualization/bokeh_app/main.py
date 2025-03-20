@@ -65,11 +65,9 @@ from requests.adapters import HTTPAdapter, Retry
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
+from tiatoolbox.models.engine.general_segmentor import GeneralSegmentor
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
-)
-from tiatoolbox.models.engine.general_segmentor import (
-    GeneralSegmentor
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
@@ -1258,6 +1256,7 @@ def segment_on_box() -> None:
     rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
 
+
 def sam_segment() -> None:
     """Callback to run SAM using a point on the slide.
 
@@ -1265,10 +1264,9 @@ def sam_segment() -> None:
     by the point in pt_source.
 
     """
-
     # Get point coordinates
     x = UI["pt_source"].data["x"]
-    y = UI["pt_source"].data["y"] 
+    y = UI["pt_source"].data["y"]
     point_coords = [[x[i], -y[i]] for i in range(len(x))]
 
     # Get box coordinates
@@ -1276,7 +1274,9 @@ def sam_segment() -> None:
     y = UI["box_source"].data["y"]
     height = UI["box_source"].data["height"]
     width = UI["box_source"].data["width"]
-    box_coords = [[x[i], -y[i], x[i]-width[i], -(y[i]+height[i])] for i in range(len(x))]
+    box_coords = [
+        [x[i], -y[i], x[i] - width[i], -(y[i] + height[i])] for i in range(len(x))
+    ]
 
     print(f"point_coords: {point_coords}")
     print(f"box_coords: {box_coords}")
@@ -1295,7 +1295,9 @@ def sam_segment() -> None:
     base_mpp = UI["vstate"].mpp
 
     current_mpp = gen_segmentor.calc_mpp(bounds_dim, base_mpp)
-    prompts = gen_segmentor.create_prompts(point_coords=point_coords, box_coords=box_coords)
+    prompts = gen_segmentor.create_prompts(
+        point_coords=point_coords, box_coords=box_coords
+    )
 
     # Run SAM on the point
     print(f"Running SAM on {UI['vstate'].slide_path}")
@@ -1307,14 +1309,19 @@ def sam_segment() -> None:
         tmp_save_dir / "sam_out",
         bounds,
         current_mpp,
-        "mpp"
+        "mpp",
     )
 
     import ntpath
+
     slide_filename = Path(ntpath.basename(UI["vstate"].slide_path))
     print(slide_filename)
 
-    ann_loc = gen_segmentor.to_annotation(prediction[0][1], prediction[0][2], doc_config["overlay_folder"] / slide_filename)
+    ann_loc = gen_segmentor.to_annotation(
+        prediction[0][1],
+        prediction[0][2],
+        doc_config["overlay_folder"] / slide_filename,
+    )
     print(f"Annotation saved to {ann_loc}")
 
     fname = make_safe_name(ann_loc)
@@ -1328,6 +1335,7 @@ def sam_segment() -> None:
 
     # Clean up temp files
     rmtree(tmp_save_dir)
+
 
 # endregion
 
@@ -1557,7 +1565,7 @@ def gather_ui_elements(  # noqa: PLR0915
     )
     model_drop = Select(
         title="choose model:",
-        options=["hovernet","SAM"],
+        options=["hovernet", "SAM"],
         height=25,
         width=120,
         max_width=120,
