@@ -1227,6 +1227,7 @@ def patch_predictions_as_annotations(
 
     return annotations
 
+
 def mask_to_polygons(mask):
     """Extract polygons from a binary mask using OpenCV."""
     contours, _ = cv2.findContours(
@@ -1291,6 +1292,7 @@ def dict_to_store_semantic_segmentor_new(
         return save_path
 
     return store
+
 
 def dict_to_store_semantic_segmentor(
     patch_output: dict | zarr.group,
