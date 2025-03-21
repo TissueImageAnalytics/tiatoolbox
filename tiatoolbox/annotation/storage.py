@@ -83,10 +83,10 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 from tiatoolbox.enums import GeometryType
-from tiatoolbox.typing import CallablePredicate, CallableSelect, Geometry
+from tiatoolbox.type_hints import CallablePredicate, CallableSelect, Geometry
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import (
+    from tiatoolbox.type_hints import (
         Predicate,
         Properties,
         QueryGeometry,
@@ -442,8 +442,8 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
     def __new__(
         cls: type[StoreInstanceType],
-        *args: str,  # noqa: ARG003
-        **kwargs: int,  # noqa: ARG003
+        *args: str,  # noqa: ARG004
+        **kwargs: int,  # noqa: ARG004
     ) -> StoreInstanceType:
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:

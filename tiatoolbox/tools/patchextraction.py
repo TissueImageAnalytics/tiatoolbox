@@ -20,7 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from pandas import DataFrame
 
     from tiatoolbox.annotation.storage import AnnotationStore
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.type_hints import Resolution, Units
 
 
 def validate_shape(shape: np.ndarray) -> bool:

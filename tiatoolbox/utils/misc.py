@@ -220,8 +220,7 @@ def load_stain_matrix(stain_matrix_input: np.ndarray | PathLike) -> np.ndarray:
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
             msg = (
-                "If supplying a path to a stain matrix, "
-                "use either a npy or a csv file"
+                "If supplying a path to a stain matrix, use either a npy or a csv file"
             )
             raise FileNotSupportedError(
                 msg,
