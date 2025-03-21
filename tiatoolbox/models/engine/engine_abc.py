@@ -36,7 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore.wsireader import WSIReader
 
 
@@ -133,23 +133,21 @@ class EngineABCRunParams(TypedDict, total=False):
             Shape of patches input to the model as tuple of height and width (HW).
             Patches are requested at read resolution, not with respect to level 0,
             and must be positive.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
+        input_resolutions (list(dict(Units, Resolution))):
+            List of Python dictionaries with units and resolution for each
+            input head for model inference for reading the image. Supported
+            units are `level`, `power` and `mpp`. Keys should be "units" and
+            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
             :class:`WSIReader` for details.
         scale_factor (tuple[float, float]):
-            The scale factor to use when loading the
-            annotations. All coordinates will be multiplied by this factor to allow
-            conversion of annotations saved at non-baseline resolution to baseline.
-            Should be model_mpp/slide_mpp.
+            The scale factor to use when loading the annotations. All coordinates
+            will be multiplied by this factor to allow conversion of annotations
+            saved at non-baseline resolution to baseline. Should be model_mpp/slide_mpp.
         stride_shape (tuple):
             Stride used during WSI processing. Stride is
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
-            :class:`WSIReader` for details.
         verbose (bool):
             Whether to output logging information.
 
@@ -165,11 +163,10 @@ class EngineABCRunParams(TypedDict, total=False):
     num_post_proc_workers: int
     output_file: str
     patch_input_shape: IntPair
-    resolution: Resolution
+    input_resolutions: list[dict[Units, Resolution]]
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
-    units: Units
     verbose: bool
 
 
@@ -243,13 +240,12 @@ class EngineABC(ABC):  # noqa: B024
             Runtime ioconfig.
         return_labels (bool):
             Whether to return the labels with the predictions.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
-            :obj:`WSIReader` for details.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
-            :obj:`WSIReader` for details.
+        input_resolutions (list(dict(Units, Resolution))):
+            List of Python dictionaries with units and resolution for each
+            input head for model inference for reading the image. Supported
+            units are `level`, `power` and `mpp`. Keys should be "units" and
+            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
+            :class:`WSIReader` for details.
         patch_input_shape (tuple):
             Shape of patches input to the model as tupled of HW. Patches are at
             requested read resolution, not with respect to level 0,
@@ -284,20 +280,14 @@ class EngineABC(ABC):  # noqa: B024
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
-        resolution (Resolution):
-            Resolution used for reading the image. Please see
-            :class:`WSIReader` for details.
-            When `patch_mode` is True, the input image patches are expected to be at
-            the correct resolution and units. When `patch_mode` is False, the patches
-            are extracted at the requested resolution and units. Default value is 1.0.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `baseline`, `level`, `power` or `mpp`. Please see
-            :class:`WSIReader` for details.
-            When `patch_mode` is True, the input image patches are expected to be at
-            the correct resolution and units. When `patch_mode` is False, the patches
-            are extracted at the requested resolution and units.
-            Default value is `baseline`.
+        input_resolutions (list(dict(Units, Resolution))):
+            List of Python dictionaries with units and resolution for each
+            input head for model inference for reading the image. Supported
+            units are `level`, `power` and `mpp`. When `patch_mode` is `True`,
+            the input image patches are expected to be at the correct resolution and
+            units. When `patch_mode` is `False`, the patches are extracted at the
+            requested resolution and units. Default value is [{"units": "baseline",
+            "resolution": 1.0}].
         verbose (bool):
             Whether to output logging information. Default value is False.
 
@@ -372,10 +362,9 @@ class EngineABC(ABC):  # noqa: B024
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
         self.patch_input_shape: IntPair | None = None
-        self.resolution: Resolution | None = None
+        self.input_resolutions: list[dict[Units, Resolution]] | None = None
         self.return_labels: bool = False
         self.stride_shape: IntPair | None = None
-        self.units: Units | None = None
         self.verbose = verbose
 
     @staticmethod
@@ -792,8 +781,7 @@ class EngineABC(ABC):  # noqa: B024
         ioconfig: ModelIOConfigABC,
         patch_input_shape: IntPair,
         stride_shape: IntPair,
-        resolution: Resolution,
-        units: Units,
+        input_resolutions: list[dict[Units, Resolution]],
     ) -> ModelIOConfigABC:
         """Update IOConfig.
 
@@ -809,11 +797,12 @@ class EngineABC(ABC):  # noqa: B024
                 at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
                 `stride_shape=patch_input_shape`.
-            resolution (Resolution):
-                Resolution used for reading the image. Please see
-                :obj:`WSIReader` for details.
-            units (Units):
-                Units of resolution used for reading the image.
+            input_resolutions (list(dict(Units, Resolution))):
+                List of Python dictionaries with units and resolution for each
+                input head for model inference for reading the image. Supported
+                units are `level`, `power` and `mpp`. Keys should be "units" and
+                "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
+                :class:`WSIReader` for details.
 
         Returns:
             Updated Patch Predictor IO configuration.
@@ -821,8 +810,7 @@ class EngineABC(ABC):  # noqa: B024
         """
         config_flag = (
             patch_input_shape is None,
-            resolution is None,
-            units is None,
+            input_resolutions is None,
         )
         if isinstance(ioconfig, ModelIOConfigABC):
             return ioconfig
@@ -830,7 +818,7 @@ class EngineABC(ABC):  # noqa: B024
         if self.ioconfig is None and any(config_flag):
             msg = (
                 "Must provide either "
-                "`ioconfig` or `patch_input_shape`, `resolution`, and `units`."
+                "`ioconfig` or `patch_input_shape` and `input_resolutions`."
             )
             raise ValueError(
                 msg,
@@ -846,15 +834,13 @@ class EngineABC(ABC):  # noqa: B024
                 ioconfig.patch_input_shape = patch_input_shape
             if stride_shape is not None:
                 ioconfig.stride_shape = stride_shape
-            if resolution is not None:
-                ioconfig.input_resolutions[0]["resolution"] = resolution
-            if units is not None:
-                ioconfig.input_resolutions[0]["units"] = units
+            if input_resolutions is not None:
+                ioconfig.input_resolutions = input_resolutions
 
             return ioconfig
 
         return ModelIOConfigABC(
-            input_resolutions=[{"resolution": resolution, "units": units}],
+            input_resolutions=input_resolutions,
             patch_input_shape=patch_input_shape,
             stride_shape=stride_shape,
             output_resolutions=[],
@@ -956,8 +942,7 @@ class EngineABC(ABC):  # noqa: B024
             ioconfig,
             self.patch_input_shape,
             self.stride_shape,
-            self.resolution,
-            self.units,
+            self.input_resolutions,
         )
 
         return prepare_engines_save_dir(

@@ -17,7 +17,7 @@ from tiatoolbox.cli.common import (
     cli_pretrained_weights,
     cli_verbose,
     cli_yaml_config_path,
-    prepare_ioconfig_seg,
+    prepare_ioconfig,
     prepare_model_cli,
     tiatoolbox_cli,
 )
@@ -71,7 +71,7 @@ def semantic_segment(
         file_types=file_types,
     )
 
-    ioconfig = prepare_ioconfig_seg(
+    ioconfig = prepare_ioconfig(
         IOSegmentorConfig,
         pretrained_weights,
         yaml_config_path,

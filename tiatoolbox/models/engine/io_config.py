@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import Units
+    from tiatoolbox.type_hints import Resolution, Units
 
 
 @dataclass
@@ -69,6 +69,7 @@ class ModelIOConfigABC:
             self.stride_shape = self.patch_input_shape
 
         self.resolution_unit = self.input_resolutions[0]["units"]
+        self.highest_input_resolution = self.input_resolutions[0]["resolution"]
 
         if self.resolution_unit == "mpp":
             self.highest_input_resolution = min(
@@ -106,7 +107,9 @@ class ModelIOConfigABC:
             raise ValueError(msg)
 
     @staticmethod
-    def scale_to_highest(resolutions: list[dict], units: Units) -> np.array:
+    def scale_to_highest(
+        resolutions: list[dict[Units, Resolution]], units: Units
+    ) -> np.array:
         """Get the scaling factor from input resolutions.
 
         This will convert resolutions to a scaling factor with respect to
@@ -116,7 +119,7 @@ class ModelIOConfigABC:
         and will be scaled for low resolution requirements using interpolation.
 
         Args:
-            resolutions (list):
+            resolutions (list(dict(Units, Resolution))):
                 A list of resolutions where one is defined as
                 `{'resolution': value, 'unit': value}`
             units (Units):

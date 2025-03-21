@@ -521,8 +521,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
 
     kwargs = {
         "patch_input_shape": [512, 512],
-        "resolution": 1.75,
-        "units": "mpp",
+        "input_resolutions": [{"units": "mpp", "resolution": 1.75}],
     }
     with caplog.at_level(logging.WARNING):
         eng.run(
@@ -530,8 +529,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
             patch_mode=True,
             save_dir=tmp_path / "dump",
             patch_input_shape=kwargs["patch_input_shape"],
-            resolution=kwargs["resolution"],
-            units=kwargs["units"],
+            input_resolutions=kwargs["input_resolutions"],
         )
         assert "provide a valid ModelIOConfigABC" in caplog.text
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
@@ -570,8 +568,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
-        resolution=1.99,
-        units="baseline",
+        input_resolutions=[{"units": "baseline", "resolution": 1.99}],
         patch_mode=True,
         save_dir=f"{tmp_path}/dump",
     )
@@ -585,8 +582,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
-        resolution=None,
-        units=None,
+        input_resolutions=None,
         patch_mode=True,
         save_dir=f"{tmp_path}/dump",
     )
@@ -599,8 +595,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         ioconfig=None,
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
-        resolution=1.99,
-        units="baseline",
+        input_resolutions=[{"units": "baseline", "resolution": 1.99}],
     )
 
     assert _ioconfig.patch_input_shape == (300, 300)
@@ -614,12 +609,11 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         with pytest.raises(
             ValueError,
             match=r".*Must provide either `ioconfig` or "
-            r"`patch_input_shape`, `resolution`, and `units`*",
+            r"`patch_input_shape` and `input_resolutions`*",
         ):
             eng._update_ioconfig(
                 ioconfig=None,
                 patch_input_shape=_kwargs["patch_input_shape"],
                 stride_shape=(1, 1),
-                resolution=_kwargs["resolution"],
-                units=_kwargs["units"],
+                input_resolutions=_kwargs["input_resolutions"],
             )
