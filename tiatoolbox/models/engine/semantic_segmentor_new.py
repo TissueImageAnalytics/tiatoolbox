@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import zarr
 from typing_extensions import Unpack
 
-from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor, dict_to_zarr
+from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor_new, dict_to_zarr
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -352,7 +352,7 @@ class SemanticSegmentor(PatchPredictor):
                 processed_predictions_path = processed_predictions
                 processed_predictions = zarr.open(processed_predictions, mode="r")
 
-            out_file = dict_to_store_semantic_segmentor(
+            out_file = dict_to_store_semantic_segmentor_new(
                 processed_predictions,
                 scale_factor,
                 class_dict,

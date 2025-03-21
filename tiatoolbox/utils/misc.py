@@ -1227,6 +1227,70 @@ def patch_predictions_as_annotations(
 
     return annotations
 
+def mask_to_polygons(mask):
+    """Extract polygons from a binary mask using OpenCV."""
+    contours, _ = cv2.findContours(
+        mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    polygons = [
+        Polygon(c.squeeze()) for c in contours if len(c) > 2
+    ]  # Avoid single-point contours
+    return polygons
+
+
+def dict_to_store_semantic_segmentor_new(
+    patch_output: dict | zarr.group,
+    scale_factor: tuple[float, float],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+):
+    """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
+
+    Args:
+        patch_output (dict | zarr.Group):
+            A dictionary with "probabilities", "predictions", and "labels" keys.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the
+            annotations. All coordinates will be multiplied by this factor to allow
+            conversion of annotations saved at non-baseline resolution to baseline.
+            Should be model_mpp/slide_mpp.
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
+            Store results.
+
+    Returns:
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
+
+    """
+    preds = patch_output["predictions"]
+    mask = preds[0]
+
+    polygons = mask_to_polygons(mask)
+
+    props = {"type": "Mask"}
+    store = SQLiteStore()
+
+    for poly in polygons:
+        annotation = Annotation(geometry=poly, properties=props)
+        store.append(annotation)
+
+    if save_path:
+        # ensure parent directory exists
+        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+        # ensure proper db extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.create_index("id", '"id"')
+        store.commit()
+        store.dump(save_path)
+        store.close()
+        return save_path
+
+    return store
 
 def dict_to_store_semantic_segmentor(
     patch_output: dict | zarr.group,
@@ -1305,6 +1369,7 @@ def dict_to_store_semantic_segmentor(
             )
 
     _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    store.create_index("id", '"id"')
 
     # # if a save director is provided, then dump store into a file
     if save_path:
@@ -1312,6 +1377,7 @@ def dict_to_store_semantic_segmentor(
         save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
         # ensure proper db extension
         save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.commit()
         store.dump(save_path)
         return save_path
 
