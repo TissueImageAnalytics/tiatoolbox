@@ -247,7 +247,7 @@ class GeneralSegmentor(SemanticSegmentor):
         for i in range(len(masks)):
             polygons = mask_to_polygons(masks[i])
             # Add extracted polygons to the annotation store
-            props = {"score": f"{scores[i]}", "type": f"Mask {i+1}"}
+            props = {"score": f"{scores[i]}", "type": f"Mask {i + 1}"}
             for poly in polygons:
                 annotation = Annotation(geometry=poly, properties=props)
                 store.append(annotation)
