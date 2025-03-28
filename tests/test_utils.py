@@ -1620,7 +1620,8 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
         fetch_pretrained_weights("abc", file_path)
 
     # Test save_path is str
-    file_path = fetch_pretrained_weights("mobilenet_v3_small-pcam", os.path.join(tmp_path, "test_fetch_pretrained_weights.pth"))
+    file_path_str = str(file_path)
+    file_path = fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path_str)
     assert Path(file_path).exists()
     assert Path(file_path).stat().st_size > 0
 
