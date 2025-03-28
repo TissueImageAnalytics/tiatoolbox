@@ -1269,7 +1269,11 @@ def dict_to_store_semantic_segmentor_new(
 
     """
     preds = patch_output["predictions"]
-    mask = preds[0]
+    mask = preds[1]
+
+    from tiatoolbox.utils.transforms import imresize
+
+    mask = imresize(mask, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
 
     polygons = mask_to_polygons(mask)
 
@@ -1277,7 +1281,7 @@ def dict_to_store_semantic_segmentor_new(
     store = SQLiteStore()
 
     for poly in polygons:
-        annotation = Annotation(geometry=poly, properties=props)
+        annotation = Annotation(geometry=make_valid_poly(poly), properties=props)
         store.append(annotation)
 
     if save_path:
