@@ -10,7 +10,6 @@ import cv2
 import joblib
 import numpy as np
 
-from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
 from tiatoolbox.models.architecture.sam import SAM, SAMPrompts
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
@@ -40,24 +39,6 @@ def _prepare_save_output(
         )
 
     return mask_memmap, score_memmap
-
-
-def _prepare_save_dir(save_dir: str | Path | None) -> tuple[Path, Path]:
-    """Prepare save directory and cache."""
-    if save_dir is None:
-        logger.warning(
-            "Segmentor will only output to directory. "
-            "All subsequent output will be saved to current runtime "
-            "location under folder 'output'. Overwriting may happen! ",
-            stacklevel=2,
-        )
-        save_dir = Path.cwd() / "output"
-
-    save_dir = Path(save_dir).resolve()
-    if save_dir.is_dir():
-        save_dir.rmdir()
-    save_dir.mkdir(parents=True)
-    return save_dir
 
 
 class GeneralSegmentor(SemanticSegmentor):
@@ -135,7 +116,7 @@ class GeneralSegmentor(SemanticSegmentor):
                 prompts.box_coords = np.array(new_box_coords)
         return prompts
 
-    def unbound_masks(self, masks: list[np.ndarray], bounds: IntBounds) -> np.ndarray:
+    def _unbound_masks(self, masks: list[np.ndarray], bounds: IntBounds) -> np.ndarray:
         """Unbound the masks to the original image size."""
         new_masks = []
 
@@ -187,7 +168,7 @@ class GeneralSegmentor(SemanticSegmentor):
                 List of paths to the saved output prediction.
         """
         file_name = Path(file_name)
-        save_dir = _prepare_save_dir(save_dir=save_path)
+        save_dir = self._prepare_save_dir(save_dir=save_path)
 
         batch_data = self.load_wsi(
             file_name, resolution=resolution, units=units, bounds=bounds
@@ -230,8 +211,8 @@ class GeneralSegmentor(SemanticSegmentor):
         """Predict on a whole WSI file without prompts."""
         return self.predict(file_name, device=device, save_path=save_path)
 
+    @staticmethod
     def to_annotation(
-        self,
         mask_path: str | Path,
         score_path: str | Path,
         save_filename: str | Path | None = None,
@@ -259,8 +240,8 @@ class GeneralSegmentor(SemanticSegmentor):
         store.close()
         return store_path
 
+    @staticmethod
     def create_prompts(
-        self,
         point_coords: list[IntPair] | None = None,
         point_labels: list[int] | None = None,
         box_coords: list[IntBounds] | None = None,

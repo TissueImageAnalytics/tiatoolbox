@@ -1308,9 +1308,7 @@ def sam_segment() -> None:
         "mpp",
     )
 
-    import ntpath
-
-    slide_filename = Path(ntpath.basename(UI["vstate"].slide_path))
+    slide_filename = Path(UI["vstate"].slide_path).name
 
     ann_loc = gen_segmentor.to_annotation(
         prediction[0][1],

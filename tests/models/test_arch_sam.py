@@ -3,8 +3,6 @@
 from pathlib import Path
 from typing import Callable
 
-import pytest
-
 from tiatoolbox.models import SAM
 from tiatoolbox.models.architecture.sam import SAMPrompts
 from tiatoolbox.utils import imread
@@ -16,7 +14,6 @@ ON_GPU = False
 
 def test_functional_sam(
     remote_sample: Callable,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for SAM."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -37,10 +34,6 @@ def test_functional_sam(
     )
 
     model = SAM()
-
-    # load pretrained weights
-    # pretrained = torch.load(weights_path, map_location="cpu")
-    # model.load_state_dict(pretrained)
 
     _ = model.infer_batch(model, img, on_gpu=ON_GPU)  # no prompts
     _ = model.infer_batch(model, img, prompts=prompts1, on_gpu=ON_GPU)
