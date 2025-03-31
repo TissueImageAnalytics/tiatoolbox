@@ -114,11 +114,3 @@ def test_save_annotation_store(
     annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 
     assert annotations_properties is not None
-
-
-def test_hovernet_dat() -> None:
-    """Test for comparing annotation store saving."""
-    from tiatoolbox.utils.misc import store_from_dat
-
-    path_to_file = Path.cwd().parent.parent / "output" / "0.dat"
-    _ = store_from_dat(path_to_file, scale_factor=(1.0, 1.0))
