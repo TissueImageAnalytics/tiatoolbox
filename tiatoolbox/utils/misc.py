@@ -1228,76 +1228,6 @@ def patch_predictions_as_annotations(
     return annotations
 
 
-def mask_to_polygons(mask):
-    """Extract polygons from a binary mask using OpenCV."""
-    contours, _ = cv2.findContours(
-        mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
-    polygons = [
-        Polygon(c.squeeze()) for c in contours if len(c) > 2
-    ]  # Avoid single-point contours
-    return polygons
-
-
-def dict_to_store_semantic_segmentor_new(
-    patch_output: dict | zarr.group,
-    scale_factor: tuple[float, float],
-    class_dict: dict | None = None,
-    save_path: Path | None = None,
-):
-    """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
-
-    Args:
-        patch_output (dict | zarr.Group):
-            A dictionary with "probabilities", "predictions", and "labels" keys.
-        scale_factor (tuple[float, float]):
-            The scale factor to use when loading the
-            annotations. All coordinates will be multiplied by this factor to allow
-            conversion of annotations saved at non-baseline resolution to baseline.
-            Should be model_mpp/slide_mpp.
-        class_dict (dict):
-            Optional dictionary mapping class indices to class names.
-        save_path (str or Path):
-            Optional Output directory to save the Annotation
-            Store results.
-
-    Returns:
-        (SQLiteStore or Path):
-            An SQLiteStore containing Annotations for each patch
-            or Path to file storing SQLiteStore containing Annotations
-            for each patch.
-
-    """
-    preds = patch_output["predictions"]
-    mask = preds[1]
-
-    from tiatoolbox.utils.transforms import imresize
-
-    mask = imresize(mask, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
-
-    polygons = mask_to_polygons(mask)
-
-    props = {"type": "Mask"}
-    store = SQLiteStore()
-
-    for poly in polygons:
-        annotation = Annotation(geometry=make_valid_poly(poly), properties=props)
-        store.append(annotation)
-
-    if save_path:
-        # ensure parent directory exists
-        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-        # ensure proper db extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
-        store.create_index("id", '"id"')
-        store.commit()
-        store.dump(save_path)
-        store.close()
-        return save_path
-
-    return store
-
-
 def dict_to_store_semantic_segmentor(
     patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
@@ -1329,10 +1259,20 @@ def dict_to_store_semantic_segmentor(
     """
     preds = patch_output["predictions"]
     preds = preds[0]
+
+    from tiatoolbox.utils.transforms import imresize
+
+    preds = imresize(preds, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
+
+    # Get the number of unique predictions
     layer_list = np.unique(preds)
+
     layer_list = np.delete(layer_list, np.where(layer_list == 0))
+
     layer_info_dict = {}
+
     count = 1
+
     store = SQLiteStore()
 
     _ = class_dict  # use it once overlay is working
@@ -1340,42 +1280,47 @@ def dict_to_store_semantic_segmentor(
     annotations = []
 
     for type_class in layer_list:
-        layer = np.where(preds == type_class, 1, 0).astype("uint8")
+        layer = np.where(preds == type_class, 1, 0)
         contours, _ = cv2.findContours(
             layer.astype("uint8"),
             cv2.RETR_TREE,
             cv2.CHAIN_APPROX_NONE,
         )
         for layer_ in contours:
-            coords = layer_[:, 0, :]
+            coords = layer_.squeeze()
             layer_info_dict[count] = {
                 "contours": coords,
                 "type": "mask",
             }
             count += 1
 
-            origin = (0, 0)
             scaled_coords = np.array([scale_factor * coords])
-            feature_geom = feature2geometry(
-                {
-                    "type": "Polygon",
-                    "coordinates": scaled_coords,
-                },
-            )
+
+            if len(coords) > 2:  # noqa: PLR2004
+                feature_geom = feature2geometry(
+                    {
+                        "type": "Polygon",
+                        "coordinates": scaled_coords,
+                    },
+                )
+                feature_geom = make_valid_poly(feature_geom)
+            else:  # Single-Point contours
+                feature_geom = feature2geometry(
+                    {
+                        "type": "multipoint",
+                        "coordinates": scaled_coords[0],
+                    }
+                )
             annotations.extend(
                 [
                     Annotation(
-                        geometry=make_valid_poly(
-                            feature_geom,
-                            origin=origin,
-                        ),
+                        geometry=feature_geom,
                         properties={"type": "mask"},
                     )
                 ]
             )
 
     _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
-    store.create_index("id", '"id"')
 
     # # if a save director is provided, then dump store into a file
     if save_path:
