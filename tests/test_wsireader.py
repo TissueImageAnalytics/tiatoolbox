@@ -41,6 +41,7 @@ from tiatoolbox.wsicore.wsireader import (
     NGFFWSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
+    TransformedWSIReader,
     VirtualWSIReader,
     is_ngff,
     is_zarr,
@@ -1585,6 +1586,7 @@ def test_read_rect_at_resolution(sample_wsi_dict: dict) -> None:
         VirtualWSIReader(mini_wsi2_jpg),
         OpenSlideWSIReader(mini_wsi2_svs),
         JP2WSIReader(mini_wsi2_jp2),
+        TransformedWSIReader(mini_wsi2_svs, transform=np.eye(3)),
     ]
 
     for reader_idx, reader in enumerate(reader_list):
@@ -2810,6 +2812,7 @@ def test_file_path_does_not_exist() -> None:
         NGFFWSIReader,
         OpenSlideWSIReader,
         JP2WSIReader,
+        TransformedWSIReader,
     ]:
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
@@ -2979,3 +2982,40 @@ def test_fsspec_reader_open_pass_empty_json(tmp_path: Path) -> None:
     json_path.write_text("{}")
 
     assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
+
+
+def test_read_rect_transformedreader_svs_baseline(sample_svs: Path) -> None:
+    """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
+    wsi = wsireader.TransformedWSIReader(sample_svs, transform=np.eye(3))
+    location = SVS_TEST_TISSUE_LOCATION
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_rect(location, size, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+    fixed_info = wsi.info
+    wsi = wsireader.TransformedWSIReader(
+        sample_svs, transform=None, fixed_info=fixed_info
+    )
+    im_region_2 = wsi.read_rect(location, size, resolution=0, units="level")
+
+    assert np.array_equal(im_region, im_region_2)
+
+
+def test_read_bounds_transformedreader_baseline(sample_svs: Path) -> None:
+    """Test ReansformedWSIReader read bounds at baseline.
+
+    Location coordinate is in baseline (level 0) reference frame.
+
+    """
+    wsi = wsireader.TransformedWSIReader(sample_svs)
+
+    bounds = SVS_TEST_TISSUE_BOUNDS
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_bounds(bounds, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
