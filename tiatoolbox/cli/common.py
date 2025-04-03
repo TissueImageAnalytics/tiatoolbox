@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import click
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.models.models_abc import IOConfigABC
+    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 
 def add_default_to_usage_help(
@@ -620,10 +620,10 @@ tiatoolbox_cli = TIAToolboxCLI()
 
 
 def prepare_ioconfig(
-    config_class: type[IOConfigABC],
+    config_class: type[ModelIOConfigABC],
     pretrained_weights: str | Path | None,
     yaml_config_path: str | Path,
-) -> IOConfigABC | None:
+) -> ModelIOConfigABC | None:
     """Prepare ioconfig for CLI."""
     import yaml
 
