@@ -7,7 +7,7 @@ from tiatoolbox.models import SAM
 from tiatoolbox.models.architecture.sam import SAMPrompts
 from tiatoolbox.utils import imread
 
-ON_GPU = False
+ON_GPU = False  # TODO: Use Environment variable to set this to True
 
 # Test pretrained Model =============================
 

@@ -4,19 +4,26 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import IntBounds, IntPair
+from typing import TYPE_CHECKING
 
 import cv2
 import joblib
 import numpy as np
+from shapely import Polygon
 
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
 from tiatoolbox.models.architecture.sam import SAM, SAMPrompts
-from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
-from tiatoolbox.utils.misc import mask_to_polygons
+from tiatoolbox.models.engine.semantic_segmentor import (
+    SemanticSegmentor,
+    WSIStreamDataset,
+)
 from tiatoolbox.wsicore.wsireader import WSIReader
 
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.type_hints import Callable, IntBounds, IntPair
 
+
+# TODO: Remove
 def _prepare_save_output(
     save_path: str | Path,
     mask_shape: tuple[int, ...],
@@ -47,18 +54,24 @@ class GeneralSegmentor(SemanticSegmentor):
     Uses the SAM2 model architecture.
     """
 
-    def __init__(self, model: SAM = None) -> None:
+    def __init__(
+        self,
+        model: SAM = None,
+        batch_size: int = 8,
+        num_loader_workers: int = 0,
+        dataset_class: Callable = WSIStreamDataset,
+    ) -> None:
         """Initializes the GeneralSegmentor."""
-        self.model = SAM() if model is None else model
-        self.scale_factor = 1.0
+        super().__init__(
+            batch_size=batch_size,
+            num_loader_workers=num_loader_workers,
+            model=model,
+            dataset_class=dataset_class,
+        )
 
-    def calc_mpp(
-        self, area_dims: IntPair, base_mpp: float, fixed_size: int = 1500
-    ) -> float:
+    @staticmethod
+    def calc_mpp(area_dims: IntPair, base_mpp: float, fixed_size: int = 1500) -> float:
         """Calculates the microns per pixel for a fixed area of an image.
-
-          Finds the mpp required for the area to have a fixed size. MPP can
-          then be used to scale the image to a fixed size for inference.
 
         Args:
             area_dims (tuple):
@@ -75,7 +88,7 @@ class GeneralSegmentor(SemanticSegmentor):
         scale = max(area_dims) / fixed_size if max(area_dims) > fixed_size else 1.0
         return base_mpp * scale
 
-    def load_wsi(
+    def _load_wsi(
         self,
         file_name: str | Path,
         bounds: IntBounds | None = None,
@@ -94,7 +107,7 @@ class GeneralSegmentor(SemanticSegmentor):
             self.img = self.reader.slide_thumbnail(resolution, units)
         return self.img
 
-    def bound_prompts(self, prompts: SAMPrompts, bounds: IntBounds) -> SAMPrompts:
+    def _bound_prompts(self, prompts: SAMPrompts, bounds: IntBounds) -> SAMPrompts:
         """Bound the prompts to the region of interest."""
         if prompts is not None and bounds is not None:
             if prompts.point_coords is not None:
@@ -123,15 +136,13 @@ class GeneralSegmentor(SemanticSegmentor):
         for mask in masks:
             new_size = (bounds[2] - bounds[0], bounds[3] - bounds[1])
 
-            resized_mask = cv2.resize(
-                mask, new_size, interpolation=cv2.INTER_NEAREST
-            )  # Resizes the mask into the box at base resolution
+            # Resizes the mask into the box at base resolution
+            resized_mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
 
             new_mask = np.zeros(np.array(self.slide_dims)[::-1], dtype=np.uint8)
 
-            new_mask[bounds[1] : bounds[3], bounds[0] : bounds[2]] = (
-                resized_mask  # Stores mask into base resolution whole image
-            )
+            # Stores mask into base resolution whole image
+            new_mask[bounds[1] : bounds[3], bounds[0] : bounds[2]] = resized_mask
             new_masks.append(new_mask)
         return np.array(new_masks, dtype=np.uint8)
 
@@ -170,17 +181,17 @@ class GeneralSegmentor(SemanticSegmentor):
         file_name = Path(file_name)
         save_dir = self._prepare_save_dir(save_dir=save_path)
 
-        batch_data = self.load_wsi(
+        batch_data = self._load_wsi(
             file_name, resolution=resolution, units=units, bounds=bounds
         )
-        prompts = self.bound_prompts(prompts, bounds=bounds)
+        prompts = self._bound_prompts(prompts, bounds=bounds)
 
         masks, scores = self.model.infer_batch(
             model=self.model, batch_data=batch_data, prompts=prompts, device=device
         )
 
         if bounds is not None:
-            masks = self.unbound_masks(masks, bounds)
+            masks = self._unbound_masks(masks, bounds)
 
         mask_memmap, score_memmap = _prepare_save_output(
             save_path=save_dir, mask_shape=masks.shape, scores_shape=scores.shape
@@ -202,15 +213,6 @@ class GeneralSegmentor(SemanticSegmentor):
 
         return self._outputs
 
-    def predict_wsi(
-        self,
-        file_name: str | Path,
-        device: str = "cpu",
-        save_path: str | Path | None = None,
-    ) -> list[tuple[Path, Path, Path]]:
-        """Predict on a whole WSI file without prompts."""
-        return self.predict(file_name, device=device, save_path=save_path)
-
     @staticmethod
     def to_annotation(
         mask_path: str | Path,
@@ -225,8 +227,17 @@ class GeneralSegmentor(SemanticSegmentor):
         store_path = save_filename.with_suffix(".db")
         store = SQLiteStore()
 
-        for i in range(len(masks)):
-            polygons = mask_to_polygons(masks[i])
+        def mask_to_polygons(mask):
+            """Extract polygons from a binary mask using OpenCV."""
+            contours, _ = cv2.findContours(
+                mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            # Avoid single-point contours
+            polygons = [Polygon(c.squeeze()) for c in contours if len(c) > 2]
+            return polygons
+
+        for i, mask in enumerate(masks):
+            polygons = mask_to_polygons(mask)
             # Add extracted polygons to the annotation store
             props = {"score": f"{scores[i]}", "type": f"Mask {i + 1}"}
             for poly in polygons:

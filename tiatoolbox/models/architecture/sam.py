@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import IntBounds, IntPair
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -11,6 +11,9 @@ from sam2.build_sam import build_sam2, build_sam2_hf
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 from tiatoolbox.models.models_abc import ModelABC
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.type_hints import IntBounds, IntPair
 
 
 class SAMPrompts:
