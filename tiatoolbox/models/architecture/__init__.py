@@ -15,7 +15,6 @@ if TYPE_CHECKING:  # pragma: no cover
     import torch
 
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
-    from tiatoolbox.models.models_abc import IOConfigABC
 
 __all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
