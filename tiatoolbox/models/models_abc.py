@@ -7,11 +7,9 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import torch
 import torch._dynamo
-from torch import device as torch_device
 from torch import nn
 
 torch._dynamo.config.suppress_errors = True  # skipcq: PYL-W0212  # noqa: SLF001
-
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
@@ -58,8 +56,8 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
         # DataParallel work only for cuda
         model = torch.nn.DataParallel(model)
 
-    device = torch.device(device)
-    return model.to(device)
+    torch_device = torch.device(device)
+    return model.to(torch_device)
 
 
 class ModelABC(ABC, torch.nn.Module):
@@ -73,7 +71,9 @@ class ModelABC(ABC, torch.nn.Module):
 
     @abstractmethod
     # This is generic abc, else pylint will complain
-    def forward(self: ModelABC, *args: tuple[Any, ...], **kwargs: dict) -> None:
+    def forward(
+        self: ModelABC, *args: tuple[Any, ...], **kwargs: dict
+    ) -> None | torch.Tensor:
         """Torch method, this contains logic for using layers defined in init."""
         ...  # pragma: no cover
 
@@ -172,7 +172,13 @@ class ModelABC(ABC, torch.nn.Module):
         else:
             self._postproc = func
 
-    def to(self: ModelABC, device: str = "cpu") -> torch.nn.Module:
+    def to(  # type: ignore[override]
+        self: ModelABC,
+        device: str = "cpu",
+        dtype: torch.dtype | None = None,
+        *,
+        non_blocking: bool = False,
+    ) -> ModelABC | torch.nn.DataParallel[ModelABC]:
         """Transfers model to cpu/gpu.
 
         Args:
@@ -180,19 +186,24 @@ class ModelABC(ABC, torch.nn.Module):
                 PyTorch defined model.
             device (str):
                 Transfers model to the specified device. Default is "cpu".
+            dtype (:class:`torch.dtype`): the desired floating point or complex dtype of
+                the parameters and buffers in this module.
+            non_blocking (bool): When set, it tries to convert/move asynchronously
+                with respect to the host if possible, e.g., moving CPU Tensors with
+                pinned memory to CUDA devices.
 
         Returns:
-            torch.nn.Module:
+            torch.nn.Module | torch.nn.DataParallel:
                 The model after being moved to cpu/gpu.
 
         """
-        device = torch_device(device)
-        model = super().to(device)
+        torch_device = torch.device(device)
+        model = super().to(torch_device, dtype=dtype, non_blocking=non_blocking)
 
         # If target device istorch.cuda and more
         # than one GPU is available, use DataParallel
-        if device.type == "cuda" and torch.cuda.device_count() > 1:
-            model = torch.nn.DataParallel(model)  # pragma: no cover
+        if torch_device.type == "cuda" and torch.cuda.device_count() > 1:
+            return torch.nn.DataParallel(model)  # pragma: no cover
 
         return model
 
