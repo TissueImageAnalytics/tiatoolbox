@@ -1614,9 +1614,16 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
     fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=file_path)
     assert file_path.exists()
     assert file_path.stat().st_size > 0
+    file_path.unlink()
 
     with pytest.raises(ValueError, match="does not exist"):
         fetch_pretrained_weights("abc", file_path)
+
+    # Test save_path is str
+    file_path_str = str(file_path)
+    file_path = fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path_str)
+    assert Path(file_path).exists()
+    assert Path(file_path).stat().st_size > 0
 
 
 def test_imwrite(tmp_path: Path) -> NoReturn:
