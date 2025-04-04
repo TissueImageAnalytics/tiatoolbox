@@ -6171,6 +6171,7 @@ class TransformedWSIReader(WSIReader):
     def __init__(
         self: TransformedWSIReader,
         input_img: str | Path | np.ndarray,
+        target_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         transform: np.ndarray | str | Path = None,  # Default to None
@@ -6181,6 +6182,8 @@ class TransformedWSIReader(WSIReader):
         Args:
             input_img (str | Path | np.ndarray):
                 Path to the input image or the image array.
+            target_img (str | Path | np.ndarray):
+                Path to the input target image or the image array.
             mpp (tuple(Number, Number)):
                 Microns per pixel in x and y directions.
             power (Number):
@@ -6193,6 +6196,9 @@ class TransformedWSIReader(WSIReader):
         """
         super().__init__(input_img=input_img, mpp=mpp, power=power)
         self.wsi_reader = WSIReader.open(input_img=input_img, mpp=mpp, power=power)
+        self.target_wsi_reader = WSIReader.open(
+            input_img=target_img, mpp=mpp, power=power
+        )
         if transform is None:
             transform = np.eye(3)  # Ensures a new array instance for each call
         # we need to set the info to be the fixed image info
@@ -6211,9 +6217,21 @@ class TransformedWSIReader(WSIReader):
                 # maybe in torch format with channel first
                 disp_array = np.moveaxis(disp_array, 0, -1)
             self.df_dims = np.array((disp_array.shape[1], disp_array.shape[0]))
+            # scale factors are actually in relation to the largest dimension
+            # from source and target image (so add offset and then scale)
             self.level_scale_factors = [
-                np.array(level_dims) / np.array(self.df_dims)
-                for level_dims in self.wsi_reader.info.level_dimensions
+                np.asarray([s_dims, t_dims]).max(axis=0) / np.array(self.df_dims)
+                for s_dims, t_dims in zip(
+                    self.wsi_reader.info.level_dimensions,
+                    self.target_wsi_reader.info.level_dimensions,
+                )
+            ]
+            self.level_pads = [
+                (((t_dims[0] - s_dims[0]) // 2), ((t_dims[1] - s_dims[1]) // 2))
+                for s_dims, t_dims in zip(
+                    self.wsi_reader.info.level_dimensions,
+                    self.target_wsi_reader.info.level_dimensions,
+                )
             ]
             self.get_location_array(disp_array)
             self.transform_type = "displacement"
@@ -6234,8 +6252,17 @@ class TransformedWSIReader(WSIReader):
         transformed_image = self.transform_using_disp_array(location_array, disp_array)
 
         # make a reader for convenient reading at desired locations/resolutions
+        wsimeta = self.wsi_reader.info
+        wsimeta.level_dimensions = tuple(
+            tuple(np.asarray([s_dims, t_dims]).max(axis=0))
+            for s_dims, t_dims in zip(
+                self.wsi_reader.info.level_dimensions,
+                self.target_wsi_reader.info.level_dimensions,
+            )
+        )
+        wsimeta.slide_dimensions = wsimeta.level_dimensions[0]
         self.inverse_loc_reader = VirtualWSIReader(
-            transformed_image, info=self.wsi_reader.info, mode="feature"
+            transformed_image, info=wsimeta, mode="feature"
         )
 
     @staticmethod
@@ -6457,13 +6484,18 @@ class TransformedWSIReader(WSIReader):
 
         # Find bounding box of transformed grid + padding
         pad = 2
-        min_x = np.min(transformed_grid[:, :, 0]) - pad
+        min_x = max(np.min(transformed_grid[:, :, 0]) - pad, 0)
         max_x = np.max(transformed_grid[:, :, 0]) + pad
-        min_y = np.min(transformed_grid[:, :, 1]) - pad
+        min_y = max(np.min(transformed_grid[:, :, 1]) - pad, 0)
         max_y = np.max(transformed_grid[:, :, 1]) + pad
         # shift the grid into this coordinate space
         transformed_grid = transformed_grid - np.array([min_x, min_y]) + pad
         location = (int(min_x), int(min_y))
+        # Unpad
+        location = (
+            location[0] - self.level_pads[level][0],
+            location[1] - self.level_pads[level][1],
+        )
         size = (int(max_x - min_x), int(max_y - min_y))
         return location, size, transformed_grid
 

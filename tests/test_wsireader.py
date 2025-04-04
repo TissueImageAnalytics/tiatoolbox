@@ -2986,7 +2986,9 @@ def test_fsspec_reader_open_pass_empty_json(tmp_path: Path) -> None:
 
 def test_read_rect_transformedreader_svs_baseline(sample_svs: Path) -> None:
     """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
-    wsi = wsireader.TransformedWSIReader(sample_svs, transform=np.eye(3))
+    wsi = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3)
+    )
     location = SVS_TEST_TISSUE_LOCATION
     size = SVS_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -2997,7 +2999,7 @@ def test_read_rect_transformedreader_svs_baseline(sample_svs: Path) -> None:
 
     fixed_info = wsi.info
     wsi = wsireader.TransformedWSIReader(
-        sample_svs, transform=None, fixed_info=fixed_info
+        sample_svs, target_img=sample_svs, transform=None, fixed_info=fixed_info
     )
     im_region_2 = wsi.read_rect(location, size, resolution=0, units="level")
 
@@ -3005,12 +3007,12 @@ def test_read_rect_transformedreader_svs_baseline(sample_svs: Path) -> None:
 
 
 def test_read_bounds_transformedreader_baseline(sample_svs: Path) -> None:
-    """Test ReansformedWSIReader read bounds at baseline.
+    """Test TransformedWSIReader read bounds at baseline.
 
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.TransformedWSIReader(sample_svs)
+    wsi = wsireader.TransformedWSIReader(sample_svs, target_img=sample_svs)
 
     bounds = SVS_TEST_TISSUE_BOUNDS
     size = SVS_TEST_TISSUE_SIZE
