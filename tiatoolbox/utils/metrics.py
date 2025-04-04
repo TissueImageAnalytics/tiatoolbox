@@ -82,7 +82,7 @@ def pair_coordinates(
 
 def f1_detection(true: np.ndarray, pred: np.ndarray, radius: float) -> float:
     """Calculate the F1-score for predicted set of coordinates.
-    
+
     Examples:
         >>> # Generate two random example sets; replace with your own data
         >>> import numpy as np
@@ -96,7 +96,7 @@ def f1_detection(true: np.ndarray, pred: np.ndarray, radius: float) -> float:
         >>> # Example usage of f1_detection
         >>> from tiatoolbox.utils.metrics import f1_detection
         >>> f1_score = f1_detection(true, pred, radius)
-    
+
     """
     (paired_true, unpaired_true, unpaired_pred) = pair_coordinates(true, pred, radius)
 
