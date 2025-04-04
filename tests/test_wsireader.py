@@ -1586,7 +1586,9 @@ def test_read_rect_at_resolution(sample_wsi_dict: dict) -> None:
         VirtualWSIReader(mini_wsi2_jpg),
         OpenSlideWSIReader(mini_wsi2_svs),
         JP2WSIReader(mini_wsi2_jp2),
-        TransformedWSIReader(mini_wsi2_svs, transform=np.eye(3)),
+        TransformedWSIReader(
+            mini_wsi2_svs, target_img=mini_wsi2_svs, transform=np.eye(3)
+        ),
     ]
 
     for reader_idx, reader in enumerate(reader_list):
