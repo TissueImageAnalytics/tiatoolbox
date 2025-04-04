@@ -2814,10 +2814,12 @@ def test_file_path_does_not_exist() -> None:
         NGFFWSIReader,
         OpenSlideWSIReader,
         JP2WSIReader,
-        TransformedWSIReader,
     ]:
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
+
+    with pytest.raises(FileNotFoundError):
+        _ = TransformedWSIReader("./foo.bar", target_img="./foo.bar")
 
 
 def test_read_mpp(wsi: WSIReader) -> None:

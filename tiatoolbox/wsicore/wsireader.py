@@ -6162,7 +6162,8 @@ class TransformedWSIReader(WSIReader):
         >>> from tiatoolbox.wsicore.wsireader import TransformedWSIReader
         >>> transform_level0 = np.eye(3)
         >>> tfm = TransformedWSIReader(
-        ...     input_img=sample_ome_tiff, transform=transform_level0
+        ...     input_img=sample_ome_tiff, target_img=sample_ome_tiff,
+        ...     transform=transform_level0
         ... )
         >>> output = tfm.read_rect(location, size, resolution=resolution, units="level")
 
