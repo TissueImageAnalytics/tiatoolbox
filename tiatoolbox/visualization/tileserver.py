@@ -515,10 +515,19 @@ class TileServer(Flask):
         overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
 
+        # Get other session id
+        session_ids = list(self.layers.keys())
+        if session_id in session_ids:
+            session_ids.remove(session_id)
+
+        # Get the first remaining session_id (if any exist)
+        other_session_id = session_ids[0] if session_ids else None
+
         if overlay_path.suffix in [".npy", ".mha"]:
             # loading a registration transformation
             self.layers[session_id]["slide"] = TransformedWSIReader(
                 self.layers[session_id]["slide"].info.file_path,
+                target_img=self.layers[other_session_id]["slide"].info.file_path,
                 transform=overlay_path,
             )
             self.pyramids[session_id]["slide"] = ZoomifyGenerator(
