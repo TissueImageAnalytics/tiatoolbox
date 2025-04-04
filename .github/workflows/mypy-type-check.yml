@@ -46,4 +46,8 @@ jobs:
           tiatoolbox/tools \
           tiatoolbox/data \
           tiatoolbox/annotation \
-          tiatoolbox/cli/common.py
+          tiatoolbox/cli/common.py \
+          tiatoolbox/models/__init__.py \
+          tiatoolbox/models/models_abc.py \
+          tiatoolbox/models/architecture/__init__.py \
+          tiatoolbox/models/architecture/utils.py \
