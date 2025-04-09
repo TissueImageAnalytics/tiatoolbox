@@ -84,10 +84,12 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 from tiatoolbox.enums import GeometryType
-from tiatoolbox.type_hints import CallablePredicate, CallableSelect, Geometry
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import (
+        CallablePredicate,
+        CallableSelect,
+        Geometry,
         Predicate,
         Properties,
         QueryGeometry,
