@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 """Defines configuration for sphinx and readthedocs."""
+
+from __future__ import annotations
+
 #
 # tiatoolbox documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun  9 13:47:02 2017.
@@ -12,7 +15,6 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
 # relative to the documentation root, use os.path.abspath to make it
@@ -142,7 +144,7 @@ html_theme_options = {
             "html": """
                 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
                 xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                     viewBox="0 0 173 175" style="enable-background:new 0 0 173 175;" xml:space="preserve">
+                viewBox="0 0 173 175" style="enable-background:new 0 0 173 175;" xml:space="preserve">
                 <image style="overflow:visible;" width="519" height="525"
                 xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgcAAAINCAYAAACqOtxdAAABemlDQ1BJQ0MgUHJvZmlsZQAAKJF9
                 kE0rRFEYx38GjbxEsbCwuHlbDTFKbJSZNKYsNChvmzvXnRllrtudK2RjoWwVJTbeFnwCNhbKWilF
@@ -1983,27 +1985,26 @@ print("Copy example notebooks into docs/_notebooks")
 print("=" * 43)  # noqa: T201
 
 
-def all_but_ipynb(dir_path, contents):
-    """Helper to copy all .ipynb"""
+def all_but_ipynb(dir_path: str, contents: list) -> list:
+    """Helper to copy all *.ipynb files."""
     result = []
     for c in contents:
-        flag = os.path.isfile(os.path.join(dir_path, c)) and (not c.endswith(".ipynb"))
+        flag = (Path(dir_path) / c).is_file() and (not c.endswith(".ipynb"))
         if flag:
             result += [c]
     return result
 
 
-DOC_ROOT = os.path.dirname(os.path.realpath(__file__))
-PROJ_ROOT = Path(DOC_ROOT).parent
-shutil.rmtree(os.path.join(PROJ_ROOT, "docs/_notebooks"), ignore_errors=True)
+PROJ_ROOT = Path(os.path.realpath(__file__)).parent.parent
+shutil.rmtree(PROJ_ROOT / "docs/_notebooks", ignore_errors=True)
 shutil.copytree(
-    os.path.join(PROJ_ROOT, "examples"),
-    os.path.join(PROJ_ROOT, "docs/_notebooks/jnb"),
+    PROJ_ROOT / "examples",
+    PROJ_ROOT / "docs/_notebooks/jnb",
     ignore=all_but_ipynb,
 )
 
 # Read in the file
-with open("../examples/README.md") as file:
+with Path("../examples/README.md").open() as file:
     file_data = file.read()
 
 # Replace the target string
@@ -2013,5 +2014,5 @@ file_data = file_data.replace("](./", "](./_notebooks/jnb/")
 file_data = file_data.replace("../docs/", "./")
 
 # Write the file out again
-with open("_notebooks/README.md", "w") as file:
+with Path("_notebooks/README.md").open("w") as file:
     file.write(file_data)
