@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -112,5 +113,15 @@ def test_save_annotation_store(
     con = sqlite3.connect(output)
     cur = con.cursor()
     annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
+
+    out = []
+
+    for item in annotations_properties:
+        for json_str in item:
+            probs = json.loads(json_str)
+            if "type" in probs:
+                out.append(probs.pop("type"))
+
+    assert "mask" in out
 
     assert annotations_properties is not None

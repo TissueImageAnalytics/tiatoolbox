@@ -1264,6 +1264,9 @@ def dict_to_store_semantic_segmentor(
 
     preds = imresize(preds, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
 
+    ## Raise an error if the input patch size is not the size in ioconfig input patch
+    ## size.
+
     # Get the number of unique predictions
     layer_list = np.unique(preds)
 
@@ -1304,6 +1307,9 @@ def dict_to_store_semantic_segmentor(
                     },
                 )
                 feature_geom = make_valid_poly(feature_geom)
+
+                ## save two points as a line
+                # single point as a point
             else:  # Single-Point contours
                 feature_geom = feature2geometry(
                     {
