@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Defines configuration for sphinx and readthedocs."""
 #
 # tiatoolbox documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun  9 13:47:02 2017.
@@ -22,7 +23,7 @@ import shutil
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, str(Path("..").resolve()))
 
 import tiatoolbox
 
