@@ -138,7 +138,7 @@ html_title = f"TIA Toolbox {tiatoolbox.__version__} Documentation"
 #
 html_theme_options = {
     "navigation_with_keys": True,
-    "top_of_page_button": None,
+    "top_of_page_buttons": ["view", "edit"],
     "footer_icons": [
         {
             "name": "TIA",
