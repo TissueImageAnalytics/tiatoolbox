@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import logging
+
 #
 # tiatoolbox documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun  9 13:47:02 2017.
@@ -144,7 +146,8 @@ html_theme_options = {
             "html": """
                 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
                 xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                viewBox="0 0 173 175" style="enable-background:new 0 0 173 175;" xml:space="preserve">
+                viewBox="0 0 173 175" style="enable-background:new 0 0 173 175;"
+                xml:space="preserve">
                 <image style="overflow:visible;" width="519" height="525"
                 xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgcAAAINCAYAAACqOtxdAAABemlDQ1BJQ0MgUHJvZmlsZQAAKJF9
                 kE0rRFEYx38GjbxEsbCwuHlbDTFKbJSZNKYsNChvmzvXnRllrtudK2RjoWwVJTbeFnwCNhbKWilF
@@ -888,9 +891,15 @@ html_theme_options = {
             "name": "TIA",
             "url": "https://warwick.ac.uk/fac/cross_fac/tia/",
             "html": """
-                <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                     viewBox="0 0 178 171.89" style="enable-background:new 0 0 178 171.89;" xml:space="preserve">
-                <image style="overflow:visible;" width="518" height="525" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgYAAAINCAYAAABF+LdjAAABfWlDQ1BJQ0MgUHJvZmlsZQAAKJF9
+                <svg version="1.1" id="Layer_1"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                     viewBox="0 0 178 171.89"
+                     style="enable-background:new 0 0 178 171.89;" xml:space="preserve">
+                <image style="overflow:visible;"
+                width="518" height="525"
+                xlink:href="data:image/png;base64,
+                iVBORw0KGgoAAAANSUhEUgAAAgYAAAINCAYAAABF+LdjAAABfWlDQ1BJQ0MgUHJvZmlsZQAAKJF9
                 kM9LAkEUx7+uhVGGQR06dBjKOqnYBlKXQCVM8CBmkNVlXVcNdF12Nyq6dAi6CgVRl34d6i+oS4eg
                 cxAERRDd+geKuoRsb1xDK+gNM+8zb958mfkCgk/StFJbECirpp6KRdhcZp65XiDAhR4aTJINLZxM
                 JkDxnX/Gxz0cPN/5udbf83+jK6cYMuDoIJ6UNd0kniYeWjE1zlyvT6dHEW9wLti8wzlr81m9J52K
@@ -1867,7 +1876,8 @@ html_theme_options = {
                 SIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAE
                 SIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAE
                 SIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAESIAE
-                SIAESIAESIAESIAESIAESIAESIAESIAESIAESIAE0iPwfxKOnjvVcLCDAAAAAElFTkSuQmCC" transform="matrix(0.3333 0 0 0.3333 0 -3.11)">
+                SIAESIAESIAESIAESIAESIAESIAESIAESIAESIAE0iPwfxKOnjvVcLCDAAAAAElFTkSuQmCC"
+                transform="matrix(0.3333 0 0 0.3333 0 -3.11)">
                 </image>
                 </svg>
             """,
@@ -1877,14 +1887,19 @@ html_theme_options = {
             "name": "GitHub",
             "url": "https://github.com/TissueImageAnalytics/tiatoolbox",
             "html": """
-                <svg height="32" aria-hidden="true" viewBox="0 0 16 16" version="1.1" width="32" data-view-component="true" class="octicon octicon-mark-github v-align-middle">
+                <svg height="32" aria-hidden="true" viewBox="0 0 16 16" version="1.1"
+                width="32" data-view-component="true"
+                class="octicon octicon-mark-github v-align-middle">
                     <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29
                     6.53 5.47 7.59.4.07.55-.17.55-.38
                     0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94
                     -.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21
                     1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
                     0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21
-                    2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                    2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82
+                    2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87
+                    3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0
+                    .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
                 </svg>
             """,
             "class": "only-light",
@@ -1893,8 +1908,19 @@ html_theme_options = {
             "name": "GitHub",
             "url": "https://github.com/TissueImageAnalytics/tiatoolbox",
             "html": """
-                <svg height="32" aria-hidden="true" viewBox="0 0 16 16" version="1.1" width="32" data-view-component="true" class="octicon octicon-mark-github v-align-middle">
-                    <path fill="#ffffff" fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                <svg height="32" aria-hidden="true" viewBox="0 0 16 16" version="1.1"
+                width="32" data-view-component="true" class="octicon octicon-mark-github
+                v-align-middle">
+                    <path fill="#ffffff" fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0
+                    8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                    0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94
+                    -.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21
+                    1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+                    0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21
+                    2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82
+                    2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87
+                    3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0
+                    .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
                 </svg>
             """,
             "class": "only-dark",
@@ -1980,9 +2006,9 @@ autodoc_type_aliases = {
     "ArrayLike": "ArrayLike",
 }
 
-print("=" * 43)  # noqa: T201
-print("Copy example notebooks into docs/_notebooks")
-print("=" * 43)  # noqa: T201
+logging.info("=" * 43)
+logging.info("Copy example notebooks into docs/_notebooks")
+logging.info("=" * 43)
 
 
 def all_but_ipynb(dir_path: str, contents: list) -> list:
