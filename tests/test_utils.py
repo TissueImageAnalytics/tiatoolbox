@@ -1055,7 +1055,9 @@ def test_download_unzip_data(tmp_path: Path) -> None:
 
     extracted_path = save_dir_path / "test_directory"
     # to avoid hidden files in case of MAC-OS or Windows (?)
-    extracted_dirs = [f for f in Path.iterdir(extracted_path) if not f.startswith(".")]
+    extracted_dirs = [
+        f for f in str(Path.iterdir(extracted_path)) if not f.startswith(".")
+    ]
     extracted_dirs.sort()  # ensure same ordering
     assert extracted_dirs == ["dir1", "dir2", "dir3"]
 
