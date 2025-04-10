@@ -16,6 +16,7 @@ import cv2
 import glymur
 import numpy as np
 import pytest
+import SimpleITK as sitk  # noqa: N813
 import zarr
 from click.testing import CliRunner
 from packaging.version import Version
@@ -2989,7 +2990,7 @@ def test_fsspec_reader_open_pass_empty_json(tmp_path: Path) -> None:
 
 
 def test_read_rect_transformedreader_svs_baseline(
-    sample_svs: Path, remote_sample: Callable
+    sample_svs: Path, remote_sample: Callable, tmp_path: Path
 ) -> None:
     """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
     wsi = wsireader.TransformedWSIReader(
@@ -3032,6 +3033,26 @@ def test_read_rect_transformedreader_svs_baseline(
 
     # We don't expect arrays to be the same, but dimensions should be
     assert im_region.shape == im_region_4.shape
+
+    # Now test MHA file with correct shape
+    transform = remote_sample("reg_disp_mha_example")
+    displacement_field = sitk.ReadImage(transform, sitk.sitkVectorFloat64)
+    disp_array = sitk.GetArrayFromImage(displacement_field)  # (2, H, W)
+    disp_array = np.moveaxis(disp_array, 0, -1)
+
+    # Save it to a new .mha file in tmp_path
+    transform_path = tmp_path / "new_disp.mha"
+    sitk.WriteImage(disp_array, str(transform_path))
+
+    wsi5 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=transform_path,
+    )
+    im_region_5 = wsi5.read_rect(location, size, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_5.shape
 
     # Test wrong file type
     with pytest.raises(ValueError, match="Unsupported transformation file format"):
