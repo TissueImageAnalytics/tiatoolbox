@@ -3013,12 +3013,25 @@ def test_read_rect_transformedreader_svs_baseline(
 
     # Now test MHA displacement field
     wsi3 = wsireader.TransformedWSIReader(
-        sample_svs, target_img=sample_svs, transform=remote_sample("mha_disp_example")
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_disp_mha_example"),
     )
     im_region_3 = wsi3.read_rect(location, size, resolution=0, units="level")
 
     # We don't expect arrays to be the same, but dimensions should be
     assert im_region.shape == im_region_3.shape
+
+    # Now test NPY affine transformation
+    wsi4 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_affine_npy_example"),
+    )
+    im_region_4 = wsi4.read_rect(location, size, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_4.shape
 
 
 def test_read_bounds_transformedreader_baseline(sample_svs: Path) -> None:

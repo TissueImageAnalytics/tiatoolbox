@@ -147,5 +147,7 @@ files:
     url: [*testdata, "annotation/sample_wsi_patch_preds.db"]
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
-  mha_disp_example:
+  reg_disp_mha_example:
     url: [*testdata, "registration/sample_transf.mha"]
+  reg_affine_npy_example:
+    url: [*testdata, "registration/sample_transf.npy"]
