@@ -517,8 +517,7 @@ class TileServer(Flask):
 
         # Get other session id
         session_ids = list(self.layers.keys())
-        if session_id in session_ids:
-            session_ids.remove(session_id)
+        session_ids.remove(session_id)
 
         # Get the first remaining session_id (if any exist)
         other_session_id = session_ids[0] if session_ids else None

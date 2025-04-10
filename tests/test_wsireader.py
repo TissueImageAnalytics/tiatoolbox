@@ -3033,6 +3033,14 @@ def test_read_rect_transformedreader_svs_baseline(
     # We don't expect arrays to be the same, but dimensions should be
     assert im_region.shape == im_region_4.shape
 
+    # Test wrong file type
+    with pytest.raises(ValueError, match="Unsupported transformation file format"):
+        wsireader.TransformedWSIReader(
+            sample_svs,
+            target_img=sample_svs,
+            transform=sample_svs,
+        )
+
 
 def test_read_bounds_transformedreader_baseline(sample_svs: Path) -> None:
     """Test TransformedWSIReader read bounds at baseline.
