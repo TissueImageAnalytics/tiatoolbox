@@ -1264,8 +1264,8 @@ def dict_to_store_semantic_segmentor(
 
     preds = imresize(preds, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
 
-    ## Raise an error if the input patch size is not the size in ioconfig input patch
-    ## size.
+    # Raise an error if the input patch size is not the size in ioconfig input patch
+    # size.
 
     # Get the number of unique predictions
     layer_list = np.unique(preds)
@@ -1299,7 +1299,24 @@ def dict_to_store_semantic_segmentor(
 
             scaled_coords = np.array([scale_factor * coords])
 
-            if len(coords) > 2:  # noqa: PLR2004
+            # save two points as a line, single point as a point
+            # otherwise save the Polygon
+            if len(coords) == 1:
+                feature_geom = feature2geometry(
+                    {
+                        "type": "point",
+                        "coordinates": scaled_coords[0],
+                    }
+                )
+
+            elif len(coords) == 2:
+                feature_geom = feature2geometry(
+                    {
+                        "type": "linestring",
+                        "coordinates": scaled_coords,
+                    },
+                )
+            else:
                 feature_geom = feature2geometry(
                     {
                         "type": "Polygon",
@@ -1308,15 +1325,6 @@ def dict_to_store_semantic_segmentor(
                 )
                 feature_geom = make_valid_poly(feature_geom)
 
-                ## save two points as a line
-                # single point as a point
-            else:  # Single-Point contours
-                feature_geom = feature2geometry(
-                    {
-                        "type": "multipoint",
-                        "coordinates": scaled_coords[0],
-                    }
-                )
             annotations.extend(
                 [
                     Annotation(
