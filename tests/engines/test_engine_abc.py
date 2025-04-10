@@ -520,7 +520,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
     eng = TestEngineABC(model=model)
 
     kwargs = {
-        "patch_input_shape": [512, 512],
+        "patch_input_shape": [224, 224],
         "input_resolutions": [{"units": "mpp", "resolution": 1.75}],
     }
     with caplog.at_level(logging.WARNING):
@@ -536,7 +536,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
 
     # test providing config / full input info for non pretrained models
     ioconfig = ModelIOConfigABC(
-        patch_input_shape=(512, 512),
+        patch_input_shape=(224, 224),
         stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
     )
@@ -546,7 +546,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         save_dir=f"{tmp_path}/dump",
         ioconfig=ioconfig,
     )
-    assert eng._ioconfig.patch_input_shape == (512, 512)
+    assert eng._ioconfig.patch_input_shape == (224, 224)
     assert eng._ioconfig.stride_shape == (256, 256)
     assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
@@ -557,15 +557,15 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         save_dir=f"{tmp_path}/dump",
         **kwargs,
     )
-    assert eng._ioconfig.patch_input_shape == [512, 512]
-    assert eng._ioconfig.stride_shape == [512, 512]
+    assert eng._ioconfig.patch_input_shape == [224, 224]
+    assert eng._ioconfig.stride_shape == [224, 224]
     assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
     eng = TestEngineABC(model="alexnet-kather100k")
     eng.run(
-        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
         input_resolutions=[{"units": "baseline", "resolution": 1.99}],
@@ -579,7 +579,7 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
     shutil.rmtree(tmp_path / "dump", ignore_errors=True)
 
     eng.run(
-        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
         input_resolutions=None,
