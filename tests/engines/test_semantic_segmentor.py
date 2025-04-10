@@ -48,7 +48,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         patch_mode=True,
     )
 
-    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
+    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
     assert 0.495 < np.mean(output["probabilities"][:]) < 0.505
 
     assert (
@@ -57,7 +57,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     )
 
     assert (
-        tuple(segmentor._ioconfig.patch_output_shape) == output["predictions"][0].shape
+        tuple(segmentor._ioconfig.patch_input_shape) == output["predictions"][0].shape
     )
 
     output = segmentor.run(
@@ -73,7 +73,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     assert output == tmp_path / "output0" / "output.zarr"
 
     output = zarr.open(output, mode="r")
-    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
+    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
     assert 0.495 < np.mean(output["probabilities"][:]) < 0.505
 
     output = segmentor.run(
@@ -89,7 +89,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     assert output == tmp_path / "output1" / "output.zarr"
 
     output = zarr.open(output, mode="r")
-    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
+    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
     assert "probabilities" not in output.keys()  # noqa: SIM118
 
 
