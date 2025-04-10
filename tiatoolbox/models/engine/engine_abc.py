@@ -540,7 +540,7 @@ class EngineABC(ABC):  # noqa: B024
 
         if self.verbose:
             progress_bar = tqdm.tqdm(
-                total=int(len(dataloader)),
+                total=len(dataloader),
                 leave=True,
                 ncols=80,
                 ascii=True,
@@ -555,7 +555,7 @@ class EngineABC(ABC):  # noqa: B024
         if return_coordinates:
             keys.append("coordinates")
 
-        raw_predictions = {key: None for key in keys}
+        raw_predictions = dict.fromkeys(keys)
 
         zarr_group = None
 
@@ -586,7 +586,7 @@ class EngineABC(ABC):  # noqa: B024
                 zarr_group = write_to_zarr_in_cache_mode(
                     zarr_group=zarr_group, output_data_to_save=raw_predictions
                 )
-                raw_predictions = {key: None for key in keys}
+                raw_predictions = dict.fromkeys(keys)
 
             if progress_bar:
                 progress_bar.update()

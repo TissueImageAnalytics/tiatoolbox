@@ -479,7 +479,7 @@ class SemanticSegmentor:
         pbar = tqdm.tqdm(
             desc=pbar_desc,
             leave=True,
-            total=int(len(self._loader)),
+            total=len(self._loader),
             ncols=80,
             ascii=True,
             position=0,
