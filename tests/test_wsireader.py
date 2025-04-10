@@ -3042,7 +3042,9 @@ def test_read_rect_transformedreader_svs_baseline(
         )
 
 
-def test_read_bounds_transformedreader_baseline(sample_svs: Path) -> None:
+def test_read_bounds_transformedreader_baseline(
+    sample_svs: Path, remote_sample: Callable
+) -> None:
     """Test TransformedWSIReader read bounds at baseline.
 
     Location coordinate is in baseline (level 0) reference frame.
@@ -3057,3 +3059,25 @@ def test_read_bounds_transformedreader_baseline(sample_svs: Path) -> None:
     assert isinstance(im_region, np.ndarray)
     assert im_region.dtype == "uint8"
     assert im_region.shape == (*size[::-1], 3)
+
+    # Now test MHA displacement field
+    wsi3 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_disp_mha_example"),
+    )
+    im_region_3 = wsi3.read_bounds(bounds, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_3.shape
+
+    # Now test NPY affine transformation
+    wsi4 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_affine_npy_example"),
+    )
+    im_region_4 = wsi4.read_bounds(bounds, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_4.shape
