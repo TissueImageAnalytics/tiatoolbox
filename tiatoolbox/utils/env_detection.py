@@ -210,7 +210,7 @@ def colab_has_gpu() -> bool:
             False otherwise.
 
     """
-    return bool(int(os.environ.get("COLAB_GPU", 0)))
+    return bool(int(os.environ.get("COLAB_GPU", 0)))  # noqa: PLW1508
 
 
 def has_network(
