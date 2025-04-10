@@ -20,6 +20,7 @@ from tiatoolbox.models.dataset import (
 )
 from tiatoolbox.utils import download_data, imread, imwrite, unzip_data
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.exceptions import DimensionMismatchError
 from tiatoolbox.wsicore import WSIReader
 
 RNG = np.random.default_rng()  # Numpy Random Generator
@@ -131,6 +132,18 @@ def test_kather_dataset(tmp_path: Path) -> None:
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
+def test_incorrect_input_shape() -> None:
+    """Incorrect input patch dimensions should raise DimensionMismatchError."""
+    size = (5, 5, 3)
+    img = RNG.integers(low=0, high=255, size=size)
+    list_imgs = [img, img, img]
+    dataset = PatchDataset(list_imgs, patch_input_shape=(100, 100))
+    with pytest.raises(
+        DimensionMismatchError, match=r".*\(100, 100\), but got \(5, 5\).*"
+    ):
+        _ = dataset[0]
+
+
 def test_patch_dataset_path_imgs(
     sample_patch1: str | Path,
     sample_patch2: str | Path,
@@ -201,10 +214,10 @@ def test_patch_datasetarray_imgs() -> None:
     array_imgs = np.array(list_imgs)
 
     # test different setter for label
-    dataset = PatchDataset(array_imgs, labels=labels, patch_input_shape=(224, 224))
+    dataset = PatchDataset(array_imgs, labels=labels, patch_input_shape=(5, 5))
     an_item = dataset[2]
     assert an_item["label"] == 3
-    dataset = PatchDataset(array_imgs, labels=None, patch_input_shape=(224, 224))
+    dataset = PatchDataset(array_imgs, labels=None, patch_input_shape=(5, 5))
     an_item = dataset[2]
     assert "label" not in an_item
 
