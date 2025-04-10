@@ -1258,11 +1258,11 @@ def dict_to_store_semantic_segmentor(
 
     """
     preds = patch_output["predictions"]
-    preds = preds[0]
-
-    from tiatoolbox.utils.transforms import imresize
-
-    preds = imresize(preds, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
+    # preds = preds[0]
+    #
+    # from tiatoolbox.utils.transforms import imresize
+    #
+    # preds = imresize(preds, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
 
     # Raise an error if the input patch size is not the size in ioconfig input patch
     # size.
@@ -1299,24 +1299,8 @@ def dict_to_store_semantic_segmentor(
 
             scaled_coords = np.array([scale_factor * coords])
 
-            # save two points as a line, single point as a point
-            # otherwise save the Polygon
-            if len(coords) == 1:
-                feature_geom = feature2geometry(
-                    {
-                        "type": "point",
-                        "coordinates": scaled_coords[0],
-                    }
-                )
-
-            elif len(coords) == 2:
-                feature_geom = feature2geometry(
-                    {
-                        "type": "linestring",
-                        "coordinates": scaled_coords,
-                    },
-                )
-            else:
+            # save one points as a line, otherwise save the Polygon
+            if len(coords) > 2:
                 feature_geom = feature2geometry(
                     {
                         "type": "Polygon",
@@ -1324,6 +1308,14 @@ def dict_to_store_semantic_segmentor(
                     },
                 )
                 feature_geom = make_valid_poly(feature_geom)
+
+            else:
+                feature_geom = feature2geometry(
+                    {
+                        "type": "point",
+                        "coordinates": scaled_coords,
+                    },
+                )
 
             annotations.extend(
                 [
