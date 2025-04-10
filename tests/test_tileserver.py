@@ -734,3 +734,32 @@ def test_prop_range(app: TileServer) -> None:
         assert response.status_code == 200
         # should be back to no scaling
         assert layer.renderer.score_fn(0.5) == 0.5
+
+
+def test_registration(
+    empty_app: TileServer, tmp_path: Path, remote_sample: Callable
+) -> None:
+    """Test registering slides."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    with empty_app.test_client() as client, empty_app.test_client() as client2:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Open new window with other slide...
+        setup_app(client2)
+        response = client2.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client2.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+        )
+        assert response.status_code == 200
