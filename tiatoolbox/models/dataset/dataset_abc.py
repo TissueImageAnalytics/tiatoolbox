@@ -16,7 +16,6 @@ from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import DimensionMismatchError
-from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -625,8 +624,10 @@ class PatchDataset(PatchDatasetABC):
                 f"{patch.shape[:-1]}."
             )
             logger.error(msg=msg)
-            raise DimensionMismatchError(expected_dims=tuple(self.patch_input_shape),
-                                         actual_dims=patch.shape[:-1])
+            raise DimensionMismatchError(
+                expected_dims=tuple(self.patch_input_shape),
+                actual_dims=patch.shape[:-1],
+            )
 
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)
