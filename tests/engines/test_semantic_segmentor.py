@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import zarr
 
+from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor_new import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 
@@ -100,7 +101,7 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
 
     sample_image = remote_sample("thumbnail-1k-1k")
 
-    inputs = [sample_image, sample_image]
+    inputs = [sample_image]
 
     output = segmentor.run(
         images=inputs,
@@ -113,8 +114,16 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
         output_type="annotationstore",
     )
 
-    assert output == tmp_path / "output1" / "output.db"
-    con = sqlite3.connect(output)
+    assert output[0] == tmp_path / "output1" / (sample_image.stem + ".db")
+
+    store_ = SQLiteStore.open(output[0])
+    annotations_ = store_.values()
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+
+    con = sqlite3.connect(output[0])
     cur = con.cursor()
     annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 

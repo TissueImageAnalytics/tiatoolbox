@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import zarr
 from typing_extensions import Unpack
 
-from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor, dict_to_zarr
+from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -307,7 +307,7 @@ class SemanticSegmentor(PatchPredictor):
         output_type: str,
         save_dir: Path | None = None,
         **kwargs: SemanticSegmentorRunParams,
-    ) -> dict | AnnotationStore | Path:
+    ) -> dict | AnnotationStore | Path | list[Path]:
         """Save semantic segmentation predictions to disk.
 
         Args:
@@ -337,41 +337,46 @@ class SemanticSegmentor(PatchPredictor):
         ) and output_type.lower() != "annotationstore":
             return processed_predictions
 
-        save_path = Path(kwargs.get("output_file", save_dir / "output.db"))
+        if output_type.lower() == "zarr":
+            return super().save_predictions(
+                processed_predictions, output_type, save_dir, **kwargs
+            )
 
-        if output_type.lower() == "annotationstore":
-            # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-            # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict")
+        save_path = Path(kwargs.get("output_file", save_dir))
 
-            processed_predictions_path: str | Path | None = None
+        # scale_factor set from kwargs
+        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+        # class_dict set from kwargs
+        class_dict = kwargs.get("class_dict")
 
-            # Need to add support for zarr conversion.
-            if self.cache_mode:
-                processed_predictions_path = processed_predictions
-                processed_predictions = zarr.open(processed_predictions, mode="r")
+        processed_predictions_path: str | Path | None = None
+
+        # Need to add support for zarr conversion.
+        if self.cache_mode:
+            processed_predictions_path = processed_predictions
+            processed_predictions = zarr.open(processed_predictions, mode="r")
+
+        save_paths = []
+
+        for i, predictions in enumerate(processed_predictions["predictions"]):
+            if isinstance(self.images[i], Path):
+                output_path = save_path / (self.images[i].stem + ".db")
+            else:
+                output_path = save_path / (str(i) + ".db")
 
             out_file = dict_to_store_semantic_segmentor(
-                processed_predictions,
-                scale_factor,
-                class_dict,
-                save_path,
+                patch_output={"predictions": predictions},
+                scale_factor=scale_factor,
+                class_dict=class_dict,
+                save_path=output_path,
             )
+
+            save_paths.append(out_file)
+
             if processed_predictions_path is not None:
                 shutil.rmtree(processed_predictions_path)
 
-            return out_file
-
-        return (
-            dict_to_zarr(
-                processed_predictions,
-                save_path,
-                **kwargs,
-            )
-            if isinstance(processed_predictions, dict)
-            else processed_predictions
-        )
+        return save_paths
 
     def run(
         self: SemanticSegmentor,
