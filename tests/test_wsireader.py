@@ -2988,7 +2988,9 @@ def test_fsspec_reader_open_pass_empty_json(tmp_path: Path) -> None:
     assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
 
 
-def test_read_rect_transformedreader_svs_baseline(sample_svs: Path) -> None:
+def test_read_rect_transformedreader_svs_baseline(
+    sample_svs: Path, remote_sample: Callable
+) -> None:
     """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
     wsi = wsireader.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3)
@@ -3002,12 +3004,21 @@ def test_read_rect_transformedreader_svs_baseline(sample_svs: Path) -> None:
     assert im_region.shape == (*size[::-1], 3)
 
     fixed_info = wsi.info
-    wsi = wsireader.TransformedWSIReader(
+    wsi2 = wsireader.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=None, fixed_info=fixed_info
     )
-    im_region_2 = wsi.read_rect(location, size, resolution=0, units="level")
+    im_region_2 = wsi2.read_rect(location, size, resolution=0, units="level")
 
     assert np.array_equal(im_region, im_region_2)
+
+    # Now test MHA displacement field
+    wsi3 = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=remote_sample("mha_disp_example")
+    )
+    im_region_3 = wsi3.read_rect(location, size, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_3.shape
 
 
 def test_read_bounds_transformedreader_baseline(sample_svs: Path) -> None:
