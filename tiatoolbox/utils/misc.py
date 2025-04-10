@@ -1258,14 +1258,6 @@ def dict_to_store_semantic_segmentor(
 
     """
     preds = patch_output["predictions"]
-    # preds = preds[0]
-    #
-    # from tiatoolbox.utils.transforms import imresize
-    #
-    # preds = imresize(preds, output_size=(224, 224), interpolation=cv2.INTER_NEAREST)
-
-    # Raise an error if the input patch size is not the size in ioconfig input patch
-    # size.
 
     # Get the number of unique predictions
     layer_list = np.unique(preds)
@@ -1278,7 +1270,7 @@ def dict_to_store_semantic_segmentor(
 
     _ = class_dict  # use it once overlay is working
 
-    annotations = []
+    annotations_list = []
 
     for type_class in layer_list:
         layer = np.where(preds == type_class, 1, 0)
@@ -1294,7 +1286,7 @@ def dict_to_store_semantic_segmentor(
             scaled_coords = np.array([scale_factor * coords])
 
             # save one points as a line, otherwise save the Polygon
-            if len(coords) > 2:
+            if len(layer_) > 2:  # noqa: PLR2004
                 feature_geom = feature2geometry(
                     {
                         "type": "Polygon",
@@ -1302,7 +1294,15 @@ def dict_to_store_semantic_segmentor(
                     },
                 )
                 feature_geom = make_valid_poly(feature_geom)
-
+            # if two points, save as a line string
+            elif len(layer_) == 2:  # noqa: PLR2004
+                feature_geom = feature2geometry(
+                    {
+                        "type": "linestring",
+                        "coordinates": scaled_coords[0],
+                    },
+                )
+            # if single point, save it is a point
             else:
                 feature_geom = feature2geometry(
                     {
@@ -1311,7 +1311,7 @@ def dict_to_store_semantic_segmentor(
                     },
                 )
 
-            annotations.extend(
+            annotations_list.extend(
                 [
                     Annotation(
                         geometry=feature_geom,
@@ -1320,7 +1320,9 @@ def dict_to_store_semantic_segmentor(
                 ]
             )
 
-    _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    _ = store.append_many(
+        annotations_list, [str(i) for i in range(len(annotations_list))]
+    )
 
     # # if a save director is provided, then dump store into a file
     if save_path:
