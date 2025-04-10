@@ -408,7 +408,7 @@ class SlideGraphConstructor:
             dthresh=connectivity_distance,
         )
         edge_index = affinity_to_edge_index(adjacency_matrix)
-        edge_index = cast(np.ndarray, edge_index)
+        edge_index = cast("np.ndarray", edge_index)
         return {
             "x": feature_centroids_arr,
             "edge_index": edge_index,
