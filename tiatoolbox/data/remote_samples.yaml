@@ -21,6 +21,8 @@ files:
     extract: True
   svs-1-small:
     url: [*wsis, "CMU-1-Small-Region.svs"]
+  thumbnail-1k-1k:
+    url: [*wsis, "CMU-2_1k_1k-thumbnail.png"]
   tiled-tiff-1-small-jpeg:
     url: [*wsis, "CMU-1-Small-Region.jpeg.tiff"]
   tiled-tiff-1-small-jp2k:

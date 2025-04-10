@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
@@ -12,6 +12,9 @@ import zarr
 
 from tiatoolbox.models.engine.semantic_segmentor_new import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -24,15 +27,15 @@ def test_semantic_segmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
-def test_semantic_segmentor_patches(
-    sample_patch1: Path, sample_patch2: Path, tmp_path: Path
-) -> None:
+def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> None:
     """Tests SemanticSegmentor on image patches."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
     )
 
-    inputs = [Path(sample_patch1), Path(sample_patch2)]
+    sample_image = remote_sample("thumbnail-1k-1k")
+
+    inputs = [sample_image, sample_image]
 
     assert segmentor.cache_mode is False
 
@@ -44,7 +47,7 @@ def test_semantic_segmentor_patches(
         patch_mode=True,
     )
 
-    assert 0.24 < np.mean(output["predictions"][:]) < 0.25
+    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
     assert 0.495 < np.mean(output["probabilities"][:]) < 0.505
 
     assert (
@@ -69,7 +72,7 @@ def test_semantic_segmentor_patches(
     assert output == tmp_path / "output0" / "output.zarr"
 
     output = zarr.open(output, mode="r")
-    assert 0.24 < np.mean(output["predictions"][:]) < 0.25
+    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
     assert 0.495 < np.mean(output["probabilities"][:]) < 0.505
 
     output = segmentor.run(
@@ -85,19 +88,20 @@ def test_semantic_segmentor_patches(
     assert output == tmp_path / "output1" / "output.zarr"
 
     output = zarr.open(output, mode="r")
-    assert 0.24 < np.mean(output["predictions"][:]) < 0.25
+    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
     assert "probabilities" not in output.keys()  # noqa: SIM118
 
 
-def test_save_annotation_store(
-    sample_patch1: Path, sample_patch2: Path, tmp_path: Path
-) -> None:
+def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for saving output as annotation store."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
     )
 
-    inputs = [Path(sample_patch1), Path(sample_patch2)]
+    sample_image = remote_sample("thumbnail-1k-1k")
+
+    inputs = [sample_image, sample_image]
+
     output = segmentor.run(
         images=inputs,
         return_probabilities=False,
