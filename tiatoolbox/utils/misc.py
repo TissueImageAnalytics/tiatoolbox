@@ -1272,8 +1272,6 @@ def dict_to_store_semantic_segmentor(
 
     layer_list = np.delete(layer_list, np.where(layer_list == 0))
 
-    layer_info_dict = {}
-
     count = 1
 
     store = SQLiteStore()
@@ -1291,10 +1289,6 @@ def dict_to_store_semantic_segmentor(
         )
         for layer_ in contours:
             coords = layer_.squeeze()
-            layer_info_dict[count] = {
-                "contours": coords,
-                "type": "mask",
-            }
             count += 1
 
             scaled_coords = np.array([scale_factor * coords])

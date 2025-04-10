@@ -15,6 +15,7 @@ import torch.utils.data as torch_data
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
+from tiatoolbox.utils.exceptions import DimensionMismatchError
 from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
@@ -619,11 +620,13 @@ class PatchDataset(PatchDatasetABC):
 
         if patch.shape[:-1] != tuple(self.patch_input_shape):
             msg = (
-                "Patch size not compatible with the model. Resizing patch to make "
-                "it compatible with model input size."
+                f"Patch size is not compatible with the model. "
+                f"Expected dimensions {tuple(self.patch_input_shape)}, but got "
+                f"{patch.shape[:-1]}."
             )
-            logger.warning(msg=msg)
-            patch = imresize(patch, output_size=self.patch_input_shape)
+            logger.error(msg=msg)
+            raise DimensionMismatchError(expected_dims=tuple(self.patch_input_shape),
+                                         actual_dims=patch.shape[:-1])
 
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)

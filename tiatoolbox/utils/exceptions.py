@@ -33,3 +33,10 @@ class MethodNotSupportedError(Exception):
     ) -> None:
         """Initialize :class:`MethodNotSupportedError`."""
         super().__init__(message)
+
+
+class DimensionMismatchError(Exception):
+    def __init__(self, expected_dims, actual_dims):
+        self.expected_dims = expected_dims
+        self.actual_dims = actual_dims
+        super().__init__(f"Expected dimensions {expected_dims}, but got {actual_dims}.")
