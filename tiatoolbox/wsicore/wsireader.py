@@ -1631,8 +1631,8 @@ class WSIReader:
         output_dir.mkdir(parents=True)
         data = []
 
-        vertical_tiles = int(math.ceil((slide_h - tile_h) / tile_h + 1))
-        horizontal_tiles = int(math.ceil((slide_w - tile_w) / tile_w + 1))
+        vertical_tiles = math.ceil((slide_h - tile_h) / tile_h + 1)
+        horizontal_tiles = math.ceil((slide_w - tile_w) / tile_w + 1)
         for iter_tot, (h, w) in enumerate(np.ndindex(vertical_tiles, horizontal_tiles)):
             start_h = h * tile_h
             end_h = (h * tile_h) + tile_h

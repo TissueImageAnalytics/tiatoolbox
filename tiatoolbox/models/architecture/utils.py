@@ -98,7 +98,7 @@ def compile_model(
         )
         return model
 
-    return cast(nn.Module, torch.compile(model, mode=mode))  # pragma: no cover
+    return cast("nn.Module", torch.compile(model, mode=mode))  # pragma: no cover
 
 
 def centre_crop(
