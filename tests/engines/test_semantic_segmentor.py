@@ -13,6 +13,7 @@ import zarr
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor_new import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.misc import imread
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -83,6 +84,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         device=device,
         patch_mode=True,
         cache_mode=True,
+        output_type="zarr",
         save_dir=tmp_path / "output1",
     )
 
@@ -91,6 +93,32 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     output = zarr.open(output, mode="r")
     assert 0.15 < np.mean(output["predictions"][:]) < 0.18
     assert "probabilities" not in output.keys()  # noqa: SIM118
+
+
+def _test_store_output_patch(output: Path) -> None:
+    """Helper method to test annotation store output for a patch."""
+    store_ = SQLiteStore.open(output)
+    annotations_ = store_.values()
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+
+    con = sqlite3.connect(output)
+    cur = con.cursor()
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
+
+    out = []
+
+    for item in annotations_properties:
+        for json_str in item:
+            probs = json.loads(json_str)
+            if "type" in probs:
+                out.append(probs.pop("type"))
+
+    assert "mask" in out
+
+    assert annotations_properties is not None
 
 
 def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
@@ -115,26 +143,33 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
     )
 
     assert output[0] == tmp_path / "output1" / (sample_image.stem + ".db")
+    _test_store_output_patch(output[0])
 
-    store_ = SQLiteStore.open(output[0])
-    annotations_ = store_.values()
-    annotations_geometry_type = [
-        str(annotation_.geometry_type) for annotation_ in annotations_
-    ]
-    assert "Polygon" in annotations_geometry_type
 
-    con = sqlite3.connect(output[0])
-    cur = con.cursor()
-    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
+def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) -> None:
+    """Test for saving output as annotation store using a numpy array."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
+    )
 
-    out = []
+    sample_image = remote_sample("thumbnail-1k-1k")
 
-    for item in annotations_properties:
-        for json_str in item:
-            probs = json.loads(json_str)
-            if "type" in probs:
-                out.append(probs.pop("type"))
+    input_image = imread(sample_image)
+    inputs_list = [input_image, input_image]
 
-    assert "mask" in out
+    output = segmentor.run(
+        images=inputs_list,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        cache_mode=True,
+        save_dir=tmp_path / "output1",
+        output_type="annotationstore",
+    )
 
-    assert annotations_properties is not None
+    assert output[0] == tmp_path / "output1" / "0.db"
+    assert output[1] == tmp_path / "output1" / "1.db"
+
+    _test_store_output_patch(output[0])
+    _test_store_output_patch(output[1])

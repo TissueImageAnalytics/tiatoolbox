@@ -373,8 +373,8 @@ class SemanticSegmentor(PatchPredictor):
 
             save_paths.append(out_file)
 
-            if processed_predictions_path is not None:
-                shutil.rmtree(processed_predictions_path)
+        if processed_predictions_path is not None:
+            shutil.rmtree(processed_predictions_path)
 
         return save_paths
 
@@ -390,7 +390,7 @@ class SemanticSegmentor(PatchPredictor):
         overwrite: bool = False,
         output_type: str = "dict",
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> AnnotationStore | Path | str | dict:
+    ) -> AnnotationStore | Path | str | dict | list[Path]:
         """Run the engine on input images.
 
         Args:
@@ -431,7 +431,7 @@ class SemanticSegmentor(PatchPredictor):
                 Keyword Args to update :class:`EngineABC` attributes during runtime.
 
         Returns:
-            (:class:`numpy.ndarray`, dict):
+            (:class:`numpy.ndarray`, dict, list):
                 Model predictions of the input dataset. If multiple
                 whole slide images are provided as input,
                 or save_output is True, then results are saved to
@@ -443,6 +443,7 @@ class SemanticSegmentor(PatchPredictor):
                 - img_path: path of the input image.
                 - raw: path to save location for raw prediction,
                   saved in .json.
+                - list: List of image paths to the output files.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
