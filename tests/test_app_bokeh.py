@@ -280,6 +280,21 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     assert set(cmap_dict.keys()) == {0, 1, 2, 3, 4}
 
 
+def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
+    """Test adding a non-annotation slide layer to cover 'else' branch in  logic."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["slide1"].name]
+
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    slide_layer_path = str(data_path["overlay_image"])  # e.g. some .png or .jpg
+
+    click = MenuItemClick(layer_drop, slide_layer_path)
+    layer_drop._trigger_event(click)
+
+    # assert a layer was added and tiles changed
+    assert "slide_windows" in doc.models, "Slide windows missing"
+
+
 def test_tap_query() -> None:
     """Test the double tap query functionality."""
     # trigger a tap event

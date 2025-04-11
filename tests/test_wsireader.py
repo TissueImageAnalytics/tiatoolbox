@@ -3039,10 +3039,11 @@ def test_read_rect_transformedreader_svs_baseline(
     displacement_field = sitk.ReadImage(transform, sitk.sitkVectorFloat64)
     disp_array = sitk.GetArrayFromImage(displacement_field)  # (2, H, W)
     disp_array = np.moveaxis(disp_array, 0, -1)
+    disp_image = sitk.GetImageFromArray(disp_array, isVector=True)
 
     # Save it to a new .mha file in tmp_path
     transform_path = tmp_path / "new_disp.mha"
-    sitk.WriteImage(disp_array, str(transform_path))
+    sitk.WriteImage(disp_image, str(transform_path))
 
     wsi5 = wsireader.TransformedWSIReader(
         sample_svs,
