@@ -38,6 +38,17 @@ class PromptSegmentor(SemanticSegmentor):
     """Model designed for general segmentation of WSIs.
 
     Uses the SAM2 model architecture.
+
+    Args:
+        model (SAM): 
+            Model architecture to use.
+        batch_size (int): 
+            Batch size for processing.
+        num_loader_workers (int): 
+            Number of workers for data loading.
+        dataset_class (Callable): 
+            Dataset class to use.
+        
     """
 
     def __init__(
@@ -58,44 +69,6 @@ class PromptSegmentor(SemanticSegmentor):
         )
         self.bounds = None
         self.multi_prompt = True
-
-    @staticmethod
-    def calc_mpp(area_dims: IntPair, base_mpp: float, fixed_size: int = 1500) -> float:
-        """Calculates the microns per pixel for a fixed area of an image.
-
-        Args:
-            area_dims (tuple):
-                Dimensions of the area to be scaled.
-            base_mpp (float):
-                Microns per pixel of the base image.
-            fixed_size (int):
-                Fixed size of the area.
-
-        Returns:
-            float:
-                Microns per pixel required to scale the area to a fixed size.
-        """
-        scale = max(area_dims) / fixed_size if max(area_dims) > fixed_size else 1.0
-        return base_mpp * scale
-
-    def _load_wsi(
-        self,
-        file_name: str | Path,
-        bounds: IntBounds | None = None,
-        resolution: float = 1.0,
-        units: str = "mpp",
-    ) -> np.ndarray:
-        """Load WSI and return image data."""
-        self.reader = WSIReader.open(file_name)
-        self.slide_dims = self.reader.slide_dimensions(1.0, "baseline")
-        if bounds is not None:
-            self.img = self.reader.read_bounds(bounds, resolution, units)
-            if units == "mpp":
-                base_mpp = self.reader.info["mpp"]
-                self.scale_factor = base_mpp / resolution
-        else:
-            self.img = self.reader.slide_thumbnail(resolution, units)
-        return self.img
 
     def _bound_prompts(
         self,
