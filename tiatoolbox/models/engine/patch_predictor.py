@@ -426,7 +426,7 @@ class PatchPredictor:
 
         if self.verbose:
             pbar = tqdm.tqdm(
-                total=int(len(dataloader)),
+                total=len(dataloader),
                 leave=True,
                 ncols=80,
                 ascii=True,
