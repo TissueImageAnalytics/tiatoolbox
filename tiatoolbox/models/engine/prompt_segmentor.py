@@ -28,7 +28,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.tools.patchextraction import PointsPatchExtractor
 from tiatoolbox.type_hints import Resolution, Units
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import Callable, IntBounds, IntPair
@@ -40,15 +40,15 @@ class PromptSegmentor(SemanticSegmentor):
     Uses the SAM2 model architecture.
 
     Args:
-        model (SAM): 
+        model (SAM):
             Model architecture to use.
-        batch_size (int): 
+        batch_size (int):
             Batch size for processing.
-        num_loader_workers (int): 
+        num_loader_workers (int):
             Number of workers for data loading.
-        dataset_class (Callable): 
+        dataset_class (Callable):
             Dataset class to use.
-        
+
     """
 
     def __init__(
