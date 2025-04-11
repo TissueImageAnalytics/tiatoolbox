@@ -94,6 +94,24 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     assert 0.15 < np.mean(output["predictions"][:]) < 0.18
     assert "probabilities" not in output.keys()  # noqa: SIM118
 
+    output = segmentor.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        cache_mode=False,
+        save_dir=tmp_path / "output2",
+        output_type="zarr",
+    )
+
+    assert output == tmp_path / "output2" / "output.zarr"
+
+    output = zarr.open(output, mode="r")
+    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
+    assert "probabilities" not in output
+    assert "predictions" in output
+
 
 def _test_store_output_patch(output: Path) -> None:
     """Helper method to test annotation store output for a patch."""

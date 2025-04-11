@@ -1456,21 +1456,21 @@ def dict_to_zarr(
     compressor = (
         kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
     )
-    chunks = kwargs.get("chunks", 10000)
 
     # ensure proper zarr extension
     save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
 
-    # save to zarr
-    probabilities_array = np.array(raw_predictions["probabilities"])
-    z = zarr.open(
-        str(save_path),
-        mode="w",
-        shape=probabilities_array.shape,
-        chunks=chunks,
-        compressor=compressor,
-    )
-    z[:] = probabilities_array
+    z = zarr.open(str(save_path), mode="w")
+
+    for key, value in raw_predictions.items():
+        # save to zarr
+        array = np.array(raw_predictions[key])
+        z.create_dataset(
+            name=key,
+            data=value,
+            compression=compressor,
+            shape=array.shape,
+        )
 
     return save_path
 
