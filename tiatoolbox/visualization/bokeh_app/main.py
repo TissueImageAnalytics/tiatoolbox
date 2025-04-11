@@ -65,10 +65,10 @@ from requests.adapters import HTTPAdapter, Retry
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
-from tiatoolbox.models.engine.general_segmentor import GeneralSegmentor
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
+from tiatoolbox.models.engine.prompt_segmentor import PromptSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
@@ -1278,7 +1278,7 @@ def sam_segment() -> None:
         [x[i], -y[i], x[i] + width[i], height[i] - y[i]] for i in range(len(x))
     ]
 
-    gen_segmentor = GeneralSegmentor()
+    gen_segmentor = PromptSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
 
     x_start = max(0, UI["p"].x_range.start)

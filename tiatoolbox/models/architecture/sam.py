@@ -16,24 +16,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntBounds, IntPair
 
 
-class SAMPrompts:
-    """Structure of prompts for SAM."""
-
-    def __init__(
-        self: SAMPrompts,
-        point_coords: list[IntPair] | None = None,
-        point_labels: list[int] | None = None,
-        box_coords: list[IntBounds] | None = None,
-    ) -> None:
-        """Initialize :class:`SAMPrompts`."""
-        self.point_coords = None if point_coords == [] else point_coords
-        self.box_coords = None if box_coords == [] else box_coords
-        if point_coords and point_labels is None:
-            self.point_labels = [1] * len(point_coords)
-        else:
-            self.point_labels = point_labels
-
-
 class SAM(ModelABC):
     """SAM architecture."""
 
@@ -55,15 +37,52 @@ class SAM(ModelABC):
         self.predictor = SAM2ImagePredictor(self.model)
         self.generator = SAM2AutomaticMaskGenerator(self.model)
 
-    def forward(self: SAM, image: np.ndarray, prompts: SAMPrompts = None) -> np.ndarray:
+    def forward(
+        self: SAM,
+        imgs: list,
+        point_coords: list[list[IntPair]] | None = None,
+        box_coords: list[list[IntBounds]] | None = None,
+    ) -> np.ndarray:
         """Torch method, this contains logic for using layers defined in init."""
-        return self.generate_mask(self, image, prompts)
+        batch_masks, batch_scores = [], []
+
+        for i, image in enumerate(imgs):
+            self._encode_image(image)
+
+            # assume that prompts will be provided for all images in a batch
+            points = point_coords[i] if point_coords is not None else None
+            boxes = box_coords[i] if box_coords is not None else None
+
+            if points is not None or boxes is not None:
+                point_labels = [1] * len(point_coords)
+                masks, scores, _ = self.predictor.predict(
+                    point_coords=points,
+                    point_labels=point_labels,
+                    box_coords=boxes,
+                    multimask_output=False,
+                )
+            else:
+                # Use SAM's automatic mask generator
+                masks = self.generator.generate(image)
+                scores = np.array([mask["predicted_iou"] for mask in masks])
+                masks = np.array(
+                    [mask["segmentation"] for mask in masks], dtype=np.uint8
+                )
+
+            sorted_ind = np.argsort(scores)[::-1]
+            sorted_masks = np.array(masks[sorted_ind], dtype=np.uint8)
+            sorted_scores = np.around(scores[sorted_ind], 2)
+            batch_masks.append(sorted_masks)
+            batch_scores.append(sorted_scores)
+
+        return batch_masks, batch_scores
 
     @staticmethod
     def infer_batch(
         model: torch.nn.Module,
         batch_data: list,
-        prompts: SAMPrompts | None = None,
+        point_coords: list[list[IntPair]] | None = None,
+        box_coords: list[list[IntBounds]] | None = None,
         *,
         device: str = "cpu",
     ) -> np.ndarray:
@@ -86,15 +105,9 @@ class SAM(ModelABC):
         model.eval()
         model = model.to(device)
 
-        if isinstance(
-            batch_data, torch.Tensor
-        ):  # Move the tensor to the CPU if it's a PyTorch tensor
-            batch_data = batch_data.to(device).type(torch.float32)
-            batch_data = batch_data.cpu().numpy()
-
         with torch.inference_mode():
             batch_data = model.preproc(batch_data)
-            masks, scores = model(batch_data, prompts)
+            masks, scores = model(batch_data, point_coords, box_coords)
             masks = model.postproc(masks)
         return masks, scores
 
@@ -102,26 +115,7 @@ class SAM(ModelABC):
         """Encodes the image for feature extraction."""
         self.predictor.set_image(image)
 
-    def _generate_mask(
-        self: SAM, features: np.ndarray, prompts: SAMPrompts
-    ) -> np.ndarray:
-        """Generates a segmentation mask using SAM, optionally guided by a prompt."""
-        if prompts:
-            self.encode_image(self, features)
-            masks, scores, _ = self.predictor.predict(
-                point_coords=prompts.point_coords,
-                point_labels=prompts.point_labels,
-                box=prompts.box_coords,
-                multimask_output=False,
-            )
-            sorted_ind = np.argsort(scores)[::-1]
-            masks = np.array(masks[sorted_ind], dtype=np.uint8)
-            scores = np.around(scores[sorted_ind], 2)
-        else:
-            masks = self.generator.generate(features)
-            scores = np.array([mask["predicted_iou"] for mask in masks])
-        return masks, scores
-
+    @staticmethod
     def load_weights(self: SAM, checkpoint_path: str) -> None:
         """Loads model weights from specified checkpoint."""
         self.model.load_state_dict(
@@ -129,22 +123,13 @@ class SAM(ModelABC):
         )
 
     @staticmethod
-    def preproc(image: np.ndarray) -> np.ndarray:
+    def preproc(images: np.ndarray) -> np.ndarray:
         """Pre-processes images - Converts them into a format accepted by SAM (HWC)."""
         # Move the tensor to the CPU if it's a PyTorch tensor
-        if isinstance(image, torch.Tensor):
-            image = image.cpu().numpy()
+        if isinstance(images, torch.Tensor):
+            return images.permute(0, 2, 3, 1).cpu().numpy()
 
-        batch_dim = 4
-        # Case 1: (N, H, W, C)
-        if image.ndim == batch_dim and image.shape == (1, 512, 512, 3):
-            image = np.squeeze(image, axis=0)
-        # Case 2: (N, C, H, W)
-        elif image.ndim == batch_dim and image.shape == (1, 3, 512, 512):
-            image = np.squeeze(image, axis=0)
-            image = np.transpose(image, (1, 2, 0))
-
-        return image[:, :, :3]  # Remove alpha channel if present
+        return images[:, :, :, :3]  # Remove alpha channel if present
 
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:

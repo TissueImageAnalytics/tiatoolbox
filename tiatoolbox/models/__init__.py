@@ -10,7 +10,6 @@ from .architecture.micronet import MicroNet
 from .architecture.nuclick import NuClick
 from .architecture.sam import SAM
 from .architecture.sccnn import SCCNN
-from .engine.general_segmentor import GeneralSegmentor
 from .engine.multi_task_segmentor import MultiTaskSegmentor
 from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from .engine.patch_predictor import (
@@ -19,6 +18,7 @@ from .engine.patch_predictor import (
     PatchPredictor,
     WSIPatchDataset,
 )
+from .engine.prompt_segmentor import PromptSegmentor
 from .engine.semantic_segmentor import (
     DeepFeatureExtractor,
     IOSegmentorConfig,
@@ -29,7 +29,6 @@ from .engine.semantic_segmentor import (
 __all__ = [
     "SAM",
     "SCCNN",
-    "GeneralSegmentor",
     "HoVerNet",
     "HoVerNetPlus",
     "IDaRS",
@@ -39,5 +38,6 @@ __all__ = [
     "NuClick",
     "NucleusInstanceSegmentor",
     "PatchPredictor",
+    "PromptSegmentor",
     "SemanticSegmentor",
 ]
