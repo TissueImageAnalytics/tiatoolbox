@@ -246,6 +246,20 @@ def test_remove_dual_window(doc: Document, data_path: pytest.TempPathFactory) ->
     assert main.UI["vstate"].slide_path == data_path["slide1"]
 
 
+def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
+    """Test adding a non-annotation slide layer to cover 'else' branch in  logic."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["slide1"].name]
+
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    slide_layer_path = str(data_path["img_overlay"])  # e.g. some .png or .jpg
+
+    click = MenuItemClick(layer_drop, slide_layer_path)
+    layer_drop._trigger_event(click)
+
+    assert len(layer_drop.menu) == 5
+
+
 def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding annotation layers."""
     # test loading a geojson file.
@@ -278,20 +292,6 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     # test get_mapper function
     cmap_dict = main.get_mapper_for_prop("type")
     assert set(cmap_dict.keys()) == {0, 1, 2, 3, 4}
-
-
-def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
-    """Test adding a non-annotation slide layer to cover 'else' branch in  logic."""
-    slide_select = doc.get_model_by_name("slide_select0")
-    slide_select.value = [data_path["slide1"].name]
-
-    layer_drop = doc.get_model_by_name("layer_drop0")
-    slide_layer_path = str(data_path["img_overlay"])  # e.g. some .png or .jpg
-
-    click = MenuItemClick(layer_drop, slide_layer_path)
-    layer_drop._trigger_event(click)
-
-    assert len(layer_drop.menu) == 5
 
 
 def test_tap_query() -> None:
