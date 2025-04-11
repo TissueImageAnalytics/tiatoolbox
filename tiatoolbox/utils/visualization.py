@@ -732,7 +732,7 @@ class AnnotationRenderer:
                 # use colors directly specified in annotation properties
                 rgb = []
                 for c in annotation.properties["color"]:  # type: ignore[union-attr]
-                    c = cast(int, c)
+                    c = cast("int", c)
                     rgb.append(int(255 * c))
                 # rgb = [int(255 * c) for cast(int,c) in annotation.properties["color"]]
                 return (*rgb, 255)

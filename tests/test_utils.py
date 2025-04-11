@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
@@ -1056,7 +1055,11 @@ def test_download_unzip_data(tmp_path: Path) -> None:
 
     extracted_path = save_dir_path / "test_directory"
     # to avoid hidden files in case of MAC-OS or Windows (?)
-    extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith(".")]
+    extracted_dirs = [
+        f.name
+        for f in extracted_path.iterdir()
+        if f.is_dir() and not f.name.startswith(".")
+    ]
     extracted_dirs.sort()  # ensure same ordering
     assert extracted_dirs == ["dir1", "dir2", "dir3"]
 
