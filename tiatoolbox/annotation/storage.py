@@ -72,6 +72,7 @@ from shapely.affinity import scale, translate
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
+from typing_extensions import Self
 
 import tiatoolbox
 from tiatoolbox import DuplicateFilter, logger
@@ -83,10 +84,12 @@ from tiatoolbox.annotation.dsl import (
     py_regexp,
 )
 from tiatoolbox.enums import GeometryType
-from tiatoolbox.type_hints import CallablePredicate, CallableSelect, Geometry
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import (
+        CallablePredicate,
+        CallableSelect,
+        Geometry,
         Predicate,
         Properties,
         QueryGeometry,
@@ -441,10 +444,10 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
     """Annotation store abstract base class."""
 
     def __new__(
-        cls: type[StoreInstanceType],
+        cls,
         *args: str,  # noqa: ARG004
         **kwargs: int,  # noqa: ARG004
-    ) -> StoreInstanceType:
+    ) -> Self:
         """Return an instance of a subclass of AnnotationStore."""
         if cls is AnnotationStore:
             msg = (
@@ -814,7 +817,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the store
         for key, geometry, properties in zip(keys, geometries, properties_iter):
-            properties_ = cast(dict[str, Any], copy.deepcopy(properties))
+            properties_ = cast("dict[str, Any]", copy.deepcopy(properties))
             self.patch(key, geometry, properties_)
 
     def remove(self: AnnotationStore, key: str) -> None:
@@ -949,7 +952,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             predicate = pickle.loads(predicate)  # skipcq: BAN-B301  # noqa: S301
 
         # predicate is Callable
-        predicate = cast(Callable, predicate)
+        predicate = cast("Callable", predicate)
         return bool(predicate(properties))
 
     @staticmethod
@@ -1719,7 +1722,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                 geometry_predicate = "centers_within_k"
             elif from_mode == "poly":  # pragma: no branch
                 geometry = ann.geometry
-                geometry = cast(Geometry, geometry)
+                geometry = cast("Geometry", geometry)
                 geometry = geometry.buffer(distance)
             subquery_result = self.query(
                 geometry=geometry,
@@ -1842,7 +1845,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         if fp is not None:
             # It is a file-like object, write to it
             if hasattr(fp, "write"):
-                file_handle = cast(IO, fp)
+                file_handle = cast("IO", fp)
                 return file_fn(file_handle)  # type: ignore[func-returns-value]
             # Turn a path into a file handle, then write to it
             with Path(fp).open("w", encoding="utf-8") as file_handle:
@@ -1864,7 +1867,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         if isinstance(fp, (str, bytes)):
             return string_fn(fp)
         if hasattr(fp, "read"):
-            file_io = cast(IO, fp)
+            file_io = cast("IO", fp)
             return file_fn(file_io)
         msg = "Invalid file handle or path."
         raise OSError(msg)
@@ -1979,7 +1982,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             string_fn=json.loads,
             file_fn=json.load,
         )
-        geojson = cast(dict, geojson)
+        geojson = cast("dict", geojson)
 
         annotations = [
             transform(
@@ -2044,7 +2047,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             none_fn=lambda: json.dumps(self.to_geodict()),
         )
         if result is not None:
-            return cast(str, result)
+            return cast("str", result)
         return result
 
     @overload
@@ -2108,7 +2111,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             none_fn=lambda: "".join(string_lines_generator),
         )
         if result is not None:
-            return cast(str, result)
+            return cast("str", result)
         return result
 
     @classmethod
@@ -2148,7 +2151,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             string_fn=lambda fp: fp.splitlines(),
             file_fn=lambda fp: fp.readlines(),
         )
-        cases = cast(list, cases)
+        cases = cast("list", cases)
         for line in cases:
             dictionary = json.loads(line)
             key = dictionary.get("key", uuid.uuid4().hex)
@@ -3442,7 +3445,7 @@ class SQLiteStore(AnnotationStore):
         if not unique:
             return_columns.append("[key]")
         if is_str_query and not is_star_query:
-            select = cast(str, select)
+            select = cast("str", select)
             select_names = eval(  # skipcq: PYL-W0123,  # noqa: S307
                 select,
                 SQL_GLOBALS,
@@ -3466,8 +3469,8 @@ class SQLiteStore(AnnotationStore):
         if is_pickle_query or is_callable_query:
             # Where to apply after database query
             # only done for Callable where.
-            post_where = cast(CallablePredicate, where) if is_callable_query else None
-            select = cast(CallableSelect, select)
+            post_where = cast("CallablePredicate", where) if is_callable_query else None
+            select = cast("CallableSelect", select)
             result = self._handle_pickle_callable_pquery(
                 select,
                 post_where,
@@ -3482,7 +3485,7 @@ class SQLiteStore(AnnotationStore):
             )
 
         if unique and squeeze and len(result) == 1:
-            result = cast(list[set], result)
+            result = cast("list[set]", result)
             return result[0]
         return result
 
@@ -3814,7 +3817,7 @@ class SQLiteStore(AnnotationStore):
 
         """
         if hasattr(fp, "write"):
-            fp = cast(IO, fp)
+            fp = cast("IO", fp)
             fp = fp.name
         target = sqlite3.connect(fp)
         self.con.backup(target)
@@ -3940,7 +3943,7 @@ class DictionaryStore(AnnotationStore):
                 string_fn=lambda fp: fp.splitlines(),
                 file_fn=lambda fp: fp.readlines(),
             )
-            cases = cast(list, cases)
+            cases = cast("list", cases)
             for line in cases:
                 dictionary = json.loads(line)
                 key = dictionary.get("key", uuid.uuid4().hex)
