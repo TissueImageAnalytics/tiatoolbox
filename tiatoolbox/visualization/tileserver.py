@@ -523,10 +523,25 @@ class TileServer(Flask):
         other_session_id = session_ids[0] if session_ids else None
 
         if overlay_path.suffix in [".npy", ".mha"]:
-            # loading a registration transformation
+            if other_session_id is not None:
+                # loading a registration transformation
+                self.layers[session_id]["slide"] = TransformedWSIReader(
+                    self.layers[session_id]["slide"].info.file_path,
+                    target_img=self.layers[other_session_id]["slide"].info.file_path,
+                    transform=overlay_path,
+                )
+                self.pyramids[session_id]["slide"] = ZoomifyGenerator(
+                    self.layers[session_id]["slide"],
+                )
+                return json.dumps("slide")
+
+            logger.warning(
+                "If registration target not the same dimensions as the source "
+                "this may display incorrectly. NGFF file is not valid."
+            )
             self.layers[session_id]["slide"] = TransformedWSIReader(
                 self.layers[session_id]["slide"].info.file_path,
-                target_img=self.layers[other_session_id]["slide"].info.file_path,
+                target_img=self.layers[session_id]["slide"].info.file_path,
                 transform=overlay_path,
             )
             self.pyramids[session_id]["slide"] = ZoomifyGenerator(

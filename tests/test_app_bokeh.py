@@ -257,7 +257,7 @@ def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> No
     slide_select.value = [data_path["slide1"].name]
 
     layer_drop = doc.get_model_by_name("layer_drop0")
-    slide_layer_path = str(data_path["img_overlay"])  # e.g. some .png or .jpg
+    slide_layer_path = str(data_path["slide1"])
 
     click = MenuItemClick(layer_drop, slide_layer_path)
     layer_drop._trigger_event(click)
