@@ -13,9 +13,9 @@ import cv2
 import joblib
 import numpy as np
 import torch
+import torch.distributed as dist
 import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
-import torch.distributed as dist
 import tqdm
 
 from tiatoolbox import logger, rcParam
