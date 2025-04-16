@@ -14,30 +14,32 @@ import torch
 import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
-from shapely import Polygon
 
 from tiatoolbox import logger
-from tiatoolbox.annotation.storage import Annotation, SQLiteStore
 from tiatoolbox.models.architecture.sam import SAM
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
     SemanticSegmentor,
     WSIStreamDataset,
-    _prepare_save_output,
 )
 from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.tools.patchextraction import PointsPatchExtractor
-from tiatoolbox.type_hints import Resolution, Units
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.type_hints import Callable, IntBounds, IntPair
+    from tiatoolbox.type_hints import Callable, IntBounds, IntPair, Resolution, Units
 
 
 class PromptSegmentor(SemanticSegmentor):
-    """Model designed for general segmentation of WSIs.
+    """Engine for prompt-based segmentation of WSIs.
 
-    Uses the SAM2 model architecture.
+    This class is designed to work with the SAM model architecture.
+    It allows for interactive segmentation by providing point and bounding box
+    coordinates as prompts. The model can be used in both tile and WSI modes,
+    where tile mode processes individual image patches and WSI mode processes
+    whole-slide images. The class also supports multi-prompt segmentation,
+    where multiple point and bounding box coordinates can be provided for
+    segmentation.
 
     Args:
         model (SAM):
@@ -54,7 +56,7 @@ class PromptSegmentor(SemanticSegmentor):
     def __init__(
         self,
         model: SAM = None,
-        batch_size: int = 8,
+        batch_size: int = 4,
         num_loader_workers: int = 0,
         dataset_class: Callable = WSIStreamDataset,
     ) -> None:
@@ -67,7 +69,6 @@ class PromptSegmentor(SemanticSegmentor):
             model=model,
             dataset_class=dataset_class,
         )
-        self.bounds = None
         self.multi_prompt = True
 
     def _bound_prompts(
@@ -122,32 +123,63 @@ class PromptSegmentor(SemanticSegmentor):
         ioconfig: IOSegmentorConfig = None,
         point_coords: list[list[IntPair]] | None = None,
         box_coords: list[list[IntBounds]] | None = None,
-        multi_prompt: bool = True,
         save_dir: str | Path | None = None,
         device: str = "cpu",
         *,
+        multi_prompt: bool = True,
         crash_on_exception: bool = False,
     ) -> list[tuple[Path, Path, Path]]:
-        """Predict on a WSI using prompts.
+        """Predict on a list of WSIs using prompts.
 
         Args:
-            # TODO: Improve docstring
-            file_name (str):
-                Path to WSI file.
-
+            imgs (list, ndarray):
+                A list of paths to the input WSIs.
+            masks (list):
+                A list of masks corresponding to the input WSIs.
+                Used to filter the coordinates of patches for inference.
+            mode (str):
+                The mode of prediction. Can be either `tile` or `wsi`.
+                Tile mode processes individual image patches at baseline resolution,
+                while WSI mode processes whole-slide images.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Configuration for input/output processing.
+            point_coords (list):
+                Point coordinates for each image as `[x, y]` pairs.
+                Stored as a list of lists of coordinates.
+            box_coords (list):
+                Bounding box coordinates for each image as `[x1, y1, x2, y2]` pairs.
+                Stored as a list of lists of coordinates.
+            save_dir (str, Path):
+                Directory to save the output predictions.
             device (str):
                 Device to run inference on.
-            save_path (str):
-                Location to save output prediction.
-            bounds (tuple):
-                Bounds for the region of interest.
+            crash_on_exception (bool):
+                Whether to crash on exceptions during prediction.
             multi_prompt (bool):
-                Whether to perform inference on individual
-                prompts or multiple prompts.
+                Whether to use multiple prompts simulataneously for segmentation.
+                If false, the image will be processed for each prompt separately.
 
         Returns:
-            list:
-                List of paths to the saved output prediction.
+            output_paths(list[tuple[Path, Path, Path]]):
+                A list of tuples containing the input image path and the corresponding
+                output paths for the predictions.
+                Each tuple is of the form (input_path, mask_path, score_path).
+
+        Examples:
+            >>> segmentor = PromptSegmentor(model=model)
+            >>> imgs = ["path/to/image1", "path/to/image2"]
+            >>> masks = ["path/to/mask1", "path/to/mask2"]
+            >>> point_coords = [[[100, 200]], [[150, 250]]]
+            >>> box_coords = [[[50, 50, 150, 150]], [[100, 100, 200, 200]]]
+            >>> output_paths = segmentor.predict(
+                    imgs,
+                    masks=masks,
+                    mode="tile",
+                    point_coords=point_coords,
+                    box_coords=box_coords,
+                    save_dir="output_dir",
+                )
+
         """
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir=save_dir)
 
@@ -219,6 +251,29 @@ class PromptSegmentor(SemanticSegmentor):
         save_path: str | Path | None = None,
         mode: str = "tile",
     ) -> tuple[Path, Path, Path]:
+        """Predict on a single WSI.
+
+        Args:
+            wsi_idx (int):
+                Index of the WSI to process.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Configuration for input/output processing.
+            point_coords (list):
+                Point coordinates for the current image as [x, y] pairs.
+            box_coords (list):
+                Bounding box coordinates for the current image as
+                [x1, y1, x2, y2] pairs.
+            save_path (str, Path):
+                Directory to save the output predictions.
+            mode (str):
+                The mode of prediction. Can be either "tile" or "wsi".
+
+        Returns:
+            tuple[Path, Path, Path]:
+                A tuple containing the input image path and the corresponding
+                output paths for the predictions.
+                Each tuple is of the form (input_path, mask_path, score_path).
+        """
         cache_dir = self._cache_dir / str(wsi_idx)
         cache_dir.mkdir(parents=True)
 
@@ -338,7 +393,12 @@ class PromptSegmentor(SemanticSegmentor):
         shutil.rmtree(cache_dir)
 
     def _process_predictions(
-        self, cum_batch_predictions, wsi_reader, ioconfig, save_path, cache_dir
+        self,
+        cum_batch_predictions: list,
+        wsi_reader: WSIReader,
+        ioconfig: IOSegmentorConfig,
+        save_path: str,
+        cache_dir: str,
     ) -> None:
         """Define how the aggregated predictions are processed.
 
@@ -361,11 +421,47 @@ class PromptSegmentor(SemanticSegmentor):
                 Root path to cache current WSI data.
 
         """
-        mask_memmap, score_memmap = _prepare_save_output(
-            save_path, cache_dir, cum_batch_predictions.shape
+        mask_memmap, score_memmap = self._prepare_save_output(
+            save_path,
+            wsi_reader.slide_dimensions(1.0, "baseline"),
+            cum_batch_predictions.shape[0],
         )
 
-        # TODO: Add processing and saving output
+        if self.multi_prompt:
+            # merge the predictions
+            for _, (location, mask, score) in enumerate(cum_batch_predictions):
+                x1, y1, x2, y2 = location
+                mask_memmap[y1:y2, x1:x2] = mask[0]
+                score_memmap[y1:y2, x1:x2] = score[0]
+
+            # save the predictions
+            mask_memmap.flush()
+            score_memmap.flush()
+
+            # save the cache
+            np.save(cache_dir / "0.npy", mask_memmap)
+            np.save(cache_dir / "1.npy", score_memmap)
+            # save the mask and score
+            mask_path = Path(save_path) / "0.npy"
+            score_path = Path(save_path) / "1.npy"
+            np.save(mask_path, mask_memmap)
+            np.save(score_path, score_memmap)
+
+        else:
+            # merge the predictions
+            for _, (location, mask, score) in enumerate(cum_batch_predictions):
+                x1, y1, x2, y2 = location
+                mask_memmap[y1:y2, x1:x2] = mask[0]
+                score_memmap[y1:y2, x1:x2] = score[0]
+
+            if ioconfig.mode == "tile":  # incomplete
+                # save the predictions
+                mask_memmap.flush()
+                score_memmap.flush()
+
+                # save the cache
+                np.save(cache_dir / "0.npy", mask_memmap)
+                np.save(cache_dir / "1.npy", score_memmap)
 
     @staticmethod
     def filter_coordinates(
@@ -374,6 +470,31 @@ class PromptSegmentor(SemanticSegmentor):
         resolution: Resolution | None = None,
         units: Units | None = None,
     ) -> np.ndarray:
+        """Filter coordinates to the mask bounding box.
+
+        This function filters the coordinates to the bounding box of the mask
+        reader. It scales the coordinates to the mask resolution and clips
+        them to the mask bounding box. Only non-empty boxes are kept.
+
+        Unlike the `filter_coordinates` function in the base class, this
+        function does not discard patches that are outside the mask
+        bounding box. Instead, it clips them to within the mask bounding box,
+        unless the patch is completely outside.
+
+        Args:
+            mask_reader (VirtualWSIReader):
+                A reader for the image where the predictions come from.
+            bounds (np.ndarray):
+                The coordinates to filter.
+            resolution (Resolution):
+                The resolution of the image.
+            units (Units):
+                The units of the image.
+
+        Returns:
+            np.ndarray:
+                The filtered coordinates.
+        """
         if not isinstance(mask_reader, VirtualWSIReader):
             msg = "`mask_reader` should be VirtualWSIReader."
             raise TypeError(msg)
@@ -436,26 +557,22 @@ class PromptSegmentor(SemanticSegmentor):
 
         Args:
             imgs (list, ndarray):
-                List of inputs to process. When using `"patch"` mode,
-                the input must be either a list of images, a list of
-                image file paths or a numpy array of an image list. When
-                using `"tile"` or `"wsi"` mode, the input must be a list
-                of file paths.
+                List of image file paths to process.
             wsi_idx (int):
                 index of current WSI being processed.
             img_path(str or Path):
                 Path to current image.
             mode (str):
-                Type of input to process. Choose from either `tile` or
+                Type of input to process. Can either be `tile` or
                 `wsi`.
             ioconfig (:class:`IOSegmentorConfig`):
                 Object defines information about input and output
-                placement of patches. When provided,
-                `patch_input_shape`, `patch_output_shape`,
-                `stride_shape`, `resolution`, and `units` arguments are
-                ignored. Otherwise, those arguments will be internally
-                converted to a :class:`IOSegmentorConfig` object.
-            save_dir (str or Path):
+                placement of patches.
+            point_coords (list):
+                List of point coordinates for each image.
+            box_coords (list):
+                List of bounding box coordinates for each image.
+            save_dir (str, Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
@@ -502,41 +619,25 @@ class PromptSegmentor(SemanticSegmentor):
                 raise err  # noqa: TRY201
             logging.exception("Crashed on %s", wsi_save_path)
 
-    # TODO: Move to utils
-    @staticmethod
-    def to_annotation(
-        mask_path: str | Path,
-        score_path: str | Path,
-        save_filename: str | Path | None = None,
-    ) -> Path:
-        """Converts the prediction output to annotation format."""
-        masks = np.load(mask_path)
-        scores = np.load(score_path)
-
-        # Define annotation store path
-        store_path = save_filename.with_suffix(".db")
-        store = SQLiteStore()
-
-        def mask_to_polygons(mask):
-            """Extract polygons from a binary mask using OpenCV."""
-            contours, _ = cv2.findContours(
-                mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    def _prepare_save_output(
+        self,
+        save_path: str | Path,
+        mask_shape: tuple[int, ...],
+        scores_shape: tuple[int, ...],
+    ) -> tuple:
+        """Prepares for saving the cached output."""
+        if save_path is not None:
+            save_path = Path(save_path)
+            mask_memmap = np.lib.format.open_memmap(
+                save_path / "0.npy",
+                mode="w+",
+                shape=mask_shape,
+                dtype=np.uint8,
             )
-            # Avoid single-point contours
-            polygons = [Polygon(c.squeeze()) for c in contours if len(c) > 2]
-            return polygons
-
-        for i, mask in enumerate(masks):
-            polygons = mask_to_polygons(mask)
-            # Add extracted polygons to the annotation store
-            props = {"score": f"{scores[i]}", "type": f"Mask {i + 1}"}
-            for poly in polygons:
-                annotation = Annotation(geometry=poly, properties=props)
-                store.append(annotation)
-
-        store.create_index("id", '"id"')
-
-        store.commit()
-        store.dump(store_path)
-        store.close()
-        return store_path
+            score_memmap = np.lib.format.open_memmap(
+                save_path / "1.npy",
+                mode="w+",
+                shape=scores_shape,
+                dtype=np.float32,
+            )
+        return mask_memmap, score_memmap

@@ -9,6 +9,7 @@ import torch
 from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
 from sam2.build_sam import build_sam2, build_sam2_hf
 from sam2.sam2_image_predictor import SAM2ImagePredictor
+from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 
 from tiatoolbox.models.models_abc import ModelABC
 
@@ -17,25 +18,87 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class SAM(ModelABC):
-    """SAM architecture."""
+    """Segment Anything Model (SAM) Architecture.
+
+    Meta AI's zero-shot segmentation model.
+    SAM is used for interactive general-purpose segmentation.
+
+    Currently supports both SAM and SAM2, each of which require
+    different model checkpoints and configuration files.
+
+    SAM accepts an RGB image patch along with a list of point and bounding
+    box coordinates as prompts.
+
+    Args:
+        model_type (str):
+            Model type. Currently supported: vit_b, vit_l, vit_h.
+            Required for SAM.
+        checkpoint_path (str):
+            Path to the model checkpoint.
+            Required for both SAM and SAM2.
+        model_cfg_path (str):
+            Path to the model configuration file.
+            Required for SAM2.
+        model_hf_path (str):
+            Huggingface path for the pretrained SAM2 model.
+            If provided, it will override the checkpoint_path and model_cfg_path.
+            Default is "facebook/sam2-hiera-tiny".
+        device (str):
+            Device to run inference on.
+        use_sam2 (bool):
+            Whether to use SAM2 or not. Default is True.
+
+    Examples:
+        >>> # instantiate SAM with checkpoint path and model type
+        >>> sam = SAM(
+        ...     model_type="vit_b",
+        ...     checkpoint_path="path/to/sam_checkpoint.pth"
+        ...     use_sam2=False
+        ... )
+        >>> # instantiate SAM2 with checkpoint and config path
+        >>> sam2 = SAM(
+        ...     checkpoint_path="path/to/sam2_checkpoint.pth",
+        ...     model_cfg_path="path/to/sam2_config.yaml"
+        ... )
+        >>> # instantiate SAM2 with Huggingface path
+        >>> sam2 = SAM(
+        ...     model_hf_path="facebook/sam2-hiera-tiny"
+        ... )
+    """
 
     def __init__(
         self: SAM,
-        model_hf_path: str | None = "facebook/sam2-hiera-tiny",
+        model_type: str | None = None,
         checkpoint_path: str | None = None,
         model_cfg_path: str | None = None,
+        model_hf_path: str = "facebook/sam2-hiera-tiny",
+        *,
+        device: str = "cpu",
+        use_sam2: bool = True,
     ) -> None:
         """Initialize :class:`SAM`."""
         super().__init__()
+        self.use_sam2 = use_sam2
         self.net_name = "SAM"
 
-        if checkpoint_path is None or model_cfg_path is None:
-            self.model = build_sam2_hf(model_hf_path, device="cpu")
+        if self.use_sam2:
+            # Load SAM2
+            if checkpoint_path is None or model_cfg_path is None:
+                self.model = build_sam2_hf(model_hf_path, device=device)
+            else:
+                self.model = build_sam2(model_cfg_path, checkpoint_path)
+            self.predictor = SAM2ImagePredictor(self.model)
+            self.generator = SAM2AutomaticMaskGenerator(self.model)
         else:
-            self.model = build_sam2(model_cfg_path, checkpoint_path)
-
-        self.predictor = SAM2ImagePredictor(self.model)
-        self.generator = SAM2AutomaticMaskGenerator(self.model)
+            # Load original SAM
+            if checkpoint_path is None:
+                msg = "You must provide a checkpoint path for SAM."
+                raise ValueError(msg)
+            self.model = sam_model_registry[model_type](checkpoint=checkpoint_path).to(
+                device
+            )
+            self.predictor = SamPredictor(self.model)
+            self.generator = SamAutomaticMaskGenerator(self.model)
 
     def forward(
         self: SAM,
@@ -43,7 +106,24 @@ class SAM(ModelABC):
         point_coords: list[list[IntPair]] | None = None,
         box_coords: list[list[IntBounds]] | None = None,
     ) -> np.ndarray:
-        """Torch method, this contains logic for using layers defined in init."""
+        """Torch method. Defines forward pass on each image in the batch.
+
+        Note: This architecture only uses a single layer, so only one forward pass
+        is needed.
+
+        Args:
+            imgs (list):
+                List of images to process, of the shape NHWC.
+            point_coords (list):
+                List of point coordinates for each image.
+            box_coords (list):
+                List of bounding box coordinates for each image.
+
+        Returns:
+            list:
+                List of masks and scores for each image.
+
+        """
         batch_masks, batch_scores = [], []
 
         for i, image in enumerate(imgs):
@@ -96,8 +176,10 @@ class SAM(ModelABC):
             batch_data (list):
                 A batch of data generated by
                 `torch.utils.data.DataLoader`.
-            prompts (SAMPrompts):
-                Prompts for SAM model.
+            point_coords (list):
+                Point coordinates for each image in the batch.
+            box_coords (list):
+                Bounding box coordinates for each image in the batch.
             device (str):
                 Device to run inference on.
 
@@ -115,7 +197,6 @@ class SAM(ModelABC):
         """Encodes the image for feature extraction."""
         self.predictor.set_image(image)
 
-    @staticmethod
     def load_weights(self: SAM, checkpoint_path: str) -> None:
         """Loads model weights from specified checkpoint."""
         self.model.load_state_dict(

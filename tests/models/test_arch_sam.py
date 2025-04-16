@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Callable
 
 from tiatoolbox.models import SAM
-from tiatoolbox.models.architecture.sam import SAMPrompts
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread
 
-ON_GPU = False  # TODO: Use Environment variable to set this to True
+ON_GPU = toolbox_env.has_gpu()
 
 # Test pretrained Model =============================
 
@@ -26,17 +26,14 @@ def test_functional_sam(
     # test inference
     # create prompts
 
-    prompts1 = SAMPrompts(point_coords=[[64, 64]])
-    prompts2 = SAMPrompts(point_coords=[[64, 64]], point_labels=[1])
-    prompts3 = SAMPrompts(box_coords=[[64, 64, 128, 128]])
-    prompts4 = SAMPrompts(
-        point_coords=[[64, 64]], point_labels=[1], box_coords=[[64, 64, 128, 128]]
-    )
+    points1 = [[[64, 64]]]
+    points2 = [[[64, 64], [128, 128]]]
+    boxes1 = [[[64, 64, 128, 128]]]
 
     model = SAM()
 
     _ = model.infer_batch(model, img, on_gpu=ON_GPU)  # no prompts
-    _ = model.infer_batch(model, img, prompts=prompts1, on_gpu=ON_GPU)
-    _ = model.infer_batch(model, img, prompts=prompts2, on_gpu=ON_GPU)
-    _ = model.infer_batch(model, img, prompts=prompts3, on_gpu=ON_GPU)
-    _ = model.infer_batch(model, img, prompts=prompts4, on_gpu=ON_GPU)
+    _ = model.infer_batch(model, img, points1, on_gpu=ON_GPU)
+    _ = model.infer_batch(model, img, points2, on_gpu=ON_GPU)
+    _ = model.infer_batch(model, img, box_coords=boxes1, on_gpu=ON_GPU)
+    _ = model.infer_batch(model, img, points2, boxes1, on_gpu=ON_GPU)
