@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 import torch
 import torch._dynamo
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel
 
 torch._dynamo.config.suppress_errors = True  # skipcq: PYL-W0212  # noqa: SLF001
 
@@ -51,12 +54,21 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
             The model after being moved to specified device.
 
     """
-    if device != "cpu":
-        # DataParallel work only for cuda
-        model = torch.nn.DataParallel(model)
-
     torch_device = torch.device(device)
-    return model.to(torch_device)
+
+    model = model.to(torch_device)
+
+    # Use DDP if multiple GPUs and not on CPU
+    if device == "cuda" and torch.cuda.device_count() > 1:
+        # This assumes a single-process DDP setup for inference
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = "12355"
+        dist.init_process_group(
+            "gloo", rank=0, world_size=1
+        )  # You can use "nccl" for speed if CUDA
+        model = DistributedDataParallel(model, device_ids=[device.index])
+
+    return model
 
 
 class ModelABC(ABC, torch.nn.Module):
