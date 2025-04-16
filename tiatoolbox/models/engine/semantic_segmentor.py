@@ -15,6 +15,7 @@ import numpy as np
 import torch
 import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
+import torch.distributed as dist
 import tqdm
 
 from tiatoolbox import logger, rcParam
@@ -1421,6 +1422,7 @@ class SemanticSegmentor:
             logger.warning("Unable to remove %s", self._cache_dir)
 
         self._memory_cleanup()
+        dist.destroy_process_group()
 
         return self._outputs
 

@@ -64,8 +64,8 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "12355"
         dist.init_process_group(
-            "gloo", rank=0, world_size=1
-        )  # You can use "nccl" for speed if CUDA
+            backend="nccl", rank=0, world_size=1
+        )
         model = DistributedDataParallel(model, device_ids=[device.index])
 
     return model
