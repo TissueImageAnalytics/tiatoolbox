@@ -734,7 +734,8 @@ class TileServer(Flask):
                 session_paths[key] = str(slide.info.as_dict().get("file_path", ""))
         return jsonify(session_paths)
 
-    def healthcheck(self: TileServer) -> Response:
+    @staticmethod
+    def healthcheck() -> Response:
         """Simple health check endpoint to verify the server is running.
 
         Useful for load balancers or uptime monitoring tools to check
