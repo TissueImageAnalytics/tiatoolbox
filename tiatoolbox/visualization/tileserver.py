@@ -725,12 +725,13 @@ class TileServer(Flask):
 
         Returns:
             Response: A JSON response containing a mapping of session keys
-        and their respective slide file paths.
+            and their respective slide file paths.
         """
         session_paths = {}
         for key, layer in self.layers.items():
-            session_paths[key] = str(layer.get("slide").info.as_dict()["file_path"])
-
+            slide = layer.get("slide")
+            if slide is not None:
+                session_paths[key] = str(slide.info.as_dict().get("file_path", ""))
         return jsonify(session_paths)
 
     def healthcheck(self: TileServer) -> Response:
