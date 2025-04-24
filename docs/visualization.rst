@@ -124,7 +124,12 @@ Visualising Image Registration/Transformation
 
 TIAToolbox offers a registration feature that facilitates the visual alignment of images, such as H&E and IHC-stained slides, using Dual Window Mode. This feature allows for quick visualization of registered regions without the need for full whole-slide registration. To utilize this feature, a precomputed registration matrix (e.g., an .mha or .npy file from prior affine/deformable registration) must be provided as an overlay.
 
-First, open the H&E (source) image in one window. Then open the IHC (target) image in the other window. Next, load the registration file (e.g. an .mha or .npy file) as an overlay on the source image to be registered. This overlay applies the transformation to the field of view displayed in the interface rather than the entire whole-slide image. This allows for rapid inspection of localised registration results without the computational cost of registering the full slide.
+To perform registration:
+
+- Open Dual Window Mode and load the images.
+- In one window, open the H&E (source) image.
+- In the other window, open the IHC (target) image.
+- Load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
 
 .. _data_format:
 
