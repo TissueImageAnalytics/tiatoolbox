@@ -421,47 +421,31 @@ class PromptSegmentor(SemanticSegmentor):
                 Root path to cache current WSI data.
 
         """
-        mask_memmap, score_memmap = self._prepare_save_output(
-            save_path,
-            wsi_reader.slide_dimensions(1.0, "baseline"),
-            cum_batch_predictions.shape[0],
-        )
+        wsi_shape = wsi_reader.slide_dimensions(1.0, "baseline")
 
-        if self.multi_prompt:
-            # merge the predictions
-            for _, (location, mask, score) in enumerate(cum_batch_predictions):
+        if ioconfig.mode == "tile":
+            for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
+                mask_memmap, score_memmap = self._prepare_save_output(
+                    save_path / f"_{i}",
+                    wsi_shape,
+                    cum_batch_predictions.shape[0],
+                )
                 x1, y1, x2, y2 = location
+                mask = patch_prediction[0]
+                score = patch_prediction[1]
+
+                # store the predictions
                 mask_memmap[y1:y2, x1:x2] = mask[0]
                 score_memmap[y1:y2, x1:x2] = score[0]
 
-            # save the predictions
-            mask_memmap.flush()
-            score_memmap.flush()
-
-            # save the cache
-            np.save(cache_dir / "0.npy", mask_memmap)
-            np.save(cache_dir / "1.npy", score_memmap)
-            # save the mask and score
-            mask_path = Path(save_path) / "0.npy"
-            score_path = Path(save_path) / "1.npy"
-            np.save(mask_path, mask_memmap)
-            np.save(score_path, score_memmap)
-
-        else:
-            # merge the predictions
-            for _, (location, mask, score) in enumerate(cum_batch_predictions):
-                x1, y1, x2, y2 = location
-                mask_memmap[y1:y2, x1:x2] = mask[0]
-                score_memmap[y1:y2, x1:x2] = score[0]
-
-            if ioconfig.mode == "tile":  # incomplete
-                # save the predictions
                 mask_memmap.flush()
                 score_memmap.flush()
 
-                # save the cache
-                np.save(cache_dir / "0.npy", mask_memmap)
-                np.save(cache_dir / "1.npy", score_memmap)
+        elif ioconfig.mode == "wsi":
+            mask = np.zeros(wsi_shape, dtype=np.uint8)
+            cache_dir = Path(cache_dir)
+
+            # Generate annotations
 
     @staticmethod
     def filter_coordinates(
