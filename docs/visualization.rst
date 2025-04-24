@@ -120,7 +120,7 @@ A filter can be applied to annotations using the filter box. For example, enteri
 The main slide view can be made fullscreen by clicking the fullscreen icon in the small toolbar to the immediate right of the main window. This toolbar also provides a button to save the current view as a .png file.
 
 Visualising Image Registration/Transformation
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 TIAToolbox provides a registration feature that allows visual alignment of images, such as H&E and IHC-stained slides, using Dual Window Mode. This feature enables quick visualization of registered regions without requiring full whole-slide registration. A precomputed registration matrix (e.g. an .mha or .npy file from prior affine/deformable registration) must be provided as an overlay. To perform registration, first open the Dual Window Mode and load the images:
 
