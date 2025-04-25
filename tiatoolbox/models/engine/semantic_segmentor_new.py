@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import zarr
 from typing_extensions import Unpack
 
-from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
+from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor, imwrite_large_tif
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -343,6 +343,7 @@ class SemanticSegmentor(PatchPredictor):
             )
 
         save_path = Path(kwargs.get("output_file", save_dir))
+        return_probabilities = kwargs.get("return_probabilities", False)
 
         # scale_factor set from kwargs
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
@@ -372,6 +373,18 @@ class SemanticSegmentor(PatchPredictor):
             )
 
             save_paths.append(out_file)
+
+            if return_probabilities:
+                imwrite_large_tif(
+                    image_path=output_path.with_suffix(".tif"),
+                    img=processed_predictions["probabilities"],
+                    tile_size=(
+                        self._ioconfig.patch_input_shape[0],
+                        self._ioconfig.patch_input_shape[1],
+                    ),
+                    index=i,
+                )
+                save_paths.append(output_path.with_suffix(".tif"))
 
         if processed_predictions_path is not None:
             shutil.rmtree(processed_predictions_path)

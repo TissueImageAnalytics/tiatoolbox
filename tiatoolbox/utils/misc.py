@@ -16,6 +16,7 @@ import numcodecs
 import numpy as np
 import pandas as pd
 import requests
+import tifffile
 import yaml
 import zarr
 from filelock import FileLock
@@ -159,8 +160,42 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
         raise OSError(msg)
 
 
+def imwrite_large_tif(
+    image_path: PathLike,
+    img: np.ndarray | zarr.core.Array,
+    tile_size: tuple = (256, 256),
+    index: int = 0,
+) -> None:
+    """Write large arrays to a tiff image.
+
+    Args:
+        image_path (str or PathLike):
+            File path (including extension) to save image to.
+        img (:class:`numpy.ndarray` or :class:`zarr.core.Array`):
+            Image array of dtype uint8.
+        tile_size (tuple):
+            Tile size for writing the tiff file. default is (256, 256).
+        index (int):
+            Index of the tile when processing multiple files in a zarr array.
+            default is 0.
+
+    """
+    # Create a TIFF writer
+    with tifffile.TiffWriter(image_path, bigtiff=True) as tif:
+        for i in range(0, img.shape[0], tile_size[0]):
+            for j in range(0, img.shape[1], tile_size[1]):
+                # Read a chunk from the Zarr array
+                chunk = img[index][i : i + tile_size[0], j : j + tile_size[1], 1]
+
+                # Ensure the chunk is compatible with JPEG compression
+                if chunk.dtype != "uint8":
+                    chunk = (chunk * 255).astype("uint8")
+                # Write the chunk to the TIFF file
+                tif.write(chunk, tile=tile_size, compression="jpeg")
+
+
 def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
-    """Read an image as numpy array.
+    """Read an image as :class:`numpy.ndarray`.
 
     Args:
         image_path (PathLike):

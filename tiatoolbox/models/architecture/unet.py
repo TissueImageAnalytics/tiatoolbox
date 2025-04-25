@@ -463,7 +463,11 @@ class UNetModel(ModelABC):
             probs = centre_crop(probs, crop_shape)
             output = probs.permute(0, 2, 3, 1)  # to NHWC
 
-        return {"probabilities": output.cpu().numpy()}
+        output = np.pad(
+            output.cpu().numpy(), pad_width=((0, 0), (256, 256), (256, 256), (0, 0))
+        )
+
+        return {"probabilities": output}
 
     def postproc(self: UNetModel, image: np.ndarray) -> np.ndarray:
         """Define post-processing of this class of model.
@@ -471,5 +475,4 @@ class UNetModel(ModelABC):
         This simply applies argmax along last axis of the input.
 
         """
-        class_output = argmax_last_axis(image=image)
-        return np.pad(class_output, pad_width=((0, 0), (256, 256), (256, 256)))
+        return argmax_last_axis(image=image)

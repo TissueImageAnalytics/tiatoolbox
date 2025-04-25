@@ -50,10 +50,10 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     )
 
     assert 0.15 < np.mean(output["predictions"][:]) < 0.18
-    assert 0.495 < np.mean(output["probabilities"][:]) < 0.505
+    assert 0.120 < np.mean(output["probabilities"][:]) < 0.130
 
     assert (
-        tuple(segmentor._ioconfig.patch_output_shape)
+        tuple(segmentor._ioconfig.patch_input_shape)
         == output["probabilities"][0].shape[:-1]
     )
 
@@ -75,7 +75,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
 
     output = zarr.open(output, mode="r")
     assert 0.15 < np.mean(output["predictions"][:]) < 0.18
-    assert 0.495 < np.mean(output["probabilities"][:]) < 0.505
+    assert 0.120 < np.mean(output["probabilities"][:]) < 0.130
 
     output = segmentor.run(
         images=inputs,
@@ -155,12 +155,13 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
         return_labels=False,
         device=device,
         patch_mode=True,
-        cache_mode=True,
+        cache_mode=False,
         save_dir=tmp_path / "output1",
         output_type="annotationstore",
     )
 
     assert output[0] == tmp_path / "output1" / (sample_image.stem + ".db")
+    assert len(output) == 1
     _test_store_output_patch(output[0])
 
 
@@ -177,7 +178,7 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
 
     output = segmentor.run(
         images=inputs_list,
-        return_probabilities=False,
+        return_probabilities=True,
         return_labels=False,
         device=device,
         patch_mode=True,
@@ -187,7 +188,10 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
     )
 
     assert output[0] == tmp_path / "output1" / "0.db"
-    assert output[1] == tmp_path / "output1" / "1.db"
+    assert output[2] == tmp_path / "output1" / "1.db"
+
+    assert output[1] == tmp_path / "output1" / "0.tif"
+    assert output[3] == tmp_path / "output1" / "1.tif"
 
     _test_store_output_patch(output[0])
-    _test_store_output_patch(output[1])
+    _test_store_output_patch(output[2])
