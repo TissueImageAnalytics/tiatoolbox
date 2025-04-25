@@ -52,6 +52,7 @@ class SAM(ModelABC):
         """Initialize :class:`SAM`."""
         super().__init__()
         self.net_name = "SAM"
+        self.device = device
 
         self.model = sam_model_registry[model_type](checkpoint=checkpoint_path).to(
             device
@@ -149,12 +150,10 @@ class SAM(ModelABC):
 
         """
         model.eval()
-        model = model.to(device)
+        model = model.to(device).type(torch.float32)
 
         with torch.inference_mode():
-            batch_data = model.preproc(batch_data)
             masks, scores = model(batch_data, point_coords, box_coords)
-            masks = model.postproc(masks)
         return masks, scores
 
     def _encode_image(self: SAM, image: np.ndarray) -> np.ndarray:
@@ -168,15 +167,15 @@ class SAM(ModelABC):
         )
 
     @staticmethod
-    def preproc(images: np.ndarray) -> np.ndarray:
-        """Pre-processes images - Converts them into a format accepted by SAM (HWC)."""
+    def preproc(image: np.ndarray) -> np.ndarray:
+        """Pre-processes an image - Converts it into a format accepted by SAM (HWC)."""
         # Move the tensor to the CPU if it's a PyTorch tensor
-        if isinstance(images, torch.Tensor):
-            return images.permute(0, 2, 3, 1).cpu().numpy()
+        if isinstance(image, torch.Tensor):
+            return image.permute(1, 2, 0).cpu().numpy()
 
-        return images[:, :, :, :3]  # Remove alpha channel if present
+        return image[..., :3]  # Remove alpha channel if present
 
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:
-        """Post-processes images."""
+        """Post-processes an image."""
         return image

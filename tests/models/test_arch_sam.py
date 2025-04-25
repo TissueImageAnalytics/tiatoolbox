@@ -35,6 +35,8 @@ def test_functional_sam(
 
     # create image patch and prompts
     patch = np.expand_dims(img[63:191, 750:878, :], axis=0)
+    patch = model.preproc(patch)  # pre-process the image
+
     points = np.array([[[64, 64]]], dtype=np.int32)
     boxes = np.array([[64, 64, 128, 128]], dtype=np.int32)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import shutil
 from pathlib import Path
@@ -183,7 +184,8 @@ class PromptSegmentor(SemanticSegmentor):
         """
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir=save_dir)
 
-        ioconfig = self._update_ioconfig(ioconfig, mode)
+        if ioconfig is None and self.ioconfig is not None:
+            ioconfig = copy.deepcopy(self.ioconfig)
 
         # use external for testing
         self._device = device
@@ -246,8 +248,8 @@ class PromptSegmentor(SemanticSegmentor):
         self,
         wsi_idx: int,
         ioconfig: IOSegmentorConfig,
-        point_coords: list[IntPair] | None = None,
-        box_coords: list[IntBounds] | None = None,
+        point_coords: np.ndarray | None = None,
+        box_coords: np.ndarray | None = None,
         save_path: str | Path | None = None,
         mode: str = "tile",
     ) -> tuple[Path, Path, Path]:
@@ -290,11 +292,17 @@ class PromptSegmentor(SemanticSegmentor):
             resolution = ioconfig.to_baseline().highest_input_resolution
             wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
             image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
-            num_prompts = len(point_coords) + len(box_coords)
 
             if self.multi_prompt:
                 patch_inputs = np.array([np.copy(image_patch)])
+                point_coords = (
+                    np.array([point_coords]) if point_coords is not None else None
+                )
+                box_coords = np.array([box_coords]) if box_coords is not None else None
             else:
+                num_prompts = (len(point_coords) if point_coords else 0) + (
+                    len(box_coords) if box_coords else 0
+                )
                 patch_inputs = np.array(
                     [np.copy(image_patch) for _ in range(num_prompts)]
                 )
@@ -315,11 +323,6 @@ class PromptSegmentor(SemanticSegmentor):
                     patch_input_shape=ioconfig.patch_input_shape,
                     stride_shape=ioconfig.stride_shape,
                 )
-
-        if mask_reader is not None:
-            patch_inputs = self.filter_coordinates(
-                mask_reader, patch_inputs, **resolution
-            )
 
         patch_outputs = patch_inputs.copy()
 
@@ -361,14 +364,17 @@ class PromptSegmentor(SemanticSegmentor):
             # each of shape N x etc. (N=batch size)
             sample_outputs = self.model.infer_batch(
                 self._model,
-                sample_datas,
+                sample_datas[0].numpy(),
                 point_coords=points,
                 box_coords=boxes,
                 device=self._device,
             )
+
             # repackage so that it's an N list, each contains
             # L x etc. output
-            sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
+            sample_outputs = [
+                np.split(np.array(v), batch_size, axis=0) for v in sample_outputs
+            ]
             sample_outputs = list(zip(*sample_outputs))
 
             # tensor to numpy, costly?
@@ -396,9 +402,9 @@ class PromptSegmentor(SemanticSegmentor):
         self,
         cum_batch_predictions: list,
         wsi_reader: WSIReader,
-        ioconfig: IOSegmentorConfig,
         save_path: str,
         cache_dir: str,
+        mode: str = "tile",
     ) -> None:
         """Define how the aggregated predictions are processed.
 
@@ -412,18 +418,20 @@ class PromptSegmentor(SemanticSegmentor):
                 should be of (location, patch_predictions).
             wsi_reader (:class:`WSIReader`):
                 A reader for the image where the predictions come from.
-            ioconfig (:class:`IOSegmentorConfig`):
-                A configuration object contains input and output
-                information.
             save_path (str):
                 Root path to save current WSI predictions.
             cache_dir (str):
                 Root path to cache current WSI data.
+            mode (str):
+                Type of input to process. Can either be `tile` or
+                `wsi`.
 
         """
         wsi_shape = wsi_reader.slide_dimensions(1.0, "baseline")
+        cache_dir = Path(cache_dir)
+        save_path = Path(save_path)
 
-        if ioconfig.mode == "tile":
+        if mode == "tile":
             for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
                 mask_memmap, score_memmap = self._prepare_save_output(
                     save_path / f"_{i}",
@@ -436,14 +444,28 @@ class PromptSegmentor(SemanticSegmentor):
 
                 # store the predictions
                 mask_memmap[y1:y2, x1:x2] = mask[0]
-                score_memmap[y1:y2, x1:x2] = score[0]
+                score_memmap[i] = score[0]
 
                 mask_memmap.flush()
                 score_memmap.flush()
 
-        elif ioconfig.mode == "wsi":
-            mask = np.zeros(wsi_shape, dtype=np.uint8)
-            cache_dir = Path(cache_dir)
+        elif mode == "wsi":
+            mask_memmap, score_memmap = self._prepare_save_output(
+                save_path,
+                wsi_shape,
+                cum_batch_predictions.shape[0],
+            )
+            for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
+                x1, y1, x2, y2 = location
+                mask = patch_prediction[0]
+                score = patch_prediction[1]
+
+                # store the predictions
+                mask_memmap[y1:y2, x1:x2] = mask[0]
+                score_memmap[i] = score[0]
+
+                mask_memmap.flush()
+                score_memmap.flush()
 
             # Generate annotations
 
@@ -461,9 +483,9 @@ class PromptSegmentor(SemanticSegmentor):
         them to the mask bounding box. Only non-empty boxes are kept.
 
         Unlike the `filter_coordinates` function in the base class, this
-        function does not discard patches that are outside the mask
-        bounding box. Instead, it clips them to within the mask bounding box,
-        unless the patch is completely outside.
+        function clips patches to within the mask bounding box, and discards
+        patches that are completely outside. Therefore, masks should
+        be overestimates of the area of interest.
 
         Args:
             mask_reader (VirtualWSIReader):
@@ -532,7 +554,7 @@ class PromptSegmentor(SemanticSegmentor):
         mode: str,
         ioconfig: IOSegmentorConfig,
         point_coords: list[IntPair],
-        box_coords: list[IntBounds],
+        box_coords: IntBounds,
         save_dir: str | Path,
         *,
         crash_on_exception: bool,
@@ -553,9 +575,9 @@ class PromptSegmentor(SemanticSegmentor):
                 Object defines information about input and output
                 placement of patches.
             point_coords (list):
-                List of point coordinates for each image.
-            box_coords (list):
-                List of bounding box coordinates for each image.
+                List of point coordinates.
+            box_coords (IntBounds):
+                Bounding box coordinates in [x1, y1, x2, y2] form.
             save_dir (str, Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
