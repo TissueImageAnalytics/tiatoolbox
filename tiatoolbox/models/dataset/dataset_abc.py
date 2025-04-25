@@ -574,9 +574,9 @@ class PatchDataset(PatchDatasetABC):
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
         patch_input_shape (tuple):
-                Size of patches input to the model. Patches are at
-                requested read resolution, not with respect to level 0,
-                and must be positive.
+            Size of patches input to the model. Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
 
     Examples:
         >>> # A user defined preproc func and expected behavior

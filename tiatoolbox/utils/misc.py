@@ -1351,7 +1351,7 @@ def dict_to_store_patch_predictions(
     class_dict: dict | None = None,
     save_path: Path | None = None,
 ) -> AnnotationStore | Path:
-    """Converts output of TIAToolbox PatchPredictor engines to AnnotationStore.
+    """Converts output of TIAToolbox PatchPredictor engine to AnnotationStore.
 
     Args:
         patch_output (dict | zarr.Group):

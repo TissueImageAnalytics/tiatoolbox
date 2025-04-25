@@ -395,7 +395,7 @@ class SemanticSegmentor(PatchPredictor):
 
         Args:
             images (list, ndarray):
-                List of inputs to process. when using `patch` mode, the
+                List of inputs to process. When using `patch` mode, the
                 input must be either a list of images, a list of image
                 file paths or a numpy array of an image list.
             masks (list | None):
