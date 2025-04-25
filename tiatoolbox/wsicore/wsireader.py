@@ -3874,7 +3874,6 @@ class FsspecJsonWSIReader(WSIReader):
         path = Path(file_path)
 
         if path.suffix.lower() != ".json":
-            logger.error("File does not have a .json extension.")
             return False
 
         try:
