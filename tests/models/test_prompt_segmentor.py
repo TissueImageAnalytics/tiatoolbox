@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable
 
 import numpy as np
+import torch
 
 from tiatoolbox.models import PromptSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
@@ -50,16 +51,16 @@ def test_functional_segmentor(
     shutil.rmtree(save_dir, ignore_errors=True)
 
     model = SAM()
-    model.load_state_dict(fetch_pretrained_weights("segment_anything-base"))
+    pretrained = fetch_pretrained_weights("segment_anything-base")
+    model.load_state_dict(torch.load(pretrained, map_location="cpu"))
 
     prompt_segmentor = PromptSegmentor(model, BATCH_SIZE, NUM_LOADER_WORKERS)
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
-            {"units": "mpp", "resolution": 2.0},
-            {"units": "mpp", "resolution": 1.0},
+            {"units": "baseline", "resolution": 1.0},
         ],
-        output_resolutions=[{"units": "mpp", "resolution": 2.0}],
+        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_input_shape=[512, 512],
         patch_output_shape=[512, 512],
     )
@@ -88,7 +89,7 @@ def test_functional_segmentor(
         mode="tile",
         multi_prompt=False,
         device=select_device(on_gpu=ON_GPU),
-        points_coords=points,
+        point_coords=points,
         ioconfig=ioconfig,
         crash_on_exception=False,
         save_dir=save_dir,

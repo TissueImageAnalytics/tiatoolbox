@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Callable
 
 import numpy as np
+import torch
 
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.sam import SAM
@@ -29,7 +30,8 @@ def test_functional_sam(
     # test creation
 
     model = SAM()
-    model.load_state_dict(weights_path)
+    pretrained = torch.load(weights_path, map_location="cpu")
+    model.load_state_dict(pretrained)
 
     # test inference
 

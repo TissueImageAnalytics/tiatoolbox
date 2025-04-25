@@ -149,8 +149,10 @@ class SAM(ModelABC):
                 Tuple of masks and scores for each image in the batch.
 
         """
-        model.eval()
-        model = model.to(device).type(torch.float32)
+        model.eval().to(device)
+
+        if isinstance(batch_data, torch.Tensor):
+            batch_data = batch_data.cpu().numpy()  
 
         with torch.inference_mode():
             masks, scores = model(batch_data, point_coords, box_coords)
@@ -160,11 +162,9 @@ class SAM(ModelABC):
         """Encodes the image for feature extraction."""
         self.predictor.set_image(image)
 
-    def load_state_dict(self: SAM, checkpoint_path: str) -> None:
-        """Loads model weights from specified checkpoint."""
-        self.model.load_state_dict(
-            torch.load(checkpoint_path, map_location=self.device)
-        )
+    def load_state_dict(self: SAM, state_dict: str, **kwargs) -> None:
+        """Loads model weights from specified state dictionary."""
+        self.model.load_state_dict(state_dict, **kwargs)
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:

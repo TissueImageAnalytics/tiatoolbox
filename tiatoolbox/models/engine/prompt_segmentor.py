@@ -309,7 +309,7 @@ class PromptSegmentor(SemanticSegmentor):
 
         elif mode == "wsi":
             # Takes the second resolution from ioconfig
-            resolution = ioconfig.input_resolutions[1]
+            resolution = ioconfig.output_resolutions[0]
             wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
             if self.multi_prompt:
                 patch_inputs = np.array([[0, 0, wsi_proc_shape[0], wsi_proc_shape[1]]])
@@ -362,9 +362,12 @@ class PromptSegmentor(SemanticSegmentor):
 
             # assume to return a list of L output,
             # each of shape N x etc. (N=batch size)
+            
+            logger.debug(sample_datas.shape)
+
             sample_outputs = self.model.infer_batch(
                 self._model,
-                sample_datas[0].numpy(),
+                sample_datas,
                 point_coords=points,
                 box_coords=boxes,
                 device=self._device,
@@ -390,9 +393,9 @@ class PromptSegmentor(SemanticSegmentor):
         self._process_predictions(
             cum_output,
             wsi_reader,
-            ioconfig,
             save_path,
             cache_dir,
+            mode,
         )
 
         # clean up the cache directories
@@ -428,32 +431,32 @@ class PromptSegmentor(SemanticSegmentor):
 
         """
         wsi_shape = wsi_reader.slide_dimensions(1.0, "baseline")
-        cache_dir = Path(cache_dir)
-        save_path = Path(save_path)
 
         if mode == "tile":
             for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
                 mask_memmap, score_memmap = self._prepare_save_output(
-                    save_path / f"_{i}",
-                    wsi_shape,
-                    cum_batch_predictions.shape[0],
+                    f"{save_path}.{i}.raw.0.npy",
+                    f"{save_path}.{i}.raw.1.npy",
+                    tuple(wsi_shape),
+                    (len(cum_batch_predictions),),
                 )
-                x1, y1, x2, y2 = location
+                x1, y1, x2, y2 = location[0]
                 mask = patch_prediction[0]
                 score = patch_prediction[1]
 
                 # store the predictions
                 mask_memmap[y1:y2, x1:x2] = mask[0]
-                score_memmap[i] = score[0]
+                score_memmap[i] = score[0][0]
 
                 mask_memmap.flush()
                 score_memmap.flush()
 
         elif mode == "wsi":
             mask_memmap, score_memmap = self._prepare_save_output(
-                save_path,
+                f"{save_path}.raw.0.npy",
+                f"{save_path}.raw.1.npy",
                 wsi_shape,
-                cum_batch_predictions.shape[0],
+                len(cum_batch_predictions)
             )
             for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
                 x1, y1, x2, y2 = location
@@ -461,8 +464,8 @@ class PromptSegmentor(SemanticSegmentor):
                 score = patch_prediction[1]
 
                 # store the predictions
-                mask_memmap[y1:y2, x1:x2] = mask[0]
-                score_memmap[i] = score[0]
+                mask_memmap[y1:y2, x1:x2] = mask[i]
+                score_memmap[i] = score[i][0]
 
                 mask_memmap.flush()
                 score_memmap.flush()
@@ -627,21 +630,25 @@ class PromptSegmentor(SemanticSegmentor):
 
     def _prepare_save_output(
         self,
-        save_path: str | Path,
+        mask_path: str | Path,
+        score_path: str | Path,
         mask_shape: tuple[int, ...],
         scores_shape: tuple[int, ...],
     ) -> tuple:
         """Prepares for saving the cached output."""
-        if save_path is not None:
-            save_path = Path(save_path)
+        # Check if save path exists
+
+        if mask_path is not None and score_path is not None:
+            mask_path = Path(mask_path)
+            score_path = Path(score_path)
             mask_memmap = np.lib.format.open_memmap(
-                save_path / "0.npy",
+                mask_path,
                 mode="w+",
                 shape=mask_shape,
                 dtype=np.uint8,
             )
             score_memmap = np.lib.format.open_memmap(
-                save_path / "1.npy",
+                score_path,
                 mode="w+",
                 shape=scores_shape,
                 dtype=np.float32,
