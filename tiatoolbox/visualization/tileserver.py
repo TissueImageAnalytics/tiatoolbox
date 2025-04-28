@@ -744,9 +744,9 @@ class TileServer(Flask):
         if the service is operational.
 
         Returns:
-            Response: 
+            Response:
                 A JSON response with status "OK" and HTTP status code 200.
-                
+
         """
         return jsonify({"status": "OK"})
 
