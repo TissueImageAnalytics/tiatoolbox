@@ -724,10 +724,10 @@ class TileServer(Flask):
         """Retrieve a mapping of session keys to their corresponding slide file paths.
 
         Returns:
-            Response: 
+            Response:
                 A JSON response containing a mapping of session keys
                 and their respective slide file paths.
-                
+
         """
         session_paths = {}
         for key, layer in self.layers.items():
