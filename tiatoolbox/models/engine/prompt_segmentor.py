@@ -8,7 +8,6 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import cv2
 import joblib
 import numpy as np
 import torch
@@ -71,50 +70,6 @@ class PromptSegmentor(SemanticSegmentor):
             dataset_class=dataset_class,
         )
         self.multi_prompt = True
-
-    def _bound_prompts(
-        self,
-        bounds: IntBounds | None,
-        point_coords: list[IntPair] | None = None,
-        box_coords: list[IntBounds] | None = None,
-    ) -> tuple[list[IntPair], list[IntBounds]]:
-        """Bound the prompts to the region of interest."""
-        if bounds is not None:
-            if point_coords is not None:
-                point_coords = (
-                    np.array(point_coords) - np.array(bounds[:2])
-                ) * np.array(self.scale_factor)
-
-            if box_coords is not None:
-                new_box_coords = []
-                for left, top, right, bottom in box_coords:
-                    new_left, new_top = (
-                        np.array([left, top]) - np.array(bounds[:2])
-                    ) * np.array(self.scale_factor)
-                    new_right, new_bottom = (
-                        np.array([right, bottom]) - np.array(bounds[:2])
-                    ) * np.array(self.scale_factor)
-
-                    new_box_coords.append([new_left, new_top, new_right, new_bottom])
-                box_coords = np.array(new_box_coords)
-        return point_coords, box_coords
-
-    def _unbound_masks(self, masks: list[np.ndarray], bounds: IntBounds) -> np.ndarray:
-        """Unbound the masks to the original image size."""
-        new_masks = []
-
-        for mask in masks:
-            new_size = (bounds[2] - bounds[0], bounds[3] - bounds[1])
-
-            # Resizes the mask into the box at base resolution
-            resized_mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
-
-            new_mask = np.zeros(np.array(self.slide_dims)[::-1], dtype=np.uint8)
-
-            # Stores mask into base resolution whole image
-            new_mask[bounds[1] : bounds[3], bounds[0] : bounds[2]] = resized_mask
-            new_masks.append(new_mask)
-        return np.array(new_masks, dtype=np.uint8)
 
     def predict(
         self,
@@ -288,41 +243,15 @@ class PromptSegmentor(SemanticSegmentor):
             auto_get_mask=self.auto_generate_mask,
         )
 
-        if mode == "tile":
-            resolution = ioconfig.to_baseline().highest_input_resolution
-            wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
-            image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
-
-            if self.multi_prompt:
-                patch_inputs = np.array([np.copy(image_patch)])
-                point_coords = (
-                    np.array([point_coords]) if point_coords is not None else None
-                )
-                box_coords = np.array([box_coords]) if box_coords is not None else None
-            else:
-                num_prompts = (len(point_coords) if point_coords else 0) + (
-                    len(box_coords) if box_coords else 0
-                )
-                patch_inputs = np.array(
-                    [np.copy(image_patch) for _ in range(num_prompts)]
-                )
-
-        elif mode == "wsi":
-            # Takes the second resolution from ioconfig
-            resolution = ioconfig.output_resolutions[0]
-            wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
-            if self.multi_prompt:
-                patch_inputs = np.array([[0, 0, wsi_proc_shape[0], wsi_proc_shape[1]]])
-            else:
-                patch_extractor = PointsPatchExtractor(
-                    wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
-                )
-                patch_inputs, patch_outputs = patch_extractor.get_coordinates(
-                    patch_output_shape=ioconfig.patch_output_shape,
-                    image_shape=wsi_proc_shape,
-                    patch_input_shape=ioconfig.patch_input_shape,
-                    stride_shape=ioconfig.stride_shape,
-                )
+        patch_inputs, point_coords, box_coords = self.get_coordinates(
+            wsi_reader,
+            ioconfig,
+            mode,
+            mask_reader,
+            point_coords=point_coords,
+            box_coords=box_coords,
+            multi_prompt=self.multi_prompt,
+        )
 
         patch_outputs = patch_inputs.copy()
 
@@ -362,8 +291,6 @@ class PromptSegmentor(SemanticSegmentor):
 
             # assume to return a list of L output,
             # each of shape N x etc. (N=batch size)
-            
-            logger.debug(sample_datas.shape)
 
             sample_outputs = self.model.infer_batch(
                 self._model,
@@ -401,6 +328,131 @@ class PromptSegmentor(SemanticSegmentor):
         # clean up the cache directories
         shutil.rmtree(cache_dir)
 
+    @staticmethod
+    def get_coordinates(
+        wsi_reader: WSIReader,
+        ioconfig: IOSegmentorConfig,
+        mode: str,
+        mask_reader: VirtualWSIReader | None = None,
+        point_coords: np.ndarray | None = None,
+        box_coords: np.ndarray | None = None,
+        *,
+        multi_prompt: bool = False,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Calculate patch tiling coordinates.
+
+        ! Update this docstring to reflect the new API.
+
+        By default, internally, it will call the
+        `PatchExtractor.get_coordinates`. To use your own approach,
+        either subclass to overwrite or directly assign your own
+        function to this name. In either cases, the function must obey
+        the API defined here.
+
+        Args:
+            wsi_reader (WSIReader):
+                A reader for the image where the predictions come from.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Configuration for input/output processing.
+            mode (str):
+                The mode of prediction. Can be either `tile` or `wsi`.
+            mask_reader (VirtualWSIReader):
+                A reader for the mask image where the predictions come from.
+            point_coords (np.ndarray):
+                Point coordinates for the current image as [x, y] pairs.
+            box_coords (np.ndarray):
+                Bounding box coordinates for the current image as
+                [x1, y1, x2, y2] pairs.
+            multi_prompt (bool):
+                Whether to use multiple prompts simultaneously for segmentation.
+                If false, the image will be processed for each prompt separately.
+
+        Returns:
+            tuple:
+                List of patch inputs and outputs
+
+                - :py:obj:`list` - patch_inputs:
+                    A list of corrdinates in `[start_x, start_y, end_x,
+                    end_y]` format indicating the read location of the
+                    patch in the mother image.
+
+                - point_coords:
+                    A list of point coordinates for the current image
+                    as `[x, y]` pairs.
+                - box_coords:
+                    A list of bounding box coordinates for the current
+                    image as `[x1, y1, x2, y2]` pairs.
+
+        Examples:
+            >>> # API of function expected to overwrite `get_coordinates`
+            >>> def func(image_shape, ioconfig):
+            ...   patch_inputs = np.array([[0, 0, 256, 256]])
+            ...   patch_outputs = np.array([[0, 0, 256, 256]])
+            ...   return patch_inputs, patch_outputs
+            >>> segmentor = SemanticSegmentor(model='unet')
+            >>> segmentor.get_coordinates = func
+
+        """
+        resolution = ioconfig.to_baseline().highest_input_resolution
+        wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
+        image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
+
+        if mask_reader is not None:
+            point_coords = (
+                PromptSegmentor.filter_coordinates(
+                    mask_reader, point_coords, **resolution
+                )
+                if point_coords is not None
+                else None
+            )
+
+            box_coords = (
+                PromptSegmentor.clip_coordinates(mask_reader, box_coords, **resolution)
+                if box_coords is not None
+                else None
+            )
+
+        if multi_prompt:
+            patch_inputs = np.array([np.copy(image_patch)])
+            point_coords = (
+                np.array([point_coords]) if point_coords is not None else None
+            )
+            box_coords = np.array([box_coords]) if box_coords is not None else None
+        else:
+            num_prompts = sum(
+                len(coords)
+                for coords in (point_coords, box_coords)
+                if coords is not None
+            )
+            if mode == "tile":
+                patch_inputs = np.array(
+                    [np.copy(image_patch) for _ in range(num_prompts)]
+                )
+            elif mode == "wsi":
+                patch_extractor = PointsPatchExtractor(
+                    wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
+                )
+                patch_inputs, _ = patch_extractor.get_coordinates(
+                    patch_output_shape=ioconfig.patch_output_shape,
+                    image_shape=wsi_proc_shape,
+                    patch_input_shape=ioconfig.patch_input_shape,
+                    stride_shape=ioconfig.stride_shape,
+                )
+
+            def format_coords(coords: np.ndarray) -> np.ndarray:
+                return np.array([[xy] for xy in coords]) if coords is not None else None
+
+            point_coords = format_coords(point_coords)
+            box_coords = format_coords(box_coords)
+
+        if mask_reader is not None:
+            patch_inputs = np.array(
+                PromptSegmentor.clip_coordinates(
+                    mask_reader, patch_inputs, **resolution
+                )
+            )
+        return patch_inputs, point_coords, box_coords
+
     def _process_predictions(
         self,
         cum_batch_predictions: list,
@@ -433,10 +485,11 @@ class PromptSegmentor(SemanticSegmentor):
         wsi_shape = wsi_reader.slide_dimensions(1.0, "baseline")
 
         if mode == "tile":
+            self._prepare_save_dir(save_path)
             for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
                 mask_memmap, score_memmap = self._prepare_save_output(
-                    f"{save_path}.{i}.raw.0.npy",
-                    f"{save_path}.{i}.raw.1.npy",
+                    Path(save_path) / f"{i}.raw.0.npy",
+                    Path(save_path) / f"{i}.raw.1.npy",
                     tuple(wsi_shape),
                     (len(cum_batch_predictions),),
                 )
@@ -453,10 +506,10 @@ class PromptSegmentor(SemanticSegmentor):
 
         elif mode == "wsi":
             mask_memmap, score_memmap = self._prepare_save_output(
-                f"{save_path}.raw.0.npy",
-                f"{save_path}.raw.1.npy",
+                f"{cache_dir}/0.raw.0.npy",
+                f"{cache_dir}/0.raw.1.npy",
                 wsi_shape,
-                len(cum_batch_predictions)
+                len(cum_batch_predictions),
             )
             for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
                 x1, y1, x2, y2 = location
@@ -464,8 +517,8 @@ class PromptSegmentor(SemanticSegmentor):
                 score = patch_prediction[1]
 
                 # store the predictions
-                mask_memmap[y1:y2, x1:x2] = mask[i]
-                score_memmap[i] = score[i][0]
+                mask_memmap[y1:y2, x1:x2] = mask[0]
+                score_memmap[i] = score[0][0]
 
                 mask_memmap.flush()
                 score_memmap.flush()
@@ -473,17 +526,31 @@ class PromptSegmentor(SemanticSegmentor):
             # Generate annotations
 
     @staticmethod
-    def filter_coordinates(
+    def get_mask_bounds(
+        mask_reader: VirtualWSIReader,
+    ) -> np.ndarray:
+        """Generate a bounding box for the mask."""
+        if not isinstance(mask_reader, VirtualWSIReader):
+            msg = "`mask_reader` should be VirtualWSIReader."
+            raise TypeError(msg)
+
+        ys, xs = np.where(mask_reader.img > 0)
+        x_min, x_max = xs.min(), xs.max()
+        y_min, y_max = ys.min(), ys.max()
+        return np.array([x_min, y_min, x_max, y_max])
+
+    @staticmethod
+    def clip_coordinates(
         mask_reader: VirtualWSIReader,
         bounds: np.ndarray,
         resolution: Resolution | None = None,
         units: Units | None = None,
     ) -> np.ndarray:
-        """Filter coordinates to the mask bounding box.
+        """Clip coordinates to the mask bounding box.
 
-        This function filters the coordinates to the bounding box of the mask
-        reader. It scales the coordinates to the mask resolution and clips
-        them to the mask bounding box. Only non-empty boxes are kept.
+        This function scales the provided coordinates to the mask
+        resolution and clips them to the mask bounding box.
+        Only non-empty boxes are kept.
 
         Unlike the `filter_coordinates` function in the base class, this
         function clips patches to within the mask bounding box, and discards
@@ -526,10 +593,7 @@ class PromptSegmentor(SemanticSegmentor):
         scale_factor = scale_factor[0]  # what if ratio x != y
 
         # Get mask bounding box
-        ys, xs = np.where(mask_reader.img > 0)
-        x_min, x_max = xs.min(), xs.max()
-        y_min, y_max = ys.min(), ys.max()
-        mask_bbox = np.array([x_min, y_min, x_max, y_max])
+        mask_bbox = PromptSegmentor.get_mask_bounds(mask_reader)
 
         # Scale bounds to mask resolution
         scaled_bounds = np.ceil(bounds * scale_factor).astype(np.int32)

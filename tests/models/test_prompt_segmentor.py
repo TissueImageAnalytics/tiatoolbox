@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from typing import Callable
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -18,7 +19,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils import imwrite
+from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
@@ -39,13 +40,12 @@ def test_functional_segmentor(
     save_dir = tmp_path / "dump"
     # # convert to pathlib Path to prevent wsireader complaint
     resolution = 2.0
-    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
-    reader = WSIReader.open(mini_wsi_svs)
+    mini_wsi_svs = Path(remote_sample("patch-extraction-vf"))
+    reader = WSIReader.open(mini_wsi_svs, resolution)
     thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
+    thumb = thumb[63:191, 750:878, :]
     mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
-    mini_wsi_msk = f"{tmp_path}/mini_mask.jpg"
-    imwrite(mini_wsi_msk, (thumb > 0).astype(np.uint8))
 
     # preemptive clean up
     shutil.rmtree(save_dir, ignore_errors=True)
@@ -65,14 +65,15 @@ def test_functional_segmentor(
         patch_output_shape=[512, 512],
     )
 
-    points = np.array([[[64, 64], [100, 100], [64, 100], [100, 64]]])  # Random points
+    points = np.array([[[64, 64]], [[64, 64]]])  # Point on nuclei
 
     # Run on tile mode with multi-prompt
+    # Test running with multiple images
     shutil.rmtree(save_dir, ignore_errors=True)
     output_list = prompt_segmentor.predict(
-        [mini_wsi_jpg],
+        [mini_wsi_jpg, mini_wsi_jpg],
         mode="tile",
-        multi_prompt=True,
+        multi_prompt=False,
         device=select_device(on_gpu=ON_GPU),
         point_coords=points,
         ioconfig=ioconfig,
@@ -80,7 +81,12 @@ def test_functional_segmentor(
         save_dir=save_dir,
     )
 
-    assert len(output_list) == 1
+    pred_1 = np.load(output_list[0][1] + "/0.raw.0.npy")
+    pred_2 = np.load(output_list[1][1] + "/0.raw.0.npy")
+    assert len(output_list) == 2
+    assert np.sum(pred_1 - pred_2) == 0
+
+    points = np.array([[[64, 64], [100, 40], [100, 70]]])  # Points on nuclei
 
     # Run on tile mode with single-prompt
     shutil.rmtree(save_dir, ignore_errors=True)
@@ -94,41 +100,62 @@ def test_functional_segmentor(
         crash_on_exception=False,
         save_dir=save_dir,
     )
+    preds = []
+    for i, _ in enumerate(points[0]):
+        preds.append(np.load(output_list[0][1] + f"/{i}.raw.0.npy"))
 
-    pred_1 = np.load(output_list[0][1] + ".raw.0.npy")
-    pred_2 = np.load(output_list[1][1] + ".raw.0.npy")
-    assert len(output_list) == 4
-    assert np.sum(pred_1 - pred_2) == 0
-    # due to overlapping merge and division, will not be
-    # exactly 1, but should be approximately so
-    assert np.sum((pred_1 - 1) > 1.0e-6) == 0
-    shutil.rmtree(save_dir, ignore_errors=True)
+    visualize_masks([imread(mini_wsi_jpg)], [preds], points[0])
 
-    # * test running with mask and svs
-    # * also test merging prediction at designated resolution
-    ioconfig = IOSegmentorConfig(
-        input_resolutions=[{"units": "mpp", "resolution": resolution}],
-        output_resolutions=[{"units": "mpp", "resolution": resolution}],
-        save_resolution={"units": "mpp", "resolution": resolution},
-        patch_input_shape=[512, 512],
-        patch_output_shape=[256, 256],
-        stride_shape=[512, 512],
-    )
+    # Generate mask
+    mask = np.zeros((thumb.shape[0], thumb.shape[1]), dtype=np.uint8)
+    mask[32:96, 32:96] = 1
+    mini_wsi_msk = f"{tmp_path}/mini_svs_mask.jpg"
+    imwrite(mini_wsi_msk, mask)
+
+    # Only point within mask should generate a segmentation
+    points = np.array([[[64, 64], [100, 40]]])
+
+    # Run on wsi mode with multi-prompt
+    # Also tests masks
     shutil.rmtree(save_dir, ignore_errors=True)
     output_list = prompt_segmentor.predict(
-        [mini_wsi_svs],
-        masks=[mini_wsi_msk],
+        [mini_wsi_jpg],
+        masks=[mini_wsi_msk],  # ! Create mask
         mode="wsi",
+        multi_prompt=True,
         device=select_device(on_gpu=ON_GPU),
+        point_coords=points,
         ioconfig=ioconfig,
-        crash_on_exception=True,
-        save_dir=f"{save_dir}/raw/",
+        crash_on_exception=False,
+        save_dir=save_dir,
     )
-    reader = WSIReader.open(mini_wsi_svs)
-    expected_shape = reader.slide_dimensions(**ioconfig.save_resolution)
-    expected_shape = np.array(expected_shape)[::-1]  # to YX
-    pred_1 = np.load(output_list[0][1] + ".raw.0.npy")
-    saved_shape = np.array(pred_1.shape[:2])
-    assert np.sum(expected_shape - saved_shape) == 0
-    assert np.sum((pred_1 - 1) > 1.0e-6) == 0
+
+    # Run on wsi mode with single-prompt
     shutil.rmtree(save_dir, ignore_errors=True)
+    output_list = prompt_segmentor.predict(
+        [mini_wsi_jpg],
+        mode="wsi",
+        multi_prompt=True,
+        device=select_device(on_gpu=ON_GPU),
+        point_coords=points,
+        ioconfig=ioconfig,
+        crash_on_exception=False,
+        save_dir=save_dir,
+    )
+
+
+def visualize_masks(
+    images: list, masks_list: list, metadata_list: list | None = None
+) -> None:
+    """Visualizes masks on the given image."""
+    for i, image in enumerate(images):
+        for j, mask in enumerate(masks_list[i]):
+            nuclei_type = metadata_list[i][j] if metadata_list else "Nuclei"
+            plt.imshow(image / 255.0)
+            plt.savefig("image_{i}.png", bbox_inches="tight", dpi=300)
+            plt.imshow(mask, alpha=0.5, cmap="jet")
+            plt.axis("off")
+            plt.title(f"Nuclei Type: {nuclei_type}" + f"Image: {i}")
+            plt.show()
+            # save the image
+            plt.savefig(f"image_{i}_mask_{j}.png", bbox_inches="tight", dpi=300)

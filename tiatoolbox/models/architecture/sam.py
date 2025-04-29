@@ -152,7 +152,7 @@ class SAM(ModelABC):
         model.eval().to(device)
 
         if isinstance(batch_data, torch.Tensor):
-            batch_data = batch_data.cpu().numpy()  
+            batch_data = batch_data.cpu().numpy()
 
         with torch.inference_mode():
             masks, scores = model(batch_data, point_coords, box_coords)
@@ -162,7 +162,7 @@ class SAM(ModelABC):
         """Encodes the image for feature extraction."""
         self.predictor.set_image(image)
 
-    def load_state_dict(self: SAM, state_dict: str, **kwargs) -> None:
+    def load_state_dict(self: SAM, state_dict: str, **kwargs: dict) -> None:
         """Loads model weights from specified state dictionary."""
         self.model.load_state_dict(state_dict, **kwargs)
 
