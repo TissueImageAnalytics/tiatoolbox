@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
@@ -12,10 +13,13 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import tifffile
 import torch
+import zarr
 from PIL import Image
 from requests import HTTPError
 from shapely.geometry import Polygon
+from tifffile import TiffFile
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
@@ -1858,3 +1862,77 @@ def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
 
     is_torch_compile_compatible()
     assert "torch.compile" in caplog.text
+
+
+# Tests for OME tiff writer
+
+
+def get_ome_metadata(tiff_path: Path) -> str | None:
+    """Extracts the OME metadata string from a TIFF file."""
+    with TiffFile(tiff_path) as tif:
+        if tif.ome_metadata:
+            return tif.ome_metadata
+    return None
+
+
+def parse_ome_xml(xml_string: str | None) -> ET.Element | None:
+    """Parses the OME XML string into an ElementTree object with namespace awareness."""
+    if xml_string:
+        ET.register_namespace(
+            "ome", "http://www.openmicroscopy.org/Schemas/OME/2016-06"
+        )
+        root = ET.fromstring(xml_string)
+        return root
+    return None
+
+
+def assert_ome_metadata_value(
+    ome_xml: ET.Element, tag: str, expected_value: str
+) -> None:
+    """Asserts the value of a specific OME metadata tag (as an attribute)."""
+    namespace = "{http://www.openmicroscopy.org/Schemas/OME/2016-06}"
+    image_elements = ome_xml.findall(f".//{namespace}Image")
+    if image_elements:
+        pixels_elements = image_elements[0].findall(f"./{namespace}Pixels")
+        if pixels_elements:
+            actual_value = pixels_elements[0].get(tag)
+            assert actual_value == expected_value, (
+                f"Expected attribute '{tag}' to be '{expected_value}', but got '{actual_value}'."
+            )
+            return
+
+    # If we reach here, the tag or attribute was not found
+    ET.dump(ome_xml)
+    assert False, f"Attribute '{tag}' not found in OME metadata."
+
+
+def test_save_numpy_array(tmp_path: Path) -> None:
+    """Tests saving a basic NumPy array."""
+    image_path = tmp_path / "numpy_image.ome.tif"
+    img = np.random.randint(0, 256, size=(100, 150, 3), dtype=np.uint8)
+    misc.imwrite_ome_tiff(image_path, img, tile_size=(64, 64))
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path)
+    assert img.shape == saved_img.shape
+    assert img.dtype == saved_img.dtype
+    ome_xml = parse_ome_xml(get_ome_metadata(image_path))
+    assert ome_xml is not None
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(img.shape[2]))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+
+
+def test_save_zarr_array(tmp_path: Path) -> None:
+    """Tests saving a Zarr array with uint8 dtype."""
+    image_path = tmp_path / "zarr_uint8_image.ome.tif"
+    img_zarr = zarr.zeros((80, 120, 2), dtype=np.uint8, chunks=(40, 60, 2))
+    img_zarr[:] = np.random.randint(0, 256, size=(80, 120, 2), dtype=np.uint8)
+
+    misc.imwrite_ome_tiff(image_path, img_zarr)  # Pass the uint8 Zarr array
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path, squeeze=True)
+    assert img_zarr.shape == saved_img.shape
+    assert saved_img.dtype == np.uint8  # Expect uint8 to be preserved
+    ome_xml = parse_ome_xml(get_ome_metadata(image_path))
+    assert ome_xml is not None

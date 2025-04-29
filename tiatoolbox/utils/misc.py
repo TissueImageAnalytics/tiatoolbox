@@ -167,17 +167,17 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
 def imwrite_ome_tiff(
     image_path: PathLike,
     img: np.ndarray | zarr.core.Array,
-    tile_size: tuple = (256, 256),
+    tile_size: tuple[int, int] = (256, 256),
     channels: list[str] | None = None,
     mpp: tuple[float, float] = (0.25, 0.25),
 ) -> None:
-    """Saves a NumPy or Zarr array (HWC) as an OME-TIFF file with metadata.
+    """Saves a NumPy or Zarr array (YXC/HWC) as an OME-TIFF file with metadata.
 
     Args:
         image_path (PathLike):
             File path (including extension) to save image to.
         img (np.ndarray or zarr.core.Array):
-            The input image data in HWC (Height, Width, Channels) format.
+            The input image data in YXC (Height, Width, Channels) format.
         tile_size (tuple):
             Tile size for writing the tiff file. Default is (256, 256).
         channels (list[str]):
@@ -206,7 +206,7 @@ def imwrite_ome_tiff(
 
     height, width, num_channels = img.shape
 
-    if not channels or len(channels) == 0:
+    if not channels:
         channels = [f"Channel{c + 1}" for c in range(num_channels)]
 
     # Calculate the number of tiles in X and Y
@@ -215,11 +215,11 @@ def imwrite_ome_tiff(
 
     # Construct the base OME metadata as an ElementTree object
     ome = ET.Element("OME", xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06")
-    image_element = ET.SubElement(ome, "Image", ID="Image:0", Name=str(image_path))
+    image_element = ET.Element("Image", ID="Image:0", Name=str(image_path))
     pixels = ET.SubElement(
         image_element,
         "Pixels",
-        DimensionOrder="YXCZT",
+        DimensionOrder="XYCZT",
         ID="Pixels:0",
         Type=str(img.dtype),
     )
@@ -252,17 +252,25 @@ def imwrite_ome_tiff(
 
     # Convert the ElementTree to a string for tifffile
     def prettify_xml(elem: Element) -> str | None:
-        """Prettify OME XML."""
+        """Prettify OME XML using defusedxml for security.
+
+        Args:
+            elem: The XML ElementTree Element to prettify.
+
+        """
         rough_string = ET.tostring(elem, encoding="utf-8", method="xml")
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="  ")
 
     ome_metadata_str = prettify_xml(ome)
 
+    # Prepare metadata dictionary for tifffile
+    ome_dict: dict[str, str] = {"ome": ome_metadata_str}
+
     # Iterate through channels and tiles to save chunk-wise
     with TiffWriter(image_path, bigtiff=True) as tif:
         # Write the OME metadata as the first page (with None as data)
-        tif.write(None, metadata=ome_metadata_str)
+        tif.write(None, metadata=ome_dict, dtype=np.uint8, shape=img.shape)
 
         # Iterate through tiles to save chunk-wise
         for y in range(num_tiles_y):
@@ -273,12 +281,8 @@ def imwrite_ome_tiff(
                 start_x = x * tile_size[1]
                 end_x = min((x + 1) * tile_size[1], width)
 
-                # Extract the tile for the current channel (HWC)
+                # Extract the tile for the current channel (YXC/HWC)
                 tile = img[start_y:end_y, start_x:end_x, :]
-
-                # If it's a Zarr array, compute the chunk
-                if isinstance(img, zarr.core.Array):
-                    tile = tile.compute()
 
                 # Ensure the chunk is compatible with JPEG compression
                 if tile.dtype != "uint8":
