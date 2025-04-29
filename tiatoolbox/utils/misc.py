@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import shutil
 import tempfile
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 from typing import IO, TYPE_CHECKING
@@ -18,11 +20,13 @@ import pandas as pd
 import requests
 import yaml
 import zarr
+from defusedxml import minidom
 from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
+from tifffile import TiffWriter
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
@@ -30,6 +34,7 @@ from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
     from os import PathLike
+    from xml.dom.minidom import Element
 
     from shapely import geometry
 
@@ -159,8 +164,134 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
         raise OSError(msg)
 
 
+def imwrite_ome_tiff(
+    image_path: PathLike,
+    img: np.ndarray | zarr.core.Array,
+    tile_size: tuple = (256, 256),
+    channels: list[str] | None = None,
+    mpp: tuple[float, float] = (0.25, 0.25),
+) -> None:
+    """Saves a NumPy or Zarr array (HWC) as an OME-TIFF file with metadata.
+
+    Args:
+        image_path (PathLike):
+            File path (including extension) to save image to.
+        img (np.ndarray or zarr.core.Array):
+            The input image data in HWC (Height, Width, Channels) format.
+        tile_size (tuple):
+            Tile size for writing the tiff file. Default is (256, 256).
+        channels (list[str]):
+            List containing channel names. This can be an output of a DL model with
+            labels.
+        mpp (tuple[float, float]):
+            Tuple of mpp values in x and y. Default is (0.25, 0.25).
+
+    Raises:
+        TypeError:
+            If the input `img` is not a NumPy or Zarr array or does not have 3
+            dimensions.
+        ValueError:
+            If input dimensions is not 3 (HWC) dimensions.
+
+    """
+    if channels is None:
+        channels = []
+    if not isinstance(img, (zarr.core.Array, np.ndarray)):
+        msg = "Input 'img' must be a NumPy array or a Zarr array."
+        raise TypeError(msg)
+
+    if img.ndim != 3:  # noqa: PLR2004
+        msg = "Input 'img' must have 3 (HWC) dimensions."
+        raise ValueError(msg)
+
+    height, width, num_channels = img.shape
+
+    if not channels or len(channels) == 0:
+        channels = [f"Channel{c + 1}" for c in range(num_channels)]
+
+    # Calculate the number of tiles in X and Y
+    num_tiles_x = math.ceil(width / tile_size[1])
+    num_tiles_y = math.ceil(height / tile_size[0])
+
+    # Construct the base OME metadata as an ElementTree object
+    ome = ET.Element("OME", xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06")
+    image_element = ET.SubElement(ome, "Image", ID="Image:0", Name=str(image_path))
+    pixels = ET.SubElement(
+        image_element,
+        "Pixels",
+        DimensionOrder="YXCZT",
+        ID="Pixels:0",
+        Type=str(img.dtype),
+    )
+    ET.SubElement(pixels, "SizeX", Value=str(width))
+    ET.SubElement(pixels, "SizeY", Value=str(height))
+    ET.SubElement(pixels, "SizeC", Value=str(num_channels))
+    ET.SubElement(pixels, "SizeZ", Value="1")
+    ET.SubElement(pixels, "SizeT", Value="1")
+
+    for i, c in enumerate(channels):
+        ET.SubElement(pixels, "Channel", ID=f"Channel:{i}", Name=f"{c}")
+
+    # Add Plane elements for each tile and channel
+    for c in range(num_channels):
+        for y in range(num_tiles_y):
+            for x in range(num_tiles_x):
+                ET.SubElement(
+                    pixels,
+                    "Plane",
+                    TheC=str(c),
+                    TheZ="0",
+                    TheY=str(y),
+                    TheX=str(x),
+                    TheT="0",
+                )
+
+    # Add the Spatial Calibration (MPP) to the OME metadata
+    ET.SubElement(pixels, "PhysicalSizeX", Value=str(mpp[0]), Unit="µm")
+    ET.SubElement(pixels, "PhysicalSizeY", Value=str(mpp[1]), Unit="µm")
+
+    # Convert the ElementTree to a string for tifffile
+    def prettify_xml(elem: Element) -> str | None:
+        """Prettify OME XML."""
+        rough_string = ET.tostring(elem, encoding="utf-8", method="xml")
+        reparsed = minidom.parseString(rough_string)
+        return reparsed.toprettyxml(indent="  ")
+
+    ome_metadata_str = prettify_xml(ome)
+
+    # Iterate through channels and tiles to save chunk-wise
+    with TiffWriter(image_path, bigtiff=True) as tif:
+        # Write the OME metadata as the first page (with None as data)
+        tif.write(None, metadata=ome_metadata_str)
+
+        # Iterate through tiles to save chunk-wise
+        for y in range(num_tiles_y):
+            for x in range(num_tiles_x):
+                # Calculate the start and end indices for the current tile
+                start_y = y * tile_size[0]
+                end_y = min((y + 1) * tile_size[0], height)
+                start_x = x * tile_size[1]
+                end_x = min((x + 1) * tile_size[1], width)
+
+                # Extract the tile for the current channel (HWC)
+                tile = img[start_y:end_y, start_x:end_x, :]
+
+                # If it's a Zarr array, compute the chunk
+                if isinstance(img, zarr.core.Array):
+                    tile = tile.compute()
+
+                # Ensure the chunk is compatible with JPEG compression
+                if tile.dtype != "uint8":
+                    tile = (tile * 255).astype("uint8")
+
+                # Write the chunk with tiling
+                tif.write(tile, tile=tile_size, compression="jpeg")
+
+        logger.info(f"Image saved as OME-TIFF to {image_path}")
+
+
 def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
-    """Read an image as numpy array.
+    """Read an image as a NumPy array.
 
     Args:
         image_path (PathLike):
