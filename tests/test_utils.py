@@ -1858,3 +1858,76 @@ def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
 
     is_torch_compile_compatible()
     assert "torch.compile" in caplog.text
+
+
+def test_dict_to_store_semantic_segment() -> None:
+    """Tests multipoint behaviour in dict_to_store."""
+    test_pred = np.zeros(shape=(224, 224))
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert not store_.values()
+
+    patch_output["predictions"][100, 100] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert len(store_) == 1
+
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" not in annotations_geometry_type
+
+    patch_output["predictions"][110:155, 110:115] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert len(store_) == 2
+
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
+
+    patch_output["predictions"][50, 50] = 1
+    patch_output["predictions"][50, 51] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert len(store_) == 3
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
+    assert "Line String" in annotations_geometry_type
