@@ -1970,3 +1970,7 @@ def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
     assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[1]))
     assert_ome_metadata_value(ome_xml, "SizeC", str(img_zarr.shape[2]))
     assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
