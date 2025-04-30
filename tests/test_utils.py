@@ -1909,25 +1909,25 @@ def assert_ome_metadata_value(
 def test_save_numpy_array(tmp_path: Path) -> None:
     """Tests saving a basic NumPy array."""
     image_path = tmp_path / "numpy_image.ome.tif"
-    img = np.random.randint(0, 256, size=(100, 150, 3), dtype=np.uint8)
-    misc.imwrite_ome_tiff(image_path, img, tile_size=(64, 64))
+    img = np.random.randint(0, 256, size=(3, 100, 150), dtype=np.uint8)
+    misc.imwrite_ome_tiff(image_path, img, channels=["Red", "Green", "Blue"])
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path)
     assert img.shape == saved_img.shape
     assert img.dtype == saved_img.dtype
     ome_xml = parse_ome_xml(get_ome_metadata(image_path))
     assert ome_xml is not None
-    assert_ome_metadata_value(ome_xml, "SizeX", str(img.shape[1]))
-    assert_ome_metadata_value(ome_xml, "SizeY", str(img.shape[0]))
-    assert_ome_metadata_value(ome_xml, "SizeC", str(img.shape[2]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img.shape[2]))
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(img.shape[0]))
     assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
 
 
 def test_save_zarr_array(tmp_path: Path) -> None:
     """Tests saving a Zarr array with uint8 dtype."""
     image_path = tmp_path / "zarr_uint8_image.ome.tif"
-    img_zarr = zarr.zeros((80, 120, 2), dtype=np.uint8, chunks=(40, 60, 2))
-    img_zarr[:] = np.random.randint(0, 256, size=(80, 120, 2), dtype=np.uint8)
+    img_zarr = zarr.zeros((2, 80, 120), dtype=np.uint8, chunks=(2, 40, 60))
+    img_zarr[:] = np.random.randint(0, 256, size=(2, 80, 120), dtype=np.uint8)
 
     misc.imwrite_ome_tiff(image_path, img_zarr)  # Pass the uint8 Zarr array
     assert image_path.is_file()
@@ -1936,3 +1936,7 @@ def test_save_zarr_array(tmp_path: Path) -> None:
     assert saved_img.dtype == np.uint8  # Expect uint8 to be preserved
     ome_xml = parse_ome_xml(get_ome_metadata(image_path))
     assert ome_xml is not None
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[2]))
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(img_zarr.shape[0]))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
