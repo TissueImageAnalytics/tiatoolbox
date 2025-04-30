@@ -51,7 +51,7 @@ def pair_coordinates(
         >>> set_a = np.random.randint(low=0, high=25, size=(set_a_num_points, 2))
         >>> set_b = np.random.randint(low=0, high=25, size=(set_b_num_points, 2))
         >>> radius = 2.0
-        >>>
+
         >>> # Example usage of pair_coordinates
         >>> from tiatoolbox.utils.metrics import pair_coordinates
         >>> pairing, unpaired_a, unpaired_b = pair_coordinates(set_a, set_b, radius)
@@ -92,7 +92,7 @@ def f1_detection(true: np.ndarray, pred: np.ndarray, radius: float) -> float:
         >>> true = np.random.randint(low=0, high=25, size=(true_num_points, 2))
         >>> pred = np.random.randint(low=0, high=25, size=(pred_num_points, 2))
         >>> radius = 2.0
-        >>>
+
         >>> # Example usage of f1_detection
         >>> from tiatoolbox.utils.metrics import f1_detection
         >>> f1_score = f1_detection(true, pred, radius)
@@ -127,15 +127,15 @@ def dice(gt_mask: np.ndarray, pred_mask: np.ndarray) -> float:
             An estimate of Sørensen-Dice coefficient value.
 
     Examples:
-    >>> # Generate two random example masks; replace with your own data
-    >>> import numpy as np
-    >>> np.random.seed(6)
-    >>> gt_mask = (np.random.rand(256, 256) > 0.8).astype(np.uint8)
-    >>> pred_mask = (np.random.rand(256, 256) > 0.8).astype(np.uint8)
-    >>>
-    >>> # Example usage of dice
-    >>> from tiatoolbox.utils.metrics import dice
-    >>> dice_score = dice(gt_mask, pred_mask)
+        >>> # Generate two random example masks; replace with your own data
+        >>> import numpy as np
+        >>> np.random.seed(6)
+        >>> gt_mask = (np.random.rand(256, 256) > 0.8).astype(np.uint8)
+        >>> pred_mask = (np.random.rand(256, 256) > 0.8).astype(np.uint8)
+
+        >>> # Example usage of dice
+        >>> from tiatoolbox.utils.metrics import dice
+        >>> dice_score = dice(gt_mask, pred_mask)
 
 
     """
