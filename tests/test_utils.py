@@ -1895,6 +1895,28 @@ def assert_ome_metadata_value(
     pytest.fail(f"Attribute '{tag}' not found in OME metadata.")
 
 
+def test_imwrite_ome_tiff_errors(tmp_path: Path) -> None:
+    """Test expected errors in `imwrite_ome_tiff`."""
+    img = np.zeros(shape=(256, 256))
+
+    # Input image must have 3 (CYX) dimensions.
+    with pytest.raises(ValueError, match=r".*must have 3 \(CYX\).*"):
+        misc.imwrite_ome_tiff(
+            image_path=tmp_path / "failed_test.tif",
+            img=img,
+        )
+
+    img = np.zeros(shape=(256, 256, 3))
+    img = torch.from_numpy(img)
+
+    # Input image must be a NumPy array or a Zarr array.
+    with pytest.raises(TypeError, match=r".*must be a NumPy array or a Zarr.*"):
+        misc.imwrite_ome_tiff(
+            image_path=tmp_path / "failed_test.tif",
+            img=img,
+        )
+
+
 def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
     """Tests saving a basic NumPy array."""
     image_path = tmp_path / "numpy_image.ome.tif"
