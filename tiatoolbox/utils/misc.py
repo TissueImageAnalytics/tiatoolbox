@@ -204,7 +204,7 @@ def imwrite_ome_tiff(
         ... channels=["Red", "Green", "Blue"],
         ... mpp=(0.5, 0.5),
         ... photometric="rgb",
-    )
+        ... )
 
     """
     if channels is None:
