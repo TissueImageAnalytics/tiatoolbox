@@ -165,6 +165,7 @@ def imwrite_ome_tiff(
     img: np.ndarray | zarr.core.Array,
     channels: list[str] | None = None,
     mpp: tuple[float, float] = (0.25, 0.25),
+    photometric: str = "minisblack",
 ) -> None:
     """Saves a NumPy or Zarr array (CYX/CHW) as an OME-TIFF file with metadata.
 
@@ -180,6 +181,11 @@ def imwrite_ome_tiff(
             labels.
         mpp (tuple[float, float]):
             Tuple of mpp values in x and y. Default is (0.25, 0.25).
+        photometric (str):
+            Color space of image for tifffile. Default is "minisblack".
+            *MINISBLACK*: for bilevel and grayscale images, 0 is black.
+            *RGB*: the image contains red, green and blue samples.
+            See tifffile for more options.
 
     Raises:
         TypeError:
@@ -199,10 +205,8 @@ def imwrite_ome_tiff(
         msg = "Input 'img' must have 3 (CYX) dimensions."
         raise ValueError(msg)
 
-    num_channels, height, width = img.shape
-
     if not channels:
-        channels = [f"Channel{c + 1}" for c in range(num_channels)]
+        channels = [f"Channel{c + 1}" for c in range(img.shape[0])]
 
     ome_metadata = {
         "axes": "CYX",
@@ -219,15 +223,15 @@ def imwrite_ome_tiff(
         shape=img.shape,
         dtype=img.dtype,
         metadata=ome_metadata,
-        photometric="minisblack",
+        photometric=photometric,
     )
 
     store = tifffile.imread(image_path, mode="r+", aszarr=True)
     z = zarr.open(store, mode="r+")
     z[:] = img
     store.close()
-
-    logger.info(f"Image saved as OME-TIFF to {image_path}")
+    msg = f"Image saved as OME-TIFF to {image_path}."
+    logger.info(msg)
 
 
 def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:

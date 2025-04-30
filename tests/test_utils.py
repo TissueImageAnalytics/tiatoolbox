@@ -1875,16 +1875,6 @@ def get_ome_metadata(tiff_path: Path) -> str | None:
     return None
 
 
-def parse_ome_xml(xml_string: str | None) -> ET.Element | None:
-    """Parses the OME XML string into an ElementTree object with namespace awareness."""
-    if xml_string:
-        ET.register_namespace(
-            "ome", "http://www.openmicroscopy.org/Schemas/OME/2016-06"
-        )
-        return ET.fromstring(xml_string)
-    return None
-
-
 def assert_ome_metadata_value(
     ome_xml: ET.Element, tag: str, expected_value: str
 ) -> None:
@@ -1910,12 +1900,14 @@ def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
     image_path = tmp_path / "numpy_image.ome.tif"
     img = utils.imread(source_image)
     img = np.transpose(img, (2, 0, 1))
-    misc.imwrite_ome_tiff(image_path, img, channels=["Red", "Green", "Blue"])
+    misc.imwrite_ome_tiff(
+        image_path, img, channels=["Red", "Green", "Blue"], photometric="rgb"
+    )
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path)
     assert img.shape == saved_img.shape
     assert img.dtype == saved_img.dtype
-    ome_xml = parse_ome_xml(get_ome_metadata(image_path))
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
     assert ome_xml is not None
     assert_ome_metadata_value(ome_xml, "SizeX", str(img.shape[2]))
     assert_ome_metadata_value(ome_xml, "SizeY", str(img.shape[1]))
@@ -1926,17 +1918,19 @@ def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
 def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
     """Tests saving a Zarr array with uint8 dtype."""
     image_path = tmp_path / "zarr_uint8_image.ome.tif"
-    img_zarr = zarr.zeros((2, 80, 120), dtype=np.uint8, chunks=(2, 40, 60))
+
     img = utils.imread(source_image)
-    img = img[:, :, 2]
-    img_zarr[:] = np.transpose(img, (2, 0, 1))
+    img = img[:, :, 0:2]
+    img = np.transpose(img, axes=(2, 0, 1))
+    img_zarr = zarr.zeros(shape=img.shape, dtype=np.uint8, chunks=(2, 40, 60))
+    img_zarr[:] = img
 
     misc.imwrite_ome_tiff(image_path, img_zarr)  # Pass the uint8 Zarr array
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path, squeeze=True)
     assert img_zarr.shape == saved_img.shape
     assert saved_img.dtype == np.uint8  # Expect uint8 to be preserved
-    ome_xml = parse_ome_xml(get_ome_metadata(image_path))
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
     assert ome_xml is not None
     assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[2]))
     assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[1]))
