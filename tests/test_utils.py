@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import shutil
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
@@ -16,6 +15,7 @@ import pytest
 import tifffile
 import torch
 import zarr
+from defusedxml import ElementTree as ET  # noqa: N817
 from PIL import Image
 from requests import HTTPError
 from shapely.geometry import Polygon
@@ -1881,8 +1881,7 @@ def parse_ome_xml(xml_string: str | None) -> ET.Element | None:
         ET.register_namespace(
             "ome", "http://www.openmicroscopy.org/Schemas/OME/2016-06"
         )
-        root = ET.fromstring(xml_string)
-        return root
+        return ET.fromstring(xml_string)
     return None
 
 
@@ -1897,19 +1896,20 @@ def assert_ome_metadata_value(
         if pixels_elements:
             actual_value = pixels_elements[0].get(tag)
             assert actual_value == expected_value, (
-                f"Expected attribute '{tag}' to be '{expected_value}', but got '{actual_value}'."
+                f"Expected attribute '{tag}' to be '{expected_value}', "
+                f"but got '{actual_value}'."
             )
             return
 
     # If we reach here, the tag or attribute was not found
-    ET.dump(ome_xml)
-    assert False, f"Attribute '{tag}' not found in OME metadata."
+    pytest.fail(f"Attribute '{tag}' not found in OME metadata.")
 
 
-def test_save_numpy_array(tmp_path: Path) -> None:
+def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
     """Tests saving a basic NumPy array."""
     image_path = tmp_path / "numpy_image.ome.tif"
-    img = np.random.randint(0, 256, size=(3, 100, 150), dtype=np.uint8)
+    img = utils.imread(source_image)
+    img = np.transpose(img, (2, 0, 1))
     misc.imwrite_ome_tiff(image_path, img, channels=["Red", "Green", "Blue"])
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path)
@@ -1923,11 +1923,13 @@ def test_save_numpy_array(tmp_path: Path) -> None:
     assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
 
 
-def test_save_zarr_array(tmp_path: Path) -> None:
+def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
     """Tests saving a Zarr array with uint8 dtype."""
     image_path = tmp_path / "zarr_uint8_image.ome.tif"
     img_zarr = zarr.zeros((2, 80, 120), dtype=np.uint8, chunks=(2, 40, 60))
-    img_zarr[:] = np.random.randint(0, 256, size=(2, 80, 120), dtype=np.uint8)
+    img = utils.imread(source_image)
+    img = img[:, :, 2]
+    img_zarr[:] = np.transpose(img, (2, 0, 1))
 
     misc.imwrite_ome_tiff(image_path, img_zarr)  # Pass the uint8 Zarr array
     assert image_path.is_file()
