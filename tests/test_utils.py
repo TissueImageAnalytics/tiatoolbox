@@ -1899,20 +1899,31 @@ def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
     """Tests saving a basic NumPy array."""
     image_path = tmp_path / "numpy_image.ome.tif"
     img = utils.imread(source_image)
-    img = np.transpose(img, (2, 0, 1))
     misc.imwrite_ome_tiff(
-        image_path, img, channels=["Red", "Green", "Blue"], photometric="rgb"
+        image_path=image_path,
+        img=img,
+        tile_size=(10, 15),
+        channels=["Red", "Green", "Blue"],
+        mpp=(0.5, 0.5),
+        photometric="rgb",
     )
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path)
+    saved_img = np.transpose(saved_img, (1, 2, 0))
+    assert np.all(saved_img == img)
     assert img.shape == saved_img.shape
     assert img.dtype == saved_img.dtype
     ome_xml = ET.fromstring(get_ome_metadata(image_path))
     assert ome_xml is not None
-    assert_ome_metadata_value(ome_xml, "SizeX", str(img.shape[2]))
-    assert_ome_metadata_value(ome_xml, "SizeY", str(img.shape[1]))
-    assert_ome_metadata_value(ome_xml, "SizeC", str(img.shape[0]))
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(img.shape[2]))
     assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
 
 
 def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
@@ -1920,19 +1931,20 @@ def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
     image_path = tmp_path / "zarr_uint8_image.ome.tif"
 
     img = utils.imread(source_image)
-    img = img[:, :, 0:2]
-    img = np.transpose(img, axes=(2, 0, 1))
-    img_zarr = zarr.zeros(shape=img.shape, dtype=np.uint8, chunks=(2, 40, 60))
+    img = img[:, 0:200, :]
+    img = np.concatenate((img, img), axis=2)
+    img_zarr = zarr.zeros(shape=img.shape, dtype=np.uint8)
     img_zarr[:] = img
 
-    misc.imwrite_ome_tiff(image_path, img_zarr)  # Pass the uint8 Zarr array
+    misc.imwrite_ome_tiff(image_path, img_zarr, tile_size=(10, 20))
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path, squeeze=True)
-    assert img_zarr.shape == saved_img.shape
-    assert saved_img.dtype == np.uint8  # Expect uint8 to be preserved
+    saved_img = np.transpose(saved_img, (1, 2, 0))
+    assert np.all(saved_img == img_zarr)
     ome_xml = ET.fromstring(get_ome_metadata(image_path))
     assert ome_xml is not None
-    assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[2]))
-    assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[1]))
-    assert_ome_metadata_value(ome_xml, "SizeC", str(img_zarr.shape[0]))
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(img_zarr.shape[2]))
     assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")

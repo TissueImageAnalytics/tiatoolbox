@@ -163,24 +163,25 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
 def imwrite_ome_tiff(
     image_path: PathLike,
     img: np.ndarray | zarr.core.Array,
+    tile_size: tuple[int, int] = (256, 256),
     channels: list[str] | None = None,
     mpp: tuple[float, float] = (0.25, 0.25),
     photometric: str = "minisblack",
 ) -> None:
-    """Saves a NumPy or Zarr array (CYX/CHW) as an OME-TIFF file with metadata.
+    """Saves a NumPy or Zarr array (YXC/HWC) as an OME-TIFF in chunks.
 
     Args:
         image_path (PathLike):
             File path (including extension) to save image to.
         img (np.ndarray or zarr.core.Array):
-            The input image data in CYX (Channels, Height, Width) format.
+            The input image data in YXC (Height, Width, Channels) format.
         tile_size (tuple):
-            Tile size for writing the tiff file. Default is (256, 256).
+            Tile/Chunk size (YX/HW) for writing the tiff file. Default is (256, 256).
         channels (list[str]):
             List containing channel names. This can be an output of a DL model with
             labels.
         mpp (tuple[float, float]):
-            Tuple of mpp values in x and y. Default is (0.25, 0.25).
+            Tuple of mpp values in y and x (YX/HW). Default is (0.25, 0.25).
         photometric (str):
             Color space of image for tifffile. Default is "minisblack".
             *MINISBLACK*: for bilevel and grayscale images, 0 is black.
@@ -194,6 +195,17 @@ def imwrite_ome_tiff(
         ValueError:
             If input dimensions is not 3 (HWC) dimensions.
 
+    Examples:
+        >>> img = imread("path/to/image")
+        >>> imwrite_ome_tiff(
+        ... image_path=image_path,
+        ... img=img,
+        ... tile_size=(10, 15),
+        ... channels=["Red", "Green", "Blue"],
+        ... mpp=(0.5, 0.5),
+        ... photometric="rgb",
+    )
+
     """
     if channels is None:
         channels = []
@@ -206,7 +218,7 @@ def imwrite_ome_tiff(
         raise ValueError(msg)
 
     if not channels:
-        channels = [f"Channel{c + 1}" for c in range(img.shape[0])]
+        channels = [f"Channel{c + 1}" for c in range(img.shape[2])]
 
     ome_metadata = {
         "axes": "CYX",
@@ -220,7 +232,7 @@ def imwrite_ome_tiff(
 
     tifffile.imwrite(
         image_path,
-        shape=img.shape,
+        shape=(img.shape[2], img.shape[0], img.shape[1]),
         dtype=img.dtype,
         metadata=ome_metadata,
         photometric=photometric,
@@ -228,7 +240,15 @@ def imwrite_ome_tiff(
 
     store = tifffile.imread(image_path, mode="r+", aszarr=True)
     z = zarr.open(store, mode="r+")
-    z[:] = img
+
+    for y in range(0, img.shape[0], tile_size[0]):
+        for x in range(0, img.shape[1], tile_size[1]):
+            tile = img[y : y + tile_size[0], x : x + tile_size[1], :]
+
+            # Convert to CYX required by OME-tiff
+            tile = np.transpose(tile, axes=(2, 0, 1))
+            z[:, y : y + tile_size[0], x : x + tile_size[1]] = tile
+
     store.close()
     msg = f"Image saved as OME-TIFF to {image_path}."
     logger.info(msg)
