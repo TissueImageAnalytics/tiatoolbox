@@ -214,7 +214,7 @@ def imwrite_ome_tiff(
         raise TypeError(msg)
 
     if img.ndim != 3:  # noqa: PLR2004
-        msg = "Input 'img' must have 3 (CYX) dimensions."
+        msg = "Input 'img' must have 3 (YXC) dimensions."
         raise ValueError(msg)
 
     if not channels:

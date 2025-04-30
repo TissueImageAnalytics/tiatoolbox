@@ -1900,7 +1900,7 @@ def test_imwrite_ome_tiff_errors(tmp_path: Path) -> None:
     img = np.zeros(shape=(256, 256))
 
     # Input image must have 3 (CYX) dimensions.
-    with pytest.raises(ValueError, match=r".*must have 3 \(CYX\).*"):
+    with pytest.raises(ValueError, match=r".*must have 3 \(YXC\).*"):
         misc.imwrite_ome_tiff(
             image_path=tmp_path / "failed_test.tif",
             img=img,
