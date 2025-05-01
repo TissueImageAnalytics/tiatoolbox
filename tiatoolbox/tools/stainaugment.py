@@ -197,7 +197,7 @@ class StainAugmentor(ImageOnlyTransform):
             else:
                 augmented_concentrations[self.tissue_mask, i] *= self.alpha
                 augmented_concentrations[self.tissue_mask, i] += self.beta
-        self.stain_matrix = cast(np.ndarray, self.stain_matrix)
+        self.stain_matrix = cast("np.ndarray", self.stain_matrix)
         img_augmented = 255 * np.exp(
             -1 * np.dot(augmented_concentrations, self.stain_matrix),
         )

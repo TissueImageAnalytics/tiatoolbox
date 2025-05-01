@@ -9,9 +9,8 @@ import re
 import shutil
 from copy import deepcopy
 from pathlib import Path
-
-# When no longer supporting Python <3.9 this should be collections.abc.Iterable
 from typing import TYPE_CHECKING, Callable
+from unittest.mock import patch
 
 import cv2
 import glymur
@@ -27,7 +26,7 @@ from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, utils
 from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.utils import imread
+from tiatoolbox.utils import imread, tiff_to_fsspec
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
@@ -37,6 +36,7 @@ from tiatoolbox.wsicore.wsireader import (
     AnnotationStoreReader,
     ArrayView,
     DICOMWSIReader,
+    FsspecJsonWSIReader,
     JP2WSIReader,
     NGFFWSIReader,
     OpenSlideWSIReader,
@@ -220,6 +220,43 @@ def read_bounds_level_consistency(wsi: WSIReader, bounds: IntBounds) -> None:
 # -------------------------------------------------------------------------------------
 # Utility Test Classes & Functions
 # -------------------------------------------------------------------------------------
+
+_FSSPEC_WSI_CACHE = {}
+
+
+def fsspec_wsi(sample_svs: Path, tmp_path: Path) -> FsspecJsonWSIReader:
+    """Returns cached FsspecJsonWSIReader instance.
+
+    The reader instance opens CMU-1-Small-Region.svs image.
+
+    It's cached so the reader can be reused,
+
+    since loading the whole image using HTTP range requests from:
+
+    https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs
+
+    takes about 20 seconds.
+
+    """
+    cache_key = "sample_svs"
+
+    if cache_key in _FSSPEC_WSI_CACHE:
+        return _FSSPEC_WSI_CACHE[cache_key]  # Return cached instance
+
+    file_types = ("*.svs",)
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=Path(sample_svs).parent,
+        file_types=file_types,
+    )
+    svs_file_path = str(files_all[0])
+    json_file_path = str(tmp_path / "fsspec.json")
+    final_url = (
+        "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs"
+    )
+    tiff_to_fsspec.main(svs_file_path, json_file_path, final_url)
+
+    _FSSPEC_WSI_CACHE[cache_key] = wsireader.FsspecJsonWSIReader(json_file_path)
+    return _FSSPEC_WSI_CACHE[cache_key]
 
 
 class DummyMutableOpenSlideObject:
@@ -2834,3 +2871,133 @@ def test_visualise_multi_channel(sample_qptiff: Path) -> None:
 
     assert region.shape == (100, 50, 3)
     assert region2.shape == (100, 50, 7)
+
+
+def test_fsspec_json_wsi_reader_instantiation() -> None:
+    """Test if FsspecJsonWSIReader is instantiated.
+
+    In case json is passed to  WSIReader.open, FsspecJsonWSIReader
+    should be instantiated.
+    """
+    input_path = "mock_path.json"
+    mpp = None
+    power = None
+
+    with (
+        patch(
+            "tiatoolbox.wsicore.wsireader.FsspecJsonWSIReader.is_valid_zarr_fsspec",
+            return_value=True,
+        ),
+        patch("tiatoolbox.wsicore.wsireader.FsspecJsonWSIReader") as mock_reader,
+    ):
+        WSIReader.open(input_path, mpp, power)
+        mock_reader.assert_called_once_with(input_path, mpp=mpp, power=power)
+
+
+def test_generate_fsspec_json_file_and_validate(
+    sample_svs: Path, tmp_path: Path
+) -> None:
+    """Test generate fsspec json file and validate it."""
+    file_types = ("*.svs",)
+
+    files_all = utils.misc.grab_files_from_dir(
+        input_path=Path(sample_svs).parent,
+        file_types=file_types,
+    )
+
+    svs_file_path = str(files_all[0])
+    json_file_path = str(tmp_path / "fsspec.json")
+    final_url = "https://example.com/some_id"
+
+    tiff_to_fsspec.main(svs_file_path, json_file_path, final_url)
+
+    assert Path(json_file_path).exists(), "Output JSON file was not created."
+
+    assert FsspecJsonWSIReader.is_valid_zarr_fsspec(json_file_path), (
+        "FSSPEC JSON file is invalid."
+    )
+
+
+def test_fsspec_wsireader_info_read(sample_svs: Path, tmp_path: Path) -> None:
+    """Test info read of the FsspecJsonWSIReader.
+
+    Generate fsspec json file and load image from:
+
+    https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs
+
+    """
+    wsi = fsspec_wsi(sample_svs, tmp_path)
+    info = wsi.info
+
+    assert info is not None, "info  should not be None."
+
+
+def test_read_bounds_fsspec_reader_baseline(sample_svs: Path, tmp_path: Path) -> None:
+    """Test FsspecJsonWSIReader read bounds at baseline.
+
+    Location coordinate is in baseline (level 0) reference frame.
+
+    """
+    wsi = fsspec_wsi(sample_svs, tmp_path)
+
+    bounds = SVS_TEST_TISSUE_BOUNDS
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_bounds(bounds, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+
+def test_read_rect_fsspec_reader_baseline(sample_svs: Path, tmp_path: Path) -> None:
+    """Test FsspecJsonWSIReader read rect at baseline.
+
+    Location coordinate is in baseline (level 0) reference frame.
+
+    """
+    wsi = fsspec_wsi(sample_svs, tmp_path)
+
+    location = SVS_TEST_TISSUE_LOCATION
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_rect(location, size, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+
+def test_fsspec_reader_open_invalid_json_file(tmp_path: Path) -> None:
+    """Ensure JSONDecodeError is handled properly.
+
+    Pass invalid JSON to  FsspecJsonWSIReader.is_valid_zarr_fsspec.
+    """
+    json_path = tmp_path / "invalid.json"
+    json_path.write_text("{invalid json}")  # Corrupt JSON
+
+    assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
+
+
+def test_fsspec_reader_open_oserror_handling() -> None:
+    """Ensure OSError is handled properly.
+
+    Pass non existent JSON to  FsspecJsonWSIReader.is_valid_zarr_fsspec.
+
+    """
+    with patch("builtins.open", side_effect=OSError("File not found")):
+        result = FsspecJsonWSIReader.is_valid_zarr_fsspec("non_existent.json")
+
+    assert result is False, "Function should return False for OSError"
+
+
+def test_fsspec_reader_open_pass_empty_json(tmp_path: Path) -> None:
+    """Ensure empty JSON is handled properly.
+
+    Pass empty JSON to FsspecJsonWSIReader.is_valid_zarr_fsspec and
+
+    verify that it's not valid.
+
+    """
+    json_path = tmp_path / "empty.json"
+    json_path.write_text("{}")
+
+    assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
