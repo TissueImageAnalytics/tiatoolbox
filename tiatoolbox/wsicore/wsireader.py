@@ -6497,7 +6497,10 @@ class TransformedWSIReader(WSIReader):
             location[0] - self.level_pads[level][0],
             location[1] - self.level_pads[level][1],
         )
-        size = (int(max_x - min_x), int(max_y - min_y))
+        size = (
+            int(max_x - min_x + self.level_pads[level][0]),
+            int(max_y - min_y + self.level_pads[level][1]),
+        )
         return location, size, transformed_grid
 
     def transform_patch(
