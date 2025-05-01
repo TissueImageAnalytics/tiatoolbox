@@ -43,6 +43,8 @@ def pair_coordinates(
 
 
     Examples:
+        >>> from tiatoolbox.utils.metrics import pair_coordinates
+
         >>> # Generate two random example sets; replace with your own data
         >>> import numpy as np
         >>> np.random.seed(6)
@@ -53,9 +55,7 @@ def pair_coordinates(
         >>> radius = 2.0
 
         >>> # Example usage of pair_coordinates
-        >>> from tiatoolbox.utils.metrics import pair_coordinates
         >>> pairing, unpaired_a, unpaired_b = pair_coordinates(set_a, set_b, radius)
-
 
     """
     # * Euclidean distance as the cost matrix
@@ -84,6 +84,8 @@ def f1_detection(true: np.ndarray, pred: np.ndarray, radius: float) -> float:
     """Calculate the F1-score for predicted set of coordinates.
 
     Examples:
+        >>> from tiatoolbox.utils.metrics import f1_detection
+
         >>> # Generate two random example sets; replace with your own data
         >>> import numpy as np
         >>> np.random.seed(6)
@@ -94,7 +96,6 @@ def f1_detection(true: np.ndarray, pred: np.ndarray, radius: float) -> float:
         >>> radius = 2.0
 
         >>> # Example usage of f1_detection
-        >>> from tiatoolbox.utils.metrics import f1_detection
         >>> f1_score = f1_detection(true, pred, radius)
 
     """
@@ -127,6 +128,8 @@ def dice(gt_mask: np.ndarray, pred_mask: np.ndarray) -> float:
             An estimate of Sørensen-Dice coefficient value.
 
     Examples:
+        >>> from tiatoolbox.utils.metrics import dice
+
         >>> # Generate two random example masks; replace with your own data
         >>> import numpy as np
         >>> np.random.seed(6)
@@ -134,9 +137,7 @@ def dice(gt_mask: np.ndarray, pred_mask: np.ndarray) -> float:
         >>> pred_mask = (np.random.rand(256, 256) > 0.8).astype(np.uint8)
 
         >>> # Example usage of dice
-        >>> from tiatoolbox.utils.metrics import dice
         >>> dice_score = dice(gt_mask, pred_mask)
-
 
     """
     if gt_mask.shape != pred_mask.shape:
