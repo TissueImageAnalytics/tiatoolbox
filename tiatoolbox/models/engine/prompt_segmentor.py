@@ -24,6 +24,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.tools.patchextraction import PointsPatchExtractor
+from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -55,7 +56,7 @@ class PromptSegmentor(SemanticSegmentor):
 
     def __init__(
         self,
-        model: SAM = None,
+        model: torch.nn.Module = None,
         batch_size: int = 4,
         num_loader_workers: int = 0,
         dataset_class: Callable = WSIStreamDataset,
@@ -95,8 +96,9 @@ class PromptSegmentor(SemanticSegmentor):
                 Used to filter the coordinates of patches for inference.
             mode (str):
                 The mode of prediction. Can be either `tile` or `wsi`.
-                Tile mode processes individual image patches at baseline resolution,
-                while WSI mode processes whole-slide images.
+                Affects how the input images are processed and saved.
+                Use 'tile' for saving as raw numpy files, or 'wsi' for
+                saving as annotations.
             ioconfig (:class:`IOSegmentorConfig`):
                 Configuration for input/output processing.
             point_coords (list):
@@ -244,10 +246,10 @@ class PromptSegmentor(SemanticSegmentor):
         )
 
         patch_inputs, point_coords, box_coords = self.get_coordinates(
-            wsi_reader,
-            ioconfig,
-            mode,
-            mask_reader,
+            wsi_reader=wsi_reader,
+            mask_reader=mask_reader,
+            ioconfig=ioconfig,
+            mode=mode,
             point_coords=point_coords,
             box_coords=box_coords,
             multi_prompt=self.multi_prompt,
@@ -320,6 +322,7 @@ class PromptSegmentor(SemanticSegmentor):
         self._process_predictions(
             cum_output,
             wsi_reader,
+            ioconfig,
             save_path,
             cache_dir,
             mode,
@@ -398,10 +401,16 @@ class PromptSegmentor(SemanticSegmentor):
         image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
 
         if mask_reader is not None:
+            # Filters the point coordinates to only include those within the
+            # mask. filter_coordinates only accepts bounding-box style coordinates
             point_coords = (
-                PromptSegmentor.filter_coordinates(
-                    mask_reader, point_coords, **resolution
-                )
+                point_coords[
+                    PromptSegmentor.filter_coordinates(
+                        mask_reader,
+                        np.hstack([point_coords, point_coords]),
+                        **resolution,
+                    )
+                ]
                 if point_coords is not None
                 else None
             )
@@ -417,13 +426,12 @@ class PromptSegmentor(SemanticSegmentor):
             point_coords = (
                 np.array([point_coords]) if point_coords is not None else None
             )
-            box_coords = np.array([box_coords]) if box_coords is not None else None
+            # Will only use the first box passed in
+            box_coords = np.array([[box_coords[0]]]) if box_coords is not None else None
         else:
-            num_prompts = sum(
-                len(coords)
-                for coords in (point_coords, box_coords)
-                if coords is not None
-            )
+            num_points = len(point_coords) if point_coords is not None else 0
+            num_boxes = len(box_coords) if box_coords is not None else 0
+            num_prompts = num_points + num_boxes
             if mode == "tile":
                 patch_inputs = np.array(
                     [np.copy(image_patch) for _ in range(num_prompts)]
@@ -439,11 +447,17 @@ class PromptSegmentor(SemanticSegmentor):
                     stride_shape=ioconfig.stride_shape,
                 )
 
-            def format_coords(coords: np.ndarray) -> np.ndarray:
-                return np.array([[xy] for xy in coords]) if coords is not None else None
-
-            point_coords = format_coords(point_coords)
-            box_coords = format_coords(box_coords)
+            repeats = len(ioconfig.input_resolutions)
+            if point_coords is not None:
+                # Format coordinates by adding padding
+                # Required for slicing when iterating over DataLoader
+                padded_points = [[x] for x in point_coords] + [None] * num_boxes
+                # Repeat point and box coordinates in place for each input resolution
+                # because DataLoader will repeat patches for each input resolution
+                point_coords = [item for item in padded_points for _ in range(repeats)]
+            if box_coords is not None:
+                padded_boxes = [None] * num_points + [[y] for y in box_coords]
+                box_coords = [item for item in padded_boxes for _ in range(repeats)]
 
         if mask_reader is not None:
             patch_inputs = np.array(
@@ -457,6 +471,7 @@ class PromptSegmentor(SemanticSegmentor):
         self,
         cum_batch_predictions: list,
         wsi_reader: WSIReader,
+        ioconfig: IOSegmentorConfig,
         save_path: str,
         cache_dir: str,
         mode: str = "tile",
@@ -473,6 +488,8 @@ class PromptSegmentor(SemanticSegmentor):
                 should be of (location, patch_predictions).
             wsi_reader (:class:`WSIReader`):
                 A reader for the image where the predictions come from.
+            ioconfig (:class: IOSegmentorConfig):
+                Configuration for input/output processing.
             save_path (str):
                 Root path to save current WSI predictions.
             cache_dir (str):
@@ -501,29 +518,48 @@ class PromptSegmentor(SemanticSegmentor):
                 mask_memmap[y1:y2, x1:x2] = mask[0]
                 score_memmap[i] = score[0][0]
 
-                mask_memmap.flush()
-                score_memmap.flush()
+            mask_memmap.flush()
+            score_memmap.flush()
 
         elif mode == "wsi":
-            mask_memmap, score_memmap = self._prepare_save_output(
-                f"{cache_dir}/0.raw.0.npy",
-                f"{cache_dir}/0.raw.1.npy",
-                wsi_shape,
-                len(cum_batch_predictions),
-            )
-            for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
-                x1, y1, x2, y2 = location
-                mask = patch_prediction[0]
-                score = patch_prediction[1]
-
-                # store the predictions
-                mask_memmap[y1:y2, x1:x2] = mask[0]
-                score_memmap[i] = score[0][0]
-
-                mask_memmap.flush()
-                score_memmap.flush()
-
-            # Generate annotations
+            locations, predictions = list(zip(*cum_batch_predictions))
+            # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
+            # output patch this can exceed the image bound at the requested
+            # resolution remove singleton due to split.
+            locations = np.array([v[0] for v in locations])
+            for index, output_resolution in enumerate(ioconfig.output_resolutions):
+                # assume resolution index to be in the same order as L
+                merged_resolution = ioconfig.highest_input_resolution
+                merged_locations = locations[index :: len(ioconfig.output_resolutions)]
+                if ioconfig.save_resolution is not None:
+                    merged_resolution = ioconfig.save_resolution
+                    output_shape = wsi_reader.slide_dimensions(**output_resolution)
+                    merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
+                    fx = merged_shape[0] / output_shape[0]
+                    merged_locations = np.ceil(merged_locations * fx).astype(np.int64)
+                merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
+                # 0 idx is to remove singleton without removing other axes singleton
+                to_merge_predictions = predictions[
+                    index :: len(ioconfig.output_resolutions)
+                ]
+                to_merge_predictions = [v[0][0][0] for v in to_merge_predictions]
+                sub_save_path = f"{save_path}.raw.{index}.npy"
+                sub_count_path = f"{cache_dir}/count.{index}.npy"
+                merged_output = {
+                    "predictions": self.merge_prediction(
+                        merged_shape[::-1],  # XY to YX
+                        to_merge_predictions,
+                        merged_locations,
+                        save_path=sub_save_path,
+                        cache_count_path=sub_count_path,
+                    )
+                }
+                # Generate annotations
+                dict_to_store_semantic_segmentor(
+                    patch_output={"predictions": merged_output},
+                    scale_factor=1.0,
+                    save_path=Path(f"{save_path}.{index!s}.db"),
+                )
 
     @staticmethod
     def get_mask_bounds(

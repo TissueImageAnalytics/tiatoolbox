@@ -63,8 +63,8 @@ class SAM(ModelABC):
     def forward(
         self: SAM,
         imgs: list,
-        point_coords: np.array | None = None,
-        box_coords: np.array | None = None,
+        point_coords: list | None = None,
+        box_coords: list | None = None,
     ) -> np.ndarray:
         """Torch method. Defines forward pass on each image in the batch.
 
@@ -94,7 +94,11 @@ class SAM(ModelABC):
             box = box_coords[i] if box_coords is not None else None
 
             if points is not None or box is not None:
-                point_labels = np.ones(points.shape[0]) if points is not None else None
+                # Convert points and box to numpy arrays
+                points = np.array(points) if points is not None else None
+                box = np.array(box) if box is not None else None
+
+                point_labels = np.ones(len(points)) if points is not None else None
                 masks, scores, _ = self.predictor.predict(
                     point_coords=points,
                     point_labels=point_labels,

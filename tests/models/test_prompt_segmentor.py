@@ -54,6 +54,10 @@ def test_functional_segmentor(
     pretrained = fetch_pretrained_weights("segment_anything-base")
     model.load_state_dict(torch.load(pretrained, map_location="cpu"))
 
+    # test engine setup
+
+    _ = PromptSegmentor(None, BATCH_SIZE, NUM_LOADER_WORKERS)
+
     prompt_segmentor = PromptSegmentor(model, BATCH_SIZE, NUM_LOADER_WORKERS)
 
     ioconfig = IOSegmentorConfig(
@@ -63,7 +67,10 @@ def test_functional_segmentor(
         output_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_input_shape=[512, 512],
         patch_output_shape=[512, 512],
+        stride_shape=[512, 512],
     )
+
+    # test inference
 
     points = np.array([[[64, 64]], [[64, 64]]])  # Point on nuclei
 
@@ -73,7 +80,7 @@ def test_functional_segmentor(
     output_list = prompt_segmentor.predict(
         [mini_wsi_jpg, mini_wsi_jpg],
         mode="tile",
-        multi_prompt=False,
+        multi_prompt=True,
         device=select_device(on_gpu=ON_GPU),
         point_coords=points,
         ioconfig=ioconfig,
@@ -87,8 +94,10 @@ def test_functional_segmentor(
     assert np.sum(pred_1 - pred_2) == 0
 
     points = np.array([[[64, 64], [100, 40], [100, 70]]])  # Points on nuclei
+    boxes = np.array([[[10, 10, 50, 50], [80, 80, 110, 110]]])  # Boxes on nuclei
 
     # Run on tile mode with single-prompt
+    # Also tests boxes
     shutil.rmtree(save_dir, ignore_errors=True)
     output_list = prompt_segmentor.predict(
         [mini_wsi_jpg],
@@ -96,31 +105,39 @@ def test_functional_segmentor(
         multi_prompt=False,
         device=select_device(on_gpu=ON_GPU),
         point_coords=points,
+        box_coords=boxes,
         ioconfig=ioconfig,
         crash_on_exception=False,
         save_dir=save_dir,
     )
-    preds = []
-    for i, _ in enumerate(points[0]):
-        preds.append(np.load(output_list[0][1] + f"/{i}.raw.0.npy"))
 
-    visualize_masks([imread(mini_wsi_jpg)], [preds], points[0])
+    total_prompts = points.shape[1] + boxes.shape[1]
+    preds = [
+        np.load(output_list[0][1] + f"/{i}.raw.0.npy") for i in range(total_prompts)
+    ]
+
+    # Remove before commit
+    visualize_masks([imread(mini_wsi_jpg)], [preds], None)
+
+    assert len(output_list) == 1
+    assert len(preds) == total_prompts
 
     # Generate mask
     mask = np.zeros((thumb.shape[0], thumb.shape[1]), dtype=np.uint8)
-    mask[32:96, 32:96] = 1
+    mask[32:120, 32:120] = 1
     mini_wsi_msk = f"{tmp_path}/mini_svs_mask.jpg"
     imwrite(mini_wsi_msk, mask)
 
     # Only point within mask should generate a segmentation
     points = np.array([[[64, 64], [100, 40]]])
+    save_dir = tmp_path / "dump"
 
     # Run on wsi mode with multi-prompt
     # Also tests masks
     shutil.rmtree(save_dir, ignore_errors=True)
     output_list = prompt_segmentor.predict(
         [mini_wsi_jpg],
-        masks=[mini_wsi_msk],  # ! Create mask
+        masks=[mini_wsi_msk],
         mode="wsi",
         multi_prompt=True,
         device=select_device(on_gpu=ON_GPU),
@@ -129,13 +146,16 @@ def test_functional_segmentor(
         crash_on_exception=False,
         save_dir=save_dir,
     )
+
+    # Check if db exists
+    assert Path(output_list[0][1] + ".0.db").exists()
 
     # Run on wsi mode with single-prompt
     shutil.rmtree(save_dir, ignore_errors=True)
     output_list = prompt_segmentor.predict(
         [mini_wsi_jpg],
         mode="wsi",
-        multi_prompt=True,
+        multi_prompt=False,
         device=select_device(on_gpu=ON_GPU),
         point_coords=points,
         ioconfig=ioconfig,
@@ -143,7 +163,11 @@ def test_functional_segmentor(
         save_dir=save_dir,
     )
 
+    # Check if db exists
+    assert Path(output_list[0][1] + ".0.db").exists()
 
+
+# ! Remove before commit
 def visualize_masks(
     images: list, masks_list: list, metadata_list: list | None = None
 ) -> None:
