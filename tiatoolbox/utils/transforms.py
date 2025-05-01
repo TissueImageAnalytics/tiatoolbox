@@ -199,7 +199,11 @@ def imresize(
         ]
         return np.concatenate(img_channels, axis=-1)
 
-    return cv2.resize(src=img, dsize=(output_size_array[0], output_size_array[1]), interpolation=cv2_interpolation)
+    return cv2.resize(
+        src=img,
+        dsize=(output_size_array[0], output_size_array[1]),
+        interpolation=cv2_interpolation,
+    )
 
 
 def rgb2od(img: np.ndarray) -> np.ndarray:
