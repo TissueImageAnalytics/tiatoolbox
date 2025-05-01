@@ -346,7 +346,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1),
             mode=rcParam["torch_compile_mode"],
         )
-        self.pretrained = cast("torch.nn.Module", compiled_model.features)
+        self.pretrained = cast("torch.nn.Mppodule", compiled_model.features)
 
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
