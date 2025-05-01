@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import timm
@@ -19,9 +19,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _get_architecture(
     arch_name: str,
-    weights: str or WeightsEnum = "DEFAULT",
+    weights: str | WeightsEnum = "DEFAULT",
     **kwargs: dict,
-) -> list[nn.Sequential, ...] | nn.Sequential:
+) -> torch.nn.ModuleList | nn.Sequential:
     """Retrieve a CNN model architecture.
 
     This function fetches a Convolutional Neural Network (CNN) model architecture,
@@ -38,7 +38,7 @@ def _get_architecture(
             Key-word arguments.
 
     Returns:
-        list[nn.Sequential, ...] | nn.Sequential:
+        list[nn.Sequential] | nn.Sequential:
             A list of PyTorch network layers wrapped with `nn.Sequential`.
 
     Raises:
@@ -94,7 +94,7 @@ def _get_timm_architecture(
     arch_name: str,
     *,
     pretrained: bool,
-) -> list[nn.Sequential, ...] | nn.Sequential:
+) -> torch.nn.ModuleList | nn.Sequential:
     """Retrieve a timm model architecture.
 
     This function fetches a model architecture from the timm library, specifically for
@@ -124,6 +124,7 @@ def _get_timm_architecture(
         model = timm.create_model(arch_name, pretrained=pretrained)
         return nn.Sequential(*list(model.children())[:-1])
 
+    arch_map: dict[str, dict] = {}
     arch_map = {
         # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
         "UNI": {
@@ -306,7 +307,9 @@ class CNNModel(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self: CNNModel, imgs: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self: CNNModel, *args: tuple[Any, ...], **kwargs: dict
+    ) -> torch.Tensor | None:
         """Pass input data through the model.
 
         Args:
@@ -318,6 +321,9 @@ class CNNModel(ModelABC):
                 The output logits after passing through the model.
 
         """
+        imgs = args[0]
+        if imgs is None:
+            return None
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
         gap_feat = torch.flatten(gap_feat, 1)
@@ -431,7 +437,9 @@ class TimmModel(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self: TimmModel, imgs: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self: TimmModel, *args: tuple[Any, ...], **kwargs: dict
+    ) -> torch.Tensor | None:
         """Pass input data through the model.
 
         Args:
@@ -443,6 +451,9 @@ class TimmModel(ModelABC):
                 The output logits after passing through the model.
 
         """
+        imgs = args[0]
+        if imgs is None:
+            return None
         feat = self.feat_extract(imgs)
         feat = torch.flatten(feat, 1)
         logit = self.classifier(feat)
@@ -552,7 +563,9 @@ class CNNBackbone(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self: CNNBackbone, imgs: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self: CNNBackbone, *args: tuple[Any, ...], **kwargs: dict
+    ) -> torch.Tensor | None:
         """Pass input data through the model.
 
         Args:
@@ -564,6 +577,9 @@ class CNNBackbone(ModelABC):
                 The extracted features.
 
         """
+        imgs = args[0]
+        if imgs is None:
+            return None
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
         return torch.flatten(gap_feat, 1)
@@ -645,7 +661,9 @@ class TimmBackbone(ModelABC):
 
     # pylint: disable=W0221
     # because abc is generic, this is actual definition
-    def forward(self: TimmBackbone, imgs: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self: TimmBackbone, *args: tuple[Any, ...], **kwargs: dict
+    ) -> torch.Tensor | None:
         """Pass input data through the model.
 
         Args:
@@ -657,6 +675,9 @@ class TimmBackbone(ModelABC):
                 The extracted features.
 
         """
+        imgs = args[0]
+        if imgs is None:
+            return None
         feats = self.feat_extract(imgs)
         return torch.flatten(feats, 1)
 
