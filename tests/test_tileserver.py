@@ -790,7 +790,7 @@ def test_registration_single_window(
                 data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
             )
             assert (
-                "If registration target not the same dimensions as the source "
-                "this may display incorrectly. NGFF file is not valid." in caplog.text
+                "No suitable overlay found. Using current slide as target. "
+                "This may display incorrectly if dimensions differ." in caplog.text
             )
             assert response.status_code == 200
