@@ -185,7 +185,6 @@ def imwrite_ome_tiff(
         photometric (str):
             Color space of image for tifffile. Default is "minisblack".
             *MINISBLACK*: for bilevel and grayscale images, 0 is black.
-            *RGB*: the image contains red, green and blue samples.
             See tifffile for more options.
 
     Raises:
@@ -217,12 +216,18 @@ def imwrite_ome_tiff(
         msg = "Input 'img' must have 3 (YXC) dimensions."
         raise ValueError(msg)
 
+    if photometric.lower() != "minisblack":
+        msg = (
+            f"photometric = {photometric} is not supported. "
+            f"This function currently supports photometric = 'minisblack'."
+        )
+        raise ValueError(msg)
+
     if not channels:
         channels = [f"Channel{c + 1}" for c in range(img.shape[2])]
 
     ome_metadata = {
         "axes": "CYX",
-        "SignificantBits": 8,
         "PhysicalSizeX": mpp[1],
         "PhysicalSizeXUnit": "µm",
         "PhysicalSizeY": mpp[0],

@@ -1875,6 +1875,21 @@ def get_ome_metadata(tiff_path: Path) -> str | None:
     return None
 
 
+def assert_channel_names_from_ome_metadata(
+    ome_metadata: str, expected_channel_names: list[str]
+) -> None:
+    """Asserts channel naems from OME metadata."""
+    root = ET.fromstring(ome_metadata)
+    namespace = "{http://www.openmicroscopy.org/Schemas/OME/2016-06}"
+    channel_elements = root.findall(
+        f".//{namespace}Image/{namespace}Pixels/{namespace}Channel"
+    )
+    channel_names = [
+        channel.get("Name") for channel in channel_elements if channel.get("Name")
+    ]
+    assert channel_names == expected_channel_names
+
+
 def assert_ome_metadata_value(
     ome_xml: ET.Element, tag: str, expected_value: str
 ) -> None:
@@ -1916,6 +1931,19 @@ def test_imwrite_ome_tiff_errors(tmp_path: Path) -> None:
             img=img,
         )
 
+    img = np.zeros(shape=(256, 256, 3))
+
+    # Input image must be a NumPy array or a Zarr array.
+    with pytest.raises(
+        ValueError,
+        match=r".*This function currently supports photometric = 'minisblack'.*",
+    ):
+        misc.imwrite_ome_tiff(
+            image_path=tmp_path / "failed_test.tif",
+            img=img,
+            photometric="rgb",
+        )
+
 
 def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
     """Tests saving a basic NumPy array."""
@@ -1927,7 +1955,7 @@ def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
         tile_size=(10, 15),
         channels=["Red", "Green", "Blue"],
         mpp=(0.5, 0.5),
-        photometric="rgb",
+        photometric="minisblack",
     )
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path)
@@ -1946,6 +1974,10 @@ def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
     assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.5")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+    assert_channel_names_from_ome_metadata(
+        ome_metadata=get_ome_metadata(image_path),
+        expected_channel_names=["Red", "Green", "Blue"],
+    )
 
 
 def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
@@ -1974,3 +2006,14 @@ def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
     assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+    assert_channel_names_from_ome_metadata(
+        ome_metadata=get_ome_metadata(image_path),
+        expected_channel_names=[
+            "Channel1",
+            "Channel2",
+            "Channel3",
+            "Channel4",
+            "Channel5",
+            "Channel6",
+        ],
+    )
