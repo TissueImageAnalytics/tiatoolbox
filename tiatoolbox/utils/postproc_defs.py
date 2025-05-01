@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import colorsys
 import warnings
+from typing import Any
 
 import numpy as np
 
@@ -13,7 +14,7 @@ class MultichannelToRGB:
 
     def __init__(
         self: MultichannelToRGB,
-        color_dict: list[tuple[float, float, float]] | None = None,
+        color_dict: dict[str : tuple[float, float, float]] | None = None,
     ) -> None:
         """Initialize the MultichannelToRGB converter.
 
@@ -60,7 +61,7 @@ class MultichannelToRGB:
         msg = f"Number of colors: {n_colors} does not match channels in image: {n}."
         raise ValueError(msg)
 
-    def generate_colors(self: MultichannelToRGB, n_channels: int) -> np.ndarray:
+    def generate_colors(self: MultichannelToRGB, n_channels: int) -> None:
         """Generate a set of visually distinct colors.
 
         Args:
@@ -97,6 +98,9 @@ class MultichannelToRGB:
         if not self.is_validated:
             self.validate(n)
 
+        if image.dtype == np.uint16:
+            image = (image / 256).astype(np.uint8)
+
         # Convert to RGB image
         rgb_image = (
             np.einsum(
@@ -111,7 +115,7 @@ class MultichannelToRGB:
         # Clip  to ensure in valid range and return
         return np.clip(rgb_image, 0, 255).astype(np.uint8)
 
-    def __setattr__(self: MultichannelToRGB, name: str, value: np.Any) -> None:
+    def __setattr__(self: MultichannelToRGB, name: str, value: Any) -> None:
         """Ensure that colors is updated if color_dict is updated."""
         if name == "color_dict" and value is not None:
             self.colors = np.array(list(value.values()), dtype=np.float32)
