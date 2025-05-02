@@ -480,7 +480,7 @@ def overlay_prediction_contours(
             inst_colour = type_colours[inst_info["type"]][1]
         else:
             inst_colour = (inst_colours_array[idx]).tolist()
-        contours: list[np.ndarray] = [inst_contour]
+        contours: list[np.ndarray] = [np.array(inst_contour)]
         cv2.drawContours(
             overlay,
             contours,
