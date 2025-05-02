@@ -766,7 +766,7 @@ def test_registration_dual_window(
         assert response.status_code == 200
 
 
-def test_registration_single_window(
+def test_registration_single_window_same_slide(
     empty_app: TileServer,
     tmp_path: Path,
     remote_sample: Callable,
@@ -796,6 +796,14 @@ def test_registration_single_window(
             )
             assert response.status_code == 200
 
+
+def test_registration_single_window_different_slide(
+    empty_app: TileServer,
+    tmp_path: Path,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides."""
     # Repeat but provide extra overlays
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
