@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, cast
 
 import cv2
 import numpy as np
@@ -338,11 +338,16 @@ class DFBRFeatureExtractor(torch.nn.Module):
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
-        self.features: dict = dict.fromkeys(output_layers_key, None)
-        self.pretrained: torch.nn.Sequential = compile_model(
+        self.features: dict[str, torch.Tensor] = dict.fromkeys(
+            output_layers_key, torch.Tensor()
+        )
+
+        compiled_model = compile_model(
             torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1),
             mode=rcParam["torch_compile_mode"],
-        ).features
+        )
+        self.pretrained = cast("torch.nn.Module", compiled_model.features)
+
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
                 self.forward_hook(output_layers_key[i]),
@@ -350,7 +355,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             for i, layer in enumerate(output_layers_id)
         ]
 
-    def forward_hook(self: torch.nn.Module, layer_name: str) -> Callable:
+    def forward_hook(self: DFBRFeatureExtractor, layer_name: str) -> Callable:
         """Register a hook.
 
         Args:
@@ -386,7 +391,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self: torch.nn.Module, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self: DFBRFeatureExtractor, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
