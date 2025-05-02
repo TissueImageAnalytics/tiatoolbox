@@ -1280,32 +1280,35 @@ def sam_segment() -> None:
 
     gen_segmentor = PromptSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
+    tmp_mask_dir = Path(tempfile.mkdtemp())
 
     x_start = max(0, UI["p"].x_range.start)
     y_start = max(0, -UI["p"].y_range.end)
     x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
     y_end = min(-UI["p"].y_range.start, UI["vstate"].dims[1])
 
-    bounds = np.array([x_start, y_start, x_end, y_end], dtype=np.int32)
+    # Make a mask defining the box
+    thumb = UI["vstate"].wsi.slide_thumbnail()
+    conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
+    x = round(x_start / conv_mpp)
+    y = -round(y_start / conv_mpp)
+    width = round((x_end - x_start) / conv_mpp)
+    height = round((y_end - y_start) / conv_mpp)
 
-    bounds_dim = bounds[2:] - bounds[:2]
-    base_mpp = UI["vstate"].mpp
-    window_width = UI["p"].width
+    mask = np.zeros((thumb.shape[0], thumb.shape[1]), dtype=np.uint8)
+    mask[y : y + height, x : x + width] = 1
 
-    current_mpp = gen_segmentor.calc_mpp(bounds_dim, base_mpp, window_width)
-    prompts = gen_segmentor.create_prompts(
-        point_coords=point_coords, box_coords=box_coords
-    )
+    Image.fromarray(mask).save(tmp_mask_dir / "mask.png")
 
     # Run SAM on the point
     prediction = gen_segmentor.predict(
-        UI["vstate"].slide_path,
-        prompts,
-        select_device(on_gpu=torch.cuda.is_available()),
-        tmp_save_dir / "sam_out",
-        bounds,
-        current_mpp,
-        "mpp",
+        imgs=[UI["vstate"].slide_path],
+        masks=[tmp_mask_dir / "mask.png"],
+        device=select_device(on_gpu=torch.cuda.is_available()),
+        save_dir=tmp_save_dir / "sam_out",
+        point_coords=point_coords,
+        box_coords=box_coords,
+        mode="wsi",
     )
 
     slide_filename = Path(UI["vstate"].slide_path).name

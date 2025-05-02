@@ -440,8 +440,7 @@ class PromptSegmentor(SemanticSegmentor):
                 patch_extractor = PointsPatchExtractor(
                     wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
                 )
-                patch_inputs, _ = patch_extractor.get_coordinates(
-                    patch_output_shape=ioconfig.patch_output_shape,
+                patch_inputs = patch_extractor.get_coordinates(
                     image_shape=wsi_proc_shape,
                     patch_input_shape=ioconfig.patch_input_shape,
                     stride_shape=ioconfig.stride_shape,
@@ -530,6 +529,7 @@ class PromptSegmentor(SemanticSegmentor):
             for index, output_resolution in enumerate(ioconfig.output_resolutions):
                 # assume resolution index to be in the same order as L
                 merged_resolution = ioconfig.highest_input_resolution
+                # DataLoader duplicates patches for each input resolution
                 merged_locations = locations[index :: len(ioconfig.output_resolutions)]
                 if ioconfig.save_resolution is not None:
                     merged_resolution = ioconfig.save_resolution
@@ -728,8 +728,8 @@ class PromptSegmentor(SemanticSegmentor):
                 raise err  # noqa: TRY201
             logging.exception("Crashed on %s", wsi_save_path)
 
+    @staticmethod
     def _prepare_save_output(
-        self,
         mask_path: str | Path,
         score_path: str | Path,
         mask_shape: tuple[int, ...],

@@ -473,6 +473,7 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     assert len(main.UI["type_column"].children) == 1
 
 
+# Needs updating
 def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test running hovernet on a box."""
     slide_select = doc.get_model_by_name("slide_select0")
