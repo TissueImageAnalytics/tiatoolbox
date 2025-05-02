@@ -773,6 +773,7 @@ def test_registration_single_window(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test registering slides."""
+    # First is testing with a single sldie and single registration
     data = make_simple_dat()
     joblib.dump(data, tmp_path / "test.dat")
     with empty_app.test_client() as client:
@@ -792,5 +793,34 @@ def test_registration_single_window(
             assert (
                 "No suitable overlay found. Using current slide as target. "
                 "This may display incorrectly if dimensions differ." in caplog.text
+            )
+            assert response.status_code == 200
+
+    # Repeat but provide extra overlays
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Now add extra slide (i.e. IHC slide as target to register with)
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("svs-1-small"))},
+        )
+
+        # Capture logger output to check for warning
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "Using slide as source and last overlay as target for registration."
+                in caplog.text
             )
             assert response.status_code == 200
