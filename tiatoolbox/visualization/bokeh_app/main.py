@@ -8,7 +8,7 @@ import tempfile
 import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
-from shutil import rmtree
+from shutil import rmtree, move
 from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 
 import numpy as np
@@ -62,12 +62,13 @@ from matplotlib import colormaps
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
+from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.architecture.sam import SAM
+
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (
-    NucleusInstanceSegmentor,
-)
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.models.engine.prompt_segmentor import PromptSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
@@ -1265,20 +1266,26 @@ def sam_segment() -> None:
 
     """
     # Get point coordinates
-    x = UI["pt_source"].data["x"]
-    y = UI["pt_source"].data["y"]
-    point_coords = [[x[i], -y[i]] for i in range(len(x))]
+    x = np.round(UI["pt_source"].data["x"])
+    y = np.round(UI["pt_source"].data["y"])
+    point_coords = np.array([[
+        [x[i], -y[i]] for i in range(len(x))
+    ]], np.uint32) if len(x) > 0 else None
 
     # Get box coordinates
-    x = UI["box_source"].data["x"]
-    y = UI["box_source"].data["y"]
-    height = UI["box_source"].data["height"]
-    width = UI["box_source"].data["width"]
-    box_coords = [
+    x = np.round(UI["box_source"].data["x"])
+    y = np.round(UI["box_source"].data["y"])
+    height = np.round(UI["box_source"].data["height"])
+    width = np.round(UI["box_source"].data["width"])
+    box_coords = np.array([[
         [x[i], -y[i], x[i] + width[i], height[i] - y[i]] for i in range(len(x))
-    ]
+    ]], np.uint32) if len(x) > 0 else None
 
-    gen_segmentor = PromptSegmentor()
+    model = SAM()
+    pretrained = fetch_pretrained_weights("segment_anything-base")
+    model.load_state_dict(torch.load(pretrained, map_location="cpu"))
+
+    prompt_segmentor = PromptSegmentor(model)
     tmp_save_dir = Path(tempfile.mkdtemp())
     tmp_mask_dir = Path(tempfile.mkdtemp())
 
@@ -1300,8 +1307,10 @@ def sam_segment() -> None:
 
     Image.fromarray(mask).save(tmp_mask_dir / "mask.png")
 
+    res = prompt_segmentor.calc_mpp(UI["vstate"].dims[0], UI["vstate"].mpp[0], 1024)
+
     # Run SAM on the point
-    prediction = gen_segmentor.predict(
+    prediction = prompt_segmentor.predict(
         imgs=[UI["vstate"].slide_path],
         masks=[tmp_mask_dir / "mask.png"],
         device=select_device(on_gpu=torch.cuda.is_available()),
@@ -1309,17 +1318,24 @@ def sam_segment() -> None:
         point_coords=point_coords,
         box_coords=box_coords,
         mode="wsi",
+        patch_input_shape=(1024, 1024),
+        patch_output_shape=(1024, 1024),
+        resolution=res,
+        units="mpp",
+        multi_prompt=True
     )
 
-    slide_filename = Path(UI["vstate"].slide_path).name
+    ann_loc = f"{prediction[0][1]}.0.db"
 
-    ann_loc = gen_segmentor.to_annotation(
-        prediction[0][1],
-        prediction[0][2],
-        doc_config["overlay_folder"] / slide_filename,
-    )
+    slide_filename = UI["vstate"].slide_path.stem + ".db"
+    destination = doc_config["overlay_folder"] / slide_filename
+    print(f"slide: {UI['vstate'].slide_path}")
+    print(f"destination: {destination}")
 
-    fname = make_safe_name(ann_loc)
+    # Move the database file
+    move(ann_loc, destination)
+
+    fname = make_safe_name(destination)
     resp = UI["s"].put(
         f"http://{host2}:{port}/tileserver/overlay",
         data={"overlay_path": fname},
@@ -1328,7 +1344,7 @@ def sam_segment() -> None:
     update_ui_on_new_annotations(ann_types)
 
     # Clean up temp files
-    rmtree(tmp_save_dir)
+    #rmtree(tmp_save_dir)
 
 
 # endregion

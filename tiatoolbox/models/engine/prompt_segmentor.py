@@ -78,6 +78,11 @@ class PromptSegmentor(SemanticSegmentor):
         masks: list | None = None,
         mode: str = "tile",
         ioconfig: IOSegmentorConfig = None,
+        patch_input_shape: IntPair = None,
+        patch_output_shape: IntPair = None,
+        stride_shape: IntPair = None,
+        resolution: Resolution = 1.0,
+        units: Units = "baseline",
         point_coords: list[list[IntPair]] | None = None,
         box_coords: list[list[IntBounds]] | None = None,
         save_dir: str | Path | None = None,
@@ -85,7 +90,7 @@ class PromptSegmentor(SemanticSegmentor):
         *,
         multi_prompt: bool = True,
         crash_on_exception: bool = False,
-    ) -> list[tuple[Path, Path, Path]]:
+    ) -> list[tuple[Path, Path]]:
         """Predict on a list of WSIs using prompts.
 
         Args:
@@ -118,10 +123,10 @@ class PromptSegmentor(SemanticSegmentor):
                 If false, the image will be processed for each prompt separately.
 
         Returns:
-            output_paths(list[tuple[Path, Path, Path]]):
+            output_paths(list[tuple[Path, Path]]):
                 A list of tuples containing the input image path and the corresponding
-                output paths for the predictions.
-                Each tuple is of the form (input_path, mask_path, score_path).
+                output path for the predictions.
+                Each tuple is of the form (input_path, save_path).
 
         Examples:
             >>> segmentor = PromptSegmentor(model=model)
@@ -130,19 +135,29 @@ class PromptSegmentor(SemanticSegmentor):
             >>> point_coords = [[[100, 200]], [[150, 250]]]
             >>> box_coords = [[[50, 50, 150, 150]], [[100, 100, 200, 200]]]
             >>> output_paths = segmentor.predict(
-                    imgs,
-                    masks=masks,
-                    mode="tile",
-                    point_coords=point_coords,
-                    box_coords=box_coords,
-                    save_dir="output_dir",
-                )
+            ...     imgs,
+            ...     masks=masks,
+            ...     mode="tile",
+            ...     point_coords=point_coords,
+            ...     box_coords=box_coords,
+            ...     save_dir="output_dir",)
 
         """
+        if mode not in ["wsi", "tile"]:
+            msg = f"{mode} is not a valid mode. Use either `tile` or `wsi`."
+            raise ValueError(msg)
+        
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir=save_dir)
 
-        if ioconfig is None and self.ioconfig is not None:
-            ioconfig = copy.deepcopy(self.ioconfig)
+        ioconfig = self._update_ioconfig(
+            ioconfig,
+            mode,
+            patch_input_shape,
+            patch_output_shape,
+            stride_shape,
+            resolution,
+            units,
+        )
 
         # use external for testing
         self._device = device
@@ -245,15 +260,48 @@ class PromptSegmentor(SemanticSegmentor):
             auto_get_mask=self.auto_generate_mask,
         )
 
+        resolution = ioconfig.to_baseline().highest_input_resolution
+
+        if mask_reader is not None:
+            # Filters the point coordinates to only include those within the
+            # mask. filter_coordinates only accepts bounding-box style coordinates
+            point_coords = (
+                point_coords[
+                    PromptSegmentor.filter_coordinates(
+                        mask_reader,
+                        np.hstack([point_coords, point_coords]),
+                        **resolution,
+                    )
+                ]
+                if point_coords is not None
+                else None
+            )
+            point_coords = self._adjust_prompt_resolution(wsi_reader, point_coords, **resolution)
+
+            box_coords = (
+                PromptSegmentor.clip_coordinates(mask_reader, box_coords, **resolution)
+                if box_coords is not None
+                else None
+            )
+            box_coords = self._adjust_prompt_resolution(wsi_reader, box_coords, **resolution)
+
         patch_inputs, point_coords, box_coords = self.get_coordinates(
             wsi_reader=wsi_reader,
-            mask_reader=mask_reader,
             ioconfig=ioconfig,
             mode=mode,
             point_coords=point_coords,
             box_coords=box_coords,
             multi_prompt=self.multi_prompt,
         )
+
+    
+        patch_inputs = np.array(
+            self.clip_coordinates(
+                mask_reader, patch_inputs, **resolution
+            )
+        ) if mask_reader is not None else patch_inputs
+
+        print((f"Patch inputs: {patch_inputs}"))
 
         patch_outputs = patch_inputs.copy()
 
@@ -302,6 +350,8 @@ class PromptSegmentor(SemanticSegmentor):
                 device=self._device,
             )
 
+            print(f"Sample outputs: {sample_outputs}")
+
             # repackage so that it's an N list, each contains
             # L x etc. output
             sample_outputs = [
@@ -331,12 +381,39 @@ class PromptSegmentor(SemanticSegmentor):
         # clean up the cache directories
         shutil.rmtree(cache_dir)
 
+    def _adjust_prompt_resolution(
+            self,
+            wsi_reader: WSIReader,
+            coords: np.ndarray | None,
+            resolution: Resolution,
+            units: Units,
+    ) -> np.ndarray | None:
+        """Adjust the resolution of the prompt coordinates.
+
+        This function scales the provided coordinates to the specified
+        resolution and units. It is used to ensure that the coordinates
+        are in the correct format for processing.
+
+        Args:
+            wsi_reader (WSIReader):
+                A reader for the image where the predictions come from.
+            resolution (Resolution):
+                The resolution of the image.
+            units (Units):
+                The units of the image.
+            coords (np.ndarray):
+                Coordinates to adjust. 
+        """
+        if coords is not None:
+            coords = coords * (wsi_reader.slide_dimensions(resolution, units) 
+                      / wsi_reader.slide_dimensions(1.0, "baseline"))
+        return coords
+
     @staticmethod
     def get_coordinates(
         wsi_reader: WSIReader,
         ioconfig: IOSegmentorConfig,
         mode: str,
-        mask_reader: VirtualWSIReader | None = None,
         point_coords: np.ndarray | None = None,
         box_coords: np.ndarray | None = None,
         *,
@@ -359,8 +436,6 @@ class PromptSegmentor(SemanticSegmentor):
                 Configuration for input/output processing.
             mode (str):
                 The mode of prediction. Can be either `tile` or `wsi`.
-            mask_reader (VirtualWSIReader):
-                A reader for the mask image where the predictions come from.
             point_coords (np.ndarray):
                 Point coordinates for the current image as [x, y] pairs.
             box_coords (np.ndarray):
@@ -396,30 +471,11 @@ class PromptSegmentor(SemanticSegmentor):
             >>> segmentor.get_coordinates = func
 
         """
-        resolution = ioconfig.to_baseline().highest_input_resolution
+        resolution = ioconfig.highest_input_resolution
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
+        print("resolution: ", resolution)
+        print(f"WSI proc shape: {wsi_proc_shape}")
         image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
-
-        if mask_reader is not None:
-            # Filters the point coordinates to only include those within the
-            # mask. filter_coordinates only accepts bounding-box style coordinates
-            point_coords = (
-                point_coords[
-                    PromptSegmentor.filter_coordinates(
-                        mask_reader,
-                        np.hstack([point_coords, point_coords]),
-                        **resolution,
-                    )
-                ]
-                if point_coords is not None
-                else None
-            )
-
-            box_coords = (
-                PromptSegmentor.clip_coordinates(mask_reader, box_coords, **resolution)
-                if box_coords is not None
-                else None
-            )
 
         if multi_prompt:
             patch_inputs = np.array([np.copy(image_patch)])
@@ -445,6 +501,7 @@ class PromptSegmentor(SemanticSegmentor):
                     patch_input_shape=ioconfig.patch_input_shape,
                     stride_shape=ioconfig.stride_shape,
                 )
+                patch_inputs.append(box_coords)
 
             repeats = len(ioconfig.input_resolutions)
             if point_coords is not None:
@@ -458,12 +515,6 @@ class PromptSegmentor(SemanticSegmentor):
                 padded_boxes = [None] * num_points + [[y] for y in box_coords]
                 box_coords = [item for item in padded_boxes for _ in range(repeats)]
 
-        if mask_reader is not None:
-            patch_inputs = np.array(
-                PromptSegmentor.clip_coordinates(
-                    mask_reader, patch_inputs, **resolution
-                )
-            )
         return patch_inputs, point_coords, box_coords
 
     def _process_predictions(
@@ -529,6 +580,7 @@ class PromptSegmentor(SemanticSegmentor):
             for index, output_resolution in enumerate(ioconfig.output_resolutions):
                 # assume resolution index to be in the same order as L
                 merged_resolution = ioconfig.highest_input_resolution
+                logger.warning(f"Merged res: {merged_resolution}")
                 # DataLoader duplicates patches for each input resolution
                 merged_locations = locations[index :: len(ioconfig.output_resolutions)]
                 if ioconfig.save_resolution is not None:
@@ -556,9 +608,9 @@ class PromptSegmentor(SemanticSegmentor):
                 }
                 # Generate annotations
                 dict_to_store_semantic_segmentor(
-                    patch_output={"predictions": merged_output},
+                    patch_output=merged_output,
                     scale_factor=1.0,
-                    save_path=Path(f"{save_path}.{index!s}.db"),
+                    save_path=Path(f"{save_path}.{index}.db"),
                 )
 
     @staticmethod
@@ -623,6 +675,9 @@ class PromptSegmentor(SemanticSegmentor):
             resolution=resolution,
             units=units,
         )[::-1]
+        print(f"mask_real_shape: {mask_real_shape}")
+        print(f"mask_resolution_shape: {mask_resolution_shape}")
+
         mask_real_shape = np.array(mask_real_shape)
         mask_resolution_shape = np.array(mask_resolution_shape)
         scale_factor = mask_real_shape / mask_resolution_shape
@@ -630,18 +685,16 @@ class PromptSegmentor(SemanticSegmentor):
 
         # Get mask bounding box
         mask_bbox = PromptSegmentor.get_mask_bounds(mask_reader)
-
-        # Scale bounds to mask resolution
-        scaled_bounds = np.ceil(bounds * scale_factor).astype(np.int32)
+        scaled_bbox = np.ceil(mask_bbox / scale_factor).astype(np.int32)
 
         # Clip to mask bounding box
         new_bounds = []
-        for box in scaled_bounds:
+        for box in bounds:
             x1, y1, x2, y2 = box
-            x1_new = max(x1, mask_bbox[0])
-            y1_new = max(y1, mask_bbox[1])
-            x2_new = min(x2, mask_bbox[2])
-            y2_new = min(y2, mask_bbox[3])
+            x1_new = max(x1, scaled_bbox[0])
+            y1_new = max(y1, scaled_bbox[1])
+            x2_new = min(x2, scaled_bbox[2])
+            y2_new = min(y2, scaled_bbox[3])
 
             # Only keep if box is non-empty
             if x1_new < x2_new and y1_new < y2_new:
@@ -754,3 +807,22 @@ class PromptSegmentor(SemanticSegmentor):
                 dtype=np.float32,
             )
         return mask_memmap, score_memmap
+    
+    @staticmethod
+    def calc_mpp(area_dims: IntPair, base_mpp: float, fixed_size: int = 1500) -> float:
+        """Calculates the microns per pixel for a fixed area of an image.
+
+        Args:
+            area_dims (tuple):
+                Dimensions of the area to be scaled.
+            base_mpp (float):
+                Microns per pixel of the base image.
+            fixed_size (int):
+                Fixed size of the area.
+
+        Returns:
+            float:
+                Microns per pixel required to scale the area to a fixed size.
+        """
+        scale = max(area_dims) / fixed_size if max(area_dims) > fixed_size else 1.0
+        return base_mpp * scale

@@ -475,7 +475,7 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
 
 # Needs updating
 def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
-    """Test running hovernet on a box."""
+    """Test running SAM on points and a box."""
     slide_select = doc.get_model_by_name("slide_select0")
     slide_select.value = [data_path["slide2"].name]
     run_button = doc.get_model_by_name("to_model0")
@@ -491,7 +491,7 @@ def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
 
     # select hovernet model and run it on box
     model_select = doc.get_model_by_name("model_drop0")
-    model_select.value = "hovernet"
+    model_select.value = "SAM"
 
     click = ButtonClick(run_button)
     run_button._trigger_event(click)

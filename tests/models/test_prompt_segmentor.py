@@ -62,9 +62,9 @@ def test_functional_segmentor(
 
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
-            {"units": "baseline", "resolution": 1.0},
+            {"units": "mpp", "resolution": 4.0},
         ],
-        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        output_resolutions=[{"units": "mpp", "resolution": 4.0}],
         patch_input_shape=[512, 512],
         patch_output_shape=[512, 512],
         stride_shape=[512, 512],
