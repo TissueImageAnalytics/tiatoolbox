@@ -24,12 +24,14 @@ from shapely.affinity import translate
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
+from tqdm import trange
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
     from os import PathLike
 
     from shapely import geometry
@@ -158,105 +160,6 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
     if not cv2.imwrite(image_path_str, cv2.cvtColor(img, cv2.COLOR_RGB2BGR)):
         msg = "Could not write image."
         raise OSError(msg)
-
-
-def imwrite_ome_tiff(
-    image_path: PathLike,
-    img: np.ndarray | zarr.core.Array,
-    tile_size: tuple[int, int] = (256, 256),
-    channels: list[str] | None = None,
-    mpp: tuple[float, float] = (0.25, 0.25),
-    photometric: str = "minisblack",
-) -> None:
-    """Saves a NumPy or Zarr array (YXC/HWC) as an OME-TIFF in chunks.
-
-    Args:
-        image_path (PathLike):
-            File path (including extension) to save image to.
-        img (np.ndarray or zarr.core.Array):
-            The input image data in YXC (Height, Width, Channels) format.
-        tile_size (tuple):
-            Tile/Chunk size (YX/HW) for writing the tiff file. Default is (256, 256).
-        channels (list[str]):
-            List containing channel names. This can be an output of a DL model with
-            labels.
-        mpp (tuple[float, float]):
-            Tuple of mpp values in y and x (YX/HW). Default is (0.25, 0.25).
-        photometric (str):
-            Color space of image for tifffile. Default is "minisblack".
-            *MINISBLACK*: for bilevel and grayscale images, 0 is black.
-            See tifffile for more options.
-
-    Raises:
-        TypeError:
-            If the input `img` is not a NumPy or Zarr array or does not have 3
-            dimensions.
-        ValueError:
-            If input dimensions is not 3 (HWC) dimensions.
-
-    Examples:
-        >>> img = imread("path/to/image")
-        >>> imwrite_ome_tiff(
-        ... image_path=image_path,
-        ... img=img,
-        ... tile_size=(10, 15),
-        ... channels=["Red", "Green", "Blue"],
-        ... mpp=(0.5, 0.5),
-        ... photometric="rgb",
-        ... )
-
-    """
-    if channels is None:
-        channels = []
-    if not isinstance(img, (zarr.core.Array, np.ndarray)):
-        msg = "Input 'img' must be a NumPy array or a Zarr array."
-        raise TypeError(msg)
-
-    if img.ndim != 3:  # noqa: PLR2004
-        msg = "Input 'img' must have 3 (YXC) dimensions."
-        raise ValueError(msg)
-
-    if photometric.lower() != "minisblack":
-        msg = (
-            f"photometric = {photometric} is not supported. "
-            f"This function currently supports photometric = 'minisblack'."
-        )
-        raise ValueError(msg)
-
-    if not channels:
-        channels = [f"Channel{c + 1}" for c in range(img.shape[2])]
-
-    ome_metadata = {
-        "axes": "CYX",
-        "PhysicalSizeX": mpp[1],
-        "PhysicalSizeXUnit": "µm",
-        "PhysicalSizeY": mpp[0],
-        "PhysicalSizeYUnit": "µm",
-        "Channel": {"Name": channels},
-    }
-
-    tifffile.imwrite(
-        image_path,
-        shape=(img.shape[2], img.shape[0], img.shape[1]),
-        dtype=img.dtype,
-        metadata=ome_metadata,
-        photometric=photometric,
-    )
-
-    store = tifffile.imread(image_path, mode="r+", aszarr=True)
-    z = zarr.open(store, mode="r+")
-
-    for y in range(0, img.shape[0], tile_size[0]):
-        for x in range(0, img.shape[1], tile_size[1]):
-            tile = img[y : y + tile_size[0], x : x + tile_size[1], :]
-
-            # Convert to CYX required by OME-tiff
-            tile = np.transpose(tile, axes=(2, 0, 1))
-            z[:, y : y + tile_size[0], x : x + tile_size[1]] = tile
-
-    store.close()
-    msg = f"Image saved as OME-TIFF to {image_path}."
-    logger.info(msg)
 
 
 def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
@@ -1381,6 +1284,117 @@ def dict_to_store(
         return save_path
 
     return store
+
+
+def _tiles(
+    in_img: np.ndarray | zarr.core.Array,
+    tile_size: tuple[int, int],
+    colormap: int = cv2.COLORMAP_JET,
+    level: int = 0,
+) -> Iterator[np.ndarray]:
+    for y in trange(0, in_img.shape[0], tile_size[0]):
+        for x in range(0, in_img.shape[1], tile_size[1]):
+            in_img_ = in_img[
+                y : y + tile_size[0] : 2**level, x : x + tile_size[1] : 2**level
+            ]
+            yield cv2.applyColorMap(in_img_, colormap)
+
+
+def write_probability_heatmap_as_ome_tiff(
+    image_path: Path,
+    probability: np.ndarray | zarr.core.Array,
+    tile_size: tuple[int, int] = (64, 64),
+    levels: int = 2,
+    mpp: tuple[float, float] = (0.25, 0.25),
+    colormap: int = cv2.COLORMAP_JET,
+) -> None:
+    """Saves output probability maps from segmentation models as heatmaps.
+
+    This function converts the probability maps from individual classes to heatmaps
+    and saves them as pyramidal ome tiffs.
+
+    Args:
+        image_path (Path):
+            File path (including extension) to save image to.
+        probability (np.ndarray or zarr.core.Array):
+            The input image data in YXC (Height, Width, Channels) format.
+        tile_size (tuple):
+            Tile/Chunk size (YX/HW) for writing the tiff file.
+            Only allows tile shapes allowed by tifffile. Default is (64, 64).
+        levels (int):
+            Number of levels for saving pyramidal ome tiffs. Default is 2.
+        mpp (tuple[float, float]):
+            Tuple of mpp values in y and x (YX/HW). Default is (0.25, 0.25).
+        colormap (int):
+            Colormap to save the heatmaps. Default is 2 (cv2.COLORMAP_JET).
+
+    Raises:
+        TypeError:
+            If the input `img` is not a NumPy or Zarr array or does not have 3
+            dimensions.
+        ValueError:
+            If input dimensions is not 3 (HWC) dimensions.
+
+    Examples:
+        >>> probability_map = imread("path/to/probability_map")
+        >>> write_probability_heatmap_as_ome_tiff(
+        ... image_path=image_path,
+        ... probability=probability_map,
+        ... tile_size=(64, 64),
+        ... class_name="tumor",
+        ... levels=2,
+        ... mpp=(0.5, 0.5),
+        ... colormap=cv2.COLORMAP_JET,
+        ... )
+
+    """
+    if not isinstance(probability, (zarr.core.Array, np.ndarray)):
+        msg = "Input 'probability' must be a NumPy array or a Zarr array."
+        raise TypeError(msg)
+
+    if probability.ndim != 2:  # noqa: PLR2004
+        msg = "Input 'probability' must have 2 (YX) dimensions."
+        raise ValueError(msg)
+
+    ome_metadata = {
+        "axes": "YXC",
+        "PhysicalSizeX": mpp[1],
+        "PhysicalSizeXUnit": "µm",
+        "PhysicalSizeY": mpp[0],
+        "PhysicalSizeYUnit": "µm",
+    }
+
+    h = probability.shape[0]
+    w = probability.shape[1]
+
+    with tifffile.TiffWriter(image_path, bigtiff=True, ome=True) as tif:
+        tif.write(
+            _tiles(in_img=probability, tile_size=tile_size, colormap=colormap),
+            dtype="uint8",
+            shape=(h, w, 3),
+            tile=tile_size,
+            compression="jpeg",
+            metadata=ome_metadata,
+            subifds=levels - 1,
+        )
+
+        for level_ in range(1, levels):
+            tif.write(
+                _tiles(
+                    in_img=probability,
+                    tile_size=tile_size,
+                    colormap=colormap,
+                    level=level_,
+                ),
+                dtype="uint8",
+                shape=(h // 2**level_, w // 2**level_, 3),
+                tile=(tile_size[0] // 2**level_, tile_size[1] // 2**level_),
+                compression="jpeg",
+                subfiletype=0,
+            )
+
+    msg = f"Image saved as OME-TIFF to {image_path}."
+    logger.info(msg)
 
 
 def dict_to_zarr(

@@ -1875,21 +1875,6 @@ def get_ome_metadata(tiff_path: Path) -> str | None:
     return None
 
 
-def assert_channel_names_from_ome_metadata(
-    ome_metadata: str, expected_channel_names: list[str]
-) -> None:
-    """Asserts channel naems from OME metadata."""
-    root = ET.fromstring(ome_metadata)
-    namespace = "{http://www.openmicroscopy.org/Schemas/OME/2016-06}"
-    channel_elements = root.findall(
-        f".//{namespace}Image/{namespace}Pixels/{namespace}Channel"
-    )
-    channel_names = [
-        channel.get("Name") for channel in channel_elements if channel.get("Name")
-    ]
-    assert channel_names == expected_channel_names
-
-
 def assert_ome_metadata_value(
     ome_xml: ET.Element, tag: str, expected_value: str
 ) -> None:
@@ -1910,110 +1895,90 @@ def assert_ome_metadata_value(
     pytest.fail(f"Attribute '{tag}' not found in OME metadata.")
 
 
-def test_imwrite_ome_tiff_errors(tmp_path: Path) -> None:
-    """Test expected errors in `imwrite_ome_tiff`."""
-    img = np.zeros(shape=(256, 256))
+def test_iwrite_probability_heatmap_as_ome_tiff_errors(tmp_path: Path) -> None:
+    """Test expected errors in `write_probability_heatmap_as_ome_tiff`."""
+    probability = np.zeros(shape=(256, 256, 3))
 
-    # Input image must have 3 (CYX) dimensions.
-    with pytest.raises(ValueError, match=r".*must have 3 \(YXC\).*"):
-        misc.imwrite_ome_tiff(
+    # Input image must have 2 (CY) dimensions.
+    with pytest.raises(ValueError, match=r".*must have 2 \(YX\).*"):
+        misc.write_probability_heatmap_as_ome_tiff(
             image_path=tmp_path / "failed_test.tif",
-            img=img,
+            probability=probability,
         )
 
-    img = np.zeros(shape=(256, 256, 3))
-    img = torch.from_numpy(img)
+    probability = np.zeros(shape=(256, 256, 3))
+    probability = torch.from_numpy(probability)
 
     # Input image must be a NumPy array or a Zarr array.
     with pytest.raises(TypeError, match=r".*must be a NumPy array or a Zarr.*"):
-        misc.imwrite_ome_tiff(
+        misc.write_probability_heatmap_as_ome_tiff(
             image_path=tmp_path / "failed_test.tif",
-            img=img,
-        )
-
-    img = np.zeros(shape=(256, 256, 3))
-
-    # Input image must be a NumPy array or a Zarr array.
-    with pytest.raises(
-        ValueError,
-        match=r".*This function currently supports photometric = 'minisblack'.*",
-    ):
-        misc.imwrite_ome_tiff(
-            image_path=tmp_path / "failed_test.tif",
-            img=img,
-            photometric="rgb",
+            probability=probability,
         )
 
 
-def test_save_numpy_array(tmp_path: Path, source_image: Path) -> None:
+def test_save_numpy_array_proability_ome_tiff(
+    tmp_path: Path, source_image: Path
+) -> None:
     """Tests saving a basic NumPy array."""
     image_path = tmp_path / "numpy_image.ome.tif"
-    img = utils.imread(source_image)
-    misc.imwrite_ome_tiff(
+    probability = utils.imread(source_image)
+    probability_0 = probability[:, :, 0]
+    misc.write_probability_heatmap_as_ome_tiff(
         image_path=image_path,
-        img=img,
-        tile_size=(10, 15),
-        channels=["Red", "Green", "Blue"],
+        probability=probability_0,
+        tile_size=(64, 64),
         mpp=(0.5, 0.5),
-        photometric="minisblack",
+        levels=2,
+        colormap=cv2.COLORMAP_JET,
     )
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path)
-    saved_img = np.transpose(saved_img, (1, 2, 0))
-    assert np.all(saved_img == img)
-    assert img.shape == saved_img.shape
-    assert img.dtype == saved_img.dtype
+    assert probability.shape == saved_img.shape
+    assert probability.dtype == saved_img.dtype
     ome_xml = ET.fromstring(get_ome_metadata(image_path))
     assert ome_xml is not None
 
-    assert_ome_metadata_value(ome_xml, "SizeY", str(img.shape[0]))
-    assert_ome_metadata_value(ome_xml, "SizeX", str(img.shape[1]))
-    assert_ome_metadata_value(ome_xml, "SizeC", str(img.shape[2]))
+    assert_ome_metadata_value(ome_xml, "SizeY", str(probability.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(probability.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
     assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.5")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.5")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
-    assert_channel_names_from_ome_metadata(
-        ome_metadata=get_ome_metadata(image_path),
-        expected_channel_names=["Red", "Green", "Blue"],
-    )
 
 
-def test_save_zarr_array(tmp_path: Path, source_image: Path) -> None:
+def test_save_zarr_array_probability_ome_tiff(
+    tmp_path: Path, source_image: Path
+) -> None:
     """Tests saving a Zarr array with uint8 dtype."""
     image_path = tmp_path / "zarr_uint8_image.ome.tif"
 
     img = utils.imread(source_image)
-    img = img[:, 0:200, :]
-    img = np.concatenate((img, img), axis=2)
-    img_zarr = zarr.zeros(shape=img.shape, dtype=np.uint8)
-    img_zarr[:] = img
+    probability = img[:, 0:200, 0]
+    img_zarr = zarr.zeros(shape=probability.shape, dtype=np.uint8)
+    img_zarr[:] = probability
 
-    misc.imwrite_ome_tiff(image_path, img_zarr, tile_size=(10, 20))
+    misc.write_probability_heatmap_as_ome_tiff(
+        image_path,
+        img_zarr,
+        tile_size=(32, 32),
+        levels=2,
+        colormap=cv2.COLORMAP_INFERNO,
+    )
     assert image_path.is_file()
     saved_img = tifffile.imread(image_path, squeeze=True)
-    saved_img = np.transpose(saved_img, (1, 2, 0))
-    assert np.all(saved_img == img_zarr)
+    assert img_zarr.shape == saved_img.shape[0:2]
+    assert img_zarr.dtype == saved_img.dtype
     ome_xml = ET.fromstring(get_ome_metadata(image_path))
     assert ome_xml is not None
 
     assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[0]))
     assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[1]))
-    assert_ome_metadata_value(ome_xml, "SizeC", str(img_zarr.shape[2]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
     assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.25")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
-    assert_channel_names_from_ome_metadata(
-        ome_metadata=get_ome_metadata(image_path),
-        expected_channel_names=[
-            "Channel1",
-            "Channel2",
-            "Channel3",
-            "Channel4",
-            "Channel5",
-            "Channel6",
-        ],
-    )
