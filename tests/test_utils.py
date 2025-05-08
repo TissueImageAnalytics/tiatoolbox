@@ -1934,7 +1934,7 @@ def test_dict_to_store_semantic_segment() -> None:
 
 
 def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
-    """Tests behaviour of holes in dict_to_store."""
+    """Tests behaviour of holes in dict_to_store and save_path."""
     test_pred = np.array([[0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]])
 
     patch_output = {"predictions": test_pred}
@@ -1949,6 +1949,15 @@ def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
         save_path=save_dir_path,
     )
 
+    assert save_dir_path.exists()
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
     assert (
         len(store_) == 2
     )  # outer contour and inner contour/hole are treated the same. This is wrong!
@@ -1959,4 +1968,3 @@ def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
     ]
     assert "Polygon" in annotations_geometry_type
     assert "Point" not in annotations_geometry_type
-    assert save_dir_path.exists()
