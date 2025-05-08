@@ -4595,6 +4595,7 @@ class DICOMWSIReader(WSIReader):
             mpp=mpp,
             level_count=len(level_dimensions),
             vendor=dataset.Manufacturer,
+            file_path=self.input_path,
         )
 
     def read_rect(
@@ -4826,8 +4827,16 @@ class DICOMWSIReader(WSIReader):
         _, constrained_read_size = utils.transforms.bounds2locsize(
             constrained_read_bounds,
         )
+
+        # if read_size <= 0, return empty image
+        if np.any(np.array(constrained_read_size) <= 0):
+            return np.zeros(
+                shape=tuple(np.array(size).astype(int)),
+                dtype=np.uint8,
+            )
+
         dicom_level = wsi.levels[read_level].level
-        im_region = wsi.read_region(location, dicom_level, constrained_read_size)
+        im_region = wsi.read_region(level_location, dicom_level, constrained_read_size)
         im_region = np.array(im_region)
 
         # Apply padding outside the slide area
@@ -5003,7 +5012,6 @@ class DICOMWSIReader(WSIReader):
         wsi = self.wsi
 
         # Read at optimal level and corrected read size
-        location_at_baseline = bounds_at_baseline[:2]
         level_location, size_at_read_level = utils.transforms.bounds2locsize(
             bounds_at_read_level,
         )
@@ -5016,7 +5024,7 @@ class DICOMWSIReader(WSIReader):
         _, read_size = utils.transforms.bounds2locsize(read_bounds)
         dicom_level = wsi.levels[read_level].level
         im_region = wsi.read_region(
-            location=location_at_baseline,
+            location=level_location,
             level=dicom_level,
             size=read_size,
         )
