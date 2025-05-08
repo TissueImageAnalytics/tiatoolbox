@@ -163,6 +163,16 @@ def sample_jp2(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
+def sample_dicom(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for dicom images.
+
+    Download dicom image for pytest.
+
+    """
+    return remote_sample("dicom-1")
+
+
+@pytest.fixture(scope="session")
 def sample_all_wsis(
     sample_ndpi: Path,
     sample_svs: Path,

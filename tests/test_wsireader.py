@@ -2979,3 +2979,22 @@ def test_fsspec_reader_open_pass_empty_json(tmp_path: Path) -> None:
     json_path.write_text("{}")
 
     assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
+
+
+def test_oob_read_dicom(sample_dicom: Path) -> None:
+    """Test that out of bounds returns background value.
+
+    For consistency with openslide, our readers should return a
+    background tile when reading out of bounds.
+
+    """
+    wsi = DICOMWSIReader(sample_dicom)
+    # Read a region that is out of bounds
+    region = wsi.read_rect(
+        location=(200000, 200),
+        size=(100, 100),
+    )
+    # Check that the region is the same size as the requested size
+    assert region.shape == (100, 100, 3)
+    # Check that the region is white (255)
+    assert np.all(region == 255)

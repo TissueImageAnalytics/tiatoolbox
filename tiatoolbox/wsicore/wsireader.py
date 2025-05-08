@@ -4828,11 +4828,14 @@ class DICOMWSIReader(WSIReader):
             constrained_read_bounds,
         )
 
-        # if read_size <= 0, return empty image
+        # if out of bounds, return empty image consistent with openslide
         if np.any(np.array(constrained_read_size) <= 0):
-            return np.zeros(
-                shape=tuple(np.array(size).astype(int)),
-                dtype=np.uint8,
+            return (
+                np.ones(
+                    shape=(int(size[1]), int(size[0]), 3),
+                    dtype=np.uint8,
+                )
+                * 255
             )
 
         dicom_level = wsi.levels[read_level].level
