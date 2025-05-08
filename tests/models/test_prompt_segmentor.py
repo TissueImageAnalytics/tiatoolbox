@@ -25,7 +25,7 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB
-BATCH_SIZE = 1 if not ON_GPU else 16
+BATCH_SIZE = 1 if not ON_GPU else 2
 try:
     NUM_LOADER_WORKERS = multiprocessing.cpu_count()
 except NotImplementedError:
@@ -51,8 +51,6 @@ def test_functional_segmentor(
     shutil.rmtree(save_dir, ignore_errors=True)
 
     model = SAM()
-    pretrained = fetch_pretrained_weights("segment_anything-base")
-    model.load_state_dict(torch.load(pretrained, map_location="cpu"))
 
     # test engine setup
 
@@ -127,6 +125,16 @@ def test_functional_segmentor(
     mask[32:120, 32:120] = 1
     mini_wsi_msk = f"{tmp_path}/mini_svs_mask.jpg"
     imwrite(mini_wsi_msk, mask)
+
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[
+            {"units": "baseline", "resolution": 1.0},
+        ],
+        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        patch_input_shape=[512, 512],
+        patch_output_shape=[512, 512],
+        stride_shape=[512, 512],
+    )
 
     # Only point within mask should generate a segmentation
     points = np.array([[[64, 64], [100, 40]]])

@@ -29,19 +29,19 @@ def test_functional_sam(
 
     # test creation
 
-    model = SAM()
-    pretrained = torch.load(weights_path, map_location="cpu")
-    model.load_state_dict(pretrained)
+    model = SAM(device=select_device(on_gpu=ON_GPU))
+    # pretrained = torch.load(weights_path, map_location="cpu")
+    # model.load_state_dict(pretrained)
 
     # test inference
 
     # create image patch and prompts
-    patch = np.expand_dims(img[63:191, 750:878, :], axis=0)
-    patch = model.preproc(patch)  # pre-process the image
+    patch = img[63:191, 750:878, :]
+    patch = [model.preproc(patch)]  # pre-process the image
 
-    points = np.array([[[64, 64]]], dtype=np.int32)
-    boxes = np.array([[64, 64, 128, 128]], dtype=np.int32)
-
+    points = [[[64, 64]]]
+    boxes = [[[64, 64, 128, 128]]]
+    
     mask_output, score_output = model.infer_batch(
         model, patch, points, device=select_device(on_gpu=ON_GPU)
     )

@@ -1,8 +1,7 @@
-"""Model designed for general segmentation of WSIs."""
+"""This module enables interactive segmentation"""
 
 from __future__ import annotations
 
-import copy
 import logging
 import shutil
 from pathlib import Path
@@ -265,25 +264,28 @@ class PromptSegmentor(SemanticSegmentor):
         if mask_reader is not None:
             # Filters the point coordinates to only include those within the
             # mask. filter_coordinates only accepts bounding-box style coordinates
+            logger.warning(f"Point coords: {point_coords}")
             point_coords = (
                 point_coords[
                     PromptSegmentor.filter_coordinates(
                         mask_reader,
-                        np.hstack([point_coords, point_coords]),
+                        point_coords,
                         **resolution,
                     )
                 ]
                 if point_coords is not None
                 else None
             )
-            point_coords = self._adjust_prompt_resolution(wsi_reader, point_coords, **resolution)
-
+            logger.warning(f"Filtered point coords: {point_coords}")
+            point_coords = np.array(point_coords) 
+            if point_coords.size == 0:
+                point_coords = None
+    
             box_coords = (
                 PromptSegmentor.clip_coordinates(mask_reader, box_coords, **resolution)
                 if box_coords is not None
                 else None
             )
-            box_coords = self._adjust_prompt_resolution(wsi_reader, box_coords, **resolution)
 
         patch_inputs, point_coords, box_coords = self.get_coordinates(
             wsi_reader=wsi_reader,
@@ -339,6 +341,9 @@ class PromptSegmentor(SemanticSegmentor):
             points = point_coords[prompt_slice] if point_coords is not None else None
             boxes = box_coords[prompt_slice] if box_coords is not None else None
 
+            logger.warning(f"Points: {points}")
+            logger.warning(f"Boxes: {boxes}")
+
             # assume to return a list of L output,
             # each of shape N x etc. (N=batch size)
 
@@ -381,8 +386,8 @@ class PromptSegmentor(SemanticSegmentor):
         # clean up the cache directories
         shutil.rmtree(cache_dir)
 
+    @staticmethod
     def _adjust_prompt_resolution(
-            self,
             wsi_reader: WSIReader,
             coords: np.ndarray | None,
             resolution: Resolution,
@@ -405,8 +410,8 @@ class PromptSegmentor(SemanticSegmentor):
                 Coordinates to adjust. 
         """
         if coords is not None:
-            coords = coords * (wsi_reader.slide_dimensions(resolution, units) 
-                      / wsi_reader.slide_dimensions(1.0, "baseline"))
+            coords = coords * (wsi_reader.slide_dimensions(resolution, units)[0] 
+                      / wsi_reader.slide_dimensions(1.0, "baseline")[0])
         return coords
 
     @staticmethod
@@ -477,6 +482,11 @@ class PromptSegmentor(SemanticSegmentor):
         print(f"WSI proc shape: {wsi_proc_shape}")
         image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
 
+        point_coords = PromptSegmentor._adjust_prompt_resolution(wsi_reader, point_coords, **resolution)
+        logger.warning(f"Adjusted point coords: {point_coords}")
+        box_coords = PromptSegmentor._adjust_prompt_resolution(wsi_reader, box_coords, **resolution)
+        logger.warning(f"Adjusted point coords: {box_coords}")
+
         if multi_prompt:
             patch_inputs = np.array([np.copy(image_patch)])
             point_coords = (
@@ -488,11 +498,13 @@ class PromptSegmentor(SemanticSegmentor):
             num_points = len(point_coords) if point_coords is not None else 0
             num_boxes = len(box_coords) if box_coords is not None else 0
             num_prompts = num_points + num_boxes
+
             if mode == "tile":
                 patch_inputs = np.array(
                     [np.copy(image_patch) for _ in range(num_prompts)]
                 )
             elif mode == "wsi":
+                
                 patch_extractor = PointsPatchExtractor(
                     wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
                 )
@@ -501,7 +513,11 @@ class PromptSegmentor(SemanticSegmentor):
                     patch_input_shape=ioconfig.patch_input_shape,
                     stride_shape=ioconfig.stride_shape,
                 )
-                patch_inputs.append(box_coords)
+                logger.warning(f"Patch inputs: {patch_inputs}")
+                logger.warning(f"Box coords: {box_coords}")
+                if box_coords is not None:
+                    patch_inputs = np.concatenate(patch_inputs, box_coords, axis=0)
+                logger.warning(f"New Patch inputs: {patch_inputs}")
 
             repeats = len(ioconfig.input_resolutions)
             if point_coords is not None:
@@ -516,6 +532,85 @@ class PromptSegmentor(SemanticSegmentor):
                 box_coords = [item for item in padded_boxes for _ in range(repeats)]
 
         return patch_inputs, point_coords, box_coords
+    
+    @staticmethod
+    def filter_coordinates(
+        mask_reader: VirtualWSIReader,
+        bounds: np.ndarray,
+        resolution: Resolution | None = None,
+        units: Units | None = None,
+    ) -> np.ndarray:
+        """Indicates which coordinate is valid basing on the mask.
+
+        To use your own approaches, either subclass to overwrite or
+        directly assign your own function to this name. In either cases,
+        the function must obey the API defined here.
+
+        Args:
+            mask_reader (:class:`.VirtualReader`):
+                A virtual pyramidal reader of the mask related to the
+                WSI from which we want to extract the patches.
+            bounds (ndarray and np.int32):
+                Coordinates to be checked via the `func`. They must be
+                in the same resolution as requested `resolution` and
+                `units`. The shape of `coordinates` is (N, K) where N is
+                the number of coordinate sets and K is either 2 for
+                centroids or 4 for bounding boxes. When using the
+                default `func=None`, K should be 4, as we expect the
+                `coordinates` to be bounding boxes in `[start_x,
+                start_y, end_x, end_y]` format.
+            resolution (Resolution):
+                Resolution of the requested patch.
+            units (Units):
+                Units of the requested patch.
+
+        Returns:
+            :class:`numpy.ndarray`:
+                List of flags to indicate which coordinate is valid.
+
+        Examples:
+            >>> # API of function expected to overwrite `filter_coordinates`
+            >>> def func(reader, bounds, resolution, units):
+            ...   # as example, only select first bound
+            ...   return np.array([1, 0])
+            >>> coords = [[0, 0, 256, 256], [128, 128, 384, 384]]
+            >>> segmentor = SemanticSegmentor(model='unet')
+            >>> segmentor.filter_coordinates = func
+
+        """
+        if not isinstance(mask_reader, VirtualWSIReader):
+            msg = "`mask_reader` should be VirtualWSIReader."
+            raise TypeError(msg)
+
+        if not isinstance(bounds, np.ndarray) or not np.issubdtype(
+            bounds.dtype,
+            np.integer,
+        ):
+            msg = "`coordinates` should be ndarray of integer type."
+            raise ValueError(msg)
+
+        mask_real_shape = mask_reader.img.shape[:2]
+        mask_resolution_shape = mask_reader.slide_dimensions(
+            resolution=resolution,
+            units=units,
+        )[::-1]
+        mask_real_shape = np.array(mask_real_shape)
+        mask_resolution_shape = np.array(mask_resolution_shape)
+        scale_factor = mask_real_shape / mask_resolution_shape
+        scale_factor = scale_factor[0]  # what if ratio x != y
+
+        # Get mask bounding box
+        mask_bbox = PromptSegmentor.get_mask_bounds(mask_reader)
+        scaled_bbox = np.ceil(mask_bbox / scale_factor).astype(np.int32)
+
+        def sel_func(coord: np.ndarray) -> bool:
+            """Accept coord if it is part of mask."""
+            x,y = coord
+            return (x >= scaled_bbox[0] and y >= scaled_bbox[1] 
+                and x <= scaled_bbox[2] and y <= scaled_bbox[3])
+
+        flags = [sel_func(bound) for bound in bounds]
+        return np.array(flags)
 
     def _process_predictions(
         self,
@@ -566,7 +661,7 @@ class PromptSegmentor(SemanticSegmentor):
 
                 # store the predictions
                 mask_memmap[y1:y2, x1:x2] = mask[0]
-                score_memmap[i] = score[0][0]
+                score_memmap[i] = score[0][0][0]
 
             mask_memmap.flush()
             score_memmap.flush()
@@ -594,7 +689,7 @@ class PromptSegmentor(SemanticSegmentor):
                 to_merge_predictions = predictions[
                     index :: len(ioconfig.output_resolutions)
                 ]
-                to_merge_predictions = [v[0][0][0] for v in to_merge_predictions]
+                to_merge_predictions = to_merge_predictions[0][0][0][0][0]
                 sub_save_path = f"{save_path}.raw.{index}.npy"
                 sub_count_path = f"{cache_dir}/count.{index}.npy"
                 merged_output = {
@@ -606,10 +701,12 @@ class PromptSegmentor(SemanticSegmentor):
                         cache_count_path=sub_count_path,
                     )
                 }
+                # Scale the merged output to the original WSI shape
+                scale_factor = merged_shape[0] / wsi_shape[0]
                 # Generate annotations
                 dict_to_store_semantic_segmentor(
                     patch_output=merged_output,
-                    scale_factor=1.0,
+                    scale_factor=scale_factor,
                     save_path=Path(f"{save_path}.{index}.db"),
                 )
 

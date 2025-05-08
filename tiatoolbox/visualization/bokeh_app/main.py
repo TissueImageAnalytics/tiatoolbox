@@ -1281,9 +1281,7 @@ def sam_segment() -> None:
         [x[i], -y[i], x[i] + width[i], height[i] - y[i]] for i in range(len(x))
     ]], np.uint32) if len(x) > 0 else None
 
-    model = SAM()
-    pretrained = fetch_pretrained_weights("segment_anything-base")
-    model.load_state_dict(torch.load(pretrained, map_location="cpu"))
+    model = SAM(device=select_device(on_gpu=torch.cuda.is_available()))
 
     prompt_segmentor = PromptSegmentor(model)
     tmp_save_dir = Path(tempfile.mkdtemp())
@@ -1307,7 +1305,7 @@ def sam_segment() -> None:
 
     Image.fromarray(mask).save(tmp_mask_dir / "mask.png")
 
-    res = prompt_segmentor.calc_mpp(UI["vstate"].dims[0], UI["vstate"].mpp[0], 1024)
+    res = prompt_segmentor.calc_mpp(UI["vstate"].dims, UI["vstate"].mpp[0], 1024)
 
     # Run SAM on the point
     prediction = prompt_segmentor.predict(

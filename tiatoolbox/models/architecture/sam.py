@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
-from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
+from PIL import Image
 
 from tiatoolbox.models.models_abc import ModelABC
+from transformers import SamModel, SamProcessor, pipeline
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntBounds, IntPair
@@ -44,8 +45,7 @@ class SAM(ModelABC):
 
     def __init__(
         self: SAM,
-        model_type: str = "vit_b",
-        checkpoint_path: str | None = None,
+        model_path: str = "facebook/sam-vit-huge",
         *,
         device: str = "cpu",
     ) -> None:
@@ -54,11 +54,9 @@ class SAM(ModelABC):
         self.net_name = "SAM"
         self.device = device
 
-        self.model = sam_model_registry[model_type](checkpoint=checkpoint_path).to(
-            device
-        )
-        self.predictor = SamPredictor(self.model)
-        self.generator = SamAutomaticMaskGenerator(self.model)
+        self.model = SamModel.from_pretrained(model_path).to(device)
+        self.processor = SamProcessor.from_pretrained(model_path)
+        self.generator = pipeline("mask-generation", model=model_path, device=device)
 
     def forward(
         self: SAM,
@@ -84,42 +82,66 @@ class SAM(ModelABC):
                 List of masks and scores for each image.
 
         """
-        batch_masks, batch_scores = [], []
+        masks, scores = [], []
 
-        for i, image in enumerate(imgs):
-            self._encode_image(image)
+        if point_coords is not None or box_coords is not None:
+            for i, image in enumerate(imgs):
+                image = [Image.fromarray(image)]
+                image_embeddings = self._encode_image(image)
+                point_labels = None
+                points = None
+                boxes = None
 
-            # assume that prompts will be provided for all images in a batch
-            points = point_coords[i] if point_coords is not None else None
-            box = box_coords[i] if box_coords is not None else None
+                # Processor expects coordinates to be lists
+                def format_coords(coords):
+                    if isinstance(coords, np.ndarray):
+                        return coords.tolist()
+                    if isinstance(coords[0], np.ndarray):
+                        return [item.tolist() if isinstance(item, np.ndarray) else item for item in coords]
+                    return coords
 
-            if points is not None or box is not None:
-                # Convert points and box to numpy arrays
-                points = np.array(points) if points is not None else None
-                box = np.array(box) if box is not None else None
+                if point_coords is not None:
+                    points = point_coords[i]
+                    # Convert point coordinates to list
+                    if points is not None:
+                        point_labels = [[[1] * len(points)]]
+                        points = [format_coords(points)]
+                
+                if box_coords is not None:
+                    boxes = box_coords[i]
+                    # Convert box coordinates to list
+                    if boxes is not None:
+                        boxes = [format_coords(boxes)]
+                    
+                inputs = self.processor(
+                    image,
+                    input_points=points,
+                    input_labels=point_labels,
+                    input_boxes=boxes,
+                    return_tensors="pt",
+                ).to(self.device)
 
-                point_labels = np.ones(len(points)) if points is not None else None
-                masks, scores, _ = self.predictor.predict(
-                    point_coords=points,
-                    point_labels=point_labels,
-                    box=box,
-                    multimask_output=False,
-                )
-            else:
-                # Use SAM's automatic mask generator
-                masks = self.generator.generate(image)
-                scores = np.array([mask["predicted_iou"] for mask in masks])
-                masks = np.array(
-                    [mask["segmentation"] for mask in masks], dtype=np.uint8
-                )
+                # Replaces pixel_values with image embeddings
+                inputs.pop("pixel_values", None)
+                inputs.update({"image_embeddings": image_embeddings})
 
-            sorted_ind = np.argsort(scores)[::-1]
-            sorted_masks = np.array(masks[sorted_ind], dtype=np.uint8)
-            sorted_scores = np.around(scores[sorted_ind], 2)
-            batch_masks.append(sorted_masks)
-            batch_scores.append(sorted_scores)
-
-        return batch_masks, batch_scores
+                with torch.inference_mode():
+                    # Forward pass through the model
+                    outputs = self.model(**inputs, multimask_output=False)
+                    image_masks = self.processor.image_processor.post_process_masks(
+                        outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), 
+                        inputs["reshaped_input_sizes"].cpu())
+                    image_scores = outputs.iou_scores.cpu()
+                masks.append(image_masks)
+                scores.append(image_scores)
+        else:
+            imgs = [Image.fromarray(image) for image in imgs]
+            # If no points or boxes are provided, use the generator pipeline
+            outputs = self.generator(imgs, points_per_batch=64)
+            masks = np.array([output["masks"] for output in outputs])
+            scores = np.array([output["scores"] for output in outputs])
+            
+        return np.array(masks), np.array(scores)
 
     @staticmethod
     def infer_batch(
@@ -160,11 +182,13 @@ class SAM(ModelABC):
 
         with torch.inference_mode():
             masks, scores = model(batch_data, point_coords, box_coords)
+            
         return masks, scores
 
     def _encode_image(self: SAM, image: np.ndarray) -> np.ndarray:
         """Encodes the image for feature extraction."""
-        self.predictor.set_image(image)
+        inputs = self.processor(image, return_tensors="pt").to(self.device)
+        return self.model.get_image_embeddings(inputs["pixel_values"])
 
     def load_state_dict(self: SAM, state_dict: str, **kwargs: dict) -> None:
         """Loads model weights from specified state dictionary."""
@@ -178,8 +202,15 @@ class SAM(ModelABC):
             return image.permute(1, 2, 0).cpu().numpy()
 
         return image[..., :3]  # Remove alpha channel if present
-
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:
         """Post-processes an image."""
         return image
+
+    def to(self: SAM, device: str) -> SAM:
+        """Moves the model to the specified device."""
+        super().to(device)
+        self.device = device
+        self.model.to(device)
+        return self
+    
