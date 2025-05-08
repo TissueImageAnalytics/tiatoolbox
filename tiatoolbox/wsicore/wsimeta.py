@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -121,7 +121,7 @@ class WSIMeta:
         self.level_downsamples = (
             [float(x) for x in level_downsamples]
             if level_downsamples is not None
-            else None
+            else [1.0]
         )
         self.level_count = (
             int(level_count) if level_count is not None else len(self.level_dimensions)
@@ -212,7 +212,9 @@ class WSIMeta:
         ceil = int(np.ceil(level))
         floor_downsample = level_downsamples[floor]
         ceil_downsample = level_downsamples[ceil]
-        return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
+        return float(
+            np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
+        )
 
     def relative_level_scales(
         self: WSIMeta,
@@ -260,13 +262,16 @@ class WSIMeta:
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
 
         """
+        base_scale: np.ndarray | float
+        msg: str
+
         if units not in ("mpp", "power", "level", "baseline"):
             msg = "Invalid units"
             raise ValueError(msg)
 
         level_downsamples = self.level_downsamples
 
-        def np_pair(x: Number | np.array) -> np.ndarray:
+        def np_pair(x: Resolution) -> np.ndarray:
             """Ensure input x is a numpy array of length 2."""
             # If one number is given, the same value is used for x and y
             if isinstance(x, Number):
@@ -274,6 +279,7 @@ class WSIMeta:
             return np.array(x)
 
         if units == "level":
+            resolution = cast("float", resolution)
             if resolution >= len(level_downsamples):
                 msg = (
                     f"Target scale level {resolution} > "
@@ -296,7 +302,7 @@ class WSIMeta:
             if self.objective_power is None:
                 msg = (
                     "Objective power is None. "
-                    "Cannot determine scale in terms of objective power.",
+                    "Cannot determine scale in terms of objective power."
                 )
                 raise ValueError(
                     msg,
