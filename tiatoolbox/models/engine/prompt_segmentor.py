@@ -71,7 +71,7 @@ class PromptSegmentor(SemanticSegmentor):
         )
         self.multi_prompt = True
 
-    def predict(  # skipcq: PYL-W0221 
+    def predict(  # skipcq: PYL-W0221
         self,
         imgs: list,
         masks: list | None = None,
