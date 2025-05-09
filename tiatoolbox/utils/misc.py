@@ -1227,7 +1227,7 @@ def process_contours(
 
     for i, layer_ in enumerate(contours):
         coords: np.ndarray = layer_.squeeze()
-        scaled_coords: np.ndarray = np.array([scale_factor * coords])
+        scaled_coords: np.ndarray = np.array([np.array(scale_factor) * coords])
 
         # save one points as a line, otherwise save the Polygon
         if len(layer_) > 2:  # noqa: PLR2004
