@@ -12,10 +12,14 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import tifffile
 import torch
+import zarr
+from defusedxml import ElementTree as ET  # noqa: N817
 from PIL import Image
 from requests import HTTPError
 from shapely.geometry import Polygon
+from tifffile import TiffFile
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
@@ -1931,3 +1935,123 @@ def test_dict_to_store_semantic_segment() -> None:
     assert "Point" in annotations_geometry_type
     assert "Polygon" in annotations_geometry_type
     assert "Line String" in annotations_geometry_type
+
+# Tests for OME tiff writer
+
+
+def get_ome_metadata(tiff_path: Path) -> str | None:
+    """Extracts the OME metadata string from a TIFF file."""
+    with TiffFile(tiff_path) as tif:
+        if tif.ome_metadata:
+            return tif.ome_metadata
+    return None
+
+
+def assert_ome_metadata_value(
+    ome_xml: ET.Element, tag: str, expected_value: str
+) -> None:
+    """Asserts the value of a specific OME metadata tag (as an attribute)."""
+    namespace = "{http://www.openmicroscopy.org/Schemas/OME/2016-06}"
+    image_elements = ome_xml.findall(f".//{namespace}Image")
+    if image_elements:
+        pixels_elements = image_elements[0].findall(f"./{namespace}Pixels")
+        if pixels_elements:
+            actual_value = pixels_elements[0].get(tag)
+            assert actual_value == expected_value, (
+                f"Expected attribute '{tag}' to be '{expected_value}', "
+                f"but got '{actual_value}'."
+            )
+            return
+
+    # If we reach here, the tag or attribute was not found
+    pytest.fail(f"Attribute '{tag}' not found in OME metadata.")
+
+
+def test_iwrite_probability_heatmap_as_ome_tiff_errors(tmp_path: Path) -> None:
+    """Test expected errors in `write_probability_heatmap_as_ome_tiff`."""
+    probability = np.zeros(shape=(256, 256, 3))
+
+    # Input image must have 2 (CY) dimensions.
+    with pytest.raises(ValueError, match=r".*must have 2 \(YX\).*"):
+        misc.write_probability_heatmap_as_ome_tiff(
+            image_path=tmp_path / "failed_test.tif",
+            probability=probability,
+        )
+
+    probability = np.zeros(shape=(256, 256, 3))
+    probability = torch.from_numpy(probability)
+
+    # Input image must be a NumPy array or a Zarr array.
+    with pytest.raises(TypeError, match=r".*must be a NumPy array or a Zarr.*"):
+        misc.write_probability_heatmap_as_ome_tiff(
+            image_path=tmp_path / "failed_test.tif",
+            probability=probability,
+        )
+
+
+def test_save_numpy_array_proability_ome_tiff(
+    tmp_path: Path, source_image: Path
+) -> None:
+    """Tests saving a basic NumPy array."""
+    image_path = tmp_path / "numpy_image.ome.tif"
+    probability = utils.imread(source_image)
+    probability_0 = probability[:, :, 0]
+    misc.write_probability_heatmap_as_ome_tiff(
+        image_path=image_path,
+        probability=probability_0,
+        tile_size=(64, 64),
+        mpp=(0.5, 0.5),
+        levels=2,
+        colormap=cv2.COLORMAP_JET,
+    )
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path)
+    assert probability.shape == saved_img.shape
+    assert probability.dtype == saved_img.dtype
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
+    assert ome_xml is not None
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(probability.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(probability.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+
+
+def test_save_zarr_array_probability_ome_tiff(
+    tmp_path: Path, source_image: Path
+) -> None:
+    """Tests saving a Zarr array with uint8 dtype."""
+    image_path = tmp_path / "zarr_uint8_image.ome.tif"
+
+    img = utils.imread(source_image)
+    probability = img[:, 0:200, 0]
+    img_zarr = zarr.zeros(shape=probability.shape, dtype=np.uint8)
+    img_zarr[:] = probability
+
+    misc.write_probability_heatmap_as_ome_tiff(
+        image_path,
+        img_zarr,
+        tile_size=(32, 32),
+        levels=2,
+        colormap=cv2.COLORMAP_INFERNO,
+    )
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path, squeeze=True)
+    assert img_zarr.shape == saved_img.shape[0:2]
+    assert img_zarr.dtype == saved_img.dtype
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
+    assert ome_xml is not None
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+
