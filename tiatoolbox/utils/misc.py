@@ -1226,15 +1226,15 @@ def process_contours(
     holes_dict: dict[int, list[np.ndarray]] = {}
 
     for i, layer_ in enumerate(contours):
-        coords = layer_.squeeze()
-        scaled_coords = np.array([scale_factor * coords])
+        coords: np.ndarray = layer_.squeeze()
+        scaled_coords: np.ndarray = np.array([scale_factor * coords])
 
         # save one points as a line, otherwise save the Polygon
         if len(layer_) > 2:  # noqa: PLR2004
-            if hierarchy[0][i][3] == -1:  # Outer contour
+            if int(hierarchy[0][i][3]) == -1:  # Outer contour
                 outer_contours.append(scaled_coords[0])
             else:  # Hole
-                parent_idx = hierarchy[0][i][3]
+                parent_idx: int = int(hierarchy[0][i][3])
                 if parent_idx not in holes_dict:
                     holes_dict[parent_idx] = []
                 holes_dict[parent_idx].append(scaled_coords[0])
@@ -1272,7 +1272,7 @@ def process_contours(
             )
 
     for idx, outer in enumerate(outer_contours):
-        holes = holes_dict.get(idx, [])
+        holes: list[np.ndarray] = holes_dict.get(idx, [])
         if len(holes) != 0:
             feature_geom = feature2geometry(
                 {
