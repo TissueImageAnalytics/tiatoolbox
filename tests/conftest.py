@@ -164,9 +164,10 @@ def sample_jp2(remote_sample: Callable) -> Path:
 
 @pytest.fixture(scope="session")
 def sample_dicom(remote_sample: Callable) -> Path:
-    """Sample pytest fixture for dicom images.
+    """Sample pytest fixture for DICOM images.
 
-    Download dicom image for pytest.
+    This fixture downloads a sample DICOM file in a standard format for testing.
+    The file represents a single DICOM image and is stored in a temporary directory.
 
     """
     return remote_sample("dicom-1")
