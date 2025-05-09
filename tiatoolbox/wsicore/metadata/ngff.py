@@ -9,8 +9,12 @@ https://ngff.openmicroscopy.org/0.4/
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 from dataclasses import dataclass, field
-from typing import Literal
 
 from tiatoolbox import __version__ as tiatoolbox_version
 
@@ -165,6 +169,14 @@ class Multiscales:
     )
     datasets: list[Dataset] = field(default_factory=lambda: [Dataset()])
     version: str = "0.4"
+
+    def __iter__(self: Multiscales) -> Iterator:
+        """Iterate over the values of the attributes in the `Multiscales` object.
+
+        Yields:
+            Iterator: An iterator
+        """
+        yield from self.__dict__.values()
 
 
 @dataclass
