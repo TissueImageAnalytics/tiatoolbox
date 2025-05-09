@@ -1203,7 +1203,7 @@ def add_from_dat(
 
 def process_contours(
     contours: list[np.ndarray],
-    hierarchy: list[np.ndarray],
+    hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
 ) -> list:
     """Process contours and hierarchy to create annotations.
