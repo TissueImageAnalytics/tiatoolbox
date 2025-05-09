@@ -8,7 +8,7 @@ import tempfile
 import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
-from shutil import rmtree, move
+from shutil import move, rmtree
 from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 
 import numpy as np
@@ -62,7 +62,6 @@ from matplotlib import colormaps
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
-from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.sam import SAM
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
@@ -1268,18 +1267,25 @@ def sam_segment() -> None:
     # Get point coordinates
     x = np.round(UI["pt_source"].data["x"])
     y = np.round(UI["pt_source"].data["y"])
-    point_coords = np.array([[
-        [x[i], -y[i]] for i in range(len(x))
-    ]], np.uint32) if len(x) > 0 else None
+    point_coords = (
+        np.array([[[x[i], -y[i]] for i in range(len(x))]], np.uint32)
+        if len(x) > 0
+        else None
+    )
 
     # Get box coordinates
     x = np.round(UI["box_source"].data["x"])
     y = np.round(UI["box_source"].data["y"])
     height = np.round(UI["box_source"].data["height"])
     width = np.round(UI["box_source"].data["width"])
-    box_coords = np.array([[
-        [x[i], -y[i], x[i] + width[i], height[i] - y[i]] for i in range(len(x))
-    ]], np.uint32) if len(x) > 0 else None
+    box_coords = (
+        np.array(
+            [[[x[i], -y[i], x[i] + width[i], height[i] - y[i]] for i in range(len(x))]],
+            np.uint32,
+        )
+        if len(x) > 0
+        else None
+    )
 
     model = SAM(device=select_device(on_gpu=torch.cuda.is_available()))
 
@@ -1320,17 +1326,16 @@ def sam_segment() -> None:
         patch_output_shape=(1024, 1024),
         resolution=res,
         units="mpp",
-        multi_prompt=True
+        multi_prompt=True,
     )
 
     ann_loc = f"{prediction[0][1]}.0.db"
 
     slide_filename = UI["vstate"].slide_path.stem + ".db"
     destination = doc_config["overlay_folder"] / slide_filename
-    print(f"slide: {UI['vstate'].slide_path}")
-    print(f"destination: {destination}")
 
     # Move the database file
+    # ! Need to check if this is necessary
     move(ann_loc, destination)
 
     fname = make_safe_name(destination)
@@ -1342,7 +1347,7 @@ def sam_segment() -> None:
     update_ui_on_new_annotations(ann_types)
 
     # Clean up temp files
-    #rmtree(tmp_save_dir)
+    rmtree(tmp_save_dir)
 
 
 # endregion

@@ -934,21 +934,3 @@ nuclick_light-pannuke:
             patch_input_shape: [128, 128]
             patch_output_shape: [128, 128]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
-
-segment_anything-base:
-    url: https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
-    architecture:
-        class: sam.SAM
-        kwargs:
-            model_type: "vit_b"
-            checkpoint_path: "sam_vit_b_01ec64.pth"
-    ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
-        kwargs:
-            input_resolutions:
-                - {'units': 'baseline', 'resolution': 1.0}
-            output_resolutions:
-                - {'units': 'baseline', 'resolution': 1.0}
-            patch_input_shape: [1024, 1024]
-            patch_output_shape: [1024, 1024]
-            save_resolution: {'units': 'baseline', 'resolution': 1.0}

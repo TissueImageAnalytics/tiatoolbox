@@ -3,10 +3,6 @@
 from pathlib import Path
 from typing import Callable
 
-import numpy as np
-import torch
-
-from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.sam import SAM
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread
@@ -25,13 +21,9 @@ def test_functional_sam(
     tile_path = Path(remote_sample("patch-extraction-vf"))
     img = imread(tile_path)
 
-    weights_path = fetch_pretrained_weights("segment_anything-base")
-
     # test creation
 
     model = SAM(device=select_device(on_gpu=ON_GPU))
-    # pretrained = torch.load(weights_path, map_location="cpu")
-    # model.load_state_dict(pretrained)
 
     # test inference
 
@@ -41,7 +33,7 @@ def test_functional_sam(
 
     points = [[[64, 64]]]
     boxes = [[[64, 64, 128, 128]]]
-    
+
     mask_output, score_output = model.infer_batch(
         model, patch, points, device=select_device(on_gpu=ON_GPU)
     )

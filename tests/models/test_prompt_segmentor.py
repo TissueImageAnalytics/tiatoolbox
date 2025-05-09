@@ -8,23 +8,20 @@ import shutil
 from pathlib import Path
 from typing import Callable
 
-import matplotlib.pyplot as plt
 import numpy as np
-import torch
+import pytest
 
 from tiatoolbox.models import PromptSegmentor
-from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.sam import SAM
 from tiatoolbox.models.engine.semantic_segmentor import (
     IOSegmentorConfig,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils import imread, imwrite
+from tiatoolbox.utils import imwrite
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = toolbox_env.has_gpu()
-# The value is based on 2 TitanXP each with 12GB
 BATCH_SIZE = 1 if not ON_GPU else 2
 try:
     NUM_LOADER_WORKERS = multiprocessing.cpu_count()
@@ -114,9 +111,6 @@ def test_functional_segmentor(
         np.load(output_list[0][1] + f"/{i}.raw.0.npy") for i in range(total_prompts)
     ]
 
-    # Remove before commit
-    visualize_masks([imread(mini_wsi_jpg)], [preds], None)
-
     assert len(output_list) == 1
     assert len(preds) == total_prompts
 
@@ -134,6 +128,7 @@ def test_functional_segmentor(
         patch_input_shape=[512, 512],
         patch_output_shape=[512, 512],
         stride_shape=[512, 512],
+        save_resolution={"units": "baseline", "resolution": 1.0},
     )
 
     # Only point within mask should generate a segmentation
@@ -175,19 +170,54 @@ def test_functional_segmentor(
     assert Path(output_list[0][1] + ".0.db").exists()
 
 
-# ! Remove before commit
-def visualize_masks(
-    images: list, masks_list: list, metadata_list: list | None = None
-) -> None:
-    """Visualizes masks on the given image."""
-    for i, image in enumerate(images):
-        for j, mask in enumerate(masks_list[i]):
-            nuclei_type = metadata_list[i][j] if metadata_list else "Nuclei"
-            plt.imshow(image / 255.0)
-            plt.savefig("image_{i}.png", bbox_inches="tight", dpi=300)
-            plt.imshow(mask, alpha=0.5, cmap="jet")
-            plt.axis("off")
-            plt.title(f"Nuclei Type: {nuclei_type}" + f"Image: {i}")
-            plt.show()
-            # save the image
-            plt.savefig(f"image_{i}_mask_{j}.png", bbox_inches="tight", dpi=300)
+def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
+    """Functional crash tests for segmentor."""
+    # # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_msk = Path(remote_sample("wsi2_4k_4k_msk"))
+
+    save_dir = tmp_path / "test_crash_segmentor"
+    prompt_segmentor = PromptSegmentor(batch_size=BATCH_SIZE)
+
+    # * test basic crash
+    with pytest.raises(TypeError, match=r".*`mask_reader`.*"):
+        prompt_segmentor.filter_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
+    with pytest.raises(TypeError, match=r".*`mask_reader`.*"):
+        prompt_segmentor.get_mask_bounds(mini_wsi_msk)
+    with pytest.raises(TypeError, match=r".*mask_reader.*"):
+        prompt_segmentor.clip_coordinates(mini_wsi_msk, np.array(["a", "b", "c"]))
+
+    with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
+        prompt_segmentor.filter_coordinates(
+            WSIReader.open(mini_wsi_msk),
+            np.array([1.0, 2.0]),
+        )
+    with pytest.raises(ValueError, match=r".*ndarray.*integer.*"):
+        prompt_segmentor.clip_coordinates(
+            WSIReader.open(mini_wsi_msk),
+            np.array([1.0, 2.0]),
+        )
+    prompt_segmentor.get_reader(mini_wsi_svs, None, "wsi", auto_get_mask=True)
+    with pytest.raises(ValueError, match=r".*must be a valid file path.*"):
+        prompt_segmentor.get_reader(
+            mini_wsi_msk,
+            "not_exist",
+            "wsi",
+            auto_get_mask=True,
+        )
+
+    shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
+    with pytest.raises(ValueError, match=r".*valid mode.*"):
+        prompt_segmentor.predict([], mode="abc")
+
+    shutil.rmtree(save_dir, ignore_errors=True)
+
+    # test ignore crash
+    prompt_segmentor.predict(
+        [mini_wsi_svs],
+        patch_input_shape=(2048, 2048),
+        mode="wsi",
+        device=select_device(on_gpu=ON_GPU),
+        crash_on_exception=False,
+        save_dir=save_dir,
+    )

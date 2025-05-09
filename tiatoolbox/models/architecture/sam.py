@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import torch
 from PIL import Image
+from transformers import SamModel, SamProcessor, pipeline
 
 from tiatoolbox.models.models_abc import ModelABC
-from transformers import SamModel, SamProcessor, pipeline
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntBounds, IntPair
@@ -58,7 +58,7 @@ class SAM(ModelABC):
         self.processor = SamProcessor.from_pretrained(model_path)
         self.generator = pipeline("mask-generation", model=model_path, device=device)
 
-    def forward(
+    def forward(  # skipcq: PYL-W0221
         self: SAM,
         imgs: list,
         point_coords: list | None = None,
@@ -85,19 +85,22 @@ class SAM(ModelABC):
         masks, scores = [], []
 
         if point_coords is not None or box_coords is not None:
-            for i, image in enumerate(imgs):
-                image = [Image.fromarray(image)]
+            for i, img in enumerate(imgs):
+                image = [Image.fromarray(img)]
                 image_embeddings = self._encode_image(image)
                 point_labels = None
                 points = None
                 boxes = None
 
                 # Processor expects coordinates to be lists
-                def format_coords(coords):
+                def format_coords(coords: np.ndarray | list) -> list:
                     if isinstance(coords, np.ndarray):
                         return coords.tolist()
                     if isinstance(coords[0], np.ndarray):
-                        return [item.tolist() if isinstance(item, np.ndarray) else item for item in coords]
+                        return [
+                            item.tolist() if isinstance(item, np.ndarray) else item
+                            for item in coords
+                        ]
                     return coords
 
                 if point_coords is not None:
@@ -106,13 +109,13 @@ class SAM(ModelABC):
                     if points is not None:
                         point_labels = [[[1] * len(points)]]
                         points = [format_coords(points)]
-                
+
                 if box_coords is not None:
                     boxes = box_coords[i]
                     # Convert box coordinates to list
                     if boxes is not None:
                         boxes = [format_coords(boxes)]
-                    
+
                 inputs = self.processor(
                     image,
                     input_points=points,
@@ -129,8 +132,10 @@ class SAM(ModelABC):
                     # Forward pass through the model
                     outputs = self.model(**inputs, multimask_output=False)
                     image_masks = self.processor.image_processor.post_process_masks(
-                        outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), 
-                        inputs["reshaped_input_sizes"].cpu())
+                        outputs.pred_masks.cpu(),
+                        inputs["original_sizes"].cpu(),
+                        inputs["reshaped_input_sizes"].cpu(),
+                    )
                     image_scores = outputs.iou_scores.cpu()
                 masks.append(image_masks)
                 scores.append(image_scores)
@@ -140,7 +145,7 @@ class SAM(ModelABC):
             outputs = self.generator(imgs, points_per_batch=64)
             masks = np.array([output["masks"] for output in outputs])
             scores = np.array([output["scores"] for output in outputs])
-            
+
         return np.array(masks), np.array(scores)
 
     @staticmethod
@@ -182,17 +187,13 @@ class SAM(ModelABC):
 
         with torch.inference_mode():
             masks, scores = model(batch_data, point_coords, box_coords)
-            
+
         return masks, scores
 
     def _encode_image(self: SAM, image: np.ndarray) -> np.ndarray:
         """Encodes the image for feature extraction."""
         inputs = self.processor(image, return_tensors="pt").to(self.device)
         return self.model.get_image_embeddings(inputs["pixel_values"])
-
-    def load_state_dict(self: SAM, state_dict: str, **kwargs: dict) -> None:
-        """Loads model weights from specified state dictionary."""
-        self.model.load_state_dict(state_dict, **kwargs)
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
@@ -202,10 +203,6 @@ class SAM(ModelABC):
             return image.permute(1, 2, 0).cpu().numpy()
 
         return image[..., :3]  # Remove alpha channel if present
-    @staticmethod
-    def postproc(image: np.ndarray) -> np.ndarray:
-        """Post-processes an image."""
-        return image
 
     def to(self: SAM, device: str) -> SAM:
         """Moves the model to the specified device."""
@@ -213,4 +210,3 @@ class SAM(ModelABC):
         self.device = device
         self.model.to(device)
         return self
-    

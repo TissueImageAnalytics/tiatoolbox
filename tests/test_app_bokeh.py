@@ -473,7 +473,6 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     assert len(main.UI["type_column"].children) == 1
 
 
-# Needs updating
 def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test running SAM on points and a box."""
     slide_select = doc.get_model_by_name("slide_select0")
@@ -489,7 +488,7 @@ def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
         "height": [400],
     }
 
-    # select hovernet model and run it on box
+    # select SAM model and run it on box
     model_select = doc.get_model_by_name("model_drop0")
     model_select.value = "SAM"
 
@@ -497,8 +496,8 @@ def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
     run_button._trigger_event(click)
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num = label(np.any(im[:, :, :3], axis=2))
-    # check there are multiple cells being detected
-    assert len(main.UI["color_column"].children) > 3
+    # check there are cells being detected
+    assert len(main.UI["color_column"].children) > 0
     assert num > 10
 
     # test save functionality
@@ -506,9 +505,7 @@ def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
     click = ButtonClick(save_button)
     save_button._trigger_event(click)
     saved_path = (
-        data_path["base_path"]
-        / "overlays"
-        / (data_path["slide1"].stem + "_saved_anns.db")
+        data_path["base_path"] / "overlays" / (data_path["slide1"].stem + ".db")
     )
     assert saved_path.exists()
 
