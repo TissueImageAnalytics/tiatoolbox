@@ -1224,7 +1224,7 @@ def process_contours(
     annotations_list = []
 
     outer_contours = []
-    holes_dict = {}
+    holes_dict: dict[int, list[np.ndarray]] = {}
 
     for i, layer_ in enumerate(contours):
         coords = layer_.squeeze()
