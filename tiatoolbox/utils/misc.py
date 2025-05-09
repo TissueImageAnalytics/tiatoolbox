@@ -1221,9 +1221,8 @@ def process_contours(
             A list of annotations.
 
     """
-    annotations_list = []
-
-    outer_contours = []
+    annotations_list: list[Annotation] = []
+    outer_contours: list[np.ndarray] = []
     holes_dict: dict[int, list[np.ndarray]] = {}
 
     for i, layer_ in enumerate(contours):
@@ -1285,7 +1284,7 @@ def process_contours(
             feature_geom = feature2geometry(
                 {
                     "type": "Polygon",
-                    "coordinates": outer,
+                    "coordinates": [outer],
                 },
             )
         feature_geom = make_valid_poly(feature_geom)
@@ -1341,7 +1340,7 @@ def dict_to_store_semantic_segmentor(
 
     _ = class_dict  # use it once overlay is working
 
-    annotations_list = []
+    annotations_list: list[Annotation] = []
 
     for type_class in layer_list:
         layer = np.where(preds == type_class, 1, 0)

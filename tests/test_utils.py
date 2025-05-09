@@ -2024,4 +2024,44 @@ def test_dict_to_store_semantic_segment_multiple_holes() -> None:
 
     # Check number of holes
     polygon = annotation.geometry
-    assert len(polygon.interiors) == 1, "There should be two holes in the Polygon"
+    assert len(polygon.interiors) == 2, "There should be two holes in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_no_holes() -> None:
+    """Tests behaviour of no holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert annotation.geometry.type == "Polygon", "The annotation should be a Polygon"
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert len(polygon.interiors) == 0, "There should be no holes in the Polygon"
