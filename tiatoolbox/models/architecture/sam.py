@@ -203,7 +203,7 @@ class SAM(ModelABC):
         """Pre-processes an image - Converts it into a format accepted by SAM (HWC)."""
         # Move the tensor to the CPU if it's a PyTorch tensor
         if isinstance(image, torch.Tensor):
-            return image.permute(1, 2, 0).cpu().numpy()
+            image = image.permute(1, 2, 0).cpu().numpy()
 
         return image[..., :3]  # Remove alpha channel if present
 

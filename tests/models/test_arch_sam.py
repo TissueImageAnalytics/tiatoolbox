@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Callable
 
+import numpy as np
 import torch
 
 from tiatoolbox.models.architecture.sam import SAM
@@ -35,7 +36,7 @@ def test_functional_sam(
 
     # test preproc
     tensor = torch.from_numpy(img)
-    patch = [model.preproc(tensor)]
+    patch = np.expand_dims(model.preproc(tensor), axis=0)
     patch = model.preproc(patch)
 
     # test inference
