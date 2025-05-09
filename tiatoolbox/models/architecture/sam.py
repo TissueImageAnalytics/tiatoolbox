@@ -94,6 +94,7 @@ class SAM(ModelABC):
 
                 # Processor expects coordinates to be lists
                 def format_coords(coords: np.ndarray | list) -> list:
+                    """Helper function that converts coordinates to list format."""
                     if isinstance(coords, np.ndarray):
                         return coords.tolist()
                     if isinstance(coords[0], np.ndarray):
@@ -204,9 +205,15 @@ class SAM(ModelABC):
 
         return image[..., :3]  # Remove alpha channel if present
 
-    def to(self: SAM, device: str) -> SAM:
+    def to(
+        self: SAM,
+        device: str,
+        dtype: torch.dtype | None = None,
+        *,
+        non_blocking: bool = False,
+    ) -> ModelABC | torch.nn.DataParallel[ModelABC]:
         """Moves the model to the specified device."""
-        super().to(device)
+        super().to(device, dtype=dtype, non_blocking=non_blocking)
         self.device = device
         self.model.to(device)
         return self

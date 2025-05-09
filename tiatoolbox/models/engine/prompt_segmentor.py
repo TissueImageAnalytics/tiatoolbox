@@ -71,17 +71,12 @@ class PromptSegmentor(SemanticSegmentor):
         )
         self.multi_prompt = True
 
-    def predict(  # skipcq: PYL-W0221 
+    def predict(  # skipcq: PYL-W0221
         self,
         imgs: list,
         masks: list | None = None,
         mode: str = "tile",
         ioconfig: IOSegmentorConfig = None,
-        patch_input_shape: IntPair = None,
-        patch_output_shape: IntPair = None,
-        stride_shape: IntPair = None,
-        resolution: Resolution = 1.0,
-        units: Units = "baseline",
         point_coords: list[list[IntPair]] | None = None,
         box_coords: list[list[IntBounds]] | None = None,
         save_dir: str | Path | None = None,
@@ -89,6 +84,7 @@ class PromptSegmentor(SemanticSegmentor):
         *,
         multi_prompt: bool = True,
         crash_on_exception: bool = False,
+        **ioconfig_kwargs: dict,
     ) -> list[tuple[Path, Path]]:
         """Predict on a list of WSIs using prompts.
 
@@ -105,21 +101,6 @@ class PromptSegmentor(SemanticSegmentor):
                 saving as annotations.
             ioconfig (:class:`IOSegmentorConfig`):
                 Configuration for input/output processing.
-            patch_input_shape (IntPair):
-                Size of patches input to the model. The values are at
-                requested read resolution and must be positive.
-            patch_output_shape (tuple):
-                Size of patches output by the model. The values are at
-                the requested read resolution and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. The values
-                are at requested read resolution and must be positive.
-                If not provided, `stride_shape=patch_input_shape` is
-                used.
-            resolution (Resolution):
-                Resolution used for reading the image.
-            units (Units):
-                Units of resolution used for reading the image.
             point_coords (list):
                 Point coordinates for each image as `[x, y]` pairs.
                 Stored as a list of lists of coordinates.
@@ -135,6 +116,8 @@ class PromptSegmentor(SemanticSegmentor):
             multi_prompt (bool):
                 Whether to use multiple prompts simulataneously for segmentation.
                 If false, the image will be processed for each prompt separately.
+            **ioconfig_kwargs (dict):
+                Additional keyword arguments for the IOSegmentorConfig.
 
         Returns:
             output_paths(list[tuple[Path, Path]]):
@@ -163,15 +146,7 @@ class PromptSegmentor(SemanticSegmentor):
 
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir=save_dir)
 
-        ioconfig = self._update_ioconfig(
-            ioconfig,
-            mode,
-            patch_input_shape,
-            patch_output_shape,
-            stride_shape,
-            resolution,
-            units,
-        )
+        ioconfig = self._update_ioconfig(ioconfig, mode, **ioconfig_kwargs)
 
         # use external for testing
         self._device = device
@@ -607,11 +582,8 @@ class PromptSegmentor(SemanticSegmentor):
         def sel_func(coord: np.ndarray) -> bool:
             """Accept coord if it is part of mask."""
             x, y = coord
-            return (
-                x >= scaled_bbox[0]
-                and y >= scaled_bbox[1]
-                and x <= scaled_bbox[2]
-                and y <= scaled_bbox[3]
+            return (scaled_bbox[0] <= x <= scaled_bbox[2]) and (
+                scaled_bbox[1] <= y <= scaled_bbox[3]
             )
 
         flags = [sel_func(bound) for bound in bounds]
