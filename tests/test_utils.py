@@ -1936,6 +1936,7 @@ def test_dict_to_store_semantic_segment() -> None:
     assert "Polygon" in annotations_geometry_type
     assert "Line String" in annotations_geometry_type
 
+
 # Tests for OME tiff writer
 
 
@@ -2054,4 +2055,3 @@ def test_save_zarr_array_probability_ome_tiff(
     assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
-
