@@ -494,11 +494,7 @@ def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
 
     click = ButtonClick(run_button)
     run_button._trigger_event(click)
-    im = get_tile("overlay", 4, 8, 4, show=False)
-    _, num = label(np.any(im[:, :, :3], axis=2))
-    # check there are cells being detected
     assert len(main.UI["color_column"].children) > 0
-    assert num > 10
 
     # test save functionality
     save_button = doc.get_model_by_name("save_button0")

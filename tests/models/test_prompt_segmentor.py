@@ -153,6 +153,25 @@ def test_functional_segmentor(
     # Check if db exists
     assert Path(output_list[0][1] + ".0.db").exists()
 
+    points = np.array([[[10, 30]]])
+    boxes = np.array([[[10, 10, 30, 30]]])
+    # Test no prompts within mask
+    shutil.rmtree(save_dir, ignore_errors=True)
+    output_list = prompt_segmentor.predict(
+        [mini_wsi_jpg],
+        masks=[mini_wsi_msk],
+        mode="wsi",
+        multi_prompt=True,
+        device=select_device(on_gpu=ON_GPU),
+        point_coords=points,
+        box_coords=boxes,
+        ioconfig=ioconfig,
+        crash_on_exception=False,
+        save_dir=save_dir,
+    )
+    # Check if db exists
+    assert Path(output_list[0][1] + ".0.db").exists()
+
     # Run on wsi mode with single-prompt
     shutil.rmtree(save_dir, ignore_errors=True)
     output_list = prompt_segmentor.predict(

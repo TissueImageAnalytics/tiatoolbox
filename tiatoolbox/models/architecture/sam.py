@@ -145,7 +145,7 @@ class SAM(ModelABC):
             imgs = [Image.fromarray(image) for image in imgs]
             # If no points or boxes are provided, use the generator pipeline
             with torch.inference_mode():
-                outputs = self.generator(imgs, points_per_batch=64)
+                outputs = self.generator(imgs, points_per_batch=16)
             masks = np.array([output["masks"] for output in outputs])
             scores = np.array([output["scores"] for output in outputs])
 
