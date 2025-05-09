@@ -145,7 +145,7 @@ class PromptSegmentor(SemanticSegmentor):
             raise ValueError(msg)
 
         save_dir, self._cache_dir = self._prepare_save_dir(save_dir=save_dir)
-
+        ioconfig_kwargs = self.pad_ioconfig(**ioconfig_kwargs)
         ioconfig = self._update_ioconfig(ioconfig, mode, **ioconfig_kwargs)
 
         # use external for testing
@@ -368,6 +368,25 @@ class PromptSegmentor(SemanticSegmentor):
         shutil.rmtree(cache_dir)
 
     @staticmethod
+    def pad_ioconfig(
+        **kw_ioconfig: dict,
+    ) -> dict:
+        """Assign None to missing keyword ioconfig info."""
+        # Define the expected keys
+        required_keys = [
+            "patch_input_shape",
+            "patch_output_shape",
+            "stride_shape",
+            "resolution",
+            "units",
+        ]
+
+        # Fill in any missing keys with None
+        for key in required_keys:
+            kw_ioconfig.setdefault(key, None)
+        return kw_ioconfig
+
+    @staticmethod
     def _adjust_prompt_resolution(
         wsi_reader: WSIReader,
         coords: np.ndarray | None,
@@ -480,34 +499,84 @@ class PromptSegmentor(SemanticSegmentor):
         else:
             num_points = len(point_coords) if point_coords is not None else 0
             num_boxes = len(box_coords) if box_coords is not None else 0
-            num_prompts = num_points + num_boxes
 
-            if mode == "tile":
-                patch_inputs = np.array(
-                    [np.copy(image_patch) for _ in range(num_prompts)]
-                )
-            elif mode == "wsi":
-                patch_extractor = PointsPatchExtractor(
-                    wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
-                )
-                patch_inputs = patch_extractor.get_coordinates(
-                    image_shape=wsi_proc_shape,
-                    patch_input_shape=ioconfig.patch_input_shape,
-                    stride_shape=ioconfig.stride_shape,
-                )
-            repeats = len(ioconfig.input_resolutions)
-            if point_coords is not None:
-                # Format coordinates by adding padding
-                # Required for slicing when iterating over DataLoader
-                padded_points = [[x] for x in point_coords] + [None] * num_boxes
-                # Repeat point and box coordinates in place for each input resolution
-                # because DataLoader will repeat patches for each input resolution
-                point_coords = [item for item in padded_points for _ in range(repeats)]
-            if box_coords is not None:
-                padded_boxes = [None] * num_points + [[y] for y in box_coords]
-                box_coords = [item for item in padded_boxes for _ in range(repeats)]
+            patch_inputs = PromptSegmentor._extract_patches(
+                wsi_reader=wsi_reader,
+                ioconfig=ioconfig,
+                point_coords=point_coords,
+                box_coords=box_coords,
+                mode=mode,
+            )
+
+            # Format coordinates by adding padding
+            # Required for slicing when iterating over DataLoader
+            point_coords = (
+                ([[x] for x in point_coords] + [None] * num_boxes)
+                if point_coords is not None
+                else None
+            )
+            box_coords = (
+                [None] * num_points + [[y] for y in box_coords]
+                if box_coords is not None
+                else None
+            )
 
         return patch_inputs, point_coords, box_coords
+
+    @staticmethod
+    def _extract_patches(
+        wsi_reader: WSIReader,
+        ioconfig: IOSegmentorConfig,
+        point_coords: np.ndarray | None = None,
+        box_coords: np.ndarray | None = None,
+        mode: str = "tile",
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Extract patches from the WSI, given that it is WSI mode.
+
+        Args:
+            wsi_reader (WSIReader):
+                A reader for the image where the predictions come from.
+            ioconfig (:class:`IOSegmentorConfig`):
+                Configuration for input/output processing.
+            mode (str):
+                The mode of prediction. Can be either `tile` or `wsi`.
+            point_coords (np.ndarray):
+                Point coordinates for the current image as [x, y] pairs.
+            box_coords (np.ndarray):
+                Bounding box coordinates for the current image as
+                [x1, y1, x2, y2] pairs.
+
+        Returns:
+            tuple:
+                List of patch inputs and outputs
+
+                - :py:obj:`list` - patch_inputs:
+                    A list of corrdinates in `[start_x, start_y, end_x,
+                    end_y]` format indicating the read location of the
+                    patch in the mother image.
+
+        """
+        resolution = ioconfig.highest_input_resolution
+        wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
+        image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
+
+        if mode == "tile":
+            patch_inputs = np.array(
+                [
+                    np.copy(image_patch)
+                    for _ in range(len(point_coords) + len(box_coords))
+                ]
+            )
+        elif mode == "wsi":
+            patch_extractor = PointsPatchExtractor(
+                wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
+            )
+            patch_inputs = patch_extractor.get_coordinates(
+                image_shape=wsi_proc_shape,
+                patch_input_shape=ioconfig.patch_input_shape,
+                stride_shape=ioconfig.stride_shape,
+            )
+        return patch_inputs
 
     @staticmethod
     def filter_coordinates(
@@ -769,7 +838,7 @@ class PromptSegmentor(SemanticSegmentor):
 
         return np.array(new_bounds, dtype=np.int32)
 
-    def _predict_wsi_handle_exception(
+    def _predict_wsi_handle_exception(  # skipcq: PYL-W0221
         self: PromptSegmentor,
         imgs: list,
         wsi_idx: int,

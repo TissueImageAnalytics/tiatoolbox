@@ -140,10 +140,12 @@ class SAM(ModelABC):
                     image_scores = outputs.iou_scores.cpu()
                 masks.append(image_masks)
                 scores.append(image_scores)
+                torch.cuda.empty_cache()
         else:
             imgs = [Image.fromarray(image) for image in imgs]
             # If no points or boxes are provided, use the generator pipeline
-            outputs = self.generator(imgs, points_per_batch=64)
+            with torch.inference_mode():
+                outputs = self.generator(imgs, points_per_batch=64)
             masks = np.array([output["masks"] for output in outputs])
             scores = np.array([output["scores"] for output in outputs])
 
@@ -206,8 +208,8 @@ class SAM(ModelABC):
         return image[..., :3]  # Remove alpha channel if present
 
     def to(
-        self: SAM,
-        device: str,
+        self: ModelABC,
+        device: str = "cpu",
         dtype: torch.dtype | None = None,
         *,
         non_blocking: bool = False,

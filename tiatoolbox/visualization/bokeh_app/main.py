@@ -62,8 +62,6 @@ from matplotlib import colormaps
 from PIL import Image
 from requests.adapters import HTTPAdapter, Retry
 
-from tiatoolbox.models.architecture.sam import SAM
-
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
@@ -1287,9 +1285,7 @@ def sam_segment() -> None:
         else None
     )
 
-    model = SAM(device=select_device(on_gpu=torch.cuda.is_available()))
-
-    prompt_segmentor = PromptSegmentor(model)
+    prompt_segmentor = PromptSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
     tmp_mask_dir = Path(tempfile.mkdtemp())
 

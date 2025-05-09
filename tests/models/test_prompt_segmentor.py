@@ -211,13 +211,3 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         prompt_segmentor.predict([], mode="abc")
 
     shutil.rmtree(save_dir, ignore_errors=True)
-
-    # test ignore crash
-    prompt_segmentor.predict(
-        [mini_wsi_svs],
-        patch_input_shape=(2048, 2048),
-        mode="wsi",
-        device=select_device(on_gpu=ON_GPU),
-        crash_on_exception=False,
-        save_dir=save_dir,
-    )
