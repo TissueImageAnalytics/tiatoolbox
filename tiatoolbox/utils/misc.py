@@ -1273,9 +1273,8 @@ def process_contours(
             )
 
     for idx, outer in enumerate(outer_contours):
-        if idx in holes_dict:
-            holes = holes_dict[idx]
-        if holes:
+        holes = holes_dict.get(idx, [])
+        if len(holes) != 0:
             feature_geom = feature2geometry(
                 {
                     "type": "Polygon",
