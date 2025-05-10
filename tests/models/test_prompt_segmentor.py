@@ -229,4 +229,45 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     with pytest.raises(ValueError, match=r".*valid mode.*"):
         prompt_segmentor.predict([], mode="abc")
 
+    crash_segmentor = PromptSegmentor()
+
+    # * test crash segmentor
+    def _predict_one_wsi(
+        *args: dict,
+        **kwargs: dict,
+    ) -> tuple[WSIReader, str]:
+        """Override the predict function to test crash segmentor."""
+        msg = f"Test crash segmentor:{args} {kwargs}"
+        raise RuntimeError(msg)
+
+    crash_segmentor._predict_one_wsi = _predict_one_wsi
     shutil.rmtree(save_dir, ignore_errors=True)
+    with pytest.raises(
+        RuntimeError,
+        match=r"Test crash segmentor:\(.*\) \{.*\}",
+    ):
+        crash_segmentor.predict(
+            [mini_wsi_svs],
+            mode="wsi",
+            multi_prompt=True,
+            device=select_device(on_gpu=ON_GPU),
+            patch_input_shape=[512, 512],
+            resolution=2.0,
+            units="mpp",
+            crash_on_exception=True,
+            save_dir=save_dir,
+        )
+
+    # test ignore crash
+    shutil.rmtree(save_dir, ignore_errors=True)
+    crash_segmentor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        multi_prompt=True,
+        device=select_device(on_gpu=ON_GPU),
+        patch_input_shape=[512, 512],
+        resolution=2.0,
+        units="mpp",
+        crash_on_exception=False,
+        save_dir=save_dir,
+    )

@@ -567,7 +567,7 @@ class PromptSegmentor(SemanticSegmentor):
                     for _ in range(len(point_coords) + len(box_coords))
                 ]
             )
-        elif mode == "wsi":
+        else:
             patch_extractor = PointsPatchExtractor(
                 wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
             )
@@ -712,7 +712,7 @@ class PromptSegmentor(SemanticSegmentor):
             mask_memmap.flush()
             score_memmap.flush()
 
-        elif mode == "wsi":
+        else:
             locations, predictions = list(zip(*cum_batch_predictions))
             # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
             # output patch this can exceed the image bound at the requested
