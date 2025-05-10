@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import torch
 from PIL import Image
-from transformers import SamModel, SamProcessor, pipeline
+from transformers import SamModel, SamProcessor
 
 from tiatoolbox.models.models_abc import ModelABC
 
@@ -56,7 +56,6 @@ class SAM(ModelABC):
 
         self.model = SamModel.from_pretrained(model_path).to(device)
         self.processor = SamProcessor.from_pretrained(model_path)
-        self.generator = pipeline("mask-generation", model=model_path, device=device)
 
     def forward(  # skipcq: PYL-W0221
         self: SAM,
@@ -83,71 +82,62 @@ class SAM(ModelABC):
 
         """
         masks, scores = [], []
+        for i, img in enumerate(imgs):
+            image = [Image.fromarray(img)]
+            image_embeddings = self._encode_image(image)
+            point_labels = None
+            points = None
+            boxes = None
 
-        if point_coords is not None or box_coords is not None:
-            for i, img in enumerate(imgs):
-                image = [Image.fromarray(img)]
-                image_embeddings = self._encode_image(image)
-                point_labels = None
-                points = None
-                boxes = None
+            # Processor expects coordinates to be lists
+            def format_coords(coords: np.ndarray | list) -> list:
+                """Helper function that converts coordinates to list format."""
+                if isinstance(coords, np.ndarray):
+                    return coords.tolist()
+                if isinstance(coords[0], np.ndarray):
+                    return [
+                        item.tolist() if isinstance(item, np.ndarray) else item
+                        for item in coords
+                    ]
+                return coords
 
-                # Processor expects coordinates to be lists
-                def format_coords(coords: np.ndarray | list) -> list:
-                    """Helper function that converts coordinates to list format."""
-                    if isinstance(coords, np.ndarray):
-                        return coords.tolist()
-                    if isinstance(coords[0], np.ndarray):
-                        return [
-                            item.tolist() if isinstance(item, np.ndarray) else item
-                            for item in coords
-                        ]
-                    return coords
+            if point_coords is not None:
+                points = point_coords[i]
+                # Convert point coordinates to list
+                if points is not None:
+                    point_labels = [[[1] * len(points)]]
+                    points = [format_coords(points)]
 
-                if point_coords is not None:
-                    points = point_coords[i]
-                    # Convert point coordinates to list
-                    if points is not None:
-                        point_labels = [[[1] * len(points)]]
-                        points = [format_coords(points)]
+            if box_coords is not None:
+                boxes = box_coords[i]
+                # Convert box coordinates to list
+                if boxes is not None:
+                    boxes = [format_coords(boxes)]
 
-                if box_coords is not None:
-                    boxes = box_coords[i]
-                    # Convert box coordinates to list
-                    if boxes is not None:
-                        boxes = [format_coords(boxes)]
+            inputs = self.processor(
+                image,
+                input_points=points,
+                input_labels=point_labels,
+                input_boxes=boxes,
+                return_tensors="pt",
+            ).to(self.device)
 
-                inputs = self.processor(
-                    image,
-                    input_points=points,
-                    input_labels=point_labels,
-                    input_boxes=boxes,
-                    return_tensors="pt",
-                ).to(self.device)
+            # Replaces pixel_values with image embeddings
+            inputs.pop("pixel_values", None)
+            inputs.update({"image_embeddings": image_embeddings})
 
-                # Replaces pixel_values with image embeddings
-                inputs.pop("pixel_values", None)
-                inputs.update({"image_embeddings": image_embeddings})
-
-                with torch.inference_mode():
-                    # Forward pass through the model
-                    outputs = self.model(**inputs, multimask_output=False)
-                    image_masks = self.processor.image_processor.post_process_masks(
-                        outputs.pred_masks.cpu(),
-                        inputs["original_sizes"].cpu(),
-                        inputs["reshaped_input_sizes"].cpu(),
-                    )
-                    image_scores = outputs.iou_scores.cpu()
-                masks.append(image_masks)
-                scores.append(image_scores)
-                torch.cuda.empty_cache()
-        else:
-            imgs = [Image.fromarray(image) for image in imgs]
-            # If no points or boxes are provided, use the generator pipeline
             with torch.inference_mode():
-                outputs = self.generator(imgs, points_per_batch=16)
-            masks = np.array([output["masks"] for output in outputs])
-            scores = np.array([output["scores"] for output in outputs])
+                # Forward pass through the model
+                outputs = self.model(**inputs, multimask_output=False)
+                image_masks = self.processor.image_processor.post_process_masks(
+                    outputs.pred_masks.cpu(),
+                    inputs["original_sizes"].cpu(),
+                    inputs["reshaped_input_sizes"].cpu(),
+                )
+                image_scores = outputs.iou_scores.cpu()
+            masks.append(image_masks)
+            scores.append(image_scores)
+            torch.cuda.empty_cache()
 
         return np.array(masks), np.array(scores)
 
