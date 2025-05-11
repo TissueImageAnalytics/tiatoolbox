@@ -84,7 +84,7 @@ class SAM(ModelABC):
         masks, scores = [], []
         for i, img in enumerate(imgs):
             image = [Image.fromarray(img)]
-            image_embeddings = self._encode_image(image)
+            embeddings, orig_sizes, reshaped_sizes = self._encode_image(image)
             point_labels = None
             points = None
             boxes = None
@@ -124,7 +124,13 @@ class SAM(ModelABC):
 
             # Replaces pixel_values with image embeddings
             inputs.pop("pixel_values", None)
-            inputs.update({"image_embeddings": image_embeddings})
+            inputs.update(
+                {
+                    "image_embeddings": embeddings,
+                    "original_sizes": orig_sizes,
+                    "reshaped_input_sizes": reshaped_sizes,
+                }
+            )
 
             with torch.inference_mode():
                 # Forward pass through the model
@@ -184,9 +190,14 @@ class SAM(ModelABC):
         return masks, scores
 
     def _encode_image(self: SAM, image: np.ndarray) -> np.ndarray:
-        """Encodes the image for feature extraction."""
-        inputs = self.processor(image, return_tensors="pt").to(self.device)
-        return self.model.get_image_embeddings(inputs["pixel_values"])
+        """Encodes image and stores size info for later mask post-processing."""
+        processed = self.processor(image, return_tensors="pt")
+        original_sizes = processed["original_sizes"]
+        reshaped_sizes = processed["reshaped_input_sizes"]
+
+        inputs = processed.to(self.device)
+        embeddings = self.model.get_image_embeddings(inputs["pixel_values"])
+        return embeddings, original_sizes, reshaped_sizes
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
