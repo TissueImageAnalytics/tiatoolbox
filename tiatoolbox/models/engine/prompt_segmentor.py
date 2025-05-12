@@ -331,7 +331,7 @@ class PromptSegmentor(SemanticSegmentor):
             # each of shape N x etc. (N=batch size)
 
             sample_outputs = self.model.infer_batch(
-                self._model,
+                self.model,
                 sample_datas,
                 point_coords=points,
                 box_coords=boxes,
@@ -559,14 +559,12 @@ class PromptSegmentor(SemanticSegmentor):
         resolution = ioconfig.highest_input_resolution
         wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
         image_patch = np.array([0, 0, wsi_proc_shape[0], wsi_proc_shape[1]])
+        num_points = len(point_coords) if point_coords is not None else 0
+        num_boxes = len(box_coords) if box_coords is not None else 0
+        num_patches = num_points + num_boxes
 
         if mode == "tile":
-            patch_inputs = np.array(
-                [
-                    np.copy(image_patch)
-                    for _ in range(len(point_coords) + len(box_coords))
-                ]
-            )
+            patch_inputs = np.array([np.copy(image_patch) for _ in range(num_patches)])
         else:
             patch_extractor = PointsPatchExtractor(
                 wsi_reader, point_coords, ioconfig.patch_input_shape, **resolution
@@ -690,27 +688,26 @@ class PromptSegmentor(SemanticSegmentor):
                 `wsi`.
 
         """
-        wsi_shape = wsi_reader.slide_dimensions(1.0, "baseline")
+        wsi_shape = wsi_reader.slide_dimensions(1.0, "baseline")[::-1]
 
         if mode == "tile":
             self._prepare_save_dir(save_path)
-            for i, (location, patch_prediction) in enumerate(cum_batch_predictions):
+            for i, (_, patch_prediction) in enumerate(cum_batch_predictions):
                 mask_memmap, score_memmap = self._prepare_save_output(
                     Path(save_path) / f"{i}.raw.0.npy",
                     Path(save_path) / f"{i}.raw.1.npy",
                     tuple(wsi_shape),
                     (len(cum_batch_predictions),),
                 )
-                x1, y1, x2, y2 = location[0]
                 mask = patch_prediction[0]
                 score = patch_prediction[1]
 
                 # store the predictions
-                mask_memmap[y1:y2, x1:x2] = mask[0]
+                mask_memmap[:, :] = mask[0]
                 score_memmap[i] = score[0][0][0]
 
-            mask_memmap.flush()
-            score_memmap.flush()
+                mask_memmap.flush()
+                score_memmap.flush()
 
         else:
             locations, predictions = list(zip(*cum_batch_predictions))
