@@ -159,4 +159,4 @@ def test_multi_gpu_feature_extraction(remote_sample: Callable, tmp_path: Path) -
     positions = np.load(f"{wsi_0_root_path}.position.npy")
     features = np.load(f"{wsi_0_root_path}.features.0.npy")
     assert len(positions.shape) == 2
-    assert len(features.shape) == 4
+    assert len(features.shape) == 2
