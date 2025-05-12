@@ -115,3 +115,48 @@ def test_full_inference(
     # ! else the output values will not exactly be the same (still < 1.0e-4
     # ! of epsilon though)
     assert np.mean(np.abs(features[:4] - _features)) < 1.0e-1
+
+
+@pytest.mark.skipif(
+    toolbox_env.running_on_ci() or not ON_GPU,
+    reason="Local test on machine with GPU.",
+)
+def test_multi_gpu_feature_extraction(remote_sample: Callable, tmp_path: Path) -> None:
+    """Local functionality test for feature extraction using multiple GPUs."""
+    save_dir = tmp_path / "output"
+    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
+    shutil.rmtree(save_dir, ignore_errors=True)
+
+    # Use multiple GPUs
+    device = select_device(on_gpu=ON_GPU)
+
+    wsi_ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        patch_input_shape=[224, 224],
+        output_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        patch_output_shape=[224, 224],
+        stride_shape=[224, 224],
+    )
+
+    model = TimmBackbone(backbone="UNI", pretrained=True)
+    extractor = DeepFeatureExtractor(
+        model=model,
+        auto_generate_mask=True,
+        batch_size=32,
+        num_loader_workers=4,
+        num_postproc_workers=4,
+    )
+
+    output_list = extractor.predict(
+        [mini_wsi_svs],
+        mode="wsi",
+        device=device,
+        ioconfig=wsi_ioconfig,
+        crash_on_exception=True,
+        save_dir=save_dir,
+    )
+    wsi_0_root_path = output_list[0][1]
+    positions = np.load(f"{wsi_0_root_path}.position.npy")
+    features = np.load(f"{wsi_0_root_path}.features.0.npy")
+    assert len(positions.shape) == 2
+    assert len(features.shape) == 4
