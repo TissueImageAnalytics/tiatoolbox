@@ -1298,7 +1298,7 @@ def sam_segment() -> None:
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
     x = round(x_start / conv_mpp)
-    y = -round(y_start / conv_mpp)
+    y = round(y_start / conv_mpp)
     width = round((x_end - x_start) / conv_mpp)
     height = round((y_end - y_start) / conv_mpp)
 
@@ -1306,13 +1306,14 @@ def sam_segment() -> None:
     mask[y : y + height, x : x + width] = 1
 
     Image.fromarray(mask).save(tmp_mask_dir / "mask.png")
+    # ! Mask is currently causing issues. Tool works fine without it,
+    # ! but reduction in segmentation quality for larger WSIs.
 
     res = prompt_segmentor.calc_mpp(UI["vstate"].dims, UI["vstate"].mpp[0], 1024)
 
     # Run SAM on the point
     prediction = prompt_segmentor.predict(
         imgs=[UI["vstate"].slide_path],
-        masks=[tmp_mask_dir / "mask.png"],
         device=select_device(on_gpu=torch.cuda.is_available()),
         save_dir=tmp_save_dir / "sam_out",
         point_coords=point_coords,

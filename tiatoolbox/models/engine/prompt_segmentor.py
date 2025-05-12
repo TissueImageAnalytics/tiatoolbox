@@ -285,6 +285,8 @@ class PromptSegmentor(SemanticSegmentor):
             multi_prompt=self.multi_prompt,
         )
 
+        resolution = ioconfig.highest_input_resolution
+
         patch_inputs = (
             np.array(self.clip_coordinates(mask_reader, patch_inputs, **resolution))
             if mask_reader is not None
@@ -740,7 +742,7 @@ class PromptSegmentor(SemanticSegmentor):
                     )
                 }
                 # Scale the merged output to the original WSI shape
-                scale_factor = merged_shape[0] / wsi_shape[0]
+                scale_factor = np.array(wsi_shape) / np.array(merged_shape[::-1])
                 # Generate annotations
                 dict_to_store_semantic_segmentor(
                     patch_output=merged_output,
