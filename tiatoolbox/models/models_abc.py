@@ -68,9 +68,7 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
         model = model.to(torch_device)
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "12355"
-        dist.init_process_group(
-            backend="nccl", rank=0, world_size=torch.cuda.device_count()
-        )
+        dist.init_process_group(backend="nccl", rank=0, world_size=1)
         model = DistributedDataParallel(model, device_ids=[torch_device.index])
 
     elif device != "cpu":
