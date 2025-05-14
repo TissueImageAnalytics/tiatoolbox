@@ -12,6 +12,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
 import tifffile
 import torch
 import zarr
@@ -24,6 +25,7 @@ from tifffile import TiffFile
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
+from tiatoolbox.enums import GeometryType
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.utils import misc
@@ -1878,6 +1880,7 @@ def test_dict_to_store_semantic_segment() -> None:
     )
     assert not store_.values()
 
+    # single point
     patch_output["predictions"][100, 100] = 1
 
     store_ = misc.dict_to_store_semantic_segmentor(
@@ -1955,7 +1958,7 @@ def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
     save_dir_path = tmp_path / "tmp"
     save_dir_path.mkdir()
 
-    store_ = misc.dict_to_store_semantic_segmentor(
+    _ = misc.dict_to_store_semantic_segmentor(
         patch_output=patch_output,
         scale_factor=(1.0, 1.0),
         class_dict=None,
@@ -1982,10 +1985,13 @@ def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
     assert "Point" not in annotations_geometry_type
 
     annotation = annotations_[0]
-    assert annotation.geometry.type == "Polygon", "The annotation should be a Polygon"
+    assert isinstance(annotation.geometry_type, GeometryType)
 
     # Check number of holes
     polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
     assert len(polygon.interiors) == 1, "There should be one hole in the Polygon"
 
 
@@ -2024,10 +2030,13 @@ def test_dict_to_store_semantic_segment_multiple_holes() -> None:
     assert "Point" not in annotations_geometry_type
 
     annotation = annotations_[0]
-    assert annotation.geometry.type == "Polygon", "The annotation should be a Polygon"
+    assert isinstance(annotation.geometry_type, GeometryType)
 
     # Check number of holes
     polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
     assert len(polygon.interiors) == 2, "There should be two holes in the Polygon"
 
 
@@ -2064,10 +2073,13 @@ def test_dict_to_store_semantic_segment_no_holes() -> None:
     assert "Point" not in annotations_geometry_type
 
     annotation = annotations_[0]
-    assert annotation.geometry.type == "Polygon", "The annotation should be a Polygon"
+    assert isinstance(annotation.geometry_type, GeometryType)
 
     # Check number of holes
     polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
     assert len(polygon.interiors) == 0, "There should be no holes in the Polygon"
 
 

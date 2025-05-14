@@ -1208,7 +1208,7 @@ def process_contours(
     contours: list[np.ndarray],
     hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
-) -> list:
+) -> list[Annotation]:
     """Process contours and hierarchy to create annotations.
 
     Args:
