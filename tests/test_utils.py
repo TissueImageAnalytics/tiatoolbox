@@ -12,6 +12,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
 import tifffile
 import torch
 import zarr
@@ -24,6 +25,7 @@ from tifffile import TiffFile
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
+from tiatoolbox.enums import GeometryType
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.utils import misc
@@ -1896,6 +1898,7 @@ def test_dict_to_store_semantic_segment() -> None:
     )
     assert not store_.values()
 
+    # single point
     patch_output["predictions"][100, 100] = 1
 
     store_ = misc.dict_to_store_semantic_segmentor(
@@ -1955,7 +1958,147 @@ def test_dict_to_store_semantic_segment() -> None:
     assert "Line String" in annotations_geometry_type
 
 
-# Tests for OME tiff writer
+def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
+    """Tests behaviour of holes in dict_to_store and save_path."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    save_dir_path = tmp_path / "tmp"
+    save_dir_path.mkdir()
+
+    _ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=save_dir_path,
+    )
+
+    assert save_dir_path.exists()
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 1, "There should be one hole in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_multiple_holes() -> None:
+    """Tests behaviour of multiple holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 2, "There should be two holes in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_no_holes() -> None:
+    """Tests behaviour of no holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 0, "There should be no holes in the Polygon"
 
 
 def get_ome_metadata(tiff_path: Path) -> str | None:

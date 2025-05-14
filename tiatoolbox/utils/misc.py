@@ -1231,6 +1231,113 @@ def patch_predictions_as_annotations(
     return annotations
 
 
+def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
+    """Converts a zarr array into a numpy array."""
+    if isinstance(zarr_array, zarr.core.Array):
+        return zarr_array[:]
+
+    return np.array(zarr_array).astype(float)
+
+
+def process_contours(
+    contours: list[np.ndarray],
+    hierarchy: np.ndarray,
+    scale_factor: tuple[float, float] = (1, 1),
+) -> list[Annotation]:
+    """Process contours and hierarchy to create annotations.
+
+    Args:
+        contours (list[np.ndarray]):
+            A list of contours.
+        hierarchy (list[np.ndarray]):
+            A list of hierarchy.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the annotations.
+
+    Returns:
+        list:
+            A list of annotations.
+
+    """
+    annotations_list: list[Annotation] = []
+    outer_contours: list[np.ndarray] = []
+    holes_dict: dict[int, list[np.ndarray]] = {}
+
+    for i, layer_ in enumerate(contours):
+        coords: np.ndarray = layer_.squeeze()
+        scaled_coords: np.ndarray = np.array([np.array(scale_factor) * coords])
+
+        # save one points as a line, otherwise save the Polygon
+        if len(layer_) > 2:  # noqa: PLR2004
+            if int(hierarchy[0][i][3]) == -1:  # Outer contour
+                outer_contours.append(scaled_coords[0])
+            else:  # Hole
+                parent_idx: int = int(hierarchy[0][i][3])
+                if parent_idx not in holes_dict:
+                    holes_dict[parent_idx] = []
+                holes_dict[parent_idx].append(scaled_coords[0])
+        # if two points, save as a line string
+        elif len(layer_) == 2:  # noqa: PLR2004
+            feature_geom = feature2geometry(
+                {
+                    "type": "linestring",
+                    "coordinates": scaled_coords[0],
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties={"type": "mask"},
+                    )
+                ]
+            )
+        # if single point, save it is a point
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "point",
+                    "coordinates": scaled_coords,
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties={"type": "mask"},
+                    )
+                ]
+            )
+
+    for idx, outer in enumerate(outer_contours):
+        holes: list[np.ndarray] = holes_dict.get(idx, [])
+        if len(holes) != 0:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer, *holes],
+                },
+            )
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer],
+                },
+            )
+        feature_geom = make_valid_poly(feature_geom)
+        annotations_list.extend(
+            [
+                Annotation(
+                    geometry=feature_geom,
+                    properties={"type": "mask"},
+                )
+            ]
+        )
+
+    return annotations_list
+
+
 def dict_to_store_semantic_segmentor(
     patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
@@ -1267,61 +1374,22 @@ def dict_to_store_semantic_segmentor(
 
     layer_list = np.delete(layer_list, np.where(layer_list == 0))
 
-    count = 1
-
     store = SQLiteStore()
 
     _ = class_dict  # use it once overlay is working
 
-    annotations_list = []
+    annotations_list: list[Annotation] = []
 
     for type_class in layer_list:
         layer = np.where(preds == type_class, 1, 0)
-        contours, _ = cv2.findContours(
+        contours, hierarchy = cv2.findContours(
             layer.astype("uint8"),
-            cv2.RETR_TREE,
+            cv2.RETR_CCOMP,
             cv2.CHAIN_APPROX_NONE,
         )
-        for layer_ in contours:
-            coords = layer_.squeeze()
-            count += 1
 
-            scaled_coords = np.array([scale_factor * coords])
-
-            # save one points as a line, otherwise save the Polygon
-            if len(layer_) > 2:  # noqa: PLR2004
-                feature_geom = feature2geometry(
-                    {
-                        "type": "Polygon",
-                        "coordinates": scaled_coords,
-                    },
-                )
-                feature_geom = make_valid_poly(feature_geom)
-            # if two points, save as a line string
-            elif len(layer_) == 2:  # noqa: PLR2004
-                feature_geom = feature2geometry(
-                    {
-                        "type": "linestring",
-                        "coordinates": scaled_coords[0],
-                    },
-                )
-            # if single point, save it is a point
-            else:
-                feature_geom = feature2geometry(
-                    {
-                        "type": "point",
-                        "coordinates": scaled_coords,
-                    },
-                )
-
-            annotations_list.extend(
-                [
-                    Annotation(
-                        geometry=feature_geom,
-                        properties={"type": "mask"},
-                    )
-                ]
-            )
+        annotations_list_ = process_contours(contours, hierarchy, scale_factor)
+        annotations_list.extend(annotations_list_)
 
     _ = store.append_many(
         annotations_list, [str(i) for i in range(len(annotations_list))]
@@ -1338,14 +1406,6 @@ def dict_to_store_semantic_segmentor(
         return save_path
 
     return store
-
-
-def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
-    """Converts a zarr array into a numpy array."""
-    if isinstance(zarr_array, zarr.core.Array):
-        return zarr_array[:]
-
-    return np.array(zarr_array).astype(float)
 
 
 def dict_to_store_patch_predictions(
