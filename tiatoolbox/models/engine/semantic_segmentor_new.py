@@ -9,7 +9,10 @@ from typing import TYPE_CHECKING
 import zarr
 from typing_extensions import Unpack
 
-from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor, imwrite_large_tif
+from tiatoolbox import logger
+from tiatoolbox.utils.misc import (
+    dict_to_store_semantic_segmentor,
+)
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -350,12 +353,12 @@ class SemanticSegmentor(PatchPredictor):
         # class_dict set from kwargs
         class_dict = kwargs.get("class_dict")
 
-        processed_predictions_path: str | Path | None = None
+        processed_predictions_path: str | Path = None
 
         # Need to add support for zarr conversion.
         if self.cache_mode:
             processed_predictions_path = processed_predictions
-            processed_predictions = zarr.open(processed_predictions, mode="r")
+            processed_predictions = zarr.open(processed_predictions, mode="r+")
 
         save_paths = []
 
@@ -374,19 +377,21 @@ class SemanticSegmentor(PatchPredictor):
 
             save_paths.append(out_file)
 
-            if return_probabilities:
-                imwrite_large_tif(
-                    image_path=output_path.with_suffix(".tif"),
-                    img=processed_predictions["probabilities"],
-                    tile_size=(
-                        self._ioconfig.patch_input_shape[0],
-                        self._ioconfig.patch_input_shape[1],
-                    ),
-                    index=i,
-                )
-                save_paths.append(output_path.with_suffix(".tif"))
+        processed_predictions.pop("predictions")
 
-        if processed_predictions_path is not None:
+        if return_probabilities and self.cache_mode:
+            new_zarr_name = out_file.parent.with_suffix(".zarr")
+            processed_predictions_path.rename(new_zarr_name)
+            msg = (
+                f"Probability maps cannot be saved as AnnotationStore. "
+                f"To visualise heatmaps in TIAToolbox Visualization tool,"
+                f"convert heatmaps in {processed_predictions_path} to ome.tiff using"
+                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+            )
+            logger.info(msg)
+            save_paths.append(new_zarr_name)
+
+        if processed_predictions_path and processed_predictions_path.exists():
             shutil.rmtree(processed_predictions_path)
 
         return save_paths
