@@ -5,6 +5,8 @@ name: pip Install
 on:
     push:
         paths: [ "requirements*.yml", "conda-env-create.yml", "requirements/requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
+    pull_request:
+        paths: [ "requirements*.yml", "conda-env-create.yml", "requirements/requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
 
 jobs:
   build:
