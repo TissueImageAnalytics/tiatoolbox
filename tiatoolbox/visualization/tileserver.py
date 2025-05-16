@@ -482,7 +482,7 @@ class TileServer(Flask):
             file_path,
             np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
         )
-        tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+        tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
         sq.dump(tmp_path)
         sq = SQLiteStore(tmp_path)
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
@@ -536,7 +536,7 @@ class TileServer(Flask):
             sq = SQLiteStore(overlay_path, auto_commit=False)
         else:
             # make a temporary db for the new annotations
-            tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+            tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
             sq.dump(tmp_path)
             sq = SQLiteStore(tmp_path)
 
@@ -621,7 +621,7 @@ class TileServer(Flask):
             if isinstance(layer, AnnotationTileGenerator):
                 if (
                     layer.store.path.suffix == ".db"
-                    and layer.store.path.name != "temp.db"
+                    and layer.store.path.name != f"temp_{session_id}.db"
                 ):
                     logger.info("%s*.db committed.", layer.store.path.stem)
                     layer.store.commit()
