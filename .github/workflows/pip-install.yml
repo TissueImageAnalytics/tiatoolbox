@@ -65,3 +65,7 @@ jobs:
       shell: python
       run: |
         import tiatoolbox
+        import openslide
+        print(openslide.__version__)
+        import torch
+        print(torch.__version__)
