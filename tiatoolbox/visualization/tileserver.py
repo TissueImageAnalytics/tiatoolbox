@@ -165,6 +165,8 @@ class TileServer(Flask):
         self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
         self.route("/tileserver/prop_range", methods=["PUT"])(self.prop_range)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
+        self.route("/tileserver/sessions", methods=["GET"])(self.sessions)
+        self.route("/tileserver/healthcheck", methods=["GET"])(self.healthcheck)
 
     def _get_session_id(self: TileServer) -> str:
         """Get the session_id from the request.
@@ -717,6 +719,36 @@ class TileServer(Flask):
         minv, maxv = prop_range
         self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
         return "done"
+
+    def sessions(self: TileServer) -> Response:
+        """Retrieve a mapping of session keys to their corresponding slide file paths.
+
+        Returns:
+            Response:
+                A JSON response containing a mapping of session keys
+                and their respective slide file paths.
+
+        """
+        session_paths = {}
+        for key, layer in self.layers.items():
+            slide = layer.get("slide")
+            if slide is not None:
+                session_paths[key] = str(slide.info.as_dict().get("file_path", ""))
+        return jsonify(session_paths)
+
+    @staticmethod
+    def healthcheck() -> Response:
+        """Simple health check endpoint to verify the server is running.
+
+        Useful for load balancers or uptime monitoring tools to check
+        if the service is operational.
+
+        Returns:
+            Response:
+                A JSON response with status "OK" and HTTP status code 200.
+
+        """
+        return jsonify({"status": "OK"})
 
     @staticmethod
     def shutdown() -> None:
