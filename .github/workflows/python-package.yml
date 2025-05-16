@@ -42,8 +42,6 @@ jobs:
         echo "---SQlite---"
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-        echo "---Openslide---"
-        openslide-quickhash1sum --version
         echo "---OpenJPEG---"
         opj_dump -h | head -n 5
         echo "---Python---"
