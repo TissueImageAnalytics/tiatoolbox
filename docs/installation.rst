@@ -24,7 +24,7 @@ The same command is used when working on the Colab or Kaggle platforms. When wor
 Windows (10+)
 -------------
 
-Install OpenJPEG. One of the easiest ways to install OpenJPEG is through conda:
+On Windows, the user can install OpenJPEG using the following conda command:
 
 .. code-block:: console
 
