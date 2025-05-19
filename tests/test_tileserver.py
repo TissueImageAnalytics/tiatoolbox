@@ -833,6 +833,7 @@ def test_registration_single_window_different_slide(
             )
             assert response.status_code == 200
 
+
 def test_healthcheck(empty_app: TileServer) -> None:
     """Test the /tileserver/healthcheck endpoint."""
     with empty_app.test_client() as client:
