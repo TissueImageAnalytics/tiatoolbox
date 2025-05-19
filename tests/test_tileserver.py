@@ -832,3 +832,43 @@ def test_registration_single_window_different_slide(
                 in caplog.text
             )
             assert response.status_code == 200
+
+def test_healthcheck(empty_app: TileServer) -> None:
+    """Test the /tileserver/healthcheck endpoint."""
+    with empty_app.test_client() as client:
+        response = client.get("/tileserver/healthcheck")
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        assert response.get_json() == {"status": "OK"}
+
+
+def test_sessions_no_slide_loaded(empty_app: TileServer) -> None:
+    """Test /tileserver/sessions when no slides are loaded."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.get("/tileserver/sessions")
+        assert response.status_code == 200
+        assert response.is_json
+        assert response.get_json() == {}
+
+
+def test_sessions_one_slide_loaded(
+    empty_app: TileServer, remote_sample: Callable
+) -> None:
+    """Test /tileserver/sessions after loading one slide."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        slide_path = safe_str(remote_sample("svs-1-small"))
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": slide_path},
+        )
+        assert response.status_code == 200
+
+        response = client.get("/tileserver/sessions")
+        assert response.status_code == 200
+        sessions = response.get_json()
+
+        assert isinstance(sessions, dict)
+        assert len(sessions) == 1

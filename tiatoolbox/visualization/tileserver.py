@@ -170,6 +170,8 @@ class TileServer(Flask):
         self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
         self.route("/tileserver/prop_range", methods=["PUT"])(self.prop_range)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
+        self.route("/tileserver/sessions", methods=["GET"])(self.sessions)
+        self.route("/tileserver/healthcheck", methods=["GET"])(self.healthcheck)
 
     def _get_session_id(self: TileServer) -> str:
         """Get the session_id from the request.
@@ -487,7 +489,7 @@ class TileServer(Flask):
             file_path,
             np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
         )
-        tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+        tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
         sq.dump(tmp_path)
         sq = SQLiteStore(tmp_path)
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
@@ -610,7 +612,8 @@ class TileServer(Flask):
         elif overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
         else:
-            tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+            # make a temporary db for the new annotations
+            tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
             sq.dump(tmp_path)
             sq = SQLiteStore(tmp_path)
 
@@ -695,7 +698,7 @@ class TileServer(Flask):
             if isinstance(layer, AnnotationTileGenerator):
                 if (
                     layer.store.path.suffix == ".db"
-                    and layer.store.path.name != "temp.db"
+                    and layer.store.path.name != f"temp_{session_id}.db"
                 ):
                     logger.info("%s*.db committed.", layer.store.path.stem)
                     layer.store.commit()
@@ -791,6 +794,36 @@ class TileServer(Flask):
         minv, maxv = prop_range
         self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
         return "done"
+
+    def sessions(self: TileServer) -> Response:
+        """Retrieve a mapping of session keys to their corresponding slide file paths.
+
+        Returns:
+            Response:
+                A JSON response containing a mapping of session keys
+                and their respective slide file paths.
+
+        """
+        session_paths = {}
+        for key, layer in self.layers.items():
+            slide = layer.get("slide")
+            if slide is not None:
+                session_paths[key] = str(slide.info.as_dict().get("file_path", ""))
+        return jsonify(session_paths)
+
+    @staticmethod
+    def healthcheck() -> Response:
+        """Simple health check endpoint to verify the server is running.
+
+        Useful for load balancers or uptime monitoring tools to check
+        if the service is operational.
+
+        Returns:
+            Response:
+                A JSON response with status "OK" and HTTP status code 200.
+
+        """
+        return jsonify({"status": "OK"})
 
     @staticmethod
     def shutdown() -> None:
