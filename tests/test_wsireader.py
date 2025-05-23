@@ -739,7 +739,7 @@ def test_is_tiled_tiff(source_image: Path) -> None:
 def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
     """Test if source_image is not a tiled tiff."""
     temp_tiff_path = tmp_samples_path / "not_tiled.tiff"
-    images = [np.random.randint(0, 256, (4, 4), dtype=np.uint8) for _ in range(3)]
+    images = [np.zeros(shape=(4, 4)) for _ in range(3)]
     # Write multi-page TIFF with all pages not tiled
     with tifffile.TiffWriter(temp_tiff_path) as tif:
         for image in images:
