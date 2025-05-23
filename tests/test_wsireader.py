@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Callable
 from unittest.mock import patch
 
 import cv2
+import tifffile
 import glymur
 import numpy as np
 import pytest
@@ -734,6 +735,19 @@ def test_is_tiled_tiff(source_image: Path) -> None:
     assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
 
+def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
+    """Test if source_image is not a tiled tiff."""
+    temp_tiff_path = tmp_samples_path / "not_tiled.tiff"
+    images = [np.random.randint(0, 256, (4, 4), dtype=np.uint8) for _ in range(3)]
+    # Write multi-page TIFF with all pages not tiled
+    with tifffile.TiffWriter(temp_tiff_path) as tif:
+        for image in images:
+            tif.write(
+                image,
+                compression=None,
+                tile=None
+            )
+    assert wsireader.is_tiled_tiff(temp_tiff_path) is False
 
 def test_read_rect_openslide_levels(sample_ndpi: Path) -> None:
     """Test openslide read rect with resolution in levels.
@@ -2153,7 +2167,7 @@ def test_store_reader_base_wsi_str(remote_sample: Callable) -> None:
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store, base_wsi=remote_sample("svs-1-small"))
     assert isinstance(reader.store, SQLiteStore)
-    assert isinstance(reader.base_wsi_reader, WSIReader)
+    assert isinstance(reader.base_wsi, WSIReader)
 
 
 def test_store_reader_alpha(remote_sample: Callable) -> None:
