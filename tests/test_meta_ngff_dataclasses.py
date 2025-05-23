@@ -30,6 +30,21 @@ class TestDataclassInit:
         ngff.Multiscales()
 
     @staticmethod
+    def test_multiscales_iter() -> None:
+        """Test :class:`ngff.Multiscales` init."""
+        multiscales = ngff.Multiscales()
+        iter_values = list(iter(multiscales))
+
+        # Check if all attributes are present in the yielded values
+        assert multiscales.axes in iter_values
+        assert multiscales.datasets in iter_values
+        assert multiscales.version in iter_values
+
+        # Check the order of yielded values matches __dict__ order
+        expected = list(multiscales.__dict__.values())
+        assert iter_values == expected
+
+    @staticmethod
     def test_omero_defaults() -> None:
         """Test :class:`ngff.Omero` init with default args."""
         ngff.Omero()
