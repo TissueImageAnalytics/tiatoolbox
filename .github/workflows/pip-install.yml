@@ -5,6 +5,8 @@ name: pip Install
 on:
     push:
         paths: [ "requirements*.yml", "conda-env-create.yml", "requirements/requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
+    pull_request:
+        paths: [ "requirements*.yml", "conda-env-create.yml", "requirements/requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
 
 jobs:
   build:
@@ -19,16 +21,16 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: 🐧 Install OpenSlide & OpenJPEG
+    - name: 🐧 Install OpenJPEG
       if: runner.os == 'Linux'
       run: |
         sudo apt update
-        sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        sudo apt-get install -y libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-    - name: 🍎 Install OpenSlide & OpenJPEG
+    - name: 🍎 Install OpenJPEG
       if: runner.os == 'macOS'
       run: |
-        brew install openslide openjpeg
+        brew install openjpeg
         python -m pip install --upgrade pip
     - name: 🪟 Install OpenJPEG
       if: runner.os == 'Windows'
@@ -43,20 +45,6 @@ jobs:
         make -j4
         make install
         make clean
-    - name: 🪟 Install OpenSlide
-      if: runner.os == 'Windows'
-      run: |
-        choco install wget --no-progress
-        wget https://github.com/openslide/openslide-winbuild/releases/download/v20220811/openslide-win64-20220811.zip
-        7z x openslide-win64-20220811.zip
-        ls openslide-win64-20220811
-        # Add to PATH
-        echo "$(realpath ./openslide-win64-20220811/bin)" >> $GITHUB_PATH
-        echo "$(realpath ./openslide-win64-20220811/lib)" >> $GITHUB_PATH
-        # Install
-        mkdir "C:\Program Files\openslide"
-        Copy-Item -Path ".\openslide-win64-20220811\*" -Destination "C:\Program Files\openslide" -Recurse
-        ls "C:/Program Files/openslide"
     - name: 🪟 Install SQLite Shell
       if: runner.os == 'Windows'
       run: choco install sqlite.shell --no-progress
@@ -64,26 +52,21 @@ jobs:
       run: |
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-    - name: OpenSlide Version Information
-      if: runner.os == 'Linux'
-      run: openslide-quickhash1sum --version
     - name: OpenJPEG Version Information
       continue-on-error: true  # This -h option has exit code 1 for some reason
       run: opj_dump -h
     - name: pip Install From GitHub Repo on Linux and macOS
       if: runner.os != 'Windows'
-      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_REF_NAME}
+      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
     - name: pip Install From GitHub on Windows
       if: runner.os == 'Windows'
-      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_REF_NAME
-    - name: Test TIAToolbox Import
+      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
+    - name: Test Imports
       shell: python
       run: |
-        import os
-        if hasattr(os, "add_dll_directory"):
-          # Required for Python>=3.8 on Windows
-          with os.add_dll_directory(r"D:\a\tiatoolbox\tiatoolbox\openslide-win64-20220811\bin"):
-            import tiatoolbox
-        else:
-          os.environ["PATH"] = r"D:\a\tiatoolbox\tiatoolbox\openslide-win64-20220811\bin;"
-          import tiatoolbox
+        import tiatoolbox
+        print(tiatoolbox.__version__)
+        import openslide
+        print(openslide.__version__)
+        import torch
+        print(torch.__version__)

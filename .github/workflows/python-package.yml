@@ -28,9 +28,9 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        sudo apt-get install -y libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install ruff==0.11.4 pytest pytest-cov pytest-runner
+        python -m pip install ruff==0.11.8 pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v3
@@ -42,8 +42,6 @@ jobs:
         echo "---SQlite---"
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-        echo "---Openslide---"
-        openslide-quickhash1sum --version
         echo "---OpenJPEG---"
         opj_dump -h | head -n 5
         echo "---Python---"

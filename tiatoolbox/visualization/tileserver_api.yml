@@ -395,6 +395,24 @@ paths:
         '200':
           description: Successful response
 
+  /tileserver/sessions:
+      get:
+          summary: Returns all session/path mappings
+          responses:
+              '200':
+                  description: A jsonified session/path mappings
+                  content:
+                      application/json:
+
+  /tileserver/healthcheck:
+      get:
+          summary: Returns Ok if server is online
+          responses:
+              '200':
+                  description: A json with status field
+                  content:
+                      application/json:
+
   /tileserver/tap_query/{x}/{y}:
     get:
       summary: Query annotation at a point

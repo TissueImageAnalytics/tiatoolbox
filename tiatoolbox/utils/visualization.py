@@ -475,14 +475,15 @@ def overlay_prediction_contours(
     inst_colours_array = inst_colours_array.astype(np.uint8)
 
     for idx, [_, inst_info] in enumerate(inst_dict.items()):
-        inst_contour = inst_info["contour"]
+        inst_contour: np.ndarray = inst_info["contour"]
         if "type" in inst_info and type_colours is not None:
             inst_colour = type_colours[inst_info["type"]][1]
         else:
             inst_colour = (inst_colours_array[idx]).tolist()
+        contours: list[np.ndarray] = [np.array(inst_contour)]
         cv2.drawContours(
             overlay,
-            [np.array(inst_contour)],
+            contours,
             -1,
             inst_colour,
             line_thickness,
@@ -881,9 +882,10 @@ class AnnotationRenderer:
             top_left,
             scale,
         )
+        pts: list[np.ndarray] = [np.array(cnt)]
         cv2.polylines(
             tile,
-            [np.array(cnt)],
+            pts,
             isClosed=False,
             color=col,
             thickness=3,
