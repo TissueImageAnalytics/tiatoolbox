@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-if TYPE_CHECKING:   # pragma: no cover
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 from dataclasses import dataclass, field

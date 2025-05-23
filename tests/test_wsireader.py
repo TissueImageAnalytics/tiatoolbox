@@ -13,10 +13,10 @@ from typing import TYPE_CHECKING, Callable
 from unittest.mock import patch
 
 import cv2
-import tifffile
 import glymur
 import numpy as np
 import pytest
+import tifffile
 import zarr
 from click.testing import CliRunner
 from packaging.version import Version
@@ -735,6 +735,7 @@ def test_is_tiled_tiff(source_image: Path) -> None:
     assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
 
+
 def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
     """Test if source_image is not a tiled tiff."""
     temp_tiff_path = tmp_samples_path / "not_tiled.tiff"
@@ -742,12 +743,9 @@ def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
     # Write multi-page TIFF with all pages not tiled
     with tifffile.TiffWriter(temp_tiff_path) as tif:
         for image in images:
-            tif.write(
-                image,
-                compression=None,
-                tile=None
-            )
+            tif.write(image, compression=None, tile=None)
     assert wsireader.is_tiled_tiff(temp_tiff_path) is False
+
 
 def test_read_rect_openslide_levels(sample_ndpi: Path) -> None:
     """Test openslide read rect with resolution in levels.
