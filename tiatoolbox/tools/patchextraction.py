@@ -9,6 +9,7 @@ import numpy as np
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
+from tiatoolbox.annotation.storage import AnnotationStore
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
 from tiatoolbox.utils.visualization import AnnotationRenderer
@@ -19,7 +20,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from pandas import DataFrame
 
-    from tiatoolbox.annotation.storage import AnnotationStore
     from tiatoolbox.type_hints import Resolution, Units
 
 
@@ -237,7 +237,9 @@ class PatchExtractor(PatchExtractorABC):
 
         if input_mask is None:
             self.mask = None
-        elif isinstance(input_mask, str) and input_mask.endswith(".db"):
+        elif (isinstance(input_mask, str) and input_mask.endswith(".db")) or isinstance(
+            input_mask, AnnotationStore
+        ):
             # input_mask is an annotation store
             renderer = AnnotationRenderer(
                 max_scale=10000, edge_thickness=0, where=store_filter
@@ -670,7 +672,12 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         self: SlidingWindowPatchExtractor,
         input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
+        input_mask: str
+        | Path
+        | np.ndarray
+        | wsireader.VirtualWSIReader
+        | AnnotationStore
+        | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         stride: int | tuple[int, int] | None = None,
