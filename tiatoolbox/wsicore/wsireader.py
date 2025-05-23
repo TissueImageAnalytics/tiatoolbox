@@ -8,9 +8,8 @@ import math
 import os
 import re
 from datetime import datetime
-from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import fsspec
 import numpy as np
@@ -23,7 +22,7 @@ from imagecodecs.numcodecs import Delta, Jpeg, Jpeg2k, Lzw
 from numcodecs import register_codec
 from packaging.version import Version
 from PIL import Image
-from tifffile import TiffPages
+from tifffile import TiffPage, TiffPages
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -34,8 +33,6 @@ from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterable
-
     import glymur
 
     from tiatoolbox.type_hints import (
@@ -89,7 +86,10 @@ def is_tiled_tiff(path: Path) -> bool:
         tif = tifffile.TiffFile(path)
     except tifffile.TiffFileError:
         return False
-    return tif.pages[0].is_tiled
+    page = tif.pages[0]
+    if isinstance(page, TiffPage):
+        return page.is_tiled
+    return False
 
 
 def is_zarr(path: Path) -> bool:
@@ -168,9 +168,9 @@ def is_ngff(  # noqa: PLR0911
     multiscales_versions = {
         Version(scale["version"]) for scale in multiscales if "version" in scale
     }
-    omero_version: str | None = omero.get("version")
-    if omero_version:
-        omero_version: Version = Version(omero_version)
+    omero_version_str: str | None = omero.get("version")
+    if omero_version_str:
+        omero_version: Version = Version(omero_version_str)
         if omero_version < min_version:
             logger.warning(
                 "The minimum supported version of the NGFF file is %s. "
@@ -218,8 +218,8 @@ def is_ngff(  # noqa: PLR0911
 def _handle_virtual_wsi(
     last_suffix: str,
     input_path: Path,
-    mpp: tuple[Number, Number] | None,
-    power: Number | None,
+    mpp: tuple[float, float] | None,
+    power: int | None,
 ) -> VirtualWSIReader | None:
     """Handle virtual WSI cases.
 
@@ -245,12 +245,13 @@ def _handle_virtual_wsi(
     # Handle homogeneous cases (based on final suffix)
     def np_virtual_wsi(
         input_path: np.ndarray,
-        *args: Number | tuple | str | WSIMeta | None,
+        *args: float | tuple | str | WSIMeta | None,
         **kwargs: dict,
     ) -> VirtualWSIReader:
         """Create a virtual WSI from a numpy array."""
         return VirtualWSIReader(input_path, *args, **kwargs)
 
+    suffix_to_reader: dict[str, Callable | VirtualWSIReader | JP2WSIReader]
     suffix_to_reader = {
         ".npy": np_virtual_wsi,
         ".jp2": JP2WSIReader,
@@ -268,7 +269,7 @@ def _handle_virtual_wsi(
 
 
 def _handle_tiff_wsi(
-    input_path: Path, mpp: tuple[Number, Number] | None, power: Number | None
+    input_path: Path, mpp: tuple[float, float] | None, power: int | None
 ) -> TIFFWSIReader | OpenSlideWSIReader | None:
     """Handle TIFF WSI cases.
 
@@ -324,8 +325,8 @@ class WSIReader:
     @staticmethod
     def open(  # noqa: PLR0911
         input_img: str | Path | np.ndarray | WSIReader,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
         **kwargs: dict,
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
@@ -454,8 +455,8 @@ class WSIReader:
     def __init__(
         self: WSIReader,
         input_img: str | Path | np.ndarray | AnnotationStore,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
     ) -> None:
         """Initialize :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
@@ -468,7 +469,7 @@ class WSIReader:
         self._m_info = None
 
         # Set a manual mpp value
-        if mpp and isinstance(mpp, Number):
+        if mpp and isinstance(mpp, float):
             mpp = (mpp, mpp)
         if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):  # noqa: PLR2004
             msg = "`mpp` must be a number or iterable of length 2."
@@ -476,7 +477,7 @@ class WSIReader:
         self._manual_mpp = tuple(mpp) if mpp else None
 
         # Set a manual power value
-        if power and not isinstance(power, Number):
+        if power and not isinstance(power, int):
             msg = "`power` must be a number."
             raise TypeError(msg)
         self._manual_power = power
@@ -760,10 +761,10 @@ class WSIReader:
 
     def bounds_at_resolution_to_baseline(
         self: WSIReader,
-        bounds: Bounds,
+        bounds: IntBounds,
         resolution: Resolution,
         units: Units,
-    ) -> Bounds:
+    ) -> IntBounds:
         """Find corresponding bounds in baseline.
 
         Find corresponding bounds in baseline given the input is at
@@ -790,7 +791,12 @@ class WSIReader:
         )
         tl_at_baseline = location_at_baseline
         br_at_baseline = tl_at_baseline + size_at_baseline
-        return np.concatenate([tl_at_baseline, br_at_baseline])  # bounds at baseline
+        return (
+            tl_at_baseline[0],
+            tl_at_baseline[1],
+            br_at_baseline[0],
+            br_at_baseline[1],
+        )
 
     def slide_dimensions(
         self: WSIReader,
@@ -841,7 +847,7 @@ class WSIReader:
         resolution: Resolution,
         units: Units,
         precision: int = 3,
-    ) -> tuple[int, IntBounds, IntPair, IntPair, np.ndarray]:
+    ) -> tuple[int, IntBounds, IntPair, np.ndarray]:
         """Find optimal parameters for reading bounds at a given resolution.
 
         Args:
@@ -1062,8 +1068,8 @@ class WSIReader:
 
     def _find_tile_params(
         self: WSIReader,
-        tile_objective_value: Number,
-    ) -> tuple[int, IntPair, int, Number]:
+        tile_objective_value: float,
+    ) -> tuple[int, IntPair, int, float]:
         """Find the params for save tiles."""
         rescale = self.info.objective_power / tile_objective_value
         if not rescale.is_integer():
@@ -1119,7 +1125,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Number | Iterable[NumPair] = 0,
+        pad_constant_values: int | IntPair = 0,
         **kwargs: dict,
     ) -> np.ndarray:
         """Helper to perform `read_rect` at resolution.
@@ -1151,7 +1157,7 @@ class WSIReader:
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: int | tuple[int, int] = 0,
+        pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
         **kwargs: dict,
     ) -> np.ndarray:
@@ -1339,12 +1345,12 @@ class WSIReader:
 
     def read_bounds(
         self: WSIReader,
-        bounds: Bounds,
+        bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: Number | Iterable[NumPair] = 0,
+        pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
         **kwargs: dict,
     ) -> np.ndarray:
@@ -1575,7 +1581,7 @@ class WSIReader:
         self: WSIReader,
         output_dir: str | Path = "tiles",
         tile_objective_value: int = 20,
-        tile_read_size: tuple[int, int] = (5000, 5000),
+        tile_read_size: IntPair = (5000, 5000),
         tile_format: str = ".jpg",
         *,
         verbose: bool = False,
@@ -1738,8 +1744,8 @@ class OpenSlideWSIReader(WSIReader):
     def __init__(
         self: OpenSlideWSIReader,
         input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
     ) -> None:
         """Initialize :class:`OpenSlideWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
@@ -2276,8 +2282,8 @@ class JP2WSIReader(WSIReader):
     def __init__(
         self: JP2WSIReader,
         input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
     ) -> None:
         """Initialize :class:`OmnyxJP2WSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
@@ -2901,8 +2907,8 @@ class VirtualWSIReader(WSIReader):
     def __init__(
         self: VirtualWSIReader,
         input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
         info: WSIMeta | None = None,
         mode: str = "rgb",
     ) -> None:
@@ -3469,8 +3475,8 @@ class TIFFWSIReader(WSIReader):
     def __init__(
         self: TIFFWSIReader,
         input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
         series: str = "auto",
         cache_size: int = 2**28,
     ) -> None:
@@ -3773,8 +3779,8 @@ class FsspecJsonWSIReader(WSIReader):
     def __init__(
         self: FsspecJsonWSIReader,
         input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
         cache_size: int = 2**28,
     ) -> None:
         """Initialize :class:`FsspecJsonWSIReader`."""
@@ -4023,7 +4029,7 @@ class TIFFWSIReaderDelegate:
         raw["Software"] = software
         raw["Photometric Info"] = photometric_info
 
-        def parse_svs_tag(string: str) -> tuple[str, Number | str]:
+        def parse_svs_tag(string: str) -> tuple[str, float | str]:
             """Parse SVS key-value string.
 
             Infers type(s) of data by trial and error with a fallback to
@@ -4083,15 +4089,15 @@ class TIFFWSIReaderDelegate:
         }
 
     @staticmethod
-    def canonical_shape(axes: str, shape: tuple[int, int]) -> tuple[int, int]:
+    def canonical_shape(axes: str, shape: IntPair) -> IntPair:
         """Make a level shape tuple in YXS order.
 
         Args:
             axes (str): The axes format.
-            shape (tuple[int, int]): Input shape tuple.
+            shape (IntPair): Input shape tuple.
 
         Returns:
-            tuple[int, int]: Shape in YXS order.
+            IntPair: Shape in YXS order.
         """
         if axes == "YXS":
             return shape
@@ -4553,8 +4559,8 @@ class DICOMWSIReader(WSIReader):
     def __init__(
         self: DICOMWSIReader,
         input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
+        mpp: tuple[float, float] | None = None,
+        power: int | None = None,
     ) -> None:
         """Initialize :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom
@@ -5621,31 +5627,22 @@ class AnnotationStoreReader(WSIReader):
         **kwargs: dict,
     ) -> None:
         """Initialize :class:`AnnotationStoreReader`."""
-        super().__init__(store, **kwargs)
+        super().__init__(store, mpp=None, power=None, **kwargs)
         self.store = (
             SQLiteStore(Path(store)) if isinstance(store, (str, Path)) else store
         )
-        self.base_wsi = base_wsi
+        self.base_wsi_reader: WSIReader | None
         if isinstance(base_wsi, (str, Path)):
-            self.base_wsi = WSIReader.open(base_wsi)
+            self.base_wsi_reader = WSIReader.open(base_wsi)
+        elif isinstance(base_wsi, WSIReader):
+            self.base_wsi_reader = base_wsi
+        else:
+            self.base_wsi_reader = None
+
         if info is None:
             # try to get metadata from store
-            try:
-                info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
-            except KeyError as exc:
-                if self.base_wsi is not None:
-                    # get the metadata from the base reader.
-                    # assumes annotations saved at WSI baseline res
-                    info = self.base_wsi.info
-                else:
-                    # we cant find any metadata
-                    msg = (
-                        "No metadata found in store. "
-                        "Please provide either info or base slide."
-                    )
-                    raise ValueError(
-                        msg,
-                    ) from exc
+            info = self._extract_metadata()
+
         self.info = info
         if renderer is None:
             types = self.store.pquery("props['type']")
@@ -5655,9 +5652,41 @@ class AnnotationStoreReader(WSIReader):
                 renderer = AnnotationRenderer("type", list(types), max_scale=1000)
         renderer.edge_thickness = 0
         self.renderer = renderer
-        if self.base_wsi is not None:
+        if self.base_wsi_reader is not None:
             self.on_slide = True
         self.alpha = alpha
+
+    def _extract_metadata(self: AnnotationStoreReader) -> WSIMeta:
+        if isinstance(self.store, SQLiteStore):
+            try:
+                info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
+            except KeyError as exc:
+                if self.base_wsi_reader is not None:
+                    # get the metadata from the base reader.
+                    # assumes annotations saved at WSI baseline res
+                    info = self.base_wsi_reader.info
+                else:
+                    # we cant find any metadata
+                    msg = (
+                        "No metadata found in store. "
+                        "Please provide either info or base slide."
+                    )
+                    raise ValueError(
+                        msg,
+                    ) from exc
+        elif self.base_wsi_reader is not None:
+            # get the metadata from the base reader.
+            # assumes annotations saved at WSI baseline res
+            info = self.base_wsi_reader.info
+        else:
+            # we cant find any metadata
+            msg = (
+                "No metadata found in store. Please provide either info or base slide."
+            )
+            raise ValueError(
+                msg,
+            )
+        return info
 
     def _info(self: AnnotationStoreReader) -> WSIMeta:
         """Get the metadata of the slide."""
@@ -5671,7 +5700,7 @@ class AnnotationStoreReader(WSIReader):
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: int | tuple[int, int] = 0,
+        pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
         **kwargs: dict,
     ) -> np.ndarray:
@@ -5927,9 +5956,9 @@ class AnnotationStoreReader(WSIReader):
             interpolation=interpolation,
         )
 
-        if self.base_wsi is not None:
+        if self.base_wsi_reader is not None:
             # overlay image region on the base wsi
-            base_region = self.base_wsi.read_rect(
+            base_region = self.base_wsi_reader.read_rect(
                 location,
                 size,
                 resolution=resolution,
@@ -5940,17 +5969,17 @@ class AnnotationStoreReader(WSIReader):
                 coord_space=coord_space,
                 **kwargs,
             )
-            base_region = Image.fromarray(
+            base_region_image = Image.fromarray(
                 utils.transforms.background_composite(base_region, alpha=True),
             )
-            im_region = Image.fromarray(im_region)
+            im_region_temp = Image.fromarray(im_region)
             if self.alpha < 1.0:
-                im_region.putalpha(
-                    im_region.getchannel("A").point(lambda i: i * self.alpha),
+                im_region_temp.putalpha(
+                    im_region_temp.getchannel("A").point(lambda i: i * self.alpha),
                 )
-            base_region = Image.alpha_composite(base_region, im_region)
-            base_region = base_region.convert("RGB")
-            return np.array(base_region)
+            base_region_image = Image.alpha_composite(base_region_image, im_region_temp)
+            base_region_image = base_region_image.convert("RGB")
+            return np.array(base_region_image)
         return utils.transforms.background_composite(im_region, alpha=False)
 
     def read_bounds(
@@ -5960,7 +5989,7 @@ class AnnotationStoreReader(WSIReader):
         units: Units = "level",
         interpolation: str = "optimise",
         pad_mode: str = "constant",
-        pad_constant_values: int | tuple[int, int] = 0,
+        pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
         **kwargs: dict,
     ) -> np.ndarray:
@@ -6103,6 +6132,7 @@ class AnnotationStoreReader(WSIReader):
                 units=units,
             )
 
+        im_region: np.ndarray
         im_region = self.renderer.render_annotations(
             self.store,
             bounds_at_baseline,
@@ -6121,9 +6151,9 @@ class AnnotationStoreReader(WSIReader):
                 scale_factor=post_read_scale,
                 output_size=size_at_requested,
             )
-        if self.base_wsi is not None:
+        if self.base_wsi_reader is not None:
             # overlay image region on the base wsi
-            base_region = self.base_wsi.read_bounds(
+            base_region = self.base_wsi_reader.read_bounds(
                 bounds,
                 resolution=resolution,
                 units=units,
@@ -6133,15 +6163,15 @@ class AnnotationStoreReader(WSIReader):
                 coord_space=coord_space,
                 **kwargs,
             )
-            base_region = Image.fromarray(
+            base_region_image = Image.fromarray(
                 utils.transforms.background_composite(base_region, alpha=True),
             )
-            im_region = Image.fromarray(im_region)
+            im_region_temp = Image.fromarray(im_region)
             if self.alpha < 1.0:
-                im_region.putalpha(
-                    im_region.getchannel("A").point(lambda i: i * self.alpha),
+                im_region_temp.putalpha(
+                    im_region_temp.getchannel("A").point(lambda i: i * self.alpha),
                 )
-            base_region = Image.alpha_composite(base_region, im_region)
-            base_region = base_region.convert("RGB")
-            return np.array(base_region)
+            base_region_image = Image.alpha_composite(base_region_image, im_region_temp)
+            base_region_image = base_region_image.convert("RGB")
+            return np.array(base_region_image)
         return utils.transforms.background_composite(im_region, alpha=False)

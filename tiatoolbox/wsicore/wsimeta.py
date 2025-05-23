@@ -262,7 +262,8 @@ class WSIMeta:
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
 
         """
-        base_scale: np.ndarray | float
+        base_scale: np.ndarray
+        resolution_array: np.ndarray
         msg: str
 
         if units not in ("mpp", "power", "level", "baseline"):
@@ -288,17 +289,19 @@ class WSIMeta:
                 raise ValueError(
                     msg,
                 )
-            base_scale, resolution = 1, self.level_downsample(resolution)
+            resolution_array = np.array(
+                [self.level_downsample(resolution)] * 2, dtype=float
+            )
+            base_scale = np.array([1.0, 1.0], dtype=float)
 
-        resolution = np_pair(resolution)
-
-        if units == "mpp":
+        elif units == "mpp":
             if self.mpp is None:
                 msg = "MPP is None. Cannot determine scale in terms of MPP."
                 raise ValueError(msg)
             base_scale = self.mpp
+            resolution_array = np_pair(resolution)
 
-        if units == "power":
+        elif units == "power":
             if self.objective_power is None:
                 msg = (
                     "Objective power is None. "
@@ -307,13 +310,16 @@ class WSIMeta:
                 raise ValueError(
                     msg,
                 )
-            base_scale, resolution = 1 / self.objective_power, 1 / resolution
+            base_scale = np.array([1 / self.objective_power] * 2, dtype=float)
+            resolution_array = 1.0 / np_pair(resolution)
 
-        if units == "baseline":
-            base_scale, resolution = 1, 1 / resolution
+        else:  # units == "baseline"
+            base_scale = np.array([1.0, 1.0], dtype=float)
+            resolution_array = 1.0 / np_pair(resolution)
 
         return [
-            (base_scale * downsample) / resolution for downsample in level_downsamples
+            (base_scale * downsample) / resolution_array
+            for downsample in level_downsamples
         ]
 
     def as_dict(self: WSIMeta) -> dict:

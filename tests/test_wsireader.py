@@ -2153,7 +2153,7 @@ def test_store_reader_base_wsi_str(remote_sample: Callable) -> None:
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store, base_wsi=remote_sample("svs-1-small"))
     assert isinstance(reader.store, SQLiteStore)
-    assert isinstance(reader.base_wsi, WSIReader)
+    assert isinstance(reader.base_wsi_reader, WSIReader)
 
 
 def test_store_reader_alpha(remote_sample: Callable) -> None:
