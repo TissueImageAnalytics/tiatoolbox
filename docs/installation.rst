@@ -17,16 +17,14 @@ On Linux, the prerequisite software can be installed using the following command
 
 .. code-block:: console
 
-    $ apt-get -y install libopenjp2-7-dev libopenjp2-tools openslide-tools
+    $ apt-get -y install libopenjp2-7-dev libopenjp2-tools
 
 The same command is used when working on the Colab or Kaggle platforms. When working on Google Colab, we remove the packages ``datascience`` and ``albumentations`` because they conflict and produce an error message.
 
 Windows (10+)
 -------------
 
-1. Download OpenSlide binaries from `this page <https://openslide.org/download/>`_. Extract the folder and add the ``bin`` and ``lib`` subdirectories to the Windows `system path <https://docs.microsoft.com/en-us/previous-versions/office/developer/sharepoint-2010/ee537574(v=office.14)>`_. If you are using a conda environment, you can also copy the ``bin`` and ``lib`` subdirectories to ``[Anaconda Installation Path]/envs/[tiatoolbox-environment]/Library/``.
-
-2. Install OpenJPEG. The easiest way to install OpenJPEG is through conda:
+On Windows, ``OpenJPEG`` can be installed using the following ``conda`` command:
 
 .. code-block:: console
 
@@ -45,14 +43,14 @@ Homebrew
 
 .. code-block:: console
 
-    $ brew install openjpeg openslide
+    $ brew install openjpeg
 
 MacPorts
 ^^^^^^^^
 
 .. code-block:: console
 
-    $ port install openjpeg openslide
+    $ port install openjpeg
 
 Installing Stable Release
 =========================
