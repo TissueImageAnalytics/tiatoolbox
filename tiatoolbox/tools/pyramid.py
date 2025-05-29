@@ -29,6 +29,7 @@ from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+    from typing import Literal
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
@@ -352,7 +353,9 @@ class TilePyramidGenerator:
                 )
 
         else:  # container == "tar":
-            compression2mode = {
+            compression2mode: dict[
+                str | None, Literal["w", "w:gz", "w:bz2", "w:xz"]
+            ] = {
                 None: "w",
                 "gzip": "w:gz",
                 "bz2": "w:bz2",
