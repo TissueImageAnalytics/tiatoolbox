@@ -362,7 +362,9 @@ class TilePyramidGenerator:
                 msg = "Unsupported compression for tar."
                 raise ValueError(msg)
 
-            tar_archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
+            tar_archive = tarfile.TarFile.open(
+                str(path), mode=compression2mode[compression]
+            )
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output zip."""
