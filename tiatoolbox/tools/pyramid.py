@@ -17,7 +17,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import defusedxml
 import numpy as np
@@ -352,17 +352,13 @@ class TilePyramidGenerator:
                 )
 
         else:  # container == "tar":
-            compression2mode = {
-                None: "w",
-                "gzip": "w:gz",
-                "bz2": "w:bz2",
-                "lzma": "w:xz",
-            }
-            if compression not in compression2mode:
+            if compression not in [None, "gzip", "bz2", "lzma"]:
                 msg = "Unsupported compression for tar."
                 raise ValueError(msg)
 
-            tar_archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
+            compression_mode = self._compression_mode_to_literal(compression)
+
+            tar_archive = tarfile.TarFile.open(str(path), mode=compression_mode)
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output zip."""
@@ -398,6 +394,19 @@ class TilePyramidGenerator:
         for level in range(self.level_count):
             for x, y in np.ndindex(self.tile_grid_size(level)):
                 yield self.get_tile(level=level, x=x, y=y)
+
+    def _compression_mode_to_literal(
+        self: TilePyramidGenerator, mode: str | None
+    ) -> Literal["w", "w:gz", "w:bz2", "w:xz"]:
+        """Convert compression mode to a literal string."""
+        if mode is None:
+            return "w"
+        if mode == "gzip":
+            return "w:gz"
+        if mode == "bz2":
+            return "w:bz2"
+        # mode is "lzma"
+        return "w:xz"
 
 
 class ZoomifyGenerator(TilePyramidGenerator):
