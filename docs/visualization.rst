@@ -128,24 +128,42 @@ Visualising Image Registration/Transformation
     :alt: dual window example
 
 
-TIAToolbox offers a registration feature that facilitates the visual alignment of images, such as H&E and IHC-stained slides. This can be done using Dual Window Mode or with Overlays. This feature allows for quick visualization of registered regions without the need for full whole-slide registration. To utilize this feature, a precomputed registration matrix (e.g., an .mha or .npy file from prior affine/deformable registration) must be provided as an overlay.
+TIAToolbox provides a powerful registration visualization feature that enables intuitive alignment and comparison of histopathology images—such as H&E and IHC-stained slides—without requiring full whole-slide registration. This is particularly useful for quickly inspecting the accuracy of precomputed registration results.
 
-To perform registration using Dual Window Mode:
+To use this feature, you must supply a precomputed registration matrix (e.g., .mha or .npy file) generated from an affine or deformable registration process. This matrix is used to align the images visually.
 
-- Open Dual Window Mode and load the images.
+Dual Window Mode:
+"""""""""""""""""""""""
+
+This mode allows side-by-side comparison of registered images.
+
+**Steps:**
+- Open **Dual Window Mode** and load the images.
 - In one window, open the H&E (source) image.
 - In the other window, open the IHC (target) image.
 - Load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
 
-To perform registration using Overlays:
+Overlay Mode:
+""""""""""""""""
 
-- In one window, open the H&E (source) image.
-- Next, overlay the IHC (target) image on the source image.
-- Finally, load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
-- Please note, it is essential to load the target image first as otherwise the algorithm will assume that the source and target image are the same which may result in incorrect transformations.
-- You should now be able to accurately compare the regstration of your images overlayed.
+This mode overlays the registered image directly on top of the source image for visual inspection.
 
-Please note, the order of source and target images used above must be kept consistent. This is as most registration algorithms require the dimensions of both the source and target images to perform the registration transformation. The above examples assume that the H&E image is registered to the IHC images, but if instead you have registered the IHC to the H&E image then please change the order of image loading accordingly.
+
+**Steps:**
+- Open the H&E (source) image.
+- Overlay the IHC (target) image on the source image.
+- Load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
+
+.. note::
+
+   Always load the **target image first** when using overlays. If not, the system may incorrectly assume both images are the same, leading to inaccurate transformations
+
+
+The **order** of source and target images must remain consistent with how the registration matrix was computed. This is as most registration algorithms require the dimensions of both the source and target images to perform the registration transformation. The above examples assume that the H&E image is registered to the IHC images, but if instead you have registered the IHC to the H&E image then please change the order of image loading accordingly.
+
+
+Incorrect ordering may result in misaligned overlays or misleading visualizations.
+
 
 .. _data_format:
 
