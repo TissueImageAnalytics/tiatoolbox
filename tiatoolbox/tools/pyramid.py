@@ -356,7 +356,9 @@ class TilePyramidGenerator:
                 msg = "Unsupported compression for tar."
                 raise ValueError(msg)
 
-            compression_mode = self._compression_mode_to_literal(compression)
+            compression_mode = TilePyramidGenerator._compression_mode_to_literal(
+                compression
+            )
 
             tar_archive = tarfile.TarFile.open(str(path), mode=compression_mode)
 
@@ -395,8 +397,9 @@ class TilePyramidGenerator:
             for x, y in np.ndindex(self.tile_grid_size(level)):
                 yield self.get_tile(level=level, x=x, y=y)
 
+    @staticmethod
     def _compression_mode_to_literal(
-        self: TilePyramidGenerator, mode: str | None
+        mode: str | None,
     ) -> Literal["w", "w:gz", "w:bz2", "w:xz"]:
         """Convert compression mode to a literal string."""
         if mode is None:
