@@ -318,7 +318,7 @@ class WSIMeta:
             resolution_array = 1.0 / np_pair(resolution)
 
         return [
-            ((base_scale * downsample) / resolution_array).item()
+            (base_scale * downsample) / resolution_array
             for downsample in level_downsamples
         ]
 
