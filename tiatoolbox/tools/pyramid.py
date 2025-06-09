@@ -17,7 +17,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import defusedxml
 import numpy as np
@@ -352,7 +352,9 @@ class TilePyramidGenerator:
                 )
 
         else:  # container == "tar":
-            compression2mode = {
+            compression2mode: dict[
+                str | None, Literal["w", "w:gz", "w:bz2", "w:xz"]
+            ] = {
                 None: "w",
                 "gzip": "w:gz",
                 "bz2": "w:bz2",
@@ -362,7 +364,9 @@ class TilePyramidGenerator:
                 msg = "Unsupported compression for tar."
                 raise ValueError(msg)
 
-            tar_archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
+            tar_archive = tarfile.TarFile.open(
+                str(path), mode=compression2mode[compression]
+            )
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output zip."""
