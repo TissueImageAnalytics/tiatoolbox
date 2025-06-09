@@ -280,7 +280,7 @@ class WSIMeta:
             return np.array(x)
 
         if units == "level":
-            resolution = cast("float", resolution)
+            resolution = cast(float, resolution)
             if resolution >= len(level_downsamples):
                 msg = (
                     f"Target scale level {resolution} > "
@@ -318,7 +318,7 @@ class WSIMeta:
             resolution_array = 1.0 / np_pair(resolution)
 
         return [
-            (base_scale * downsample) / resolution_array
+            ((base_scale * downsample) / resolution_array).item()
             for downsample in level_downsamples
         ]
 

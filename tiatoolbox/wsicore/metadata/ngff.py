@@ -175,6 +175,7 @@ class Multiscales:
 
         Yields:
             Iterator: An iterator
+        
         """
         yield from self.__dict__.values()
 
