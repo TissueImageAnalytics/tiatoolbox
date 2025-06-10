@@ -120,7 +120,7 @@ A filter can be applied to annotations using the filter box. For example, enteri
 The main slide view can be made fullscreen by clicking the fullscreen icon in the small toolbar to the immediate right of the main window. This toolbar also provides a button to save the current view as a .png file.
 
 Visualising Image Registration/Transformation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. image:: images/dual_win_reg.png
     :width: 100%
@@ -133,36 +133,39 @@ TIAToolbox provides a powerful registration visualization feature that enables i
 To use this feature, you must supply a precomputed registration matrix (e.g., .mha or .npy file) generated from an affine or deformable registration process. This matrix is used to align the images visually.
 
 Dual Window Mode:
-"""""""""""""""""""""""
+"""""""""""""""""
 
 This mode allows side-by-side comparison of registered images.
 
 **Steps:**
-- Open **Dual Window Mode** and load the images.
-- In one window, open the H&E (source) image.
-- In the other window, open the IHC (target) image.
-- Load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
+
+* Open **Dual Window Mode** and load the images.
+
+* In one window, open the H&E (source) image.
+
+* In the other window, open the IHC (target) image.
+
+* Load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
 
 Overlay Mode:
-""""""""""""""""
+"""""""""""""
 
 This mode overlays the registered image directly on top of the source image for visual inspection.
 
 
 **Steps:**
-- Open the H&E (source) image.
-- Overlay the IHC (target) image on the source image.
-- Load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
+
+* Open the H&E (source) image.
+
+* Overlay the IHC (target) image on the source image.
+
+* Load the registration file (e.g., an .mha or .npy file) as an overlay on the source image.
 
 .. note::
-
-   Always load the **target image first** when using overlays. If not, the system may incorrectly assume both images are the same, leading to inaccurate transformations
+   Always load the **target image first** when using overlays. If not, the system may incorrectly assume both images are the same, leading to inaccurate transformations. Incorrect ordering may result in misaligned overlays or misleading visualizations.
 
 
 The **order** of source and target images must remain consistent with how the registration matrix was computed. This is as most registration algorithms require the dimensions of both the source and target images to perform the registration transformation. The above examples assume that the H&E image is registered to the IHC images, but if instead you have registered the IHC to the H&E image then please change the order of image loading accordingly.
-
-
-Incorrect ordering may result in misaligned overlays or misleading visualizations.
 
 
 .. _data_format:
