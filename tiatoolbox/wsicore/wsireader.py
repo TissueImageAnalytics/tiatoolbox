@@ -6171,11 +6171,16 @@ class TransformedWSIReader(WSIReader):
     Example:
         >>> from tiatoolbox.wsicore.wsireader import TransformedWSIReader
         >>> transform_level0 = np.eye(3)
-        >>> tfm = TransformedWSIReader(
+        >>> transformed_wsi = TransformedWSIReader(
         ...     input_img=sample_ome_tiff, target_img=sample_ome_tiff,
         ...     transform=transform_level0
         ... )
-        >>> output = tfm.read_rect(location, size, resolution=resolution, units="level")
+        >>> output = transformed_wsi.read_rect(
+        ...     location,
+        ...     size,
+        ...     resolution,
+        ...     units="level"
+        ... )
 
     """
 
@@ -6188,7 +6193,7 @@ class TransformedWSIReader(WSIReader):
         transform: np.ndarray | str | Path = None,  # Default to None
         fixed_info: WSIMeta = None,
     ) -> None:
-        """Initialize object.
+        """Initialize :class:`TransformedWSIReader`.
 
         Args:
             input_img (str | Path | np.ndarray):
@@ -6255,6 +6260,7 @@ class TransformedWSIReader(WSIReader):
 
         Gives an inverse showing, for a given pixel in a transformed image, where it
         would come from in the original image.
+
         """
         location_array = np.mgrid[
             0 : disp_array.shape[0], 0 : disp_array.shape[1]
