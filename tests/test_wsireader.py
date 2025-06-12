@@ -3075,11 +3075,22 @@ def test_read_rect_transformedreader_svs_baseline(
 
     fixed_info = wsi.info
     wsi2 = wsireader.TransformedWSIReader(
-        sample_svs, target_img=sample_svs, transform=None, fixed_info=fixed_info
+        sample_svs, target_img=sample_svs, transform=np.eye(3), fixed_info=fixed_info
     )
     im_region_2 = wsi2.read_rect(location, size, resolution=0, units="level")
 
     assert np.array_equal(im_region, im_region_2)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Transform cannot be None. "
+            "Please provide a valid transformation matrix or file.",
+        ),
+    ):
+        wsi2 = wsireader.TransformedWSIReader(
+            sample_svs, target_img=sample_svs, transform=None
+        )
 
     # Now test MHA displacement field
     wsi3 = wsireader.TransformedWSIReader(

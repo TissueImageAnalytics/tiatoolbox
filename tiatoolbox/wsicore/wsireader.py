@@ -6206,6 +6206,11 @@ class TransformedWSIReader(WSIReader):
                 Objective power of the image.
             transform (str | Path | np.ndarray):
                 Transformation matrix or path to a transformation file (.npy or .mha).
+
+                - .npy: A file format for storing numpy arrays.
+                - .mha: MetaImage Header, a file format used for storing medical imaging
+                        data. It is part of the MetaIO library. For more information,
+                        visit: https://public.kitware.com/Wiki/ITK/MetaIO/Documentation
             fixed_info (WSIMeta):
                 Fixed metadata to use for the transformed image.
 
@@ -6216,7 +6221,11 @@ class TransformedWSIReader(WSIReader):
             input_img=target_img, mpp=mpp, power=power
         )
         if transform is None:
-            transform = np.eye(3)  # Ensures a new array instance for each call
+            error_message = (
+                "Transform cannot be None. "
+                "Please provide a valid transformation matrix or file."
+            )
+            raise ValueError(error_message)
         # we need to set the info to be the fixed image info
         if fixed_info is not None:
             self.wsi_reader.info = fixed_info
@@ -6226,6 +6235,9 @@ class TransformedWSIReader(WSIReader):
         elif transform.suffix == ".npy":
             self.transform_level0 = np.load(transform)
         elif transform.suffix == ".mha":
+            # .mha (MetaImage Header) is a file format used for storing medical imaging
+            # data. It is part of the MetaIO library. For more information, visit:
+            # https://public.kitware.com/Wiki/ITK/MetaIO/Documentation
             displacement_field = sitk.ReadImage(transform, sitk.sitkVectorFloat64)
             disp_array = sitk.GetArrayFromImage(displacement_field)  # (2, H, W)
             displacement_field_channels = 2
@@ -6261,6 +6273,11 @@ class TransformedWSIReader(WSIReader):
         Gives an inverse showing, for a given pixel in a transformed image, where it
         would come from in the original image.
 
+        Args:
+            disp_array (np.ndarray): A numpy array representing the displacement values.
+
+        Returns:
+            None
         """
         location_array = np.mgrid[
             0 : disp_array.shape[0], 0 : disp_array.shape[1]
@@ -6281,12 +6298,22 @@ class TransformedWSIReader(WSIReader):
         self.inverse_loc_reader = VirtualWSIReader(
             transformed_image, info=wsimeta, mode="feature"
         )
+        self.transformed_info = wsimeta
 
     @staticmethod
     def transform_using_disp_array(
         input_array: np.ndarray, disp_array: np.ndarray
     ) -> np.ndarray:
-        """Transform an array of locations using the displacement field."""
+        """Transform an array of locations using the displacement field.
+
+        Args:
+            input_array (np.ndarray): A numpy array representing the input locations.
+            disp_array (np.ndarray): A numpy array representing the displacement field.
+
+        Returns:
+            np.ndarray: The transformed array of locations.
+
+        """
         input_image = sitk.GetImageFromArray(input_array, isVector=True)
 
         # Convert displacement field numpy array to SimpleITK image
@@ -6310,7 +6337,7 @@ class TransformedWSIReader(WSIReader):
 
     def _info(self: TransformedWSIReader) -> WSIMeta:
         """Get the WSI metadata."""
-        return self.wsi_reader.info
+        return self.transformed_info
 
     @staticmethod
     def transform_points(points: np.ndarray, transform: np.ndarray) -> np.ndarray:
@@ -6514,8 +6541,8 @@ class TransformedWSIReader(WSIReader):
             location[1] - self.level_pads[level][1],
         )
         size = (
-            int(max_x - min_x + self.level_pads[level][0]),
-            int(max_y - min_y + self.level_pads[level][1]),
+            int(max_x - min_x),
+            int(max_y - min_y),
         )
         return location, size, transformed_grid
 
