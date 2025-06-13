@@ -1428,7 +1428,7 @@ class SemanticSegmentor:
             device == "cuda"
             and torch.cuda.device_count() > 1
             and is_torch_compile_compatible()
-        ):
+        ):  # pragma: no cover
             dist.destroy_process_group()
 
         return self._outputs

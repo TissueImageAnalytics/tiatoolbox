@@ -63,7 +63,7 @@ def model_to(model: torch.nn.Module, device: str = "cpu") -> torch.nn.Module:
         device == "cuda"
         and torch.cuda.device_count() > 1
         and is_torch_compile_compatible()
-    ):
+    ):  # pragma: no cover
         # This assumes a single-process DDP setup for inference
         model = model.to(torch_device)
         os.environ["MASTER_ADDR"] = "localhost"
