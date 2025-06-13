@@ -16,6 +16,7 @@ import cv2
 import glymur
 import numpy as np
 import pytest
+import tifffile
 import zarr
 from click.testing import CliRunner
 from packaging.version import Version
@@ -85,6 +86,41 @@ RNG = np.random.default_rng()  # Numpy Random Generator
 # -------------------------------------------------------------------------------------
 # Utility Test Functions
 # -------------------------------------------------------------------------------------
+def get_tissue_com_tile(reader: WSIReader, size: int) -> IntBounds:
+    """Returns bounds of a tile located approximately at COM of the tissue.
+
+    Uses reader.tissue_mask() to find the center of mass of the tissue
+    and returns a tile centered at that point, at requested size. Used
+    to ensure we are looking at a tissue region when doing level consistency
+     tests etc.
+
+    Args:
+        reader (WSIReader): WSIReader instance.
+        size (int): Size at baseline of the tile to return.
+
+    Returns:
+        IntBounds: Baseline bounds of the tile centered at COM of the tissue.
+
+    """
+    mask = reader.tissue_mask(resolution=8.0, units="mpp").img
+
+    # Find the center of mass of the tissue
+    ys, xs = np.nonzero(mask)
+    com_y = int(ys.mean())
+    com_x = int(xs.mean())
+    # convert to baseline coordinates
+    com_x = int(com_x * (8.0 / reader.info.mpp[0]))
+    com_y = int(com_y * (8.0 / reader.info.mpp[1]))
+
+    # Calculate bounds for the tile centered at COM
+    half_size = size // 2
+    bounds = (
+        max(0, com_x - half_size),
+        max(0, com_y - half_size),
+        min(reader.info.slide_dimensions[0], com_x + half_size),
+        min(reader.info.slide_dimensions[1], com_y + half_size),
+    )
+    return np.array(bounds)
 
 
 def strictly_increasing(sequence: Iterable) -> bool:
@@ -733,6 +769,17 @@ def test_is_tiled_tiff(source_image: Path) -> None:
     source_image.replace(source_image.with_suffix(".tiff"))
     assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
+
+
+def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
+    """Test if source_image is not a tiled tiff."""
+    temp_tiff_path = tmp_samples_path / "not_tiled.tiff"
+    images = [np.zeros(shape=(4, 4)) for _ in range(3)]
+    # Write multi-page TIFF with all pages not tiled
+    with tifffile.TiffWriter(temp_tiff_path) as tif:
+        for image in images:
+            tif.write(image, compression=None, tile=None)
+    assert wsireader.is_tiled_tiff(temp_tiff_path) is False
 
 
 def test_read_rect_openslide_levels(sample_ndpi: Path) -> None:
@@ -2690,7 +2737,8 @@ def test_read_rect_level_consistency(wsi: WSIReader) -> None:
     they are aligned.
 
     """
-    location = (0, 0)
+    bounds = get_tissue_com_tile(wsi, 1024)
+    location = bounds[:2]
     size = np.array([1024, 1024])
     # Avoid testing very small levels (e.g. as in Omnyx JP2) because
     # MSE for very small levels is noisy.
@@ -2725,7 +2773,7 @@ def test_read_bounds_level_consistency(wsi: WSIReader) -> None:
     they are aligned.
 
     """
-    bounds = (0, 0, 1024, 1024)
+    bounds = get_tissue_com_tile(wsi, 1024)
     # This logic can be moved from the helper to here when other
     # reader classes have been parameterised into scenarios also.
     read_bounds_level_consistency(wsi, bounds)
@@ -2770,15 +2818,17 @@ def test_read_rect_coord_space_consistency(wsi: WSIReader) -> None:
     will not be of the same size, but the field of view will match.
 
     """
+    bounds = get_tissue_com_tile(wsi, 2000)
+    location = (bounds[:2] // 2) * 2  # ensure even coordinates
     roi1 = wsi.read_rect(
-        np.array([500, 500]),
+        location,
         np.array([2000, 2000]),
         coord_space="baseline",
         resolution=1.00,
         units="baseline",
     )
     roi2 = wsi.read_rect(
-        np.array([250, 250]),
+        location // 2,
         np.array([1000, 1000]),
         coord_space="resolution",
         resolution=0.5,
@@ -2979,3 +3029,22 @@ def test_fsspec_reader_open_pass_empty_json(tmp_path: Path) -> None:
     json_path.write_text("{}")
 
     assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
+
+
+def test_oob_read_dicom(sample_dicom: Path) -> None:
+    """Test that out of bounds returns background value.
+
+    For consistency with openslide, our readers should return a
+    background tile when reading out of bounds.
+
+    """
+    wsi = DICOMWSIReader(sample_dicom)
+    # Read a region that is out of bounds
+    region = wsi.read_rect(
+        location=(200000, 200),
+        size=(100, 100),
+    )
+    # Check that the region is the same size as the requested size
+    assert region.shape == (100, 100, 3)
+    # Check that the region is white (255)
+    assert np.all(region == 255)
