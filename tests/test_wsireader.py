@@ -16,6 +16,7 @@ import cv2
 import glymur
 import numpy as np
 import pytest
+import tifffile
 import zarr
 from click.testing import CliRunner
 from packaging.version import Version
@@ -768,6 +769,17 @@ def test_is_tiled_tiff(source_image: Path) -> None:
     source_image.replace(source_image.with_suffix(".tiff"))
     assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
+
+
+def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
+    """Test if source_image is not a tiled tiff."""
+    temp_tiff_path = tmp_samples_path / "not_tiled.tiff"
+    images = [np.zeros(shape=(4, 4)) for _ in range(3)]
+    # Write multi-page TIFF with all pages not tiled
+    with tifffile.TiffWriter(temp_tiff_path) as tif:
+        for image in images:
+            tif.write(image, compression=None, tile=None)
+    assert wsireader.is_tiled_tiff(temp_tiff_path) is False
 
 
 def test_read_rect_openslide_levels(sample_ndpi: Path) -> None:

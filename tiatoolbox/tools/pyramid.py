@@ -17,7 +17,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import defusedxml
 import numpy as np
