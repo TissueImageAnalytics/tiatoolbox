@@ -50,4 +50,7 @@ jobs:
           tiatoolbox/models/__init__.py \
           tiatoolbox/models/models_abc.py \
           tiatoolbox/models/architecture/__init__.py \
-          tiatoolbox/models/architecture/utils.py
+          tiatoolbox/models/architecture/utils.py \
+          tiatoolbox/wsicore/__init__.py \
+          tiatoolbox/wsicore/wsimeta.py \
+          tiatoolbox/wsicore/metadata/
