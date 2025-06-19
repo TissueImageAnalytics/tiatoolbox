@@ -49,16 +49,16 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         patch_mode=True,
     )
 
-    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
-    assert 0.120 < np.mean(output["probabilities"][:]) < 0.130
+    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
+    assert 0.48 < np.mean(output["probabilities"][:]) < 0.52
 
     assert (
-        tuple(segmentor._ioconfig.patch_input_shape)
+        tuple(segmentor._ioconfig.patch_output_shape)
         == output["probabilities"][0].shape[:-1]
     )
 
     assert (
-        tuple(segmentor._ioconfig.patch_input_shape) == output["predictions"][0].shape
+        tuple(segmentor._ioconfig.patch_output_shape) == output["predictions"][0].shape
     )
 
     output = segmentor.run(
@@ -74,8 +74,8 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     assert output == tmp_path / "output0" / "output.zarr"
 
     output = zarr.open(output, mode="r")
-    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
-    assert 0.120 < np.mean(output["probabilities"][:]) < 0.130
+    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
+    assert 0.48 < np.mean(output["probabilities"][:]) < 0.52
 
     output = segmentor.run(
         images=inputs,
@@ -91,7 +91,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     assert output == tmp_path / "output1" / "output.zarr"
 
     output = zarr.open(output, mode="r")
-    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
+    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
     assert "probabilities" not in output.keys()  # noqa: SIM118
 
     output = segmentor.run(
@@ -108,7 +108,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
     assert output == tmp_path / "output2" / "output.zarr"
 
     output = zarr.open(output, mode="r")
-    assert 0.15 < np.mean(output["predictions"][:]) < 0.18
+    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
     assert "probabilities" not in output
     assert "predictions" in output
 
@@ -213,3 +213,25 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
 
     _test_store_output_patch(output[0])
     _test_store_output_patch(output[1])
+
+
+def test_wsi_segmentor_zarr(sample_svs: Path, tmp_path: Path) -> None:
+    """Test normal run of patch predictor for WSIs."""
+    mini_wsi_svs = sample_svs
+
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=32,
+        verbose=False,
+    )
+    # don't run test on GPU
+    output = segmentor.run(
+        images=[mini_wsi_svs],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "wsi_out_check",
+    )
+
+    assert output[mini_wsi_svs].exists()

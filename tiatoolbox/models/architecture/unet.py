@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import torch
 import torch.nn.functional as F  # noqa: N812
 from torch import nn
@@ -17,6 +16,9 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop,
 )
 from tiatoolbox.models.models_abc import ModelABC
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class ResNetEncoder(ResNet):
@@ -463,11 +465,7 @@ class UNetModel(ModelABC):
             probs = centre_crop(probs, crop_shape)
             output = probs.permute(0, 2, 3, 1)  # to NHWC
 
-        output = np.pad(
-            output.cpu().numpy(), pad_width=((0, 0), (256, 256), (256, 256), (0, 0))
-        )
-
-        return {"probabilities": output}
+        return {"probabilities": output.cpu().numpy()}
 
     def postproc(self: UNetModel, image: np.ndarray) -> np.ndarray:
         """Define post-processing of this class of model.
