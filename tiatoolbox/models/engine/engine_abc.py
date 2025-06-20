@@ -460,7 +460,6 @@ class EngineABC(ABC):  # noqa: B024
         if not patch_mode:
             dataset = WSIPatchDataset(
                 img_path=images,
-                mode="wsi",
                 mask_path=masks,
                 patch_input_shape=ioconfig.patch_input_shape,
                 stride_shape=ioconfig.stride_shape,

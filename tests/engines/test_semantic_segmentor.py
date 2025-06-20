@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from typing import TYPE_CHECKING, Callable
+from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import torch
@@ -14,9 +15,6 @@ from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor_new import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -215,9 +213,9 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
     _test_store_output_patch(output[1])
 
 
-def test_wsi_segmentor_zarr(sample_svs: Path, tmp_path: Path) -> None:
+def test_wsi_segmentor_zarr(remote_sample: Callable, tmp_path: Path) -> None:
     """Test normal run of patch predictor for WSIs."""
-    mini_wsi_svs = sample_svs
+    wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
 
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
@@ -226,7 +224,7 @@ def test_wsi_segmentor_zarr(sample_svs: Path, tmp_path: Path) -> None:
     )
     # don't run test on GPU
     output = segmentor.run(
-        images=[mini_wsi_svs],
+        images=[wsi_with_artifacts],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -234,4 +232,4 @@ def test_wsi_segmentor_zarr(sample_svs: Path, tmp_path: Path) -> None:
         save_dir=tmp_path / "wsi_out_check",
     )
 
-    assert output[mini_wsi_svs].exists()
+    assert output[wsi_with_artifacts].exists()

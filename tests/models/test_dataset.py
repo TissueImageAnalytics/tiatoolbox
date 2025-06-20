@@ -346,7 +346,6 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_jpg = Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     def reuse_init(img_path: Path = mini_wsi_svs, **kwargs: dict) -> WSIPatchDataset:
@@ -355,7 +354,7 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
 
     def reuse_init_wsi(**kwargs: dict) -> WSIPatchDataset:
         """Testing function."""
-        return reuse_init(mode="wsi", **kwargs)
+        return reuse_init(**kwargs)
 
     # test for ABC validate
     # intentionally created to check error
@@ -380,7 +379,6 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     with pytest.raises(ValueError, match=r".*`img_path` must be a valid file path.*"):
         WSIPatchDataset(
             img_path="aaaa",
-            mode="wsi",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
             auto_get_mask=False,
@@ -391,17 +389,12 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         WSIPatchDataset(
             img_path=mini_wsi_svs,
             mask_path="aaaa",
-            mode="wsi",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
             resolution=1.0,
             units="mpp",
             auto_get_mask=False,
         )
-
-    # invalid mode
-    with pytest.raises(ValueError, match="`X` is not supported."):
-        reuse_init(mode="X")
 
     # invalid patch
     with pytest.raises(ValueError, match="Invalid `patch_input_shape` value None."):
@@ -485,9 +478,8 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     ds = WSIPatchDataset(
         img_path=mini_wsi_svs,
         mask_path=mini_wsi_msk,
-        mode="wsi",
-        patch_input_shape=[512, 512],
-        stride_shape=[256, 256],
+        patch_input_shape=(512, 512),
+        stride_shape=(256, 256),
         auto_get_mask=False,
         resolution=1.0,
         units="mpp",
@@ -500,40 +492,12 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         ds = WSIPatchDataset(
             img_path=mini_wsi_svs,
             mask_path=negative_mask_path,
-            mode="wsi",
-            patch_input_shape=[512, 512],
-            stride_shape=[256, 256],
+            patch_input_shape=(512, 512),
+            stride_shape=(256, 256),
             auto_get_mask=False,
             resolution=1.0,
             units="mpp",
         )
-
-    # * for tile
-    reader = WSIReader.open(mini_wsi_jpg)
-    tile_ds = WSIPatchDataset(
-        img_path=mini_wsi_jpg,
-        mode="tile",
-        patch_input_shape=patch_size,
-        stride_shape=stride_size,
-        auto_get_mask=False,
-    )
-    step_idx = 3  # manually calibrate
-    start = (step_idx * stride_size[1], 0)
-    end = (start[0] + patch_size[0], start[1] + patch_size[1])
-    roi2 = reader.read_bounds(
-        start + end,
-        resolution=1.0,
-        units="baseline",
-        coord_space="resolution",
-    )
-    roi1 = tile_ds[3]["image"]  # match with step_index
-    correlation = np.corrcoef(
-        cv2.cvtColor(roi1, cv2.COLOR_RGB2GRAY).flatten(),
-        cv2.cvtColor(roi2, cv2.COLOR_RGB2GRAY).flatten(),
-    )
-    assert roi1.shape[0] == roi2.shape[0]
-    assert roi1.shape[1] == roi2.shape[1]
-    assert np.min(correlation) > 0.9, correlation
 
 
 def test_patch_dataset_abc() -> None:
