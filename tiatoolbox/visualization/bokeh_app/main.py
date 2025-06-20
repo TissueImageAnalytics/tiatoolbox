@@ -14,6 +14,10 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -59,9 +63,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -923,6 +924,7 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
         "*.png",
         "*.tif",
         "*.qptiff",
+        "*.dcm",
     ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
@@ -2304,6 +2306,7 @@ class DocConfig:
             "*.png",
             "*.jpg",
             "*.qptiff",
+            "*.dcm",
         ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
