@@ -506,7 +506,8 @@ class WSIPatchDataset(PatchDatasetABC):
                 min_mask_ratio=min_mask_ratio,
             )
             self.inputs = self.inputs[selected]
-            self.outputs = self.outputs[selected]
+            if hasattr(self, "outputs"):
+                self.outputs = self.outputs[selected]
 
         if len(self.inputs) == 0:
             msg = "No patch coordinates remain after filtering."
