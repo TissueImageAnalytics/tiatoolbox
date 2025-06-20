@@ -17,7 +17,7 @@ from tiatoolbox.models.architecture.utils import (
 )
 from tiatoolbox.models.models_abc import ModelABC
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
 
