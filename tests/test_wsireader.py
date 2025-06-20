@@ -3083,10 +3083,7 @@ def test_read_rect_transformedreader_svs_baseline(
 
     with pytest.raises(
         ValueError,
-        match=(
-            "Transform cannot be None. "
-            "Please provide a valid transformation matrix or file.",
-        ),
+        match="Transform cannot be None. Please provide a valid transformation",
     ):
         wsi2 = wsireader.TransformedWSIReader(
             sample_svs, target_img=sample_svs, transform=None
@@ -3152,7 +3149,9 @@ def test_read_bounds_transformedreader_baseline(
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.TransformedWSIReader(sample_svs, target_img=sample_svs)
+    wsi = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3)
+    )
 
     bounds = SVS_TEST_TISSUE_BOUNDS
     size = SVS_TEST_TISSUE_SIZE
