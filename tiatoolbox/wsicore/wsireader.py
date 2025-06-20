@@ -6229,6 +6229,7 @@ class TransformedWSIReader(WSIReader):
         # we need to set the info to be the fixed image info
         if fixed_info is not None:
             self.wsi_reader.info = fixed_info
+        self.transformed_info = self.target_wsi_reader.info
         self.transform_type = "affine"
         if isinstance(transform, np.ndarray):
             self.transform_level0 = transform
