@@ -367,6 +367,7 @@ class WSIPatchDataset(PatchDatasetABC):
         img_path: str | Path,
         mask_path: str | Path | None = None,
         patch_input_shape: IntPair = None,
+        patch_output_shape: IntPair = None,
         stride_shape: IntPair = None,
         resolution: Resolution = None,
         units: Units = None,
@@ -386,6 +387,12 @@ class WSIPatchDataset(PatchDatasetABC):
             patch_input_shape:
                 A tuple (int, int) or ndarray of shape (2,). Expected
                 shape to read from `reader` at requested `resolution`
+                and `units`. Expected to be positive and of (height,
+                width). Note, this is not at `resolution` coordinate
+                space.
+            patch_output_shape:
+                A tuple (int, int) or ndarray of shape (2,). Expected
+                output shape from the model at requested `resolution`
                 and `units`. Expected to be positive and of (height,
                 width). Note, this is not at `resolution` coordinate
                 space.
@@ -462,7 +469,7 @@ class WSIPatchDataset(PatchDatasetABC):
             image_shape=wsi_shape,
             patch_input_shape=patch_input_shape[::-1],
             stride_shape=stride_shape[::-1],
-            input_within_bound=False,
+            patch_output_shape=patch_output_shape,
         )
 
         mask_reader = None

@@ -20,6 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
 
     import numpy as np
+    import torch
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
@@ -302,6 +303,48 @@ class SemanticSegmentor(PatchPredictor):
             weights=weights,
             device=device,
             verbose=verbose,
+        )
+
+    def get_dataloader(
+        self: SemanticSegmentor,
+        images: str | Path | list[str | Path] | np.ndarray,
+        masks: Path | None = None,
+        labels: list | None = None,
+        ioconfig: SemanticSegmentorRunParams | None = None,
+        *,
+        patch_mode: bool = True,
+    ) -> torch.utils.data.DataLoader:
+        """Pre-process images and masks and return dataloader for inference.
+
+        Args:
+            images (list of str or :class:`Path` or :class:`numpy.ndarray`):
+                A list of image patches in NHWC format as a numpy array
+                or a list of str/paths to WSIs. When `patch_mode` is False
+                the function expects list of str/paths to WSIs.
+            masks (list | None):
+                List of masks. Only utilised when patch_mode is False.
+                Patches are only generated within a masked area.
+                If not provided, then a tissue mask will be automatically
+                generated for whole slide images.
+            labels (list | None):
+                List of labels. Only a single label per image is supported.
+            ioconfig (ModelIOConfigABC):
+                A :class:`ModelIOConfigABC` object.
+            patch_mode (bool):
+                Whether to treat input image as a patch or WSI.
+
+        Returns:
+            torch.utils.data.DataLoader:
+                :class:`torch.utils.data.DataLoader` for inference.
+
+        """
+        # Overwrite when patch_mode is False.
+        return super().get_dataloader(
+            images=images,
+            masks=masks,
+            labels=labels,
+            ioconfig=ioconfig,
+            patch_mode=patch_mode,
         )
 
     def save_predictions(
