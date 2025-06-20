@@ -240,14 +240,9 @@ class SemanticSegmentor(PatchPredictor):
             When `patch_mode` is True, the input image patches are expected to be at
             the correct resolution and units. When `patch_mode` is False, the patches
             are extracted at the requested resolution and units. Default value is 1.0.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `baseline`, `level`, `power` or `mpp`. Please see
-            :class:`WSIReader` for details.
-            When `patch_mode` is True, the input image patches are expected to be at
-            the correct resolution and units. When `patch_mode` is False, the patches
-            are extracted at the requested resolution and units.
-            Default value is `baseline`.
+        output_locations (list | None):
+            A list of coordinates in `[start_x, start_y, end_x, end_y]` format to be
+            used for patch extraction.
         verbose (bool):
             Whether to output logging information. Default value is False.
 
@@ -305,6 +300,7 @@ class SemanticSegmentor(PatchPredictor):
             device=device,
             verbose=verbose,
         )
+        self.output_locations: list | None = None
 
     def get_dataloader(
         self: SemanticSegmentor,
@@ -352,6 +348,7 @@ class SemanticSegmentor(PatchPredictor):
             )
 
             dataset.preproc_func = self.model.preproc_func
+            self.output_locations = dataset.outputs
 
             # preprocessing must be defined with the dataset
             return torch.utils.data.DataLoader(
