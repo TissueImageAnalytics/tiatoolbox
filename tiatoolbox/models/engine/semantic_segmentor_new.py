@@ -6,10 +6,12 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import torch
 import zarr
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
+from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
 )
@@ -20,7 +22,6 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
 
     import numpy as np
-    import torch
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
@@ -339,6 +340,28 @@ class SemanticSegmentor(PatchPredictor):
 
         """
         # Overwrite when patch_mode is False.
+        if not patch_mode:
+            dataset = WSIPatchDataset(
+                img_path=images,
+                mask_path=masks,
+                patch_input_shape=ioconfig.patch_input_shape,
+                patch_output_shape=ioconfig.patch_output_shape,
+                stride_shape=ioconfig.stride_shape,
+                resolution=ioconfig.input_resolutions[0]["resolution"],
+                units=ioconfig.input_resolutions[0]["units"],
+            )
+
+            dataset.preproc_func = self.model.preproc_func
+
+            # preprocessing must be defined with the dataset
+            return torch.utils.data.DataLoader(
+                dataset,
+                num_workers=self.num_loader_workers,
+                batch_size=self.batch_size,
+                drop_last=False,
+                shuffle=False,
+            )
+
         return super().get_dataloader(
             images=images,
             masks=masks,

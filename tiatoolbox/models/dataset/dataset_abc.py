@@ -465,12 +465,19 @@ class WSIPatchDataset(PatchDatasetABC):
         wsi_shape = self.reader.slide_dimensions(resolution=resolution, units=units)
 
         # use all patches, as long as it overlaps source image
-        self.inputs = PatchExtractor.get_coordinates(
-            image_shape=wsi_shape,
-            patch_input_shape=patch_input_shape[::-1],
-            stride_shape=stride_shape[::-1],
-            patch_output_shape=patch_output_shape,
-        )
+        if patch_output_shape is not None:
+            self.inputs, self.outputs = PatchExtractor.get_coordinates(
+                image_shape=wsi_shape,
+                patch_input_shape=patch_input_shape[::-1],
+                stride_shape=stride_shape[::-1],
+                patch_output_shape=patch_output_shape,
+            )
+        else:
+            self.inputs = PatchExtractor.get_coordinates(
+                image_shape=wsi_shape,
+                patch_input_shape=patch_input_shape[::-1],
+                stride_shape=stride_shape[::-1],
+            )
 
         mask_reader = None
         if mask_path is not None:
@@ -499,6 +506,7 @@ class WSIPatchDataset(PatchDatasetABC):
                 min_mask_ratio=min_mask_ratio,
             )
             self.inputs = self.inputs[selected]
+            self.outputs = self.outputs[selected]
 
         if len(self.inputs) == 0:
             msg = "No patch coordinates remain after filtering."
