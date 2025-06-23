@@ -768,14 +768,11 @@ def test_registration_dual_window(
 
 def test_registration_single_window_same_slide(
     empty_app: TileServer,
-    tmp_path: Path,
     remote_sample: Callable,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test registering slides."""
     # First is testing with a single sldie and single registration
-    data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
     with empty_app.test_client() as client:
         setup_app(client)
         response = client.put(
@@ -796,6 +793,13 @@ def test_registration_single_window_same_slide(
             )
             assert response.status_code == 200
 
+
+def test_registration_single_window_nonslide_overlay(
+    empty_app: TileServer,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides with non-slide overlay."""
     with empty_app.test_client() as client:
         setup_app(client)
         response = client.put(
@@ -803,7 +807,7 @@ def test_registration_single_window_same_slide(
             data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
         assert response.status_code == 200
-        # check same response when an overlay is there, but it isn't suitabe (e.g jpg)
+        # check behaviour when an overlay is there, but it isn't suitabe (e.g jpg)
         response = client.put(
             "/tileserver/overlay",
             data={"overlay_path": safe_str(remote_sample("wsi2_4k_4k_jpg"))},
