@@ -796,6 +796,31 @@ def test_registration_single_window_same_slide(
             )
             assert response.status_code == 200
 
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+        # check same response when an overlay is there, but it isn't suitabe (e.g jpg)
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("wsi2_4k_4k_jpg"))},
+        )
+        assert response.status_code == 200
+
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "No suitable overlay found. Using current slide as target. "
+                "This may display incorrectly if dimensions differ." in caplog.text
+            )
+            assert response.status_code == 200
+
 
 def test_registration_single_window_different_slide(
     empty_app: TileServer,

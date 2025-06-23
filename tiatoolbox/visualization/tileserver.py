@@ -609,7 +609,7 @@ class TileServer(Flask):
             sq = SQLiteStore.from_geojson(overlay_path)
         elif overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
-        elif overlay_path.suffix == ".db":
+        if overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
         else:
             # make a temporary db for the new annotations
