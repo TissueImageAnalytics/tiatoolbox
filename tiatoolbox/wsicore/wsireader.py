@@ -6268,6 +6268,29 @@ class TransformedWSIReader(WSIReader):
             error_message = "Unsupported transformation file format"
             raise ValueError(error_message)
 
+        if self.transform_type == "affine":
+            wsimeta = self.wsi_reader.info
+            baseline_size = self.wsi_reader.slide_dimensions(
+                resolution=0, units="level"
+            )
+            _, transformed_shape = self.get_transformed_location(
+                location=(0, 0),
+                size=baseline_size,
+                level=0,
+            )
+
+            # Calculate the new shape at each level based on downsampling
+            wsimeta.level_dimensions = tuple(
+                tuple(
+                    np.asarray(transformed_shape)
+                    // (baseline_size[0] // s_dims[0], baseline_size[1] // s_dims[1])
+                )
+                for s_dims in self.wsi_reader.info.level_dimensions
+            )
+
+            wsimeta.slide_dimensions = wsimeta.level_dimensions[0]
+            self.transformed_info = wsimeta
+
     def get_location_array(self, disp_array: np.ndarray) -> None:
         """Transform an array of locations using the displacement field.
 
