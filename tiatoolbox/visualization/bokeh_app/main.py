@@ -714,6 +714,12 @@ def populate_layer_list(slide_name: str, overlay_path: Path) -> None:
         "*.jpg",
         "*.json",
         "*.tiff",
+        "*.mrxs",
+        "*.ndpi",
+        "*.svs",
+        "*.tif",
+        "*.npy",
+        "*.mha",
     ]:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
@@ -1012,7 +1018,8 @@ def layer_drop_cb(attr: MenuItemClick) -> None:
     if Path(attr.item).suffix in [".db", ".dat", ".geojson"]:
         update_ui_on_new_annotations(resp)
     else:
-        add_layer(resp)
+        if resp != "slide":
+            add_layer(resp)
         change_tiles(resp)
 
 
