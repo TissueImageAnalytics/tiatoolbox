@@ -16,6 +16,7 @@ import cv2
 import glymur
 import numpy as np
 import pytest
+import SimpleITK as sitk  # noqa: N813
 import tifffile
 import zarr
 from click.testing import CliRunner
@@ -42,6 +43,7 @@ from tiatoolbox.wsicore.wsireader import (
     NGFFWSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
+    TransformedWSIReader,
     VirtualWSIReader,
     is_ngff,
     is_zarr,
@@ -1636,6 +1638,9 @@ def test_read_rect_at_resolution(sample_wsi_dict: dict) -> None:
         VirtualWSIReader(mini_wsi2_jpg),
         OpenSlideWSIReader(mini_wsi2_svs),
         JP2WSIReader(mini_wsi2_jp2),
+        TransformedWSIReader(
+            mini_wsi2_svs, target_img=mini_wsi2_svs, transform=np.eye(3)
+        ),
     ]
 
     for reader_idx, reader in enumerate(reader_list):
@@ -2874,6 +2879,9 @@ def test_file_path_does_not_exist() -> None:
         with pytest.raises(FileNotFoundError):
             _ = reader_class("./foo.bar")
 
+    with pytest.raises(FileNotFoundError):
+        _ = TransformedWSIReader("./foo.bar", target_img="./foo.bar")
+
 
 def test_read_mpp(wsi: WSIReader) -> None:
     """Test that the mpp is read correctly."""
@@ -3070,3 +3078,129 @@ def test_oob_read_dicom(sample_dicom: Path) -> None:
     assert region.shape == (100, 100, 3)
     # Check that the region is white (255)
     assert np.all(region == 255)
+
+
+def test_read_rect_transformedreader_svs_baseline(
+    sample_svs: Path, remote_sample: Callable, tmp_path: Path
+) -> None:
+    """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
+    wsi = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3)
+    )
+    location = SVS_TEST_TISSUE_LOCATION
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_rect(location, size, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+    fixed_info = wsi.info
+    wsi2 = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3), fixed_info=fixed_info
+    )
+    im_region_2 = wsi2.read_rect(location, size, resolution=0, units="level")
+
+    assert np.array_equal(im_region, im_region_2)
+
+    with pytest.raises(
+        ValueError,
+        match="Transform cannot be None. Please provide a valid transformation",
+    ):
+        wsi2 = wsireader.TransformedWSIReader(
+            sample_svs, target_img=sample_svs, transform=None
+        )
+
+    # Now test MHA displacement field
+    wsi3 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_disp_mha_example"),
+    )
+    im_region_3 = wsi3.read_rect(location, size, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_3.shape
+
+    # Now test NPY affine transformation
+    wsi4 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_affine_npy_example"),
+    )
+    im_region_4 = wsi4.read_rect(location, size, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_4.shape
+
+    # Now test MHA file with correct shape
+    transform = remote_sample("reg_disp_mha_example")
+    displacement_field = sitk.ReadImage(transform, sitk.sitkVectorFloat64)
+    disp_array = sitk.GetArrayFromImage(displacement_field)  # (2, H, W)
+    disp_array = np.moveaxis(disp_array, 0, -1)
+    disp_image = sitk.GetImageFromArray(disp_array, isVector=True)
+
+    # Save it to a new .mha file in tmp_path
+    transform_path = tmp_path / "new_disp.mha"
+    sitk.WriteImage(disp_image, str(transform_path))
+
+    wsi5 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=transform_path,
+    )
+    im_region_5 = wsi5.read_rect(location, size, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_5.shape
+
+    # Test wrong file type
+    with pytest.raises(ValueError, match="Unsupported transformation file format"):
+        wsireader.TransformedWSIReader(
+            sample_svs,
+            target_img=sample_svs,
+            transform=sample_svs,
+        )
+
+
+def test_read_bounds_transformedreader_baseline(
+    sample_svs: Path, remote_sample: Callable
+) -> None:
+    """Test TransformedWSIReader read bounds at baseline.
+
+    Location coordinate is in baseline (level 0) reference frame.
+
+    """
+    wsi = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3)
+    )
+
+    bounds = SVS_TEST_TISSUE_BOUNDS
+    size = SVS_TEST_TISSUE_SIZE
+    im_region = wsi.read_bounds(bounds, resolution=0, units="level")
+
+    assert isinstance(im_region, np.ndarray)
+    assert im_region.dtype == "uint8"
+    assert im_region.shape == (*size[::-1], 3)
+
+    # Now test MHA displacement field
+    wsi3 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_disp_mha_example"),
+    )
+    im_region_3 = wsi3.read_bounds(bounds, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_3.shape
+
+    # Now test NPY affine transformation
+    wsi4 = wsireader.TransformedWSIReader(
+        sample_svs,
+        target_img=sample_svs,
+        transform=remote_sample("reg_affine_npy_example"),
+    )
+    im_region_4 = wsi4.read_bounds(bounds, resolution=0, units="level")
+
+    # We don't expect arrays to be the same, but dimensions should be
+    assert im_region.shape == im_region_4.shape

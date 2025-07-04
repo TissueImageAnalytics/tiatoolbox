@@ -26,7 +26,12 @@ from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
 from tiatoolbox.utils.misc import add_from_dat, store_from_dat
 from tiatoolbox.utils.postproc_defs import MultichannelToRGB
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
-from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import (
+    OpenSlideWSIReader,
+    TransformedWSIReader,
+    VirtualWSIReader,
+    WSIReader,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.colors import Colormap
@@ -516,24 +521,96 @@ class TileServer(Flask):
         overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
 
-        if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
-            layer = f"layer{len(self.pyramids[session_id])}"
-            if overlay_path.suffix == ".tiff":
-                self.layers[session_id][layer] = OpenSlideWSIReader(
-                    overlay_path,
-                    mpp=self.layers[session_id]["slide"].info.mpp[0],
-                )
-            elif overlay_path.suffix in [".jpg", ".png"]:
-                self.layers[session_id][layer] = VirtualWSIReader(
-                    Path(overlay_path),
-                    info=self.layers[session_id]["slide"].info,
-                )
-            else:
-                self.layers[session_id][layer] = WSIReader.open(overlay_path)
-            self.pyramids[session_id][layer] = ZoomifyGenerator(
-                self.layers[session_id][layer],
+        # Get other session id
+        session_ids = list(self.layers.keys())
+        session_ids.remove(session_id)
+
+        # Get the first remaining session_id (if any exist)
+        other_session_id = session_ids[0] if session_ids else None
+
+        if overlay_path.suffix in [".npy", ".mha"]:
+            return self._handle_registration_overlay(
+                session_id, overlay_path, other_session_id
             )
-            return json.dumps(layer)
+
+        if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
+            return self._add_image_overlay(session_id, overlay_path)
+
+        return self._add_annotation_overlay(session_id, overlay_path)
+
+    def _handle_registration_overlay(
+        self,
+        session_id: str,
+        overlay_path: Path,
+        other_session_id: str,
+    ) -> str:
+        def _apply_transform(source_fp: str, target_fp: str) -> None:
+            # loading a registration transformation
+            self.layers[session_id]["slide"] = TransformedWSIReader(
+                source_fp,
+                target_img=target_fp,
+                transform=overlay_path,
+            )
+            self.pyramids[session_id]["slide"] = ZoomifyGenerator(
+                self.layers[session_id]["slide"]
+            )
+
+        if other_session_id is not None:
+            logger.warning("Using slide in other window as target slide.")
+            _apply_transform(
+                self.layers[session_id]["slide"].info.file_path,
+                self.layers[other_session_id]["slide"].info.file_path,
+            )
+            return json.dumps("slide")
+
+        layer_keys = [k for k in self.layers[session_id] if "layer" in k]
+        for key in sorted(
+            layer_keys, key=lambda x: int(x.replace("layer", "")), reverse=True
+        ):
+            target_fp = self.layers[session_id][key].info.file_path
+            if Path(target_fp).suffix in [".tiff", ".svs", ".ndpi", ".mrxs"]:
+                logger.warning(
+                    "Using slide as source and last overlay as target for registration."
+                )
+                _apply_transform(
+                    self.layers[session_id]["slide"].info.file_path,
+                    target_fp,
+                )
+                return json.dumps("slide")
+
+        logger.warning(
+            "No suitable overlay found. Using current slide as target. "
+            "This may display incorrectly if dimensions differ."
+        )
+        _apply_transform(
+            self.layers[session_id]["slide"].info.file_path,
+            self.layers[session_id]["slide"].info.file_path,
+        )
+        return json.dumps("slide")
+
+    def _add_image_overlay(self, session_id: str, overlay_path: Path) -> str:
+        layer = f"layer{len(self.pyramids[session_id])}"
+        if overlay_path.suffix == ".tiff":
+            self.layers[session_id][layer] = OpenSlideWSIReader(
+                overlay_path,
+                mpp=self.layers[session_id]["slide"].info.mpp[0],
+            )
+        elif overlay_path.suffix in [".jpg", ".png"]:
+            info = self.layers[session_id]["slide"].info
+            info.file_path = str(overlay_path)
+            self.layers[session_id][layer] = VirtualWSIReader(
+                overlay_path,
+                info=info,
+            )
+        else:
+            self.layers[session_id][layer] = WSIReader.open(overlay_path)
+
+        self.pyramids[session_id][layer] = ZoomifyGenerator(
+            self.layers[session_id][layer]
+        )
+        return json.dumps(layer)
+
+    def _add_annotation_overlay(self, session_id: str, overlay_path: Path) -> str:
         if overlay_path.suffix == ".geojson":
             sq = SQLiteStore.from_geojson(overlay_path)
         elif overlay_path.suffix == ".dat":
@@ -552,17 +629,17 @@ class TileServer(Flask):
                 logger.info("Loaded %d annotations.", len(sq))
                 types = self.update_types(sq)
                 return json.dumps(types)
+
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
             self.renderers[session_id],
             overlap=self.overlaps[session_id],
         )
-        logger.info(
-            "Loaded %d annotations.",
-            len(self.pyramids[session_id]["overlay"].store),
-        )
         self.layers[session_id]["overlay"] = self.pyramids[session_id]["overlay"]
+        logger.info(
+            "Loaded %d annotations.", len(self.pyramids[session_id]["overlay"].store)
+        )
         types = self.update_types(sq)
         return json.dumps(types)
 
