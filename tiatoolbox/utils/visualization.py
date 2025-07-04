@@ -602,8 +602,6 @@ def plot_graph(
 
 
     Examples:
-
-
         >>> from tiatoolbox.utils.visualization import plot_graph
         >>> import numpy as np
         >>> # Generate a random example; replace with your own data
