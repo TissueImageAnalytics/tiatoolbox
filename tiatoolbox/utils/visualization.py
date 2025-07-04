@@ -55,7 +55,7 @@ def random_colors(num_colors: int, *, bright: bool) -> np.ndarray:
     Returns:
         np.ndarray:
             Array of (r, g, b) colors.
-    
+
     Examples:
         >>> from tiatoolbox.utils.visualization import random_colors
         >>> colors = random_colors(10, bright=True)
@@ -148,10 +148,10 @@ def overlay_prediction_mask(
         >>> # Example usage of overlay_prediction_mask
         >>> ax = overlay_prediction_mask(
         ... img=img,
-        ... prediction=prediction, 
+        ... prediction=prediction,
         ... alpha=0.5,
-        ... label_info=label_info, 
-        ... min_val=0.0, 
+        ... label_info=label_info,
+        ... min_val=0.0,
         ... ax=None,
         ... return_ax=True)
 
@@ -518,8 +518,8 @@ def overlay_prediction_contours(
         >>> type_colours = {0: ("Type A", (0, 255, 0)), 1: ("Type B", (0, 0, 255))}
         >>> # Example usage of overlay_prediction_contours
         >>> overlaid_canvas = overlay_prediction_contours(
-        ... canvas=canvas, 
-        ... inst_dict=inst_dict, 
+        ... canvas=canvas,
+        ... inst_dict=inst_dict,
         ... type_colours=type_colours,
         ... line_thickness=1,
         ... draw_dot=True)
@@ -607,7 +607,7 @@ def plot_graph(
         >>> # Generate a random example; replace with your own data
         >>> canvas = np.zeros((256, 256, 3), dtype=np.uint8)
         >>> num_nodes = 10
-        >>> nodes = np.random.randint(0, 255, size=(num_nodes, 2))  
+        >>> nodes = np.random.randint(0, 255, size=(num_nodes, 2))
         >>> num_edges = 15
         >>> edges = np.random.randint(0, num_nodes, size=(num_edges, 2))
         >>> node_colors = np.random.randint(0, 256, size=(num_nodes, 3))
