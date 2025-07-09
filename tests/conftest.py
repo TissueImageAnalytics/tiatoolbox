@@ -589,9 +589,9 @@ def chdir() -> Callable:
 
     """
     try:
-        from contextlib import chdir
+        from contextlib import chdir  # noqa: PLC0415
     except ImportError:
-        from contextlib import AbstractContextManager
+        from contextlib import AbstractContextManager  # noqa: PLC0415
 
         class chdir(AbstractContextManager):  # noqa: N801
             """Non thread-safe context manager to change the current working directory.

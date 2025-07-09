@@ -104,6 +104,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING, Any
 
+from shapely import affinity
+
 sys.path.append("../")
 
 try:
@@ -188,8 +190,6 @@ def cell_polygon(
         round_coords (bool): Round coordinates to integers. Defaults to False.
 
     """
-    from shapely import affinity
-
     rand_state = np.random.default_rng().__getstate__()
     rng = np.random.default_rng(seed)
     if repeat_first:
