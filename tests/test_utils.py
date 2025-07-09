@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
@@ -27,7 +28,10 @@ from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
 from tiatoolbox.enums import GeometryType
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import (
+    compile_model,
+    is_torch_compile_compatible,
+)
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
@@ -1348,8 +1352,6 @@ def test_select_device() -> None:
 def test_save_as_json(tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
-    import json
-
     # dict with nested dict, list, and np.array
     key_dict = {
         "a1": {"name": "John", "age": 23, "sex": "male"},
@@ -1860,8 +1862,6 @@ def test_torch_compile_disable() -> None:
 
 def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
     """Test if torch-compile compatibility is checked correctly."""
-    from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
-
     is_torch_compile_compatible()
     assert "torch.compile" in caplog.text
 
