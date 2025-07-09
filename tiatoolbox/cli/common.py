@@ -13,6 +13,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def add_default_to_usage_help(
     usage_help: str,
+    *,
     default: str | float | bool | None,
 ) -> str:
     """Adds default value to usage help string.
@@ -36,6 +37,7 @@ def add_default_to_usage_help(
 
 def cli_img_input(
     usage_help: str = "Path to WSI or directory containing WSIs.",
+    *,
     multiple: bool | None = None,
 ) -> Callable:
     """Enables --img-input option for cli."""
@@ -49,6 +51,7 @@ def cli_img_input(
 
 def cli_name(
     usage_help: str = "User defined name to be used as an identifier.",
+    *,
     multiple: bool | None = None,
 ) -> Callable:
     """Enable --name option for cli."""
@@ -451,7 +454,10 @@ def prepare_file_dir_cli(
         pathlib.Path: updated output path.
 
     """
-    from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
+    from tiatoolbox.utils.misc import (  # noqa: PLC0415
+        grab_files_from_dir,
+        string_to_tuple,
+    )
 
     img_input = no_input_message(input_file=img_input)
     file_types_tuple = string_to_tuple(in_str=file_types)
@@ -512,7 +518,10 @@ def prepare_model_cli(
             Output path.
 
     """
-    from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
+    from tiatoolbox.utils.misc import (  # noqa: PLC0415
+        grab_files_from_dir,
+        string_to_tuple,
+    )
 
     img_input = no_input_message(input_file=img_input)
     output_path = Path(output_path)
@@ -558,7 +567,7 @@ def prepare_ioconfig_seg(
     yaml_config_path: str | Path,
 ) -> IOConfigABC | None:
     """Prepare ioconfig for segmentation."""
-    import yaml
+    import yaml  # noqa: PLC0415
 
     if pretrained_weights is not None:
         with Path(yaml_config_path).open() as registry_handle:
