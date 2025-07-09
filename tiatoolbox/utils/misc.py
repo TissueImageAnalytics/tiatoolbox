@@ -162,7 +162,7 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
         raise OSError(msg)
 
 
-def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
+def imread(image_path: PathLike, *, as_uint8: bool | None = None) -> np.ndarray:
     """Read an image as a NumPy array.
 
     Args:

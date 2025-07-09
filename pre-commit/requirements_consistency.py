@@ -115,7 +115,7 @@ def parse_setup_py(file_path: Path) -> dict[str, Requirement]:
             pkg_resources.Requirement.
     """
     mock_setup = {}
-    import setuptools
+    import setuptools  # noqa: PLC0415
 
     setuptools.setup = lambda **kw: mock_setup.update(kw)
     spec = importlib.util.spec_from_file_location("setup", str(file_path))

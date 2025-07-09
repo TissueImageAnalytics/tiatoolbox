@@ -4047,7 +4047,6 @@ class DictionaryStore(AnnotationStore):
         """Return the length of the instance attributes."""
         return len(self._rows)
 
-    # flake8: noqa: A003
     @classmethod
     def open(cls: type[AnnotationStore], fp: Path | str | IO) -> AnnotationStore:
         """Opens :class:`DictionaryStore` from file pointer or path."""
