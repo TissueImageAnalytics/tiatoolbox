@@ -97,7 +97,7 @@ def is_notebook() -> bool:
 
     """
     try:
-        from IPython import get_ipython
+        from IPython import get_ipython  # noqa: PLC0415
 
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
