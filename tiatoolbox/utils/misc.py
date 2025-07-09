@@ -162,7 +162,7 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
         raise OSError(msg)
 
 
-def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
+def imread(image_path: PathLike, *, as_uint8: bool | None = None) -> np.ndarray:
     """Read an image as :class:`numpy.ndarray`.
 
     Args:
@@ -1638,7 +1638,7 @@ def dict_to_zarr(
 
     for key, value in raw_predictions.items():
         # save to zarr
-        array = np.array(raw_predictions[key])
+        array = np.array(value)
         z.create_dataset(
             name=key,
             data=value,

@@ -867,7 +867,7 @@ class SemanticSegmentor:
                 of file paths.
             wsi_idx (int):
                 index of current WSI being processed.
-            img_path(str):
+            img_path(str or Path):
                 Path to current image.
             mode (str):
                 Type of input to process. Choose from either `tile` or
@@ -879,7 +879,7 @@ class SemanticSegmentor:
                 `stride_shape`, `resolution`, and `units` arguments are
                 ignored. Otherwise, those arguments will be internally
                 converted to a :class:`IOSegmentorConfig` object.
-            save_dir (str or pathlib.Path):
+            save_dir (str or Path):
                 Output directory when processing multiple tiles and
                 whole-slide images. By default, it is folder `output`
                 where the running script is invoked.
