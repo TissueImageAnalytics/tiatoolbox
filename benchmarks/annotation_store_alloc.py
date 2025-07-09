@@ -104,8 +104,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING, Any
 
-from shapely import affinity
-
 sys.path.append("../")
 
 try:
@@ -143,6 +141,7 @@ except ImportError:
 
 import numpy as np
 import psutil
+from shapely import affinity
 from shapely.geometry import Polygon
 from tqdm import tqdm
 
