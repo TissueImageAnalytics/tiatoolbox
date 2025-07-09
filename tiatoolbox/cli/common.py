@@ -103,7 +103,7 @@ def cli_output_type(
     input_type = click_choices if input_type is None else input_type
     return click.option(
         "--output-type",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
         type=input_type,
     )
@@ -134,7 +134,7 @@ def cli_patch_mode(
     return click.option(
         "--patch-mode",
         type=bool,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -286,7 +286,7 @@ def cli_model(
     """Enables --pretrained-model option for cli."""
     return click.option(
         "--model",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -299,7 +299,7 @@ def cli_weights(
     """Enables --pretrained-weights option for cli."""
     return click.option(
         "--weights",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
