@@ -66,7 +66,7 @@ class SemanticSegmentorRunParams(PredictorRunParams):
             Shape of patches input to the model as tuple of height and width (HW).
             Patches are requested at read resolution, not with respect to level 0,
             and must be positive.
-        input_resolutions (Resolution):
+        input_resolutions (list(dict(Units, Resolution)))::
             Resolution used for reading the image. Please see
             :class:`WSIReader` for details.
         return_probabilities (bool):
@@ -81,10 +81,6 @@ class SemanticSegmentorRunParams(PredictorRunParams):
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
-        units (Units):
-            Units of resolution used for reading the image. Choose
-            from either `level`, `power` or `mpp`. Please see
-            :class:`WSIReader` for details.
         verbose (bool):
             Whether to output logging information.
 
