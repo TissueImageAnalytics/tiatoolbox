@@ -225,11 +225,23 @@ def test_wsi_segmentor_zarr(remote_sample: Callable, tmp_path: Path) -> None:
     # don't run test on GPU
     output = segmentor.run(
         images=[wsi_with_artifacts],
-        return_probabilities=True,
+        return_probabilities=False,
         return_labels=False,
         device=device,
         patch_mode=False,
         save_dir=tmp_path / "wsi_out_check",
+        output_type="zarr",
+    )
+
+    assert output[wsi_with_artifacts].exists()
+
+    output = segmentor.run(
+        images=[wsi_with_artifacts],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "wsi_out_check_prob",
         output_type="zarr",
     )
 
