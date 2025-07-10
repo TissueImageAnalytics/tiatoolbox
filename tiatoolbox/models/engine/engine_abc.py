@@ -233,6 +233,8 @@ class EngineABC(ABC):  # noqa: B024
             be downloaded. However, you can override with your own set
             of weights via the `weights` argument. Argument
             is case-insensitive.
+        dataloader (torch.utils.data.DataLoader):
+            :class:`torch.utils.data.DataLoader` used during inference.
         ioconfig (ModelIOConfigABC):
             Input IO configuration of type :class:`ModelIOConfigABC` to run the Engine.
         _ioconfig (ModelIOConfigABC):
@@ -364,7 +366,8 @@ class EngineABC(ABC):  # noqa: B024
         self.input_resolutions: list[dict[Units, Resolution]] | None = None
         self.return_labels: bool = False
         self.stride_shape: IntPair | None = None
-        self.verbose = verbose
+        self.verbose: bool = verbose
+        self.dataloader: DataLoader | None = None
 
     @staticmethod
     def _initialize_model_ioconfig(
@@ -968,7 +971,7 @@ class EngineABC(ABC):  # noqa: B024
         duplicate_filter = DuplicateFilter()
         logger.addFilter(duplicate_filter)
 
-        dataloader = self.get_dataloader(
+        self.dataloader = self.get_dataloader(
             images=self.images,
             masks=self.masks,
             labels=self.labels,
@@ -976,7 +979,7 @@ class EngineABC(ABC):  # noqa: B024
             ioconfig=self._ioconfig,
         )
         raw_predictions = self.infer_patches(
-            dataloader=dataloader,
+            dataloader=self.dataloader,
             save_path=save_path,
             return_coordinates=output_type == "annotationstore",
         )
@@ -1070,17 +1073,17 @@ class EngineABC(ABC):  # noqa: B024
             duplicate_filter = DuplicateFilter()
             logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
-            dataloader = self.get_dataloader(
+            self.dataloader = self.get_dataloader(
                 images=image,
                 masks=mask,
                 patch_mode=False,
                 ioconfig=self._ioconfig,
             )
 
-            scale_factor = self._calculate_scale_factor(dataloader=dataloader)
+            scale_factor = self._calculate_scale_factor(dataloader=self.dataloader)
 
             raw_predictions = self.infer_wsi(
-                dataloader=dataloader,
+                dataloader=self.dataloader,
                 save_path=save_path[image],
                 **kwargs,
             )
