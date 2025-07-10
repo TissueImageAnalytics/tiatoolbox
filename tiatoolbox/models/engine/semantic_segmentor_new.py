@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 import torch
 import zarr
 from typing_extensions import Unpack
@@ -20,8 +21,6 @@ from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
-
-    import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
@@ -363,6 +362,88 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode=patch_mode,
         )
 
+    def post_process_cache_mode(
+        self: SemanticSegmentor,
+        raw_predictions: Path,
+        **kwargs: Unpack[PredictorRunParams],
+    ) -> Path:
+        """Returns an array from raw predictions.
+
+        Merges raw predictions from individual patches into a single prediction array if
+        patch_mode is False.
+
+        """
+        if self.patch_mode:
+            return super().post_process_cache_mode(
+                raw_predictions=raw_predictions,
+                **kwargs,
+            )
+
+        return_probabilities = kwargs.get("return_probabilities")
+        merged_resolution = self.ioconfig.highest_input_resolution
+
+        zarr_group = zarr.open(str(raw_predictions), mode="r+")
+
+        # Calculate canvas parameters
+        wsi_reader = self.dataloader.dataset.reader
+        ioconfig = self.ioconfig
+        in_out_ratio = np.array(ioconfig.patch_input_shape) / np.array(
+            ioconfig.patch_output_shape
+        )
+        padding_size = (
+            np.array(ioconfig.patch_input_shape)
+            - np.array(ioconfig.stride_shape) * 4 / in_out_ratio
+        )
+        slide_dimensions = wsi_reader.slide_dimensions(**merged_resolution)
+        merged_shape = [
+            *slide_dimensions + padding_size.astype(int),
+            zarr_group["probabilities"].shape[3],
+        ]
+
+        # create dataset for merged probabilities
+        merged_probabilities = zarr_group.create_dataset(
+            name="merged_probabilities",
+            shape=merged_shape,
+            compressor=zarr_group["probabilities"].compressor,
+        )
+
+        merged_weights = np.zeros_like(merged_probabilities)
+
+        for idx, location in enumerate(self.output_locations):
+            start_x, start_y, end_x, end_y = location
+            merged_probabilities[start_y:end_y, start_x:end_x, :] += zarr_group[
+                "probabilities"
+            ][idx][0 : end_y - start_y, 0 : end_x - start_x, :]
+            merged_weights[start_y:end_y, start_x:end_x] += 1
+
+        # Normalize
+        merged_weights[merged_weights == 0] = 1
+        merged_probabilities[:] = merged_probabilities[:] / merged_weights[:]
+
+        # save merged probabilities as single output probabilities
+        zarr_group["probabilities"] = merged_probabilities
+        del zarr_group["merged_probabilities"]
+
+        zarr_group["predictions"] = self.model.postproc_func(
+            zarr_group["probabilities"],
+        )
+
+        zarr_group["predictions"] = zarr_group["predictions"][
+            0 : slide_dimensions[0],
+            0 : slide_dimensions[1],
+        ]
+
+        if not return_probabilities:
+            del zarr_group["probabilities"]
+            return raw_predictions
+
+        zarr_group["probabilities"] = zarr_group["probabilities"][
+            0 : slide_dimensions[0],
+            0 : slide_dimensions[1],
+            :,
+        ]
+        return raw_predictions
+
     def save_predictions(
         self: PatchPredictor,
         processed_predictions: dict | Path,
@@ -394,12 +475,8 @@ class SemanticSegmentor(PatchPredictor):
                 `.zarr` file depending on whether a save_dir Path is provided.
 
         """
-        if (
-            self.cache_mode or not save_dir
-        ) and output_type.lower() != "annotationstore":
-            return processed_predictions
-
-        if output_type.lower() == "zarr":
+        # Conversion to annotationstore uses a different function for SemanticSegmentor
+        if output_type.lower() != "annotationstore":
             return super().save_predictions(
                 processed_predictions, output_type, save_dir, **kwargs
             )

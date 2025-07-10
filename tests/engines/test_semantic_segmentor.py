@@ -230,6 +230,7 @@ def test_wsi_segmentor_zarr(remote_sample: Callable, tmp_path: Path) -> None:
         device=device,
         patch_mode=False,
         save_dir=tmp_path / "wsi_out_check",
+        output_type="zarr",
     )
 
     assert output[wsi_with_artifacts].exists()
