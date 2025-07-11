@@ -19,7 +19,7 @@ def run_tileserver() -> None:
 
     def run_app() -> None:
         """Run the tileserver app."""
-        from tiatoolbox.visualization.tileserver import TileServer
+        from tiatoolbox.visualization.tileserver import TileServer  # noqa: PLC0415
 
         app = TileServer(
             title="Tiatoolbox TileServer",

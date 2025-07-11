@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from tiatoolbox import logger, read_registry_files
+from tiatoolbox.utils import imread
 
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
@@ -87,8 +88,6 @@ def _local_sample_path(path: str | Path) -> Path:
 
 def stain_norm_target() -> np.ndarray:
     """Target image for stain normalization."""
-    from tiatoolbox.utils import imread
-
     return imread(_local_sample_path("target_image.png"))
 
 

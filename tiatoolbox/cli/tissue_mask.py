@@ -30,7 +30,7 @@ def get_masker(
     resolution: float,
 ) -> TissueMasker:
     """Get Tissue Masker."""
-    from tiatoolbox.tools import tissuemask
+    from tiatoolbox.tools import tissuemask  # noqa: PLC0415
 
     if method == "Otsu":
         return tissuemask.OtsuTissueMasker()
@@ -73,11 +73,11 @@ def tissue_mask(
     file_types: str,
 ) -> None:
     """Generate tissue mask for a WSI."""
-    import numpy as np
-    from PIL import Image
+    import numpy as np  # noqa: PLC0415
+    from PIL import Image  # noqa: PLC0415
 
-    from tiatoolbox.utils import imwrite
-    from tiatoolbox.wsicore.wsireader import WSIReader
+    from tiatoolbox.utils import imwrite  # noqa: PLC0415
+    from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: PLC0415
 
     files_all, output_path = prepare_file_dir_cli(
         img_input,

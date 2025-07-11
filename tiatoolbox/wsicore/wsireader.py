@@ -1615,7 +1615,7 @@ class WSIReader:
                 Extra kwargs passed to the masker class.
 
         """
-        from tiatoolbox.tools import tissuemask
+        from tiatoolbox.tools import tissuemask  # noqa: PLC0415
 
         thumbnail = self.slide_thumbnail(resolution, units)
         if method not in ["otsu", "morphological"]:
@@ -2354,7 +2354,7 @@ class JP2WSIReader(WSIReader):
     ) -> None:
         """Initialize :class:`OmnyxJP2WSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
-        import glymur
+        import glymur  # noqa: PLC0415
 
         glymur.set_option("lib.num_threads", os.cpu_count() or 1)
         self.glymur_jp2 = glymur.Jp2k(filename=str(self.input_path))
@@ -2853,7 +2853,7 @@ class JP2WSIReader(WSIReader):
                 Metadata information.
 
         """
-        import glymur
+        import glymur  # noqa: PLC0415
 
         jp2 = self.glymur_jp2
         boxes = self._get_jp2_boxes(jp2)
@@ -4744,7 +4744,7 @@ class DICOMWSIReader(WSIReader):
         post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`DICOMWSIReader`."""
-        from wsidicom import WsiDicom
+        from wsidicom import WsiDicom  # noqa: PLC0415
 
         super().__init__(input_img, mpp, power, post_proc)
         self.wsi = WsiDicom.open(input_img)
@@ -5262,9 +5262,9 @@ class NGFFWSIReader(WSIReader):
     def __init__(self: NGFFWSIReader, path: str | Path, **kwargs: dict) -> None:
         """Initialize :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
-        from imagecodecs import numcodecs
+        from imagecodecs import numcodecs  # noqa: PLC0415
 
-        from tiatoolbox.wsicore.metadata import ngff
+        from tiatoolbox.wsicore.metadata import ngff  # noqa: PLC0415
 
         numcodecs.register_codecs()
         store = zarr.SQLiteStore(path) if is_sqlite3(path) else path

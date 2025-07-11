@@ -141,6 +141,7 @@ except ImportError:
 
 import numpy as np
 import psutil
+from shapely import affinity
 from shapely.geometry import Polygon
 from tqdm import tqdm
 
@@ -188,8 +189,6 @@ def cell_polygon(
         round_coords (bool): Round coordinates to integers. Defaults to False.
 
     """
-    from shapely import affinity
-
     rand_state = np.random.default_rng().__getstate__()
     rng = np.random.default_rng(seed)
     if repeat_first:
