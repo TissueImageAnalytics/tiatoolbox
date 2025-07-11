@@ -9,6 +9,7 @@ filelock>=3.9.0
 flask>=2.2.2
 flask-cors>=4.0.0
 glymur>=0.12.7, < 0.14 # 0.14 is not compatible with python3.9
+huggingface_hub # do we need to pin it to 0.33.3?
 imagecodecs>=2022.9.26
 joblib>=1.1.1
 jupyterlab>=3.5.2
@@ -37,4 +38,3 @@ tqdm>=4.64.1
 umap-learn>=0.5.3
 wsidicom>=0.18.0
 zarr>=2.13.3, <3.0.0
-huggingface_hub # do we need to pin it to 0.33.3?
