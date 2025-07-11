@@ -10,7 +10,6 @@ import torch
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
-from tiatoolbox.utils import download_data
 
 from huggingface_hub import hf_hub_download
 
