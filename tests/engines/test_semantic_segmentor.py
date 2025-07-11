@@ -235,7 +235,9 @@ def test_wsi_segmentor_zarr(
         output_type="zarr",
     )
 
-    assert output[wsi_with_artifacts].exists()
+    output_ = zarr.open(output[wsi_with_artifacts], mode="r")
+    assert 0.48 < np.mean(output_["predictions"][:]) < 0.49
+    assert "probabilities" not in output_
 
     # Return Probabilities is True
     # Using small image for faster run
@@ -249,4 +251,6 @@ def test_wsi_segmentor_zarr(
         output_type="zarr",
     )
 
-    assert output[sample_svs].exists()
+    output_ = zarr.open(output[sample_svs], mode="r")
+    assert 0.48 < np.mean(output_["predictions"][:]) < 0.49
+    assert 0.49 < np.mean(output_["probabilities"][:]) < 0.51
