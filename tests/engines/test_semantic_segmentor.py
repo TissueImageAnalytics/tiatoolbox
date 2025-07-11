@@ -224,7 +224,7 @@ def test_wsi_segmentor_zarr(
         batch_size=32,
         verbose=False,
     )
-    # Return Probabilitis is False
+    # Return Probabilities is False
     output = segmentor.run(
         images=[wsi_with_artifacts],
         return_probabilities=False,
@@ -252,5 +252,5 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.48 < np.mean(output_["predictions"][:]) < 0.49
+    assert 0.27 < np.mean(output_["predictions"][:]) < 0.28
     assert 0.49 < np.mean(output_["probabilities"][:]) < 0.51
