@@ -36,10 +36,10 @@ def read_bounds(
     mode: str,
 ) -> None:
     """Read a region in a whole slide image as specified."""
-    from PIL import Image
+    from PIL import Image  # noqa: PLC0415
 
-    from tiatoolbox.utils import imwrite
-    from tiatoolbox.wsicore.wsireader import WSIReader
+    from tiatoolbox.utils import imwrite  # noqa: PLC0415
+    from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: PLC0415
 
     no_input_message(input_file=img_input)
 

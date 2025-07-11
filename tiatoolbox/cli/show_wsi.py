@@ -31,8 +31,8 @@ def show_wsi(
     colour_map: str,
 ) -> None:  # pragma: no cover
     """Show a slide together with any overlays."""
-    from tiatoolbox.utils.visualization import AnnotationRenderer
-    from tiatoolbox.visualization.tileserver import TileServer
+    from tiatoolbox.utils.visualization import AnnotationRenderer  # noqa: PLC0415
+    from tiatoolbox.visualization.tileserver import TileServer  # noqa: PLC0415
 
     renderer = AnnotationRenderer()
     if colour_by is not None:

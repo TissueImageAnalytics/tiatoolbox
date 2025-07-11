@@ -33,7 +33,7 @@ def slide_info(
     verbose: bool,
 ) -> None:
     """Displays or saves WSI metadata depending on the mode argument."""
-    from tiatoolbox import utils, wsicore
+    from tiatoolbox import utils, wsicore  # noqa: PLC0415
 
     all_files, output_path = prepare_file_dir_cli(
         img_input,

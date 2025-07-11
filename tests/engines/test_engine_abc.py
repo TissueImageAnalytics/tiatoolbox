@@ -37,6 +37,7 @@ class TestEngineABC(EngineABC):
         self: TestEngineABC,
         model: str | torch.nn.Module,
         weights: str | Path | None = None,
+        *,
         verbose: bool | None = None,
     ) -> NoReturn:
         """Test EngineABC init."""
