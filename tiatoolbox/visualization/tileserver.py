@@ -805,7 +805,7 @@ class TileServer(Flask):
         """Get the channels of the slide."""
         session_id = self._get_session_id()
         if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
-            if self.layers[session_id]["slide"].post_proc.color_dict is None:
+            if not self.layers[session_id]["slide"].post_proc.is_validated:
                 _ = self.layers[session_id]["slide"].slide_thumbnail(
                     resolution=8.0, units="mpp"
                 )
