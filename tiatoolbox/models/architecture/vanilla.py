@@ -87,7 +87,6 @@ def _get_architecture(
         return model.features
     if "alexnet" in arch_name:
         return model.features
-    
 
     return model.features
 

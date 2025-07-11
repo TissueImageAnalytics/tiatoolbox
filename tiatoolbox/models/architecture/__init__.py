@@ -7,11 +7,10 @@ from pydoc import locate
 from typing import TYPE_CHECKING
 
 import torch
+from huggingface_hub import hf_hub_download
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
-
-from huggingface_hub import hf_hub_download
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import IOConfigABC
@@ -60,7 +59,7 @@ def fetch_pretrained_weights(
 
     return hf_hub_download(
         repo_id="TIACentre/TIAToolbox_pretrained_weights",
-        filename=file_name, 
+        filename=file_name,
         cache_dir=cache_dir,
         force_download=overwrite,
     )
