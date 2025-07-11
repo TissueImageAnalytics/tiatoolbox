@@ -16,7 +16,7 @@ def test_set_root_dir(tmp_path: Path) -> None:
     """Test for setting new root dir."""
     # skipcq
     importlib.reload(tiatoolbox)
-    from tiatoolbox import rcParam
+    from tiatoolbox import rcParam  # noqa: PLC0415
 
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
     test_dir_path = tmp_path / "tmp_check"
@@ -27,7 +27,7 @@ def test_set_root_dir(tmp_path: Path) -> None:
     # reimport to see if it overwrites
     # silence Deep Source because this is an intentional check
     # skipcq
-    from tiatoolbox import rcParam
+    from tiatoolbox import rcParam  # noqa: PLC0415
 
     rcParam["TIATOOLBOX_HOME"].mkdir(parents=True)
     if not Path.exists(test_dir_path):
@@ -135,9 +135,9 @@ def test_duplicate_filter(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_lazy_import() -> None:
     """Test lazy import for tiatoolbox."""
-    import sys
+    import sys  # noqa: PLC0415
 
-    from tiatoolbox import _lazy_import
+    from tiatoolbox import _lazy_import  # noqa: PLC0415
 
     assert "exceptions" not in sys.modules
 
@@ -151,7 +151,7 @@ def test_lazy_import() -> None:
 
 def test_lazy_import_module_not_found() -> None:
     """'Test lazy import for ModuleNotFoundError."""
-    from tiatoolbox import _lazy_import
+    from tiatoolbox import _lazy_import  # noqa: PLC0415
 
     with pytest.raises(ModuleNotFoundError):
         _lazy_import(
