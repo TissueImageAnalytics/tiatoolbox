@@ -213,8 +213,10 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
     _test_store_output_patch(output[1])
 
 
-def test_wsi_segmentor_zarr(remote_sample: Callable, tmp_path: Path) -> None:
-    """Test normal run of patch predictor for WSIs."""
+def test_wsi_segmentor_zarr(
+    remote_sample: Callable, sample_svs: Path, tmp_path: Path
+) -> None:
+    """Test SemanticSegmentor for WSIs with zarr output."""
     wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
 
     segmentor = SemanticSegmentor(
@@ -222,7 +224,7 @@ def test_wsi_segmentor_zarr(remote_sample: Callable, tmp_path: Path) -> None:
         batch_size=32,
         verbose=False,
     )
-    # don't run test on GPU
+    # Return Probabilitis is False
     output = segmentor.run(
         images=[wsi_with_artifacts],
         return_probabilities=False,
@@ -235,8 +237,10 @@ def test_wsi_segmentor_zarr(remote_sample: Callable, tmp_path: Path) -> None:
 
     assert output[wsi_with_artifacts].exists()
 
+    # Return Probabilities is True
+    # Using small image for faster run
     output = segmentor.run(
-        images=[wsi_with_artifacts],
+        images=[sample_svs],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -245,4 +249,4 @@ def test_wsi_segmentor_zarr(remote_sample: Callable, tmp_path: Path) -> None:
         output_type="zarr",
     )
 
-    assert output[wsi_with_artifacts].exists()
+    assert output[sample_svs].exists()
