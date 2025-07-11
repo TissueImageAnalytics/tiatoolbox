@@ -37,7 +37,7 @@ def fetch_pretrained_weights(
             Path to save the weight of the
           corresponding `model_name`.
         overwrite (bool):
-            Overwrite existing downloaded weights.
+            Overwrite existing downloaded weights (force downloading).
 
     Returns:
         Path:
@@ -62,6 +62,7 @@ def fetch_pretrained_weights(
         repo_id="TIACentre/TIAToolbox_pretrained_weights",
         filename=file_name, 
         cache_dir=cache_dir,
+        force_download=overwrite,
     )
 
 
