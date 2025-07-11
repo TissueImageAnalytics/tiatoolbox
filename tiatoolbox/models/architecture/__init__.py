@@ -12,6 +12,8 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
 
+from huggingface_hub import hf_hub_download
+
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import IOConfigABC
 
@@ -49,16 +51,19 @@ def fetch_pretrained_weights(
 
     info = PRETRAINED_INFO[model_name]
 
+    file_name = info["url"].split("/")[-1]
     if save_path is None:
-        file_name = info["url"].split("/")[-1]
-        processed_save_path = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
+        cache_dir = rcParam["TIATOOLBOX_HOME"] / "models"
     elif type(save_path) is str:
-        processed_save_path = Path(save_path)
+        cache_dir = Path(save_path)
     else:
-        processed_save_path = save_path
+        cache_dir = save_path
 
-    download_data(info["url"], save_path=processed_save_path, overwrite=overwrite)
-    return processed_save_path
+    return hf_hub_download(
+        repo_id="TIACentre/TIAToolbox_pretrained_weights",
+        filename=file_name, 
+        cache_dir=cache_dir,
+    )
 
 
 def get_pretrained_model(

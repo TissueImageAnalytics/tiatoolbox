@@ -19,7 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _get_architecture(
     arch_name: str,
-    weights: str or WeightsEnum = "DEFAULT",
+    weights: str or WeightsEnum = None,
     **kwargs: dict,
 ) -> list[nn.Sequential, ...] | nn.Sequential:
     """Retrieve a CNN model architecture.
@@ -75,8 +75,11 @@ def _get_architecture(
         raise ValueError(msg)
 
     creator = backbone_dict[arch_name]
-    model = creator(weights=weights, **kwargs)
+    if "inception_v3" in arch_name or "googlenet" in arch_name:
+        model = creator(weights=weights, aux_logits=False, num_classes=1000)
+        return nn.Sequential(*list(model.children())[:-3])
 
+    model = creator(weights=weights, **kwargs)
     # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in arch_name or "resnext" in arch_name:
         return nn.Sequential(*list(model.children())[:-2])
@@ -84,8 +87,7 @@ def _get_architecture(
         return model.features
     if "alexnet" in arch_name:
         return model.features
-    if "inception_v3" in arch_name or "googlenet" in arch_name:
-        return nn.Sequential(*list(model.children())[:-3])
+    
 
     return model.features
 
@@ -297,6 +299,7 @@ class CNNModel(ModelABC):
         super().__init__()
         self.num_classes = num_classes
 
+        # set num_classes to 100 to avoid downloading weights
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -547,6 +550,7 @@ class CNNBackbone(ModelABC):
     def __init__(self: CNNBackbone, backbone: str) -> None:
         """Initialize :class:`CNNBackbone`."""
         super().__init__()
+        # set num_classes=1000 to avoid downloading weights
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
