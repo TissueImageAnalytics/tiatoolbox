@@ -316,6 +316,8 @@ def populate_table() -> None:
     colors, active_channels = get_channel_info()
 
     if colors is not None:
+        if active_channels:
+            tables[0].source.selected.indices = active_channels
         tables[0].source.data = {
             "channels": list(colors.keys()),
             "dummy": list(colors.keys()),
@@ -324,7 +326,6 @@ def populate_table() -> None:
             "colors": [rgb2hex(color) for color in colors.values()],
             "dummy": list(colors.keys()),
         }
-        tables[0].source.selected.indices = active_channels
 
 
 def get_view_bounds(
