@@ -1624,7 +1624,9 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
         file_path.unlink()
 
     print("tmp_path: ", tmp_path)
-    mosi = fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=tmp_path)
+    mosi = fetch_pretrained_weights(
+        model_name="mobilenet_v3_small-pcam", save_path=tmp_path
+    )
     print("returned path: ", mosi)
     print("desired path: ", file_path)
     print(file_path.exists())
