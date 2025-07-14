@@ -8,6 +8,7 @@ import logging
 import math
 import os
 import re
+from collections import defaultdict
 from datetime import datetime
 from numbers import Number
 from pathlib import Path
@@ -378,12 +379,8 @@ class WSIReader:
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
         """
-        # Validate inputs
-        if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
-            msg = "Invalid input: Must be a WSIRead, numpy array, string or Path"
-            raise TypeError(
-                msg,
-            )
+        WSIReader._validate_input(input_img)
+
         if isinstance(input_img, np.ndarray):
             return VirtualWSIReader(
                 input_img, mpp=mpp, power=power, post_proc=post_proc
@@ -397,56 +394,20 @@ class WSIReader:
         WSIReader.verify_supported_wsi(input_path)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
-        if is_dicom(input_path):
-            return DICOMWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
-
-        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
-        last_suffix = suffixes[-1]
-
-        if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
-            return FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
-
-        if last_suffix == ".db":
-            kwargs["post_proc"] = post_proc
-            return AnnotationStoreReader(input_path, **kwargs)
-
-        if last_suffix in (".zarr",):
-            if not is_ngff(input_path):
-                msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
-                raise FileNotSupportedError(
-                    msg,
-                )
-            return NGFFWSIReader(input_path, mpp=mpp, power=power)
-
-        if suffixes[-2:] in ([".ome", ".tiff"],) or suffixes[-2:] in (
-            [".ome", ".tif"],
-        ):
-            return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
-
-        if last_suffix == ".qptiff":
-            return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
-
-        if last_suffix in (".tif", ".tiff"):
-            tiff_wsi = TIFFWSIReader(
-                input_path, mpp=mpp, power=power, post_proc=post_proc
-            )
-            # temporary force to use TIFFWSIReader for tiffs as openslide doesnt work with comet
-            # remove before merging
-            # tiff_wsi = _handle_tiff_wsi(
-            #    input_path, mpp=mpp, power=power, post_proc=post_proc
-            # )
-            if tiff_wsi is not None:
-                return tiff_wsi
-
-        virtual_wsi = _handle_virtual_wsi(
-            last_suffix=last_suffix, input_path=input_path, mpp=mpp, power=power
+        special_reader = WSIReader._handle_special_cases(
+            input_path, input_img, mpp, power, post_proc, **kwargs
         )
-
-        if virtual_wsi is not None:
-            return virtual_wsi
+        if special_reader is not None:
+            return special_reader
 
         # Try openslide last
         return OpenSlideWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
+
+    @staticmethod
+    def _validate_input(input_img: str | Path | np.ndarray) -> None:
+        if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
+            msg = "Invalid input: Must be a WSIReader, numpy array, string or Path"
+            raise TypeError(msg)
 
     @staticmethod
     def verify_supported_wsi(input_path: Path) -> None:
@@ -486,6 +447,65 @@ class WSIReader:
             raise FileNotSupportedError(
                 msg,
             )
+
+    @staticmethod
+    def _handle_special_cases(
+        input_path: Path,
+        input_img: str | Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
+        post_proc: str | callable | None = "auto",
+        **kwargs: dict,
+    ) -> WSIReader | None:
+        reader = None
+
+        if is_dicom(input_path):
+            reader = DICOMWSIReader(
+                input_path, mpp=mpp, power=power, post_proc=post_proc
+            )
+        else:
+            _, _, suffixes = utils.misc.split_path_name_ext(input_path)
+            last_suffix = suffixes[-1]
+
+            if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
+                reader = FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
+
+            elif last_suffix == ".db":
+                kwargs["post_proc"] = post_proc
+                reader = AnnotationStoreReader(input_path, **kwargs)
+
+            elif last_suffix in (".zarr",):
+                if not is_ngff(input_path):
+                    msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
+                    raise FileNotSupportedError(
+                        msg,
+                    )
+                reader = NGFFWSIReader(input_path, mpp=mpp, power=power)
+
+            elif (
+                suffixes[-2:] in ([".ome", ".tiff"],)
+                or suffixes[-2:] in ([".ome", ".tif"],)
+                or last_suffix == ".qptiff"
+            ):
+                reader = TIFFWSIReader(
+                    input_path, mpp=mpp, power=power, post_proc=post_proc
+                )
+
+            elif last_suffix in (".tif", ".tiff"):
+                tiff_wsi = TIFFWSIReader(
+                    input_path, mpp=mpp, power=power, post_proc=post_proc
+                )
+                if tiff_wsi is not None:
+                    reader = tiff_wsi
+
+            else:
+                virtual_wsi = _handle_virtual_wsi(
+                    last_suffix=last_suffix, input_path=input_path, mpp=mpp, power=power
+                )
+                if virtual_wsi is not None:
+                    reader = virtual_wsi
+
+        return reader
 
     def __init__(
         self: WSIReader,
@@ -3637,89 +3657,179 @@ class TIFFWSIReader(WSIReader):
 
     def _get_colors_from_meta(self: TIFFWSIReader) -> None:
         """Get colors from metadata if they exist."""
-        if isinstance(self.post_proc, postproc_defs.MultichannelToRGB):
-            xml = self.info.raw["Description"]
-            try:
-                root = ElementTree.fromstring(xml)
-            except ElementTree.ParseError:
-                return
-            color_info = root.find(".//ScanColorTable")
-            if color_info is not None:
-                color_dict = {
-                    k.text.split("_")[0]: v.text
-                    for k, v in zip(
-                        color_info.iterfind("ScanColorTable-k"),
-                        color_info.iterfind("ScanColorTable-v"),
-                    )
-                }
-                # values will be either a string of 3 ints e.g 155, 128, 0, or
-                # a color name e.g Lime. Convert them all to RGB tuples.
-                for key, value in color_dict.items():
-                    if value is None:
-                        continue
-                    if "," in value:
-                        color_dict[key] = tuple(int(x) / 255 for x in value.split(","))
-                    else:
-                        color_dict[key] = mcolors.to_rgb(value)
+        if not isinstance(self.post_proc, postproc_defs.MultichannelToRGB):
+            return
+
+        xml = self.info.raw["Description"]
+        try:
+            root = ElementTree.fromstring(xml)
+        except ElementTree.ParseError:
+            return
+
+        # Try multiple formats
+        for parser in (
+            self._parse_scancolortable,
+            self._parse_filtercolor_metadata,
+            self._parse_ome_metadata_mapping,
+        ):
+            color_dict = parser(root)
+            if color_dict:
                 self.post_proc.color_dict = color_dict
                 return
 
-            # try alternate metadata format
-            # Build a map from filter pair string -> color label or RGB string
-            # from the <FilterColors> section
-            filter_colors = {}
-            filter_colors_section = root.find(".//FilterColors")
-            if filter_colors_section is not None:
-                keys = filter_colors_section.findall(".//FilterColors-k")
-                vals = filter_colors_section.findall(".//FilterColors-v")
-                for k, v in zip(keys, vals):
-                    filter_colors[k.text] = v.text
+    def _parse_scancolortable(
+        self, root: ElementTree
+    ) -> dict[str, tuple[float, float, float]] | None:
+        color_info = root.find(".//ScanColorTable")
+        if color_info is None:
+            return None
 
-            # Helper function to convert color strings like "Lime" or "255, 128, 0" into (R,G,B)
-            def color_string_to_rgb(s):
-                if "," in s:
-                    return tuple(int(x.strip()) / 255 for x in s.split(","))
-                return mcolors.to_rgb(s)
+        color_dict = {
+            k.text.split("_")[0]: v.text
+            for k, v in zip(
+                color_info.iterfind("ScanColorTable-k"),
+                color_info.iterfind("ScanColorTable-v"),
+            )
+        }
+        # values will be either a string of 3 ints e.g 155, 128, 0, or
+        # a color name e.g Lime. Convert them all to RGB tuples.
+        for key, value in color_dict.items():
+            if value is None:
+                continue
+            if "," in value:
+                color_dict[key] = tuple(int(x) / 255 for x in value.split(","))
+            else:
+                color_dict[key] = mcolors.to_rgb(value)
 
-            # 2) For each <ScanBands-i>, find the channel's name and figure out
-            #    which filter pair it uses, then match that to a color.
-            channel_dict = {}
+        return color_dict
 
-            for scan_band in root.findall(".//ScanBands-i"):
-                # Inside a <ScanBands-i> there is a <Bands-i> with a <Name> tag
-                bands_i = scan_band.find(".//Bands-i")
-                if bands_i is not None:
-                    band_name_element = bands_i.find("Name")
-                    if band_name_element is not None:
-                        channel_name = band_name_element.text.strip()
+    def _parse_filtercolor_metadata(
+        self, root: ElementTree
+    ) -> dict[str, tuple[float, float, float]] | None:
+        # try alternate metadata format
+        # Build a map from filter pair string -> color label or RGB string
+        # from the <FilterColors> section
+        filter_colors = {}
+        filter_colors_section = root.find(".//FilterColors")
+        if filter_colors_section is None:
+            return None
 
-                        # Grab the filter pair manufacturer info
-                        filter_pair = scan_band.find(".//FilterPair")
-                        if filter_pair is not None:
-                            emission_part = filter_pair.find(
-                                ".//EmissionFilter/FixedFilter/PartNumber"
-                            )
-                            excitation_part = filter_pair.find(
-                                ".//ExcitationFilter/FixedFilter/PartNumber"
-                            )
-                            if (
-                                emission_part is not None
-                                and excitation_part is not None
-                            ):
-                                matching_rgb = (1.0, 1.0, 1.0)  # default white
-                                for fc_key, fc_val in filter_colors.items():
-                                    # if both part numbers appear in the FilterColors-k string, assume it's the match
-                                    if (
-                                        emission_part.text in fc_key
-                                        and excitation_part.text in fc_key
-                                    ):
-                                        matching_rgb = color_string_to_rgb(fc_val)
-                                        break
+        keys = filter_colors_section.findall(".//FilterColors-k")
+        vals = filter_colors_section.findall(".//FilterColors-v")
+        for k, v in zip(keys, vals):
+            filter_colors[k.text] = v.text
 
-                                channel_dict[channel_name] = matching_rgb
+        # Helper function to convert color strings like "Lime" or
+        # "255, 128, 0" into (R,G,B)
+        def color_string_to_rgb(s: str) -> tuple[float, float, float]:
+            if "," in s:
+                return tuple(int(x.strip()) / 255 for x in s.split(","))
+            return mcolors.to_rgb(s)
 
-            if len(channel_dict) > 0:
-                self.post_proc.color_dict = channel_dict
+        # 2) For each <ScanBands-i>, find the channel's name and figure out
+        #    which filter pair it uses, then match that to a color.
+        channel_dict = {}
+        for scan_band in root.findall(".//ScanBands-i"):
+            # Inside a <ScanBands-i> there is a <Bands-i> with a <Name> tag
+            bands_i = scan_band.find(".//Bands-i")
+            if bands_i is not None:
+                band_name_element = bands_i.find("Name")
+                if band_name_element is not None:
+                    channel_name = band_name_element.text.strip()
+
+                    # Grab the filter pair manufacturer info
+                    filter_pair = scan_band.find(".//FilterPair")
+                    if filter_pair is not None:
+                        emission_part = filter_pair.find(
+                            ".//EmissionFilter/FixedFilter/PartNumber"
+                        )
+                        excitation_part = filter_pair.find(
+                            ".//ExcitationFilter/FixedFilter/PartNumber"
+                        )
+                        if emission_part is not None and excitation_part is not None:
+                            matching_rgb = (1.0, 1.0, 1.0)  # default white
+                            for fc_key, fc_val in filter_colors.items():
+                                # if both part numbers appear in the FilterColors-k
+                                # string, assume it's the match
+                                if (
+                                    emission_part.text in fc_key
+                                    and excitation_part.text in fc_key
+                                ):
+                                    matching_rgb = color_string_to_rgb(fc_val)
+                                    break
+
+                            channel_dict[channel_name] = matching_rgb
+
+        return channel_dict if channel_dict else None
+
+    def _parse_ome_metadata_mapping(
+        self, root: ElementTree
+    ) -> dict[str, tuple[float, float, float]] | None:
+        # 3) Try OME/Lunaphore format e.g. for COMET
+        ns = {}
+        if root.tag.startswith("{"):
+            ns_uri = root.tag.split("}")[0].strip("{")
+            ns = {"ns": ns_uri}
+
+        dye_mapping = {}
+        for annotation in root.findall(
+            ".//ns:StructuredAnnotations/ns:XMLAnnotation", ns
+        ):
+            value_elem = annotation.find("ns:Value", ns)
+            if value_elem is not None:
+                for chan_priv in value_elem.findall(".//ns:ChannelPriv", ns):
+                    chan_id = chan_priv.attrib.get("ID")
+                    dye = chan_priv.attrib.get("FluorescenceChannel")
+                    if chan_id and dye:
+                        dye_mapping[chan_id] = dye
+
+        channel_data = []
+        for pixels in root.findall(".//ns:Pixels", ns):
+            for channel in pixels.findall("ns:Channel", ns):
+                chan_id = channel.attrib.get("ID")
+                name = channel.attrib.get("Name")
+                color = channel.attrib.get("Color")
+                if chan_id and name and color:
+                    try:
+                        color_int = int(color)
+                        if color_int < 0:
+                            color_int += 1 << 32
+                        r = (color_int >> 16) & 0xFF
+                        g = (color_int >> 8) & 0xFF
+                        b = color_int & 0xFF
+                        rgb = (r / 255, g / 255, b / 255)
+                    except ValueError:
+                        rgb = None
+
+                    dye = dye_mapping.get(chan_id, "Unknown")
+                    label = f"{chan_id}: {name} ({dye})"
+                    channel_data.append(
+                        {
+                            "id": chan_id,
+                            "name": name,
+                            "dye": dye,
+                            "rgb": rgb,
+                            "label": label,
+                        }
+                    )
+
+        color_dict = {}
+        key_counts = defaultdict(int)
+        for c_data in channel_data:
+            chan_id = c_data["id"]
+            name = c_data["name"]
+            dye = c_data["dye"]
+            rgb = c_data["rgb"]
+            dye = dye_mapping.get(chan_id)
+            base_key = f"{name} ({dye})" if dye else name
+
+            # Check for duplicates
+            count = key_counts[base_key]
+            key = base_key if count == 0 else f"{base_key} [{count + 1}]"
+            color_dict[key] = rgb
+            key_counts[base_key] += 1
+
+        return color_dict if color_dict else None
 
     def _get_ome_xml(self: TIFFWSIReader) -> ElementTree.Element:
         """Parse OME-XML from the description of the first IFD (page).
