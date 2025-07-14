@@ -33,8 +33,7 @@ def fetch_pretrained_weights(
             Refer to `::py::meth:get_pretrained_model` for all supported
             model names.
         save_path (str | Path):
-            Path to save the weight of the
-          corresponding `model_name`.
+            Path to the directory in which the pretrained weight will be cached.
         overwrite (bool):
             Overwrite existing downloaded weights (force downloading).
 
@@ -60,7 +59,7 @@ def fetch_pretrained_weights(
     return hf_hub_download(
         repo_id="TIACentre/TIAToolbox_pretrained_weights",
         filename=file_name,
-        cache_dir=cache_dir,
+        local_dir=cache_dir,
         force_download=overwrite,
     )
 

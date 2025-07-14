@@ -33,7 +33,8 @@ def _get_architecture(
             Name of the architecture (e.g. 'resnet50', 'alexnet').
         weights (str or WeightsEnum):
             Pretrained torchvision model weights to use (get_model_weights).
-            Defaults to "DEFAULT".
+            Defaults is None to avoid downloading ImageNet weights.
+            To initiate the models with ImageNet weights, use "DEFAULT".
         **kwargs (dict):
             Key-word arguments.
 

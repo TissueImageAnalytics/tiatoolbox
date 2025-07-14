@@ -1618,21 +1618,25 @@ def test_from_multi_head_dat_type_dict(tmp_path: Path) -> None:
 
 def test_fetch_pretrained_weights(tmp_path: Path) -> None:
     """Test fetching pretrained weights for a model."""
-    file_path = tmp_path / "test_fetch_pretrained_weights.pth"
+    model_name = "mobilenet_v3_small-pcam"
+    file_path = tmp_path / f"{model_name}.pth"
     if file_path.exists():
         file_path.unlink()
 
-    fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=file_path)
+    print("tmp_path: ", tmp_path)
+    mosi = fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=tmp_path)
+    print("returned path: ", mosi)
+    print("desired path: ", file_path)
+    print(file_path.exists())
     assert file_path.exists()
     assert file_path.stat().st_size > 0
     file_path.unlink()
 
     with pytest.raises(ValueError, match="does not exist"):
-        fetch_pretrained_weights("abc", file_path)
+        fetch_pretrained_weights("abc", tmp_path)
 
     # Test save_path is str
-    file_path_str = str(file_path)
-    file_path = fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path_str)
+    file_path = fetch_pretrained_weights(model_name, str(tmp_path))
     assert Path(file_path).exists()
     assert Path(file_path).stat().st_size > 0
 
