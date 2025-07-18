@@ -50,16 +50,14 @@ def fetch_pretrained_weights(
 
     file_name = info["url"].split("/")[-1]
     if save_path is None:
-        cache_dir = rcParam["TIATOOLBOX_HOME"] / "models"
-    elif type(save_path) is str:
-        cache_dir = Path(save_path)
+        local_dir = rcParam["TIATOOLBOX_HOME"] / "models"
     else:
-        cache_dir = save_path
+        local_dir = Path(save_path)
 
     return hf_hub_download(
         repo_id="TIACentre/TIAToolbox_pretrained_weights",
         filename=file_name,
-        local_dir=cache_dir,
+        local_dir=local_dir,
         force_download=overwrite,
     )
 
