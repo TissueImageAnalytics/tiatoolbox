@@ -12,7 +12,7 @@ import torch
 import zarr
 
 from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.models.engine.semantic_segmentor_new import SemanticSegmentor
+from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
 
