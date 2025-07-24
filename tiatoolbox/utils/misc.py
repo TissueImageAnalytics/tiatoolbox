@@ -1383,7 +1383,7 @@ def dict_to_store_semantic_segmentor(
     annotations_list: list[Annotation] = []
 
     for type_class in layer_list:
-        layer = np.where(preds == type_class, 1, 0)
+        layer = np.where(preds[:] == type_class, 1, 0)
         contours, hierarchy = cv2.findContours(
             layer.astype("uint8"),
             cv2.RETR_CCOMP,

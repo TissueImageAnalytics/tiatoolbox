@@ -50,11 +50,11 @@ def smart_divide(
     estimated_memory = total_elements * 4 * 2  # float32 = 4 bytes, two arrays
 
     available_memory = psutil.virtual_memory().available
-    if estimated_memory < available_memory * safety_margin:  # pragma: no cover
+    if estimated_memory < available_memory * safety_margin:
         # Use full-array division
         merged_weights[merged_weights == 0] = 1
         merged_probabilities[:] = merged_probabilities[:] / merged_weights[:]
-    else:
+    else:  # pragma: no cover
         progress_bar = None
         tqdm = get_tqdm()
 
@@ -434,14 +434,10 @@ class SemanticSegmentor(PatchPredictor):
             )
 
         return_probabilities = kwargs.get("return_probabilities")
-        merged_resolution = self.ioconfig.output_resolutions[0]
 
         zarr_group = zarr.open(str(raw_predictions), mode="r+")
 
         # Calculate canvas parameters
-        wsi_reader = self.dataloader.dataset.reader
-
-        slide_dimensions = wsi_reader.slide_dimensions(**merged_resolution)
         max_location = np.max(self.output_locations, axis=0)
         merged_shape = (
             max_location[3],
@@ -485,20 +481,10 @@ class SemanticSegmentor(PatchPredictor):
             zarr_group["probabilities"],
         )
 
-        zarr_group["predictions"] = zarr_group["predictions"][
-            0 : slide_dimensions[0],
-            0 : slide_dimensions[1],
-        ]
-
         if not return_probabilities:
             del zarr_group["probabilities"]
             return raw_predictions
 
-        zarr_group["probabilities"] = zarr_group["probabilities"][
-            0 : slide_dimensions[0],
-            0 : slide_dimensions[1],
-            :,
-        ]
         return raw_predictions
 
     def save_predictions(
@@ -555,20 +541,29 @@ class SemanticSegmentor(PatchPredictor):
 
         save_paths = []
 
-        for i, predictions in enumerate(processed_predictions["predictions"]):
-            if isinstance(self.images[i], Path):
-                output_path = save_path / (self.images[i].stem + ".db")
-            else:
-                output_path = save_path / (str(i) + ".db")
+        if self.patch_mode:
+            for i, predictions in enumerate(processed_predictions["predictions"]):
+                if isinstance(self.images[i], Path):
+                    output_path = save_path / (self.images[i].stem + ".db")
+                else:
+                    output_path = save_path / (str(i) + ".db")
 
+                out_file = dict_to_store_semantic_segmentor(
+                    patch_output={"predictions": predictions},
+                    scale_factor=scale_factor,
+                    class_dict=class_dict,
+                    save_path=output_path,
+                )
+
+                save_paths.append(out_file)
+        else:
             out_file = dict_to_store_semantic_segmentor(
-                patch_output={"predictions": predictions},
+                patch_output=processed_predictions,
                 scale_factor=scale_factor,
                 class_dict=class_dict,
-                save_path=output_path,
+                save_path=processed_predictions_path.with_suffix(".db"),
             )
-
-            save_paths.append(out_file)
+            save_paths = out_file
 
         processed_predictions.pop("predictions")
 
@@ -582,7 +577,6 @@ class SemanticSegmentor(PatchPredictor):
                 f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
             )
             logger.info(msg)
-            save_paths.append(new_zarr_name)
 
         if processed_predictions_path and processed_predictions_path.exists():
             shutil.rmtree(processed_predictions_path)

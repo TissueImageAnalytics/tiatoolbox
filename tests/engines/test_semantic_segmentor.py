@@ -189,7 +189,7 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
     assert output[0] == tmp_path / "output1" / "0.db"
     assert output[1] == tmp_path / "output1" / "1.db"
 
-    assert output[2] == tmp_path / "output1.zarr"
+    assert (tmp_path / "output1.zarr").exists()
 
     _test_store_output_patch(output[0])
     _test_store_output_patch(output[1])
@@ -237,7 +237,7 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[wsi_with_artifacts], mode="r")
-    assert 0.48 < np.mean(output_["predictions"][:]) < 0.49
+    assert 0.38 < np.mean(output_["predictions"][:]) < 0.39
     assert "probabilities" not in output_
 
     # Return Probabilities is True
@@ -253,7 +253,7 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.27 < np.mean(output_["predictions"][:]) < 0.28
+    assert 0.16 < np.mean(output_["predictions"][:]) < 0.17
     assert 0.49 < np.mean(output_["probabilities"][:]) < 0.51
 
 
@@ -265,7 +265,7 @@ def test_wsi_segmentor_annotationstore(sample_svs: Path, tmp_path: Path) -> None
         verbose=False,
     )
     # Return Probabilities is False
-    _ = segmentor.run(
+    output = segmentor.run(
         images=[sample_svs],
         return_probabilities=False,
         return_labels=False,
@@ -273,4 +273,7 @@ def test_wsi_segmentor_annotationstore(sample_svs: Path, tmp_path: Path) -> None
         patch_mode=False,
         save_dir=tmp_path / "wsi_out_check",
         verbose=True,
+        output_type="annotationstore",
     )
+
+    assert output[sample_svs] == tmp_path / "wsi_out_check" / (sample_svs.stem + ".db")
