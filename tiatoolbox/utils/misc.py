@@ -24,8 +24,8 @@ from shapely.affinity import translate
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
+from tqdm import notebook as tqdm_notebook
 from tqdm import tqdm, trange
-from tqdm.notebook import tqdm_notebook
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
@@ -1792,7 +1792,7 @@ def write_to_zarr_in_cache_mode(
     return zarr_group
 
 
-def get_tqdm() -> tqdm_notebook.tqdm | tqdm.tqdm:
+def get_tqdm() -> type[tqdm_notebook | tqdm]:
     """Returns appropriate tqdm tqdm object."""
     if is_notebook():  # pragma: no cover
         return tqdm_notebook.tqdm
