@@ -140,6 +140,7 @@ def overlay_prediction_mask(
     Examples:
         >>> from tiatoolbox.utils.visualization import overlay_prediction_mask
         >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
         >>> # Generate a random example; replace with your own data
         >>> img = np.random.randint(0, 256, size=(256, 256, 3), dtype=np.uint8)
         >>> prediction = np.random.randint(0, 3, size=(256, 256), dtype=np.uint8)
@@ -158,6 +159,7 @@ def overlay_prediction_mask(
         ...     ax=None,
         ...     return_ax=True
         ... )
+        >>> plt.show()
 
     """
     # Validate inputs
@@ -348,6 +350,7 @@ def overlay_probability_map(
     Examples:
         >>> from tiatoolbox.utils.visualization import overlay_probability_map
         >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
         >>> # Generate a random example; replace with your own data
         >>> img = np.random.randint(0, 256, size=(256, 256, 3), dtype=np.uint8)
         >>> probability_map = np.random.rand(256, 256).astype(np.float32)
@@ -359,8 +362,9 @@ def overlay_probability_map(
         ...     colour_map="jet",
         ...     min_val=0.0,
         ...     ax=None,
-        ...     return_ax=False
+        ...     return_ax=True,
         ... )
+        >>> plt.show()
 
     """
     prediction = prediction.astype(np.float32)
@@ -510,6 +514,7 @@ def overlay_prediction_contours(
     Examples:
         >>> from tiatoolbox.utils.visualization import overlay_prediction_contours
         >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
         >>> # Generate a random example; replace with your own data
         >>> canvas = np.zeros((256, 256, 3), dtype=np.uint8)
         >>> inst_dict = {
@@ -537,6 +542,8 @@ def overlay_prediction_contours(
         ...     line_thickness=1,
         ...     draw_dot=True
         ... )
+        >>> plt.imshow(overlaid_canvas)
+        >>> plt.show()
 
     """
     overlay = np.copy(canvas)
