@@ -1794,6 +1794,6 @@ def write_to_zarr_in_cache_mode(
 
 def get_tqdm() -> tqdm_notebook.tqdm | tqdm.tqdm:
     """Returns appropriate tqdm tqdm object."""
-    if is_notebook():
+    if is_notebook():  # pragma: no cover
         return tqdm_notebook.tqdm
     return tqdm
