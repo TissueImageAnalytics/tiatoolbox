@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
+import psutil
 import torch
 import zarr
 from typing_extensions import Unpack
@@ -15,6 +16,7 @@ from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
+    get_tqdm,
 )
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
@@ -27,6 +29,58 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import Resolution
     from tiatoolbox.wsicore import WSIReader
+
+
+def smart_divide(
+    merged_probabilities: zarr.Array,
+    merged_weights: zarr.Array,
+    tile_size: int = 2048,
+    safety_margin: float = 0.5,
+    *,
+    verbose: bool = False,
+) -> zarr.Array:
+    """Use chunked division for Zarr if memory is low.
+
+    Divide merged_probabilities by merged_weights using full-array or chunked strategy
+    based on available system memory.
+
+    """
+    h, w, c = merged_probabilities.shape
+    total_elements = h * w * c
+    estimated_memory = total_elements * 4 * 2  # float32 = 4 bytes, two arrays
+
+    available_memory = psutil.virtual_memory().available
+    if estimated_memory < available_memory * safety_margin:  # pragma: no cover
+        # Use full-array division
+        merged_weights[merged_weights == 0] = 1
+        merged_probabilities[:] = merged_probabilities[:] / merged_weights[:]
+    else:
+        progress_bar = None
+        tqdm = get_tqdm()
+
+        if verbose:
+            progress_bar = tqdm(
+                total=len(range(0, h, tile_size)),
+                leave=False,
+                desc="Merging Patches",
+            )
+        # Use chunked division
+        for i in range(0, h, tile_size):
+            for j in range(0, w, tile_size):
+                i_end = min(i + tile_size, h)
+                j_end = min(j + tile_size, w)
+                prob_tile = merged_probabilities[i:i_end, j:j_end, :]
+                weight_tile = merged_weights[i:i_end, j:j_end, :]
+                weight_tile[weight_tile == 0] = 1
+                merged_probabilities[i:i_end, j:j_end, :] = prob_tile / weight_tile
+
+            if progress_bar:
+                progress_bar.update()
+
+        if progress_bar:
+            progress_bar.close()
+
+    return merged_probabilities
 
 
 class SemanticSegmentorRunParams(PredictorRunParams):
@@ -380,25 +434,20 @@ class SemanticSegmentor(PatchPredictor):
             )
 
         return_probabilities = kwargs.get("return_probabilities")
-        merged_resolution = self.ioconfig.highest_input_resolution
+        merged_resolution = self.ioconfig.output_resolutions[0]
 
         zarr_group = zarr.open(str(raw_predictions), mode="r+")
 
         # Calculate canvas parameters
         wsi_reader = self.dataloader.dataset.reader
-        ioconfig = self.ioconfig
-        in_out_ratio = np.array(ioconfig.patch_input_shape) / np.array(
-            ioconfig.patch_output_shape
-        )
-        padding_size = (
-            np.array(ioconfig.patch_input_shape)
-            - np.array(ioconfig.stride_shape) * 4 / in_out_ratio
-        )
+
         slide_dimensions = wsi_reader.slide_dimensions(**merged_resolution)
-        merged_shape = [
-            *slide_dimensions + padding_size.astype(int),
+        max_location = np.max(self.output_locations, axis=0)
+        merged_shape = (
+            max_location[3],
+            max_location[2],
             zarr_group["probabilities"].shape[3],
-        ]
+        )
 
         # create dataset for merged probabilities
         merged_probabilities = zarr_group.create_dataset(
@@ -407,9 +456,12 @@ class SemanticSegmentor(PatchPredictor):
             compressor=zarr_group["probabilities"].compressor,
         )
 
-        merged_weights = np.zeros_like(merged_probabilities)
+        merged_weights = zarr.zeros_like(merged_probabilities)
 
-        for idx, location in enumerate(self.output_locations):
+        tqdm = get_tqdm()
+        for idx, location in enumerate(
+            tqdm(self.output_locations, desc="Merging Patch Outputs")
+        ):
             start_x, start_y, end_x, end_y = location
             merged_probabilities[start_y:end_y, start_x:end_x, :] += zarr_group[
                 "probabilities"
@@ -418,7 +470,12 @@ class SemanticSegmentor(PatchPredictor):
 
         # Normalize
         merged_weights[merged_weights == 0] = 1
-        merged_probabilities[:] = merged_probabilities[:] / merged_weights[:]
+        merged_probabilities = smart_divide(
+            merged_probabilities,
+            merged_weights,
+            safety_margin=0.5,
+            verbose=self.verbose,
+        )
 
         # save merged probabilities as single output probabilities
         zarr_group["probabilities"] = merged_probabilities

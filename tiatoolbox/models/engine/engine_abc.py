@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import torch
-import tqdm
 import zarr
 from torch import nn
 from typing_extensions import Unpack
@@ -23,6 +22,7 @@ from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
     dict_to_zarr,
+    get_tqdm,
     write_to_zarr_in_cache_mode,
 )
 
@@ -539,14 +539,13 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         progress_bar = None
+        tqdm = get_tqdm()
 
         if self.verbose:
-            progress_bar = tqdm.tqdm(
+            progress_bar = tqdm(
                 total=len(dataloader),
-                leave=True,
-                ncols=80,
-                ascii=True,
-                position=0,
+                leave=self.patch_mode,
+                desc="Inferring patches",
             )
 
         keys = ["probabilities"]
@@ -1059,6 +1058,14 @@ class EngineABC(ABC):  # noqa: B024
         Input arguments are passed from :func:`EngineABC.run()`.
 
         """
+        progress_bar = None
+        tqdm = get_tqdm()
+
+        if self.verbose:
+            progress_bar = tqdm(
+                total=len(self.images),
+                desc="Processing WSIs",
+            )
         suffix = ".zarr"
         if output_type == "AnnotationStore":
             suffix = ".db"
@@ -1102,6 +1109,12 @@ class EngineABC(ABC):  # noqa: B024
             logger.removeFilter(duplicate_filter)
             msg = f"Output file saved at {out[image]}."
             logger.info(msg=msg)
+
+            if progress_bar:
+                progress_bar.update()
+
+        if progress_bar:
+            progress_bar.close()
 
         return out
 

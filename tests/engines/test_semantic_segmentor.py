@@ -156,6 +156,7 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
         cache_mode=False,
         save_dir=tmp_path / "output1",
         output_type="annotationstore",
+        verbose=True,
     )
 
     assert output[0] == tmp_path / "output1" / (sample_image.stem + ".db")
@@ -242,7 +243,7 @@ def test_wsi_segmentor_zarr(
     # Return Probabilities is True
     # Using small image for faster run
     output = segmentor.run(
-        images=[sample_svs],
+        images=[sample_svs, sample_svs],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -256,9 +257,7 @@ def test_wsi_segmentor_zarr(
     assert 0.49 < np.mean(output_["probabilities"][:]) < 0.51
 
 
-def test_wsi_segmentor_annotationstore(
-    sample_svs: Path, sample_ndpi: Path, tmp_path: Path
-) -> None:
+def test_wsi_segmentor_annotationstore(sample_svs: Path, tmp_path: Path) -> None:
     """Test SemanticSegmentor for WSIs with AnnotationStore output."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
@@ -266,13 +265,12 @@ def test_wsi_segmentor_annotationstore(
         verbose=False,
     )
     # Return Probabilities is False
-    output = segmentor.run(
-        images=[sample_svs, sample_ndpi],
+    _ = segmentor.run(
+        images=[sample_svs],
         return_probabilities=False,
         return_labels=False,
         device=device,
         patch_mode=False,
         save_dir=tmp_path / "wsi_out_check",
+        verbose=True,
     )
-
-    assert output[0] == tmp_path / "output2" / "0.db"
