@@ -24,10 +24,12 @@ from shapely.affinity import translate
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
-from tqdm import trange
+from tqdm import tqdm, trange
+from tqdm.notebook import tqdm_notebook
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.utils.env_detection import is_notebook
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -1788,3 +1790,10 @@ def write_to_zarr_in_cache_mode(
         zarr_group[key].append(value)
 
     return zarr_group
+
+
+def get_tqdm() -> tqdm_notebook.tqdm | tqdm.tqdm:
+    """Returns appropriate tqdm tqdm object."""
+    if is_notebook():
+        return tqdm_notebook.tqdm
+    return tqdm
