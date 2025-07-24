@@ -254,3 +254,25 @@ def test_wsi_segmentor_zarr(
     output_ = zarr.open(output[sample_svs], mode="r")
     assert 0.27 < np.mean(output_["predictions"][:]) < 0.28
     assert 0.49 < np.mean(output_["probabilities"][:]) < 0.51
+
+
+def test_wsi_segmentor_annotationstore(
+    sample_svs: Path, sample_ndpi: Path, tmp_path: Path
+) -> None:
+    """Test SemanticSegmentor for WSIs with AnnotationStore output."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=32,
+        verbose=False,
+    )
+    # Return Probabilities is False
+    output = segmentor.run(
+        images=[sample_svs, sample_ndpi],
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "wsi_out_check",
+    )
+
+    assert output[0] == tmp_path / "output2" / "0.db"
