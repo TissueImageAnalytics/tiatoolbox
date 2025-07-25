@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 
-from tiatoolbox.models import SemanticSegmentor, WSIStreamDataset
+from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
+
+from .semantic_segmentor import SemanticSegmentor
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
