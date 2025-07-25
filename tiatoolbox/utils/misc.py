@@ -1629,9 +1629,7 @@ def dict_to_zarr(
 
     """
     # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = (
-        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-    )
+    compressor = kwargs.get("compressor", numcodecs.Zstd(level=1))
 
     # ensure proper zarr extension
     save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
@@ -1684,9 +1682,7 @@ def wsi_batch_output_to_zarr_group(
 
     """
     # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = (
-        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-    )
+    compressor = kwargs.get("compressor", numcodecs.Zstd(level=1))
     chunks = kwargs.get("chunks", 10000)
 
     # case 1 - new zarr group
