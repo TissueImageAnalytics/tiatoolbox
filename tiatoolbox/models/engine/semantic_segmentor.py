@@ -450,6 +450,7 @@ class SemanticSegmentor(PatchPredictor):
             name="merged_probabilities",
             shape=merged_shape,
             compressor=zarr_group["probabilities"].compressor,
+            chunks=merged_shape,
         )
 
         merged_weights = zarr.zeros_like(merged_probabilities)

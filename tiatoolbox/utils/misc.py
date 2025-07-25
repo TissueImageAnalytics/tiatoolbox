@@ -1644,6 +1644,7 @@ def dict_to_zarr(
             data=value,
             compression=compressor,
             shape=array.shape,
+            chunks=array.shape,
         )
 
     return save_path
@@ -1683,7 +1684,6 @@ def wsi_batch_output_to_zarr_group(
     """
     # Default values for Compressor and Chunks set if not received from kwargs.
     compressor = kwargs.get("compressor", numcodecs.Zstd(level=1))
-    chunks = kwargs.get("chunks", 10000)
 
     # case 1 - new zarr group
     if not wsi_batch_zarr_group:
@@ -1695,7 +1695,7 @@ def wsi_batch_output_to_zarr_group(
         probabilities_zarr = wsi_batch_zarr_group.create_dataset(
             name="probabilities",
             shape=batch_output_probabilities.shape,
-            chunks=chunks,
+            chunks=batch_output_probabilities.shape,
             compressor=compressor,
         )
         probabilities_zarr[:] = batch_output_probabilities
@@ -1703,7 +1703,7 @@ def wsi_batch_output_to_zarr_group(
         predictions_zarr = wsi_batch_zarr_group.create_dataset(
             name="predictions",
             shape=batch_output_predictions.shape,
-            chunks=chunks,
+            chunks=batch_output_predictions.shape,
             compressor=compressor,
         )
         predictions_zarr[:] = batch_output_predictions
@@ -1712,7 +1712,7 @@ def wsi_batch_output_to_zarr_group(
             coordinates_zarr = wsi_batch_zarr_group.create_dataset(
                 name="coordinates",
                 shape=batch_output_coordinates.shape,
-                chunks=chunks,
+                chunks=batch_output_coordinates.shape,
                 compressor=compressor,
             )
             coordinates_zarr[:] = batch_output_coordinates
@@ -1721,7 +1721,7 @@ def wsi_batch_output_to_zarr_group(
             labels_zarr = wsi_batch_zarr_group.create_dataset(
                 name="labels",
                 shape=batch_output_label.shape,
-                chunks=chunks,
+                chunks=batch_output_label.shape,
                 compressor=compressor,
             )
             labels_zarr[:] = batch_output_label
@@ -1776,6 +1776,7 @@ def write_to_zarr_in_cache_mode(
                 name=key,
                 shape=value.shape,
                 compressor=compressor,
+                chunks=value.shape,
             )
             zarr_dataset[:] = value
 

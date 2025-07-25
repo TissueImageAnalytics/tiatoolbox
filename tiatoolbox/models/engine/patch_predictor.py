@@ -374,6 +374,7 @@ class PatchPredictor(EngineABC):
                 name="predictions",
                 shape=predictions.shape,
                 compressor=zarr_group["probabilities"].compressor,
+                chunks=predictions.shape,
             )
             zarr_dataset[:] = predictions
 
