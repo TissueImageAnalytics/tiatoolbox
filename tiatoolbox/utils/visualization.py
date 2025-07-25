@@ -56,6 +56,10 @@ def random_colors(num_colors: int, *, bright: bool) -> np.ndarray:
         np.ndarray:
             Array of (r, g, b) colors.
 
+    Examples:
+        >>> from tiatoolbox.utils.visualization import random_colors
+        >>> colors = random_colors(10, bright=True)
+
     """
     brightness = 1.0 if bright else 0.7
     hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
@@ -75,6 +79,15 @@ def colourise_image(img: np.ndarray, cmap: str = "viridis") -> np.ndarray:
 
     Returns:
         img(ndarray): An RGB image.
+
+    Examples:
+        >>> from tiatoolbox.utils.visualization import colourise_image
+        >>> import numpy as np
+        >>> # Generate a random example; replace with your own data
+        >>> img = np.random.rand(255, 255)
+        >>> # Example usage of colourise_image
+        >>> coloured_image = colourise_image(img, 'viridis')
+
     """
     if len(img.shape) == 2:  # noqa: PLR2004
         # Single channel, make into rgb with colormap.
@@ -123,6 +136,30 @@ def overlay_prediction_mask(
     Returns:
         If return_ax is True, return the matplotlib ax object. Else,
         return the overlay array.
+
+    Examples:
+        >>> from tiatoolbox.utils.visualization import overlay_prediction_mask
+        >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
+        >>> # Generate a random example; replace with your own data
+        >>> img = np.random.randint(0, 256, size=(256, 256, 3), dtype=np.uint8)
+        >>> prediction = np.random.randint(0, 3, size=(256, 256), dtype=np.uint8)
+        >>> label_info = {
+        ...     0: ("Background", (0, 0, 0)),
+        ...     1: ("Tumor", (255, 0, 0)),
+        ...     2: ("Stroma", (0, 255, 0))
+        ... }
+        >>> # Example usage of overlay_prediction_mask
+        >>> ax = overlay_prediction_mask(
+        ...     img=img,
+        ...     prediction=prediction,
+        ...     alpha=0.5,
+        ...     label_info=label_info,
+        ...     min_val=0.0,
+        ...     ax=None,
+        ...     return_ax=True
+        ... )
+        >>> plt.show()
 
     """
     # Validate inputs
@@ -310,6 +347,25 @@ def overlay_probability_map(
         If return_ax is True, return the matplotlib ax object. Else,
         return the overlay array.
 
+    Examples:
+        >>> from tiatoolbox.utils.visualization import overlay_probability_map
+        >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
+        >>> # Generate a random example; replace with your own data
+        >>> img = np.random.randint(0, 256, size=(256, 256, 3), dtype=np.uint8)
+        >>> probability_map = np.random.rand(256, 256).astype(np.float32)
+        >>> # Example usage of overlay_probability_map
+        >>> ax = overlay_probability_map(
+        ...     img=img,
+        ...     prediction=probability_map,
+        ...     alpha=0.35,
+        ...     colour_map="jet",
+        ...     min_val=0.0,
+        ...     ax=None,
+        ...     return_ax=True,
+        ... )
+        >>> plt.show()
+
     """
     prediction = prediction.astype(np.float32)
     img = _validate_overlay_probability_map(img, prediction, min_val)
@@ -455,6 +511,40 @@ def overlay_prediction_contours(
         :class:`numpy.ndarray`:
             The overlaid image.
 
+    Examples:
+        >>> from tiatoolbox.utils.visualization import overlay_prediction_contours
+        >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
+        >>> # Generate a random example; replace with your own data
+        >>> canvas = np.zeros((256, 256, 3), dtype=np.uint8)
+        >>> inst_dict = {
+        ...     1: {
+        ...         "type": 0,
+        ...         "contour": [[50, 50], [60, 45], [70, 50],
+        ...                     [70, 60], [60, 65], [50, 60]],
+        ...         "centroid": [60, 55]
+        ...         },
+        ...     2: {
+        ...         "type": 1,
+        ...         "contour": [[100, 100], [120, 100], [120, 120], [100, 120]],
+        ...         "centroid": [110, 110]
+        ...         }
+        ... }
+        >>> type_colours = {
+        ...     0: ("Type A", (0, 255, 0)),
+        ...     1: ("Type B", (0, 0, 255))
+        ... }
+        >>> # Example usage of overlay_prediction_contours
+        >>> overlaid_canvas = overlay_prediction_contours(
+        ...     canvas=canvas,
+        ...     inst_dict=inst_dict,
+        ...     type_colours=type_colours,
+        ...     line_thickness=1,
+        ...     draw_dot=True
+        ... )
+        >>> plt.imshow(overlaid_canvas)
+        >>> plt.show()
+
     """
     overlay = np.copy(canvas)
 
@@ -530,6 +620,28 @@ def plot_graph(
             Radius of each node.
         edge_size (int):
             Line width of the edge.
+
+    Examples:
+        >>> from tiatoolbox.utils.visualization import plot_graph
+        >>> import numpy as np
+        >>> # Generate a random example; replace with your own data
+        >>> canvas = np.zeros((256, 256, 3), dtype=np.uint8)
+        >>> num_nodes = 10
+        >>> nodes = np.random.randint(0, 255, size=(num_nodes, 2))
+        >>> num_edges = 15
+        >>> edges = np.random.randint(0, num_nodes, size=(num_edges, 2))
+        >>> node_colors = np.random.randint(0, 256, size=(num_nodes, 3))
+        >>> edge_colors = np.random.randint(0, 256, size=(num_edges, 3))
+        >>> # Example usage of overlay_prediction_contours
+        >>> overlaid_canvas = plot_graph(
+        ...     canvas=canvas,
+        ...     nodes=nodes,
+        ...     edges=edges,
+        ...     node_colors=node_colors,
+        ...     node_size=8,
+        ...     edge_colors=edge_colors,
+        ...     edge_size=3
+        ... )
 
     """
     if isinstance(node_colors, tuple):
