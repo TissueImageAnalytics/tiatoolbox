@@ -6,10 +6,13 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import dask
+import dask.array as da
 import numpy as np
 import psutil
 import torch
 import zarr
+from dask import compute
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -433,59 +436,109 @@ class SemanticSegmentor(PatchPredictor):
                 **kwargs,
             )
 
-        return_probabilities = kwargs.get("return_probabilities")
+        progress_bar = None
+        tqdm = get_tqdm()
 
-        zarr_group = zarr.open(str(raw_predictions), mode="r+")
+        if self.verbose:
+            progress_bar = tqdm(
+                total=len(self.output_locations),
+                leave=False,
+                desc="Merging Patch Outputs",
+            )
 
-        # Calculate canvas parameters
+        return_probabilities = kwargs.get("return_probabilities", False)
+        num_post_proc_workers = self.num_post_proc_workers
+
+        if num_post_proc_workers is not None and num_post_proc_workers > 0:
+            dask.config.set(scheduler="threads", num_workers=num_post_proc_workers)
+        else:
+            dask.config.set(scheduler="threads")
+
+        dask_patch_probabilities = da.from_zarr(
+            url=str(raw_predictions), component="probabilities"
+        )
+
+        # --- Calculate canvas parameters from Dask array and locations ---
         max_location = np.max(self.output_locations, axis=0)
         merged_shape = (
             max_location[3],
             max_location[2],
-            zarr_group["probabilities"].shape[3],
+            dask_patch_probabilities.shape[3],
         )
 
-        # create dataset for merged probabilities
-        merged_probabilities = zarr_group.create_dataset(
-            name="merged_probabilities",
+        # creating dask arrays for faster processing
+        merged_probabilities = da.zeros(
             shape=merged_shape,
-            compressor=zarr_group["probabilities"].compressor,
+            dtype=dask_patch_probabilities.dtype,
             chunks=merged_shape,
         )
 
-        merged_weights = zarr.zeros_like(merged_probabilities)
-
-        tqdm = get_tqdm()
-        for idx, location in enumerate(
-            tqdm(self.output_locations, desc="Merging Patch Outputs")
-        ):
-            start_x, start_y, end_x, end_y = location
-            merged_probabilities[start_y:end_y, start_x:end_x, :] += zarr_group[
-                "probabilities"
-            ][idx][0 : end_y - start_y, 0 : end_x - start_x, :]
-            merged_weights[start_y:end_y, start_x:end_x] += 1
-
-        # Normalize
-        merged_weights[merged_weights == 0] = 1
-        merged_probabilities = smart_divide(
-            merged_probabilities,
-            merged_weights,
-            safety_margin=0.5,
-            verbose=self.verbose,
+        merged_weights = da.zeros(
+            shape=merged_shape,
+            dtype=int,
+            chunks=merged_shape,
         )
+
+        for idx, location in enumerate(self.output_locations):
+            start_x, start_y, end_x, end_y = location
+            patch_probs = dask_patch_probabilities[
+                idx, 0 : end_y - start_y, 0 : end_x - start_x, :
+            ]
+            merged_probabilities[start_y:end_y, start_x:end_x, :] = (
+                merged_probabilities[start_y:end_y, start_x:end_x, :] + patch_probs
+            )
+            merged_weights[start_y:end_y, start_x:end_x] = (
+                merged_weights[start_y:end_y, start_x:end_x] + 1
+            )
+            if progress_bar:
+                progress_bar.update()
+
+        if progress_bar:
+            progress_bar.close()
+
+        # Normalize where weight > 1
+        final_probabilities_dask = da.where(
+            merged_weights > 1,
+            merged_probabilities / merged_weights,
+            merged_probabilities,
+        )
+
+        # Applying Post-Processing
+        final_predictions_dask = self.model.postproc_func(
+            final_probabilities_dask,
+        )
+
+        zarr_group = zarr.open_group(
+            str(raw_predictions),
+            mode="r+",
+        )  # Open in read/write mode
 
         # save merged probabilities as single output probabilities
-        zarr_group["probabilities"] = merged_probabilities
-        del zarr_group["merged_probabilities"]
+        logger.info("Saving raw predictions to array.")
 
-        zarr_group["predictions"] = self.model.postproc_func(
-            zarr_group["probabilities"],
+        write_predictions = da.to_zarr(
+            final_predictions_dask,
+            url=zarr_group.store,  # Use the underlying store object of the Zarr group
+            component="predictions",
+            compute=False,
         )
 
-        if not return_probabilities:
+        if return_probabilities:
+            write_probabilities = da.to_zarr(
+                final_probabilities_dask,
+                url=zarr_group.store,
+                component="merged_probabilities",
+                compute=False,
+            )
+            compute(write_probabilities, write_predictions)
             del zarr_group["probabilities"]
+            zarr.storage.rename(
+                zarr_group.store, "merged_probabilities", "probabilities"
+            )
             return raw_predictions
 
+        write_predictions.compute()
+        del zarr_group["probabilities"]
         return raw_predictions
 
     def save_predictions(
@@ -524,6 +577,8 @@ class SemanticSegmentor(PatchPredictor):
             return super().save_predictions(
                 processed_predictions, output_type, save_dir, **kwargs
             )
+
+        logger.info("Saving predictions as AnnotationStore.")
 
         save_path = Path(kwargs.get("output_file", save_dir))
         return_probabilities = kwargs.get("return_probabilities", False)

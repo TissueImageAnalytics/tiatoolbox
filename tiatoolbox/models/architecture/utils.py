@@ -250,4 +250,4 @@ def argmax_last_axis(image: np.ndarray) -> np.ndarray:
             The post-processed image array.
 
     """
-    return np.argmax(image, axis=-1)
+    return image.argmax(axis=-1)
