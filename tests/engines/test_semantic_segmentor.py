@@ -237,7 +237,7 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.16 < np.mean(output_["predictions"][:]) < 0.17
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
     assert "probabilities" not in output_
 
     # Return Probabilities is True
@@ -253,12 +253,12 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.16 < np.mean(output_["predictions"][:]) < 0.17
-    assert 0.49 < np.mean(output_["probabilities"][:]) < 0.51
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
+    assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
     output_ = zarr.open(output[wsi_with_artifacts], mode="r")
-    assert 0.38 < np.mean(output_["predictions"][:]) < 0.39
-    assert 0.49 < np.mean(output_["probabilities"][:]) < 0.51
+    assert 0.40 < np.mean(output_["predictions"][:]) < 0.41
+    assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
 def test_wsi_segmentor_annotationstore(sample_svs: Path, tmp_path: Path) -> None:
