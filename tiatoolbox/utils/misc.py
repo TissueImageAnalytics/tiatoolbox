@@ -1452,7 +1452,7 @@ def dict_to_store_patch_predictions(
     patch_coords = np.array(patch_output.get("coordinates", []))
     if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
-    patch_coords = patch_coords.astype(float)
+
     labels = patch_output.get("labels", [])
     # get classes to consider
     if len(class_probs) == 0:
@@ -1473,11 +1473,11 @@ def dict_to_store_patch_predictions(
 
     # put patch predictions into a store
     annotations = patch_predictions_as_annotations(
-        preds,
+        preds.astype(float),
         keys,
         class_dict,
-        class_probs,
-        patch_coords,
+        class_probs.astype(float),
+        patch_coords.astype(float),
         classes_predicted,
         labels,
     )
