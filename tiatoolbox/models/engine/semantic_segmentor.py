@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import dask
 import dask.array as da
 import numpy as np
-import psutil
 import torch
 import zarr
 from dask import compute
@@ -32,58 +31,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import Resolution
     from tiatoolbox.wsicore import WSIReader
-
-
-def smart_divide(
-    merged_probabilities: zarr.Array,
-    merged_weights: zarr.Array,
-    tile_size: int = 2048,
-    safety_margin: float = 0.5,
-    *,
-    verbose: bool = False,
-) -> zarr.Array:
-    """Use chunked division for Zarr if memory is low.
-
-    Divide merged_probabilities by merged_weights using full-array or chunked strategy
-    based on available system memory.
-
-    """
-    h, w, c = merged_probabilities.shape
-    total_elements = h * w * c
-    estimated_memory = total_elements * 4 * 2  # float32 = 4 bytes, two arrays
-
-    available_memory = psutil.virtual_memory().available
-    if estimated_memory < available_memory * safety_margin:
-        # Use full-array division
-        merged_weights[merged_weights == 0] = 1
-        merged_probabilities[:] = merged_probabilities[:] / merged_weights[:]
-    else:  # pragma: no cover
-        progress_bar = None
-        tqdm = get_tqdm()
-
-        if verbose:
-            progress_bar = tqdm(
-                total=len(range(0, h, tile_size)),
-                leave=False,
-                desc="Merging Patches",
-            )
-        # Use chunked division
-        for i in range(0, h, tile_size):
-            for j in range(0, w, tile_size):
-                i_end = min(i + tile_size, h)
-                j_end = min(j + tile_size, w)
-                prob_tile = merged_probabilities[i:i_end, j:j_end, :]
-                weight_tile = merged_weights[i:i_end, j:j_end, :]
-                weight_tile[weight_tile == 0] = 1
-                merged_probabilities[i:i_end, j:j_end, :] = prob_tile / weight_tile
-
-            if progress_bar:
-                progress_bar.update()
-
-        if progress_bar:
-            progress_bar.close()
-
-    return merged_probabilities
 
 
 class SemanticSegmentorRunParams(PredictorRunParams):
