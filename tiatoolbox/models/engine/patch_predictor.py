@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING
 
-import zarr
 from typing_extensions import Unpack
 
 from .engine_abc import EngineABC, EngineABCRunParams
@@ -348,43 +346,6 @@ class PatchPredictor(EngineABC):
             verbose=verbose,
         )
 
-    def post_process_cache_mode(
-        self: PatchPredictor,
-        raw_predictions: Path,
-        **kwargs: Unpack[PredictorRunParams],
-    ) -> Path:
-        """Returns an array from raw predictions."""
-        return_probabilities = kwargs.get("return_probabilities")
-        zarr_group = zarr.open(str(raw_predictions), mode="r+")
-
-        num_iter = math.ceil(len(zarr_group["probabilities"]) / self.batch_size)
-        start = 0
-        for _ in range(num_iter):
-            # Probabilities for post-processing
-            probabilities = zarr_group["probabilities"][start : start + self.batch_size]
-            start = start + self.batch_size
-            predictions = self.model.postproc_func(
-                probabilities,
-            )
-            if "predictions" in zarr_group:
-                zarr_group["predictions"].append(predictions)
-                continue
-
-            zarr_dataset = zarr_group.create_dataset(
-                name="predictions",
-                shape=predictions.shape,
-                compressor=zarr_group["probabilities"].compressor,
-                chunks=predictions.shape,
-            )
-            zarr_dataset[:] = predictions
-
-        if return_probabilities is not False:
-            return raw_predictions
-
-        del zarr_group["probabilities"]
-
-        return raw_predictions
-
     def post_process_patches(
         self: PatchPredictor,
         raw_predictions: dict | Path,
@@ -410,22 +371,13 @@ class PatchPredictor(EngineABC):
                 saved zarr file if `cache_mode` is True.
 
         """
-        return_probabilities = kwargs.get("return_probabilities")
-        if self.cache_mode:
-            return self.post_process_cache_mode(raw_predictions, **kwargs)
+        _ = kwargs.pop("return_labels")
 
         probabilities = raw_predictions.get("probabilities")
 
-        predictions = self.model.postproc_func(
+        raw_predictions["predictions"] = self.model.postproc_func(
             probabilities,
         )
-
-        raw_predictions["predictions"] = predictions
-
-        if return_probabilities is not False:
-            return raw_predictions
-
-        del raw_predictions["probabilities"]
 
         return raw_predictions
 
@@ -440,7 +392,41 @@ class PatchPredictor(EngineABC):
         results e.g., using information from neighbouring patches.
 
         """
-        return self.post_process_cache_mode(raw_predictions, **kwargs)
+        return self.post_process_patches(raw_predictions, **kwargs)
+
+    def _update_run_params(
+        self: EngineABC,
+        images: list[os | Path | WSIReader] | np.ndarray,
+        masks: list[os | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        save_dir: os | Path | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+        output_type: str = "dict",
+        *,
+        overwrite: bool = False,
+        patch_mode: bool,
+        **kwargs: Unpack[PredictorRunParams],
+    ) -> Path | None:
+        """Updates runtime parameters.
+
+        Updates runtime parameters for an EngineABC for EngineABC.run().
+
+        """
+        return_probabilities = kwargs.get("return_probabilities")
+        if not return_probabilities:
+            self.drop_keys.append("probabilities")
+
+        return super()._update_run_params(
+            images=images,
+            masks=masks,
+            labels=labels,
+            save_dir=save_dir,
+            ioconfig=ioconfig,
+            overwrite=overwrite,
+            patch_mode=patch_mode,
+            output_type=output_type,
+            **kwargs,
+        )
 
     def run(
         self: PatchPredictor,

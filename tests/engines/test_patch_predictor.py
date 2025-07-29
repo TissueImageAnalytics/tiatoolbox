@@ -54,6 +54,7 @@ def _test_predictor_output(
         cache_mode=cache_mode,
         save_dir=save_dir,
         output_type=output_type,
+        return_probabilities=True,
     )
 
     if tmp_path is not None:
@@ -188,6 +189,7 @@ def test_patch_predictor_api(
     output = predictor.run(
         inputs,
         device="cpu",
+        return_probabilities=True,
     )
     assert sorted(output.keys()) == ["predictions", "probabilities"]
     assert len(output["probabilities"]) == 2
@@ -198,6 +200,7 @@ def test_patch_predictor_api(
         inputs,
         labels=["1", "a"],
         return_labels=True,
+        return_probabilities=True,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["probabilities"]) == len(output["labels"])
@@ -234,6 +237,7 @@ def test_patch_predictor_api(
         labels=[1, 2],
         return_labels=True,
         ioconfig=ioconfig,
+        return_probabilities=True,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["probabilities"]) == len(output["labels"])
@@ -274,6 +278,7 @@ def test_wsi_predictor_api(
         images=[mini_wsi_svs, mini_wsi_jpg],
         masks=[mini_wsi_msk, mini_wsi_msk],
         patch_mode=False,
+        return_probabilities=True,
         **_kwargs,
     )
 

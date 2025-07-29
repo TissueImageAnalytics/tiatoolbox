@@ -8,9 +8,12 @@ from abc import ABC
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
+import dask
+import dask.array as da
 import numpy as np
 import torch
 import zarr
+from dask import compute, delayed
 from torch import nn
 from typing_extensions import Unpack
 
@@ -21,9 +24,7 @@ from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
-    dict_to_zarr,
     get_tqdm,
-    write_to_zarr_in_cache_mode,
 )
 
 from .io_config import ModelIOConfigABC
@@ -281,6 +282,8 @@ class EngineABC(ABC):  # noqa: B024
             Number of workers to postprocess the results of the model.
         return_labels (bool):
             Whether to return the output labels. Default value is False.
+        drop_keys (list):
+            List of keys to drop from the model output.
         input_resolutions (list(dict(Units, Resolution))):
             List of Python dictionaries with units and resolution for each
             input head for model inference for reading the image. Supported
@@ -368,6 +371,7 @@ class EngineABC(ABC):  # noqa: B024
         self.stride_shape: IntPair | None = None
         self.verbose: bool = verbose
         self.dataloader: DataLoader | None = None
+        self.drop_keys: list = []
 
     @staticmethod
     def _initialize_model_ioconfig(
@@ -479,6 +483,7 @@ class EngineABC(ABC):  # noqa: B024
                 batch_size=self.batch_size,
                 drop_last=False,
                 shuffle=False,
+                persistent_workers=self.num_loader_workers > 0,
             )
 
         dataset = PatchDataset(
@@ -498,12 +503,19 @@ class EngineABC(ABC):  # noqa: B024
 
     @staticmethod
     def _update_model_output(raw_predictions: dict, raw_output: dict) -> dict:
-        """Helper function to append raw output during inference."""
+        """Helper function to append raw output during inference using Dask arrays."""
         for key, value in raw_output.items():
+            delayed_value = delayed(value)
+            dask_array = da.from_delayed(
+                delayed_value, shape=value.shape, dtype=value.dtype
+            )
+
             if raw_predictions[key] is None:
-                raw_predictions[key] = value
+                raw_predictions[key] = dask_array
             else:
-                raw_predictions[key] = np.append(raw_predictions[key], value, axis=0)
+                raw_predictions[key] = da.concatenate(
+                    [raw_predictions[key], dask_array], axis=0
+                )
 
         return raw_predictions
 
@@ -517,7 +529,6 @@ class EngineABC(ABC):  # noqa: B024
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
-        save_path: Path | None,
         *,
         return_coordinates: bool = False,
     ) -> dict | Path:
@@ -538,30 +549,21 @@ class EngineABC(ABC):  # noqa: B024
                 saved zarr file if `cache_mode` is True.
 
         """
-        progress_bar = None
         tqdm = get_tqdm()
 
-        if self.verbose:
-            progress_bar = tqdm(
-                total=len(dataloader),
-                leave=self.patch_mode,
-                desc="Inferring patches",
-            )
+        progress_bar = (
+            tqdm(total=len(dataloader), leave=self.patch_mode, desc="Inferring patches")
+            if self.verbose
+            else None
+        )
 
         keys = ["probabilities"]
-
         if self.return_labels:
             keys.append("labels")
-
         if return_coordinates:
             keys.append("coordinates")
 
         raw_predictions = dict.fromkeys(keys)
-
-        zarr_group = None
-
-        if self.cache_mode:
-            zarr_group = zarr.open(save_path, mode="w")
 
         for _, batch_data in enumerate(dataloader):
             batch_output = self.model.infer_batch(
@@ -576,18 +578,12 @@ class EngineABC(ABC):  # noqa: B024
                 if isinstance(batch_data["label"], torch.Tensor):
                     batch_output["labels"] = batch_data["label"].numpy()
                 else:
-                    batch_output["labels"] = batch_data["label"]
+                    batch_output["labels"] = np.array(batch_data["label"])
 
             raw_predictions = self._update_model_output(
                 raw_predictions=raw_predictions,
                 raw_output=batch_output,
             )
-
-            if self.cache_mode:
-                zarr_group = write_to_zarr_in_cache_mode(
-                    zarr_group=zarr_group, output_data_to_save=raw_predictions
-                )
-                raw_predictions = dict.fromkeys(keys)
 
             if progress_bar:
                 progress_bar.update()
@@ -595,7 +591,7 @@ class EngineABC(ABC):  # noqa: B024
         if progress_bar:
             progress_bar.close()
 
-        return save_path if self.cache_mode else raw_predictions
+        return raw_predictions
 
     def post_process_patches(
         self: EngineABC,
@@ -624,16 +620,13 @@ class EngineABC(ABC):  # noqa: B024
         """
         _ = kwargs.get("return_labels")  # Key values required for post-processing
 
-        if self.cache_mode:  # cache mode
-            _ = zarr.open(raw_predictions, mode="w")
-
         return raw_predictions
 
     def save_predictions(
         self: EngineABC,
         processed_predictions: dict | Path,
         output_type: str,
-        save_dir: Path | None = None,
+        save_path: Path | None = None,
         **kwargs: EngineABCRunParams,
     ) -> dict | AnnotationStore | Path:
         """Save model predictions.
@@ -641,7 +634,7 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             processed_predictions (dict | Path):
                 A dictionary or path to zarr with model prediction information.
-            save_dir (Path):
+            save_path (Path):
                 Optional output path to directory to save the patch dataset output to a
                 `.zarr` or `.db` file, provided `patch_mode` is True. If the
                 `patch_mode` is False then `save_dir` is required.
@@ -660,46 +653,70 @@ class EngineABC(ABC):  # noqa: B024
                 `.zarr` file depending on whether a save_dir Path is provided.
 
         """
-        if (
-            self.cache_mode or not save_dir
-        ) and output_type.lower() != "annotationstore":
+        if output_type.lower() == "dict":
+            keys_to_compute = [
+                k
+                for k in processed_predictions
+                if processed_predictions[k] is not None and k not in self.drop_keys
+            ]
+            values_to_compute = [processed_predictions[k] for k in keys_to_compute]
+
+            # Compute all at once
+            computed_values = compute(*values_to_compute)
+
+            # Assign computed values
+            for k, v in zip(keys_to_compute, computed_values):
+                processed_predictions[k] = v
+
+            # Remove keys in drop_keys
+            for k in self.drop_keys:
+                processed_predictions.pop(k, None)  # safely remove if exists
+
             return processed_predictions
 
-        save_path = Path(kwargs.get("output_file", save_dir / "output.db"))
+        zarr_group = zarr.open_group(save_path, mode="w")
+
+        write_tasks = []
+        for key, dask_array in processed_predictions.items():
+            if dask_array is not None and key not in self.drop_keys:
+                task = dask_array.to_zarr(
+                    url=zarr_group.create_dataset(
+                        name=key,
+                        shape=dask_array.shape,
+                        chunks=dask_array.chunksize,
+                        dtype=dask_array.dtype,
+                    ),
+                    compute=False,
+                )
+                write_tasks.append(task)
+
+        compute(*write_tasks)
+
+        if output_type.lower() == "zarr":
+            return save_path
 
         if output_type.lower() == "annotationstore":
+            zarr_path = save_path
+            save_path = Path(kwargs.get("output_file", save_path.parent / "output.db"))
+
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
-            processed_predictions_path: str | Path | None = None
-
-            # Need to add support for zarr conversion.
-            if self.cache_mode:
-                processed_predictions_path = processed_predictions
-                processed_predictions = zarr.open(processed_predictions, mode="r")
-
             out_file = dict_to_store_patch_predictions(
-                processed_predictions,
+                zarr_group,
                 scale_factor,
                 class_dict,
                 save_path,
             )
-            if processed_predictions_path is not None:
-                shutil.rmtree(processed_predictions_path)
+
+            zarr_group.close()
+            shutil.rmtree(zarr_path)
 
             return out_file
-
-        return (
-            dict_to_zarr(
-                processed_predictions,
-                save_path,
-                **kwargs,
-            )
-            if isinstance(processed_predictions, dict)
-            else processed_predictions
-        )
+        msg = f"Unsupported output type: {output_type}"
+        raise TypeError(msg)
 
     def infer_wsi(
         self: EngineABC,
@@ -919,6 +936,14 @@ class EngineABC(ABC):  # noqa: B024
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
 
+        if self.num_loader_workers is not None and self.num_loader_workers > 0:
+            dask.config.set(scheduler="threads", num_workers=self.num_loader_workers)
+        else:
+            dask.config.set(scheduler="threads")
+
+        if not self.return_labels:
+            self.drop_keys.append("label")
+
         self.patch_mode = patch_mode
         if not self.patch_mode:
             self.cache_mode = True  # if input is WSI run using cache mode.
@@ -930,6 +955,23 @@ class EngineABC(ABC):  # noqa: B024
         if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
             msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
             raise TypeError(msg)
+
+        self.output_type = output_type
+        if self.cache_mode and output_type.lower() not in ["zarr", "annotationstore"]:
+            self.output_type = "zarr"
+            msg = "output_type has been updated to 'zarr' for cache_mode=True."
+            logger.info(msg)
+
+        if save_dir is not None and output_type.lower() not in [
+            "zarr",
+            "annotationstore",
+        ]:
+            self.output_type = "zarr"
+            msg = (
+                f"output_type has been updated to 'zarr' "
+                f"for saving the file to {save_dir}."
+            )
+            logger.info(msg)
 
         self.images = self._validate_images_masks(images=images)
 
@@ -963,7 +1005,7 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         save_path = None
-        if self.cache_mode:
+        if self.cache_mode or save_dir:
             output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
 
@@ -991,11 +1033,11 @@ class EngineABC(ABC):  # noqa: B024
         out = self.save_predictions(
             processed_predictions=processed_predictions,
             output_type=output_type,
-            save_dir=save_dir,
+            save_path=save_path,
             **kwargs,
         )
 
-        if save_dir:
+        if out is not None:
             msg = f"Output file saved at {out}."
             logger.info(msg=msg)
             return out
@@ -1103,7 +1145,7 @@ class EngineABC(ABC):  # noqa: B024
             out[image] = self.save_predictions(
                 processed_predictions=processed_predictions,
                 output_type=output_type,
-                save_dir=save_dir,
+                save_path=save_path[image],
                 **kwargs,
             )
             logger.removeFilter(duplicate_filter)
@@ -1220,7 +1262,7 @@ class EngineABC(ABC):  # noqa: B024
 
         if patch_mode:
             return self._run_patch_mode(
-                output_type=output_type,
+                output_type=self.output_type,
                 save_dir=save_dir,
                 **kwargs,
             )
@@ -1230,7 +1272,7 @@ class EngineABC(ABC):  # noqa: B024
         # pre-processing, post-processing and save_output
         # for WSIs separately.
         return self._run_wsi_mode(
-            output_type=output_type,
+            output_type=self.output_type,
             save_dir=save_dir,
             **kwargs,
         )
