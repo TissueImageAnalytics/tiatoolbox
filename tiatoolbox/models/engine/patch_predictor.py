@@ -371,7 +371,7 @@ class PatchPredictor(EngineABC):
                 saved zarr file if `cache_mode` is True.
 
         """
-        _ = kwargs.pop("return_labels")
+        _ = kwargs.get("return_probabilities")
 
         probabilities = raw_predictions.get("probabilities")
 

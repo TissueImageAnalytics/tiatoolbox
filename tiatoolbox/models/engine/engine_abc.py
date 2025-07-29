@@ -711,7 +711,6 @@ class EngineABC(ABC):  # noqa: B024
                 save_path,
             )
 
-            zarr_group.close()
             shutil.rmtree(zarr_path)
 
             return out_file
@@ -721,7 +720,6 @@ class EngineABC(ABC):  # noqa: B024
     def infer_wsi(
         self: EngineABC,
         dataloader: DataLoader,
-        save_path: Path,
         **kwargs: EngineABCRunParams,
     ) -> Path:
         """Model inference on a WSI.
@@ -745,7 +743,6 @@ class EngineABC(ABC):  # noqa: B024
         _ = kwargs.get("patch_mode", False)
         return self.infer_patches(
             dataloader=dataloader,
-            save_path=save_path,
             return_coordinates=True,
         )
 
@@ -1021,7 +1018,6 @@ class EngineABC(ABC):  # noqa: B024
         )
         raw_predictions = self.infer_patches(
             dataloader=self.dataloader,
-            save_path=save_path,
             return_coordinates=output_type == "annotationstore",
         )
         processed_predictions = self.post_process_patches(
@@ -1133,7 +1129,6 @@ class EngineABC(ABC):  # noqa: B024
 
             raw_predictions = self.infer_wsi(
                 dataloader=self.dataloader,
-                save_path=save_path[image],
                 **kwargs,
             )
             processed_predictions = self.post_process_wsi(
