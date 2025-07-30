@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-import shutil
 from abc import ABC
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
@@ -653,50 +652,48 @@ class EngineABC(ABC):  # noqa: B024
                 `.zarr` file depending on whether a save_dir Path is provided.
 
         """
-        if output_type.lower() == "dict":
-            keys_to_compute = [
-                k
-                for k in processed_predictions
-                if processed_predictions[k] is not None and k not in self.drop_keys
-            ]
-            values_to_compute = [processed_predictions[k] for k in keys_to_compute]
-
-            # Compute all at once
-            computed_values = compute(*values_to_compute)
-
-            # Assign computed values
-            for k, v in zip(keys_to_compute, computed_values):
-                processed_predictions[k] = v
-
-            # Remove keys in drop_keys
-            for k in self.drop_keys:
-                processed_predictions.pop(k, None)  # safely remove if exists
-
-            return processed_predictions
-
-        zarr_group = zarr.open_group(save_path, mode="w")
-
-        write_tasks = []
-        for key, dask_array in processed_predictions.items():
-            if dask_array is not None and key not in self.drop_keys:
-                task = dask_array.to_zarr(
-                    url=zarr_group.create_dataset(
-                        name=key,
-                        shape=dask_array.shape,
-                        chunks=dask_array.chunksize,
-                        dtype=dask_array.dtype,
-                    ),
-                    compute=False,
-                )
-                write_tasks.append(task)
-
-        compute(*write_tasks)
-
         if output_type.lower() == "zarr":
+            zarr_group = zarr.open_group(save_path, mode="w")
+
+            write_tasks = []
+            for key, dask_array in processed_predictions.items():
+                if dask_array is not None and key not in self.drop_keys:
+                    task = dask_array.to_zarr(
+                        url=zarr_group.create_dataset(
+                            name=key,
+                            shape=dask_array.shape,
+                            chunks=dask_array.chunksize,
+                            dtype=dask_array.dtype,
+                        ),
+                        compute=False,
+                    )
+                    write_tasks.append(task)
+
+            compute(*write_tasks)
+
             return save_path
 
+        keys_to_compute = [
+            k
+            for k in processed_predictions
+            if processed_predictions[k] is not None and k not in self.drop_keys
+        ]
+        values_to_compute = [processed_predictions[k] for k in keys_to_compute]
+
+        # Compute all at once
+        computed_values = compute(*values_to_compute)
+
+        # Assign computed values
+        for k, v in zip(keys_to_compute, computed_values):
+            processed_predictions[k] = v
+
+        # Remove keys in drop_keys
+        for k in self.drop_keys:
+            processed_predictions.pop(k, None)  # safely remove if exists
+        if output_type.lower() == "dict":
+            return processed_predictions
+
         if output_type.lower() == "annotationstore":
-            zarr_path = save_path
             save_path = Path(kwargs.get("output_file", save_path.parent / "output.db"))
 
             # scale_factor set from kwargs
@@ -704,16 +701,13 @@ class EngineABC(ABC):  # noqa: B024
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
-            out_file = dict_to_store_patch_predictions(
-                zarr_group,
+            return dict_to_store_patch_predictions(
+                processed_predictions,
                 scale_factor,
                 class_dict,
                 save_path,
             )
 
-            shutil.rmtree(zarr_path)
-
-            return out_file
         msg = f"Unsupported output type: {output_type}"
         raise TypeError(msg)
 
@@ -967,6 +961,7 @@ class EngineABC(ABC):  # noqa: B024
             msg = (
                 f"output_type has been updated to 'zarr' "
                 f"for saving the file to {save_dir}."
+                f"Remove `save_dir` input to return the output as a `dict`."
             )
             logger.info(msg)
 

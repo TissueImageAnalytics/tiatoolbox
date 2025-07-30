@@ -618,3 +618,11 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
                 stride_shape=(1, 1),
                 input_resolutions=_kwargs["input_resolutions"],
             )
+
+
+def test_save_predictions_incorrect_output_type() -> None:
+    """Engine should raise TypeError if incorrect output type is requested."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    with pytest.raises(TypeError, match=r".*Unsupported output type.* "):
+        eng.save_predictions({"predictions": np.zeros((20, 9))}, output_type="random")
