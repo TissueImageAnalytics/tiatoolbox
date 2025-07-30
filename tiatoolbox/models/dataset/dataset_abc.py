@@ -523,6 +523,10 @@ class WSIPatchDataset(PatchDatasetABC):
     def __getitem__(self: WSIPatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
         coords = self.inputs[idx]
+        output_locs = None
+        if hasattr(self, "outputs"):
+            output_locs = self.outputs[idx]
+
         # Read image patch from the whole-slide image
         patch = self.reader.read_bounds(
             coords,
@@ -534,6 +538,13 @@ class WSIPatchDataset(PatchDatasetABC):
 
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)
+
+        if output_locs is not None:
+            return {
+                "image": patch,
+                "coords": np.array(coords),
+                "output_locs": output_locs,
+            }
 
         return {"image": patch, "coords": np.array(coords)}
 

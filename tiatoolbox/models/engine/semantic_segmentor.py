@@ -24,11 +24,15 @@ from .patch_predictor import PatchPredictor, PredictorRunParams
 if TYPE_CHECKING:  # pragma: no cover
     import os
 
+    from torch.utils.data import DataLoader
+
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import Resolution
     from tiatoolbox.wsicore import WSIReader
+
+    from .engine_abc import EngineABC, EngineABCRunParams
 
 
 class SemanticSegmentorRunParams(PredictorRunParams):
@@ -364,6 +368,121 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode=patch_mode,
         )
 
+    def infer_wsi(
+        self: EngineABC,
+        dataloader: DataLoader,
+        **kwargs: EngineABCRunParams,
+    ) -> Path:
+        """Model inference on a WSI.
+
+        Args:
+            dataloader (DataLoader):
+                A torch dataloader to process WSIs.
+
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes. See
+                :class:`EngineRunParams` for accepted keyword arguments.
+
+        Returns:
+            save_path (Path):
+                Path to zarr file where intermediate output is saved.
+
+        """
+        _ = kwargs.get("return_probabilities")
+
+        tqdm = get_tqdm()
+
+        progress_bar = (
+            tqdm(total=len(dataloader), leave=self.patch_mode, desc="Inferring patches")
+            if self.verbose
+            else None
+        )
+
+        keys = ["coordinates"]
+
+        if self.return_labels:
+            keys.append("labels")
+
+        raw_predictions = dict.fromkeys(keys)
+
+        max_location = np.max(self.output_locations, axis=0)
+
+        out_ = self.model.infer_batch(
+            self.model,
+            torch.from_numpy(dataloader.dataset[0]["image"][None, :, :, :]),
+            device=self.device,
+        )
+
+        merged_shape = (
+            max_location[3],
+            max_location[2],
+            out_["probabilities"].shape[3],
+        )
+
+        # creating dask arrays for faster processing
+        merged_probabilities = da.zeros(
+            shape=merged_shape,
+            dtype=out_["probabilities"].dtype,
+            chunks=merged_shape,
+        )
+
+        merged_weights = da.zeros(
+            shape=merged_shape[:2],
+            dtype=int,
+            chunks=merged_shape[:2],
+        )
+
+        for _, batch_data in enumerate(dataloader):
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+
+            batch_output["coordinates"] = self._get_coordinates(batch_data)
+
+            if self.return_labels:  # be careful of `s`
+                if isinstance(batch_data["label"], torch.Tensor):
+                    batch_output["labels"] = batch_data["label"].numpy()
+                else:
+                    batch_output["labels"] = np.array(batch_data["label"])
+
+            output_locs = batch_data["output_locs"]
+
+            for idx, location in enumerate(output_locs.numpy()):
+                start_x, start_y, end_x, end_y = location
+                patch_probs = batch_output["probabilities"][
+                    idx, 0 : end_y - start_y, 0 : end_x - start_x, :
+                ]
+                merged_probabilities[start_y:end_y, start_x:end_x, :] = (
+                    merged_probabilities[start_y:end_y, start_x:end_x, :] + patch_probs
+                )
+                merged_weights[start_y:end_y, start_x:end_x] = (
+                    merged_weights[start_y:end_y, start_x:end_x] + 1
+                )
+
+            del batch_output["probabilities"]
+            raw_predictions = self._update_model_output(
+                raw_predictions=raw_predictions,
+                raw_output=batch_output,
+            )
+
+            if progress_bar:
+                progress_bar.update()
+
+        merged_weights = da.maximum(merged_weights, 1)
+        raw_predictions["probabilities"] = (
+            merged_probabilities / merged_weights[:, :, None]
+        )
+
+        if progress_bar:
+            progress_bar.close()
+
+        return raw_predictions
+
     def post_process_wsi(
         self: SemanticSegmentor,
         raw_predictions: Path,
@@ -376,15 +495,6 @@ class SemanticSegmentor(PatchPredictor):
 
         """
         _ = kwargs.get("return_probabilities")
-        progress_bar = None
-        tqdm = get_tqdm()
-
-        if self.verbose:
-            progress_bar = tqdm(
-                total=len(self.output_locations),
-                leave=False,
-                desc="Merging Patch Outputs",
-            )
 
         num_post_proc_workers = self.num_post_proc_workers
 
@@ -393,56 +503,9 @@ class SemanticSegmentor(PatchPredictor):
         else:
             dask.config.set(scheduler="threads")
 
-        dask_patch_probabilities = raw_predictions["probabilities"]
-
-        # --- Calculate canvas parameters from Dask array and locations ---
-        max_location = np.max(self.output_locations, axis=0)
-        merged_shape = (
-            max_location[3],
-            max_location[2],
-            dask_patch_probabilities.shape[3],
-        )
-
-        # creating dask arrays for faster processing
-        merged_probabilities = da.zeros(
-            shape=merged_shape,
-            dtype=dask_patch_probabilities.dtype,
-            chunks=merged_shape,
-        )
-
-        merged_weights = da.zeros(
-            shape=merged_shape,
-            dtype=int,
-            chunks=merged_shape,
-        )
-
-        for idx, location in enumerate(self.output_locations):
-            start_x, start_y, end_x, end_y = location
-            patch_probs = dask_patch_probabilities[
-                idx, 0 : end_y - start_y, 0 : end_x - start_x, :
-            ]
-            merged_probabilities[start_y:end_y, start_x:end_x, :] = (
-                merged_probabilities[start_y:end_y, start_x:end_x, :] + patch_probs
-            )
-            merged_weights[start_y:end_y, start_x:end_x] = (
-                merged_weights[start_y:end_y, start_x:end_x] + 1
-            )
-            if progress_bar:
-                progress_bar.update()
-
-        if progress_bar:
-            progress_bar.close()
-
-        # Normalize where weight > 1
-        final_probabilities_dask = da.where(
-            merged_weights > 1,
-            merged_probabilities / merged_weights,
-            merged_probabilities,
-        )
-
         # Applying Post-Processing
         raw_predictions["predictions"] = self.model.postproc_func(
-            final_probabilities_dask,
+            raw_predictions["probabilities"],
         )
 
         return raw_predictions

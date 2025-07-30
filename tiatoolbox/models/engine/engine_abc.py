@@ -13,6 +13,7 @@ import numpy as np
 import torch
 import zarr
 from dask import compute, delayed
+from dask.diagnostics import ProgressBar
 from torch import nn
 from typing_extensions import Unpack
 
@@ -669,7 +670,8 @@ class EngineABC(ABC):  # noqa: B024
                     )
                     write_tasks.append(task)
 
-            compute(*write_tasks)
+            with ProgressBar():
+                compute(*write_tasks)
 
             return save_path
 
