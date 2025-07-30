@@ -9,8 +9,6 @@ import dask
 import dask.array as da
 import numpy as np
 import torch
-import zarr
-from dask import compute
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -366,7 +364,7 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode=patch_mode,
         )
 
-    def post_process_cache_mode(
+    def post_process_wsi(
         self: SemanticSegmentor,
         raw_predictions: Path,
         **kwargs: Unpack[PredictorRunParams],
@@ -377,12 +375,7 @@ class SemanticSegmentor(PatchPredictor):
         patch_mode is False.
 
         """
-        if self.patch_mode:
-            return super().post_process_cache_mode(
-                raw_predictions=raw_predictions,
-                **kwargs,
-            )
-
+        _ = kwargs.get("return_probabilities")
         progress_bar = None
         tqdm = get_tqdm()
 
@@ -393,7 +386,6 @@ class SemanticSegmentor(PatchPredictor):
                 desc="Merging Patch Outputs",
             )
 
-        return_probabilities = kwargs.get("return_probabilities", False)
         num_post_proc_workers = self.num_post_proc_workers
 
         if num_post_proc_workers is not None and num_post_proc_workers > 0:
@@ -401,9 +393,7 @@ class SemanticSegmentor(PatchPredictor):
         else:
             dask.config.set(scheduler="threads")
 
-        dask_patch_probabilities = da.from_zarr(
-            url=str(raw_predictions), component="probabilities"
-        )
+        dask_patch_probabilities = raw_predictions["probabilities"]
 
         # --- Calculate canvas parameters from Dask array and locations ---
         max_location = np.max(self.output_locations, axis=0)
@@ -451,41 +441,10 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         # Applying Post-Processing
-        final_predictions_dask = self.model.postproc_func(
+        raw_predictions["predictions"] = self.model.postproc_func(
             final_probabilities_dask,
         )
 
-        zarr_group = zarr.open_group(
-            str(raw_predictions),
-            mode="r+",
-        )  # Open in read/write mode
-
-        # save merged probabilities as single output probabilities
-        logger.info("Saving raw predictions to array.")
-
-        write_predictions = da.to_zarr(
-            final_predictions_dask,
-            url=zarr_group.store,  # Use the underlying store object of the Zarr group
-            component="predictions",
-            compute=False,
-        )
-
-        if return_probabilities:
-            write_probabilities = da.to_zarr(
-                final_probabilities_dask,
-                url=zarr_group.store,
-                component="merged_probabilities",
-                compute=False,
-            )
-            compute(write_probabilities, write_predictions)
-            del zarr_group["probabilities"]
-            zarr.storage.rename(
-                zarr_group.store, "merged_probabilities", "probabilities"
-            )
-            return raw_predictions
-
-        write_predictions.compute()
-        del zarr_group["probabilities"]
         return raw_predictions
 
     def save_predictions(

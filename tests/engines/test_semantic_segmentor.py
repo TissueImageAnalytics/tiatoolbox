@@ -215,10 +215,12 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
 
 
 def test_wsi_segmentor_zarr(
-    remote_sample: Callable, sample_svs: Path, tmp_path: Path
+    remote_sample: Callable,
+    sample_svs: Path,
+    tmp_path: Path,
 ) -> None:
     """Test SemanticSegmentor for WSIs with zarr output."""
-    wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
+    wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
 
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
@@ -244,7 +246,7 @@ def test_wsi_segmentor_zarr(
     # Using small image for faster run
     segmentor.drop_keys = []
     output = segmentor.run(
-        images=[sample_svs, wsi_with_artifacts],
+        images=[sample_svs, wsi1_2k_2k_svs],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -257,8 +259,8 @@ def test_wsi_segmentor_zarr(
     assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
-    output_ = zarr.open(output[wsi_with_artifacts], mode="r")
-    assert 0.40 < np.mean(output_["predictions"][:]) < 0.44
+    output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
+    assert 0.24 < np.mean(output_["predictions"][:]) < 0.25
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
