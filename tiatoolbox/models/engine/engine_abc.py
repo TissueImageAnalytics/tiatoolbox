@@ -573,7 +573,8 @@ class EngineABC(ABC):  # noqa: B024
                 saved zarr file if `cache_mode` is True.
 
         """
-        tasks = []
+        raw_outputs = []
+        batch_size = [None] * len(dataloader)
 
         tqdm = get_tqdm()
 
@@ -583,7 +584,7 @@ class EngineABC(ABC):  # noqa: B024
             else None
         )
 
-        for _, batch_data in enumerate(dataloader):
+        for idx, batch_data in enumerate(dataloader):
             task = self.process_batch(
                 batch_data,
                 self.model,
@@ -591,7 +592,8 @@ class EngineABC(ABC):  # noqa: B024
                 return_labels=self.return_labels,
                 return_coordinates=return_coordinates,
             )
-            tasks.append(task)
+            raw_outputs.append(task)
+            batch_size[idx] = batch_data["image"].shape[0]
 
             if progress_bar:
                 progress_bar.update()
@@ -599,12 +601,17 @@ class EngineABC(ABC):  # noqa: B024
         if progress_bar:
             progress_bar.close()
 
-        raw_outputs = compute(*tasks)
+        sample = compute(raw_outputs[0])[0]
+        keys = sample.keys()
         raw_predictions = {}
 
-        for raw_output in raw_outputs:
-            for key, value in raw_output.items():
-                dask_array = da.from_array(value)
+        for idx, raw_output in enumerate(raw_outputs):
+            for key in keys:
+                dask_array = da.from_delayed(
+                    raw_output[key],
+                    shape=(batch_size[idx], *sample[key].shape[1:]),
+                    dtype=sample[key].dtype,
+                )
                 if key in raw_predictions:
                     raw_predictions[key] = da.concatenate(
                         [raw_predictions[key], dask_array], axis=0
@@ -612,7 +619,7 @@ class EngineABC(ABC):  # noqa: B024
                 else:
                     raw_predictions[key] = dask_array
 
-        return raw_predictions  # List of delayed objects
+        return raw_predictions  # List of delayed objects# List of delayed objects
 
     def post_process_patches(
         self: EngineABC,
