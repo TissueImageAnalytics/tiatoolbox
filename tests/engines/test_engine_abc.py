@@ -6,10 +6,11 @@ import copy
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn
+from typing import NoReturn
 
 import numpy as np
 import pytest
+import torch
 import torchvision.models as torch_models
 from typing_extensions import Unpack
 
@@ -26,8 +27,7 @@ from tiatoolbox.models.engine.engine_abc import (
 )
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
-if TYPE_CHECKING:
-    import torch.nn
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
 class TestEngineABC(EngineABC):
@@ -362,7 +362,7 @@ def test_engine_run_with_verbose() -> NoReturn:
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         labels=list(range(10)),
-        on_gpu=False,
+        device=device,
     )
 
     assert "probabilities" in out

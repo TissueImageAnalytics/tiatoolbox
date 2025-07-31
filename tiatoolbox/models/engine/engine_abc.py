@@ -526,6 +526,30 @@ class EngineABC(ABC):  # noqa: B024
             return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
         return batch_data["coords"].numpy()
 
+    @delayed
+    def process_batch(
+        self: EngineABC,
+        batch_data: dict,
+        model: ModelABC,
+        device: str,
+        *,
+        return_labels: bool,
+        return_coordinates: bool,
+    ) -> dict:
+        """Process a batch of images and masks and return a dataloader for inference."""
+        batch_output = model.infer_batch(model, batch_data["image"], device=device)
+
+        if return_coordinates:
+            batch_output["coordinates"] = self._get_coordinates(batch_data)
+
+        if return_labels:
+            if isinstance(batch_data["label"], torch.Tensor):
+                batch_output["labels"] = batch_data["label"].numpy()
+            else:
+                batch_output["labels"] = np.array(batch_data["label"])
+
+        return batch_output
+
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
@@ -549,6 +573,8 @@ class EngineABC(ABC):  # noqa: B024
                 saved zarr file if `cache_mode` is True.
 
         """
+        tasks = []
+
         tqdm = get_tqdm()
 
         progress_bar = (
@@ -557,33 +583,15 @@ class EngineABC(ABC):  # noqa: B024
             else None
         )
 
-        keys = ["probabilities"]
-        if self.return_labels:
-            keys.append("labels")
-        if return_coordinates:
-            keys.append("coordinates")
-
-        raw_predictions = dict.fromkeys(keys)
-
         for _, batch_data in enumerate(dataloader):
-            batch_output = self.model.infer_batch(
+            task = self.process_batch(
+                batch_data,
                 self.model,
-                batch_data["image"],
-                device=self.device,
+                self.device,
+                return_labels=self.return_labels,
+                return_coordinates=return_coordinates,
             )
-            if return_coordinates:
-                batch_output["coordinates"] = self._get_coordinates(batch_data)
-
-            if self.return_labels:  # be careful of `s`
-                if isinstance(batch_data["label"], torch.Tensor):
-                    batch_output["labels"] = batch_data["label"].numpy()
-                else:
-                    batch_output["labels"] = np.array(batch_data["label"])
-
-            raw_predictions = self._update_model_output(
-                raw_predictions=raw_predictions,
-                raw_output=batch_output,
-            )
+            tasks.append(task)
 
             if progress_bar:
                 progress_bar.update()
@@ -591,7 +599,20 @@ class EngineABC(ABC):  # noqa: B024
         if progress_bar:
             progress_bar.close()
 
-        return raw_predictions
+        raw_outputs = compute(*tasks)
+        raw_predictions = {}
+
+        for raw_output in raw_outputs:
+            for key, value in raw_output.items():
+                dask_array = da.from_array(value)
+                if key in raw_predictions:
+                    raw_predictions[key] = da.concatenate(
+                        [raw_predictions[key], dask_array], axis=0
+                    )
+                else:
+                    raw_predictions[key] = dask_array
+
+        return raw_predictions  # List of delayed objects
 
     def post_process_patches(
         self: EngineABC,
