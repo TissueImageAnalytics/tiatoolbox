@@ -111,6 +111,10 @@ class MultichannelToRGB:
         if image.dtype == np.uint16:
             image = (image / 256).astype(np.uint8)
 
+        if self.colors is None:
+            msg = "self.colors must be initialized before RGB conversion."
+            raise RuntimeError(msg)
+
         # Convert to RGB image
         rgb_image = (
             np.einsum(
