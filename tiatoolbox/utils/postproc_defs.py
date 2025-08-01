@@ -22,11 +22,11 @@ class MultichannelToRGB:
             provided, a set of distinct colors will be auto-generated.
 
         """
-        self.colors = None
+        self.colors: np.ndarray | None = None
         self.color_dict = color_dict
-        self.is_validated = False
-        self.channels = None
-        self.enhance = 1.0
+        self.is_validated: bool = False
+        self.channels: list[int] | None = None
+        self.enhance: float = 1.0
 
     def validate(self: MultichannelToRGB, n: int) -> None:
         """Validate the input color_dict on first read from image.
