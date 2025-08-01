@@ -49,6 +49,9 @@ class MultichannelToRGB:
             self.is_validated = True
             return
 
+        if self.channels is None:
+            self.channels = list(range(n_colors))
+
         if n_colors - 1 == n:
             self.colors = self.colors[:n]
             self.channels = [c for c in self.channels if c < n]
@@ -103,7 +106,7 @@ class MultichannelToRGB:
             self.validate(n)
 
         if self.channels is None:
-            self.channels = list(range(n))
+            self.channels = list(range(image.shape[2]))
 
         if image.dtype == np.uint16:
             image = (image / 256).astype(np.uint8)
