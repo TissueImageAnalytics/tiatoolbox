@@ -13,7 +13,7 @@ class MultichannelToRGB:
 
     def __init__(
         self: MultichannelToRGB,
-        color_dict: dict[str : tuple[float, float, float]] | None = None,
+        color_dict: dict[str, tuple[float, float, float]] | None = None,
     ) -> None:
         """Initialize the MultichannelToRGB converter.
 
@@ -40,6 +40,10 @@ class MultichannelToRGB:
             n (int): Number of channels
 
         """
+        if self.colors is None:
+            msg = "Colors must be initialized before validation."
+            raise ValueError(msg)
+
         n_colors = len(self.colors)
         if n_colors == n:
             self.is_validated = True
@@ -49,10 +53,11 @@ class MultichannelToRGB:
             self.colors = self.colors[:n]
             self.channels = [c for c in self.channels if c < n]
             self.is_validated = True
-            warnings.warn(
-                """Number of channels in image is one less than number of channels in
+            msg = """Number of channels in image is one less than number of channels in
                 dict. Assuming last channel is background autofluorescence and ignoring
-                it. If this is not the case please provide a manual color_dict.""",
+                it. If this is not the case please provide a manual color_dict."""
+            warnings.warn(
+                msg,
                 stacklevel=2,
             )
             return
@@ -97,6 +102,9 @@ class MultichannelToRGB:
         if not self.is_validated:
             self.validate(n)
 
+        if self.channels is None:
+            self.channels = list(range(n))
+
         if image.dtype == np.uint16:
             image = (image / 256).astype(np.uint8)
 
@@ -117,7 +125,7 @@ class MultichannelToRGB:
     def __setattr__(
         self: MultichannelToRGB,
         name: str,
-        value: dict[str, tuple[int, int, int]] | None,
+        value: dict[str, tuple[float, float, float]] | None,
     ) -> None:
         """Ensure that colors is updated if color_dict is updated."""
         if name == "color_dict" and value is not None:
