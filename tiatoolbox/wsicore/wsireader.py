@@ -466,7 +466,7 @@ class WSIReader:
         post_proc: str | callable | None = "auto",
         **kwargs: dict,
     ) -> WSIReader | None:
-        """Handle special cases for selecting the appropriate WSIReader based on file
+        """Handle special cases for selecting the appropriate WSIReader based on file 
         type and metadata.
 
         Args:
@@ -477,7 +477,7 @@ class WSIReader:
             post_proc (str | callable | None, optional): Post-processing method
             or identifier.
             **kwargs (dict): Additional keyword arguments for specific reader types.
-
+        
         Returns:
             WSIReader | None: An appropriate WSIReader instance if a match is found,
             otherwise None.
@@ -486,6 +486,7 @@ class WSIReader:
             FileNotSupportedError: If the file format is not supported for NGFF Zarr.
 
         """
+
         reader = None
         if is_dicom(input_path):
             reader = DICOMWSIReader(
