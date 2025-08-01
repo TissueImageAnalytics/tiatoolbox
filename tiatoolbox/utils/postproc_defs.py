@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import colorsys
 import warnings
-from typing import Any
 
 import numpy as np
 
@@ -115,7 +114,11 @@ class MultichannelToRGB:
         # Clip  to ensure in valid range and return
         return np.clip(rgb_image, 0, 255).astype(np.uint8)
 
-    def __setattr__(self: MultichannelToRGB, name: str, value: Any) -> None:
+    def __setattr__(
+        self: MultichannelToRGB,
+        name: str,
+        value: dict[str, tuple[int, int, int]] | None,
+    ) -> None:
         """Ensure that colors is updated if color_dict is updated."""
         if name == "color_dict" and value is not None:
             self.colors = np.array(list(value.values()), dtype=np.float32)
