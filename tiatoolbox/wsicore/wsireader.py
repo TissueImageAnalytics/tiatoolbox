@@ -405,6 +405,15 @@ class WSIReader:
 
     @staticmethod
     def _validate_input(input_img: str | Path | np.ndarray) -> None:
+        """Validate the input image type.
+
+        Args:
+            input_img (str | Path | np.ndarray): The input image, which
+            must be a path, string, numpy array, or WSIReader.
+
+        Raises:
+            TypeError: If the input is not one of the accepted types.
+        """
         if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
             msg = "Invalid input: Must be a WSIReader, numpy array, string or Path"
             raise TypeError(msg)
@@ -457,8 +466,27 @@ class WSIReader:
         post_proc: str | callable | None = "auto",
         **kwargs: dict,
     ) -> WSIReader | None:
-        reader = None
+        """Handle special cases for selecting the appropriate WSIReader based on file
+        type and metadata.
 
+        Args:
+            input_path (Path): Path to the input image file.
+            input_img (str | Path | np.ndarray): The input image or path.
+            mpp (tuple[Number, Number] | None, optional): Microns per pixel resolution.
+            power (Number | None, optional): Objective power.
+            post_proc (str | callable | None, optional): Post-processing method
+            or identifier.
+            **kwargs (dict): Additional keyword arguments for specific reader types.
+
+        Returns:
+            WSIReader | None: An appropriate WSIReader instance if a match is found,
+            otherwise None.
+
+        Raises:
+            FileNotSupportedError: If the file format is not supported for NGFF Zarr.
+
+        """
+        reader = None
         if is_dicom(input_path):
             reader = DICOMWSIReader(
                 input_path, mpp=mpp, power=power, post_proc=post_proc
@@ -3668,18 +3696,28 @@ class TIFFWSIReader(WSIReader):
 
         # Try multiple formats
         for parser in (
-            self._parse_scancolortable,
-            self._parse_filtercolor_metadata,
-            self._parse_ome_metadata_mapping,
+            TIFFWSIReader._parse_scancolortable,
+            TIFFWSIReader._parse_filtercolor_metadata,
+            TIFFWSIReader._parse_ome_metadata_mapping,
         ):
             color_dict = parser(root)
             if color_dict:
                 self.post_proc.color_dict = color_dict
                 return
 
+    @staticmethod
     def _parse_scancolortable(
-        self, root: ElementTree
+        root: ElementTree,
     ) -> dict[str, tuple[float, float, float]] | None:
+        """Parse ScanColorTable metadata from XML and convert color values to RGB.
+
+        Args:
+            root (ElementTree): The root of the parsed XML tree.
+
+        Returns:
+            dict[str, tuple[float, float, float]] | None: A mapping of channel
+            names to RGB tuples, or None if not found.
+        """
         color_info = root.find(".//ScanColorTable")
         if color_info is None:
             return None
@@ -3703,9 +3741,19 @@ class TIFFWSIReader(WSIReader):
 
         return color_dict
 
+    @staticmethod
     def _parse_filtercolor_metadata(
-        self, root: ElementTree
+        root: ElementTree,
     ) -> dict[str, tuple[float, float, float]] | None:
+        """Parse FilterColors metadata from XML and convert color values to RGB.
+
+        Args:
+            root (ElementTree): The root of the parsed XML tree.
+
+        Returns:
+            dict[str, tuple[float, float, float]] | None: A mapping of channel
+            names to RGB tuples, or None if not found.
+        """
         # try alternate metadata format
         # Build a map from filter pair string -> color label or RGB string
         # from the <FilterColors> section
@@ -3722,6 +3770,14 @@ class TIFFWSIReader(WSIReader):
         # Helper function to convert color strings like "Lime" or
         # "255, 128, 0" into (R,G,B)
         def color_string_to_rgb(s: str) -> tuple[float, float, float]:
+            """Convert a color string (e.g., 'Lime' or '255, 128, 0') to an RGB tuple.
+
+            Args:
+                s (str): The color string.
+
+            Returns:
+                tuple[float, float, float]: RGB values normalized to [0, 1].
+            """
             if "," in s:
                 return tuple(int(x.strip()) / 255 for x in s.split(","))
             return mcolors.to_rgb(s)
@@ -3762,9 +3818,19 @@ class TIFFWSIReader(WSIReader):
 
         return channel_dict if channel_dict else None
 
+    @staticmethod
     def _parse_ome_metadata_mapping(
-        self, root: ElementTree
+        root: ElementTree,
     ) -> dict[str, tuple[float, float, float]] | None:
+        """Parse OME metadata from the given XML root element.
+
+        Args:
+            root (ElementTree): The root of the parsed XML tree.
+
+        Returns:
+            dict[str, tuple[float, float, float]] | None: A mapping
+            of channel names to RGB tuples, or None if not found.
+        """
         # 3) Try OME/Lunaphore format e.g. for COMET
         ns = {}
         if root.tag.startswith("{"):
@@ -3783,6 +3849,23 @@ class TIFFWSIReader(WSIReader):
                     if chan_id and dye:
                         dye_mapping[chan_id] = dye
 
+        def _int_to_rgb(color_int: int) -> tuple[float, float, float]:
+            """Convert a color string (e.g., 'Lime' or '255, 128, 0') to an RGB tuple.
+
+            Args:
+                color_int (str): The color string to convert.
+
+            Returns:
+                tuple[float, float, float]: The corresponding RGB values normalized to
+                [0, 1].
+            """
+            if color_int < 0:
+                color_int += 1 << 32
+            r = (color_int >> 16) & 0xFF
+            g = (color_int >> 8) & 0xFF
+            b = color_int & 0xFF
+            return (r / 255, g / 255, b / 255)
+
         channel_data = []
         for pixels in root.findall(".//ns:Pixels", ns):
             for channel in pixels.findall("ns:Channel", ns):
@@ -3792,12 +3875,7 @@ class TIFFWSIReader(WSIReader):
                 if chan_id and name and color:
                     try:
                         color_int = int(color)
-                        if color_int < 0:
-                            color_int += 1 << 32
-                        r = (color_int >> 16) & 0xFF
-                        g = (color_int >> 8) & 0xFF
-                        b = color_int & 0xFF
-                        rgb = (r / 255, g / 255, b / 255)
+                        rgb = _int_to_rgb(color_int)
                     except ValueError:
                         rgb = None
 
