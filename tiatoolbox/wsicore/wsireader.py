@@ -3819,6 +3819,84 @@ class TIFFWSIReader(WSIReader):
         return channel_dict if channel_dict else None
 
     @staticmethod
+    def _get_namespace(root: ElementTree) -> dict:
+        if root.tag.startswith("{"):
+            ns_uri = root.tag.split("}")[0].strip("{")
+            return {"ns": ns_uri}
+        return {}
+
+    @staticmethod
+    def _extract_dye_mapping(root: ElementTree, ns: dict) -> dict:
+        dye_mapping = {}
+        for annotation in root.findall(
+            ".//ns:StructuredAnnotations/ns:XMLAnnotation", ns
+        ):
+            value_elem = annotation.find("ns:Value", ns)
+            if value_elem is not None:
+                for chan_priv in value_elem.findall(".//ns:ChannelPriv", ns):
+                    chan_id = chan_priv.attrib.get("ID")
+                    dye = chan_priv.attrib.get("FluorescenceChannel")
+                    if chan_id and dye:
+                        dye_mapping[chan_id] = dye
+        return dye_mapping
+
+    @staticmethod
+    def _int_to_rgb(color_int: int) -> tuple[float, float, float]:
+        if color_int < 0:
+            color_int += 1 << 32
+        r = (color_int >> 16) & 0xFF
+        g = (color_int >> 8) & 0xFF
+        b = color_int & 0xFF
+        return (r / 255, g / 255, b / 255)
+
+    @staticmethod
+    def _parse_channel_data(
+        root: ElementTree, ns: dict, dye_mapping: dict
+    ) -> list[dict]:
+        channel_data = []
+        for pixels in root.findall(".//ns:Pixels", ns):
+            for channel in pixels.findall("ns:Channel", ns):
+                chan_id = channel.attrib.get("ID")
+                name = channel.attrib.get("Name")
+                color = channel.attrib.get("Color")
+                if chan_id and name and color:
+                    try:
+                        color_int = int(color)
+                        rgb = TIFFWSIReader._int_to_rgb(color_int)
+                    except ValueError:
+                        rgb = None
+                    dye = dye_mapping.get(chan_id, "Unknown")
+                    label = f"{chan_id}: {name} ({dye})"
+                    channel_data.append(
+                        {
+                            "id": chan_id,
+                            "name": name,
+                            "dye": dye,
+                            "rgb": rgb,
+                            "label": label,
+                        }
+                    )
+        return channel_data
+
+    @staticmethod
+    def _build_color_dict(
+        channel_data: list[dict], dye_mapping: dict
+    ) -> dict[str, tuple[float, float, float]]:
+        color_dict = {}
+        key_counts = defaultdict(int)
+        for c_data in channel_data:
+            chan_id = c_data["id"]
+            name = c_data["name"]
+            dye = dye_mapping.get(chan_id)
+            rgb = c_data["rgb"]
+            base_key = f"{name} ({dye})" if dye else name
+            count = key_counts[base_key]
+            key = base_key if count == 0 else f"{base_key} [{count + 1}]"
+            color_dict[key] = rgb
+            key_counts[base_key] += 1
+        return color_dict
+
+    @staticmethod
     def _parse_ome_metadata_mapping(
         root: ElementTree,
     ) -> dict[str, tuple[float, float, float]] | None:
@@ -3832,81 +3910,10 @@ class TIFFWSIReader(WSIReader):
             of channel names to RGB tuples, or None if not found.
         """
         # 3) Try OME/Lunaphore format e.g. for COMET
-        ns = {}
-        if root.tag.startswith("{"):
-            ns_uri = root.tag.split("}")[0].strip("{")
-            ns = {"ns": ns_uri}
-
-        dye_mapping = {}
-        for annotation in root.findall(
-            ".//ns:StructuredAnnotations/ns:XMLAnnotation", ns
-        ):
-            value_elem = annotation.find("ns:Value", ns)
-            if value_elem is not None:
-                for chan_priv in value_elem.findall(".//ns:ChannelPriv", ns):
-                    chan_id = chan_priv.attrib.get("ID")
-                    dye = chan_priv.attrib.get("FluorescenceChannel")
-                    if chan_id and dye:
-                        dye_mapping[chan_id] = dye
-
-        def _int_to_rgb(color_int: int) -> tuple[float, float, float]:
-            """Convert a color string (e.g., 'Lime' or '255, 128, 0') to an RGB tuple.
-
-            Args:
-                color_int (str): The color string to convert.
-
-            Returns:
-                tuple[float, float, float]: The corresponding RGB values normalized to
-                [0, 1].
-            """
-            if color_int < 0:
-                color_int += 1 << 32
-            r = (color_int >> 16) & 0xFF
-            g = (color_int >> 8) & 0xFF
-            b = color_int & 0xFF
-            return (r / 255, g / 255, b / 255)
-
-        channel_data = []
-        for pixels in root.findall(".//ns:Pixels", ns):
-            for channel in pixels.findall("ns:Channel", ns):
-                chan_id = channel.attrib.get("ID")
-                name = channel.attrib.get("Name")
-                color = channel.attrib.get("Color")
-                if chan_id and name and color:
-                    try:
-                        color_int = int(color)
-                        rgb = _int_to_rgb(color_int)
-                    except ValueError:
-                        rgb = None
-
-                    dye = dye_mapping.get(chan_id, "Unknown")
-                    label = f"{chan_id}: {name} ({dye})"
-                    channel_data.append(
-                        {
-                            "id": chan_id,
-                            "name": name,
-                            "dye": dye,
-                            "rgb": rgb,
-                            "label": label,
-                        }
-                    )
-
-        color_dict = {}
-        key_counts = defaultdict(int)
-        for c_data in channel_data:
-            chan_id = c_data["id"]
-            name = c_data["name"]
-            dye = c_data["dye"]
-            rgb = c_data["rgb"]
-            dye = dye_mapping.get(chan_id)
-            base_key = f"{name} ({dye})" if dye else name
-
-            # Check for duplicates
-            count = key_counts[base_key]
-            key = base_key if count == 0 else f"{base_key} [{count + 1}]"
-            color_dict[key] = rgb
-            key_counts[base_key] += 1
-
+        ns = TIFFWSIReader._get_namespace(root)
+        dye_mapping = TIFFWSIReader._extract_dye_mapping(root, ns)
+        channel_data = TIFFWSIReader._parse_channel_data(root, ns, dye_mapping)
+        color_dict = TIFFWSIReader._build_color_dict(channel_data, dye_mapping)
         return color_dict if color_dict else None
 
     def _get_ome_xml(self: TIFFWSIReader) -> ElementTree.Element:
