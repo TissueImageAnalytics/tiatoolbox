@@ -465,7 +465,7 @@ class UNetModel(ModelABC):
             probs = centre_crop(probs, crop_shape)
             output = probs.permute(0, 2, 3, 1)  # to NHWC
 
-        return {"probabilities": output.cpu().numpy()}
+        return output.cpu().numpy()
 
     def postproc(self: UNetModel, image: np.ndarray) -> np.ndarray:
         """Define post-processing of this class of model.

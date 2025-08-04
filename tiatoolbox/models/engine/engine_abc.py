@@ -40,45 +40,38 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def prepare_engines_save_dir(
-    save_dir: os | Path | None,
+    save_dir: str | Path | None,
     *,
     patch_mode: bool,
     overwrite: bool = False,
 ) -> Path | None:
-    """Create a save directory.
-
-    If patch_mode is False and the save directory is not defined,
-    this function will raise an error.
-
-    If patch_mode is True and the save directory is defined it will
-    create save_dir otherwise returns None.
+    """Create or validate the save directory for engine outputs.
 
     Args:
-        save_dir (str or Path):
-            Path to output directory.
-        patch_mode(bool):
-            Whether to treat input image as a patch or WSI.
+        save_dir (str | Path | None):
+            Path to the output directory.
+        patch_mode (bool):
+            Whether the input is treated as patches.
         overwrite (bool):
-            Whether to overwrite the results. Default = False.
+            Whether to overwrite existing directory. Default is False.
 
     Returns:
-        :class:`Path`:
-            Path to output directory.
+        Path | None:
+            Path to the output directory if created or validated, else None.
 
     Raises:
         OSError:
-            If the save directory is not defined.
+            If patch_mode is False and save_dir is not provided.
 
     """
-    if patch_mode is True:
-        if save_dir is not None:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=overwrite)
+    if patch_mode is True and save_dir is not None:
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=overwrite)
         return save_dir
 
     if save_dir is None:
         msg = (
-            "Input WSIs detected but no save directory provided."
+            "Input WSIs detected but no save directory provided. "
             "Please provide a 'save_dir'."
         )
         raise OSError(msg)
@@ -86,8 +79,8 @@ def prepare_engines_save_dir(
     logger.info(
         "When providing multiple whole slide images, "
         "the outputs will be saved and the locations of outputs "
-        "will be returned to the calling function when `run()`"
-        "finishes successfully.",
+        "will be returned to the calling function when `run()` "
+        "finishes successfully."
     )
 
     save_dir = Path(save_dir)
