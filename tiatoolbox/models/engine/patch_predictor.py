@@ -348,7 +348,6 @@ class PatchPredictor(EngineABC):
             verbose=verbose,
         )
 
-    @delayed
     def post_process_patches(
         self: PatchPredictor,
         raw_predictions: dict | Path,
@@ -366,9 +365,13 @@ class PatchPredictor(EngineABC):
         Args:
             raw_predictions (dict | Path):
                 A dictionary or path to zarr with patch prediction information.
-            **kwargs (PredictorRunParams):
+            prediction_shape (tuple (int, ...)):
+                prediction shape.
+            prediction_dtype (tuple (int, ...)):
+                prediction dtype.
+            **kwargs (EngineABCRunParams):
                 Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`PredictorRunParams` for accepted keyword arguments.
+                :class:`EngineRunParams` for accepted keyword arguments.
 
         Returns:
             dict or Path:
@@ -399,6 +402,22 @@ class PatchPredictor(EngineABC):
 
         Takes the raw output from patch predictions and post-processes it to improve the
         results e.g., using information from neighbouring patches.
+
+        Args:
+            raw_predictions (dict | Path):
+                A dictionary or path to zarr with patch prediction information.
+            prediction_shape (tuple (int, ...)):
+                prediction shape.
+            prediction_dtype (tuple (int, ...)):
+                prediction dtype.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes. See
+                :class:`EngineRunParams` for accepted keyword arguments.
+
+        Returns:
+            dict or Path:
+                Returns patch based output after post-processing. Returns path to
+                saved zarr file if `cache_mode` is True.
 
         """
         return self.post_process_patches(

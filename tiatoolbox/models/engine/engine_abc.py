@@ -650,7 +650,7 @@ class EngineABC(ABC):  # noqa: B024
 
         return raw_predictions
 
-    def post_process_patches(
+    def post_process_patches(  # noqa: ARG002
         self: EngineABC,
         raw_predictions: dict | Path,
         prediction_shape: tuple[int, ...],
@@ -667,6 +667,10 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             raw_predictions (dict | Path):
                 A dictionary or path to zarr with patch prediction information.
+            prediction_shape (tuple (int, ...)):
+                prediction shape.
+            prediction_dtype (tuple (int, ...)):
+                prediction dtype.
             **kwargs (EngineABCRunParams):
                 Keyword Args to update setup_patch_dataset() method attributes. See
                 :class:`EngineRunParams` for accepted keyword arguments.
@@ -739,7 +743,7 @@ class EngineABC(ABC):  # noqa: B024
         computed_values = compute(*values_to_compute)
 
         # Assign computed values
-        processed_predictions = dict.fromkeys(keys_to_compute, computed_values)
+        processed_predictions = dict(zip(keys_to_compute, computed_values))
 
         if output_type.lower() == "dict":
             return processed_predictions
@@ -792,7 +796,7 @@ class EngineABC(ABC):  # noqa: B024
         )
 
     # This is not a static model for child classes.
-    def post_process_wsi(  # skipcq: PYL-R0201
+    def post_process_wsi(  # skipcq: PYL-R0201  # noqa: ARG002
         self: EngineABC,
         raw_predictions: dict | Path,
         prediction_shape: tuple[int, ...],
@@ -803,6 +807,22 @@ class EngineABC(ABC):  # noqa: B024
 
         Takes the raw output from patch predictions and post-processes it to improve the
         results e.g., using information from neighbouring patches.
+
+        Args:
+            raw_predictions (dict | Path):
+                A dictionary or path to zarr with patch prediction information.
+            prediction_shape (tuple (int, ...)):
+                prediction shape.
+            prediction_dtype (tuple (int, ...)):
+                prediction dtype.
+            **kwargs (EngineABCRunParams):
+                Keyword Args to update setup_patch_dataset() method attributes. See
+                :class:`EngineRunParams` for accepted keyword arguments.
+
+        Returns:
+            dict or Path:
+                Returns patch based output after post-processing. Returns path to
+                saved zarr file if `cache_mode` is True.
 
         """
         _ = kwargs.get("return_labels")  # Key values required for post-processing
