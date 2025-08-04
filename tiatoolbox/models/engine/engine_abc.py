@@ -650,7 +650,7 @@ class EngineABC(ABC):  # noqa: B024
 
         return raw_predictions
 
-    def post_process_patches(  # noqa: ARG002
+    def post_process_patches(
         self: EngineABC,
         raw_predictions: dict | Path,
         prediction_shape: tuple[int, ...],
@@ -796,7 +796,7 @@ class EngineABC(ABC):  # noqa: B024
         )
 
     # This is not a static model for child classes.
-    def post_process_wsi(  # skipcq: PYL-R0201  # noqa: ARG002
+    def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
         raw_predictions: dict | Path,
         prediction_shape: tuple[int, ...],
