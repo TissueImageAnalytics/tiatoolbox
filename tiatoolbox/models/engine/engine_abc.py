@@ -12,8 +12,9 @@ import dask.array as da
 import numpy as np
 import torch
 import zarr
-from dask import compute, delayed
+from dask import compute, delayed, persist
 from dask.diagnostics import ProgressBar
+from dask.graph_manipulation import bind
 from torch import nn
 from typing_extensions import Unpack
 
@@ -371,6 +372,7 @@ class EngineABC(ABC):  # noqa: B024
         self.stride_shape: IntPair | None = None
         self.verbose: bool = verbose
         self.dataloader: DataLoader | None = None
+        self.keys = []
         self.drop_keys: list = []
 
     @staticmethod
@@ -576,6 +578,14 @@ class EngineABC(ABC):  # noqa: B024
         raw_outputs = []
         batch_size = [None] * len(dataloader)
 
+        self.keys = ["probabilities"]
+
+        if self.return_labels:
+            self.keys.append("labels")
+
+        if return_coordinates:
+            self.keys.append("coordinates")
+
         tqdm = get_tqdm()
 
         progress_bar = (
@@ -585,14 +595,14 @@ class EngineABC(ABC):  # noqa: B024
         )
 
         for idx, batch_data in enumerate(dataloader):
-            task = self.process_batch(
+            raw_output = self.process_batch(
                 batch_data,
                 self.model,
                 self.device,
                 return_labels=self.return_labels,
                 return_coordinates=return_coordinates,
             )
-            raw_outputs.append(task)
+            raw_outputs.append(raw_output)
             batch_size[idx] = batch_data["image"].shape[0]
 
             if progress_bar:
@@ -602,11 +612,10 @@ class EngineABC(ABC):  # noqa: B024
             progress_bar.close()
 
         sample = compute(raw_outputs[0])[0]
-        keys = sample.keys()
         raw_predictions = {}
 
         for idx, raw_output in enumerate(raw_outputs):
-            for key in keys:
+            for key in self.keys:
                 dask_array = da.from_delayed(
                     raw_output[key],
                     shape=(batch_size[idx], *sample[key].shape[1:]),
@@ -619,7 +628,7 @@ class EngineABC(ABC):  # noqa: B024
                 else:
                     raw_predictions[key] = dask_array
 
-        return raw_predictions  # List of delayed objects# List of delayed objects
+        return raw_predictions
 
     def post_process_patches(
         self: EngineABC,
@@ -681,45 +690,35 @@ class EngineABC(ABC):  # noqa: B024
                 `.zarr` file depending on whether a save_dir Path is provided.
 
         """
-        if output_type.lower() == "zarr":
-            zarr_group = zarr.open_group(save_path, mode="w")
+        keys_to_compute = [k for k in self.keys if k not in self.drop_keys]
 
+        if output_type.lower() == "zarr":
             write_tasks = []
-            for key, dask_array in processed_predictions.items():
-                if dask_array is not None and key not in self.drop_keys:
-                    task = dask_array.to_zarr(
-                        url=zarr_group.create_dataset(
-                            name=key,
-                            shape=dask_array.shape,
-                            chunks=dask_array.chunksize,
-                            dtype=dask_array.dtype,
-                        ),
-                        compute=False,
-                    )
-                    write_tasks.append(task)
+            for key in keys_to_compute:
+                dask_array = processed_predictions[key]
+                if dask_array is None:
+                    continue
+                task = dask_array.to_zarr(
+                    url=save_path,
+                    component=key,
+                    compute=False,
+                    overwrite=True,
+                )
+                write_tasks.append(task)
 
             with ProgressBar():
                 compute(*write_tasks)
 
             return save_path
 
-        keys_to_compute = [
-            k
-            for k in processed_predictions
-            if processed_predictions[k] is not None and k not in self.drop_keys
-        ]
         values_to_compute = [processed_predictions[k] for k in keys_to_compute]
 
         # Compute all at once
         computed_values = compute(*values_to_compute)
 
         # Assign computed values
-        for k, v in zip(keys_to_compute, computed_values):
-            processed_predictions[k] = v
+        processed_predictions = dict.fromkeys(keys_to_compute, computed_values)
 
-        # Remove keys in drop_keys
-        for k in self.drop_keys:
-            processed_predictions.pop(k, None)  # safely remove if exists
         if output_type.lower() == "dict":
             return processed_predictions
 
@@ -1027,6 +1026,7 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         save_path = None
+        self.keys = []
         if self.cache_mode or save_dir:
             output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
@@ -1045,10 +1045,12 @@ class EngineABC(ABC):  # noqa: B024
             dataloader=self.dataloader,
             return_coordinates=output_type == "annotationstore",
         )
+
         processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
             **kwargs,
         )
+
         logger.removeFilter(duplicate_filter)
 
         out = self.save_predictions(
@@ -1140,6 +1142,7 @@ class EngineABC(ABC):  # noqa: B024
         }
 
         for image_num, image in enumerate(self.images):
+            self.keys = []
             duplicate_filter = DuplicateFilter()
             logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
@@ -1156,10 +1159,12 @@ class EngineABC(ABC):  # noqa: B024
                 dataloader=self.dataloader,
                 **kwargs,
             )
+
             processed_predictions = self.post_process_wsi(
                 raw_predictions=raw_predictions,
                 **kwargs,
             )
+
             kwargs["output_file"] = out[image]
             kwargs["scale_factor"] = scale_factor
             out[image] = self.save_predictions(

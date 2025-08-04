@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dask import delayed
 from typing_extensions import Unpack
 
 from .engine_abc import EngineABC, EngineABCRunParams
@@ -346,6 +347,7 @@ class PatchPredictor(EngineABC):
             verbose=verbose,
         )
 
+    @delayed
     def post_process_patches(
         self: PatchPredictor,
         raw_predictions: dict | Path,

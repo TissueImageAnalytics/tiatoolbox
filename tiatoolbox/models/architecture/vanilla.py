@@ -244,7 +244,7 @@ def _infer_batch(
     with torch.inference_mode():
         output = model(img_patches_device)
     # Output should be a single tensor or scalar
-    return {"probabilities": output.cpu().numpy()}
+    return output.cpu().numpy()
 
 
 class CNNModel(ModelABC):
