@@ -11,10 +11,8 @@ import dask
 import dask.array as da
 import numpy as np
 import torch
-import zarr
-from dask import compute, delayed, persist
+from dask import compute, delayed
 from dask.diagnostics import ProgressBar
-from dask.graph_manipulation import bind
 from torch import nn
 from typing_extensions import Unpack
 
@@ -575,58 +573,82 @@ class EngineABC(ABC):  # noqa: B024
                 saved zarr file if `cache_mode` is True.
 
         """
-        raw_outputs = []
-        batch_size = [None] * len(dataloader)
-
         self.keys = ["probabilities"]
+        probabilities = []
+
+        # sample for calculating shape for dask arrays
+        sample = self.dataloader.dataset[0]
+        sample_coordinates = self._get_coordinates(sample)
+        sample_output = self.model.infer_batch(
+            self.model,
+            torch.Tensor(sample["image"][np.newaxis, ...]),
+            device=self.device,
+        )
 
         if self.return_labels:
             self.keys.append("labels")
+            labels = []
+            sample["label"] = np.array(sample["label"])[np.newaxis, ...]
 
         if return_coordinates:
             self.keys.append("coordinates")
+            coordinates = []
 
+        # Main output dictionary
+        raw_predictions = dict(zip(self.keys, [[]] * len(self.keys)))
+
+        # Inference loop
         tqdm = get_tqdm()
-
-        progress_bar = (
-            tqdm(total=len(dataloader), leave=self.patch_mode, desc="Inferring patches")
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
             if self.verbose
-            else None
+            else self.dataloader
         )
 
-        for idx, batch_data in enumerate(dataloader):
-            raw_output = self.process_batch(
-                batch_data,
+        for batch_data in tqdm_loop:
+            batch_output = delayed(self.model.infer_batch)(
                 self.model,
-                self.device,
-                return_labels=self.return_labels,
-                return_coordinates=return_coordinates,
+                batch_data["image"],
+                device=self.device,
             )
-            raw_outputs.append(raw_output)
-            batch_size[idx] = batch_data["image"].shape[0]
 
-            if progress_bar:
-                progress_bar.update()
-
-        if progress_bar:
-            progress_bar.close()
-
-        sample = compute(raw_outputs[0])[0]
-        raw_predictions = {}
-
-        for idx, raw_output in enumerate(raw_outputs):
-            for key in self.keys:
-                dask_array = da.from_delayed(
-                    raw_output[key],
-                    shape=(batch_size[idx], *sample[key].shape[1:]),
-                    dtype=sample[key].dtype,
+            probabilities.append(
+                da.from_delayed(
+                    batch_output,  # probabilities
+                    shape=(batch_data["image"].shape[0], *sample_output.shape[1:]),
+                    dtype=sample_output.dtype,
                 )
-                if key in raw_predictions:
-                    raw_predictions[key] = da.concatenate(
-                        [raw_predictions[key], dask_array], axis=0
+            )
+
+            if return_coordinates:
+                coordinates.append(
+                    da.from_delayed(
+                        delayed(self._get_coordinates)(batch_data),
+                        shape=(
+                            batch_data["coordinates"].shape[0],
+                            *sample_coordinates.shape[1:],
+                        ),
+                        dtype=np.int64,
                     )
-                else:
-                    raw_predictions[key] = dask_array
+                )
+
+            if self.return_labels:
+                labels.append(
+                    da.from_delayed(
+                        delayed(np.array)(batch_data["label"]),
+                        shape=(batch_data["label"].shape[0], *sample["label"].shape),
+                        dtype=sample["label"].dtype,
+                    )
+                )
+
+        raw_predictions["probabilities"] = da.concatenate(probabilities, axis=0)
+
+        if return_coordinates:
+            raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+
+        if self.return_labels:
+            labels = [label.reshape(-1) for label in labels]
+            raw_predictions["labels"] = da.concatenate(labels, axis=0)
 
         return raw_predictions
 
