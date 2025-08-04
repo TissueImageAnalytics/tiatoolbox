@@ -631,7 +631,10 @@ class EngineABC(ABC):  # noqa: B024
                 labels.append(
                     da.from_delayed(
                         delayed(np.array)(batch_data["label"]),
-                        shape=batch_data["label"].shape,
+                        shape=(
+                            batch_data["image"].shape[0],
+                            *sample["label"].shape[1:],
+                        ),
                         dtype=sample["label"].dtype,
                     )
                 )
@@ -650,6 +653,8 @@ class EngineABC(ABC):  # noqa: B024
     def post_process_patches(
         self: EngineABC,
         raw_predictions: dict | Path,
+        prediction_shape: tuple[int, ...],
+        prediction_dtype: type,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post-process raw patch predictions from inference.
@@ -790,6 +795,8 @@ class EngineABC(ABC):  # noqa: B024
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
         raw_predictions: dict | Path,
+        prediction_shape: tuple[int, ...],
+        prediction_dtype: type,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post process WSI output.
@@ -1062,15 +1069,17 @@ class EngineABC(ABC):  # noqa: B024
             return_coordinates=output_type == "annotationstore",
         )
 
-        processed_predictions = self.post_process_patches(
-            raw_predictions=raw_predictions,
+        raw_predictions["predictions"] = self.post_process_patches(
+            raw_predictions=raw_predictions["probabilities"],
+            prediction_shape=raw_predictions["probabilities"].shape[:-1],
+            prediction_dtype=raw_predictions["probabilities"].dtype,
             **kwargs,
         )
 
         logger.removeFilter(duplicate_filter)
 
         out = self.save_predictions(
-            processed_predictions=processed_predictions,
+            processed_predictions=raw_predictions,
             output_type=output_type,
             save_path=save_path,
             **kwargs,
@@ -1175,15 +1184,17 @@ class EngineABC(ABC):  # noqa: B024
                 **kwargs,
             )
 
-            processed_predictions = self.post_process_wsi(
-                raw_predictions=raw_predictions,
+            raw_predictions["predictions"] = self.post_process_wsi(
+                raw_predictions=raw_predictions["probabilities"],
+                prediction_shape=raw_predictions["probabilities"].shape[:-1],
+                prediction_dtype=raw_predictions["probabilities"].dtype,
                 **kwargs,
             )
 
             kwargs["output_file"] = out[image]
             kwargs["scale_factor"] = scale_factor
             out[image] = self.save_predictions(
-                processed_predictions=processed_predictions,
+                processed_predictions=raw_predictions,
                 output_type=output_type,
                 save_path=save_path[image],
                 **kwargs,

@@ -204,7 +204,7 @@ def test_patch_predictor_api(
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["probabilities"]) == len(output["labels"])
-    assert output["labels"].tolist() == ["1", "a"]
+    assert list(output["labels"]) == ["1", "a"]
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # test loading user weight
@@ -241,7 +241,7 @@ def test_patch_predictor_api(
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["probabilities"]) == len(output["labels"])
-    assert output["labels"].tolist() == [1, 2]
+    assert list(output["labels"]) == [1, 2]
 
 
 def test_wsi_predictor_api(

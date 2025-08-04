@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import dask.array as da
 from dask import delayed
 from typing_extensions import Unpack
 
@@ -351,6 +352,8 @@ class PatchPredictor(EngineABC):
     def post_process_patches(
         self: PatchPredictor,
         raw_predictions: dict | Path,
+        prediction_shape: tuple[int, ...],
+        prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
     ) -> dict | Path:
         """Post-process raw patch predictions from inference.
@@ -375,17 +378,21 @@ class PatchPredictor(EngineABC):
         """
         _ = kwargs.get("return_probabilities")
 
-        probabilities = raw_predictions.get("probabilities")
-
-        raw_predictions["predictions"] = self.model.postproc_func(
-            probabilities,
+        raw_predictions = delayed(self.model.postproc_func)(
+            raw_predictions,
         )
 
-        return raw_predictions
+        return da.from_delayed(
+            raw_predictions,
+            shape=prediction_shape,
+            dtype=prediction_dtype,
+        )
 
     def post_process_wsi(
         self: PatchPredictor,
         raw_predictions: dict | Path,
+        prediction_shape: tuple[int, ...],
+        prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
     ) -> dict | Path:
         """Post process WSI output.
@@ -394,7 +401,12 @@ class PatchPredictor(EngineABC):
         results e.g., using information from neighbouring patches.
 
         """
-        return self.post_process_patches(raw_predictions, **kwargs)
+        return self.post_process_patches(
+            raw_predictions=raw_predictions,
+            prediction_shape=prediction_shape,
+            prediction_dtype=prediction_dtype,
+            **kwargs,
+        )
 
     def _update_run_params(
         self: EngineABC,
