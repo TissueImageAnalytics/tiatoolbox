@@ -370,7 +370,6 @@ class EngineABC(ABC):  # noqa: B024
         self.stride_shape: IntPair | None = None
         self.verbose: bool = verbose
         self.dataloader: DataLoader | None = None
-        self.keys = []
         self.drop_keys: list = []
 
     @staticmethod
@@ -524,7 +523,7 @@ class EngineABC(ABC):  # noqa: B024
         if self.patch_mode:
             coordinates = [0, 0, *batch_data["image"].shape[1:3]]
             return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
-        return batch_data["coords"].numpy()
+        return np.array(batch_data["coords"])
 
     @delayed
     def process_batch(
@@ -573,12 +572,11 @@ class EngineABC(ABC):  # noqa: B024
                 saved zarr file if `cache_mode` is True.
 
         """
-        self.keys = ["probabilities"]
+        keys = ["probabilities"]
         probabilities = []
 
         # sample for calculating shape for dask arrays
         sample = self.dataloader.dataset[0]
-        sample_coordinates = self._get_coordinates(sample)
         sample_output = self.model.infer_batch(
             self.model,
             torch.Tensor(sample["image"][np.newaxis, ...]),
@@ -586,16 +584,16 @@ class EngineABC(ABC):  # noqa: B024
         )
 
         if self.return_labels:
-            self.keys.append("labels")
+            keys.append("labels")
             labels = []
             sample["label"] = np.array(sample["label"])[np.newaxis, ...]
 
         if return_coordinates:
-            self.keys.append("coordinates")
+            keys.append("coordinates")
             coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(self.keys, [[]] * len(self.keys)))
+        raw_predictions = dict(zip(keys, [[]] * len(keys)))
 
         # Inference loop
         tqdm = get_tqdm()
@@ -624,10 +622,7 @@ class EngineABC(ABC):  # noqa: B024
                 coordinates.append(
                     da.from_delayed(
                         delayed(self._get_coordinates)(batch_data),
-                        shape=(
-                            batch_data["coordinates"].shape[0],
-                            *sample_coordinates.shape[1:],
-                        ),
+                        shape=(batch_data["image"].shape[0], 4),
                         dtype=np.int64,
                     )
                 )
@@ -636,7 +631,7 @@ class EngineABC(ABC):  # noqa: B024
                 labels.append(
                     da.from_delayed(
                         delayed(np.array)(batch_data["label"]),
-                        shape=(batch_data["label"].shape[0], *sample["label"].shape),
+                        shape=batch_data["label"].shape,
                         dtype=sample["label"].dtype,
                     )
                 )
@@ -712,7 +707,7 @@ class EngineABC(ABC):  # noqa: B024
                 `.zarr` file depending on whether a save_dir Path is provided.
 
         """
-        keys_to_compute = [k for k in self.keys if k not in self.drop_keys]
+        keys_to_compute = [k for k in processed_predictions if k not in self.drop_keys]
 
         if output_type.lower() == "zarr":
             write_tasks = []
@@ -1048,7 +1043,6 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         save_path = None
-        self.keys = []
         if self.cache_mode or save_dir:
             output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
@@ -1164,7 +1158,6 @@ class EngineABC(ABC):  # noqa: B024
         }
 
         for image_num, image in enumerate(self.images):
-            self.keys = []
             duplicate_filter = DuplicateFilter()
             logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
