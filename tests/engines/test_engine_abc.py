@@ -69,6 +69,8 @@ class TestEngineABC(EngineABC):
         """Post process WSI output."""
         return super().post_process_wsi(
             raw_predictions=raw_predictions,
+            prediction_shape=(self.batch_size, 1),
+            prediction_dtype=int,
             **kwargs,
         )
 
