@@ -682,6 +682,8 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         _ = kwargs.get("return_labels")  # Key values required for post-processing
+        _ = prediction_shape
+        _ = prediction_dtype
 
         return raw_predictions
 
@@ -826,6 +828,9 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         _ = kwargs.get("return_labels")  # Key values required for post-processing
+        _ = prediction_shape
+        _ = prediction_dtype
+
         return raw_predictions
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
