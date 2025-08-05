@@ -584,7 +584,7 @@ class EngineABC(ABC):  # noqa: B024
         dataloader: DataLoader,
         *,
         return_coordinates: bool = False,
-    ) -> dict | Path:
+    ) -> dict:
         """Run model inference on image patches and return predictions.
 
         This method performs batched inference using a PyTorch DataLoader,
@@ -599,9 +599,8 @@ class EngineABC(ABC):  # noqa: B024
                 called by `infer_wsi` and `patch_mode` is False.
 
         Returns:
-            dict | Path:
+            dict:
                 Dictionary containing prediction results as Dask arrays.
-                If `cache_mode` is True, returns a path to the saved zarr file.
 
         """
         keys = ["probabilities"]
@@ -718,33 +717,41 @@ class EngineABC(ABC):  # noqa: B024
 
     def save_predictions(
         self: EngineABC,
-        processed_predictions: dict | Path,
+        processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
-        **kwargs: EngineABCRunParams,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | AnnotationStore | Path:
-        """Save model predictions.
+        """Save model predictions to disk or return them in memory.
+
+        Depending on the output type, this method saves predictions as a zarr group,
+        an AnnotationStore (SQLite database), or returns them as a dictionary.
 
         Args:
-            processed_predictions (dict | Path):
-                A dictionary or path to zarr with model prediction information.
-            save_path (Path):
-                Optional output path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file, provided `patch_mode` is True. If the
-                `patch_mode` is False then `save_dir` is required.
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
             output_type (str):
-                The desired output type for resulting patch dataset.
+                Desired output format.
+                Supported values are "dict", "zarr", and "annotationstore".
+            save_path (Path | None):
+                Path to save the output file.
+                Required for "zarr" and "annotationstore" formats.
             **kwargs (EngineABCRunParams):
-                Keyword Args required to save the output.
+                Additional runtime parameters including:
+                    - output_file: Name of the output file.
+                    - scale_factor: Scaling factor for annotations.
+                    - class_dict: Mapping of class indices to names.
 
         Returns:
-            dict or Path or :class:`AnnotationStore`:
-                If the `output_type` is "AnnotationStore", the function returns
-                the patch predictor output as an SQLiteStore containing Annotations
-                for each or the Path to a `.db` file depending on whether a
-                save_dir Path is provided. Otherwise, the function defaults to
-                returning patch predictor output, either as a dict or the Path to a
-                `.zarr` file depending on whether a save_dir Path is provided.
+            dict | AnnotationStore | Path:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "annotationstore":
+                  returns an AnnotationStore or path to .db file.
+
+        Raises:
+            TypeError:
+                If an unsupported output_type is provided.
 
         """
         keys_to_compute = [k for k in processed_predictions if k not in self.drop_keys]
