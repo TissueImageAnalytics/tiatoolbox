@@ -906,29 +906,42 @@ class EngineABC(ABC):  # noqa: B024
         stride_shape: IntPair,
         input_resolutions: list[dict[Units, Resolution]],
     ) -> ModelIOConfigABC:
-        """Update IOConfig.
+        """Update the IO configuration used for patch-based inference.
+
+        This method updates the patch input shape, stride, and input resolutions
+        in the IO configuration. If no configuration is provided, it creates a new one.
 
         Args:
-            ioconfig (:class:`ModelIOConfigABC`):
-                Input ioconfig for PatchPredictor.
-            patch_input_shape (tuple):
-                Size of patches input to the model. Patches are at
+            ioconfig (ModelIOConfigABC):
+                Existing IO configuration to update. If None, a new one is created.
+
+            patch_input_shape (IntPair):
+                Size of patches input to the model (height, width). Patches are at
                 requested read resolution, not with respect to level 0,
                 and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. Stride is
-                at requested read resolution, not with respect to
+
+            stride_shape (IntPair):
+                Stride used during patch extraction.
+                If None, defaults to patch_input_shape.
+                Stride is at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
                 `stride_shape=patch_input_shape`.
-            input_resolutions (list(dict(Units, Resolution))):
-                List of Python dictionaries with units and resolution for each
-                input head for model inference for reading the image. Supported
-                units are `level`, `power` and `mpp`. Keys should be "units" and
-                "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
+
+            input_resolutions (list[dict[Units, Resolution]]):
+                List of dictionaries specifying resolution and units
+                for each input head. Supported units are `level`, `power` and `mpp`.
+                Keys should be "units" and "resolution"
+                e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
                 :class:`WSIReader` for details.
 
         Returns:
-            Updated Patch Predictor IO configuration.
+            ModelIOConfigABC:
+                Updated IO configuration for patch-based inference.
+
+        Raises:
+            ValueError:
+                If neither an IO configuration nor patch/resolution parameters
+                are provided.
 
         """
         config_flag = (
