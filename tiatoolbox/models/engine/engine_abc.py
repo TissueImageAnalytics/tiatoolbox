@@ -160,9 +160,13 @@ class EngineABCRunParams(TypedDict, total=False):
 class EngineABC(ABC):  # noqa: B024
     """Abstract base class for TIAToolbox deep learning engines to run CNN models.
 
+    This class provides a unified interface for running inference on image patches
+    or whole slide images (WSIs), handling preprocessing, batching, postprocessing,
+    and saving predictions.
+
     Args:
         model (str | ModelABC):
-            A PyTorch model. Default is `None`.
+            Model name from TIAToolbox or a PyTorch model instance.
             The user can request pretrained models from the toolbox model zoo using
             the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
@@ -170,16 +174,13 @@ class EngineABC(ABC):  # noqa: B024
             be downloaded. However, you can override with your own set
             of weights using the `weights` parameter.
         batch_size (int):
-            Number of image patches fed into the model each time in a
-            forward/backward pass. Default value is 8.
+            Number of patches per forward pass. Default is 8.
         num_loader_workers (int):
-            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
-            Please note that they will also perform preprocessing. Default value is 0.
+            Number of workers for data loading. Default is 0.
         num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-            Default value is 0.
-        weights (str or Path):
-            Path to the weight of the corresponding `model`.
+            Number of workers for post-processing. Default is 0.
+        weights (str | Path | None):
+            Path to model weights. If None, default weights are used.
 
             >>> engine = EngineABC(
             ...    model="pretrained-model",
@@ -187,59 +188,57 @@ class EngineABC(ABC):  # noqa: B024
             ... )
 
         device (str):
-            Select the device to run the model. Please see
+            Device to run the model on (e.g., "cpu", "cuda"). Please see
             https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
             for more details on input parameters for device. Default is "cpu".
         verbose (bool):
-            Whether to output logging information. Default value is False.
+            Enable verbose logging. Default is False.
 
     Attributes:
-        images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+        images (list[str | Path] | np.ndarray):
+            Input images or patches.
             A list of image patches in NHWC format as a numpy array
             or a list of str/paths to WSIs.
-        masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+        masks (list[str | Path] | np.ndarray):
+            Optional masks for WSIs.
             A list of tissue masks or binary masks corresponding to processing area of
             input images. These can be a list of numpy arrays or paths to
             the saved image masks. These are only utilized when patch_mode is False.
             Patches are only generated within a masked area.
             If not provided, then a tissue mask will be automatically
             generated for whole slide images.
-        patch_mode (str):
-            Whether to treat input images as a set of image patches. TIAToolbox defines
+        patch_mode (bool):
+            Whether input is treated as patches. TIAToolbox defines
             an image as a patch if HWC of the input image matches with the HWC expected
             by the model. If HWC of the input image does not match with the HWC expected
             by the model, then the patch_mode must be set to False which will allow the
             engine to extract patches from the input image.
             In this case, when the patch_mode is False the input images are treated
             as WSIs. Default value is True.
-        model (str | ModelABC):
-            A PyTorch model or a name of an existing model from the TIAToolbox model zoo
-            for processing the data. For a full list of pretrained models,
+        model (ModelABC):
+            Loaded PyTorch model. For a full list of pretrained models,
             refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
             be downloaded. However, you can override with your own set
             of weights via the `weights` argument. Argument
             is case-insensitive.
-        dataloader (torch.utils.data.DataLoader):
-            :class:`torch.utils.data.DataLoader` used during inference.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration of type :class:`ModelIOConfigABC` to run the Engine.
-        _ioconfig (ModelIOConfigABC):
-            Runtime ioconfig.
+            IO configuration (:class:`ModelIOConfigABC`) for model input/output.
+        dataloader (DataLoader):
+            Torch DataLoader for inference.
         return_labels (bool):
-            Whether to return the labels with the predictions.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
+            Whether to return labels with probabilities and predictions.
+        input_resolutions (list[dict[Units, Resolution]]):
+            Resolution settings for input heads. Supported
             units are `level`, `power` and `mpp`. Keys should be "units" and
             "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
             :class:`WSIReader` for details.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tupled of HW. Patches are at
+        patch_input_shape (IntPair):
+            Shape of input patches. Patches are at
             requested read resolution, not with respect to level 0,
             and must be positive.
-        stride_shape (tuple):
+        stride_shape (IntPair):
             Stride used during WSI processing. Stride is
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
@@ -247,51 +246,27 @@ class EngineABC(ABC):  # noqa: B024
         batch_size (int):
             Number of images fed into the model each time.
         cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory. cache_mode is always True when
-            processing WSIs i.e., when `patch_mode` is False. Default value is False.
+            Whether to use caching for large datasets.
         cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size. Default value is 10,000.
+            Number of patches to process in a batch when caching.
         labels (list | None):
-                List of labels. Only a single label per image is supported.
-        device (str):
-            :class:`torch.device` to run the model.
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device. Default value is "cpu".
-        num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-        return_labels (bool):
-            Whether to return the output labels. Default value is False.
+            Optional labels for input images.
+            Only a single label per image is supported.
         drop_keys (list):
-            List of keys to drop from the model output.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
-            units are `level`, `power` and `mpp`. When `patch_mode` is `True`,
-            the input image patches are expected to be at the correct resolution and
-            units. When `patch_mode` is `False`, the patches are extracted at the
-            requested resolution and units. Default value is [{"units": "baseline",
-            "resolution": 1.0}].
+            Keys to exclude from model output.
+        output_type (str):
+            Format of output ("dict", "zarr", "AnnotationStore").
         verbose (bool):
-            Whether to output logging information. Default value is False.
+            Whether to enable verbose logging.
 
-    Examples:
+    Example:
         >>> # Inherit from EngineABC
-        >>> class TestEngineABC(EngineABC):
-        >>>     def __init__(
-        >>>        self,
-        >>>        model,
-        >>>        weights,
-        >>>        verbose,
-        >>>     ):
-        >>>       super().__init__(model=model, weights=weights, verbose=verbose)
+        >>> class MyEngine(EngineABC):
+        >>>     def __init__(self, model, weights, verbose):
+        >>>         super().__init__(model=model, weights=weights, verbose=verbose)
+        >>> engine = MyEngine(model="resnet18-kather100k")
+        >>> output = engine.run(images, patch_mode=True)
+
         >>> # Define all the abstract classes
 
         >>> data = np.array([np.ndarray, np.ndarray])
@@ -326,7 +301,25 @@ class EngineABC(ABC):  # noqa: B024
         device: str = "cpu",
         verbose: bool = False,
     ) -> None:
-        """Initialize Engine."""
+        """Initialize the EngineABC instance.
+
+        Args:
+            model (str | ModelABC):
+                Model name from TIAToolbox or a PyTorch model instance.
+            batch_size (int):
+                Number of patches per forward pass. Default is 8.
+            num_loader_workers (int):
+                Number of workers for data loading. Default is 0.
+            num_post_proc_workers (int):
+                Number of workers for post-processing. Default is 0.
+            weights (str | Path | None):
+                Path to model weights. If None, default weights are used.
+            device (str):
+                Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+            verbose (bool):
+                Enable verbose logging. Default is False.
+
+        """
         self.images = None
         self.masks = None
         self.patch_mode = None
@@ -334,8 +327,7 @@ class EngineABC(ABC):  # noqa: B024
 
         # Initialize model with specified weights and ioconfig.
         self.model, self.ioconfig = self._initialize_model_ioconfig(
-            model=model,
-            weights=weights,
+            model=model, weights=weights
         )
         self.model.to(device=self.device)
         self.model = (
@@ -345,7 +337,6 @@ class EngineABC(ABC):  # noqa: B024
             )
         )
         self._ioconfig = self.ioconfig  # runtime ioconfig
-
         self.batch_size = batch_size
         self.cache_mode: bool = False
         self.cache_size: int = self.batch_size if self.batch_size else 10000
