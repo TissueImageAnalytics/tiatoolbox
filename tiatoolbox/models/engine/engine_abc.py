@@ -1260,18 +1260,23 @@ class EngineABC(ABC):  # noqa: B024
 
     @staticmethod
     def _calculate_scale_factor(dataloader: DataLoader) -> float | tuple[float, float]:
-        """Calculates scale factor for final output.
+        """Calculate the scale factor for final output based on dataloader resolution.
 
-        Uses the dataloader resolution and the WSI resolution to calculate scale
-        factor for final WSI output.
+        This method compares the resolution used during reading with the slide's
+        baseline resolution to compute a scale factor for coordinate transformation.
 
         Args:
             dataloader (DataLoader):
-                Dataloader for the current run.
+                PyTorch DataLoader used for WSI inference. Must contain resolution
+                and unit metadata in its dataset.
 
         Returns:
-            scale_factor (float | tuple[float, float]):
-                Scale factor for final output.
+            float | tuple[float, float]:
+                Scale factor for converting coordinates to baseline resolution.
+                - If units are "mpp": returns (model_mpp / slide_mpp).
+                - If units are "level": returns downsample ratio.
+                - If units are "power": returns objective_power / model_power.
+                - If units are "baseline": returns the resolution directly.
 
         """
         # get units and resolution from dataloader.
