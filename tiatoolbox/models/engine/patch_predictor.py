@@ -319,31 +319,31 @@ class PatchPredictor(EngineABC):
 
     def post_process_wsi(
         self: PatchPredictor,
-        raw_predictions: dict | Path,
+        raw_predictions: da.Array | np.ndarray,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
-    ) -> dict | Path:
-        """Post process WSI output.
+    ) -> da.Array:
+        """Post-process predictions from whole slide image (WSI) inference.
 
-        Takes the raw output from patch predictions and post-processes it to improve the
-        results e.g., using information from neighbouring patches.
+        This method refines the raw patch-level predictions obtained from WSI inference.
+        It typically applies spatial smoothing or other contextual operations using
+        neighboring patch information. Internally, it delegates to
+        `post_process_patches()`.
 
         Args:
-            raw_predictions (dict | Path):
-                A dictionary or path to zarr with patch prediction information.
-            prediction_shape (tuple (int, ...)):
-                prediction shape.
-            prediction_dtype (tuple (int, ...)):
-                prediction dtype.
-            **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+            raw_predictions (dask.array.Array | np.ndarray):
+                Raw model predictions.
+            prediction_shape (tuple[int, ...]):
+                Expected shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters, including
+                `return_probabilities`.
 
         Returns:
-            dict or Path:
-                Returns patch based output after post-processing. Returns path to
-                saved zarr file if `cache_mode` is True.
+            dask.array.Array: Post-processed predictions as a Dask array.
 
         """
         return self.post_process_patches(
