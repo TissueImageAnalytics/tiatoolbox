@@ -22,62 +22,16 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore import WSIReader
 
 
-class PredictorRunParams(EngineABCRunParams):
-    """Class describing the input parameters for the :func:`EngineABC.run()` method.
+class PredictorRunParams(EngineABCRunParams, total=False):
+    """Parameters for configuring the `PatchPredictor.run()` method.
 
-    Attributes:
-        batch_size (int):
-            Number of image patches to feed to the model in a forward pass.
-        cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory.
-        cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size.
-        class_dict (dict):
-            Optional dictionary mapping classification outputs to class names.
-        device (str):
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device.
-        ioconfig (ModelIOConfigABC):
-            Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
-        return_labels (bool):
-            Whether to return the labels with the predictions.
-        num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-        output_file (str):
-            Output file name to save "zarr" or "db". If None, path to output is
-            returned by the engine.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tuple of height and width (HW).
-            Patches are requested at read resolution, not with respect to level 0,
-            and must be positive.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
-            units are `level`, `power` and `mpp`. Keys should be "units" and
-            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
-            :class:`WSIReader` for details.
+    This class extends `EngineABCRunParams` with additional parameters specific
+    to patch-level prediction workflows.
+
+    Optional Keys:
         return_probabilities (bool):
-                Whether to return per-class probabilities.
-        scale_factor (tuple[float, float]):
-            The scale factor to use when loading the
-            annotations. All coordinates will be multiplied by this factor to allow
-            conversion of annotations saved at non-baseline resolution to baseline.
-            Should be model_mpp/slide_mpp.
-        stride_shape (tuple):
-            Stride used during WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
-        verbose (bool):
-            Whether to output logging information.
+            Whether to return per-class probabilities
+            in the output. If False, only predicted labels are returned.
 
     """
 
