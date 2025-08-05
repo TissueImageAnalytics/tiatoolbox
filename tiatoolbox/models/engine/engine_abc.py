@@ -510,7 +510,23 @@ class EngineABC(ABC):  # noqa: B024
         return raw_predictions
 
     def _get_coordinates(self: EngineABC, batch_data: dict) -> np.ndarray:
-        """Helper function to collect coordinates for AnnotationStore."""
+        """Extract coordinates for each image patch in a batch.
+
+        This method returns coordinates for each patch, either based on
+        the patch dimensions (if in patch mode) or from precomputed values
+        (if in WSI mode).
+
+        Args:
+            batch_data (dict):
+                Dictionary containing batch data, including image and
+                optional coordinates.
+
+        Returns:
+            np.ndarray:
+                Array of coordinates for each patch in the batch.
+                Shape is (N, 4), where N is the number of patches.
+
+        """
         if self.patch_mode:
             coordinates = [0, 0, *batch_data["image"].shape[1:3]]
             return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
