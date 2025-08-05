@@ -64,10 +64,12 @@ def prepare_engines_save_dir(
             If patch_mode is False and save_dir is not provided.
 
     """
-    if patch_mode is True and save_dir is not None:
-        save_dir = Path(save_dir)
-        save_dir.mkdir(parents=True, exist_ok=overwrite)
-        return save_dir
+    if patch_mode:
+        if save_dir is not None:
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=overwrite)
+            return save_dir
+        return None
 
     if save_dir is None:
         msg = (
