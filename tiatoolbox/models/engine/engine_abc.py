@@ -696,7 +696,7 @@ class EngineABC(ABC):  # noqa: B024
 
         Args:
             raw_predictions (dask.array.Array | np.ndarray):
-                Raw model predictions as a Dask array or a path to a zarr file.
+                Raw model predictions as a Dask array.
             prediction_shape (tuple[int, ...]):
                 Shape of the prediction output.
             prediction_dtype (type):
@@ -833,33 +833,32 @@ class EngineABC(ABC):  # noqa: B024
         )
 
     # This is not a static model for child classes.
-    def post_process_wsi(  # skipcq: PYL-R0201
+    def post_process_wsi(
         self: EngineABC,
-        raw_predictions: dict | Path,
+        raw_predictions: dask.array.Array | np.ndarray,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[EngineABCRunParams],
-    ) -> dict | Path:
-        """Post process WSI output.
+    ) -> dask.array.Array:
+        """Post-process predictions from whole slide image (WSI) inference.
 
-        Takes the raw output from patch predictions and post-processes it to improve the
-        results e.g., using information from neighbouring patches.
+        This method applies a post-processing function (e.g., smoothing, filtering)
+        to the raw model predictions. It supports delayed execution using Dask
+        and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dict | Path):
-                A dictionary or path to zarr with patch prediction information.
-            prediction_shape (tuple (int, ...)):
-                prediction shape.
-            prediction_dtype (tuple (int, ...)):
-                prediction dtype.
+            raw_predictions (dask.array.Array | np.ndarray):
+                Raw model predictions as a Dask array.
+            prediction_shape (tuple[int, ...]):
+                Shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
             **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+                Additional runtime parameters used for post-processing.
 
         Returns:
-            dict or Path:
-                Returns patch based output after post-processing. Returns path to
-                saved zarr file if `cache_mode` is True.
+            dask.array.Array:
+                Post-processed predictions as a Dask array.
 
         """
         _ = kwargs.get("return_labels")  # Key values required for post-processing
