@@ -1314,9 +1314,27 @@ class EngineABC(ABC):  # noqa: B024
         save_dir: Path,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | AnnotationStore | Path:
-        """Runs the Engine in the WSI mode (patch_mode = False).
+        """Run the engine in WSI mode (patch_mode = False).
 
-        Input arguments are passed from :func:`EngineABC.run()`.
+        This method performs inference on each whole slide image (WSI),
+        post-processes the predictions, and saves the output in the specified format.
+
+        Args:
+            output_type (str):
+                Desired output format. Supported values are "dict", "zarr",
+                and "annotationstore".
+            save_dir (Path):
+                Directory to save the output files.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters including:
+                    - output_file: Name of the output file.
+                    - scale_factor: Scaling factor for annotations.
+                    - class_dict: Mapping of class indices to names.
+
+        Returns:
+            dict | AnnotationStore | Path:
+                Dictionary mapping each input WSI to its corresponding output path.
+                Output may be a zarr file, SQLite database, or in-memory dictionary.
 
         """
         progress_bar = None
