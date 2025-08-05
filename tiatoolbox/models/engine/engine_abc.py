@@ -1073,10 +1073,10 @@ class EngineABC(ABC):  # noqa: B024
 
     def _update_run_params(
         self: EngineABC,
-        images: list[os | Path | WSIReader] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        images: list[os.PathLike | WSIReader] | np.ndarray,
+        masks: list[os.PathLike] | np.ndarray | None = None,
         labels: list | None = None,
-        save_dir: os | Path | None = None,
+        save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
         *,
@@ -1084,9 +1084,40 @@ class EngineABC(ABC):  # noqa: B024
         patch_mode: bool,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> Path | None:
-        """Updates runtime parameters.
+        """Update runtime parameters for the engine before running inference.
 
-        Updates runtime parameters for an EngineABC for EngineABC.run().
+        This method sets internal attributes such as caching, batch size,
+        IO configuration, and output format based on user input and keyword arguments.
+
+        Args:
+            images (list[PathLike | WSIReader] | np.ndarray):
+                List of input images or a NumPy array of patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional list of masks for WSI processing.
+            labels (list | None):
+                Optional list of labels for input images.
+            save_dir (PathLike | Path | None):
+                Directory to save output files. Required for WSI mode.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution settings.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore".
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters to update engine attributes.
+
+        Returns:
+            Path | None:
+                Path to the save directory if applicable, otherwise None.
+
+        Raises:
+            TypeError:
+                If an unsupported output_type is provided.
+            ValueError:
+                If required configuration or input parameters are missing.
 
         """
         for key in kwargs:
