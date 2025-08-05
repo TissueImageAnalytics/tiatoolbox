@@ -984,7 +984,27 @@ class EngineABC(ABC):  # noqa: B024
 
     @staticmethod
     def _validate_images_masks(images: list | np.ndarray) -> list | np.ndarray:
-        """Validate input images for a run."""
+        """Validate the format and shape of input images or masks.
+
+        Ensures that the input is either a list of file paths or a 4D NumPy array
+        in NHWC format.
+
+        Args:
+            images (list | np.ndarray):
+                List of image paths or a NumPy array of image patches.
+
+        Returns:
+            list | np.ndarray:
+                The validated input images or masks.
+
+        Raises:
+            TypeError:
+                If the input is neither a list nor a NumPy array.
+
+            ValueError:
+                If the input is a NumPy array but not 4D (NHWC).
+
+        """
         if not isinstance(images, (list, np.ndarray)):
             msg = "Input must be a list of file paths or a numpy array."
             raise TypeError(
@@ -1003,10 +1023,30 @@ class EngineABC(ABC):  # noqa: B024
     @staticmethod
     def _validate_input_numbers(
         images: list | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        masks: list[os.PathLike] | np.ndarray | None = None,
         labels: list | None = None,
     ) -> None:
-        """Validates number of input images, masks and labels."""
+        """Validate that the number of images, masks, and labels match.
+
+        Ensures that the lengths of masks and labels (if provided) match
+        the number of input images.
+
+        Args:
+            images (list | np.ndarray):
+                List of input images or a NumPy array.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional list of masks corresponding to the input images.
+            labels (list | None):
+                Optional list of labels corresponding to the input images.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError:
+                If the number of masks or labels does not match the number of images.
+
+        """
         if masks is None and labels is None:
             return
 
