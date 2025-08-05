@@ -808,23 +808,22 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         dataloader: DataLoader,
         **kwargs: EngineABCRunParams,
-    ) -> Path:
-        """Model inference on a WSI.
+    ) -> dict:
+        """Run model inference on a whole slide image (WSI).
+
+        This method performs inference on a WSI using the provided DataLoader,
+        and accumulates predictions in Dask arrays. Optionally includes
+        coordinates and labels in the output.
 
         Args:
             dataloader (DataLoader):
-                A torch dataloader to process WSIs.
-
-            save_path (Path):
-                Path to save the intermediate output. The intermediate output is saved
-                in a zarr file.
+                PyTorch DataLoader configured for WSI processing.
             **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+                Additional runtime parameters used during inference.
 
         Returns:
-            save_path (Path):
-                Path to zarr file where intermediate output is saved.
+            dict:
+                Dictionary containing prediction results as Dask arrays.
 
         """
         _ = kwargs.get("patch_mode", False)
