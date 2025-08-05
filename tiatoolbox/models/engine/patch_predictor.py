@@ -39,112 +39,115 @@ class PredictorRunParams(EngineABCRunParams, total=False):
 
 
 class PatchPredictor(EngineABC):
-    r"""Patch level prediction for digital histology images.
+    r"""Patch-level prediction engine for digital histology images.
 
-    The models provided by TIAToolbox should give the following results:
+    This class extends `EngineABC` to support patch-based inference using
+    pretrained or custom models from TIAToolbox. It supports both patch and
+    whole slide image (WSI) modes, and provides utilities for post-processing
+    and saving predictions.
 
-    .. list-table:: PatchPredictor performance on the Kather100K dataset [1]
-       :widths: 15 15
-       :header-rows: 1
+    Supported Models:
+        .. list-table:: PatchPredictor performance on the Kather100K dataset [1].
+           :widths: 15 15
+           :header-rows: 1
 
-       * - Model name
-         - F\ :sub:`1`\ score
-       * - alexnet-kather100k
-         - 0.965
-       * - resnet18-kather100k
-         - 0.990
-       * - resnet34-kather100k
-         - 0.991
-       * - resnet50-kather100k
-         - 0.989
-       * - resnet101-kather100k
-         - 0.989
-       * - resnext50_32x4d-kather100k
-         - 0.992
-       * - resnext101_32x8d-kather100k
-         - 0.991
-       * - wide_resnet50_2-kather100k
-         - 0.989
-       * - wide_resnet101_2-kather100k
-         - 0.990
-       * - densenet121-kather100k
-         - 0.993
-       * - densenet161-kather100k
-         - 0.992
-       * - densenet169-kather100k
-         - 0.992
-       * - densenet201-kather100k
-         - 0.991
-       * - mobilenet_v2-kather100k
-         - 0.990
-       * - mobilenet_v3_large-kather100k
-         - 0.991
-       * - mobilenet_v3_small-kather100k
-         - 0.992
-       * - googlenet-kather100k
-         - 0.992
+           * - Model name
+             - F\ :sub:`1`\ score
+           * - alexnet-kather100k
+             - 0.965
+           * - resnet18-kather100k
+             - 0.990
+           * - resnet34-kather100k
+             - 0.991
+           * - resnet50-kather100k
+             - 0.989
+           * - resnet101-kather100k
+             - 0.989
+           * - resnext50_32x4d-kather100k
+             - 0.992
+           * - resnext101_32x8d-kather100k
+             - 0.991
+           * - wide_resnet50_2-kather100k
+             - 0.989
+           * - wide_resnet101_2-kather100k
+             - 0.990
+           * - densenet121-kather100k
+             - 0.993
+           * - densenet161-kather100k
+             - 0.992
+           * - densenet169-kather100k
+             - 0.992
+           * - densenet201-kather100k
+             - 0.991
+           * - mobilenet_v2-kather100k
+             - 0.990
+           * - mobilenet_v3_large-kather100k
+             - 0.991
+           * - mobilenet_v3_small-kather100k
+             - 0.992
+           * - googlenet-kather100k
+             - 0.992
 
-    .. list-table:: PatchPredictor performance on the PCam dataset [2]
-       :widths: 15 15
-       :header-rows: 1
+        .. list-table:: PatchPredictor performance on the PCam dataset [2]
+           :widths: 15 15
+           :header-rows: 1
 
-       * - Model name
-         - F\ :sub:`1`\ score
-       * - alexnet-pcam
-         - 0.840
-       * - resnet18-pcam
-         - 0.888
-       * - resnet34-pcam
-         - 0.889
-       * - resnet50-pcam
-         - 0.892
-       * - resnet101-pcam
-         - 0.888
-       * - resnext50_32x4d-pcam
-         - 0.900
-       * - resnext101_32x8d-pcam
-         - 0.892
-       * - wide_resnet50_2-pcam
-         - 0.901
-       * - wide_resnet101_2-pcam
-         - 0.898
-       * - densenet121-pcam
-         - 0.897
-       * - densenet161-pcam
-         - 0.893
-       * - densenet169-pcam
-         - 0.895
-       * - densenet201-pcam
-         - 0.891
-       * - mobilenet_v2-pcam
-         - 0.899
-       * - mobilenet_v3_large-pcam
-         - 0.895
-       * - mobilenet_v3_small-pcam
-         - 0.890
-       * - googlenet-pcam
-         - 0.867
+           * - Model name
+             - F\ :sub:`1`\ score
+           * - alexnet-pcam
+             - 0.840
+           * - resnet18-pcam
+             - 0.888
+           * - resnet34-pcam
+             - 0.889
+           * - resnet50-pcam
+             - 0.892
+           * - resnet101-pcam
+             - 0.888
+           * - resnext50_32x4d-pcam
+             - 0.900
+           * - resnext101_32x8d-pcam
+             - 0.892
+           * - wide_resnet50_2-pcam
+             - 0.901
+           * - wide_resnet101_2-pcam
+             - 0.898
+           * - densenet121-pcam
+             - 0.897
+           * - densenet161-pcam
+             - 0.893
+           * - densenet169-pcam
+             - 0.895
+           * - densenet201-pcam
+             - 0.891
+           * - mobilenet_v2-pcam
+             - 0.899
+           * - mobilenet_v3_large-pcam
+             - 0.895
+           * - mobilenet_v3_small-pcam
+             - 0.890
+           * - googlenet-pcam
+             - 0.867
 
     Args:
         model (str | ModelABC):
-            A PyTorch model or name of pretrained model.
+            A PyTorch model instance or name of a pretrained model from TIAToolbox.
+            If a string is provided, pretrained weights
+            will be downloaded unless overridden via `weights`.
             The user can request pretrained models from the toolbox model zoo using
             the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
-            be downloaded. However, you can override with your own set
-            of weights using the `weights` parameter. Default is `None`.
+            be downloaded.
         batch_size (int):
-            Number of image patches fed into the model each time in a
-            forward/backward pass. Default value is 8.
+            Number of image patches processed per forward pass.
+            Default is 8.
         num_loader_workers (int):
-            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
-            Please note that they will also perform preprocessing. Default value is 0.
+            Number of workers for data loading. Default is 0.
         num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-            Default value is 0.
-        weights (str or Path):
-            Path to the weight of the corresponding `model`.
+            Number of workers for post-processing. Default is 0.
+        weights (str | Path | None):
+            Path to model weights. If None, default weights are used.
 
             >>> engine = PatchPredictor(
             ...    model="pretrained-model",
@@ -152,96 +155,52 @@ class PatchPredictor(EngineABC):
             ... )
 
         device (str):
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device. Default is "cpu".
+            Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
         verbose (bool):
-            Whether to output logging information. Default value is False.
+            Whether to enable verbose logging. Default is True.
+
 
     Attributes:
-        images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
-            A list of image patches in NHWC format as a numpy array
-            or a list of str/paths to WSIs.
-        masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
-            A list of tissue masks or binary masks corresponding to processing area of
-            input images. These can be a list of numpy arrays or paths to
-            the saved image masks. These are only utilized when patch_mode is False.
-            Patches are only generated within a masked area.
+        images (list[str | Path] | np.ndarray):
+            Input image patches or WSI paths.
+        masks (list[str | Path] | np.ndarray):
+            Optional tissue masks for WSI processing.
+            These are only utilized when patch_mode is False.
             If not provided, then a tissue mask will be automatically
             generated for whole slide images.
-        patch_mode (str):
-            Whether to treat input images as a set of image patches. TIAToolbox defines
-            an image as a patch if HWC of the input image matches with the HWC expected
-            by the model. If HWC of the input image does not match with the HWC expected
-            by the model, then the patch_mode must be set to False which will allow the
-            engine to extract patches from the input image.
-            In this case, when the patch_mode is False the input images are treated
-            as WSIs. Default value is True.
-        model (str | ModelABC):
-            A PyTorch model or a name of an existing model from the TIAToolbox model zoo
-            for processing the data. For a full list of pretrained models,
-            refer to the `docs
-            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
-            By default, the corresponding pretrained weights will also
-            be downloaded. However, you can override with your own set
-            of weights via the `weights` argument. Argument
-            is case-insensitive.
+        patch_mode (bool):
+            Whether input is treated as patches (`True`) or WSIs (`False`).
+        model (ModelABC):
+            Loaded PyTorch model.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration of type :class:`ModelIOConfigABC` to run the Engine.
-        _ioconfig (ModelIOConfigABC):
-            Runtime ioconfig.
+            IO configuration for patch extraction and resolution.
         return_labels (bool):
-            Whether to return the labels with the predictions.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
+            Whether to include labels in the output.
+        input_resolutions (list[dict]):
+            Resolution settings for model input. Supported
             units are `level`, `power` and `mpp`. Keys should be "units" and
             "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
             :class:`WSIReader` for details.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tupled of HW. Patches are at
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width). Patches are at
             requested read resolution, not with respect to level 0,
             and must be positive.
-        stride_shape (tuple):
-            Stride used during WSI processing. Stride is
+        stride_shape (tuple[int, int]):
+            Stride used during patch extraction. Stride is
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
-        batch_size (int):
-            Number of images fed into the model each time.
         cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory. cache_mode is always True when
-            processing WSIs i.e., when `patch_mode` is False. Default value is False.
+            Whether to use caching for large datasets.
         cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size. Default value is 10,000.
+            Number of patches to process in a batch when caching.
         labels (list | None):
-                List of labels. Only a single label per image is supported.
-        device (str):
-            :class:`torch.device` to run the model.
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device. Default value is "cpu".
-        num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-        return_labels (bool):
-            Whether to return the output labels. Default value is False.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
-            units are `level`, `power` and `mpp`. When `patch_mode` is `True`,
-            the input image patches are expected to be at the correct resolution and
-            units. When `patch_mode` is `False`, the patches are extracted at the
-            requested resolution and units. Default value is [{"units": "baseline",
-            "resolution": 1.0}].
-        verbose (bool):
-            Whether to output logging information. Default value is False.
+            Optional labels for input images.
+            Only a single label per image is supported.
+        drop_keys (list):
+            Keys to exclude from model output.
+        output_type (str):
+            Format of output ("dict", "zarr", "annotationstore").
 
     Examples:
         >>> # list of 2 image patches as input
