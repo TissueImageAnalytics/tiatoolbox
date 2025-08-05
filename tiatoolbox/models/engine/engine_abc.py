@@ -585,21 +585,23 @@ class EngineABC(ABC):  # noqa: B024
         *,
         return_coordinates: bool = False,
     ) -> dict | Path:
-        """Runs model inference on image patches and returns output as a dictionary.
+        """Run model inference on image patches and return predictions.
+
+        This method performs batched inference using a PyTorch DataLoader,
+        and accumulates predictions in Dask arrays. Optionally includes
+        coordinates and labels in the output.
 
         Args:
             dataloader (DataLoader):
-                An :class:`torch.utils.data.DataLoader` object to run inference.
-            save_path (Path | None):
-                If `cache_mode` is True then path to save zarr file must be provided.
+                PyTorch DataLoader containing image patches for inference.
             return_coordinates (bool):
-                Whether to save coordinates in the output. This is required when
-                this function is called by `infer_wsi` and `patch_mode` is False.
+                Whether to include coordinates in the output. Required when
+                called by `infer_wsi` and `patch_mode` is False.
 
         Returns:
-            dict or Path:
-                Result of model inference as a dictionary. Returns path to
-                saved zarr file if `cache_mode` is True.
+            dict | Path:
+                Dictionary containing prediction results as Dask arrays.
+                If `cache_mode` is True, returns a path to the saved zarr file.
 
         """
         keys = ["probabilities"]
@@ -682,33 +684,30 @@ class EngineABC(ABC):  # noqa: B024
 
     def post_process_patches(
         self: EngineABC,
-        raw_predictions: dict | Path,
+        raw_predictions: dask.array.Array | np.ndarray,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[EngineABCRunParams],
-    ) -> dict | Path:
+    ) -> dask.array.Array:
         """Post-process raw patch predictions from inference.
 
-        The output of :func:`infer_patches()` with patch prediction information will be
-        post-processed using this function. The processed output will be saved in the
-        respective input format. If `cache_mode` is True, the function processes the
-        input using zarr group with size specified by `cache_size`.
+        This method applies a post-processing function (e.g., smoothing, filtering)
+        to the raw model predictions. It supports delayed execution using Dask
+        and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dict | Path):
-                A dictionary or path to zarr with patch prediction information.
-            prediction_shape (tuple (int, ...)):
-                prediction shape.
-            prediction_dtype (tuple (int, ...)):
-                prediction dtype.
+            raw_predictions (dask.array.Array | np.ndarray):
+                Raw model predictions as a Dask array or a path to a zarr file.
+            prediction_shape (tuple[int, ...]):
+                Shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
             **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+                Additional runtime parameters used for post-processing.
 
         Returns:
-            dict or Path:
-                Returns patch based output after post-processing. Returns path to
-                saved zarr file if `cache_mode` is True.
+            dask.array.Array:
+                Post-processed predictions as a Dask array.
 
         """
         _ = kwargs.get("return_labels")  # Key values required for post-processing
