@@ -354,11 +354,11 @@ class PatchPredictor(EngineABC):
         )
 
     def _update_run_params(
-        self: EngineABC,
-        images: list[os | Path | WSIReader] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        self: PatchPredictor,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
-        save_dir: os | Path | None = None,
+        save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
         *,
@@ -366,15 +366,40 @@ class PatchPredictor(EngineABC):
         patch_mode: bool,
         **kwargs: Unpack[PredictorRunParams],
     ) -> Path | None:
-        """Updates runtime parameters.
+        """Update runtime parameters for the PatchPredictor engine.
 
-        Updates runtime parameters for an EngineABC for EngineABC.run().
+        This method sets internal attributes such as caching, batch size,
+        IO configuration, and output format based on user input and keyword arguments.
+        It also configures whether to include probabilities in the output.
+
+        Args:
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
+            labels (list | None):
+                Optional labels for input images.
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore".
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters.
+
+        Returns:
+            Path | None:
+                Path to the save directory if applicable, otherwise None.
 
         """
         return_probabilities = kwargs.get("return_probabilities")
         if not return_probabilities:
             self.drop_keys.append("probabilities")
-
         return super()._update_run_params(
             images=images,
             masks=masks,
