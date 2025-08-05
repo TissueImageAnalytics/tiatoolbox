@@ -542,7 +542,30 @@ class EngineABC(ABC):  # noqa: B024
         return_labels: bool,
         return_coordinates: bool,
     ) -> dict:
-        """Process a batch of images and masks and return a dataloader for inference."""
+        """Process a batch of images and return model predictions.
+
+        This method performs inference on a batch of image patches,
+        optionally including coordinates and labels in the output.
+
+        Args:
+            batch_data (dict):
+                Dictionary containing batch input data including images,
+                and optionally labels and coordinates.
+            model (ModelABC):
+                The PyTorch or TIAToolbox model used for inference.
+            device (str):
+                Device on which to run inference (e.g., "cpu", "cuda").
+            return_labels (bool):
+                Whether to include labels in the output.
+            return_coordinates (bool):
+                Whether to include coordinates in the output.
+
+        Returns:
+            dict:
+                Dictionary containing model predictions, and optionally
+                coordinates and labels.
+
+        """
         batch_output = model.infer_batch(model, batch_data["image"], device=device)
 
         if return_coordinates:
