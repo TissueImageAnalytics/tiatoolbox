@@ -478,7 +478,22 @@ class EngineABC(ABC):  # noqa: B024
 
     @staticmethod
     def _update_model_output(raw_predictions: dict, raw_output: dict) -> dict:
-        """Helper function to append raw output during inference using Dask arrays."""
+        """Append raw output from model inference to the prediction dictionary.
+
+        This method wraps each batch output in a Dask array and concatenates it
+        with existing predictions for efficient memory usage and parallel computation.
+
+        Args:
+            raw_predictions (dict):
+                Dictionary containing accumulated Dask arrays for each output key.
+            raw_output (dict):
+                Dictionary containing the current batch's output as NumPy arrays.
+
+        Returns:
+            dict:
+                Updated dictionary with concatenated Dask arrays for each output key.
+
+        """
         for key, value in raw_output.items():
             delayed_value = delayed(value)
             dask_array = da.from_delayed(

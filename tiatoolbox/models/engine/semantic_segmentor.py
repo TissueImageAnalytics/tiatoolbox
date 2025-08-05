@@ -425,7 +425,7 @@ class SemanticSegmentor(PatchPredictor):
         # creating dask arrays for faster processing
         merged_probabilities = da.zeros(
             shape=merged_shape,
-            dtype=out_["probabilities"].dtype,
+            dtype=out_.dtype,
             chunks=merged_shape,
         )
 
@@ -435,8 +435,10 @@ class SemanticSegmentor(PatchPredictor):
             chunks=merged_shape[:2],
         )
 
+        batch_output = {"probabilities": None, "coordinates": None, "labels": None}
+
         for _, batch_data in enumerate(dataloader):
-            batch_output = self.model.infer_batch(
+            batch_output["probabilities"] = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
