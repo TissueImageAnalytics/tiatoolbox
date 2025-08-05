@@ -839,7 +839,7 @@ class EngineABC(ABC):  # noqa: B024
     def infer_wsi(
         self: EngineABC,
         dataloader: DataLoader,
-        **kwargs: EngineABCRunParams,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict:
         """Run model inference on a whole slide image (WSI).
 

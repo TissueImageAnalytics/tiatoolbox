@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import dask
 import dask.array as da
 import numpy as np
 import torch
+from dask import delayed
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -16,7 +16,6 @@ from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
     dict_to_zarr,
-    get_tqdm,
 )
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
@@ -31,8 +30,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import Resolution
     from tiatoolbox.wsicore import WSIReader
-
-    from .engine_abc import EngineABC, EngineABCRunParams
 
 
 class SemanticSegmentorRunParams(PredictorRunParams):
@@ -369,20 +366,19 @@ class SemanticSegmentor(PatchPredictor):
         )
 
     def infer_wsi(
-        self: EngineABC,
+        self: SemanticSegmentor,
         dataloader: DataLoader,
-        **kwargs: EngineABCRunParams,
-    ) -> Path:
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict:
         """Model inference on a WSI.
 
         Args:
             dataloader (DataLoader):
                 A torch dataloader to process WSIs.
-
             save_path (Path):
                 Path to save the intermediate output. The intermediate output is saved
                 in a zarr file.
-            **kwargs (EngineABCRunParams):
+            **kwargs (SemanticSegmentorRunParams):
                 Keyword Args to update setup_patch_dataset() method attributes. See
                 :class:`EngineRunParams` for accepted keyword arguments.
 
@@ -391,134 +387,79 @@ class SemanticSegmentor(PatchPredictor):
                 Path to zarr file where intermediate output is saved.
 
         """
-        _ = kwargs.get("return_probabilities")
-
-        tqdm = get_tqdm()
-
-        progress_bar = (
-            tqdm(total=len(dataloader), leave=self.patch_mode, desc="Inferring patches")
-            if self.verbose
-            else None
+        _ = kwargs.get("return_probabilities", False)
+        raw_predictions = self.infer_patches(
+            dataloader=dataloader,
+            return_coordinates=True,
         )
-
-        keys = ["coordinates"]
-
-        if self.return_labels:
-            keys.append("labels")
-
-        raw_predictions = dict.fromkeys(keys)
 
         max_location = np.max(self.output_locations, axis=0)
-
-        out_ = self.model.infer_batch(
-            self.model,
-            torch.from_numpy(dataloader.dataset[0]["image"][None, :, :, :]),
-            device=self.device,
-        )
-
         merged_shape = (
             max_location[3],
             max_location[2],
-            out_.shape[3],
+            raw_predictions["probabilities"].shape[3],
         )
 
-        # creating dask arrays for faster processing
-        merged_probabilities = da.zeros(
-            shape=merged_shape,
-            dtype=out_.dtype,
-            chunks=merged_shape,
-        )
+        prob_updates = []
+        weight_updates = []
 
-        merged_weights = da.zeros(
-            shape=merged_shape[:2],
-            dtype=int,
-            chunks=merged_shape[:2],
-        )
+        for idx, location in enumerate(self.output_locations):
+            start_x, start_y, end_x, end_y = location
+            patch_probs = raw_predictions["probabilities"][
+                idx, 0 : end_y - start_y, 0 : end_x - start_x, :
+            ]
 
-        batch_output = {"probabilities": None, "coordinates": None, "labels": None}
+            # Wrap patch and location in delayed
+            @delayed
+            def make_prob_update(patch, sx, sy, ex, ey, shape):  # noqa: ANN202, ANN001
+                arr = np.zeros(shape, dtype=patch.dtype)
+                arr[sy:ey, sx:ex, :] = patch
+                return arr
 
-        for _, batch_data in enumerate(dataloader):
-            batch_output["probabilities"] = self.model.infer_batch(
-                self.model,
-                batch_data["image"],
-                device=self.device,
+            @delayed
+            def make_weight_update(sx, sy, ex, ey, shape):  # noqa: ANN202, ANN001
+                arr = np.zeros(shape, dtype=float)
+                arr[sy:ey, sx:ex] = 1
+                return arr
+
+            prob_updates.append(
+                da.from_delayed(
+                    make_prob_update(
+                        patch_probs, start_x, start_y, end_x, end_y, merged_shape
+                    ),
+                    shape=merged_shape,
+                    dtype=patch_probs.dtype,
+                )
             )
 
-            batch_output["coordinates"] = self._get_coordinates(batch_data)
-
-            if self.return_labels:  # be careful of `s`
-                if isinstance(batch_data["label"], torch.Tensor):
-                    batch_output["labels"] = batch_data["label"].numpy()
-                else:
-                    batch_output["labels"] = np.array(batch_data["label"])
-
-            output_locs = batch_data["output_locs"]
-
-            for idx, location in enumerate(output_locs.numpy()):
-                start_x, start_y, end_x, end_y = location
-                patch_probs = batch_output["probabilities"][
-                    idx, 0 : end_y - start_y, 0 : end_x - start_x, :
-                ]
-                merged_probabilities[start_y:end_y, start_x:end_x, :] = (
-                    merged_probabilities[start_y:end_y, start_x:end_x, :] + patch_probs
+            weight_updates.append(
+                da.from_delayed(
+                    make_weight_update(
+                        start_x, start_y, end_x, end_y, merged_shape[:2]
+                    ),
+                    shape=merged_shape[:2],
+                    dtype=float,
                 )
-                merged_weights[start_y:end_y, start_x:end_x] = (
-                    merged_weights[start_y:end_y, start_x:end_x] + 1
-                )
-
-            del batch_output["probabilities"]
-            raw_predictions = self._update_model_output(
-                raw_predictions=raw_predictions,
-                raw_output=batch_output,
             )
 
-            if progress_bar:
-                progress_bar.update()
+        # Sum all updates
+        merged_probabilities = da.stack(prob_updates).sum(axis=0)
+        merged_weights = da.stack(weight_updates).sum(axis=0)
 
         merged_weights = da.maximum(merged_weights, 1)
         raw_predictions["probabilities"] = (
             merged_probabilities / merged_weights[:, :, None]
         )
 
-        if progress_bar:
-            progress_bar.close()
-
-        return raw_predictions
-
-    def post_process_wsi(
-        self: SemanticSegmentor,
-        raw_predictions: Path,
-        **kwargs: Unpack[PredictorRunParams],
-    ) -> Path:
-        """Returns an array from raw predictions.
-
-        Merges raw predictions from individual patches into a single prediction array if
-        patch_mode is False.
-
-        """
-        _ = kwargs.get("return_probabilities")
-
-        num_post_proc_workers = self.num_post_proc_workers
-
-        if num_post_proc_workers is not None and num_post_proc_workers > 0:
-            dask.config.set(scheduler="threads", num_workers=num_post_proc_workers)
-        else:
-            dask.config.set(scheduler="threads")
-
-        # Applying Post-Processing
-        raw_predictions["predictions"] = self.model.postproc_func(
-            raw_predictions["probabilities"],
-        )
-
         return raw_predictions
 
     def save_predictions(
-        self: PatchPredictor,
-        processed_predictions: dict | Path,
+        self: SemanticSegmentor,
+        processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
-        **kwargs: SemanticSegmentorRunParams,
-    ) -> dict | AnnotationStore | Path | list[Path]:
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict | AnnotationStore | Path:
         """Save semantic segmentation predictions to disk.
 
         Args:
