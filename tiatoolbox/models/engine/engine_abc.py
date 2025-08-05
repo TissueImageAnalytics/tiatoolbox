@@ -1185,11 +1185,34 @@ class EngineABC(ABC):  # noqa: B024
         )
 
     def _run_patch_mode(
-        self: EngineABC, output_type: str, save_dir: Path, **kwargs: EngineABCRunParams
+        self: EngineABC,
+        output_type: str,
+        save_dir: Path,
+        **kwargs: EngineABCRunParams,
     ) -> dict | AnnotationStore | Path:
-        """Runs the Engine in the patch mode.
+        """Run the engine in patch mode.
 
-        Input arguments are passed from :func:`EngineABC.run()`.
+        This method performs inference on image patches, post-processes the predictions,
+        and saves the output in the specified format.
+
+        Args:
+            output_type (str):
+                Desired output format. Supported values are "dict", "zarr",
+                and "annotationstore".
+            save_dir (Path):
+                Directory to save the output files.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters including:
+                    - output_file: Name of the output file.
+                    - scale_factor: Scaling factor for annotations.
+                    - class_dict: Mapping of class indices to names.
+
+        Returns:
+            dict | AnnotationStore | Path:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "annotationstore": returns an AnnotationStore
+                  or path to .db file.
 
         """
         save_path = None
