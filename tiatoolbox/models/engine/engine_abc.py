@@ -868,23 +868,23 @@ class EngineABC(ABC):  # noqa: B024
         return raw_predictions
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
-        """Helper function to load ioconfig.
+        """Load or validate the IO configuration for the engine.
 
-        If the model is provided by TIAToolbox it will load the default ioconfig.
-        Otherwise, ioconfig must be specified.
+        If the model is from TIAToolbox and no IO configuration is provided,
+        this method attempts to use the default configuration. Otherwise,
+        it validates and sets the provided configuration.
 
         Args:
             ioconfig (ModelIOConfigABC):
-                IO configuration to run the engines.
-
-        Raises:
-             ValueError:
-                If no io configuration is provided or found in the pretrained TIAToolbox
-                models.
+                IO configuration to use for model inference.
 
         Returns:
             ModelIOConfigABC:
-                The ioconfig used for the run.
+                The IO configuration to be used during inference.
+
+        Raises:
+            ValueError:
+                If no IO configuration is provided and none is available from the model.
 
         """
         if self.ioconfig is None and ioconfig is None:
