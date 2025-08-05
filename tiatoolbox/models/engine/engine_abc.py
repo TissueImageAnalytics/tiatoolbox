@@ -1,4 +1,36 @@
-"""Defines Abstract Base Class for TIAToolbox Engines."""
+"""Abstract Base Class for TIAToolbox Deep Learning Engines.
+
+This module defines the `EngineABC` class, which serves as a base for implementing
+deep learning inference workflows in TIAToolbox. It supports both patch-based and
+whole slide image (WSI) processing, and provides a unified interface for model
+initialization, data loading, inference, post-processing, and output saving.
+
+Classes:
+    - EngineABC: Abstract base class for deep learning engines.
+    - EngineABCRunParams: TypedDict for runtime configuration parameters.
+
+Functions:
+    - prepare_engines_save_dir: Utility to create or validate output directories.
+
+Features:
+    - Supports patch and WSI modes.
+    - Handles caching and memory-efficient inference using Dask.
+    - Integrates with TIAToolbox models and IO configurations.
+    - Outputs predictions in multiple formats including dict, zarr, and AnnotationStore.
+
+Intended Usage:
+    Subclass `EngineABC` to implement specific inference logic by overriding
+    abstract methods such as preprocessing, postprocessing, and model-specific behavior.
+
+Example:
+    >>> class MyEngine(EngineABC):
+    >>>     def __init__(self, model, weights, verbose):
+    >>>         super().__init__(model=model, weights=weights, verbose=verbose)
+    >>> # Implement base class functions and then call.
+    >>> engine = MyEngine(model="resnet18-kather100k")
+    >>> output = engine.run(images, patch_mode=True)
+
+"""
 
 from __future__ import annotations
 
