@@ -356,17 +356,15 @@ class EngineABC(ABC):  # noqa: B024
         model: str | ModelABC,
         weights: str | Path | None,
     ) -> tuple[nn.Module, ModelIOConfigABC | None]:
-        """Helper function to initialize model and ioconfig attributes.
+        """Helper function to initialize model and IO configuration.
 
-        If a pretrained model provided by the TIAToolbox is requested. The model
-        can be specified as a string otherwise :class:`torch.nn.Module` is required.
-        This function also loads the :class:`ModelIOConfigABC` using the information
-        from the pretrained models in TIAToolbox. If ioconfig is not available then it
-        should be provided in the :func:`run()` function.
+        If a pretrained model from TIAToolbox is specified by name, this function
+        loads the model and its associated IO configuration. If a custom model is
+        provided, it loads the weights if specified and returns None for IO config.
 
         Args:
             model (str | ModelABC):
-                A PyTorch model. Default is `None`.
+                A model name from TIAToolbox or a PyTorch model instance.
                 The user can request pretrained models from the toolbox model zoo using
                 the list of pretrained models available at this `link
                 <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
@@ -375,18 +373,18 @@ class EngineABC(ABC):  # noqa: B024
                 of weights using the `weights` parameter.
 
             weights (str | Path | None):
-                Path to pretrained weights. If no pretrained weights are provided
-                and the `model` is provided by TIAToolbox, then pretrained weights will
-                be automatically loaded from the TIA servers.
+                Path to pretrained weights. If None and a TIAToolbox model is used,
+                default weights are automatically downloaded.
 
         Returns:
-            ModelABC:
-                The requested PyTorch model as a :class:`ModelABC` instance.
+            tuple[nn.Module, ModelIOConfigABC | None]:
+                A tuple containing the loaded PyTorch model and its IO configuration.
+                If the model is not from TIAToolbox, IO config will be None.
 
-            ModelIOConfigABC | None:
-                The model io configuration for TIAToolbox pretrained models.
-                If the specified model is not in TIAToolbox model zoo, then the function
-                returns None.
+        Raises:
+            TypeError:
+                If the model is neither a string (TIAToolbox model)
+                nor a torch.nn.Module.
 
         """
         if not isinstance(model, (str, nn.Module)):
