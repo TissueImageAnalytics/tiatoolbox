@@ -414,69 +414,56 @@ class PatchPredictor(EngineABC):
 
     def run(
         self: PatchPredictor,
-        images: list[os | Path | WSIReader] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
-        save_dir: os | Path | None = None,  # None will not save output
+        save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
         output_type: str = "dict",
         **kwargs: Unpack[PredictorRunParams],
     ) -> AnnotationStore | Path | str | dict:
-        """Run the engine on input images.
+        """Run the PatchPredictor engine on input images.
+
+        This method orchestrates the full inference pipeline, including preprocessing,
+        model inference, post-processing, and saving results. It supports both patch
+        and whole slide image (WSI) modes.
 
         Args:
-            images (list, ndarray):
-                List of inputs to process. when using `patch` mode, the
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches. When using `patch` mode, the
                 input must be either a list of images, a list of image
                 file paths or a numpy array of an image list.
-            masks (list | None):
-                List of masks. Only utilised when patch_mode is False.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
+                Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
             labels (list | None):
-                List of labels. Only a single label per image is supported.
+                Optional labels for input images.
+                Only a single label per image is supported.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution.
             patch_mode (bool):
-                Whether to treat input image as a patch or WSI.
-                default = True.
-            ioconfig (IOPatchPredictorConfig):
-                IO configuration.
-            save_dir (str or pathlib.Path):
-                Output directory to save the results.
-                If save_dir is not provided when patch_mode is False,
-                then for a single image the output is created in the current directory.
-                If there are multiple WSIs as input then the user must provide
-                path to save directory otherwise an OSError will be raised.
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
             overwrite (bool):
-                Whether to overwrite the results. Default = False.
+                Whether to overwrite existing output files. Default is False.
             output_type (str):
-                The format of the output type. "output_type" can be
-                "zarr" or "AnnotationStore". Default value is "zarr".
-                When saving in the zarr format the output is saved using the
-                `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
-                as a zarr group. If the required output type is an "AnnotationStore"
-                then the output will be intermediately saved as zarr but converted
-                to :class:`AnnotationStore` and saved as a `.db` file
-                at the end of the loop.
+                Desired output format: "dict", "zarr", or "annotationstore".
+                Default value is "zarr".
             **kwargs (PredictorRunParams):
-                Keyword Args to update :class:`EngineABC` attributes during runtime.
+                Additional runtime parameters.
 
         Returns:
-            (:class:`numpy.ndarray`, dict):
-                Model predictions of the input dataset. If multiple
-                whole slide images are provided as input,
-                or save_output is True, then results are saved to
-                `save_dir` and a dictionary indicating save location for
-                each input is returned.
-
-                The dict has the following format:
-
-                - img_path: path of the input image.
-                - raw: path to save location for raw prediction,
-                  saved in .json.
+            AnnotationStore | Path | str | dict:
+                - If `patch_mode` is True: returns predictions or path to saved output.
+                - If `patch_mode` is False: returns a dictionary mapping each WSI to
+                  its output path.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
