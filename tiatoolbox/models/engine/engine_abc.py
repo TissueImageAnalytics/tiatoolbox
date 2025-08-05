@@ -412,28 +412,27 @@ class EngineABC(ABC):  # noqa: B024
         *,
         patch_mode: bool = True,
     ) -> torch.utils.data.DataLoader:
-        """Pre-process images and masks and return dataloader for inference.
+        """Pre-process images and masks and return a DataLoader for inference.
 
         Args:
-            images (list of str or :class:`Path` or :class:`numpy.ndarray`):
-                A list of image patches in NHWC format as a numpy array
-                or a list of str/paths to WSIs. When `patch_mode` is False
-                the function expects list of str/paths to WSIs.
-            masks (list | None):
-                List of masks. Only utilised when patch_mode is False.
-                Patches are only generated within a masked area.
-                If not provided, then a tissue mask will be automatically
-                generated for whole slide images.
+            images (list[str | Path] | np.ndarray):
+                A list of image patches in NHWC format as a numpy array,
+                or a list of file paths to WSIs. When `patch_mode` is False,
+                expects file paths to WSIs.
+            masks (Path | None):
+                Optional list of masks used when `patch_mode` is False.
+                Patches are generated only within masked areas. If not provided,
+                tissue masks are automatically generated.
             labels (list | None):
-                List of labels. Only a single label per image is supported.
-            ioconfig (ModelIOConfigABC):
-                A :class:`ModelIOConfigABC` object.
+                Optional list of labels. Only one label per image is supported.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration object specifying patch size, stride, and resolution.
             patch_mode (bool):
-                Whether to treat input image as a patch or WSI.
+                Whether to treat input as patches (`True`) or WSIs (`False`).
 
         Returns:
             torch.utils.data.DataLoader:
-                :class:`torch.utils.data.DataLoader` for inference.
+                A PyTorch DataLoader configured for inference.
 
         """
         if labels:
