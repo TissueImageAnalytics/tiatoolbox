@@ -419,7 +419,7 @@ class SemanticSegmentor(PatchPredictor):
         merged_shape = (
             max_location[3],
             max_location[2],
-            out_["probabilities"].shape[3],
+            out_.shape[3],
         )
 
         # creating dask arrays for faster processing
