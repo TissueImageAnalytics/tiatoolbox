@@ -712,8 +712,6 @@ class EngineABC(ABC):  # noqa: B024
             write_tasks = []
             for key in keys_to_compute:
                 dask_array = processed_predictions[key]
-                if dask_array is None:
-                    continue
                 task = dask_array.to_zarr(
                     url=save_path,
                     component=key,
