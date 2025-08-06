@@ -50,7 +50,7 @@ def test_functional_unet(remote_sample: Callable) -> None:
     pretrained = torch.load(pretrained_weights, map_location="cpu")
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
-    _ = output["probabilities"][0]
+    _ = output[0]
 
     # run untrained network to test for architecture
     model = UNetModel(
