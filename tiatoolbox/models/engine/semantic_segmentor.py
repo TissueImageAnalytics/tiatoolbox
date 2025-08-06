@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import dask.array as da
 import numpy as np
 import torch
-from dask import delayed
+from dask.diagnostics import ProgressBar
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -16,6 +16,7 @@ from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
     dict_to_zarr,
+    get_tqdm,
 )
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
@@ -393,58 +394,52 @@ class SemanticSegmentor(PatchPredictor):
             return_coordinates=True,
         )
 
+        with ProgressBar():
+            da_probabilities = raw_predictions["probabilities"].persist()
+
+        progress_bar = None
+        tqdm = get_tqdm()
+
+        if self.verbose:
+            progress_bar = tqdm(
+                total=len(self.output_locations),
+                leave=False,
+                desc="Merging Patch Outputs",
+            )
+
         max_location = np.max(self.output_locations, axis=0)
         merged_shape = (
             max_location[3],
             max_location[2],
-            raw_predictions["probabilities"].shape[3],
+            da_probabilities.shape[3],
         )
 
-        prob_updates = []
-        weight_updates = []
+        # creating dask arrays for faster processing
+        merged_probabilities = da.zeros(
+            shape=merged_shape,
+            dtype=da_probabilities.dtype,
+            chunks=merged_shape,
+        )
+
+        merged_weights = da.zeros(
+            shape=merged_shape[:2],
+            dtype=int,
+            chunks=merged_shape[:2],
+        )
 
         for idx, location in enumerate(self.output_locations):
             start_x, start_y, end_x, end_y = location
-            patch_probs = raw_predictions["probabilities"][
+            patch_probs = da_probabilities[
                 idx, 0 : end_y - start_y, 0 : end_x - start_x, :
             ]
-
-            # Wrap patch and location in delayed
-            @delayed
-            def make_prob_update(patch, sx, sy, ex, ey, shape):  # noqa: ANN202, ANN001
-                arr = np.zeros(shape, dtype=patch.dtype)
-                arr[sy:ey, sx:ex, :] = patch
-                return arr
-
-            @delayed
-            def make_weight_update(sx, sy, ex, ey, shape):  # noqa: ANN202, ANN001
-                arr = np.zeros(shape, dtype=float)
-                arr[sy:ey, sx:ex] = 1
-                return arr
-
-            prob_updates.append(
-                da.from_delayed(
-                    make_prob_update(
-                        patch_probs, start_x, start_y, end_x, end_y, merged_shape
-                    ),
-                    shape=merged_shape,
-                    dtype=patch_probs.dtype,
-                )
+            merged_probabilities[start_y:end_y, start_x:end_x, :] = (
+                merged_probabilities[start_y:end_y, start_x:end_x, :] + patch_probs
             )
-
-            weight_updates.append(
-                da.from_delayed(
-                    make_weight_update(
-                        start_x, start_y, end_x, end_y, merged_shape[:2]
-                    ),
-                    shape=merged_shape[:2],
-                    dtype=float,
-                )
+            merged_weights[start_y:end_y, start_x:end_x] = (
+                merged_weights[start_y:end_y, start_x:end_x] + 1
             )
-
-        # Sum all updates
-        merged_probabilities = da.stack(prob_updates).sum(axis=0)
-        merged_weights = da.stack(weight_updates).sum(axis=0)
+            if progress_bar:
+                progress_bar.update()
 
         merged_weights = da.maximum(merged_weights, 1)
         raw_predictions["probabilities"] = (
