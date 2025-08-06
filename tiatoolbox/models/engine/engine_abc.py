@@ -508,39 +508,6 @@ class EngineABC(ABC):  # noqa: B024
             shuffle=False,
         )
 
-    @staticmethod
-    def _update_model_output(raw_predictions: dict, raw_output: dict) -> dict:
-        """Append raw output from model inference to the prediction dictionary.
-
-        This method wraps each batch output in a Dask array and concatenates it
-        with existing predictions for efficient memory usage and parallel computation.
-
-        Args:
-            raw_predictions (dict):
-                Dictionary containing accumulated Dask arrays for each output key.
-            raw_output (dict):
-                Dictionary containing the current batch's output as NumPy arrays.
-
-        Returns:
-            dict:
-                Updated dictionary with concatenated Dask arrays for each output key.
-
-        """
-        for key, value in raw_output.items():
-            delayed_value = delayed(value)
-            dask_array = da.from_delayed(
-                delayed_value, shape=value.shape, dtype=value.dtype
-            )
-
-            if raw_predictions[key] is None:
-                raw_predictions[key] = dask_array
-            else:
-                raw_predictions[key] = da.concatenate(
-                    [raw_predictions[key], dask_array], axis=0
-                )
-
-        return raw_predictions
-
     def _get_coordinates(self: EngineABC, batch_data: dict) -> np.ndarray:
         """Extract coordinates for each image patch in a batch.
 
