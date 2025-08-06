@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import dask.array as da
 import numpy as np
 import torch
-from dask.diagnostics import ProgressBar
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -394,9 +393,6 @@ class SemanticSegmentor(PatchPredictor):
             return_coordinates=True,
         )
 
-        with ProgressBar():
-            da_probabilities = raw_predictions["probabilities"].persist()
-
         progress_bar = None
         tqdm = get_tqdm()
 
@@ -411,13 +407,13 @@ class SemanticSegmentor(PatchPredictor):
         merged_shape = (
             max_location[3],
             max_location[2],
-            da_probabilities.shape[3],
+            raw_predictions["probabilities"].shape[3],
         )
 
         # creating dask arrays for faster processing
         merged_probabilities = da.zeros(
             shape=merged_shape,
-            dtype=da_probabilities.dtype,
+            dtype=raw_predictions["probabilities"].dtype,
             chunks=merged_shape,
         )
 
@@ -429,7 +425,7 @@ class SemanticSegmentor(PatchPredictor):
 
         for idx, location in enumerate(self.output_locations):
             start_x, start_y, end_x, end_y = location
-            patch_probs = da_probabilities[
+            patch_probs = raw_predictions["probabilities"][
                 idx, 0 : end_y - start_y, 0 : end_x - start_x, :
             ]
             merged_probabilities[start_y:end_y, start_x:end_x, :] = (
