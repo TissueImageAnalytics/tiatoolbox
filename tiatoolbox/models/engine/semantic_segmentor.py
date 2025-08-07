@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import dask.array as da
 import numpy as np
 import torch
+from dask import compute, delayed
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -15,7 +16,6 @@ from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
     dict_to_zarr,
-    get_tqdm,
 )
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
@@ -393,16 +393,6 @@ class SemanticSegmentor(PatchPredictor):
             return_coordinates=True,
         )
 
-        progress_bar = None
-        tqdm = get_tqdm()
-
-        if self.verbose:
-            progress_bar = tqdm(
-                total=len(self.output_locations),
-                leave=False,
-                desc="Merging Patch Outputs",
-            )
-
         max_location = np.max(self.output_locations, axis=0)
         merged_shape = (
             max_location[3],
@@ -410,36 +400,32 @@ class SemanticSegmentor(PatchPredictor):
             raw_predictions["probabilities"].shape[3],
         )
 
-        # creating dask arrays for faster processing
-        merged_probabilities = da.zeros(
+        raw_probs = raw_predictions["probabilities"].rechunk((1, 512, 512, 5))
+        delayed_blocks = raw_probs.to_delayed().ravel()
+        dtype_ = raw_predictions["probabilities"].dtype
+
+        @delayed
+        def merge_all(
+            blocks: da.Array,
+            output_locations: np.ndarray,
+            merged_shape: tuple,
+            dtype_: type,
+        ) -> da.Array:
+            """Helper function for merging blocks."""
+            canvas = da.zeros(merged_shape, dtype=dtype_)
+            count = da.zeros(merged_shape, dtype=np.uint8)
+            for i, block in enumerate(blocks):
+                xs, ys, xe, ye = output_locations[i]
+                canvas[ys:ye, xs:xe, :] += compute(block)
+                count[ys:ye, xs:xe, :] += 1
+            return canvas / np.maximum(count, 1)
+
+        merged = merge_all(delayed_blocks, self.output_locations, merged_shape, dtype_)
+
+        raw_predictions["probabilities"] = da.from_delayed(
+            merged,
             shape=merged_shape,
-            dtype=raw_predictions["probabilities"].dtype,
-            chunks=merged_shape,
-        )
-
-        merged_weights = da.zeros(
-            shape=merged_shape[:2],
-            dtype=int,
-            chunks=merged_shape[:2],
-        )
-
-        for idx, location in enumerate(self.output_locations):
-            start_x, start_y, end_x, end_y = location
-            patch_probs = raw_predictions["probabilities"][
-                idx, 0 : end_y - start_y, 0 : end_x - start_x, :
-            ]
-            merged_probabilities[start_y:end_y, start_x:end_x, :] = (
-                merged_probabilities[start_y:end_y, start_x:end_x, :] + patch_probs
-            )
-            merged_weights[start_y:end_y, start_x:end_x] = (
-                merged_weights[start_y:end_y, start_x:end_x] + 1
-            )
-            if progress_bar:
-                progress_bar.update()
-
-        merged_weights = da.maximum(merged_weights, 1)
-        raw_predictions["probabilities"] = (
-            merged_probabilities / merged_weights[:, :, None]
+            dtype=dtype_,
         )
 
         return raw_predictions
