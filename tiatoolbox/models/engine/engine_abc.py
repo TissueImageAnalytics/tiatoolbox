@@ -508,39 +508,6 @@ class EngineABC(ABC):  # noqa: B024
             shuffle=False,
         )
 
-    @staticmethod
-    def _update_model_output(raw_predictions: dict, raw_output: dict) -> dict:
-        """Append raw output from model inference to the prediction dictionary.
-
-        This method wraps each batch output in a Dask array and concatenates it
-        with existing predictions for efficient memory usage and parallel computation.
-
-        Args:
-            raw_predictions (dict):
-                Dictionary containing accumulated Dask arrays for each output key.
-            raw_output (dict):
-                Dictionary containing the current batch's output as NumPy arrays.
-
-        Returns:
-            dict:
-                Updated dictionary with concatenated Dask arrays for each output key.
-
-        """
-        for key, value in raw_output.items():
-            delayed_value = delayed(value)
-            dask_array = da.from_delayed(
-                delayed_value, shape=value.shape, dtype=value.dtype
-            )
-
-            if raw_predictions[key] is None:
-                raw_predictions[key] = dask_array
-            else:
-                raw_predictions[key] = da.concatenate(
-                    [raw_predictions[key], dask_array], axis=0
-                )
-
-        return raw_predictions
-
     def _get_coordinates(self: EngineABC, batch_data: dict) -> np.ndarray:
         """Extract coordinates for each image patch in a batch.
 
@@ -563,53 +530,6 @@ class EngineABC(ABC):  # noqa: B024
             coordinates = [0, 0, *batch_data["image"].shape[1:3]]
             return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
         return np.array(batch_data["coords"])
-
-    @delayed
-    def process_batch(
-        self: EngineABC,
-        batch_data: dict,
-        model: ModelABC,
-        device: str,
-        *,
-        return_labels: bool,
-        return_coordinates: bool,
-    ) -> dict:
-        """Process a batch of images and return model predictions.
-
-        This method performs inference on a batch of image patches,
-        optionally including coordinates and labels in the output.
-
-        Args:
-            batch_data (dict):
-                Dictionary containing batch input data including images,
-                and optionally labels and coordinates.
-            model (ModelABC):
-                The PyTorch or TIAToolbox model used for inference.
-            device (str):
-                Device on which to run inference (e.g., "cpu", "cuda").
-            return_labels (bool):
-                Whether to include labels in the output.
-            return_coordinates (bool):
-                Whether to include coordinates in the output.
-
-        Returns:
-            dict:
-                Dictionary containing model predictions, and optionally
-                coordinates and labels.
-
-        """
-        batch_output = model.infer_batch(model, batch_data["image"], device=device)
-
-        if return_coordinates:
-            batch_output["coordinates"] = self._get_coordinates(batch_data)
-
-        if return_labels:
-            if isinstance(batch_data["label"], torch.Tensor):
-                batch_output["labels"] = batch_data["label"].numpy()
-            else:
-                batch_output["labels"] = np.array(batch_data["label"])
-
-        return batch_output
 
     def infer_patches(
         self: EngineABC,
@@ -792,8 +712,6 @@ class EngineABC(ABC):  # noqa: B024
             write_tasks = []
             for key in keys_to_compute:
                 dask_array = processed_predictions[key]
-                if dask_array is None:
-                    continue
                 task = dask_array.to_zarr(
                     url=save_path,
                     component=key,
