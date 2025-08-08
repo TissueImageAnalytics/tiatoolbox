@@ -33,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def merge_all(
-    blocks: np.ndarray,
+    blocks: da.Array,
     output_locations: np.ndarray,
     merged_shape: tuple,
     dtype_: type,
