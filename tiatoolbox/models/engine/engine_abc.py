@@ -43,7 +43,7 @@ import dask
 import dask.array as da
 import numpy as np
 import torch
-from dask import compute, delayed
+from dask import compute
 from dask.diagnostics import ProgressBar
 from torch import nn
 from typing_extensions import Unpack
@@ -558,18 +558,9 @@ class EngineABC(ABC):  # noqa: B024
         keys = ["probabilities"]
         probabilities = []
 
-        # sample for calculating shape for dask arrays
-        sample = self.dataloader.dataset[0]
-        sample_output = self.model.infer_batch(
-            self.model,
-            torch.Tensor(sample["image"][np.newaxis, ...]),
-            device=self.device,
-        )
-
         if self.return_labels:
             keys.append("labels")
             labels = []
-            sample["label"] = np.array(sample["label"])[np.newaxis, ...]
 
         if return_coordinates:
             keys.append("coordinates")
@@ -587,40 +578,27 @@ class EngineABC(ABC):  # noqa: B024
         )
 
         for batch_data in tqdm_loop:
-            batch_output = delayed(self.model.infer_batch)(
+            batch_output = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
             )
 
             probabilities.append(
-                da.from_delayed(
+                da.from_array(
                     batch_output,  # probabilities
-                    shape=(batch_data["image"].shape[0], *sample_output.shape[1:]),
-                    dtype=sample_output.dtype,
                 )
             )
 
             if return_coordinates:
                 coordinates.append(
-                    da.from_delayed(
-                        delayed(self._get_coordinates)(batch_data),
-                        shape=(batch_data["image"].shape[0], 4),
-                        dtype=np.int64,
+                    da.from_array(
+                        self._get_coordinates(batch_data),
                     )
                 )
 
             if self.return_labels:
-                labels.append(
-                    da.from_delayed(
-                        delayed(np.array)(batch_data["label"]),
-                        shape=(
-                            batch_data["image"].shape[0],
-                            *sample["label"].shape[1:],
-                        ),
-                        dtype=sample["label"].dtype,
-                    )
-                )
+                labels.append(da.from_array(np.array(batch_data["label"])))
 
         raw_predictions["probabilities"] = da.concatenate(probabilities, axis=0)
 

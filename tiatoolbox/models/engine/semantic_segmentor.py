@@ -420,7 +420,7 @@ class SemanticSegmentor(PatchPredictor):
         dtype_ = raw_predictions["probabilities"].dtype
 
         merged = delayed(merge_all)(
-            raw_probs.persist(),
+            raw_probs,
             self.output_locations,
             merged_shape,
             dtype_,
