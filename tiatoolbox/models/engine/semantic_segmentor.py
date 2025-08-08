@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import dask.array as da
 import numpy as np
 import torch
-from dask import compute, delayed
+from dask import delayed
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -30,6 +30,22 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import Resolution
     from tiatoolbox.wsicore import WSIReader
+
+
+def merge_all(
+    blocks: np.ndarray,
+    output_locations: np.ndarray,
+    merged_shape: tuple,
+    dtype_: type,
+) -> np.ndarray:
+    """Helper function to merge predictions."""
+    canvas = np.zeros(merged_shape, dtype=dtype_)
+    count = np.zeros(merged_shape, dtype=np.uint8)
+    for i, block in enumerate(blocks):
+        xs, ys, xe, ye = output_locations[i]
+        canvas[ys:ye, xs:xe, :] += block
+        count[ys:ye, xs:xe, :] += 1
+    return canvas / np.maximum(count, 1)
 
 
 class SemanticSegmentorRunParams(PredictorRunParams):
@@ -401,26 +417,14 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         raw_probs = raw_predictions["probabilities"].rechunk((1, 512, 512, 5))
-        delayed_blocks = raw_probs.to_delayed().ravel()
         dtype_ = raw_predictions["probabilities"].dtype
 
-        @delayed
-        def merge_all(
-            blocks: da.Array,
-            output_locations: np.ndarray,
-            merged_shape: tuple,
-            dtype_: type,
-        ) -> da.Array:
-            """Helper function for merging blocks."""
-            canvas = da.zeros(merged_shape, dtype=dtype_)
-            count = da.zeros(merged_shape, dtype=np.uint8)
-            for i, block in enumerate(blocks):
-                xs, ys, xe, ye = output_locations[i]
-                canvas[ys:ye, xs:xe, :] += compute(block)
-                count[ys:ye, xs:xe, :] += 1
-            return canvas / np.maximum(count, 1)
-
-        merged = merge_all(delayed_blocks, self.output_locations, merged_shape, dtype_)
+        merged = delayed(merge_all)(
+            raw_probs.persist(),
+            self.output_locations,
+            merged_shape,
+            dtype_,
+        )
 
         raw_predictions["probabilities"] = da.from_delayed(
             merged,
