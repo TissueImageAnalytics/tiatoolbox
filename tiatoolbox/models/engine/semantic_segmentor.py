@@ -73,61 +73,55 @@ def merge_all(
     return canvas, count
 
 
-class SemanticSegmentorRunParams(PredictorRunParams):
-    """Class describing the input parameters for the :func:`EngineABC.run()` method.
+class SemanticSegmentorRunParams(PredictorRunParams, total=False):
+    """Runtime parameters for configuring the `SemanticSegmentor.run()` method.
+
+    This class extends `PredictorRunParams` with additional parameters
+    specific to semantic segmentation workflows.
 
     Attributes:
         batch_size (int):
             Number of image patches to feed to the model in a forward pass.
         cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory.
+            Whether to run the engine in cache mode. Recommended for large datasets.
         cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size.
+            Number of patches to process in a batch when cache_mode is True.
         class_dict (dict):
             Optional dictionary mapping classification outputs to class names.
         device (str):
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device.
+            Device to run the model on (e.g., "cpu", "cuda").
         ioconfig (ModelIOConfigABC):
-            Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
+            Input/output configuration for patch extraction and resolution.
         return_labels (bool):
-            Whether to return the labels with the predictions.
+            Whether to return labels with predictions.
         num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
+            Number of workers used in DataLoader.
         num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
+            Number of workers used for post-processing.
         output_file (str):
-            Output file name to save "zarr" or "db". If None, path to output is
-            returned by the engine.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tuple of height and width (HW).
-            Patches are requested at read resolution, not with respect to level 0,
-            and must be positive.
-        input_resolutions (list(dict(Units, Resolution)))::
-            Resolution used for reading the image. Please see
-            :class:`WSIReader` for details.
+            Output file name for saving results (e.g., .zarr or .db).
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width).
+        input_resolutions (list[dict]):
+            Resolution used for reading the image. See `WSIReader` for details.
         return_probabilities (bool):
-                Whether to return per-class probabilities.
+            Whether to return per-class probabilities.
         scale_factor (tuple[float, float]):
-            The scale factor to use when loading the
-            annotations. All coordinates will be multiplied by this factor to allow
-            conversion of annotations saved at non-baseline resolution to baseline.
-            Should be model_mpp/slide_mpp.
-        stride_shape (tuple):
-            Stride used during WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
+            Scale factor for converting annotations to baseline resolution.
+            Typically model_mpp / slide_mpp.
+        stride_shape (tuple[int, int]):
+            Stride used during WSI processing. Defaults to patch_input_shape.
         verbose (bool):
             Whether to output logging information.
+        patch_output_shape (tuple[int, int]):
+            Shape of output patches (height, width).
+        output_resolutions (Resolution):
+            Resolution used for writing output predictions.
 
     """
+
+    patch_output_shape: tuple[int, int]
+    output_resolutions: Resolution
 
     patch_output_shape: tuple
     output_resolutions: Resolution
