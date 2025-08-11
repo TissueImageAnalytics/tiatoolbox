@@ -361,7 +361,7 @@ class WSIPatchDataset(PatchDatasetABC):
 
     """
 
-    def __init__(  # skipcq: PY-R1000
+    def __init__(  # skipcq: PY-R1000  # noqa: PLR0915
         self: WSIPatchDataset,
         img_path: str | Path,
         mode: str = "wsi",
@@ -469,6 +469,7 @@ class WSIPatchDataset(PatchDatasetABC):
         # may decouple into misc ?
         # the scaling factor will scale base level to requested read resolution/units
         wsi_shape = reader.slide_dimensions(resolution=resolution, units=units)
+        self.reader_info = reader.info
 
         # use all patches, as long as it overlaps source image
         self.inputs = PatchExtractor.get_coordinates(
