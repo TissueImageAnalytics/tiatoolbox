@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import dask.array as da
-from dask import delayed
 from typing_extensions import Unpack
 
 from .engine_abc import EngineABC, EngineABCRunParams
@@ -14,6 +12,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
     from pathlib import Path
 
+    import dask.array as da
     import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
@@ -190,10 +189,6 @@ class PatchPredictor(EngineABC):
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
-        cache_mode (bool):
-            Whether to use caching for large datasets.
-        cache_size (int):
-            Number of patches to process in a batch when caching.
         labels (list | None):
             Optional labels for input images.
             Only a single label per image is supported.
@@ -310,12 +305,9 @@ class PatchPredictor(EngineABC):
 
         """
         _ = kwargs.get("return_probabilities")
-        raw_predictions = delayed(self.model.postproc_func)(raw_predictions)
-        return da.from_delayed(
-            raw_predictions,
-            shape=prediction_shape,
-            dtype=prediction_dtype,
-        )
+        _ = prediction_shape
+        _ = prediction_dtype
+        return self.model.postproc_func(raw_predictions)
 
     def post_process_wsi(
         self: PatchPredictor,

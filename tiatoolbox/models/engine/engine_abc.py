@@ -129,10 +129,6 @@ class EngineABCRunParams(TypedDict, total=False):
     Optional Keys:
         batch_size (int):
             Number of image patches per forward pass.
-        cache_mode (bool):
-            Whether to use caching for large datasets.
-        cache_size (int):
-            Number of patches to process in a batch when caching.
         class_dict (dict):
             Mapping of classification outputs to class names.
         device (str):
@@ -173,8 +169,6 @@ class EngineABCRunParams(TypedDict, total=False):
     """
 
     batch_size: int
-    cache_mode: bool
-    cache_size: int
     class_dict: dict
     device: str
     ioconfig: ModelIOConfigABC
@@ -277,10 +271,6 @@ class EngineABC(ABC):  # noqa: B024
             `stride_shape=patch_input_shape`.
         batch_size (int):
             Number of images fed into the model each time.
-        cache_mode (bool):
-            Whether to use caching for large datasets.
-        cache_size (int):
-            Number of patches to process in a batch when caching.
         labels (list | None):
             Optional labels for input images.
             Only a single label per image is supported.
@@ -370,8 +360,6 @@ class EngineABC(ABC):  # noqa: B024
         )
         self._ioconfig = self.ioconfig  # runtime ioconfig
         self.batch_size = batch_size
-        self.cache_mode: bool = False
-        self.cache_size: int = self.batch_size if self.batch_size else 10000
         self.labels: list | None = None
         self.num_loader_workers = num_loader_workers
         self.num_post_proc_workers = num_post_proc_workers
@@ -1065,11 +1053,6 @@ class EngineABC(ABC):  # noqa: B024
             self.drop_keys.append("label")
 
         self.patch_mode = patch_mode
-        if not self.patch_mode:
-            self.cache_mode = True  # if input is WSI run using cache mode.
-
-        if self.cache_mode and self.batch_size > self.cache_size:
-            self.batch_size = self.cache_size
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
         if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
@@ -1077,10 +1060,6 @@ class EngineABC(ABC):  # noqa: B024
             raise TypeError(msg)
 
         self.output_type = output_type
-        if self.cache_mode and output_type.lower() not in ["zarr", "annotationstore"]:
-            self.output_type = "zarr"
-            msg = "output_type has been updated to 'zarr' for cache_mode=True."
-            logger.info(msg)
 
         if save_dir is not None and output_type.lower() not in [
             "zarr",
@@ -1149,7 +1128,7 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         save_path = None
-        if self.cache_mode or save_dir:
+        if save_dir:
             output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
 

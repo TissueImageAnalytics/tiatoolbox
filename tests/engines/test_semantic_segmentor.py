@@ -37,7 +37,7 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
 
     inputs = [sample_image, sample_image]
 
-    assert segmentor.cache_mode is False
+    assert not segmentor.patch_mode
 
     output = segmentor.run(
         images=inputs,

@@ -82,10 +82,6 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
     Attributes:
         batch_size (int):
             Number of image patches to feed to the model in a forward pass.
-        cache_mode (bool):
-            Whether to run the engine in cache mode. Recommended for large datasets.
-        cache_size (int):
-            Number of patches to process in a batch when cache_mode is True.
         class_dict (dict):
             Optional dictionary mapping classification outputs to class names.
         device (str):
@@ -223,10 +219,6 @@ class SemanticSegmentor(PatchPredictor):
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
-        cache_mode (bool):
-            Whether to use caching for large datasets.
-        cache_size (int):
-            Number of patches to process in a batch when caching.
         labels (list | None):
             Optional labels for input images.
             Only a single label per image is supported.
@@ -587,7 +579,7 @@ class SemanticSegmentor(PatchPredictor):
             )
             save_paths = out_file
 
-        if return_probabilities and self.cache_mode:
+        if return_probabilities:
             zarr_save_path = save_path.parent.with_suffix(".zarr")
             msg = (
                 f"Probability maps cannot be saved as AnnotationStore. "
