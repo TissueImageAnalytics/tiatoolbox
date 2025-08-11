@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import dask.array as da
 import numpy as np
 import torch
-from dask import delayed
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -16,6 +15,7 @@ from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
     dict_to_zarr,
+    get_tqdm,
 )
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
@@ -33,19 +33,21 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def merge_all(
-    blocks: da.Array,
+    blocks: np.ndarray,
     output_locations: np.ndarray,
     merged_shape: tuple,
     dtype_: type,
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """Helper function to merge predictions."""
     canvas = np.zeros(merged_shape, dtype=dtype_)
-    count = np.zeros(merged_shape, dtype=np.uint8)
+    count = np.zeros(merged_shape[:2], dtype=np.uint8)
     for i, block in enumerate(blocks):
         xs, ys, xe, ye = output_locations[i]
-        canvas[ys:ye, xs:xe, :] += block
-        count[ys:ye, xs:xe, :] += 1
-    return canvas / np.maximum(count, 1)
+        # To deal with edge cases
+        ye, xe = min(ye, canvas.shape[0]), min(xe, canvas.shape[1])
+        canvas[ys:ye, xs:xe, :] += block[0 : ye - ys, 0 : xe - xs, :]
+        count[ys:ye, xs:xe] += 1
+    return canvas, count
 
 
 class SemanticSegmentorRunParams(PredictorRunParams):
@@ -404,33 +406,100 @@ class SemanticSegmentor(PatchPredictor):
 
         """
         _ = kwargs.get("return_probabilities", False)
-        raw_predictions = self.infer_patches(
-            dataloader=dataloader,
-            return_coordinates=True,
+
+        keys = ["probabilities", "coordinates"]
+        coordinates = []
+
+        if self.return_labels:
+            keys.append("labels")
+            labels = []
+
+        # Main output dictionary
+        raw_predictions = dict(zip(keys, [[]] * len(keys)))
+
+        # sample for calculating shape for dask arrays
+        sample = self.dataloader.dataset[0]
+        sample_output = self.model.infer_batch(
+            self.model,
+            torch.Tensor(sample["image"][np.newaxis, ...]),
+            device=self.device,
         )
 
+        # Create canvas and counts
         max_location = np.max(self.output_locations, axis=0)
         merged_shape = (
             max_location[3],
             max_location[2],
-            raw_predictions["probabilities"].shape[3],
+            sample_output.shape[3],
+        )
+        canvas = da.zeros(merged_shape, dtype=sample_output.dtype)
+        count = da.zeros(merged_shape[:2], dtype=np.uint8)
+
+        # Inference loop
+        tqdm = get_tqdm()
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else self.dataloader
         )
 
-        raw_probs = raw_predictions["probabilities"].rechunk((1, 512, 512, 5))
-        dtype_ = raw_predictions["probabilities"].dtype
+        for batch_data in tqdm_loop:
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
 
-        merged = delayed(merge_all)(
-            raw_probs,
-            self.output_locations,
-            merged_shape,
-            dtype_,
-        )
+            output_locs = batch_data["output_locs"].numpy()
 
-        raw_predictions["probabilities"] = da.from_delayed(
-            merged,
-            shape=merged_shape,
-            dtype=dtype_,
+            batch_xs, batch_ys = np.min(output_locs[:, 0:2], axis=0)
+            batch_xe, batch_ye = np.max(output_locs[:, 2:4], axis=0)
+
+            merged_shape_batch = (
+                batch_ye - batch_ys,
+                batch_xe - batch_xs,
+                sample_output.shape[3],
+            )
+
+            merged_output, merged_count = merge_all(
+                batch_output,
+                output_locs - np.array([batch_xs, batch_ys, batch_xs, batch_ys]),
+                merged_shape_batch,
+                sample_output.dtype,
+            )
+
+            batch_ye, batch_xe = (
+                min(batch_ye, canvas.shape[0]),
+                min(batch_xe, canvas.shape[1]),
+            )
+
+            canvas[
+                batch_ys:batch_ye,
+                batch_xs:batch_xe,
+                :,
+            ] += merged_output
+
+            count[
+                batch_ys:batch_ye,
+                batch_xs:batch_xe,
+            ] += merged_count
+
+            coordinates.append(
+                da.from_array(
+                    self._get_coordinates(batch_data),
+                )
+            )
+
+            if self.return_labels:
+                labels.append(da.from_array(np.array(batch_data["label"])))
+
+        raw_predictions["probabilities"] = canvas / da.maximum(
+            count[:, :, np.newaxis], 1
         )
+        raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+        if self.return_labels:
+            labels = [label.reshape(-1) for label in labels]
+            raw_predictions["labels"] = da.concatenate(labels, axis=0)
 
         return raw_predictions
 
