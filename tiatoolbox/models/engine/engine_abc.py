@@ -536,12 +536,12 @@ class EngineABC(ABC):  # noqa: B024
         dataloader: DataLoader,
         *,
         return_coordinates: bool = False,
-    ) -> dict:
+    ) -> dict[str, da.Array]:
         """Run model inference on image patches and return predictions.
 
         This method performs batched inference using a PyTorch DataLoader,
-        and accumulates predictions in Dask arrays. Optionally includes
-        coordinates and labels in the output.
+        and accumulates predictions in Dask arrays. It supports optional inclusion
+        of coordinates and labels in the output.
 
         Args:
             dataloader (DataLoader):
@@ -551,8 +551,13 @@ class EngineABC(ABC):  # noqa: B024
                 called by `infer_wsi` and `patch_mode` is False.
 
         Returns:
-            dict:
+            dict[str, dask.array.Array]:
                 Dictionary containing prediction results as Dask arrays.
+                Keys include:
+                    - "probabilities": Model output probabilities.
+                    - "labels": Ground truth labels (if `return_labels` is True).
+                    - "coordinates": Patch coordinates (if `return_coordinates`
+                      is True).
 
         """
         keys = ["probabilities"]
