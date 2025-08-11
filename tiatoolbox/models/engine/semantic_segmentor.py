@@ -382,22 +382,28 @@ class SemanticSegmentor(PatchPredictor):
         self: SemanticSegmentor,
         dataloader: DataLoader,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> dict:
-        """Model inference on a WSI.
+    ) -> dict[str, da.Array]:
+        """Perform model inference on a whole slide image (WSI).
+
+        This method processes a WSI using the provided DataLoader, merges
+        patch-level predictions into a full-resolution canvas, and returns
+        the aggregated output. It supports optional inclusion of coordinates
+        and labels.
 
         Args:
             dataloader (DataLoader):
-                A torch dataloader to process WSIs.
-            save_path (Path):
-                Path to save the intermediate output. The intermediate output is saved
-                in a zarr file.
+                PyTorch DataLoader configured for WSI processing.
             **kwargs (SemanticSegmentorRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+                Additional runtime parameters, including:
+                - return_probabilities (bool): Whether to return probability maps.
+                - return_labels (bool): Whether to include labels in the output.
 
         Returns:
-            save_path (Path):
-                Path to zarr file where intermediate output is saved.
+            dict[str, dask.array.Array]:
+                Dictionary containing merged prediction results:
+                - "probabilities": Full-resolution probability map.
+                - "coordinates": Patch coordinates.
+                - "labels": Ground truth labels (if `return_labels` is True).
 
         """
         _ = kwargs.get("return_probabilities", False)
