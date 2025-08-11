@@ -511,28 +511,35 @@ class SemanticSegmentor(PatchPredictor):
         save_path: Path | None = None,
         **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> dict | AnnotationStore | Path:
-        """Save semantic segmentation predictions to disk.
+        """Save semantic segmentation predictions to disk or return them in memory.
+
+        This method saves predictions in one of the supported formats:
+        - "dict": returns predictions as a Python dictionary.
+        - "zarr": saves predictions as a Zarr group and returns the path.
+        - "annotationstore": converts predictions to an AnnotationStore (.db file).
+
+        If `patch_mode` is True, predictions are saved per image. If False,
+        predictions are merged and saved as a single output.
 
         Args:
-            processed_predictions (dict | Path):
-                A dictionary or path to zarr with model prediction information.
-            save_path (Path):
-                Optional output path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file, provided `patch_mode` is True. If the
-                `patch_mode` is False then `save_dir` is required.
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
             output_type (str):
-                The desired output type for resulting patch dataset.
+                Desired output format: "dict", "zarr", or "annotationstore".
+            save_path (Path | None):
+                Path to save the output file. Required for "zarr" and "annotationstore".
             **kwargs (SemanticSegmentorRunParams):
-                Keyword Args required to save the output.
+                Additional runtime parameters including:
+                - scale_factor (tuple[float, float]): For coordinate transformation.
+                - class_dict (dict): Mapping of class indices to names.
+                - return_probabilities (bool): Whether to save probability maps.
 
         Returns:
-            dict or Path or :class:`AnnotationStore`:
-                If the `output_type` is "AnnotationStore", the function returns
-                the patch predictor output as an SQLiteStore containing Annotations
-                for each or the Path to a `.db` file depending on whether a
-                save_dir Path is provided. Otherwise, the function defaults to
-                returning patch predictor output, either as a dict or the Path to a
-                `.zarr` file depending on whether a save_dir Path is provided.
+            dict | AnnotationStore | Path:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved Zarr file.
+                - If output_type is "annotationstore": returns AnnotationStore
+                  or path to .db file.
 
         """
         # Conversion to annotationstore uses a different function for SemanticSegmentor
