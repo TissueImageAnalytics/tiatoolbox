@@ -306,7 +306,27 @@ class SemanticSegmentor(PatchPredictor):
         device: str = "cpu",
         verbose: bool = True,
     ) -> None:
-        """Initialize :class:`SemanticSegmentor`."""
+        """Initialize :class:`SemanticSegmentor`.
+
+        Args:
+            model (str | ModelABC):
+                A PyTorch model instance or name of a pretrained model from TIAToolbox.
+                If a string is provided, the corresponding pretrained weights will be
+                downloaded unless overridden via `weights`.
+            batch_size (int):
+                Number of image patches processed per forward pass. Default is 8.
+            num_loader_workers (int):
+                Number of workers for data loading. Default is 0.
+            num_post_proc_workers (int):
+                Number of workers for post-processing. Default is 0.
+            weights (str | Path | None):
+                Path to model weights. If None, default weights are used.
+            device (str):
+                Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+            verbose (bool):
+                Whether to enable verbose logging. Default is True.
+
+        """
         super().__init__(
             model=model,
             batch_size=batch_size,
