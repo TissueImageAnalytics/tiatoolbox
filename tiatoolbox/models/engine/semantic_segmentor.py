@@ -35,10 +35,33 @@ if TYPE_CHECKING:  # pragma: no cover
 def merge_all(
     blocks: np.ndarray,
     output_locations: np.ndarray,
-    merged_shape: tuple,
+    merged_shape: tuple[int, int, int],
     dtype_: type,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Helper function to merge predictions."""
+    """Merge patch-level predictions into a single canvas.
+
+    This function aggregates overlapping patch predictions into a unified
+    output canvas and maintains a count map to normalize overlapping regions.
+
+    Args:
+        blocks (np.ndarray):
+            Array of predicted blocks with shape (N, H, W, C), where N is the
+            number of patches.
+        output_locations (np.ndarray):
+            Array of coordinates for each block in the format
+            [start_x, start_y, end_x, end_y] with shape (N, 4).
+        merged_shape (tuple[int, int, int]):
+            Shape of the final merged canvas (H, W, C).
+        dtype_ (type):
+            Data type of the output canvas.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]:
+            - canvas: Merged prediction map of shape (H, W, C).
+            - count: Count map indicating how many times each pixel was updated,
+              shape (H, W).
+
+    """
     canvas = np.zeros(merged_shape, dtype=dtype_)
     count = np.zeros(merged_shape[:2], dtype=np.uint8)
     for i, block in enumerate(blocks):
