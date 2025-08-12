@@ -411,10 +411,13 @@ class SemanticSegmentor(PatchPredictor):
         raw_predictions = dict(zip(keys, [[]] * len(keys)))
 
         # sample for calculating shape for dask arrays
-        sample = self.dataloader.dataset[0]
+        dataloader_batch = iter(self.dataloader)
+        sample = next(dataloader_batch)
         sample_output = self.model.infer_batch(
             self.model,
-            torch.Tensor(sample["image"][np.newaxis, ...]),
+            torch.Tensor(
+                sample["image"][0:1, ...]
+            ),  # Use only the first image in the batch
             device=self.device,
         )
 
@@ -425,8 +428,22 @@ class SemanticSegmentor(PatchPredictor):
             max_location[2],
             sample_output.shape[3],
         )
-        canvas = da.zeros(merged_shape, dtype=sample_output.dtype)
-        count = da.zeros(merged_shape[:2], dtype=np.uint8)
+        output_locs = sample["output_locs"].numpy()
+        batch_xs, batch_ys = np.min(output_locs[:, 0:2], axis=0)
+        batch_xe, batch_ye = np.max(output_locs[:, 2:4], axis=0)
+
+        merged_shape_batch = (
+            batch_ye - batch_ys,
+            batch_xe - batch_xs,
+            sample_output.shape[3],
+        )
+
+        canvas = da.zeros(
+            merged_shape, dtype=sample_output.dtype, chunks=merged_shape_batch
+        )
+        count = da.zeros(
+            merged_shape[:2], dtype=np.uint8, chunks=merged_shape_batch[:2]
+        )
 
         # Inference loop
         tqdm = get_tqdm()
