@@ -691,6 +691,7 @@ class EngineABC(ABC):  # noqa: B024
                 )
                 write_tasks.append(task)
 
+            logger.info(f"Saving output to {save_path}.")
             with ProgressBar():
                 compute(*write_tasks)
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import dask.array as da
 import numpy as np
@@ -370,6 +370,86 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode=patch_mode,
         )
 
+    def _merge_batch(
+        self: SemanticSegmentor,
+        batch_data: dict[str, Any],
+        merged_shape: tuple[int, int, int],
+        canvas_dtype: np.dtype,
+    ) -> tuple[da.Array, da.Array]:
+        """Merge model outputs from a batch into a shared canvas and count map.
+
+        This method performs inference on a batch of image patches, aligns the
+        outputs based on their spatial locations, and merges them into a full-resolution
+        canvas. It also maintains a count map to track the number of contributions
+        per pixel.
+
+        Args:
+            batch_data (dict[str, Any]):
+                Dictionary containing batch input data. Expected keys:
+                - "image": Batch of input images (as a Tensor) for inference.
+                - "output_locs": Tensor with bounding box coordinates for each output.
+            merged_shape (tuple[int, int, int]):
+                Shape of the final merged canvas (height, width, channels).
+            canvas_dtype (np.dtype):
+                Data type for the canvas array.
+
+        Returns:
+            tuple[dask.array.Array, dask.array.Array]:
+                - canvas: Dask array containing the merged outputs.
+                - count: Dask array indicating the number of times
+                  each pixel was updated.
+
+        """
+        canvas = da.zeros(
+            merged_shape,
+            dtype=canvas_dtype,
+        )
+        count = da.zeros(
+            merged_shape[:2],
+            dtype=np.uint8,
+        )
+        batch_output = self.model.infer_batch(
+            self.model,
+            batch_data["image"],
+            device=self.device,
+        )
+
+        output_locs = batch_data["output_locs"].numpy()
+
+        batch_xs, batch_ys = np.min(output_locs[:, 0:2], axis=0)
+        batch_xe, batch_ye = np.max(output_locs[:, 2:4], axis=0)
+
+        merged_shape_batch = (
+            batch_ye - batch_ys,
+            batch_xe - batch_xs,
+            batch_output.shape[3],
+        )
+
+        merged_output, merged_count = merge_all(
+            batch_output,
+            output_locs - np.array([batch_xs, batch_ys, batch_xs, batch_ys]),
+            merged_shape_batch,
+            batch_output.dtype,
+        )
+
+        batch_ye, batch_xe = (
+            min(batch_ye, canvas.shape[0]),
+            min(batch_xe, canvas.shape[1]),
+        )
+
+        canvas[
+            batch_ys:batch_ye,
+            batch_xs:batch_xe,
+            :,
+        ] += merged_output
+
+        count[
+            batch_ys:batch_ye,
+            batch_xs:batch_xe,
+        ] += merged_count
+
+        return canvas, count
+
     def infer_wsi(
         self: SemanticSegmentor,
         dataloader: DataLoader,
@@ -428,21 +508,14 @@ class SemanticSegmentor(PatchPredictor):
             max_location[2],
             sample_output.shape[3],
         )
-        output_locs = sample["output_locs"].numpy()
-        batch_xs, batch_ys = np.min(output_locs[:, 0:2], axis=0)
-        batch_xe, batch_ye = np.max(output_locs[:, 2:4], axis=0)
-
-        merged_shape_batch = (
-            batch_ye - batch_ys,
-            batch_xe - batch_xs,
-            sample_output.shape[3],
-        )
 
         canvas = da.zeros(
-            merged_shape, dtype=sample_output.dtype, chunks=merged_shape_batch
+            merged_shape,
+            dtype=sample_output.dtype,
         )
         count = da.zeros(
-            merged_shape[:2], dtype=np.uint8, chunks=merged_shape_batch[:2]
+            merged_shape[:2],
+            dtype=np.uint8,
         )
 
         # Inference loop
@@ -454,45 +527,14 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         for batch_data in tqdm_loop:
-            batch_output = self.model.infer_batch(
-                self.model,
-                batch_data["image"],
-                device=self.device,
+            canvas_batch, count_batch = self._merge_batch(
+                batch_data=batch_data,
+                merged_shape=merged_shape,
+                canvas_dtype=canvas.dtype,
             )
 
-            output_locs = batch_data["output_locs"].numpy()
-
-            batch_xs, batch_ys = np.min(output_locs[:, 0:2], axis=0)
-            batch_xe, batch_ye = np.max(output_locs[:, 2:4], axis=0)
-
-            merged_shape_batch = (
-                batch_ye - batch_ys,
-                batch_xe - batch_xs,
-                sample_output.shape[3],
-            )
-
-            merged_output, merged_count = merge_all(
-                batch_output,
-                output_locs - np.array([batch_xs, batch_ys, batch_xs, batch_ys]),
-                merged_shape_batch,
-                sample_output.dtype,
-            )
-
-            batch_ye, batch_xe = (
-                min(batch_ye, canvas.shape[0]),
-                min(batch_xe, canvas.shape[1]),
-            )
-
-            canvas[
-                batch_ys:batch_ye,
-                batch_xs:batch_xe,
-                :,
-            ] += merged_output
-
-            count[
-                batch_ys:batch_ye,
-                batch_xs:batch_xe,
-            ] += merged_count
+            canvas = canvas.rechunk(canvas_batch.chunks) + canvas_batch
+            count = count.rechunk(count_batch.chunks) + count_batch
 
             coordinates.append(
                 da.from_array(
@@ -503,9 +545,9 @@ class SemanticSegmentor(PatchPredictor):
             if self.return_labels:
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
-        raw_predictions["probabilities"] = canvas / da.maximum(
-            count[:, :, np.newaxis], 1
-        )
+        canvas = canvas / da.maximum(count[:, :, np.newaxis], 1)
+
+        raw_predictions["probabilities"] = canvas.rechunk("auto")
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
         if self.return_labels:
             labels = [label.reshape(-1) for label in labels]
