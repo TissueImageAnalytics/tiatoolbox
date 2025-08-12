@@ -525,7 +525,9 @@ class WSIPatchDataset(PatchDatasetABC):
 
     def _get_reader(self: WSIPatchDataset, img_path: str | Path) -> WSIReader:
         """Get a reader for the image."""
-        return self.reader if self.reader else WSIReader.open(img_path)
+        # To avoid ruff errors and compatibility with base class.
+        _ = self.img_path
+        return WSIReader.open(img_path)
 
     def __getitem__(self: WSIPatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
@@ -535,7 +537,8 @@ class WSIPatchDataset(PatchDatasetABC):
             output_locs = self.outputs[idx]
 
         # Read image patch from the whole-slide image
-        self.reader = self._get_reader(self.img_path)
+        if self.reader is None:
+            self.reader = self._get_reader(self.img_path)
         patch = self.reader.read_bounds(
             coords,
             resolution=self.resolution,
