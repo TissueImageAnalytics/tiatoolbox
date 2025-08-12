@@ -493,7 +493,7 @@ class WSIPatchDataset(PatchDatasetABC):
             mask = np.array(mask > 0, dtype=np.uint8)
 
             mask_reader = VirtualWSIReader(mask)
-            mask_reader.info = self.reader.info
+            mask_reader.info = self.reader_info
         elif auto_get_mask and mask_path is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
@@ -525,34 +525,7 @@ class WSIPatchDataset(PatchDatasetABC):
 
     def _get_reader(self: WSIPatchDataset, img_path: str | Path) -> WSIReader:
         """Get a reader for the image."""
-        if self.mode == "wsi":
-            reader = WSIReader.open(img_path)
-        else:
-            logger.warning(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"` and `resolution=1.0`.',
-                stacklevel=2,
-            )
-            img = imread(img_path)
-            axes = "YXS"[: len(img.shape)]
-            # initialise metadata for VirtualWSIReader.
-            # here, we simulate a whole-slide image, but with a single level.
-            # ! should we expose this so that use can provide their metadata ?
-            metadata = WSIMeta(
-                mpp=np.array([1.0, 1.0]),
-                axes=axes,
-                objective_power=10,
-                slide_dimensions=np.array(img.shape[:2][::-1]),
-                level_downsamples=[1.0],
-                level_dimensions=[np.array(img.shape[:2][::-1])],
-            )
-            # infer value such that read if mask provided is through
-            # 'mpp' or 'power' as varying 'baseline' is locked atm
-            reader = VirtualWSIReader(
-                img,
-                info=metadata,
-            )
-        return reader
+        return self.reader if self.reader else WSIReader.open(img_path)
 
     def __getitem__(self: WSIPatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
@@ -562,9 +535,7 @@ class WSIPatchDataset(PatchDatasetABC):
             output_locs = self.outputs[idx]
 
         # Read image patch from the whole-slide image
-        if self.reader is None:
-            # only set the reader on first call so that it is initially picklable
-            self.reader = self._get_reader(self.img_path)
+        self.reader = self._get_reader(self.img_path)
         patch = self.reader.read_bounds(
             coords,
             resolution=self.resolution,
