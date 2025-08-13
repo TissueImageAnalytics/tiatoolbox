@@ -81,7 +81,7 @@ class TestEngineABC(EngineABC):
         **kwargs: dict,
     ) -> dict | np.ndarray:
         """Test infer_wsi."""
-        return super().infer_wsi(
+        return super().infer_wsi(  # skipcq: PYL-E1121
             dataloader,
             save_path,
             **kwargs,

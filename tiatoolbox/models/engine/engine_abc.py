@@ -370,6 +370,7 @@ class EngineABC(ABC):  # noqa: B024
         self.verbose: bool = verbose
         self.dataloader: DataLoader | None = None
         self.drop_keys: list = []
+        self.output_type = None
 
     @staticmethod
     def _initialize_model_ioconfig(
@@ -604,12 +605,12 @@ class EngineABC(ABC):  # noqa: B024
 
         return raw_predictions
 
-    def post_process_patches(
+    def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
         raw_predictions: dask.array.Array | np.ndarray,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
-        **kwargs: Unpack[EngineABCRunParams],
+        prediction_shape: tuple[int, ...],  # noqa: ARG002
+        prediction_dtype: type,  # noqa: ARG002
+        **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
     ) -> dask.array.Array:
         """Post-process raw patch predictions from inference.
 
@@ -632,10 +633,6 @@ class EngineABC(ABC):  # noqa: B024
                 Post-processed predictions as a Dask array.
 
         """
-        _ = kwargs.get("return_labels")  # Key values required for post-processing
-        _ = prediction_shape
-        _ = prediction_dtype
-
         return raw_predictions
 
     def save_predictions(
@@ -690,8 +687,8 @@ class EngineABC(ABC):  # noqa: B024
                     overwrite=True,
                 )
                 write_tasks.append(task)
-
-            logger.info(f"Saving output to {save_path}.")
+            msg = f"Saving output to {save_path}."
+            logger.info(msg=msg)
             with ProgressBar():
                 compute(*write_tasks)
 
@@ -755,12 +752,12 @@ class EngineABC(ABC):  # noqa: B024
         )
 
     # This is not a static model for child classes.
-    def post_process_wsi(
+    def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
         raw_predictions: dask.array.Array | np.ndarray,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
-        **kwargs: Unpack[EngineABCRunParams],
+        prediction_shape: tuple[int, ...],  # noqa: ARG002
+        prediction_dtype: type,  # noqa: ARG002
+        **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
     ) -> dask.array.Array:
         """Post-process predictions from whole slide image (WSI) inference.
 
@@ -783,10 +780,6 @@ class EngineABC(ABC):  # noqa: B024
                 Post-processed predictions as a Dask array.
 
         """
-        _ = kwargs.get("return_labels")  # Key values required for post-processing
-        _ = prediction_shape
-        _ = prediction_dtype
-
         return raw_predictions
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
@@ -1164,11 +1157,8 @@ class EngineABC(ABC):  # noqa: B024
             **kwargs,
         )
 
-        if out is not None:
-            msg = f"Output file saved at {out}."
-            logger.info(msg=msg)
-            return out
-
+        msg = f"Output file saved at {out}."
+        logger.info(msg=msg)
         return out
 
     @staticmethod

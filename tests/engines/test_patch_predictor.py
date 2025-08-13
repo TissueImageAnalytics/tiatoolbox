@@ -225,6 +225,7 @@ def test_patch_predictor_api(
         model="resnet18-kather100k",
         weights=pretrained_weights,
         batch_size=1,
+        num_loader_workers=1,
     )
     ioconfig = predictor.ioconfig
 
