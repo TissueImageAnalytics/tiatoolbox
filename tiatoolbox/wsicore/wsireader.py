@@ -3687,8 +3687,8 @@ class TIFFWSIReader(WSIReader):
         if not isinstance(self.post_proc, postproc_defs.MultichannelToRGB):
             return
 
-        xml = self.info.raw["Description"]
         try:
+            xml = self.info.raw["Description"]
             root = ElementTree.fromstring(xml)
         except ElementTree.ParseError:
             return
@@ -3969,7 +3969,11 @@ class TIFFWSIReader(WSIReader):
         """
         xml = xml or self._get_ome_xml()
         namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
-        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
+        try:
+            xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
+        except IndexError:
+            return None
+
         instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
         if instrument_ref is None:
             return None
@@ -3978,26 +3982,31 @@ class TIFFWSIReader(WSIReader):
         if objective_settings is None:
             # try alternative tag
             objective_settings = xml_series.find("ome:Objective", namespaces)
-        instrument_ref_id = instrument_ref.attrib["ID"]
-        objective_settings_id = "Objective:0"  # objective_settings.attrib["ID"]
+        instrument_ref_id = instrument_ref.attrib.get("ID")
+        objective_settings_id = objective_settings.attrib.get("ID")
+
+        if not instrument_ref_id or not objective_settings_id:
+            return None
+
         instruments = {
-            instrument.attrib["ID"]: instrument
+            instrument.attrib.get("ID"): instrument
             for instrument in xml.findall("ome:Instrument", namespaces)
+            if "ID" in instrument.attrib
         }
         objectives = {
-            (instrument_id, objective.attrib["ID"]): objective
+            (instrument_id, objective.attrib.get("ID")): objective
             for instrument_id, instrument in instruments.items()
             for objective in instrument.findall("ome:Objective", namespaces)
+            if "ID" in objective.attrib
         }
 
+        objective = objectives.get((instrument_ref_id, objective_settings_id))
+        if objective is None:
+            return None
         try:
-            objective = objectives[(instrument_ref_id, objective_settings_id)]
             return float(objective.attrib.get("NominalMagnification"))
-        except KeyError as e:
-            msg = "No matching Instrument for image InstrumentRef in OME-XML."
-            raise KeyError(
-                msg,
-            ) from e
+        except (TypeError, ValueError):
+            return None
 
     def _get_ome_mpp(
         self: TIFFWSIReader,
