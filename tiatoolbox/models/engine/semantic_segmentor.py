@@ -32,7 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore import WSIReader
 
 
-def merge_all(
+def merge_batch_to_canvas(
     blocks: np.ndarray,
     output_locations: np.ndarray,
     merged_shape: tuple[int, int, int],
@@ -370,7 +370,7 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode=patch_mode,
         )
 
-    def _merge_batch(
+    def _merge_model_output_to_dask_canvas(
         self: SemanticSegmentor,
         batch_data: dict[str, Any],
         merged_shape: tuple[int, int, int],
@@ -425,7 +425,7 @@ class SemanticSegmentor(PatchPredictor):
             batch_output.shape[3],
         )
 
-        merged_output, merged_count = merge_all(
+        merged_output, merged_count = merge_batch_to_canvas(
             batch_output,
             output_locs - np.array([batch_xs, batch_ys, batch_xs, batch_ys]),
             merged_shape_batch,
@@ -527,7 +527,7 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         for batch_data in tqdm_loop:
-            canvas_batch, count_batch = self._merge_batch(
+            canvas_batch, count_batch = self._merge_model_output_to_dask_canvas(
                 batch_data=batch_data,
                 merged_shape=merged_shape,
                 canvas_dtype=canvas.dtype,
