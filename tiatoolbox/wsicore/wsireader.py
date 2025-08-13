@@ -3819,13 +3819,31 @@ class TIFFWSIReader(WSIReader):
 
     @staticmethod
     def _get_namespace(root: ElementTree) -> dict:
+        """Extract the XML namespace from the root element.
+
+        Args:
+            root (ElementTree): Root of the parsed XML tree.
+
+        Returns:
+            dict: Dictionary containing the namespace prefix and URI.
+        """
         if root.tag.startswith("{"):
             ns_uri = root.tag.split("}")[0].strip("{")
             return {"ns": ns_uri}
+
         return {}
 
     @staticmethod
     def _extract_dye_mapping(root: ElementTree, ns: dict) -> dict:
+        """Extract dye mapping from OME-XML annotations.
+
+        Args:
+            root (ElementTree): Root of the parsed XML tree.
+            ns (dict): XML namespace dictionary.
+
+        Returns:
+            dict: Mapping of channel IDs to dye names.
+        """
         dye_mapping = {}
         for annotation in root.findall(
             ".//ns:StructuredAnnotations/ns:XMLAnnotation", ns
@@ -3841,17 +3859,36 @@ class TIFFWSIReader(WSIReader):
 
     @staticmethod
     def _int_to_rgb(color_int: int) -> tuple[float, float, float]:
+        """Convert an integer color value to an RGB tuple.
+
+        Args:
+            color_int (int): Integer representation of a color.
+
+        Returns:
+            tuple[float, float, float]: RGB values normalized to [0, 1].
+        """
         if color_int < 0:
             color_int += 1 << 32
         r = (color_int >> 16) & 0xFF
         g = (color_int >> 8) & 0xFF
         b = color_int & 0xFF
+
         return (r / 255, g / 255, b / 255)
 
     @staticmethod
     def _parse_channel_data(
         root: ElementTree, ns: dict, dye_mapping: dict
     ) -> list[dict]:
+        """Parse channel metadata from OME-XML and extract RGB color/dye information.
+
+        Args:
+            root (ElementTree): Root of the parsed XML tree.
+            ns (dict): XML namespace dictionary.
+            dye_mapping (dict): Mapping of channel IDs to dye names.
+
+        Returns:
+            list[dict]: List of dictionaries containing channel metadata.
+        """
         channel_data = []
         for pixels in root.findall(".//ns:Pixels", ns):
             for channel in pixels.findall("ns:Channel", ns):
@@ -3881,6 +3918,16 @@ class TIFFWSIReader(WSIReader):
     def _build_color_dict(
         channel_data: list[dict], dye_mapping: dict
     ) -> dict[str, tuple[float, float, float]]:
+        """Build a dictionary mapping channel names to RGB color tuples.
+
+        Args:
+            channel_data (list[dict]): List of channel metadata dictionaries.
+            dye_mapping (dict): Mapping of channel IDs to dye names.
+
+        Returns:
+            dict[str, tuple[float, float, float]]: Dictionary mapping channel labels to
+            RGB values.
+        """
         color_dict = {}
         key_counts = defaultdict(int)
         for c_data in channel_data:
@@ -3893,6 +3940,7 @@ class TIFFWSIReader(WSIReader):
             key = base_key if count == 0 else f"{base_key} [{count + 1}]"
             color_dict[key] = rgb
             key_counts[base_key] += 1
+
         return color_dict
 
     @staticmethod
@@ -3913,6 +3961,7 @@ class TIFFWSIReader(WSIReader):
         dye_mapping = TIFFWSIReader._extract_dye_mapping(root, ns)
         channel_data = TIFFWSIReader._parse_channel_data(root, ns, dye_mapping)
         color_dict = TIFFWSIReader._build_color_dict(channel_data, dye_mapping)
+
         return color_dict if color_dict else None
 
     def _get_ome_xml(self: TIFFWSIReader) -> ElementTree.Element:

@@ -276,13 +276,24 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         # Perform check on the input
         self._check_input_integrity(mode="wsi")
 
+    @staticmethod
     def _validate_inputs(
-        self,
         img_path: str | Path,
         mode: str,
         patch_input_shape: np.ndarray,
         stride_shape: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
+        """Validate input parameters for WSIPatchDataset.
+
+        Args:
+            img_path (str | Path): Path to the input image file.
+            mode (str): Mode of operation, either 'wsi' or 'tile'.
+            patch_input_shape (np.ndarray): Shape of the patch to extract.
+            stride_shape (np.ndarray): Stride between patches.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: Validated patch and stride shapes.
+        """
         if not Path(img_path).is_file():
             msg = "`img_path` must be a valid file path."
             raise ValueError(msg)
@@ -319,6 +330,16 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         *,
         auto_get_mask: bool,
     ) -> VirtualWSIReader | None:
+        """Create a mask reader from a provided mask path or generate one automatically.
+
+        Args:
+            mask_path (str | Path | None): Path to the mask image file.
+            reader (WSIReader): Reader for the input image.
+            auto_get_mask (bool): Whether to automatically generate a tissue mask.
+
+        Returns:
+            VirtualWSIReader | None: A reader for the mask or None if not applicable.
+        """
         mask_reader = None
         if mask_path is not None:
             mask_path = Path(mask_path)
@@ -350,6 +371,16 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         wsi_shape: np.ndarray,
         min_mask_ratio: float,
     ) -> None:
+        """Filter patch coordinates based on mask coverage.
+
+        Args:
+            mask_reader (VirtualWSIReader): Reader for the mask image.
+            wsi_shape (np.ndarray): Shape of the WSI at the requested resolution.
+            min_mask_ratio (float): Minimum mask coverage required to keep a patch.
+
+        Raises:
+            ValueError: If no patches remain after filtering.
+        """
         selected = PatchExtractor.filter_coordinates(
             mask_reader,  # must be at the same resolution
             self.inputs,  # must already be at requested resolution
