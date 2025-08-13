@@ -481,11 +481,10 @@ class SemanticSegmentor(PatchPredictor):
         _ = kwargs.get("return_probabilities", False)
 
         keys = ["probabilities", "coordinates"]
-        coordinates = []
-
         if self.return_labels:
             keys.append("labels")
-            labels = []
+
+        coordinates, labels = [], []
 
         # Main output dictionary
         raw_predictions = dict(zip(keys, [[]] * len(keys)))
