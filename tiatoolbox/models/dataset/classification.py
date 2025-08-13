@@ -237,35 +237,16 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
         super().__init__()
 
         # Is there a generic func for path test in toolbox?
-        if not Path.is_file(Path(img_path)):
-            msg = "`img_path` must be a valid file path."
-            raise ValueError(msg)
-        if mode not in ["wsi", "tile"]:
-            msg = f"`{mode}` is not supported."
-            raise ValueError(msg)
-        patch_input_shape = np.array(patch_input_shape)
-        stride_shape = np.array(stride_shape)
-
-        if (
-            not np.issubdtype(patch_input_shape.dtype, np.integer)
-            or np.size(patch_input_shape) > 2  # noqa: PLR2004
-            or np.any(patch_input_shape < 0)
-        ):
-            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
-            raise ValueError(msg)
-        if (
-            not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2  # noqa: PLR2004
-            or np.any(stride_shape < 0)
-        ):
-            msg = f"Invalid `stride_shape` value {stride_shape}."
-            raise ValueError(msg)
+        patch_input_shape, stride_shape = self._validate_inputs(
+            img_path, mode, patch_input_shape, stride_shape
+        )
 
         self.preproc_func = preproc_func
         self.img_path = Path(img_path)
         self.mode = mode
         self.reader = None
         reader = self._get_reader(self.img_path)
+
         if mode != "wsi":
             units = "mpp"
             resolution = 1.0
@@ -282,6 +263,60 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             input_within_bound=False,
         )
 
+        mask_reader = self._setup_mask_reader(mask_path, reader, auto_get_mask)
+        if mask_reader is not None:
+            self._filter_patches(mask_reader, wsi_shape, min_mask_ratio)
+
+        self.patch_input_shape = patch_input_shape
+        self.resolution = resolution
+        self.units = units
+
+        # Perform check on the input
+        self._check_input_integrity(mode="wsi")
+
+    def _validate_inputs(
+        self,
+        img_path: str | Path,
+        mode: str,
+        patch_input_shape: np.ndarray,
+        stride_shape: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        if not Path(img_path).is_file():
+            msg = "`img_path` must be a valid file path."
+            raise ValueError(msg)
+
+        if mode not in ["wsi", "tile"]:
+            msg = f"`{mode}` is not supported."
+            raise ValueError(msg)
+
+        patch_input_shape = np.array(patch_input_shape)
+        stride_shape = np.array(stride_shape)
+
+        if (
+            not np.issubdtype(patch_input_shape.dtype, np.integer)
+            or np.size(patch_input_shape) > 2  # noqa: PLR2004
+            or np.any(patch_input_shape < 0)
+        ):
+            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+            raise ValueError(msg)
+
+        if (
+            not np.issubdtype(stride_shape.dtype, np.integer)
+            or np.size(stride_shape) > 2  # noqa: PLR2004
+            or np.any(stride_shape < 0)
+        ):
+            msg = f"Invalid `stride_shape` value {stride_shape}."
+            raise ValueError(msg)
+
+        return patch_input_shape, stride_shape
+
+    def _setup_mask_reader(
+        self,
+        mask_path: str | Path | None,
+        reader: WSIReader,
+        *,
+        auto_get_mask: bool,
+    ) -> VirtualWSIReader | None:
         mask_reader = None
         if mask_path is not None:
             mask_path = Path(mask_path)
@@ -291,39 +326,38 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             mask = imread(mask_path)  # assume to be gray
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
-
             mask_reader = VirtualWSIReader(mask)
             mask_reader.info = reader.info
-        elif auto_get_mask and mode == "wsi" and mask_path is None:
+
+        elif auto_get_mask and self.mode == "wsi":
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
             try:
-                mask_reader = self.reader.tissue_mask(resolution=1.25, units="power")
+                mask_reader = reader.tissue_mask(resolution=1.25, units="power")
             except ValueError:
                 # if power is None, try with mpp
-                mask_reader = self.reader.tissue_mask(resolution=6.0, units="mpp")
+                mask_reader = reader.tissue_mask(resolution=6.0, units="mpp")
             # ? will this mess up  ?
             mask_reader.info = reader.info
 
-        if mask_reader is not None:
-            selected = PatchExtractor.filter_coordinates(
-                mask_reader,  # must be at the same resolution
-                self.inputs,  # must already be at requested resolution
-                wsi_shape=wsi_shape,
-                min_mask_ratio=min_mask_ratio,
-            )
-            self.inputs = self.inputs[selected]
+        return mask_reader
 
+    def _filter_patches(
+        self,
+        mask_reader: VirtualWSIReader,
+        wsi_shape: np.ndarray,
+        min_mask_ratio: float,
+    ) -> None:
+        selected = PatchExtractor.filter_coordinates(
+            mask_reader,  # must be at the same resolution
+            self.inputs,  # must already be at requested resolution
+            wsi_shape=wsi_shape,
+            min_mask_ratio=min_mask_ratio,
+        )
+        self.inputs = self.inputs[selected]
         if len(self.inputs) == 0:
             msg = "No patch coordinates remain after filtering."
             raise ValueError(msg)
-
-        self.patch_input_shape = patch_input_shape
-        self.resolution = resolution
-        self.units = units
-
-        # Perform check on the input
-        self._check_input_integrity(mode="wsi")
 
     def _get_reader(self: WSIPatchDataset, img_path: str | Path) -> WSIReader:
         """Get a reader for the image."""
