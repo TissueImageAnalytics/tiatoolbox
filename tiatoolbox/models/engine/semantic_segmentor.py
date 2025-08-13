@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import dask.array as da
 import numpy as np
 import torch
+import zarr
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -373,8 +374,8 @@ class SemanticSegmentor(PatchPredictor):
     def _merge_model_output_to_dask_canvas(
         self: SemanticSegmentor,
         batch_data: dict[str, Any],
-        merged_shape: tuple[int, int, int],
-        canvas_dtype: np.dtype,
+        canvas: zarr.Array,
+        count: zarr.Array,
     ) -> tuple[da.Array, da.Array]:
         """Merge model outputs from a batch into a shared canvas and count map.
 
@@ -400,14 +401,14 @@ class SemanticSegmentor(PatchPredictor):
                   each pixel was updated.
 
         """
-        canvas = da.zeros(
-            merged_shape,
-            dtype=canvas_dtype,
-        )
-        count = da.zeros(
-            merged_shape[:2],
-            dtype=np.uint8,
-        )
+        # canvas = da.zeros(
+        #     merged_shape,
+        #     dtype=canvas_dtype,
+        # )
+        # count = da.zeros(
+        #     merged_shape[:2],
+        #     dtype=np.uint8,
+        # )
         batch_output = self.model.infer_batch(
             self.model,
             batch_data["image"],
@@ -453,6 +454,7 @@ class SemanticSegmentor(PatchPredictor):
     def infer_wsi(
         self: SemanticSegmentor,
         dataloader: DataLoader,
+        save_path: Path,
         **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> dict[str, da.Array]:
         """Perform model inference on a whole slide image (WSI).
@@ -465,6 +467,9 @@ class SemanticSegmentor(PatchPredictor):
         Args:
             dataloader (DataLoader):
                 PyTorch DataLoader configured for WSI processing.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             **kwargs (SemanticSegmentorRunParams):
                 Additional runtime parameters, including:
                 - return_probabilities (bool): Whether to return probability maps.
@@ -505,14 +510,30 @@ class SemanticSegmentor(PatchPredictor):
             sample_output.shape[3],
         )
 
-        canvas = da.zeros(
-            merged_shape,
+        zarr_group = zarr.open(str(save_path), mode="w")
+
+        canvas = zarr_group.create_dataset(
+            name="canvas",
+            shape=merged_shape,
             dtype=sample_output.dtype,
+            fillvalue=0,
         )
-        count = da.zeros(
-            merged_shape[:2],
+
+        count = zarr_group.create_dataset(
+            name="count",
+            shape=merged_shape[:2],
             dtype=np.uint8,
+            fillvalue=0,
         )
+
+        # canvas = da.zeros(
+        #     merged_shape,
+        #     dtype=sample_output.dtype,
+        # )
+        # count = da.zeros(
+        #     merged_shape[:2],
+        #     dtype=np.uint8,
+        # )
 
         # Inference loop
         tqdm = get_tqdm()
@@ -523,14 +544,14 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         for batch_data in tqdm_loop:
-            canvas_batch, count_batch = self._merge_model_output_to_dask_canvas(
+            canvas, count = self._merge_model_output_to_dask_canvas(
                 batch_data=batch_data,
-                merged_shape=merged_shape,
-                canvas_dtype=canvas.dtype,
+                canvas=canvas,
+                count=count,
             )
 
-            canvas = canvas + canvas_batch.rechunk(canvas.chunks)
-            count = count + count_batch.rechunk(count.chunks)
+            # canvas = canvas + canvas_batch.rechunk(canvas.chunks)
+            # count = count + count_batch.rechunk(count.chunks)
 
             coordinates.append(
                 da.from_array(
@@ -541,6 +562,8 @@ class SemanticSegmentor(PatchPredictor):
             if self.return_labels:
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
+        canvas = da.from_zarr(canvas)
+        count = da.from_zarr(count)
         canvas = canvas / da.maximum(count[:, :, np.newaxis], 1)
 
         raw_predictions["probabilities"] = canvas.rechunk("auto")

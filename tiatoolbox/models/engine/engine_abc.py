@@ -726,6 +726,7 @@ class EngineABC(ABC):  # noqa: B024
     def infer_wsi(
         self: EngineABC,
         dataloader: DataLoader,
+        save_path: Path,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict:
         """Run model inference on a whole slide image (WSI).
@@ -737,6 +738,9 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             dataloader (DataLoader):
                 PyTorch DataLoader configured for WSI processing.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters used during inference.
 
@@ -746,6 +750,7 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         _ = kwargs.get("patch_mode", False)
+        _ = save_path
         return self.infer_patches(
             dataloader=dataloader,
             return_coordinates=True,
@@ -1038,7 +1043,7 @@ class EngineABC(ABC):  # noqa: B024
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
 
-        if self.num_loader_workers is not None and self.num_loader_workers > 0:
+        if self.num_post_proc_workers is not None and self.num_post_proc_workers > 0:
             dask.config.set(scheduler="threads", num_workers=self.num_loader_workers)
         else:
             dask.config.set(scheduler="threads")
@@ -1273,6 +1278,7 @@ class EngineABC(ABC):  # noqa: B024
 
             raw_predictions = self.infer_wsi(
                 dataloader=self.dataloader,
+                save_path=save_path[image],
                 **kwargs,
             )
 
