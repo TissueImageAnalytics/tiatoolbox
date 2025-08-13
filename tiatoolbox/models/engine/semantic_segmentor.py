@@ -491,13 +491,10 @@ class SemanticSegmentor(PatchPredictor):
         raw_predictions = dict(zip(keys, [[]] * len(keys)))
 
         # sample for calculating shape for dask arrays
-        dataloader_batch = iter(self.dataloader)
-        sample = next(dataloader_batch)
+        sample = self.dataloader.dataset[0]  # Use only the first image
         sample_output = self.model.infer_batch(
             self.model,
-            torch.Tensor(
-                sample["image"][0:1, ...]
-            ),  # Use only the first image in the batch
+            torch.Tensor(sample["image"][np.newaxis, ...]),
             device=self.device,
         )
 
@@ -533,8 +530,8 @@ class SemanticSegmentor(PatchPredictor):
                 canvas_dtype=canvas.dtype,
             )
 
-            canvas = canvas.rechunk(canvas_batch.chunks) + canvas_batch
-            count = count.rechunk(count_batch.chunks) + count_batch
+            canvas = canvas + canvas_batch.rechunk(canvas.chunks)
+            count = count + count_batch.rechunk(count.chunks)
 
             coordinates.append(
                 da.from_array(
