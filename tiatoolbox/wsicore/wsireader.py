@@ -3879,7 +3879,9 @@ class TIFFWSIReader(WSIReader):
     def _parse_channel_data(
         root: ElementTree, ns: dict, dye_mapping: dict
     ) -> list[dict]:
-        """Parse channel metadata from OME-XML and extract RGB color/dye information.
+        """Parse channel metadata from OME-XML.
+
+        Extract RGB color and dye information for each channel defined in the metadata.
 
         Args:
             root (ElementTree): Root of the parsed XML tree.
