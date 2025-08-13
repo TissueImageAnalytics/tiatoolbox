@@ -263,7 +263,9 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
             input_within_bound=False,
         )
 
-        mask_reader = self._setup_mask_reader(mask_path, reader, auto_get_mask)
+        mask_reader = self._setup_mask_reader(
+            mask_path, reader, auto_get_mask=auto_get_mask
+        )
         if mask_reader is not None:
             self._filter_patches(mask_reader, wsi_shape, min_mask_ratio)
 
