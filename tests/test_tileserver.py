@@ -87,7 +87,7 @@ def fill_store(cell_grid: SQLiteStore, points_grid: str) -> Callable:
     return _fill_store
 
 
-@pytest.fixture()
+@pytest.fixture
 def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     """Create a testing TileServer WSGI app."""
     # Make a low-res .jpg of the right shape to be used as
@@ -122,7 +122,7 @@ def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_alt(fill_store: Callable) -> TileServer:
     """Create a testing TileServer WSGI app, with a different setup."""
     sample_slide = WSIReader.open(np.zeros((1000, 1000, 3), dtype=np.uint8))
@@ -147,7 +147,7 @@ def app_alt(fill_store: Callable) -> TileServer:
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def empty_app() -> TileServer:
     """Create a testing TileServer WSGI app with no layers."""
     app = TileServer(
@@ -461,7 +461,7 @@ def test_change_overlay(  # noqa: PLR0915
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id])-1}"
+        lname = Path(overlay_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == overlay_path
 
@@ -493,7 +493,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(jpg_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id])-1}"
+        lname = Path(jpg_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert np.all(layer.wsi.img == imread(jpg_path))
 
@@ -517,7 +517,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(tiff_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id])-1}"
+        lname = Path(tiff_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
 
@@ -734,3 +734,44 @@ def test_prop_range(app: TileServer) -> None:
         assert response.status_code == 200
         # should be back to no scaling
         assert layer.renderer.score_fn(0.5) == 0.5
+
+
+def test_healthcheck(empty_app: TileServer) -> None:
+    """Test the /tileserver/healthcheck endpoint."""
+    with empty_app.test_client() as client:
+        response = client.get("/tileserver/healthcheck")
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        assert response.get_json() == {"status": "OK"}
+
+
+def test_sessions_no_slide_loaded(empty_app: TileServer) -> None:
+    """Test /tileserver/sessions when no slides are loaded."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.get("/tileserver/sessions")
+        assert response.status_code == 200
+        assert response.is_json
+        assert response.get_json() == {}
+
+
+def test_sessions_one_slide_loaded(
+    empty_app: TileServer, remote_sample: Callable
+) -> None:
+    """Test /tileserver/sessions after loading one slide."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        slide_path = safe_str(remote_sample("svs-1-small"))
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": slide_path},
+        )
+        assert response.status_code == 200
+
+        response = client.get("/tileserver/sessions")
+        assert response.status_code == 200
+        sessions = response.get_json()
+
+        assert isinstance(sessions, dict)
+        assert len(sessions) == 1

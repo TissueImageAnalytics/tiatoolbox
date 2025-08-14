@@ -404,7 +404,8 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     # trigger an event to select the image overlay
     click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
     layer_drop._trigger_event(click)
-    layer_slider = doc.get_model_by_name("layer2_slider")
+    l_name = "CMU-1-Small-Region_rendered_annotations"
+    layer_slider = doc.get_model_by_name(f"{l_name}_slider")
     assert layer_slider is not None
 
     # check alpha controls
@@ -413,14 +414,14 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     assert type_column_list[-1].active
     # toggle off and check alpha is 0
     type_column_list[-1].active = False
-    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0
     # toggle back on and check alpha is back to default 0.75
     type_column_list[-1].active = True
-    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0.75
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0.75
     # set alpha to 0.4
     layer_slider.value = 0.4
     # check that the alpha values have been set correctly
-    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0.4
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0.4
 
 
 def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> None:

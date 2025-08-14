@@ -18,7 +18,7 @@ from tiatoolbox.utils.transforms import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntBounds, NumpyPadLiteral
+    from tiatoolbox.type_hints import IntBounds, NumpyPadLiteral
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])
 """

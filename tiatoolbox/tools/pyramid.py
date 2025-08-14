@@ -17,7 +17,7 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import defusedxml
 import numpy as np
@@ -29,6 +29,7 @@ from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+    from typing import Literal
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
@@ -223,7 +224,7 @@ class TilePyramidGenerator:
             output_size = self.output_tile_size // 2 ** (
                 self.sub_tile_level_count - level
             )
-            output_size = np.repeat(output_size, 2).astype(int)
+            output_size = np.repeat(output_size, 2).astype(int).tolist()
             thumb = self.get_thumb_tile()
             thumb.thumbnail((output_size[0], output_size[1]))
             return thumb
@@ -236,7 +237,7 @@ class TilePyramidGenerator:
         logger.addFilter(duplicate_filter)
         tile = self.wsi.read_rect(
             coord,
-            size=[v * res for v in output_size],
+            size=(output_size[0] * res, output_size[1] * res),
             resolution=res / scale,
             units="baseline",
             pad_mode=pad_mode,
@@ -352,7 +353,9 @@ class TilePyramidGenerator:
                 )
 
         else:  # container == "tar":
-            compression2mode = {
+            compression2mode: dict[
+                str | None, Literal["w", "w:gz", "w:bz2", "w:xz"]
+            ] = {
                 None: "w",
                 "gzip": "w:gz",
                 "bz2": "w:bz2",
@@ -362,7 +365,9 @@ class TilePyramidGenerator:
                 msg = "Unsupported compression for tar."
                 raise ValueError(msg)
 
-            tar_archive = tarfile.TarFile.open(path, mode=compression2mode[compression])
+            tar_archive = tarfile.TarFile.open(
+                str(path), mode=compression2mode[compression]
+            )
 
             def save_tile(tile_path: Path, tile: Image.Image) -> None:
                 """Write the tile to the output zip."""
@@ -510,7 +515,7 @@ class AnnotationTileGenerator(ZoomifyGenerator):
 
     """
 
-    def __init__(
+    def __init__(  # skipcq: PYL-W0231
         self: AnnotationTileGenerator,
         info: WSIMeta,
         store: AnnotationStore,
@@ -520,9 +525,11 @@ class AnnotationTileGenerator(ZoomifyGenerator):
         overlap: int = 0,
     ) -> None:
         """Initialize :class:`AnnotationTileGenerator`."""
-        super().__init__(None, tile_size, downsample, overlap)
         self.info = info
         self.store = store
+        self.tile_size = tile_size
+        self.downsample = downsample
+        self.overlap = overlap
         if renderer is None:
             renderer = AnnotationRenderer()
         self.renderer = renderer

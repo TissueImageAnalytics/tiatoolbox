@@ -2,14 +2,108 @@
 
 from __future__ import annotations
 
+import sys
+from typing import cast
+
 import numpy as np
 import torch
 from torch import nn
 
+from tiatoolbox import logger
+
+
+def is_torch_compile_compatible() -> bool:
+    """Check if the current GPU is compatible with torch-compile.
+
+    Returns:
+        True if current GPU is compatible with torch-compile, False otherwise.
+
+    Raises:
+        Warning if GPU is not compatible with `torch.compile`.
+
+    """
+    gpu_compatibility = True
+    if torch.cuda.is_available():  # pragma: no cover
+        device_cap = torch.cuda.get_device_capability()
+        if device_cap not in ((7, 0), (8, 0), (9, 0)):
+            logger.warning(
+                "GPU is not compatible with torch.compile. "
+                "Compatible GPUs include NVIDIA V100, A100, and H100. "
+                "Speedup numbers may be lower than expected.",
+                stacklevel=2,
+            )
+            gpu_compatibility = False
+    else:
+        logger.warning(
+            "No GPU detected or cuda not installed, "
+            "torch.compile is only supported on selected NVIDIA GPUs. "
+            "Speedup numbers may be lower than expected.",
+            stacklevel=2,
+        )
+        gpu_compatibility = False
+
+    return gpu_compatibility
+
+
+def compile_model(
+    model: nn.Module,
+    *,
+    mode: str = "default",
+) -> nn.Module:
+    """A decorator to compile a model using torch-compile.
+
+    Args:
+        model (torch.nn.Module):
+            Model to be compiled.
+        mode (str):
+            Mode to be used for torch-compile. Available modes are:
+
+            - `disable` disables torch-compile
+            - `default` balances performance and overhead
+            - `reduce-overhead` reduces overhead of CUDA graphs (useful for small
+              batches)
+            - `max-autotune` leverages Triton/template based matrix multiplications
+              on GPUs
+            - `max-autotune-no-cudagraphs` similar to “max-autotune” but without
+              CUDA graphs
+
+    Returns:
+        torch.nn.Module:
+            Compiled model.
+
+    """
+    if mode == "disable":
+        return model
+
+    # Check if GPU is compatible with torch.compile
+    gpu_compatibility = is_torch_compile_compatible()
+
+    if not gpu_compatibility:
+        return model
+
+    if sys.platform == "win32":  # pragma: no cover
+        msg = (
+            "`torch.compile` is not supported on Windows. Please see "
+            "https://github.com/pytorch/pytorch/issues/122094."
+        )
+        logger.warning(msg=msg)
+        return model
+
+    if isinstance(  # pragma: no cover
+        model,
+        torch._dynamo.eval_frame.OptimizedModule,  # skipcq: PYL-W0212 # noqa: SLF001
+    ):
+        logger.info(
+            ("The model is already compiled. ",),
+        )
+        return model
+
+    return cast("nn.Module", torch.compile(model, mode=mode))  # pragma: no cover
+
 
 def centre_crop(
-    img: np.ndarray | torch.tensor,
-    crop_shape: np.ndarray | torch.tensor,
+    img: np.ndarray | torch.Tensor,
+    crop_shape: np.ndarray | torch.Tensor | tuple,
     data_format: str = "NCHW",
 ) -> np.ndarray | torch.Tensor:
     """A function to center crop image with given crop shape.
@@ -43,8 +137,8 @@ def centre_crop(
 
 
 def centre_crop_to_shape(
-    x: np.ndarray | torch.tensor,
-    y: np.ndarray | torch.tensor,
+    x: np.ndarray | torch.Tensor,
+    y: np.ndarray | torch.Tensor,
     data_format: str = "NCHW",
 ) -> np.ndarray | torch.Tensor:
     """A function to center crop image to shape.
@@ -107,6 +201,7 @@ class UpSample2x(nn.Module):
         """Initialize :class:`UpSample2x`."""
         super().__init__()
         # correct way to create constant within module
+        self.unpool_mat: torch.Tensor
         self.register_buffer(
             "unpool_mat",
             torch.from_numpy(np.ones((2, 2), dtype="float32")),

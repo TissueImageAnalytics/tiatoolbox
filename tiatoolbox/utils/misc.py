@@ -16,7 +16,7 @@ import numcodecs
 import numpy as np
 import pandas as pd
 import requests
-import torch
+import tifffile
 import yaml
 import zarr
 from filelock import FileLock
@@ -24,12 +24,14 @@ from shapely.affinity import translate
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
+from tqdm import trange
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
     from os import PathLike
 
     from shapely import geometry
@@ -161,7 +163,7 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
 
 
 def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
-    """Read an image as numpy array.
+    """Read an image as a NumPy array.
 
     Args:
         image_path (PathLike):
@@ -221,8 +223,7 @@ def load_stain_matrix(stain_matrix_input: np.ndarray | PathLike) -> np.ndarray:
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
             msg = (
-                "If supplying a path to a stain matrix, "
-                "use either a npy or a csv file"
+                "If supplying a path to a stain matrix, use either a npy or a csv file"
             )
             raise FileNotSupportedError(
                 msg,
@@ -482,12 +483,12 @@ def __assign_unknown_class(input_table: pd.DataFrame) -> pd.DataFrame:
 
 
 def read_locations(
-    input_table: PathLike | np.ndarray | pd.DataFrame,
+    input_table: str | Path | PathLike | np.ndarray | pd.DataFrame,
 ) -> pd.DataFrame:
     """Read annotations as pandas DataFrame.
 
     Args:
-        input_table (PathLike | np.ndarray | pd.DataFrame`):
+        input_table (str| Path| PathLike | np.ndarray | pd.DataFrame`):
             Path to csv, npy or json. Input can also be a
             :class:`numpy.ndarray` or :class:`pandas.DataFrame`.
             First column in the table represents x position, second
@@ -532,7 +533,7 @@ def read_locations(
             out_table = pd.read_json(input_table)
             return __assign_unknown_class(out_table)
 
-        msg = "File type not supported."
+        msg = "File type not supported. Supported types: .npy, .csv, .json"
         raise FileNotSupportedError(msg)
 
     if isinstance(input_table, np.ndarray):
@@ -541,7 +542,9 @@ def read_locations(
     if isinstance(input_table, pd.DataFrame):
         return __assign_unknown_class(input_table)
 
-    msg = "Please input correct image path or an ndarray image."
+    msg = "File type not supported. "
+    msg += "Supported types: str, Path, PathLike, np.ndarray, pd.DataFrame"
+
     raise TypeError(msg)
 
 
@@ -878,24 +881,6 @@ def select_device(*, on_gpu: bool) -> str:
     return "cpu"
 
 
-def model_to(model: torch.nn.Module, *, on_gpu: bool) -> torch.nn.Module:
-    """Transfers model to cpu/gpu.
-
-    Args:
-        model (torch.nn.Module): PyTorch defined model.
-        on_gpu (bool): Transfers model to gpu if True otherwise to cpu.
-
-    Returns:
-        torch.nn.Module:
-            The model after being moved to cpu/gpu.
-    """
-    if on_gpu:  # DataParallel work only for cuda
-        model = torch.nn.DataParallel(model)
-        return model.to("cuda")
-
-    return model.to("cpu")
-
-
 def get_bounding_box(img: np.ndarray) -> np.ndarray:
     """Get bounding box coordinate information.
 
@@ -1190,9 +1175,7 @@ def add_from_dat(
         anns = []
         for subcat in data:
             if (
-                subcat == "resolution"
-                or subcat == "proc_dimensions"
-                or subcat == "base_dimensions"
+                subcat in {"resolution", "proc_dimensions", "base_dimensions"}
                 or "resolution" in subcat
             ):
                 continue
@@ -1219,6 +1202,175 @@ def add_from_dat(
 
     logger.info("Added %d annotations.", len(anns))
     store.append_many(anns)
+
+
+def process_contours(
+    contours: list[np.ndarray],
+    hierarchy: np.ndarray,
+    scale_factor: tuple[float, float] = (1, 1),
+) -> list[Annotation]:
+    """Process contours and hierarchy to create annotations.
+
+    Args:
+        contours (list[np.ndarray]):
+            A list of contours.
+        hierarchy (list[np.ndarray]):
+            A list of hierarchy.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the annotations.
+
+    Returns:
+        list:
+            A list of annotations.
+
+    """
+    annotations_list: list[Annotation] = []
+    outer_contours: list[np.ndarray] = []
+    holes_dict: dict[int, list[np.ndarray]] = {}
+
+    for i, layer_ in enumerate(contours):
+        coords: np.ndarray = layer_.squeeze()
+        scaled_coords: np.ndarray = np.array([np.array(scale_factor) * coords])
+
+        # save one points as a line, otherwise save the Polygon
+        if len(layer_) > 2:  # noqa: PLR2004
+            if int(hierarchy[0][i][3]) == -1:  # Outer contour
+                outer_contours.append(scaled_coords[0])
+            else:  # Hole
+                parent_idx: int = int(hierarchy[0][i][3])
+                if parent_idx not in holes_dict:
+                    holes_dict[parent_idx] = []
+                holes_dict[parent_idx].append(scaled_coords[0])
+        # if two points, save as a line string
+        elif len(layer_) == 2:  # noqa: PLR2004
+            feature_geom = feature2geometry(
+                {
+                    "type": "linestring",
+                    "coordinates": scaled_coords[0],
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties={"type": "mask"},
+                    )
+                ]
+            )
+        # if single point, save it is a point
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "point",
+                    "coordinates": scaled_coords,
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties={"type": "mask"},
+                    )
+                ]
+            )
+
+    for idx, outer in enumerate(outer_contours):
+        holes: list[np.ndarray] = holes_dict.get(idx, [])
+        if len(holes) != 0:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer, *holes],
+                },
+            )
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer],
+                },
+            )
+        feature_geom = make_valid_poly(feature_geom)
+        annotations_list.extend(
+            [
+                Annotation(
+                    geometry=feature_geom,
+                    properties={"type": "mask"},
+                )
+            ]
+        )
+
+    return annotations_list
+
+
+def dict_to_store_semantic_segmentor(
+    patch_output: dict | zarr.group,
+    scale_factor: tuple[float, float],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+) -> AnnotationStore | Path:
+    """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
+
+    Args:
+        patch_output (dict | zarr.Group):
+            A dictionary with "probabilities", "predictions", and "labels" keys.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the
+            annotations. All coordinates will be multiplied by this factor to allow
+            conversion of annotations saved at non-baseline resolution to baseline.
+            Should be model_mpp/slide_mpp.
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
+            Store results.
+
+    Returns:
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
+
+    """
+    preds = patch_output["predictions"]
+
+    # Get the number of unique predictions
+    layer_list = np.unique(preds)
+
+    layer_list = np.delete(layer_list, np.where(layer_list == 0))
+
+    store = SQLiteStore()
+
+    _ = class_dict  # use it once overlay is working
+
+    annotations_list: list[Annotation] = []
+
+    for type_class in layer_list:
+        layer = np.where(preds == type_class, 1, 0)
+        contours, hierarchy = cv2.findContours(
+            layer.astype("uint8"),
+            cv2.RETR_CCOMP,
+            cv2.CHAIN_APPROX_NONE,
+        )
+
+        annotations_list_ = process_contours(contours, hierarchy, scale_factor)
+        annotations_list.extend(annotations_list_)
+
+    _ = store.append_many(
+        annotations_list, [str(i) for i in range(len(annotations_list))]
+    )
+
+    # # if a save director is provided, then dump store into a file
+    if save_path:
+        # ensure parent directory exists
+        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+        # ensure proper db extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.commit()
+        store.dump(save_path)
+        return save_path
+
+    return store
 
 
 def dict_to_store(
@@ -1301,6 +1453,117 @@ def dict_to_store(
         return save_path
 
     return store
+
+
+def _tiles(
+    in_img: np.ndarray | zarr.core.Array,
+    tile_size: tuple[int, int],
+    colormap: int = cv2.COLORMAP_JET,
+    level: int = 0,
+) -> Iterator[np.ndarray]:
+    for y in trange(0, in_img.shape[0], tile_size[0]):
+        for x in range(0, in_img.shape[1], tile_size[1]):
+            in_img_ = in_img[
+                y : y + tile_size[0] : 2**level, x : x + tile_size[1] : 2**level
+            ]
+            yield cv2.applyColorMap(in_img_, colormap)
+
+
+def write_probability_heatmap_as_ome_tiff(
+    image_path: Path,
+    probability: np.ndarray | zarr.core.Array,
+    tile_size: tuple[int, int] = (64, 64),
+    levels: int = 2,
+    mpp: tuple[float, float] = (0.25, 0.25),
+    colormap: int = cv2.COLORMAP_JET,
+) -> None:
+    """Saves output probability maps from segmentation models as heatmaps.
+
+    This function converts the probability maps from individual classes to heatmaps
+    and saves them as pyramidal ome tiffs.
+
+    Args:
+        image_path (Path):
+            File path (including extension) to save image to.
+        probability (np.ndarray or zarr.core.Array):
+            The input image data in YXC (Height, Width, Channels) format.
+        tile_size (tuple):
+            Tile/Chunk size (YX/HW) for writing the tiff file.
+            Only allows tile shapes allowed by tifffile. Default is (64, 64).
+        levels (int):
+            Number of levels for saving pyramidal ome tiffs. Default is 2.
+        mpp (tuple[float, float]):
+            Tuple of mpp values in y and x (YX/HW). Default is (0.25, 0.25).
+        colormap (int):
+            Colormap to save the heatmaps. Default is 2 (cv2.COLORMAP_JET).
+
+    Raises:
+        TypeError:
+            If the input `img` is not a NumPy or Zarr array or does not have 3
+            dimensions.
+        ValueError:
+            If input dimensions is not 3 (HWC) dimensions.
+
+    Examples:
+        >>> probability_map = imread("path/to/probability_map")
+        >>> write_probability_heatmap_as_ome_tiff(
+        ... image_path=image_path,
+        ... probability=probability_map,
+        ... tile_size=(64, 64),
+        ... class_name="tumor",
+        ... levels=2,
+        ... mpp=(0.5, 0.5),
+        ... colormap=cv2.COLORMAP_JET,
+        ... )
+
+    """
+    if not isinstance(probability, (zarr.core.Array, np.ndarray)):
+        msg = "Input 'probability' must be a NumPy array or a Zarr array."
+        raise TypeError(msg)
+
+    if probability.ndim != 2:  # noqa: PLR2004
+        msg = "Input 'probability' must have 2 (YX) dimensions."
+        raise ValueError(msg)
+
+    ome_metadata = {
+        "axes": "YXC",
+        "PhysicalSizeX": mpp[1],
+        "PhysicalSizeXUnit": "µm",
+        "PhysicalSizeY": mpp[0],
+        "PhysicalSizeYUnit": "µm",
+    }
+
+    h = probability.shape[0]
+    w = probability.shape[1]
+
+    with tifffile.TiffWriter(image_path, bigtiff=True, ome=True) as tif:
+        tif.write(
+            _tiles(in_img=probability, tile_size=tile_size, colormap=colormap),
+            dtype="uint8",
+            shape=(h, w, 3),
+            tile=tile_size,
+            compression="jpeg",
+            metadata=ome_metadata,
+            subifds=levels - 1,
+        )
+
+        for level_ in range(1, levels):
+            tif.write(
+                _tiles(
+                    in_img=probability,
+                    tile_size=tile_size,
+                    colormap=colormap,
+                    level=level_,
+                ),
+                dtype="uint8",
+                shape=(h // 2**level_, w // 2**level_, 3),
+                tile=(tile_size[0] // 2**level_, tile_size[1] // 2**level_),
+                compression="jpeg",
+                subfiletype=0,
+            )
+
+    msg = f"Image saved as OME-TIFF to {image_path}."
+    logger.info(msg)
 
 
 def dict_to_zarr(

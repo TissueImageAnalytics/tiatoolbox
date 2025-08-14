@@ -124,7 +124,7 @@ class OtsuTissueMasker(TissueMasker):
         # Convert RGB images to greyscale
         grey_images = [x[..., 0] for x in images]
         if images_shape[-1] == 3:  # noqa: PLR2004
-            grey_images = np.zeros(images_shape[:-1], dtype=np.uint8)
+            grey_images = np.zeros(images_shape[:-1], dtype=np.uint8).tolist()
             for n, image in enumerate(images):
                 grey_images[n] = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -206,7 +206,7 @@ class MorphologicalMasker(OtsuTissueMasker):
         *,
         mpp: float | tuple[float, float] | None = None,
         power: float | tuple[float, float] | None = None,
-        kernel_size: int | tuple[int, int] | None = None,
+        kernel_size: int | tuple[int, int] | np.ndarray | None = None,
         min_region_size: int | None = None,
     ) -> None:
         """Initialise a morphological masker.
@@ -249,7 +249,7 @@ class MorphologicalMasker(OtsuTissueMasker):
             mpp_array = np.array(mpp)
             if mpp_array.size != 2:  # noqa: PLR2004
                 mpp_array = mpp_array.repeat(2)
-            kernel_size = np.max([32 / mpp_array, [1, 1]], axis=0)
+            kernel_size = np.max([32 / mpp_array, np.array([1, 1])], axis=0)
 
         # Ensure kernel_size is a length 2 numpy array
         kernel_size_array = np.array(kernel_size)

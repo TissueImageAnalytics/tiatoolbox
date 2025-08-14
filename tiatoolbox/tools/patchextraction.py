@@ -9,8 +9,10 @@ import numpy as np
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
+from tiatoolbox.annotation.storage import AnnotationStore
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.exceptions import MethodNotSupportedError
+from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
+from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -18,7 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from pandas import DataFrame
 
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.type_hints import Resolution, Units
 
 
 def validate_shape(shape: np.ndarray) -> bool:
@@ -37,7 +39,7 @@ class ExtractorParams(TypedDict, total=False):
 
     """
 
-    input_img: str | Path | np.ndarray
+    input_img: str | Path | np.ndarray | wsireader.WSIReader
     locations_list: np.ndarray | DataFrame | str | Path
     patch_size: int | tuple[int, int]
     resolution: Resolution
@@ -45,9 +47,12 @@ class ExtractorParams(TypedDict, total=False):
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.WSIReader
+    input_mask: (
+        str | Path | np.ndarray | wsireader.VirtualWSIReader | AnnotationStore | None
+    )
     stride: int | tuple[int, int]
     min_mask_ratio: float
+    store_filter: str | None
 
 
 class PointsPatchExtractorParams(TypedDict):
@@ -57,7 +62,7 @@ class PointsPatchExtractorParams(TypedDict):
 
     """
 
-    input_img: str | Path | np.ndarray
+    input_img: str | Path | np.ndarray | wsireader.WSIReader
     locations_list: np.ndarray | DataFrame | str | Path
     patch_size: int | tuple[int, int]
     resolution: Resolution
@@ -74,16 +79,19 @@ class SlidingWindowPatchExtractorParams(TypedDict):
 
     """
 
-    input_img: str | Path | np.ndarray
+    input_img: str | Path | np.ndarray | wsireader.WSIReader
     patch_size: int | tuple[int, int]
     resolution: Resolution
     units: Units
     pad_mode: str
     pad_constant_values: int | tuple[int, int]
     within_bound: bool
-    input_mask: str | Path | np.ndarray | wsireader.WSIReader | None
+    input_mask: (
+        str | Path | np.ndarray | wsireader.VirtualWSIReader | AnnotationStore | None
+    )
     stride: int | tuple[int, int] | None
     min_mask_ratio: float
+    store_filter: str | None
 
 
 class PatchExtractorABC(ABC):
@@ -109,11 +117,12 @@ class PatchExtractor(PatchExtractorABC):
     """Class for extracting and merging patches in standard and whole-slide images.
 
     Args:
-        input_img(str, Path, :class:`numpy.ndarray`):
+        input_img(str, Path, :class:`numpy.ndarray`, :class:`WSIReader`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
+        input_mask
+            (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`VirtualWSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the input_mask.
@@ -122,7 +131,10 @@ class PatchExtractor(PatchExtractorABC):
             'morphological' options. In case of 'otsu' or
             'morphological', a tissue mask is generated for the
             input_image using tiatoolbox :class:`TissueMasker`
-            functionality.
+            functionality. May also be an annotation store, in which case the
+            mask is generated based on the annotations. All annotations are used by
+            default; the 'store_filter' argument can be used to specify a filter for
+            a subset of annotations to use to build the mask.
         resolution (Resolution):
             Resolution at which to read the image, default = 0. Either a
             single number or a sequence of two numbers for x and y are
@@ -149,6 +161,10 @@ class PatchExtractor(PatchExtractorABC):
         min_mask_ratio (float):
             Area in percentage that a patch needs to contain of positive
             mask to be included. Defaults to 0.
+        store_filter (str):
+            Filter to apply to the annotations when generating the mask. Default is
+            None, which uses all annotations. Only used if the provided mask is an
+            annotation store.
 
 
     Attributes:
@@ -185,14 +201,20 @@ class PatchExtractor(PatchExtractorABC):
 
     def __init__(
         self: PatchExtractor,
-        input_img: str | Path | np.ndarray,
+        input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
+        input_mask: str
+        | Path
+        | np.ndarray
+        | wsireader.VirtualWSIReader
+        | AnnotationStore
+        | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
         min_mask_ratio: float = 0,
+        store_filter: str | None = None,
         *,
         within_bound: bool = False,
     ) -> None:
@@ -215,6 +237,24 @@ class PatchExtractor(PatchExtractorABC):
 
         if input_mask is None:
             self.mask = None
+        elif (isinstance(input_mask, str) and input_mask.endswith(".db")) or isinstance(
+            input_mask, AnnotationStore
+        ):
+            # input_mask is an annotation store
+            renderer = AnnotationRenderer(
+                max_scale=10000, edge_thickness=0, where=store_filter
+            )
+            rendered_mask = wsireader.AnnotationStoreReader(
+                input_mask,
+                renderer=renderer,
+                info=self.wsi.info,
+            ).slide_thumbnail()
+            rendered_mask = rendered_mask[:, :, 0] == 0
+            self.mask = wsireader.VirtualWSIReader(
+                rendered_mask,
+                info=self.wsi.info,
+                mode="bool",
+            )
         elif isinstance(input_mask, str) and input_mask in {"otsu", "morphological"}:
             if isinstance(self.wsi, wsireader.VirtualWSIReader):
                 self.mask = None
@@ -391,7 +431,7 @@ class PatchExtractor(PatchExtractorABC):
             0,
             tissue_mask.shape[0],
         )
-        scaled_coords = list((scaled_coords).astype(np.int32))
+        scaled_coords_list = list((scaled_coords).astype(np.int32))
 
         def default_sel_func(
             tissue_mask: np.ndarray,
@@ -412,7 +452,7 @@ class PatchExtractor(PatchExtractorABC):
             ) and (pos_area > 0 and patch_area > 0)
 
         func = default_sel_func if func is None else func
-        flag_list = [func(tissue_mask, coord) for coord in scaled_coords]
+        flag_list = [func(tissue_mask, coord) for coord in scaled_coords_list]
 
         return np.array(flag_list)
 
@@ -529,7 +569,7 @@ class PatchExtractor(PatchExtractorABC):
             msg = f"`stride_shape` value {stride_shape_arr} must > 1."
             raise ValueError(msg)
 
-        def flat_mesh_grid_coord(x: int, y: int) -> np.ndarray:
+        def flat_mesh_grid_coord(x: np.ndarray, y: np.ndarray) -> np.ndarray:
             """Helper function to obtain coordinate grid."""
             xv, yv = np.meshgrid(x, y)
             return np.stack([xv.flatten(), yv.flatten()], axis=-1)
@@ -573,11 +613,12 @@ class SlidingWindowPatchExtractor(PatchExtractor):
     """Extract patches using sliding fixed sized window for images and labels.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, pathlib.Path, :class:`numpy.ndarray`, :class:`WSIReader`):
             Input image for patch extraction.
         patch_size(int or tuple(int)):
             Patch size tuple (width, height).
-        input_mask(str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`WSIReader`):
+        input_mask
+            (str, pathlib.Path, :class:`numpy.ndarray`, or :obj:`VirtualWSIReader`):
             Input mask that is used for position filtering when
             extracting patches i.e., patches will only be extracted
             based on the highlighted regions in the `input_mask`.
@@ -616,6 +657,10 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         min_mask_ratio (float):
             Only patches with positive area percentage above this value are included.
             Defaults to 0.
+        store_filter (str):
+            Filter to apply to the annotations when generating the mask. Default is
+            None, which uses all annotations. Only used if the provided mask is an
+            annotation store.
 
     Attributes:
         stride(tuple(int)):
@@ -625,15 +670,21 @@ class SlidingWindowPatchExtractor(PatchExtractor):
 
     def __init__(  # noqa: PLR0913
         self: SlidingWindowPatchExtractor,
-        input_img: str | Path | np.ndarray,
+        input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.WSIReader | None = None,
+        input_mask: str
+        | Path
+        | np.ndarray
+        | wsireader.VirtualWSIReader
+        | AnnotationStore
+        | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         stride: int | tuple[int, int] | None = None,
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
         min_mask_ratio: float = 0,
+        store_filter: str | None = None,
         *,
         within_bound: bool = False,
     ) -> None:
@@ -648,6 +699,7 @@ class SlidingWindowPatchExtractor(PatchExtractor):
             pad_constant_values=pad_constant_values,
             within_bound=within_bound,
             min_mask_ratio=min_mask_ratio,
+            store_filter=store_filter,
         )
         if stride is None:
             self.stride = self.patch_size
@@ -663,7 +715,7 @@ class PointsPatchExtractor(PatchExtractor):
     """Extracting patches with specified points as a centre.
 
     Args:
-        input_img(str, pathlib.Path, :class:`numpy.ndarray`):
+        input_img(str, pathlib.Path, :class:`numpy.ndarray`: class:`WSIReader`):
             Input image for patch extraction.
         locations_list(ndarray, pd.DataFrame, str, pathlib.Path):
             Contains location and/or type of patch. This can be path to
@@ -707,7 +759,7 @@ class PointsPatchExtractor(PatchExtractor):
     def __init__(
         # pylint: disable=PLR0913
         self: PointsPatchExtractor,
-        input_img: str | Path | np.ndarray,
+        input_img: str | Path | np.ndarray | wsireader.WSIReader,
         locations_list: np.ndarray | DataFrame | str | Path,
         patch_size: int | tuple[int, int] = (224, 224),
         resolution: Resolution = 0,
@@ -727,7 +779,12 @@ class PointsPatchExtractor(PatchExtractor):
             pad_constant_values=pad_constant_values,
             within_bound=within_bound,
         )
-        self.locations_df = misc.read_locations(input_table=locations_list)
+        try:
+            self.locations_df = misc.read_locations(input_table=locations_list)
+        except (TypeError, FileNotSupportedError) as exc:
+            msg = "Please input correct locations_list. "
+            msg += "Supported types: np.ndarray, DataFrame, str, Path."
+            raise TypeError(msg) from exc
         self.locations_df["x"] = self.locations_df["x"] - int(
             (self.patch_size[1] - 1) / 2,
         )
@@ -792,5 +849,6 @@ def get_patch_extractor(
         "pad_constant_values": kwargs.get("pad_constant_values", 0),
         "min_mask_ratio": kwargs.get("min_mask_ratio", 0),
         "within_bound": kwargs.get("within_bound", False),
+        "store_filter": kwargs.get("store_filter"),
     }
     return SlidingWindowPatchExtractor(**sliding_window_patch_extractor_args)

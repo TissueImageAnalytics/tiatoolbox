@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -20,7 +20,7 @@ from tiatoolbox import logger
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Mapping, Sequence
 
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.type_hints import Resolution, Units
 
 
 class WSIMeta:
@@ -96,7 +96,7 @@ class WSIMeta:
 
     _valid_axes_characters = "YXSTZ"
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self: WSIMeta,
         slide_dimensions: tuple[int, int],
         axes: str,
@@ -121,7 +121,7 @@ class WSIMeta:
         self.level_downsamples = (
             [float(x) for x in level_downsamples]
             if level_downsamples is not None
-            else None
+            else [1.0]
         )
         self.level_count = (
             int(level_count) if level_count is not None else len(self.level_dimensions)
@@ -212,7 +212,9 @@ class WSIMeta:
         ceil = int(np.ceil(level))
         floor_downsample = level_downsamples[floor]
         ceil_downsample = level_downsamples[ceil]
-        return np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
+        return float(
+            np.interp(level, [floor, ceil], [floor_downsample, ceil_downsample])
+        )
 
     def relative_level_scales(
         self: WSIMeta,
@@ -260,13 +262,17 @@ class WSIMeta:
             [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
 
         """
+        base_scale: np.ndarray
+        resolution_array: np.ndarray
+        msg: str
+
         if units not in ("mpp", "power", "level", "baseline"):
             msg = "Invalid units"
             raise ValueError(msg)
 
         level_downsamples = self.level_downsamples
 
-        def np_pair(x: Number | np.array) -> np.ndarray:
+        def np_pair(x: Resolution) -> np.ndarray:
             """Ensure input x is a numpy array of length 2."""
             # If one number is given, the same value is used for x and y
             if isinstance(x, Number):
@@ -274,6 +280,7 @@ class WSIMeta:
             return np.array(x)
 
         if units == "level":
+            resolution = cast("float", resolution)
             if resolution >= len(level_downsamples):
                 msg = (
                     f"Target scale level {resolution} > "
@@ -282,32 +289,37 @@ class WSIMeta:
                 raise ValueError(
                     msg,
                 )
-            base_scale, resolution = 1, self.level_downsample(resolution)
+            resolution_array = np.array(
+                [self.level_downsample(resolution)] * 2, dtype=float
+            )
+            base_scale = np.array([1.0, 1.0], dtype=float)
 
-        resolution = np_pair(resolution)
-
-        if units == "mpp":
+        elif units == "mpp":
             if self.mpp is None:
                 msg = "MPP is None. Cannot determine scale in terms of MPP."
                 raise ValueError(msg)
             base_scale = self.mpp
+            resolution_array = np_pair(resolution)
 
-        if units == "power":
+        elif units == "power":
             if self.objective_power is None:
                 msg = (
                     "Objective power is None. "
-                    "Cannot determine scale in terms of objective power.",
+                    "Cannot determine scale in terms of objective power."
                 )
                 raise ValueError(
                     msg,
                 )
-            base_scale, resolution = 1 / self.objective_power, 1 / resolution
+            base_scale = np.array([1 / self.objective_power] * 2, dtype=float)
+            resolution_array = 1.0 / np_pair(resolution)
 
-        if units == "baseline":
-            base_scale, resolution = 1, 1 / resolution
+        else:  # units == "baseline"
+            base_scale = np.array([1.0, 1.0], dtype=float)
+            resolution_array = 1.0 / np_pair(resolution)
 
         return [
-            (base_scale * downsample) / resolution for downsample in level_downsamples
+            (base_scale * downsample) / resolution_array
+            for downsample in level_downsamples
         ]
 
     def as_dict(self: WSIMeta) -> dict:

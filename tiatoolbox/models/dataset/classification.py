@@ -20,7 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import torch
     from PIL.Image import Image
 
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
 class _TorchPreprocCaller:
@@ -163,7 +163,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
     """
 
-    def __init__(  # skipcq: PY-R1000  # noqa: PLR0913, PLR0915
+    def __init__(  # skipcq: PY-R1000  # noqa: PLR0915
         self: WSIPatchDataset,
         img_path: str | Path,
         mode: str = "wsi",

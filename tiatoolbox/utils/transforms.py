@@ -53,9 +53,9 @@ def background_composite(
     )
     composite.alpha_composite(image)
     if not alpha:
-        return np.asarray(composite.convert("RGB"))
+        return np.array(composite.convert("RGB"))
 
-    return np.asarray(composite)
+    return np.array(composite)
 
 
 def _convert_scalar_to_width_height(array: np.ndarray) -> np.ndarray:
@@ -189,7 +189,7 @@ def imresize(
         img_channels = [
             cv2.resize(
                 src=img[..., ch],
-                dsize=output_size_array,
+                dsize=(output_size_array[0], output_size_array[1]),
                 interpolation=cv2_interpolation,
             )[
                 ...,
@@ -199,7 +199,11 @@ def imresize(
         ]
         return np.concatenate(img_channels, axis=-1)
 
-    return cv2.resize(src=img, dsize=output_size_array, interpolation=cv2_interpolation)
+    return cv2.resize(
+        src=img,
+        dsize=(output_size_array[0], output_size_array[1]),
+        interpolation=cv2_interpolation,
+    )
 
 
 def rgb2od(img: np.ndarray) -> np.ndarray:

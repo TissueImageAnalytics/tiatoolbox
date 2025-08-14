@@ -43,13 +43,13 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 if TYPE_CHECKING:  # pragma: no cover
     import torch
 
-    from tiatoolbox.typing import IntBounds
+    from tiatoolbox.type_hints import IntBounds
 
 
 # Python is yet to be able to natively pickle Object method/static method.
 # Only top-level function is passable to multi-processing as caller.
 # May need 3rd party libraries to use method/static method otherwise.
-def _process_tile_predictions(
+def _process_tile_predictions(  # skipcq: PY-R1000
     ioconfig: IOSegmentorConfig,
     tile_bounds: IntBounds,
     tile_flag: list,
@@ -243,7 +243,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self: MultiTaskSegmentor,
         batch_size: int = 8,
         num_loader_workers: int = 0,

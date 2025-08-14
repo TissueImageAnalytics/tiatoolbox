@@ -13,7 +13,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: true
       matrix:
@@ -28,9 +28,9 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        sudo apt-get install -y libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install ruff==0.5.1 pytest pytest-cov pytest-runner
+        python -m pip install ruff==0.11.13 pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v3
@@ -42,8 +42,6 @@ jobs:
         echo "---SQlite---"
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-        echo "---Openslide---"
-        openslide-quickhash1sum --version
         echo "---OpenJPEG---"
         opj_dump -h | head -n 5
         echo "---Python---"
@@ -58,7 +56,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --basetemp={envtmpdir} \
-           --cov=tiatoolbox --cov-report=term --cov-report=xml \
+           --cov=tiatoolbox --cov-report=term --cov-report=xml --cov-config=pyproject.toml \
            --capture=sys \
            --durations=10 --durations-min=1.0 \
            --maxfail=1
@@ -80,7 +78,7 @@ jobs:
         fail-ci-on-error: false
 
   release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/pre-release' || startsWith(github.ref, 'refs/tags/v')

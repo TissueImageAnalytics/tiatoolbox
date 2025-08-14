@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, cast
 
 import cv2
 import numpy as np
@@ -16,14 +16,15 @@ from skimage.registration import phase_cross_correlation
 from skimage.util import img_as_float
 from torchvision.models import VGG16_Weights
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rcParam
+from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntBounds, Resolution, Units
+    from tiatoolbox.type_hints import IntBounds, Resolution, Units
 
 RGB_IMAGE_DIM = 3
 BIN_MASK_DIM = 2
@@ -332,15 +333,21 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
     """
 
-    def __init__(self: torch.nn.Module) -> None:
+    def __init__(self: DFBRFeatureExtractor) -> None:
         """Initialize :class:`DFBRFeatureExtractor`."""
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
-        self.features: dict = dict.fromkeys(output_layers_key, None)
-        self.pretrained: torch.nn.Sequential = torchvision.models.vgg16(
-            weights=VGG16_Weights.IMAGENET1K_V1,
-        ).features
+        self.features: dict[str, torch.Tensor] = dict.fromkeys(
+            output_layers_key, torch.Tensor()
+        )
+
+        compiled_model = compile_model(
+            torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1),
+            mode=rcParam["torch_compile_mode"],
+        )
+        self.pretrained = cast("torch.nn.Module", compiled_model.features)
+
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
                 self.forward_hook(output_layers_key[i]),
@@ -348,7 +355,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             for i, layer in enumerate(output_layers_id)
         ]
 
-    def forward_hook(self: torch.nn.Module, layer_name: str) -> Callable:
+    def forward_hook(self: DFBRFeatureExtractor, layer_name: str) -> Callable:
         """Register a hook.
 
         Args:
@@ -384,7 +391,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self: torch.nn.Module, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self: DFBRFeatureExtractor, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -431,11 +438,14 @@ class DFBRegister:
 
     """
 
-    def __init__(self: DFBRegister, patch_size: tuple[int, int] = (224, 224)) -> None:
+    def __init__(
+        self: DFBRegister,
+        patch_size: tuple[int, int] = (224, 224),
+    ) -> None:
         """Initialize :class:`DFBRegister`."""
         self.patch_size = patch_size
-        self.x_scale: list[float] = []
-        self.y_scale: list[float] = []
+        self.x_scale: np.ndarray
+        self.y_scale: np.ndarray
         self.feature_extractor = DFBRFeatureExtractor()
 
     # Make this function private when full pipeline is implemented.
@@ -796,7 +806,7 @@ class DFBRegister:
         return PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_coord,
-            mask.shape[::-1],
+            (mask.shape[1], mask.shape[0]),
         )
 
     def filtering_matching_points(
@@ -1521,21 +1531,21 @@ class AffineWSITransformer:
         """
         width, height = size[0], size[1]
 
-        x = [
+        x_info = [
             np.linspace(1, width, width, endpoint=True),
             np.ones(height) * width,
             np.linspace(1, width, width, endpoint=True),
             np.ones(height),
         ]
-        x = np.array(list(itertools.chain.from_iterable(x)))
+        x = np.array(list(itertools.chain.from_iterable(x_info)))
 
-        y = [
+        y_info = [
             np.ones(width),
             np.linspace(1, height, height, endpoint=True),
             np.ones(width) * height,
             np.linspace(1, height, height, endpoint=True),
         ]
-        y = np.array(list(itertools.chain.from_iterable(y)))
+        y = np.array(list(itertools.chain.from_iterable(y_info)))
 
         points = np.array([x, y]).transpose()
         transform = transform * [[1, 1, 0], [1, 1, 0], [1, 1, 1]]  # remove translation
@@ -1688,6 +1698,7 @@ class AffineWSITransformer:
         transformed_patch = transformed_patch[start_row:end_row, start_col:end_col, :]
 
         # Resize to desired size
+        post_read_scale = float(post_read_scale[0]), float(post_read_scale[1])
         return imresize(
             img=transformed_patch,
             scale_factor=post_read_scale,

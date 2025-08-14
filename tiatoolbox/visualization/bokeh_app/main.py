@@ -14,10 +14,6 @@ from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
 import numpy as np
 import requests
 import torch
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
-
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -62,6 +58,9 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -70,6 +69,7 @@ from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
+from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -308,10 +308,8 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str,
     prop_vals = json.loads(resp.text)
     # If auto, guess what cmap should be
     if (
-        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0)
-        and mapper_type == "auto"
-        or mapper_type == "continuous"
-    ):
+        (len(prop_vals) > MAX_CAT or len(prop_vals) == 0) and mapper_type == "auto"
+    ) or mapper_type == "continuous":
         cmap = (
             "viridis" if UI["cmap_select"].value == "dict" else UI["cmap_select"].value
         )
@@ -646,24 +644,25 @@ class ViewerState:
 
     def __setattr__(
         self: ViewerState,
-        __name: str,
-        __value: Any,  # noqa: ANN401
+        name: str,
+        value: Any,  # noqa: ANN401
+        /,
     ) -> None:
         """Set an attribute of the viewer state."""
-        if __name == "types":
-            self.__dict__["mapper"] = make_color_dict(__value)
+        if name == "types":
+            self.__dict__["mapper"] = make_color_dict(value)
             self.__dict__["colors"] = list(self.mapper.values())
             if self.cprop == "type":
                 update_mapper()
             # We will standardise the types to strings, keep dict of originals
-            self.__dict__["orig_types"] = {str(x): x for x in __value}
-            __value = [str(x) for x in __value]
+            self.__dict__["orig_types"] = {str(x): x for x in value}
+            value = [str(x) for x in value]
 
-        if __name == "wsi":
-            z = ZoomifyGenerator(__value, tile_size=256)
+        if name == "wsi":
+            z = ZoomifyGenerator(value, tile_size=256)
             self.__dict__["num_zoom_levels"] = z.level_count
 
-        self.__dict__[__name] = __value
+        self.__dict__[name] = value
 
 
 # endregion
@@ -689,7 +688,7 @@ def slide_toggle_cb(attr: str) -> None:  # noqa: ARG001
         UI["p"].renderers[0].alpha = 0.0
 
 
-def node_select_cb(attr: str, old: int, new: int) -> None:  # noqa: ARG001
+def node_select_cb(attr: str, old: int, new: int) -> None:
     """Placeholder callback to do something on node selection."""
     # Do something on node select if desired
 
@@ -725,7 +724,16 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     """Populate the slide list with the available slides."""
     file_list = []
     len_slidepath = len(slide_folder.parts)
-    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png", "*.tif"]:
+    for ext in [
+        "*.svs",
+        "*ndpi",
+        "*.tiff",
+        "*.mrxs",
+        "*.jpg",
+        "*.png",
+        "*.tif",
+        "*.dcm",
+    ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
     if search_txt is None:
@@ -1206,7 +1214,7 @@ def segment_on_box() -> None:
     # Make a mask defining the box
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
-    msg = f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}'
+    msg = f"box tl: {UI['box_source'].data['x'][0]}, {UI['box_source'].data['y'][0]}"
     logger.info(msg)
     x = round(
         (UI["box_source"].data["x"][0] - 0.5 * UI["box_source"].data["width"][0])
@@ -1239,7 +1247,7 @@ def segment_on_box() -> None:
         [tmp_mask_dir / "mask.png"],
         save_dir=tmp_save_dir / "hover_out",
         mode="wsi",
-        on_gpu=torch.cuda.is_available(),
+        device=select_device(on_gpu=torch.cuda.is_available()),
         crash_on_exception=True,
     )
 
@@ -2088,7 +2096,16 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in [
+            "*.svs",
+            "*ndpi",
+            "*.tiff",
+            "*.tif",
+            "*.mrxs",
+            "*.png",
+            "*.jpg",
+            "*.dcm",
+        ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),

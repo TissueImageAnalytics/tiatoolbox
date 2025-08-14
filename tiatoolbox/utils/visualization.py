@@ -475,14 +475,15 @@ def overlay_prediction_contours(
     inst_colours_array = inst_colours_array.astype(np.uint8)
 
     for idx, [_, inst_info] in enumerate(inst_dict.items()):
-        inst_contour = inst_info["contour"]
+        inst_contour: np.ndarray = inst_info["contour"]
         if "type" in inst_info and type_colours is not None:
             inst_colour = type_colours[inst_info["type"]][1]
         else:
             inst_colour = (inst_colours_array[idx]).tolist()
+        contours: list[np.ndarray] = [np.array(inst_contour)]
         cv2.drawContours(
             overlay,
-            [np.array(inst_contour)],
+            contours,
             -1,
             inst_colour,
             line_thickness,
@@ -557,6 +558,13 @@ def plot_graph(
         color = to_int_tuple(node_colors_list[idx])
         cv2.circle(canvas, node_, node_size, color, thickness=-1)
     return canvas
+
+
+def _find_minimum_mpp_sf(mpp: tuple[float, float] | None) -> float:
+    """Calculates minimum mpp scale factor."""
+    if mpp is not None:
+        return np.minimum(mpp[0] / 0.25, 1)
+    return 1.0
 
 
 class AnnotationRenderer:
@@ -725,7 +733,7 @@ class AnnotationRenderer:
                 # use colors directly specified in annotation properties
                 rgb = []
                 for c in annotation.properties["color"]:  # type: ignore[union-attr]
-                    c = cast(int, c)
+                    c = cast("int", c)
                     rgb.append(int(255 * c))
                 # rgb = [int(255 * c) for cast(int,c) in annotation.properties["color"]]
                 return (*rgb, 255)
@@ -904,9 +912,10 @@ class AnnotationRenderer:
             top_left,
             scale,
         )
+        pts: list[np.ndarray] = [np.array(cnt)]
         cv2.polylines(
             tile,
-            [np.array(cnt)],
+            pts,
             isClosed=False,
             color=col,
             thickness=3,
@@ -937,26 +946,27 @@ class AnnotationRenderer:
 
     def __setattr__(
         self: AnnotationRenderer,
-        __name: str,
-        __value: str | list | dict | None,
+        name: str,
+        value: str | list | dict | None,
+        /,
     ) -> None:
         """Set attribute each time an attribute is set."""
-        if __name == "mapper":
+        if name == "mapper":
             # save a more readable version of the mapper too
-            _ = self._set_mapper(__value)
+            _ = self._set_mapper(value)
             return
-        if __name == "blur_radius" and isinstance(__value, int):
+        if name == "blur_radius" and isinstance(value, int):
             # need to change additional settings
-            if __value > 0:
-                self.__dict__["blur"] = ImageFilter.GaussianBlur(__value)
+            if value > 0:
+                self.__dict__["blur"] = ImageFilter.GaussianBlur(value)
                 self.__dict__["edge_thickness"] = 0
             else:
                 self.__dict__["blur"] = None
                 self.__dict__["edge_thickness"] = self.__dict__["edge_thickness_old"]
-        elif __name == "edge_thickness":
-            self.__dict__["edge_thickness_old"] = __value
+        elif name == "edge_thickness":
+            self.__dict__["edge_thickness_old"] = value
 
-        self.__dict__[__name] = __value
+        self.__dict__[name] = value
 
     def render_annotations(
         self: AnnotationRenderer,
@@ -1001,9 +1011,7 @@ class AnnotationRenderer:
             int((bounds[2] - bounds[0]) / scale),
         ]
 
-        mpp_sf = 1
-        if self.info["mpp"] is not None:
-            mpp_sf = np.minimum(self.info["mpp"][0] / 0.25, 1)
+        mpp_sf = _find_minimum_mpp_sf(self.info["mpp"])
 
         min_area = 0.0005 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
 

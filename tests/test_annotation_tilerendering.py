@@ -23,7 +23,7 @@ from tests.test_annotation_stores import cell_polygon
 from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator
 from tiatoolbox.utils.env_detection import running_on_travis
-from tiatoolbox.utils.visualization import AnnotationRenderer
+from tiatoolbox.utils.visualization import AnnotationRenderer, _find_minimum_mpp_sf
 from tiatoolbox.wsicore import wsireader
 
 RNG = np.random.default_rng(0)  # Numpy Random Generator
@@ -270,15 +270,37 @@ def test_sub_tile_levels(fill_store: Callable, tmp_path: Path) -> None:
     assert tile.size == (112, 112)
 
 
+def test_multi_point() -> None:
+    """Test multi-point rendering."""
+    renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
+    tile = np.zeros((256, 256, 3), dtype=np.uint8)
+    renderer.render_by_type(
+        tile=tile,
+        annotation=Annotation(MultiPoint([(5.0, 5.0), (10.0, 10.0)])),
+        top_left=(0, 0),
+        scale=1,
+    )
+    # check point locations are now non-zero
+    assert np.any(tile[5, 5, :] > 0)
+    assert np.any(tile[10, 10, :] > 0)
+    # check a non-point region still zero
+    assert np.all(tile[100:150, 100:150, :] == 0)
+
+
 def test_unknown_geometry(
-    fill_store: Callable,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test warning when unknown geometries cannot be rendered."""
     renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
+    unknown_ann = Annotation(
+        MultiPolygon(
+            [Polygon.from_bounds(0, 0, 1, 1), Polygon.from_bounds(2, 2, 3, 3)]
+        ),
+        {},
+    )
     renderer.render_by_type(
         tile=np.zeros((256, 256, 3), dtype=np.uint8),
-        annotation=Annotation(MultiPoint([(5.0, 5.0), (10.0, 10.0)])),
+        annotation=unknown_ann,
         top_left=(0, 0),
         scale=1,
     )
@@ -462,6 +484,7 @@ def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     _, store = fill_store(SQLiteStore, tmp_path / "test.db")
 
     def color_fn(props: dict[str, str]) -> tuple[int, int, int]:
+        """Tests Red for cells, otherwise green."""
         # simple test function that returns red for cells, otherwise green.
         if props["type"] == "cell":
             return 1, 0, 0
@@ -480,3 +503,15 @@ def test_function_mapper(fill_store: Callable, tmp_path: Path) -> None:
     assert num == 50  # expect 50 green objects
     _, num = label(np.array(thumb)[:, :, 2])
     assert num == 0  # expect 0 blue objects
+
+
+def test_minimum_mpp_sf() -> None:
+    """Test minimum mpp_sf."""
+    mpp_sf = _find_minimum_mpp_sf((0.5, 0.5))
+    assert mpp_sf == 1.0
+
+    mpp_sf = _find_minimum_mpp_sf((0.20, 0.20))
+    assert mpp_sf == 0.20 / 0.25
+
+    mpp_sf = _find_minimum_mpp_sf(None)
+    assert mpp_sf == 1.0
