@@ -489,16 +489,16 @@ class WSIReader:
         last_suffix = suffixes[-1]
 
         reader = (
-            WSIReader._try_dicom(input_path, mpp, power, post_proc)
-            or WSIReader._try_fsspec(input_img, mpp, power)
-            or WSIReader._try_annotation_store(
+            WSIReader.try_dicom(input_path, mpp, power, post_proc)
+            or WSIReader.try_fsspec(input_img, mpp, power)
+            or WSIReader.try_annotation_store(
                 input_path, last_suffix, post_proc, kwargs
             )
-            or WSIReader._try_ngff(input_path, last_suffix, mpp, power)
-            or WSIReader._try_ome_tiff(
+            or WSIReader.try_ngff(input_path, last_suffix, mpp, power)
+            or WSIReader.try_ome_tiff(
                 input_path, suffixes, last_suffix, mpp, power, post_proc
             )
-            or WSIReader._try_tiff(input_path, last_suffix, mpp, power, post_proc)
+            or WSIReader.try_tiff(input_path, last_suffix, mpp, power, post_proc)
         )
 
         if reader is None:
