@@ -398,3 +398,53 @@ def test_build_color_dict() -> None:
         "DAPI (DAPI) [2]": (0.0, 1.0, 0.0),
         "FITC (FITC)": (0.0, 0.0, 1.0),
     }
+
+
+def test_get_ome_objective_power_valid() -> None:
+    """Test extraction of objective power from valid OME-XML."""
+    xml = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <Instrument ID="Instrument:0">
+            <Objective ID="Objective:0" NominalMagnification="20.0"/>
+        </Instrument>
+        <Image>
+            <InstrumentRef ID="Instrument:0"/>
+            <ObjectiveSettings ID="Objective:0"/>
+        </Image>
+    </OME>
+    """
+    reader = wsireader.TIFFWSIReader.__new__(wsireader.TIFFWSIReader)
+    reader.series_n = 0  # Required for _get_ome_mpp
+    reader._get_ome_mpp = lambda _: [0.5, 0.5]  # Optional fallback mock
+    result = reader._get_ome_objective_power(ElementTree.fromstring(xml))
+    assert result == 20.0
+
+
+def test_get_ome_objective_power_fallback_mpp() -> None:
+    """Test fallback to MPP-based inference when objective power is missing."""
+    xml = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <Image>
+            <Pixels PhysicalSizeX="0.5" PhysicalSizeY="0.5"/>
+        </Image>
+    </OME>
+    """
+    reader = wsireader.TIFFWSIReader.__new__(wsireader.TIFFWSIReader)
+    reader._get_ome_mpp = lambda _: [0.5, 0.5]  # Mock MPP extraction
+    result = reader._get_ome_objective_power(ElementTree.fromstring(xml))
+    assert result == 20.0  # Assuming mpp2common_objective_power(0.5) == 20.0
+
+
+def test_get_ome_objective_power_none() -> None:
+    """Test full fallback when both objective power and MPP are missing."""
+    xml = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <Image>
+            <Pixels/>
+        </Image>
+    </OME>
+    """
+    reader = wsireader.TIFFWSIReader.__new__(wsireader.TIFFWSIReader)
+    reader._get_ome_mpp = lambda _: None  # Mock missing MPP
+    result = reader._get_ome_objective_power(ElementTree.fromstring(xml))
+    assert result is None
