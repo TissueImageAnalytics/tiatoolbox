@@ -1,12 +1,16 @@
 """Test TIFFWSIReader."""
 
-from pathlib import Path
-from typing import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable
 
 import cv2
 import numpy as np
 import pytest
 from defusedxml import ElementTree
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from tiatoolbox.wsicore import wsireader
 
@@ -112,7 +116,17 @@ def test_tiffreader_fallback_to_virtual(
     """
 
     class DummyTIFFWSIReader:
-        def __init__(self) -> None:
+        def __init__(
+            self,
+            input_path: Path,
+            mpp: tuple[float, float] | None = None,
+            power: float | None = None,
+            post_proc: str | None = None,
+        ) -> None:
+            _ = input_path
+            _ = mpp
+            _ = power
+            _ = post_proc
             error_msg = "Unsupported TIFF WSI format"
             raise ValueError(error_msg)
 
