@@ -520,6 +520,45 @@ class EngineABC(ABC):  # noqa: B024
             return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
         return np.array(batch_data["coords"])
 
+    def _inference_loop(
+        self,
+        dataloader: torch.utils.data.DataLoader,
+        raw_predictions: dict,
+    ) -> dict[str, list[da.Array]]:
+        # Inference loop
+        tqdm = get_tqdm()
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else self.dataloader
+        )
+        for batch_data in tqdm_loop:
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+
+            raw_predictions["probabilities"].append(
+                da.from_array(
+                    batch_output,  # probabilities
+                )
+            )
+
+            if "coordinates" in raw_predictions:
+                raw_predictions["coordinates"].append(
+                    da.from_array(
+                        self._get_coordinates(batch_data),
+                    )
+                )
+
+            if "labels" in raw_predictions:
+                raw_predictions["labels"].append(
+                    da.from_array(np.array(batch_data["label"]))
+                )
+
+        return raw_predictions
+
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
@@ -540,7 +579,7 @@ class EngineABC(ABC):  # noqa: B024
                 called by `infer_wsi` and `patch_mode` is False.
 
         Returns:
-            dict[str, dask.array.Array]:
+            dict[str, list | dask.array.Array]:
                 Dictionary containing prediction results as Dask arrays.
                 Keys include:
                     - "probabilities": Model output probabilities.
@@ -550,64 +589,36 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         keys = ["probabilities"]
-        probabilities = []
 
         if self.return_labels:
             keys.append("labels")
-            labels = []
 
         if return_coordinates:
             keys.append("coordinates")
-            coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys)))
+        raw_predictions = {key: [] for key in keys}
 
-        # Inference loop
-        tqdm = get_tqdm()
-        tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else self.dataloader
+        raw_predictions = self._inference_loop(dataloader, raw_predictions)
+
+        raw_predictions["probabilities"] = da.concatenate(
+            raw_predictions["probabilities"], axis=0
         )
 
-        for batch_data in tqdm_loop:
-            batch_output = self.model.infer_batch(
-                self.model,
-                batch_data["image"],
-                device=self.device,
-            )
-
-            probabilities.append(
-                da.from_array(
-                    batch_output,  # probabilities
-                )
-            )
-
-            if return_coordinates:
-                coordinates.append(
-                    da.from_array(
-                        self._get_coordinates(batch_data),
-                    )
-                )
-
-            if self.return_labels:
-                labels.append(da.from_array(np.array(batch_data["label"])))
-
-        raw_predictions["probabilities"] = da.concatenate(probabilities, axis=0)
-
         if return_coordinates:
-            raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+            raw_predictions["coordinates"] = da.concatenate(
+                raw_predictions["coordinates"], axis=0
+            )
 
         if self.return_labels:
-            labels = [label.reshape(-1) for label in labels]
+            labels = [label.reshape(-1) for label in raw_predictions["labels"]]
             raw_predictions["labels"] = da.concatenate(labels, axis=0)
 
         return raw_predictions
 
     def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: dask.array.Array | np.ndarray,
+        raw_predictions: dict[str, da.Array | np.ndarray],
         prediction_shape: tuple[int, ...],  # noqa: ARG002
         prediction_dtype: type,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
