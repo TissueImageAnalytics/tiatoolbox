@@ -374,8 +374,8 @@ class SemanticSegmentor(PatchPredictor):
     def _merge_model_output_to_dask_canvas(
         self: SemanticSegmentor,
         batch_data: dict[str, Any],
-        canvas: zarr.Array,
-        count: zarr.Array,
+        merged_shape: zarr.Array,
+        canvas_dtype: zarr.Array,
     ) -> tuple[da.Array, da.Array]:
         """Merge model outputs from a batch into a shared canvas and count map.
 
@@ -401,14 +401,14 @@ class SemanticSegmentor(PatchPredictor):
                   each pixel was updated.
 
         """
-        # canvas = da.zeros(
-        #     merged_shape,
-        #     dtype=canvas_dtype,
-        # )
-        # count = da.zeros(
-        #     merged_shape[:2],
-        #     dtype=np.uint8,
-        # )
+        canvas = da.zeros(
+            merged_shape,
+            dtype=canvas_dtype,
+        )
+        count = da.zeros(
+            merged_shape[:2],
+            dtype=np.uint8,
+        )
         batch_output = self.model.infer_batch(
             self.model,
             batch_data["image"],
@@ -510,30 +510,32 @@ class SemanticSegmentor(PatchPredictor):
             sample_output.shape[3],
         )
 
-        zarr_group = zarr.open(str(save_path), mode="w")
+        zarr_group = zarr.open(str(save_path), mode="a")
 
-        canvas = zarr_group.create_dataset(
+        canvas_zarr = zarr_group.create_dataset(
             name="canvas",
             shape=merged_shape,
             dtype=sample_output.dtype,
             fillvalue=0,
+            overwrite=True,
         )
 
-        count = zarr_group.create_dataset(
+        count_zarr = zarr_group.create_dataset(
             name="count",
             shape=merged_shape[:2],
             dtype=np.uint8,
             fillvalue=0,
+            overwrite=True,
         )
 
-        # canvas = da.zeros(
-        #     merged_shape,
-        #     dtype=sample_output.dtype,
-        # )
-        # count = da.zeros(
-        #     merged_shape[:2],
-        #     dtype=np.uint8,
-        # )
+        canvas = da.zeros(
+            merged_shape,
+            dtype=sample_output.dtype,
+        )
+        count = da.zeros(
+            merged_shape[:2],
+            dtype=np.uint8,
+        )
 
         # Inference loop
         tqdm = get_tqdm()
@@ -543,15 +545,61 @@ class SemanticSegmentor(PatchPredictor):
             else self.dataloader
         )
 
+        locations = self.output_locations
+        batch_size = dataloader.batch_size
+
+        num_full_batches = locations.shape[0] // batch_size
+        remainder = locations.shape[0] % batch_size
+
+        batches = (
+            np.array_split(locations[: num_full_batches * batch_size], num_full_batches)
+            if num_full_batches
+            else [locations]
+        )
+
+        # Optionally include the remainder
+        if remainder > 0 and num_full_batches > 0:
+            batches.append(locations[-remainder:])
+
+        # Compute min/max for starty (col 1) and endy (col 3)
+        batch_info = [
+            {"min_starty": np.min(batch[:, 1]), "max_endy": np.max(batch[:, 3])}
+            for batch in batches
+        ]
+
+        min_save_y = 0
+        max_save_y = 0
+
         for batch_data in tqdm_loop:
-            canvas, count = self._merge_model_output_to_dask_canvas(
+            canvas_batch, count_batch = self._merge_model_output_to_dask_canvas(
                 batch_data=batch_data,
-                canvas=canvas,
-                count=count,
+                merged_shape=merged_shape,
+                canvas_dtype=canvas.dtype,
             )
 
-            # canvas = canvas + canvas_batch.rechunk(canvas.chunks)
-            # count = count + count_batch.rechunk(count.chunks)
+            y_info = batch_info.pop(0)
+            min_y = y_info["min_starty"]
+
+            canvas = canvas + canvas_batch.rechunk(canvas.chunks)
+            count = count + count_batch.rechunk(count.chunks)
+
+            if min_y > max_save_y:
+                canvas[min_save_y:max_save_y, :, :].to_zarr(
+                    canvas_zarr,
+                    region=(slice(min_save_y, max_save_y), slice(None), slice(None)),
+                    compute=True,
+                    lock=True,
+                )
+                count[min_save_y:max_save_y, :].to_zarr(
+                    count_zarr,
+                    region=(slice(min_save_y, max_save_y), slice(None)),
+                    compute=True,
+                    lock=True,
+                )
+                canvas[min_save_y:max_save_y, :, :] = 0
+                count[min_save_y:max_save_y, :] = 0
+                min_save_y = max_save_y
+                max_save_y = y_info["max_endy"]
 
             coordinates.append(
                 da.from_array(
@@ -562,8 +610,23 @@ class SemanticSegmentor(PatchPredictor):
             if self.return_labels:
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
-        canvas = da.from_zarr(canvas)
-        count = da.from_zarr(count)
+        canvas[min_save_y:, :, :].to_zarr(
+            canvas_zarr,
+            region=(slice(min_save_y, None), slice(None), slice(None)),
+            compute=True,
+            lock=True,
+        )
+        count[min_save_y:, :].to_zarr(
+            count_zarr,
+            region=(slice(min_save_y, None), slice(None)),
+            compute=True,
+            lock=True,
+        )
+
+        del canvas, count
+
+        canvas = da.from_zarr(canvas_zarr)
+        count = da.from_zarr(count_zarr)
         canvas = canvas / da.maximum(count[:, :, np.newaxis], 1)
 
         raw_predictions["probabilities"] = canvas.rechunk("auto")
