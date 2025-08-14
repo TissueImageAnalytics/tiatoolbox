@@ -266,3 +266,135 @@ def test_extract_dye_mapping() -> None:
         root_missing_attrs, ns
     )
     assert result_missing_attrs == {}
+
+
+@pytest.mark.parametrize(
+    ("color_int", "expected"),
+    [
+        (0xFF0000, (1.0, 0.0, 0.0)),  # Red
+        (0x00FF00, (0.0, 1.0, 0.0)),  # Green
+        (0x0000FF, (0.0, 0.0, 1.0)),  # Blue
+        (-1, (1.0, 1.0, 1.0)),  # White (unsigned 32-bit)
+    ],
+)
+def test_int_to_rgb(color_int: int, expected: tuple[float, float, float]) -> None:
+    """Test conversion of integer color values to normalized RGB tuples."""
+    result = wsireader.TIFFWSIReader._int_to_rgb(color_int)
+    assert pytest.approx(result) == expected
+
+
+def test_parse_channel_data() -> None:
+    """Test parsing of channel metadata with valid color values."""
+    xml = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <Image>
+            <Pixels>
+                <Channel ID="Channel:0" Name="DAPI" Color="16711680"/>
+                <Channel ID="Channel:1" Name="FITC" Color="65280"/>
+            </Pixels>
+        </Image>
+    </OME>
+    """
+    root = ElementTree.fromstring(xml)
+    ns = {"ns": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+    dye_mapping = {
+        "Channel:0": "DAPI",
+        "Channel:1": "FITC",
+    }
+
+    result = wsireader.TIFFWSIReader._parse_channel_data(root, ns, dye_mapping)
+    assert result == [
+        {
+            "id": "Channel:0",
+            "name": "DAPI",
+            "rgb": (1.0, 0.0, 0.0),
+            "dye": "DAPI",
+            "label": "Channel:0: DAPI (DAPI)",
+        },
+        {
+            "id": "Channel:1",
+            "name": "FITC",
+            "rgb": (0.0, 1.0, 0.0),
+            "dye": "FITC",
+            "label": "Channel:1: FITC (FITC)",
+        },
+    ]
+
+
+def test_parse_channel_data_with_invalid_color() -> None:
+    """Test parsing of channel metadata with an invalid color value."""
+    xml = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <Image>
+            <Pixels>
+                <Channel ID="Channel:0" Name="DAPI" Color="16711680"/>
+                <Channel ID="Channel:1" Name="FITC" Color="not_a_number"/>
+            </Pixels>
+        </Image>
+    </OME>
+    """
+    root = ElementTree.fromstring(xml)
+    ns = {"ns": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+    dye_mapping = {
+        "Channel:0": "DAPI",
+        "Channel:1": "FITC",
+    }
+
+    result = wsireader.TIFFWSIReader._parse_channel_data(root, ns, dye_mapping)
+    assert result == [
+        {
+            "id": "Channel:0",
+            "name": "DAPI",
+            "dye": "DAPI",
+            "rgb": (1.0, 0.0, 0.0),
+            "label": "Channel:0: DAPI (DAPI)",
+        },
+        {
+            "id": "Channel:1",
+            "name": "FITC",
+            "dye": "FITC",
+            "rgb": None,
+            "label": "Channel:1: FITC (FITC)",
+        },
+    ]
+
+
+def test_build_color_dict() -> None:
+    """Test building of color dictionary with duplicate channel names."""
+    channel_data = [
+        {
+            "id": "Channel:0",
+            "name": "DAPI",
+            "rgb": (1.0, 0.0, 0.0),
+            "dye": "DAPI",
+            "label": "Channel:0: DAPI (DAPI)",
+        },
+        {
+            "id": "Channel:1",
+            "name": "DAPI",
+            "rgb": (0.0, 1.0, 0.0),
+            "dye": "DAPI",
+            "label": "Channel:1: DAPI (DAPI)",
+        },
+        {
+            "id": "Channel:2",
+            "name": "FITC",
+            "rgb": (0.0, 0.0, 1.0),
+            "dye": "FITC",
+            "label": "Channel:2: FITC (FITC)",
+        },
+    ]
+
+    dye_mapping = {
+        "Channel:0": "DAPI",
+        "Channel:1": "DAPI",
+        "Channel:2": "FITC",
+    }
+
+    result = wsireader.TIFFWSIReader._build_color_dict(channel_data, dye_mapping)
+
+    assert result == {
+        "DAPI (DAPI)": (1.0, 0.0, 0.0),
+        "DAPI (DAPI) [2]": (0.0, 1.0, 0.0),
+        "FITC (FITC)": (0.0, 0.0, 1.0),
+    }
