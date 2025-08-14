@@ -4020,44 +4020,49 @@ class TIFFWSIReader(WSIReader):
         """
         xml = xml or self._get_ome_xml()
         namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+
         try:
             xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
-        except IndexError:
-            return None
+            instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
+            objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
+            if objective_settings is None:
+                # try alternative tag
+                objective_settings = xml_series.find("ome:Objective", namespaces)
 
-        instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
-        if instrument_ref is None:
-            return None
+            instrument_ref_id = instrument_ref.attrib.get("ID")
+            objective_settings_id = (
+                objective_settings.attrib.get("ID")
+                if objective_settings is not None
+                else "Objective:0"
+            )
 
-        objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
-        if objective_settings is None:
-            # try alternative tag
-            objective_settings = xml_series.find("ome:Objective", namespaces)
-        instrument_ref_id = instrument_ref.attrib.get("ID")
-        objective_settings_id = objective_settings.attrib.get("ID")
+            instruments = {
+                instrument.attrib.get("ID"): instrument
+                for instrument in xml.findall("ome:Instrument", namespaces)
+            }
+            objectives = {
+                (instrument_id, objective.attrib.get("ID")): objective
+                for instrument_id, instrument in instruments.items()
+                for objective in instrument.findall("ome:Objective", namespaces)
+            }
 
-        if not instrument_ref_id or not objective_settings_id:
-            return None
+            objective = objectives.get((instrument_ref_id, objective_settings_id))
+            if objective is not None:
+                return float(objective.attrib.get("NominalMagnification"))
 
-        instruments = {
-            instrument.attrib.get("ID"): instrument
-            for instrument in xml.findall("ome:Instrument", namespaces)
-            if "ID" in instrument.attrib
-        }
-        objectives = {
-            (instrument_id, objective.attrib.get("ID")): objective
-            for instrument_id, instrument in instruments.items()
-            for objective in instrument.findall("ome:Objective", namespaces)
-            if "ID" in objective.attrib
-        }
+        except (IndexError, AttributeError, ValueError, TypeError, KeyError) as e:
+            logger.warning("OME objective power extraction failed: %s", e)
 
-        objective = objectives.get((instrument_ref_id, objective_settings_id))
-        if objective is None:
-            return None
-        try:
-            return float(objective.attrib.get("NominalMagnification"))
-        except (TypeError, ValueError):
-            return None
+        # Fallback: try to infer from MPP
+        mpp = self._get_ome_mpp(xml)
+        if mpp is not None:
+            try:
+                return utils.misc.mpp2common_objective_power(float(np.mean(mpp)))
+            except (TypeError, ValueError) as e:
+                logger.warning("Failed to infer objective power from MPP: %s", e)
+
+        logger.warning("Objective power could not be determined from OME-XML.")
+        return None
 
     def _get_ome_mpp(
         self: TIFFWSIReader,
