@@ -595,7 +595,7 @@ class WSIReader:
             except ValueError as e:
                 if "Unsupported TIFF WSI format" in str(e):
                     return _handle_virtual_wsi(last_suffix, input_path, mpp, power)
-                raise  # pragma: no cover
+                raise
         return None
 
     def __init__(
