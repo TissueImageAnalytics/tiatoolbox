@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import urllib
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Callable, NoReturn
@@ -734,6 +735,132 @@ def test_prop_range(app: TileServer) -> None:
         assert response.status_code == 200
         # should be back to no scaling
         assert layer.renderer.score_fn(0.5) == 0.5
+
+
+def test_registration_dual_window(
+    empty_app: TileServer, tmp_path: Path, remote_sample: Callable
+) -> None:
+    """Test registering slides."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    with empty_app.test_client() as client, empty_app.test_client() as client2:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Open new window with other slide...
+        setup_app(client2)
+        response = client2.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client2.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+        )
+        assert response.status_code == 200
+
+
+def test_registration_single_window_same_slide(
+    empty_app: TileServer,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides."""
+    # First is testing with a single sldie and single registration
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Capture logger output to check for warning
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "No suitable overlay found. Using current slide as target. "
+                "This may display incorrectly if dimensions differ." in caplog.text
+            )
+            assert response.status_code == 200
+
+
+def test_registration_single_window_nonslide_overlay(
+    empty_app: TileServer,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides with non-slide overlay."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+        # check behaviour when an overlay is there, but it isn't suitabe (e.g jpg)
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("wsi2_4k_4k_jpg"))},
+        )
+        assert response.status_code == 200
+
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "No suitable overlay found. Using current slide as target. "
+                "This may display incorrectly if dimensions differ." in caplog.text
+            )
+            assert response.status_code == 200
+
+
+def test_registration_single_window_different_slide(
+    empty_app: TileServer,
+    tmp_path: Path,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides."""
+    # Repeat but provide extra overlays
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Now add extra slide (i.e. IHC slide as target to register with)
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("svs-1-small"))},
+        )
+
+        # Capture logger output to check for warning
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "Using slide as source and last overlay as target for registration."
+                in caplog.text
+            )
+            assert response.status_code == 200
 
 
 def test_healthcheck(empty_app: TileServer) -> None:

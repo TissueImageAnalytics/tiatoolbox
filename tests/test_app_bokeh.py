@@ -11,19 +11,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -125,6 +125,11 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
         "annotation_dat_svs_1",
         data_path["base_path"] / "overlays",
     )
+    data_path["affine_trans"] = (
+        data_path["base_path"] / "overlays" / (data_path["slide1"].stem + ".npy")
+    )
+    # save eye as test identity transform
+    np.save(data_path["affine_trans"], np.eye(3))
     data_path["config"] = _fetch_remote_sample(
         "config_2",
         data_path["base_path"] / "overlays",
@@ -246,6 +251,31 @@ def test_remove_dual_window(doc: Document, data_path: pytest.TempPathFactory) ->
     assert main.UI["vstate"].slide_path == data_path["slide1"]
 
 
+def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
+    """Test adding a non-annotation slide layer."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["slide1"].name]
+
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    slide_layer_path = str(data_path["slide1"])
+
+    click = MenuItemClick(layer_drop, slide_layer_path)
+    layer_drop._trigger_event(click)
+
+    assert len(layer_drop.menu) == 6
+
+
+def test_transform_overlay(doc: Document, data_path: pytest.TempPathFactory) -> None:
+    """Test adding a transform overlay."""
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    affine_layer_path = str(data_path["affine_trans"])  # sample .npy file
+
+    click = MenuItemClick(layer_drop, affine_layer_path)
+    layer_drop._trigger_event(click)
+
+    assert len(layer_drop.menu) == 6
+
+
 def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding annotation layers."""
     # test loading a geojson file.
@@ -263,7 +293,7 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.menu) == 5
+    assert len(layer_drop.menu) == 6
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
     # trigger an event to select the annotation .db file
     click = MenuItemClick(layer_drop, str(data_path["annotations"]))
