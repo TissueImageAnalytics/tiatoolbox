@@ -1,7 +1,10 @@
 """Test TIFFWSIReader."""
 
+from pathlib import Path
 from typing import Callable
 
+import cv2
+import numpy as np
 import pytest
 from defusedxml import ElementTree
 
@@ -96,3 +99,28 @@ def test_tiffreader_non_tiled_metadata(
     )
     monkeypatch.setattr(wsi, "_m_info", None)
     assert pytest.approx(wsi.info.mpp, abs=0.1) == 0.5
+
+
+def test_tiffreader_fallback_to_virtual(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test fallback to VirtualWSIReader.
+
+    Test fallback to VirtualWSIReader when TIFFWSIReader raises unsupported format.
+
+    """
+
+    class DummyTIFFWSIReader:
+        def __init__(self) -> None:
+            error_msg = "Unsupported TIFF WSI format"
+            raise ValueError(error_msg)
+
+    monkeypatch.setattr(wsireader, "TIFFWSIReader", DummyTIFFWSIReader)
+
+    dummy_file = tmp_path / "dummy.tiff"
+    dummy_img = np.zeros((10, 10, 3), dtype=np.uint8)
+    cv2.imwrite(str(dummy_file), dummy_img)
+
+    reader = wsireader.WSIReader.try_tiff(dummy_file, ".tiff", None, None, None)
+    assert isinstance(reader, wsireader.VirtualWSIReader)
