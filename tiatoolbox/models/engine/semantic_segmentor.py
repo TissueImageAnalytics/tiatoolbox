@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
@@ -370,9 +370,54 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode=patch_mode,
         )
 
+    def _inference_loop(
+        self,
+        dataloader: torch.utils.data.DataLoader,
+        raw_predictions: dict,
+    ) -> dict[str, list[da.Array]]:
+        # Inference loop
+        tqdm = get_tqdm()
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else self.dataloader
+        )
+        for batch_data in tqdm_loop:
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+
+            raw_predictions["probabilities"].append(
+                da.from_array(
+                    batch_output,  # probabilities
+                )
+            )
+
+            if "coordinates" in raw_predictions:
+                raw_predictions["coordinates"].append(
+                    da.from_array(
+                        self._get_coordinates(batch_data),
+                    )
+                )
+
+            if "output_locs" in raw_predictions:
+                raw_predictions["output_locs"].append(
+                    da.from_array(batch_data["output_locs"].numpy())
+                )
+
+            if "labels" in raw_predictions:
+                raw_predictions["labels"].append(
+                    da.from_array(np.array(batch_data["label"]))
+                )
+
+        return raw_predictions
+
     def _merge_model_output_to_dask_canvas(
         self: SemanticSegmentor,
-        batch_data: dict[str, Any],
+        batch_output: np.ndarray,
+        output_locs: np.ndarray,
         merged_shape: tuple[int, int, int],
         canvas_dtype: np.dtype,
     ) -> tuple[da.Array, da.Array]:
@@ -408,13 +453,6 @@ class SemanticSegmentor(PatchPredictor):
             merged_shape[:2],
             dtype=np.uint8,
         )
-        batch_output = self.model.infer_batch(
-            self.model,
-            batch_data["image"],
-            device=self.device,
-        )
-
-        output_locs = batch_data["output_locs"].numpy()
 
         batch_xs, batch_ys = np.min(output_locs[:, 0:2], axis=0)
         batch_xe, batch_ye = np.max(output_locs[:, 2:4], axis=0)
@@ -480,14 +518,12 @@ class SemanticSegmentor(PatchPredictor):
         """
         _ = kwargs.get("return_probabilities", False)
 
-        keys = ["probabilities", "coordinates"]
+        keys = ["probabilities", "output_locs", "coordinates"]
         if self.return_labels:
             keys.append("labels")
 
-        coordinates, labels = [], []
-
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys)))
+        raw_predictions = {key: [] for key in keys}
 
         # sample for calculating shape for dask arrays
         sample = self.dataloader.dataset[0]  # Use only the first image
@@ -514,39 +550,42 @@ class SemanticSegmentor(PatchPredictor):
             dtype=np.uint8,
         )
 
-        # Inference loop
+        raw_predictions = self._inference_loop(dataloader, raw_predictions)
+
         tqdm = get_tqdm()
         tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
+            tqdm(
+                range(len(raw_predictions["probabilities"])),
+                leave=False,
+                desc="Merging patches",
+            )
             if self.verbose
             else self.dataloader
         )
 
-        for batch_data in tqdm_loop:
+        for _ in tqdm_loop:
+            probabilities = raw_predictions["probabilities"].pop(0)
+            output_locs = raw_predictions["output_locs"].pop(0)
             canvas_batch, count_batch = self._merge_model_output_to_dask_canvas(
-                batch_data=batch_data,
-                merged_shape=merged_shape,
-                canvas_dtype=canvas.dtype,
+                probabilities.compute(),
+                output_locs.compute(),
+                merged_shape,
+                sample_output.dtype,
             )
 
             canvas = canvas + canvas_batch.rechunk(canvas.chunks)
             count = count + count_batch.rechunk(count.chunks)
 
-            coordinates.append(
-                da.from_array(
-                    self._get_coordinates(batch_data),
-                )
-            )
+        canvas = canvas / da.maximum(count, 1)[:, :, np.newaxis]
 
-            if self.return_labels:
-                labels.append(da.from_array(np.array(batch_data["label"])))
-
-        canvas = canvas / da.maximum(count[:, :, np.newaxis], 1)
+        raw_predictions.pop("output_locs")
 
         raw_predictions["probabilities"] = canvas.rechunk("auto")
-        raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+        raw_predictions["coordinates"] = da.concatenate(
+            raw_predictions["coordinates"], axis=0
+        )
         if self.return_labels:
-            labels = [label.reshape(-1) for label in labels]
+            labels = [label.reshape(-1) for label in raw_predictions["labels"]]
             raw_predictions["labels"] = da.concatenate(labels, axis=0)
 
         return raw_predictions

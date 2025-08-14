@@ -552,6 +552,11 @@ class EngineABC(ABC):  # noqa: B024
                     )
                 )
 
+            if "output_locs" in raw_predictions:
+                raw_predictions["output_locs"].append(
+                    da.from_array(batch_data["output_locs"].numpy())
+                )
+
             if "labels" in raw_predictions:
                 raw_predictions["labels"].append(
                     da.from_array(np.array(batch_data["label"]))
