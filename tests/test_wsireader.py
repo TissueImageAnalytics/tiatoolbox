@@ -28,7 +28,7 @@ from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, utils
 from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.utils import imread, tiff_to_fsspec
+from tiatoolbox.utils import imread, postproc_defs, tiff_to_fsspec
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
@@ -2932,6 +2932,29 @@ def test_visualise_multi_channel(sample_qptiff: Path) -> None:
     assert region.shape == (100, 50, 3)
     assert region2.shape == (100, 50, 5)
     # Was 7 channels. Not sure if this is correct. Check this!
+
+
+def test_get_post_proc_variants() -> None:
+    """Test different branches of get_post_proc method."""
+    reader = wsireader.VirtualWSIReader(np.zeros((10, 10, 3)))
+
+    assert callable(reader.get_post_proc(lambda x: x))
+    assert reader.get_post_proc(None) is None
+    assert isinstance(reader.get_post_proc("auto"), postproc_defs.MultichannelToRGB)
+    assert isinstance(
+        reader.get_post_proc("MultichannelToRGB"), postproc_defs.MultichannelToRGB
+    )
+
+    with pytest.raises(ValueError, match="Invalid post-processing function"):
+        reader.get_post_proc("invalid_proc")
+
+
+def test_post_proc_applied() -> None:
+    """Test that post_proc is applied to image region."""
+    reader = wsireader.VirtualWSIReader(np.ones((100, 100, 3), dtype=np.uint8))
+    reader.post_proc = lambda x: x * 0
+    region = reader.read_rect((0, 0), (50, 50))
+    assert np.all(region == 0)
 
 
 def test_fsspec_json_wsi_reader_instantiation() -> None:

@@ -138,3 +138,38 @@ def test_tiffreader_fallback_to_virtual(
 
     reader = wsireader.WSIReader.try_tiff(dummy_file, ".tiff", None, None, None)
     assert isinstance(reader, wsireader.VirtualWSIReader)
+
+
+def test_parse_filtercolor_metadata_with_filter_pair() -> None:
+    """Test full parsing including filter pair matching from XML metadata."""
+    # We can't possibly test on all the different types of tiff files, so simulate them.
+    xml_str = """
+    <root>
+        <FilterColors>
+            <FilterColors-k>EM123_EX456</FilterColors-k>
+            <FilterColors-v>255,128,0</FilterColors-v>
+        </FilterColors>
+        <ScanBands-i>
+            <Bands-i>
+                <Name>Channel1</Name>
+            </Bands-i>
+            <FilterPair>
+                <EmissionFilter>
+                    <FixedFilter>
+                        <PartNumber>EM123</PartNumber>
+                    </FixedFilter>
+                </EmissionFilter>
+                <ExcitationFilter>
+                    <FixedFilter>
+                        <PartNumber>EX456</PartNumber>
+                    </FixedFilter>
+                </ExcitationFilter>
+            </FilterPair>
+        </ScanBands-i>
+    </root>
+    """
+    root = ElementTree.fromstring(xml_str)
+    result = wsireader.TIFFWSIReader._parse_filtercolor_metadata(root)
+    assert result is not None
+    assert "Channel1" in result
+    assert result["Channel1"] == (1.0, 128 / 255, 0.0)
