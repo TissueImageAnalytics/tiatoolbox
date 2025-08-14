@@ -434,7 +434,7 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     # trigger an event to select the image overlay
     click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
     layer_drop._trigger_event(click)
-    l_name = "CMU-1-Small-Region_rendered_annotations"
+    l_name = data_path["img_overlay"].stem
     layer_slider = doc.get_model_by_name(f"{l_name}_slider")
     assert layer_slider is not None
 
@@ -452,6 +452,12 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     layer_slider.value = 0.4
     # check that the alpha values have been set correctly
     assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0.4
+
+    # check loading a new layer with same stem uses full file name to disambiguate
+    click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
+    layer_drop._trigger_event(click)
+    full_name = data_path["img_overlay"].name
+    assert full_name in main.UI["vstate"].layer_dict
 
 
 def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> None:

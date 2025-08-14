@@ -587,6 +587,9 @@ class TileServer(Flask):
 
     def _add_image_overlay(self, session_id: str, overlay_path: Path) -> str:
         layer = overlay_path.stem
+        if layer in self.layers[session_id]:
+            # use full file name to disambiguate
+            layer = overlay_path.name
         if overlay_path.suffix == ".tiff":
             self.layers[session_id][layer] = OpenSlideWSIReader(
                 overlay_path,

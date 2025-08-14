@@ -29,7 +29,6 @@ from tiatoolbox.utils.visualization import AnnotationRenderer, random_colors
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
-    from typing import Literal
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
