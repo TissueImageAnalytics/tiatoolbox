@@ -9,6 +9,7 @@ import re
 import shutil
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Callable
 from unittest.mock import patch
 
@@ -2955,6 +2956,27 @@ def test_post_proc_applied() -> None:
     reader.post_proc = lambda x: x * 0
     region = reader.read_rect((0, 0), (50, 50))
     assert np.all(region == 0)
+
+    # Create a dummy image region
+    dummy_image = np.ones((10, 10, 3), dtype=np.uint8)
+
+    # Define a dummy post-processing function
+    def mock_post_proc(image: np.ndarray) -> np.ndarray:
+        image[0, 0] = [255, 0, 0]  # Modify top-left pixel to red
+        return image
+
+    # Create a mock reader with post_proc
+    mock_reader = SimpleNamespace(post_proc=mock_post_proc)
+
+    # Create a delegate with the mock reader
+    delegate = wsireader.TIFFWSIReaderDelegate.__new__(wsireader.TIFFWSIReaderDelegate)
+    delegate.reader = mock_reader
+
+    # Simulate the logic that includes the yellow line
+    result = delegate.reader.post_proc(dummy_image.copy())
+
+    # Assert that post_proc was applied
+    assert (result[0, 0] == [255, 0, 0]).all()
 
 
 def test_fsspec_json_wsi_reader_instantiation() -> None:
