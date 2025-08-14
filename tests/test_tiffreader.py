@@ -173,3 +173,96 @@ def test_parse_filtercolor_metadata_with_filter_pair() -> None:
     assert result is not None
     assert "Channel1" in result
     assert result["Channel1"] == (1.0, 128 / 255, 0.0)
+
+
+def test_parse_scancolortable_rgb_and_named_colors() -> None:
+    """Test parsing of ScanColorTable with RGB and named color values."""
+    xml_str = """
+    <root>
+        <ScanColorTable>
+            <ScanColorTable-k>FITC_Exc_Em</ScanColorTable-k>
+            <ScanColorTable-v>0,255,0</ScanColorTable-v>
+            <ScanColorTable-k>DAPI_Exc_Em</ScanColorTable-k>
+            <ScanColorTable-v>Blue</ScanColorTable-v>
+            <ScanColorTable-k>Cy3_Exc_Em</ScanColorTable-k>
+            <ScanColorTable-v></ScanColorTable-v>
+        </ScanColorTable>
+    </root>
+    """
+    root = ElementTree.fromstring(xml_str)
+    result = wsireader.TIFFWSIReader._parse_scancolortable(root)
+
+    assert result is not None
+    assert result["FITC"] == (0.0, 1.0, 0.0)
+    assert result["DAPI"] == (0.0, 0.0, 1.0)
+    assert result["Cy3"] is None  # Empty value is incluided but not converted
+
+
+def test_get_namespace_extraction() -> None:
+    """Test extraction of XML namespace from root tag."""
+    # Case with namespace
+    xml_with_ns = '<ome:OME xmlns:ome="http://www.openmicroscopy.org/Schemas/OME/2016-06"></ome:OME>'
+    root_with_ns = ElementTree.fromstring(xml_with_ns)
+    result_with_ns = wsireader.TIFFWSIReader._get_namespace(root_with_ns)
+    assert result_with_ns == {"ns": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+
+    # Case without namespace
+    xml_without_ns = "<OME></OME>"
+    root_without_ns = ElementTree.fromstring(xml_without_ns)
+    result_without_ns = wsireader.TIFFWSIReader._get_namespace(root_without_ns)
+    assert result_without_ns == {}
+
+
+def test_extract_dye_mapping() -> None:
+    """Test extraction of dye mapping including missing and valid cases."""
+    # Case with valid ChannelPriv entries
+    xml_valid = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <StructuredAnnotations>
+            <XMLAnnotation>
+                <Value>
+                    <ChannelPriv ID="Channel:0" FluorescenceChannel="FITC"/>
+                    <ChannelPriv ID="Channel:1" FluorescenceChannel="DAPI"/>
+                </Value>
+            </XMLAnnotation>
+        </StructuredAnnotations>
+    </OME>
+    """
+    root_valid = ElementTree.fromstring(xml_valid)
+    ns = {"ns": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
+    result_valid = wsireader.TIFFWSIReader._extract_dye_mapping(root_valid, ns)
+    assert result_valid == {"Channel:0": "FITC", "Channel:1": "DAPI"}
+
+    # Case with missing <Value>
+    xml_missing_value = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <StructuredAnnotations>
+            <XMLAnnotation>
+            </XMLAnnotation>
+        </StructuredAnnotations>
+    </OME>
+    """
+    root_missing_value = ElementTree.fromstring(xml_missing_value)
+    result_missing_value = wsireader.TIFFWSIReader._extract_dye_mapping(
+        root_missing_value, ns
+    )
+    assert result_missing_value == {}
+
+    # Case with ChannelPriv missing attributes
+    xml_missing_attrs = """
+    <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+        <StructuredAnnotations>
+        <XMLAnnotation>
+            <Value>
+                <ChannelPriv FluorescenceChannel="FITC"/>
+                <ChannelPriv ID="Channel:2"/>
+            </Value>
+        </XMLAnnotation>
+        </StructuredAnnotations>
+    </OME>
+    """
+    root_missing_attrs = ElementTree.fromstring(xml_missing_attrs)
+    result_missing_attrs = wsireader.TIFFWSIReader._extract_dye_mapping(
+        root_missing_attrs, ns
+    )
+    assert result_missing_attrs == {}
