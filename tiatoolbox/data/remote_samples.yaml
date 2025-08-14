@@ -148,9 +148,9 @@ files:
   nuclick-output:
     url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
   qptiff_sample:
-    url: [*wsis, "multiplexed_example.qptiff"]
+    url: [*wsis, "multiplex_example.qptiff"]
   qptiff_sample_small:
-    url: [ *wsis, "multiplexed_example_small.qptiff" ]
+    url: [ *wsis, "multiplex_example_small.qptiff" ]
   reg_disp_mha_example:
     url: [*testdata, "registration/sample_transf.mha"]
   reg_affine_npy_example:

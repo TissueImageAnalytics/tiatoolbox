@@ -485,54 +485,118 @@ class WSIReader:
             FileNotSupportedError: If the file format is not supported for NGFF Zarr.
 
         """
-        reader = None
-        if is_dicom(input_path):
-            reader = DICOMWSIReader(
-                input_path, mpp=mpp, power=power, post_proc=post_proc
+        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
+        last_suffix = suffixes[-1]
+
+        reader = (
+            WSIReader._try_dicom(input_path, mpp, power, post_proc)
+            or WSIReader._try_fsspec(input_img, mpp, power)
+            or WSIReader._try_annotation_store(
+                input_path, last_suffix, post_proc, kwargs
             )
-        else:
-            _, _, suffixes = utils.misc.split_path_name_ext(input_path)
-            last_suffix = suffixes[-1]
+            or WSIReader._try_ngff(input_path, last_suffix, mpp, power)
+            or WSIReader._try_ome_tiff(
+                input_path, suffixes, last_suffix, mpp, power, post_proc
+            )
+            or WSIReader._try_tiff(input_path, last_suffix, mpp, power, post_proc)
+        )
 
-            if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
-                reader = FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
-
-            elif last_suffix == ".db":
-                kwargs["post_proc"] = post_proc
-                reader = AnnotationStoreReader(input_path, **kwargs)
-
-            elif last_suffix in (".zarr",):
-                if not is_ngff(input_path):
-                    msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
-                    raise FileNotSupportedError(
-                        msg,
-                    )
-                reader = NGFFWSIReader(input_path, mpp=mpp, power=power)
-
-            elif (
-                suffixes[-2:] in ([".ome", ".tiff"],)
-                or suffixes[-2:] in ([".ome", ".tif"],)
-                or last_suffix == ".qptiff"
-            ):
-                reader = TIFFWSIReader(
-                    input_path, mpp=mpp, power=power, post_proc=post_proc
-                )
-
-            elif last_suffix in (".tif", ".tiff"):
-                tiff_wsi = TIFFWSIReader(
-                    input_path, mpp=mpp, power=power, post_proc=post_proc
-                )
-                if tiff_wsi is not None:
-                    reader = tiff_wsi
-
-            else:
-                virtual_wsi = _handle_virtual_wsi(
-                    last_suffix=last_suffix, input_path=input_path, mpp=mpp, power=power
-                )
-                if virtual_wsi is not None:
-                    reader = virtual_wsi
+        if reader is None:
+            reader = _handle_virtual_wsi(last_suffix, input_path, mpp, power)
 
         return reader
+
+    @staticmethod
+    def try_dicom(
+        input_path: Path,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+        post_proc: str | callable | None,
+    ) -> DICOMWSIReader | None:
+        """Try to create a DICOMWSIReader if the input is a DICOM file."""
+        if is_dicom(input_path):
+            return DICOMWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
+        return None
+
+    @staticmethod
+    def try_fsspec(
+        input_img: str | Path | np.ndarray,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+    ) -> FsspecJsonWSIReader | None:
+        """Try to create a FsspecJsonWSIReader if the input is a valid Zarr fsspec."""
+        if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
+            return FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
+        return None
+
+    @staticmethod
+    def try_annotation_store(
+        input_path: Path,
+        last_suffix: str,
+        post_proc: str | callable | None,
+        kwargs: dict,
+    ) -> AnnotationStoreReader | None:
+        """Try to create an AnnotationStoreReader if the file is a .db."""
+        if last_suffix == ".db":
+            kwargs["post_proc"] = post_proc
+            return AnnotationStoreReader(input_path, **kwargs)
+        return None
+
+    @staticmethod
+    def try_ngff(
+        input_path: Path,
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+    ) -> NGFFWSIReader | None:
+        """Try to create an NGFFWSIReader if the file is a valid NGFF Zarr."""
+        if last_suffix == ".zarr":
+            if not is_ngff(input_path):
+                msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
+                raise FileNotSupportedError(msg)
+            return NGFFWSIReader(input_path, mpp=mpp, power=power)
+        return None
+
+    @staticmethod
+    def try_ome_tiff(
+        input_path: Path,
+        suffixes: list[str],
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+        post_proc: str | callable | None,
+    ) -> TIFFWSIReader | None:
+        """Try to create a TIFFWSIReader for OME-TIFF or QPTIFF formats."""
+        if (
+            suffixes[-2:] in ([".ome", ".tiff"], [".ome", ".tif"])
+            or last_suffix == ".qptiff"
+        ):
+            return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
+        return None
+
+    @staticmethod
+    def try_tiff(
+        input_path: Path,
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+        post_proc: str | callable | None,
+    ) -> TIFFWSIReader | None:
+        """Try to create a TIFFWSIReader.
+
+        Try to create a TIFFWSIReader for standard TIFF formats,
+        or fallback to virtual WSI.
+        """
+        if last_suffix in (".tif", ".tiff"):
+            try:
+                return TIFFWSIReader(
+                    input_path, mpp=mpp, power=power, post_proc=post_proc
+                )
+            except ValueError as e:
+                if "Unsupported TIFF WSI format" in str(e):
+                    return _handle_virtual_wsi(last_suffix, input_path, mpp, power)
+                raise
+        return None
 
     def __init__(
         self: WSIReader,
