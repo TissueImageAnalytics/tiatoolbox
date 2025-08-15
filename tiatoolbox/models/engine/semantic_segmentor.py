@@ -552,8 +552,12 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         # Reinitialize with sparse arrays
-        canvas = da.zeros_like(canvas, chunks=canvas_zarr.chunks).persist()
-        count = da.zeros_like(count, dtype=np.uint8, chunks=count_zarr.chunks).persist()
+        canvas = da.zeros(
+            shape=canvas_zarr.shape, dtype=canvas_zarr.dtype, chunks=canvas_zarr.chunks
+        ).persist()
+        count = da.zeros(
+            shape=count_zarr.shape, dtype=np.uint8, chunks=count_zarr.chunks
+        ).persist()
 
         # Restore unsaved region
         restore_slice = slice(max_save_y, None)
