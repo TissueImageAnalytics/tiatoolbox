@@ -180,6 +180,7 @@ class EngineABCRunParams(TypedDict, total=False):
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
+    memory_threshold: int
     verbose: bool
 
 
