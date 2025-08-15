@@ -1023,7 +1023,7 @@ class EngineABC(ABC):  # noqa: B024
         # equal to dataloader resolution.
 
         if dataloader_units in ["mpp", "level", "power"]:
-            wsimeta_dict = dataloader.dataset.reader.info.as_dict()
+            wsimeta_dict = dataloader.dataset.reader_info.as_dict()
 
         if dataloader_units == "mpp":
             slide_resolution = wsimeta_dict[dataloader_units]
