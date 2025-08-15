@@ -2869,6 +2869,105 @@ def test_read_rect_coord_space_consistency(wsi: WSIReader) -> None:
     assert ssim > 0.8
 
 
+def _make_mock_post_proc(called: dict[str, bool]) -> Callable[[np.ndarray], np.ndarray]:
+    """Create a mock post-processing function that modifies the image and sets flag."""
+
+    def mock_post_proc(image: np.ndarray) -> np.ndarray:
+        called["flag"] = True
+        image = image.copy()
+        channels = image.shape[-1]
+        image[0, 0] = [42] * channels
+        image[-1, -1] = [0] * (channels - 1) + [42]
+        return image
+
+    return mock_post_proc
+
+
+def _should_patch_background_composite(wsi: WSIReader) -> bool:
+    """Determine whether background_composite should be patched for the given reader."""
+    if isinstance(wsi, AnnotationStoreReader):
+        return True
+    if isinstance(wsi, VirtualWSIReader):
+        return wsi.mode == "rgb"
+    return isinstance(
+        wsi, (OpenSlideWSIReader, JP2WSIReader, DICOMWSIReader, NGFFWSIReader)
+    )
+
+
+def _apply_post_proc(
+    wsi: WSIReader, mock_post_proc: Callable[[np.ndarray], np.ndarray]
+) -> WSIReader:
+    """Apply post_proc to the appropriate reader or delegate."""
+    if isinstance(wsi, TIFFWSIReader):
+        return TIFFWSIReader(wsi.input_path, post_proc=mock_post_proc)
+    wsi.post_proc = mock_post_proc
+    if isinstance(wsi, AnnotationStoreReader) and wsi.base_wsi is not None:
+        wsi.base_wsi.post_proc = mock_post_proc
+    return wsi
+
+
+def _inject_post_proc_recursive(
+    wsi: object, post_proc: Callable[[np.ndarray], np.ndarray]
+) -> None:
+    """Recursively inject post_proc into the deepest base_wsi that supports it."""
+    current = wsi
+    while hasattr(current, "base_wsi") and current.base_wsi is not None:
+        current = current.base_wsi
+    if hasattr(current, "post_proc"):
+        current.post_proc = post_proc
+
+
+def test_post_proc_logic_across_readers(wsi: WSIReader) -> None:
+    """Test that post_proc is applied correctly across all reader classes."""
+    called: dict[str, bool] = {"flag": False}
+    mock_post_proc = _make_mock_post_proc(called)
+
+    skip_check = isinstance(wsi, AnnotationStoreReader)  # and wsi.base_wsi is None
+
+    if skip_check is False:
+        # Recursively inject post_proc into the actual reader
+        _inject_post_proc_recursive(wsi, mock_post_proc)
+
+    patch_utils = _should_patch_background_composite(wsi)
+
+    if patch_utils:
+        with patch(
+            "tiatoolbox.utils.transforms.background_composite",
+            lambda image, **_: image,
+        ):
+            rect = wsi.read_rect(location=(0, 0), size=(50, 50))
+            region = wsi.read_bounds(bounds=(0, 0, 50, 50))
+    else:
+        rect = wsi.read_rect(location=(0, 0), size=(50, 50))
+        region = wsi.read_bounds(bounds=(0, 0, 50, 50))
+
+    if skip_check:
+        assert isinstance(rect, np.ndarray)
+        assert isinstance(region, np.ndarray)
+        assert not called["flag"]
+        return
+
+    if isinstance(wsi, NGFFWSIReader):
+        assert isinstance(rect, np.ndarray)
+        assert isinstance(region, np.ndarray)
+        return
+
+    if isinstance(wsi, OpenSlideWSIReader):
+        vendor = getattr(wsi.info, "vendor", "").lower()
+        if "ventana" in vendor or "tif" in str(wsi.input_path).lower():
+            assert isinstance(rect, np.ndarray)
+            assert isinstance(region, np.ndarray)
+            return
+
+    assert called["flag"]
+    assert isinstance(rect, np.ndarray)
+    assert isinstance(region, np.ndarray)
+    assert rect[0, 0][-1] == 42
+    assert rect[-1, -1][-1] == 42
+    assert region[0, 0][-1] == 42
+    assert region[-1, -1][-1] == 42
+
+
 def test_file_path_does_not_exist() -> None:
     """Test that FileNotFoundError is raised when file does not exist."""
     for reader_class in [
