@@ -539,7 +539,7 @@ class TileServer(Flask):
         self,
         session_id: str,
         overlay_path: Path,
-        other_session_id: str,
+        other_session_id: str | None,
     ) -> str:
         def _apply_transform(source_fp: str, target_fp: str) -> None:
             # loading a registration transformation
@@ -560,10 +560,11 @@ class TileServer(Flask):
             )
             return json.dumps("slide")
 
-        layer_keys = [k for k in self.layers[session_id] if "layer" in k]
-        for key in sorted(
-            layer_keys, key=lambda x: int(x.replace("layer", "")), reverse=True
-        ):
+        layer_keys = [
+            k for k in self.layers[session_id] if k not in ["slide", "overlay"]
+        ]
+        layer_keys.reverse()  # try newest first
+        for key in layer_keys:
             target_fp = self.layers[session_id][key].info.file_path
             if Path(target_fp).suffix in [".tiff", ".svs", ".ndpi", ".mrxs"]:
                 logger.warning(
