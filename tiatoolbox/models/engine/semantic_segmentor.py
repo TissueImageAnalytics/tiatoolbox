@@ -13,6 +13,7 @@ import torch
 import zarr
 from dask import compute
 from dask.diagnostics import ProgressBar
+from dask.utils import SerializableLock
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -464,11 +465,13 @@ class SemanticSegmentor(PatchPredictor):
         canvas_zarr: zarr.Array,
         count_zarr: zarr.Array,
     ) -> None:
+        lock = SerializableLock()
         write_task = []
         task = canvas[slice_to_write, :, :].to_zarr(
             canvas_zarr,
             region=(slice_to_write, slice(None), slice(None)),
             compute=False,
+            lock=lock,
         )
         write_task.append(task)
 
@@ -476,11 +479,14 @@ class SemanticSegmentor(PatchPredictor):
             count_zarr,
             region=(slice_to_write, slice(None)),
             compute=False,
+            lock=lock,
         )
         write_task.append(task)
 
+        print("\nWriting done... \n")  # noqa: T201
         with ProgressBar():
             compute(*write_task)
+        print("\nWriting done!!!\n")  # noqa: T201
 
     def _spill_to_disk(
         self: SemanticSegmentor,
@@ -545,25 +551,21 @@ class SemanticSegmentor(PatchPredictor):
             count_zarr=count_zarr,
         )
 
-        # Reinitialize with sparse arrays to free memory
-        canvas = da.zeros(
-            canvas.shape,
-            dtype=canvas.dtype,
-            chunks=canvas_zarr.chunks,
-        )
-        count = da.zeros(
-            count.shape,
-            dtype=np.uint8,
-            chunks=count_zarr.chunks,
-        )
+        # Reinitialize with sparse arrays
+        canvas = da.zeros_like(canvas, chunks=canvas_zarr.chunks).persist()
+        count = da.zeros_like(count, dtype=np.uint8, chunks=count_zarr.chunks).persist()
 
         # Restore unsaved region
         restore_slice = slice(max_save_y, None)
-        canvas[restore_slice, :, :] = canvas_[restore_slice, :, :]
-        count[restore_slice, :] = count_[restore_slice, :]
+
+        # Restore unsaved region (explicit compute)
+        restored_canvas = canvas_[restore_slice, :, :]
+        restored_count = count_[restore_slice, :]
+        canvas[restore_slice, :, :] = restored_canvas.persist()
+        count[restore_slice, :] = restored_count.persist()
 
         # Cleanup
-        del canvas_, count_
+        del canvas_, count_, restored_canvas, restored_count
         gc.collect()
 
         # Update boundaries
