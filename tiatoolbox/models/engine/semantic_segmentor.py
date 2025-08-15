@@ -11,6 +11,8 @@ import numpy as np
 import psutil
 import torch
 import zarr
+from dask import compute
+from dask.diagnostics import ProgressBar
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -509,18 +511,21 @@ class SemanticSegmentor(PatchPredictor):
         canvas_slice = slice(min_save_y, max_save_y)
 
         # Spill to disk
-        canvas[canvas_slice, :, :].to_zarr(
+        write_task = []
+        task = canvas[canvas_slice, :, :].to_zarr(
             canvas_zarr,
             region=(canvas_slice, slice(None), slice(None)),
-            compute=True,
-            lock=True,
+            compute=False,
         )
-        count[canvas_slice, :].to_zarr(
+        write_task.append(task)
+        task = count[canvas_slice, :].to_zarr(
             count_zarr,
             region=(canvas_slice, slice(None)),
-            compute=True,
-            lock=True,
+            compute=False,
         )
+        write_task.append(task)
+        with ProgressBar():
+            compute(*write_task)
 
         # Reinitialize with sparse arrays to free memory
         canvas = da.zeros(
