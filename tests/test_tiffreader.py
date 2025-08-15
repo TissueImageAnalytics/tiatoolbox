@@ -142,6 +142,32 @@ def test_tiffreader_fallback_to_virtual(
     assert isinstance(reader, wsireader.VirtualWSIReader)
 
 
+def test_try_tiff_raises_other_valueerror(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test try_tiff raises ValueError if not an unsupported TIFF format."""
+    tiff_path = tmp_path / "test.tiff"
+    Image.new("RGB", (10, 10), color="white").save(tiff_path)
+
+    # Patch TIFFWSIReader to raise a different ValueError
+    def raise_other_valueerror(*args: object, **kwargs: object) -> None:
+        _ = args
+        _ = kwargs
+        msg = "Some other TIFF error"
+        raise ValueError(msg)
+
+    monkeypatch.setattr(wsireader, "TIFFWSIReader", raise_other_valueerror)
+
+    with pytest.raises(ValueError, match="Some other TIFF error"):
+        wsireader.WSIReader.try_tiff(
+            input_path=tiff_path,
+            last_suffix=".tiff",
+            mpp=(0.5, 0.5),
+            power=20.0,
+            post_proc=None,
+        )
+
+
 def test_parse_filtercolor_metadata_with_filter_pair() -> None:
     """Test full parsing including filter pair matching from XML metadata."""
     # We can't possibly test on all the different types of tiff files, so simulate them.
