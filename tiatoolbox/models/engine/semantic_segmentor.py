@@ -457,7 +457,33 @@ class SemanticSegmentor(PatchPredictor):
         return canvas, count
 
     @staticmethod
+    def _write_canvas_count_to_zarr(
+        slice_to_write: slice,
+        canvas: da.Array,
+        count: da.Array,
+        canvas_zarr: zarr.Array,
+        count_zarr: zarr.Array,
+    ) -> None:
+        write_task = []
+        task = canvas[slice_to_write, :, :].to_zarr(
+            canvas_zarr,
+            region=(slice_to_write, slice(None), slice(None)),
+            compute=False,
+        )
+        write_task.append(task)
+
+        task = count[slice_to_write, :].to_zarr(
+            count_zarr,
+            region=(slice_to_write, slice(None)),
+            compute=False,
+        )
+        write_task.append(task)
+
+        with ProgressBar():
+            compute(*write_task)
+
     def _spill_to_disk(
+        self: SemanticSegmentor,
         batch_info: list[dict[str, Any]],
         canvas: da.Array,
         count: da.Array,
@@ -511,21 +537,13 @@ class SemanticSegmentor(PatchPredictor):
         canvas_slice = slice(min_save_y, max_save_y)
 
         # Spill to disk
-        write_task = []
-        task = canvas[canvas_slice, :, :].to_zarr(
-            canvas_zarr,
-            region=(canvas_slice, slice(None), slice(None)),
-            compute=False,
+        self._write_canvas_count_to_zarr(
+            slice_to_write=canvas_slice,
+            canvas=canvas,
+            count=count,
+            canvas_zarr=canvas_zarr,
+            count_zarr=count_zarr,
         )
-        write_task.append(task)
-        task = count[canvas_slice, :].to_zarr(
-            count_zarr,
-            region=(canvas_slice, slice(None)),
-            compute=False,
-        )
-        write_task.append(task)
-        with ProgressBar():
-            compute(*write_task)
 
         # Reinitialize with sparse arrays to free memory
         canvas = da.zeros(
@@ -708,17 +726,12 @@ class SemanticSegmentor(PatchPredictor):
             if self.return_labels:
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
-        canvas[min_save_y:, :, :].to_zarr(
-            canvas_zarr,
-            region=(slice(min_save_y, None), slice(None), slice(None)),
-            compute=True,
-            lock=True,
-        )
-        count[min_save_y:, :].to_zarr(
-            count_zarr,
-            region=(slice(min_save_y, None), slice(None)),
-            compute=True,
-            lock=True,
+        self._write_canvas_count_to_zarr(
+            slice_to_write=slice(min_save_y, None),
+            canvas=canvas,
+            count=count,
+            canvas_zarr=canvas_zarr,
+            count_zarr=count_zarr,
         )
 
         # Free up memory
