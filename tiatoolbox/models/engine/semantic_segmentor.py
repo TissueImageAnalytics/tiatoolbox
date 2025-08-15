@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import dask.array as da
 import numpy as np
+import psutil
 import torch
 import zarr
 from typing_extensions import Unpack
@@ -25,6 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
 
     from torch.utils.data import DataLoader
+    from tqdm import tqdm
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
@@ -451,6 +454,102 @@ class SemanticSegmentor(PatchPredictor):
 
         return canvas, count
 
+    @staticmethod
+    def _spill_to_disk(
+        batch_info: list[dict[str, Any]],
+        canvas: da.Array,
+        count: da.Array,
+        canvas_zarr: zarr.Array,
+        count_zarr: zarr.Array,
+        tqdm_loop: tqdm.tqdm,
+        max_save_y: int,
+        min_save_y: int,
+        memory_threshold: int,
+    ) -> tuple[da.Array, da.Array, int, int]:
+        vm = psutil.virtual_memory()
+        used_percent = vm.percent
+
+        # If within threshold limit return
+        if used_percent < memory_threshold:
+            return canvas, count, min_save_y, max_save_y
+
+        # Else Spill to disk
+        y_info = batch_info.pop(0)
+        min_y = y_info["min_starty"]
+
+        tqdm_loop.desc = "Memory Overload: Spilling to Disk"
+
+        # Try to continue if there is available memory for an entire row
+        if min_y == 0:
+            msg = (
+                f"Memory usage is too high ({used_percent}%). "
+                f"Current memory usage: {vm.total} bytes. "
+                f"Increase Memory threshold, reduce batch size "
+                f"or switch device to CPU."
+            )
+            logger.warning(msg)
+            return canvas, count, min_save_y, max_save_y
+
+        # When Spill is triggered for first time
+        # Avoids zero slice
+        if max_save_y == 0:
+            max_save_y = min_y - 1
+
+        # Align chunks only if needed
+        if canvas.chunks != canvas_zarr.chunks:
+            canvas_ = canvas.rechunk(canvas_zarr.chunks)
+        else:
+            canvas_ = canvas
+
+        if count.chunks != count_zarr.chunks:
+            count_ = count.rechunk(count_zarr.chunks)
+        else:
+            count_ = count
+
+        canvas_slice = slice(min_save_y, max_save_y)
+
+        # Spill to disk
+        canvas[canvas_slice, :, :].to_zarr(
+            canvas_zarr,
+            region=(canvas_slice, slice(None), slice(None)),
+            compute=True,
+            lock=True,
+        )
+        count[canvas_slice, :].to_zarr(
+            count_zarr,
+            region=(canvas_slice, slice(None)),
+            compute=True,
+            lock=True,
+        )
+
+        # Reinitialize with sparse arrays to free memory
+        canvas = da.zeros(
+            canvas.shape,
+            dtype=canvas.dtype,
+            chunks=canvas_zarr.chunks,
+        )
+        count = da.zeros(
+            count.shape,
+            dtype=np.uint8,
+            chunks=count_zarr.chunks,
+        )
+
+        # Restore unsaved region
+        restore_slice = slice(max_save_y, None)
+        canvas[restore_slice, :, :] = canvas_[restore_slice, :, :]
+        count[restore_slice, :] = count_[restore_slice, :]
+
+        # Cleanup
+        del canvas_, count_
+        gc.collect()
+
+        # Update boundaries
+        min_save_y = max_save_y
+        max_save_y = y_info["max_endy"]
+        tqdm_loop.desc = "Inferring patches"
+
+        return canvas, count, min_save_y, max_save_y
+
     def infer_wsi(
         self: SemanticSegmentor,
         dataloader: DataLoader,
@@ -483,7 +582,8 @@ class SemanticSegmentor(PatchPredictor):
                 - "labels": Ground truth labels (if `return_labels` is True).
 
         """
-        _ = kwargs.get("return_probabilities", False)
+        # Default Memory threshold percentage is 80.
+        memory_threshold = kwargs.get("memory_threshold", 80)
 
         keys = ["probabilities", "coordinates"]
         if self.return_labels:
@@ -531,10 +631,12 @@ class SemanticSegmentor(PatchPredictor):
         canvas = da.zeros(
             merged_shape,
             dtype=sample_output.dtype,
+            chunks=canvas_zarr.chunks,
         )
         count = da.zeros(
             merged_shape[:2],
             dtype=np.uint8,
+            chunks=count_zarr.chunks,
         )
 
         # Inference loop
@@ -577,29 +679,20 @@ class SemanticSegmentor(PatchPredictor):
                 canvas_dtype=canvas.dtype,
             )
 
-            y_info = batch_info.pop(0)
-            min_y = y_info["min_starty"]
+            canvas = canvas + canvas_batch.rechunk(canvas_zarr.chunks)
+            count = count + count_batch.rechunk(count_zarr.chunks)
 
-            canvas = canvas + canvas_batch.rechunk(canvas.chunks)
-            count = count + count_batch.rechunk(count.chunks)
-
-            if min_y > max_save_y:
-                canvas[min_save_y:max_save_y, :, :].to_zarr(
-                    canvas_zarr,
-                    region=(slice(min_save_y, max_save_y), slice(None), slice(None)),
-                    compute=True,
-                    lock=True,
-                )
-                count[min_save_y:max_save_y, :].to_zarr(
-                    count_zarr,
-                    region=(slice(min_save_y, max_save_y), slice(None)),
-                    compute=True,
-                    lock=True,
-                )
-                canvas[min_save_y:max_save_y, :, :] = 0
-                count[min_save_y:max_save_y, :] = 0
-                min_save_y = max_save_y
-                max_save_y = y_info["max_endy"]
+            canvas, count, min_save_y, max_save_y = self._spill_to_disk(
+                batch_info=batch_info,
+                canvas=canvas,
+                count=count,
+                canvas_zarr=canvas_zarr,
+                count_zarr=count_zarr,
+                tqdm_loop=tqdm_loop,
+                min_save_y=min_save_y,
+                max_save_y=max_save_y,
+                memory_threshold=memory_threshold,
+            )
 
             coordinates.append(
                 da.from_array(
@@ -623,8 +716,11 @@ class SemanticSegmentor(PatchPredictor):
             lock=True,
         )
 
+        # Free up memory
         del canvas, count
+        gc.collect()
 
+        # Reinitialize using zarr
         canvas = da.from_zarr(canvas_zarr)
         count = da.from_zarr(count_zarr)
         canvas = canvas / da.maximum(count[:, :, np.newaxis], 1)
