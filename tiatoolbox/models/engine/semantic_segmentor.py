@@ -563,7 +563,9 @@ class SemanticSegmentor(PatchPredictor):
                 chunks=canvas_zarr.chunks,
             ).persist()
             count = da.zeros(
-                shape=count_zarr.shape, dtype=np.uint8, chunks=count_zarr.chunks
+                shape=count_zarr.shape,
+                dtype=np.uint8,
+                chunks=count_zarr.chunks,
             ).persist()
 
             # Restore unsaved region
