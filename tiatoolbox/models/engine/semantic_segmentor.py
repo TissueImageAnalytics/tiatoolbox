@@ -529,56 +529,65 @@ class SemanticSegmentor(PatchPredictor):
         if max_save_y == 0:
             max_save_y = min_y - 1
 
-        canvas_slice = slice(min_save_y, max_save_y)
-
-        # Spill to disk
-        self._write_canvas_count_to_zarr(
-            slice_to_write=canvas_slice,
-            canvas=canvas,
-            count=count,
-            canvas_zarr=canvas_zarr,
-            count_zarr=count_zarr,
-        )
-
         # Check if all rows have been processed
         if max_save_y < min_y:
-            # Align chunks only if needed
-            if canvas.chunks != canvas_zarr.chunks:
-                canvas_ = canvas.rechunk(canvas_zarr.chunks)
-            else:
-                canvas_ = canvas
+            canvas_slice = slice(min_save_y, max_save_y)
 
-            if count.chunks != count_zarr.chunks:
-                count_ = count.rechunk(count_zarr.chunks)
-            else:
-                count_ = count
+            canvas = canvas.rechunk(canvas_zarr.chunks).persist()
+            count = count.rechunk(count_zarr.chunks).persist()
 
-            canvas_ = canvas_.persist()
-            count_ = count_.persist()
+            # Spill to disk
+            self._write_canvas_count_to_zarr(
+                slice_to_write=canvas_slice,
+                canvas=canvas,
+                count=count,
+                canvas_zarr=canvas_zarr,
+                count_zarr=count_zarr,
+            )
 
-            # Reinitialize with sparse arrays
-            canvas = da.zeros(
-                shape=canvas_zarr.shape,
-                dtype=canvas_zarr.dtype,
-                chunks=canvas_zarr.chunks,
-            ).persist()
-            count = da.zeros(
-                shape=count_zarr.shape,
-                dtype=np.uint8,
-                chunks=count_zarr.chunks,
-            ).persist()
+            canvas[canvas_slice, :, :] = 0
+            count[canvas_slice, :] = 0
 
-            # Restore unsaved region
-            restore_slice = slice(max_save_y, None)
+            canvas = canvas.persist()
+            count = count.persist()
 
-            # Restore unsaved region (explicit compute)
-            restored_canvas = canvas_[restore_slice, :, :]
-            restored_count = count_[restore_slice, :]
-            canvas[restore_slice, :, :] = restored_canvas.persist()
-            count[restore_slice, :] = restored_count.persist()
+            # # Align chunks only if needed
+            # if canvas.chunks != canvas_zarr.chunks:
+            #     canvas_ = canvas.rechunk(canvas_zarr.chunks)
+            # else:
+            #     canvas_ = canvas
+            #
+            # if count.chunks != count_zarr.chunks:
+            #     count_ = count.rechunk(count_zarr.chunks)
+            # else:
+            #     count_ = count
+            #
+            # canvas_ = canvas_.persist()
+            # count_ = count_.persist()
+            #
+            # # Reinitialize with sparse arrays
+            # canvas = da.zeros(
+            #     shape=canvas_zarr.shape,
+            #     dtype=canvas_zarr.dtype,
+            #     chunks=canvas_zarr.chunks,
+            # ).persist()
+            # count = da.zeros(
+            #     shape=count_zarr.shape,
+            #     dtype=np.uint8,
+            #     chunks=count_zarr.chunks,
+            # ).persist()
+            #
+            # # Restore unsaved region
+            # restore_slice = slice(max_save_y, None)
+            #
+            # # Restore unsaved region (explicit compute)
+            # restored_canvas = canvas_[restore_slice, :, :]
+            # restored_count = count_[restore_slice, :]
+            # canvas[restore_slice, :, :] = restored_canvas.persist()
+            # count[restore_slice, :] = restored_count.persist()
 
             # Cleanup
-            del canvas_, count_, restored_canvas, restored_count
+            # del canvas_, count_, restored_canvas, restored_count
             gc.collect()
 
             # Update boundaries
