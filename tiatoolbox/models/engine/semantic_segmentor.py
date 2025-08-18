@@ -11,7 +11,7 @@ import numpy as np
 import psutil
 import torch
 import zarr
-from dask import compute
+from dask import compute, delayed
 from dask.diagnostics import ProgressBar
 from dask.utils import SerializableLock
 from typing_extensions import Unpack
@@ -355,6 +355,7 @@ class SemanticSegmentor(PatchPredictor):
                 stride_shape=ioconfig.stride_shape,
                 resolution=ioconfig.input_resolutions[0]["resolution"],
                 units=ioconfig.input_resolutions[0]["units"],
+                auto_get_mask=False,
             )
 
             dataset.preproc_func = self.model.preproc_func
@@ -524,17 +525,17 @@ class SemanticSegmentor(PatchPredictor):
             logger.warning(msg)
             return canvas, count, min_save_y, max_save_y
 
-        # When Spill is triggered for first time
-        # Avoids zero slice
-        if max_save_y == 0:
-            max_save_y = min_y - 1
+        # # When Spill is triggered for first time
+        # # Avoids zero slice
+        # if max_save_y == 0:
+        #     max_save_y = min_y - 1
 
         # Check if all rows have been processed
         if max_save_y < min_y:
             canvas_slice = slice(min_save_y, max_save_y)
 
-            canvas = canvas.rechunk(canvas_zarr.chunks).persist()
-            count = count.rechunk(count_zarr.chunks).persist()
+            canvas = canvas.rechunk(canvas_zarr.chunks)
+            count = count.rechunk(count_zarr.chunks)
 
             # Spill to disk
             self._write_canvas_count_to_zarr(
@@ -545,11 +546,15 @@ class SemanticSegmentor(PatchPredictor):
                 count_zarr=count_zarr,
             )
 
-            canvas[canvas_slice, :, :] = 0
-            count[canvas_slice, :] = 0
+            # canvas[canvas_slice, :, :] = 0
+            # count[canvas_slice, :] = 0
 
-            canvas = canvas.persist()
-            count = count.persist()
+            # canvas = da.from_array(
+            #     canvas.compute()
+            # )
+            # count = da.from_array(
+            #     count.compute()
+            # )
 
             # # Align chunks only if needed
             # if canvas.chunks != canvas_zarr.chunks:
@@ -564,35 +569,44 @@ class SemanticSegmentor(PatchPredictor):
             #
             # canvas_ = canvas_.persist()
             # count_ = count_.persist()
-            #
-            # # Reinitialize with sparse arrays
-            # canvas = da.zeros(
-            #     shape=canvas_zarr.shape,
-            #     dtype=canvas_zarr.dtype,
-            #     chunks=canvas_zarr.chunks,
-            # ).persist()
-            # count = da.zeros(
-            #     shape=count_zarr.shape,
-            #     dtype=np.uint8,
-            #     chunks=count_zarr.chunks,
-            # ).persist()
-            #
-            # # Restore unsaved region
-            # restore_slice = slice(max_save_y, None)
-            #
-            # # Restore unsaved region (explicit compute)
-            # restored_canvas = canvas_[restore_slice, :, :]
-            # restored_count = count_[restore_slice, :]
-            # canvas[restore_slice, :, :] = restored_canvas.persist()
-            # count[restore_slice, :] = restored_count.persist()
-
-            # Cleanup
-            # del canvas_, count_, restored_canvas, restored_count
-            gc.collect()
 
             # Update boundaries
             min_save_y = max_save_y
             max_save_y = y_info["max_endy"]
+            restore_slice = slice(min_save_y, max_save_y)
+
+            canvas_ = canvas[restore_slice, :, :].compute()
+            count_ = count[restore_slice, :].compute()
+
+            # Reinitialize with sparse arrays
+            canvas = da.zeros(
+                shape=canvas_zarr.shape,
+                dtype=canvas_zarr.dtype,
+                chunks=canvas_zarr.chunks,
+            )
+            count = da.zeros(
+                shape=count_zarr.shape,
+                dtype=np.uint8,
+                chunks=count_zarr.chunks,
+            )
+
+            #
+            # # Restore unsaved region
+            #
+            #
+            # # Restore unsaved region (explicit compute)
+            # restored_canvas = canvas_[restore_slice, :, :]
+            # restored_count = count_[restore_slice, :]
+            canvas[restore_slice, :, :] = canvas_
+            count[restore_slice, :] = count_
+
+            # Cleanup
+            del (
+                canvas_,
+                count_,
+            )
+            gc.collect()
+
         tqdm_loop.desc = "Inferring patches"
 
         return canvas, count, min_save_y, max_save_y
@@ -629,9 +643,6 @@ class SemanticSegmentor(PatchPredictor):
                 - "labels": Ground truth labels (if `return_labels` is True).
 
         """
-        # Default Memory threshold percentage is 80.
-        memory_threshold = kwargs.get("memory_threshold", 80)
-
         keys = ["probabilities", "coordinates"]
         if self.return_labels:
             keys.append("labels")
@@ -641,51 +652,6 @@ class SemanticSegmentor(PatchPredictor):
         # Main output dictionary
         raw_predictions = dict(zip(keys, [[]] * len(keys)))
 
-        # sample for calculating shape for dask arrays
-        sample = self.dataloader.dataset[0]  # Use only the first image
-        sample_output = self.model.infer_batch(
-            self.model,
-            torch.Tensor(sample["image"][np.newaxis, ...]),
-            device=self.device,
-        )
-
-        # Create canvas and counts
-        max_location = np.max(self.output_locations, axis=0)
-        merged_shape = (
-            max_location[3],
-            max_location[2],
-            sample_output.shape[3],
-        )
-
-        zarr_group = zarr.open(str(save_path), mode="a")
-
-        canvas_zarr = zarr_group.create_dataset(
-            name="canvas",
-            shape=merged_shape,
-            dtype=sample_output.dtype,
-            fillvalue=0,
-            overwrite=True,
-        )
-
-        count_zarr = zarr_group.create_dataset(
-            name="count",
-            shape=merged_shape[:2],
-            dtype=np.uint8,
-            fillvalue=0,
-            overwrite=True,
-        )
-
-        canvas = da.zeros(
-            merged_shape,
-            dtype=sample_output.dtype,
-            chunks=canvas_zarr.chunks,
-        )
-        count = da.zeros(
-            merged_shape[:2],
-            dtype=np.uint8,
-            chunks=count_zarr.chunks,
-        )
-
         # Inference loop
         tqdm = get_tqdm()
         tqdm_loop = (
@@ -694,52 +660,40 @@ class SemanticSegmentor(PatchPredictor):
             else self.dataloader
         )
 
-        locations = self.output_locations
-        batch_size = dataloader.batch_size
-
-        num_full_batches = locations.shape[0] // batch_size
-        remainder = locations.shape[0] % batch_size
-
-        batches = (
-            np.array_split(locations[: num_full_batches * batch_size], num_full_batches)
-            if num_full_batches
-            else [locations]
-        )
-
-        # Optionally include the remainder
-        if remainder > 0 and num_full_batches > 0:
-            batches.append(locations[-remainder:])
-
-        # Compute min/max for starty (col 1) and endy (col 3)
-        batch_info = [
-            {"min_starty": np.min(batch[:, 1]), "max_endy": np.max(batch[:, 3])}
-            for batch in batches
-        ]
-
-        min_save_y = 0
-        max_save_y = 0
+        canvas_np, count_np, output_locs_y_ = None, None, None
+        canvas, count, output_locs = None, None, None
 
         for batch_data in tqdm_loop:
-            canvas_batch, count_batch = self._merge_model_output_to_dask_canvas(
-                batch_data=batch_data,
-                merged_shape=merged_shape,
-                canvas_dtype=canvas.dtype,
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
             )
 
-            canvas = canvas + canvas_batch.rechunk(canvas_zarr.chunks)
-            count = count + count_batch.rechunk(count_zarr.chunks)
+            batch_output_shape = batch_output.shape
 
-            canvas, count, min_save_y, max_save_y = self._spill_to_disk(
-                batch_info=batch_info,
-                canvas=canvas,
-                count=count,
-                canvas_zarr=canvas_zarr,
-                count_zarr=count_zarr,
-                tqdm_loop=tqdm_loop,
-                min_save_y=min_save_y,
-                max_save_y=max_save_y,
-                memory_threshold=memory_threshold,
-            )
+            canvas_np = concatenate_np(old_arr=canvas_np, new_arr=batch_output)
+
+            batch_count = np.ones((*batch_output_shape[:3], 1))
+            count_np = concatenate_np(old_arr=count_np, new_arr=batch_count)
+
+            batch_locs = batch_data["output_locs"].numpy()
+            output_locs = concatenate_np(old_arr=output_locs, new_arr=batch_locs)
+
+            change_indices = np.where(np.diff(output_locs[:, 1]) != 0)[0] + 1
+
+            if change_indices.size > 0:
+                canvas, count, canvas_np, count_np, output_locs, output_locs_y_ = (
+                    flush_patches(
+                        canvas,
+                        count,
+                        output_locs_y_,
+                        canvas_np,
+                        count_np,
+                        output_locs,
+                        change_indices,
+                    )
+                )
 
             coordinates.append(
                 da.from_array(
@@ -750,22 +704,25 @@ class SemanticSegmentor(PatchPredictor):
             if self.return_labels:
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
-        self._write_canvas_count_to_zarr(
-            slice_to_write=slice(min_save_y, None),
-            canvas=canvas,
-            count=count,
-            canvas_zarr=canvas_zarr,
-            count_zarr=count_zarr,
+        canvas, count, _, _, _, output_locs_y_ = flush_patches(
+            canvas,
+            count,
+            output_locs_y_,
+            canvas_np,
+            count_np,
+            output_locs,
+            change_indices=[len(output_locs)],
         )
 
-        # Free up memory
-        del canvas, count
-        gc.collect()
+        # Final vertical merge
+        canvas, count = merge_vertical(canvas, count, output_locs_y_)
 
-        # Reinitialize using zarr
-        canvas = da.from_zarr(canvas_zarr)
-        count = da.from_zarr(count_zarr)
-        canvas = canvas / da.maximum(count[:, :, np.newaxis], 1)
+        canvas = safe_blockwise_divide_float(
+            canvas=canvas,
+            count=count,
+            output_dtype=canvas.dtype,
+            persist=True,
+        )
 
         raw_predictions["probabilities"] = canvas.rechunk("auto")
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
@@ -959,3 +916,243 @@ class SemanticSegmentor(PatchPredictor):
             output_type=output_type,
             **kwargs,
         )
+
+
+def concatenate_np(old_arr, new_arr):
+    return new_arr if old_arr is None else np.concatenate((old_arr, new_arr), axis=0)
+
+
+def stack_blocks_to_dask(blocks, count=False):
+    """Stack a list of NumPy blocks into a Dask array with column-wise chunking."""
+    if count:
+        return da.concatenate(
+            [
+                da.from_array(b, chunks=(blocks.shape[1], blocks.shape[2], 1))
+                for b in blocks
+            ],
+            axis=1,
+        )
+    else:
+        return da.concatenate(
+            [da.from_array(b, chunks=blocks.shape[1:]) for b in blocks], axis=1
+        )
+
+
+def merge_horizontal(canvas_np_, count_np_, output_locs_):
+    overlaps = np.append(output_locs_[:-1, 2] - output_locs_[1:, 0], 0)
+    max_overlap = np.max(overlaps)
+    merge_func = horizontal_merge_func(overlaps, max_overlap)
+
+    dask_canvas = stack_blocks_to_dask(canvas_np_)
+    dask_count = stack_blocks_to_dask(count_np_, count=True)
+
+    canvas_merge = dask_canvas.map_overlap(
+        merge_func,
+        depth={0: 0, 1: max_overlap, 2: 0},
+        boundary="none",
+        trim=False,
+        dtype=dask_canvas.dtype,
+    ).rechunk(dask_canvas.shape)
+
+    count_merge = dask_count.map_overlap(
+        merge_func,
+        depth={0: 0, 1: max_overlap, 2: 0},
+        boundary="none",
+        trim=False,
+        dtype=dask_count.dtype,
+    ).rechunk(dask_count.shape)
+
+    canvas_merge = canvas_merge.rechunk(chunks=canvas_merge.shape)
+    count_merge = count_merge.rechunk(chunks=count_merge.shape)
+
+    return canvas_merge, count_merge
+
+
+def merge_vertical(canvas, count, output_locs_y_):
+    y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
+    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
+    max_overlap = np.max(overlaps)
+    merge_func = vertical_merge_func(overlaps, max_overlap)
+
+    canvas = canvas.map_overlap(
+        merge_func,
+        depth={0: max_overlap, 1: 0, 2: 0},
+        boundary="none",
+        trim=False,
+        dtype=canvas.dtype,
+    )
+    count = count.map_overlap(
+        merge_func,
+        depth={0: max_overlap, 1: 0, 2: 0},
+        boundary="none",
+        trim=False,
+        dtype=count.dtype,
+    )
+    return canvas, count
+
+
+def flush_patches(
+    canvas, count, output_locs_y_, canvas_np, count_np, output_locs, change_indices
+):
+    for c_idx in change_indices:
+        output_locs_ = output_locs[:c_idx]
+        canvas_np_ = canvas_np[:c_idx]
+        count_np_ = count_np[:c_idx]
+
+        canvas_merge, count_merge = merge_horizontal(
+            canvas_np_, count_np_, output_locs_
+        )
+        canvas = (
+            canvas_merge
+            if canvas is None
+            else da.concatenate((canvas, canvas_merge), axis=0)
+        )
+        count = (
+            count_merge
+            if count is None
+            else da.concatenate((count, count_merge), axis=0)
+        )
+
+        output_locs_y_ = (
+            output_locs_[:, (1, 3)]
+            if output_locs_y_ is None
+            else np.concatenate((output_locs_y_, output_locs_[:, (1, 3)]), axis=0)
+        )
+        canvas_np = canvas_np[c_idx:]
+        count_np = count_np[c_idx:]
+        output_locs = output_locs[c_idx:]
+    return canvas, count, canvas_np, count_np, output_locs, output_locs_y_
+
+
+def horizontal_merge_func(overlaps, max_overlap):
+    def merge_horizontal_seams_var(chunk, block_info=None):
+        info = block_info[0]
+        j = info["chunk-location"][1]
+        nJ = info["num-chunks"][1]
+        LH = max_overlap if j > 0 else 0
+        RH = max_overlap if j < nJ - 1 else 0
+        W = chunk.shape[1] - LH - RH
+
+        # Fold right halo
+        r = overlaps[j]
+        if r > 0:
+            chunk[:, LH + W - r : LH + W, :] += chunk[:, LH + W : LH + W + r, :]
+
+        # Drop right halo
+        if RH > 0:
+            chunk = chunk[:, : LH + W, :]
+
+        # Drop left halo + duplicate seam cols
+        if j > 0:
+            l = overlaps[j - 1]
+            chunk = chunk[:, LH + l :, :]
+
+        return chunk
+
+    return merge_horizontal_seams_var
+
+
+def vertical_merge_func(overlaps, max_overlap):
+    def merge_vertical_seams_var(chunk, block_info=None):
+        info = block_info[0]
+        i = info["chunk-location"][0]  # row-chunk index
+        nI = info["num-chunks"][0]
+        TH = max_overlap if i > 0 else 0  # top halo rows
+        BH = max_overlap if i < nI - 1 else 0
+        H = chunk.shape[0] - TH - BH  # interior rows
+
+        # Fold bottom seam
+        r = overlaps[i]
+        if r > 0:
+            chunk[TH + H - r : TH + H, :, :] += chunk[TH + H : TH + H + r, :, :]
+
+        # Drop bottom halo
+        if BH > 0:
+            chunk = chunk[: TH + H, :, :]
+
+        # Drop top halo + duplicate seam rows
+        if i > 0:
+            l = overlaps[i - 1]
+            chunk = chunk[TH + l :, :, :]
+
+        return chunk
+
+    return merge_vertical_seams_var
+
+
+def safe_blockwise_divide_float(canvas, count, *, output_dtype=None, persist=True):
+    """
+    Safely divide canvas by count blockwise, preserving float precision.
+
+    Parameters
+    ----------
+    canvas :
+        dask.array, shape (H, W, C)
+    count :
+        dask.array, shape (H, W) or (H, W, 1)
+    output_dtype : np.dtype or None
+        If set, casts final result to this dtype
+    persist : bool
+        If True, persists the result in memory
+
+    Returns
+    -------
+    dask.array
+        Result of canvas / max(count, 1), safely computed blockwise
+
+    """
+    if canvas.chunks[:2] != count.chunks[:2]:
+        raise ValueError(
+            f"Chunk mismatch:\nCanvas: {canvas.chunks[:2]}\nCount: {count.chunks[:2]}"
+        )
+
+    canvas_delayed = canvas.to_delayed().flatten()
+    count_delayed = count.to_delayed().flatten()
+
+    chunks_h = canvas.chunks[0]
+    chunks_w = canvas.chunks[1]
+    C = canvas.shape[2]
+    out_blocks = []
+
+    def _div_block(canvas_block, count_block):
+        if canvas_block.shape[:2] != count_block.shape[:2]:
+            raise ValueError(
+                f"Shape mismatch: canvas {canvas_block.shape}, count {count_block.shape}"
+            )
+
+        count_block = np.maximum(count_block, 1)
+        if count_block.ndim == 2:
+            count_block = count_block[:, :, np.newaxis]
+
+        result = canvas_block.astype(np.float32) / count_block.astype(np.float32)
+
+        # if scale_factor is not None:
+        #     result *= scale_factor
+        # if clip_range is not None:
+        #     result = np.clip(result, clip_range[0], clip_range[1])
+        # if round:
+        #     result = np.round(result)
+
+        if output_dtype is not None:
+            result = result.astype(output_dtype)
+
+        return result
+
+    for i, h in enumerate(chunks_h):
+        row = []
+        for j, w in enumerate(chunks_w):
+            idx = i * len(chunks_w) + j
+            canvas_blk = canvas_delayed[idx]
+            count_blk  = count_delayed[idx]
+            block_shape = (h, w, C)
+            out_blk = da.from_delayed(
+                delayed(_div_block)(canvas_blk, count_blk),
+                shape=block_shape,
+                dtype=output_dtype or np.float32
+            )
+            row.append(out_blk)
+        out_blocks.append(row)
+
+    rows = [da.concatenate(row, axis=1) for row in out_blocks]
+    result = da.concatenate(rows, axis=0)
+    return result.persist() if persist else result
