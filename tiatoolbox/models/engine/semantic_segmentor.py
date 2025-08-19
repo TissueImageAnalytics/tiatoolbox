@@ -643,6 +643,10 @@ class SemanticSegmentor(PatchPredictor):
                 - "labels": Ground truth labels (if `return_labels` is True).
 
         """
+        # Default Memory threshold percentage is 80.
+        memory_threshold = kwargs.get("memory_threshold", 80)
+        vm = psutil.virtual_memory()
+
         keys = ["probabilities", "coordinates"]
         if self.return_labels:
             keys.append("labels")
@@ -662,6 +666,7 @@ class SemanticSegmentor(PatchPredictor):
 
         canvas_np, count_np, output_locs_y_ = None, None, None
         canvas, count, output_locs = None, None, None
+        canvas_zarr, count_zarr = None, None
 
         for batch_data in tqdm_loop:
             batch_output = self.model.infer_batch(
@@ -695,6 +700,19 @@ class SemanticSegmentor(PatchPredictor):
                     )
                 )
 
+                used_percent = vm.percent
+                if used_percent > memory_threshold:
+                    tqdm_loop.desc = "Spilling to disk "
+                    print("Spill")
+                    canvas_zarr, count_zarr = save_to_cache(
+                        canvas, count, canvas_zarr, count_zarr
+                    )
+                    canvas, count = None, None
+                    import gc
+
+                    gc.collect()
+                    tqdm_loop.desc = "Inferring patches"
+
             coordinates.append(
                 da.from_array(
                     self._get_coordinates(batch_data),
@@ -713,6 +731,13 @@ class SemanticSegmentor(PatchPredictor):
             output_locs,
             change_indices=[len(output_locs)],
         )
+
+        if canvas_zarr is not None:
+            canvas_zarr, count_zarr = save_to_cache(
+                canvas, count, canvas_zarr, count_zarr
+            )
+            canvas = da.from_zarr(canvas_zarr)
+            count = da.from_zarr(count_zarr)
 
         # Final vertical merge
         canvas, count = merge_vertical(canvas, count, output_locs_y_)
@@ -932,10 +957,9 @@ def stack_blocks_to_dask(blocks, count=False):
             ],
             axis=1,
         )
-    else:
-        return da.concatenate(
-            [da.from_array(b, chunks=blocks.shape[1:]) for b in blocks], axis=1
-        )
+    return da.concatenate(
+        [da.from_array(b, chunks=blocks.shape[1:]) for b in blocks], axis=1
+    )
 
 
 def merge_horizontal(canvas_np_, count_np_, output_locs_):
@@ -1081,8 +1105,7 @@ def vertical_merge_func(overlaps, max_overlap):
 
 
 def safe_blockwise_divide_float(canvas, count, *, output_dtype=None, persist=True):
-    """
-    Safely divide canvas by count blockwise, preserving float precision.
+    """Safely divide canvas by count blockwise, preserving float precision.
 
     Parameters
     ----------
@@ -1095,7 +1118,7 @@ def safe_blockwise_divide_float(canvas, count, *, output_dtype=None, persist=Tru
     persist : bool
         If True, persists the result in memory
 
-    Returns
+    Returns:
     -------
     dask.array
         Result of canvas / max(count, 1), safely computed blockwise
@@ -1143,12 +1166,12 @@ def safe_blockwise_divide_float(canvas, count, *, output_dtype=None, persist=Tru
         for j, w in enumerate(chunks_w):
             idx = i * len(chunks_w) + j
             canvas_blk = canvas_delayed[idx]
-            count_blk  = count_delayed[idx]
+            count_blk = count_delayed[idx]
             block_shape = (h, w, C)
             out_blk = da.from_delayed(
                 delayed(_div_block)(canvas_blk, count_blk),
                 shape=block_shape,
-                dtype=output_dtype or np.float32
+                dtype=output_dtype or np.float32,
             )
             row.append(out_blk)
         out_blocks.append(row)
@@ -1156,3 +1179,39 @@ def safe_blockwise_divide_float(canvas, count, *, output_dtype=None, persist=Tru
     rows = [da.concatenate(row, axis=1) for row in out_blocks]
     result = da.concatenate(rows, axis=0)
     return result.persist() if persist else result
+
+
+def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path="temp.zarr"):
+    canvas_computed = canvas.compute()
+    count_computed = count.compute()
+    chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
+    if canvas_zarr is None:
+        zarr_group = zarr.open(str(save_path), mode="w")
+
+        canvas_zarr = zarr_group.create_dataset(
+            name="canvas",
+            shape=(0, *canvas_computed.shape[1:]),
+            chunks=(chunk_shape[0], *canvas_computed.shape[1:]),
+            dtype=canvas_computed.dtype,
+            overwrite=True,
+        )
+
+        count_zarr = zarr_group.create_dataset(
+            name="count",
+            shape=(0, *count_computed.shape[1:]),
+            dtype=count_computed.dtype,
+            chunks=(chunk_shape[0], *count_computed.shape[1:]),
+            overwrite=True,
+        )
+
+    canvas_zarr.resize(
+        (canvas_zarr.shape[0] + canvas_computed.shape[0],) + canvas_zarr.shape[1:]
+    )
+    canvas_zarr[-canvas_computed.shape[0] :] = canvas_computed
+
+    count_zarr.resize(
+        (count_zarr.shape[0] + count_computed.shape[0],) + count_zarr.shape[1:]
+    )
+    count_zarr[-count_computed.shape[0] :] = count_computed
+
+    return canvas_zarr, count_zarr

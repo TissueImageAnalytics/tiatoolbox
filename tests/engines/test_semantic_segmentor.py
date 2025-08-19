@@ -228,7 +228,7 @@ def test_wsi_segmentor_zarr(
 
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
-        batch_size=32,
+        batch_size=64,
         verbose=False,
         num_loader_workers=1,
     )
