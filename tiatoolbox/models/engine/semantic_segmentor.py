@@ -703,7 +703,13 @@ class SemanticSegmentor(PatchPredictor):
                 used_percent = vm.percent
                 if used_percent > memory_threshold:
                     tqdm_loop.desc = "Spilling to disk "
-                    print("Spill")
+                    msg = (
+                        f"Memory usage is too high ({used_percent}%). "
+                        f"Current memory usage: {vm.total} bytes. "
+                        f"Increase Memory threshold, reduce batch size "
+                        f"or switch device to CPU."
+                    )
+                    logger.warning(msg)
                     canvas_zarr, count_zarr = save_to_cache(
                         canvas, count, canvas_zarr, count_zarr
                     )
@@ -732,24 +738,21 @@ class SemanticSegmentor(PatchPredictor):
             change_indices=[len(output_locs)],
         )
 
+        zarr_group = None
         if canvas_zarr is not None:
             canvas_zarr, count_zarr = save_to_cache(
                 canvas, count, canvas_zarr, count_zarr
             )
             canvas = da.from_zarr(canvas_zarr)
             count = da.from_zarr(count_zarr)
+            zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
 
         # Final vertical merge
-        canvas, count = merge_vertical(canvas, count, output_locs_y_)
-
-        canvas = safe_blockwise_divide_float(
-            canvas=canvas,
-            count=count,
-            output_dtype=canvas.dtype,
-            persist=True,
-        )
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
-            canvas, count, output_locs_y_
+            canvas,
+            count,
+            output_locs_y_,
+            zarr_group,
         ).rechunk("auto")
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
         if self.return_labels:
@@ -1220,13 +1223,13 @@ def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path="temp.zarr")
     return canvas_zarr, count_zarr
 
 
-def merge_vertical_chunkwise(canvas, count, output_locs_y_):
+def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
     overlaps = np.append(y1s[:-1] - y0s[1:], 0)
     max_overlap = np.max(overlaps)
 
     num_chunks = canvas.numblocks[0]
-    zarr_group, probabilities_zarr, probabilities_da = None, None, None
+    probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
 
     for i in range(num_chunks):
@@ -1283,18 +1286,20 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_):
                     shape=(0, *probabilities.shape[1:]),
                     chunks=(chunk_shape[0], *probabilities.shape[1:]),
                     dtype=probabilities.dtype,
-                    overwrite=True,
                 )
 
             probabilities_zarr.resize(
-                probabilities_zarr.shape[0] + probabilities.shape[0], axis=0
+                (probabilities_zarr.shape[0] + probabilities.shape[0],)
+                + probabilities_zarr.shape[1:]
             )
             probabilities_zarr[-probabilities.shape[0] :] = probabilities
         else:
             probabilities_da = (
-                probabilities
+                da.from_array(probabilities)
                 if probabilities_da is None
-                else da.concatenate((probabilities_da, probabilities), axis=0)
+                else da.concatenate(
+                    [probabilities_da, da.from_array(probabilities)], axis=0
+                )
             )
 
     if probabilities_zarr:
