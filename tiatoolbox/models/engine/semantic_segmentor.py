@@ -748,8 +748,9 @@ class SemanticSegmentor(PatchPredictor):
             output_dtype=canvas.dtype,
             persist=True,
         )
-
-        raw_predictions["probabilities"] = canvas.rechunk("auto")
+        raw_predictions["probabilities"] = merge_vertical_chunkwise(
+            canvas, count, output_locs_y_
+        ).rechunk("auto")
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
         if self.return_labels:
             labels = [label.reshape(-1) for label in labels]
@@ -1217,3 +1218,86 @@ def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path="temp.zarr")
     count_zarr[-count_computed.shape[0] :] = count_computed
 
     return canvas_zarr, count_zarr
+
+
+def merge_vertical_chunkwise(canvas, count, output_locs_y_):
+    y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
+    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
+    max_overlap = np.max(overlaps)
+
+    num_chunks = canvas.numblocks[0]
+    zarr_group, probabilities_zarr, probabilities_da = None, None, None
+    chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
+
+    for i in range(num_chunks):
+        print(f"🧩 Processing chunk {i + 1}/{num_chunks}")
+        top_halo = max_overlap if i > 0 else 0
+        bottom_halo = max_overlap if i < num_chunks - 1 else 0
+
+        # Load chunk with halo
+        chunk = canvas.blocks[i, 0].compute()
+        count_chunk = count.blocks[i, 0].compute()
+
+        # Pad if needed (simulate halo)
+        if top_halo > 0:
+            top_pad = canvas.blocks[i - 1, 0][-top_halo:].compute()
+            top_count = count.blocks[i - 1, 0][-top_halo:].compute()
+            chunk = np.concatenate([top_pad, chunk], axis=0)
+            count_chunk = np.concatenate([top_count, count_chunk], axis=0)
+
+        if bottom_halo > 0:
+            bottom_pad = canvas.blocks[i + 1, 0][:bottom_halo].compute()
+            bottom_count = count.blocks[i + 1, 0][:bottom_halo].compute()
+            chunk = np.concatenate([chunk, bottom_pad], axis=0)
+            count_chunk = np.concatenate([count_chunk, bottom_count], axis=0)
+
+        # Apply seam folding
+        TH = top_halo
+        BH = bottom_halo
+        H = chunk.shape[0] - TH - BH
+
+        r = overlaps[i]
+        if r > 0:
+            chunk[TH + H - r : TH + H] += chunk[TH + H : TH + H + r]
+            count_chunk[TH + H - r : TH + H] += count_chunk[TH + H : TH + H + r]
+
+        # Drop bottom halo
+        if BH > 0:
+            chunk = chunk[: TH + H]
+            count_chunk = count_chunk[: TH + H]
+
+        # Drop top halo + duplicate seam
+        if i > 0:
+            l = overlaps[i - 1]
+            chunk = chunk[TH + l :]
+            count_chunk = count_chunk[TH + l :]
+
+        # Normalize
+        count_safe = np.where(count_chunk == 0, 1, count_chunk)
+        probabilities = chunk / count_safe
+
+        if zarr_group is not None:
+            if probabilities_zarr is None:
+                probabilities_zarr = zarr_group.create_dataset(
+                    name="probabilities",
+                    shape=(0, *probabilities.shape[1:]),
+                    chunks=(chunk_shape[0], *probabilities.shape[1:]),
+                    dtype=probabilities.dtype,
+                    overwrite=True,
+                )
+
+            probabilities_zarr.resize(
+                probabilities_zarr.shape[0] + probabilities.shape[0], axis=0
+            )
+            probabilities_zarr[-probabilities.shape[0] :] = probabilities
+        else:
+            probabilities_da = (
+                probabilities
+                if probabilities_da is None
+                else da.concatenate((probabilities_da, probabilities), axis=0)
+            )
+
+    if probabilities_zarr:
+        return da.from_zarr(probabilities_zarr)
+
+    return probabilities_da
