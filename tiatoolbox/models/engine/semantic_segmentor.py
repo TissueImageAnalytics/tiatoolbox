@@ -1233,7 +1233,6 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
 
     for i in range(num_chunks):
-        print(f"🧩 Processing chunk {i + 1}/{num_chunks}")
         top_halo = max_overlap if i > 0 else 0
         bottom_halo = max_overlap if i < num_chunks - 1 else 0
 
