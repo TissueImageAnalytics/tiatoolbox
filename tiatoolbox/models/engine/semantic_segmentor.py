@@ -1018,10 +1018,11 @@ def merge_vertical(canvas, count, output_locs_y_):
 def flush_patches(
     canvas, count, output_locs_y_, canvas_np, count_np, output_locs, change_indices
 ):
+    start_idx = 0
     for c_idx in change_indices:
-        output_locs_ = output_locs[:c_idx]
-        canvas_np_ = canvas_np[:c_idx]
-        count_np_ = count_np[:c_idx]
+        output_locs_ = output_locs[: c_idx - start_idx]
+        canvas_np_ = canvas_np[: c_idx - start_idx]
+        count_np_ = count_np[: c_idx - start_idx]
 
         canvas_merge, count_merge = merge_horizontal(
             canvas_np_, count_np_, output_locs_
@@ -1042,9 +1043,10 @@ def flush_patches(
             if output_locs_y_ is None
             else np.concatenate((output_locs_y_, output_locs_[:, (1, 3)]), axis=0)
         )
-        canvas_np = canvas_np[c_idx:]
-        count_np = count_np[c_idx:]
-        output_locs = output_locs[c_idx:]
+        canvas_np = canvas_np[c_idx - start_idx :]
+        count_np = count_np[c_idx - start_idx :]
+        output_locs = output_locs[c_idx - start_idx :]
+        start_idx = c_idx
     return canvas, count, canvas_np, count_np, output_locs, output_locs_y_
 
 
