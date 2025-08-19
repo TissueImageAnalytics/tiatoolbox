@@ -701,15 +701,18 @@ class SemanticSegmentor(PatchPredictor):
                 )
 
                 used_percent = vm.percent
-                if used_percent > memory_threshold:
+                # Cache the output if Memory threshold is reached
+                # Or if length of dask graph is too long.
+                # 50000 is estimated based on trial and error for 64 GB RAM
+                if used_percent > memory_threshold or len(canvas.dask) > 5e4*memory_threshold/100:
                     tqdm_loop.desc = "Spilling to disk "
                     msg = (
-                        f"Memory usage is too high ({used_percent}%). "
-                        f"Current memory usage: {vm.total} bytes. "
-                        f"Increase Memory threshold, reduce batch size "
-                        f"or switch device to CPU."
+                        f"Current Memory usage: {vm.total} bytes. "
+                        f"Canvas task graph length: {len(canvas.dask)} "
+                        f"Increase Memory threshold."
                     )
                     logger.warning(msg)
+                    # Flush data in Memory and clear dask graph
                     canvas_zarr, count_zarr = save_to_cache(
                         canvas, count, canvas_zarr, count_zarr
                     )
@@ -746,6 +749,8 @@ class SemanticSegmentor(PatchPredictor):
             canvas = da.from_zarr(canvas_zarr)
             count = da.from_zarr(count_zarr)
             zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
+
+        np.save("output-locs-y.npy", output_locs_y_)
 
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
@@ -1222,7 +1227,6 @@ def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path="temp.zarr")
 
     return canvas_zarr, count_zarr
 
-
 def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
     overlaps = np.append(y1s[:-1] - y0s[1:], 0)
@@ -1232,26 +1236,32 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
     probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
 
-    for i in range(num_chunks):
+    tqdm = get_tqdm()
+    tqdm_loop = tqdm(range(num_chunks), leave=False, desc="Merging patches")
+
+    prev_chunk, prev_count = None, None
+
+    curr_chunk = canvas.blocks[0, 0].compute()
+    curr_count = count.blocks[0, 0].compute()
+    next_chunk = canvas.blocks[1, 0].compute() if num_chunks > 1 else None
+    next_count = count.blocks[1, 0].compute() if num_chunks > 1 else None
+
+    for i in tqdm_loop:
         top_halo = max_overlap if i > 0 else 0
         bottom_halo = max_overlap if i < num_chunks - 1 else 0
 
-        # Load chunk with halo
-        chunk = canvas.blocks[i, 0].compute()
-        count_chunk = count.blocks[i, 0].compute()
+        chunk = curr_chunk
+        count_chunk = curr_count
 
-        # Pad if needed (simulate halo)
         if top_halo > 0:
-            top_pad = canvas.blocks[i - 1, 0][-top_halo:].compute()
-            top_count = count.blocks[i - 1, 0][-top_halo:].compute()
-            chunk = np.concatenate([top_pad, chunk], axis=0)
-            count_chunk = np.concatenate([top_count, count_chunk], axis=0)
+            chunk = np.concatenate([prev_chunk[-top_halo:], chunk], axis=0)
+            count_chunk = np.concatenate([prev_count[-top_halo:], count_chunk], axis=0)
 
         if bottom_halo > 0:
-            bottom_pad = canvas.blocks[i + 1, 0][:bottom_halo].compute()
-            bottom_count = count.blocks[i + 1, 0][:bottom_halo].compute()
-            chunk = np.concatenate([chunk, bottom_pad], axis=0)
-            count_chunk = np.concatenate([count_chunk, bottom_count], axis=0)
+            chunk = np.concatenate([chunk, next_chunk[:bottom_halo]], axis=0)
+            count_chunk = np.concatenate(
+                [count_chunk, next_count[:bottom_halo]], axis=0
+            )
 
         # Apply seam folding
         TH = top_halo
@@ -1259,7 +1269,7 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
         H = chunk.shape[0] - TH - BH
 
         r = overlaps[i]
-        if r > 0:
+        if r > 0 and chunk.shape[0] >= TH + H + r:
             chunk[TH + H - r : TH + H] += chunk[TH + H : TH + H + r]
             count_chunk[TH + H - r : TH + H] += count_chunk[TH + H : TH + H + r]
 
@@ -1276,6 +1286,9 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
 
         # Normalize
         count_safe = np.where(count_chunk == 0, 1, count_chunk)
+        if count_safe.ndim == 2:
+            count_safe = count_safe[:, :, np.newaxis]
+
         probabilities = chunk / count_safe
 
         if zarr_group is not None:
@@ -1285,6 +1298,7 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
                     shape=(0, *probabilities.shape[1:]),
                     chunks=(chunk_shape[0], *probabilities.shape[1:]),
                     dtype=probabilities.dtype,
+                    overwrite=True,
                 )
 
             probabilities_zarr.resize(
@@ -1301,7 +1315,16 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
                 )
             )
 
+        prev_chunk, prev_count = curr_chunk, curr_count
+        curr_chunk, curr_count = next_chunk, next_count
+        if i + 2 < num_chunks:
+            next_chunk = canvas.blocks[i + 2, 0].compute()
+            next_count = count.blocks[i + 2, 0].compute()
+        else:
+            next_chunk, next_count = None, None
+
     if probabilities_zarr:
         return da.from_zarr(probabilities_zarr)
 
     return probabilities_da
+
