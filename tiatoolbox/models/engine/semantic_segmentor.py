@@ -704,7 +704,10 @@ class SemanticSegmentor(PatchPredictor):
                 # Cache the output if Memory threshold is reached
                 # Or if length of dask graph is too long.
                 # 50000 is estimated based on trial and error for 64 GB RAM
-                if used_percent > memory_threshold or len(canvas.dask) > 5e4*memory_threshold/100:
+                if (
+                    used_percent > memory_threshold
+                    or len(canvas.dask) > 5e4 * memory_threshold / 100
+                ):
                     tqdm_loop.desc = "Spilling to disk "
                     msg = (
                         f"Current Memory usage: {vm.total} bytes. "
@@ -1227,6 +1230,7 @@ def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path="temp.zarr")
 
     return canvas_zarr, count_zarr
 
+
 def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
     overlaps = np.append(y1s[:-1] - y0s[1:], 0)
@@ -1285,11 +1289,11 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
             count_chunk = count_chunk[TH + l :]
 
         # Normalize
-        count_safe = np.where(count_chunk == 0, 1, count_chunk)
+        count_safe = np.where(count_chunk == 0, 1.0, count_chunk)
         if count_safe.ndim == 2:
             count_safe = count_safe[:, :, np.newaxis]
 
-        probabilities = chunk / count_safe
+        probabilities = chunk / count_safe.astype(np.float32)
 
         if zarr_group is not None:
             if probabilities_zarr is None:
@@ -1298,7 +1302,7 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
                     shape=(0, *probabilities.shape[1:]),
                     chunks=(chunk_shape[0], *probabilities.shape[1:]),
                     dtype=probabilities.dtype,
-                    overwrite=True,
+                    # overwrite=True,
                 )
 
             probabilities_zarr.resize(
@@ -1327,4 +1331,3 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
         return da.from_zarr(probabilities_zarr)
 
     return probabilities_da
-
