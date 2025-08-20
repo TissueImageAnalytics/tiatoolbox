@@ -355,7 +355,7 @@ class SemanticSegmentor(PatchPredictor):
                 stride_shape=ioconfig.stride_shape,
                 resolution=ioconfig.input_resolutions[0]["resolution"],
                 units=ioconfig.input_resolutions[0]["units"],
-                auto_get_mask=False,
+                # auto_get_mask=False,
             )
 
             dataset.preproc_func = self.model.preproc_func
@@ -668,22 +668,55 @@ class SemanticSegmentor(PatchPredictor):
         canvas, count, output_locs = None, None, None
         canvas_zarr, count_zarr = None, None
 
-        for batch_data in tqdm_loop:
+        full_output_locs = (
+            dataloader.dataset.full_outputs
+            if hasattr(dataloader.dataset, "full_outputs")
+            else dataloader.dataset.outputs
+        )
+
+        for idx, batch_data in enumerate(tqdm_loop):
             batch_output = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
             )
 
-            batch_output_shape = batch_output.shape
-
-            canvas_np = concatenate_np(old_arr=canvas_np, new_arr=batch_output)
-
-            batch_count = np.ones((*batch_output_shape[:3], 1))
-            count_np = concatenate_np(old_arr=count_np, new_arr=batch_count)
-
             batch_locs = batch_data["output_locs"].numpy()
-            output_locs = concatenate_np(old_arr=output_locs, new_arr=batch_locs)
+
+            # Use np.intersect1d once numpy version is upgraded to 2.0
+            full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
+            matches = [full_output_dict[tuple(row)] for row in batch_locs]
+
+            full_range = set(range(max(matches) + 1))  # +1 to include max_idx
+            matched_set = set(matches)
+            missing = sorted(full_range - matched_set)
+
+            total_size = max(matches + missing) + 1
+            H, W, C = batch_output.shape[1:]
+
+            # Initialize full output array
+            full_batch_output = np.zeros(
+                (total_size, H, W, C), dtype=batch_output.dtype
+            )
+            full_batch_count = np.zeros_like(full_batch_output).astype(np.uint8)
+
+            # Place matching outputs
+            for i, idx in enumerate(matches):
+                full_batch_output[idx] = batch_output[i]
+                full_batch_count[idx] = np.ones((H, W, C), dtype=np.uint8)
+
+            max_index = np.max(matches).astype(int)
+
+            output_locs = concatenate_np(old_arr=output_locs, new_arr=full_output_locs[:max_index+1])
+            full_output_locs = full_output_locs[max_index+1:]
+
+            if idx == len(dataloader):
+                output_locs = concatenate_np(old_arr=output_locs, new_arr=full_output_locs)
+                full_batch_output = np.concatenate((full_batch_output, np.zeros(shape=(len(full_output_locs), H, W, C), dtype=np.uint8)), axis=0)
+                full_batch_count = np.concatenate((full_batch_count, np.zeros(shape=(len(full_output_locs), H, W, C), dtype=np.uint8)), axis=0)
+
+            canvas_np = concatenate_np(old_arr=canvas_np, new_arr=full_batch_output)
+            count_np = concatenate_np(old_arr=count_np, new_arr=full_batch_count)
 
             change_indices = np.where(np.diff(output_locs[:, 1]) != 0)[0] + 1
 
@@ -706,7 +739,7 @@ class SemanticSegmentor(PatchPredictor):
                 # 50000 is estimated based on trial and error for 64 GB RAM
                 if (
                     used_percent > memory_threshold
-                    or len(canvas.dask) > 5e4 * memory_threshold / 100
+                    or len(canvas.dask) > 25e3 * memory_threshold / 100
                 ):
                     tqdm_loop.desc = "Spilling to disk "
                     msg = (
@@ -717,7 +750,7 @@ class SemanticSegmentor(PatchPredictor):
                     logger.warning(msg)
                     # Flush data in Memory and clear dask graph
                     canvas_zarr, count_zarr = save_to_cache(
-                        canvas, count, canvas_zarr, count_zarr
+                        canvas, count, canvas_zarr, count_zarr, save_path=save_path,
                     )
                     canvas, count = None, None
                     import gc
@@ -749,8 +782,8 @@ class SemanticSegmentor(PatchPredictor):
             canvas_zarr, count_zarr = save_to_cache(
                 canvas, count, canvas_zarr, count_zarr
             )
-            canvas = da.from_zarr(canvas_zarr)
-            count = da.from_zarr(count_zarr)
+            canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
+            count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
             zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
 
         np.save("output-locs-y.npy", output_locs_y_)
@@ -1195,7 +1228,7 @@ def safe_blockwise_divide_float(canvas, count, *, output_dtype=None, persist=Tru
     return result.persist() if persist else result
 
 
-def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path="temp.zarr"):
+def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path: str | Path = "temp.zarr"):
     canvas_computed = canvas.compute()
     count_computed = count.compute()
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)

@@ -510,6 +510,7 @@ class WSIPatchDataset(PatchDatasetABC):
             )
             self.inputs = self.inputs[selected]
             if hasattr(self, "outputs"):
+                self.full_outputs = self.outputs  # Full list of outputs
                 self.outputs = self.outputs[selected]
 
         if len(self.inputs) == 0:
