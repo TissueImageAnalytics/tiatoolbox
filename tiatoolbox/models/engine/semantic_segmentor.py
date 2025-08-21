@@ -674,7 +674,7 @@ class SemanticSegmentor(PatchPredictor):
             else dataloader.dataset.outputs
         )
 
-        for idx, batch_data in enumerate(tqdm_loop):
+        for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
@@ -687,36 +687,39 @@ class SemanticSegmentor(PatchPredictor):
             full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
             matches = [full_output_dict[tuple(row)] for row in batch_locs]
 
-            full_range = set(range(max(matches) + 1))  # +1 to include max_idx
-            matched_set = set(matches)
-            missing = sorted(full_range - matched_set)
-
-            total_size = max(matches + missing) + 1
+            total_size = np.max(matches).astype(np.uint16) + 1
             H, W, C = batch_output.shape[1:]
 
             # Initialize full output array
             full_batch_output = np.zeros(
                 (total_size, H, W, C), dtype=batch_output.dtype
             )
-            full_batch_count = np.zeros_like(full_batch_output).astype(np.uint8)
+            full_batch_count = np.zeros_like(full_batch_output[:, :, :, 0:1]).astype(
+                np.uint8
+            )
 
-            # Place matching outputs
-            for i, idx in enumerate(matches):
-                full_batch_output[idx] = batch_output[i]
-                full_batch_count[idx] = np.ones((H, W, C), dtype=np.uint8)
+            # Place matching outputs using matching indices
+            full_batch_output[matches] = batch_output
+            full_batch_count[matches] = 1
 
-            max_index = np.max(matches).astype(int)
+            output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs[:total_size])
+            full_output_locs = full_output_locs[total_size:]
 
-            output_locs = concatenate_np(old_arr=output_locs, new_arr=full_output_locs[:max_index+1])
-            full_output_locs = full_output_locs[max_index+1:]
+            if batch_idx == len(dataloader) - 1:
+                output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs)
+                full_batch_output = concatenate_none(
+                    old_arr=full_batch_output,
+                    new_arr=np.zeros(shape=(len(full_output_locs), H, W, C), dtype=np.uint8)
+                )
+                full_batch_count = concatenate_none(
+                    old_arr=full_batch_count,
+                    new_arr=np.zeros(shape=(len(full_output_locs), H, W, 1), dtype=np.uint8)
+                )
 
-            if idx == len(dataloader):
-                output_locs = concatenate_np(old_arr=output_locs, new_arr=full_output_locs)
-                full_batch_output = np.concatenate((full_batch_output, np.zeros(shape=(len(full_output_locs), H, W, C), dtype=np.uint8)), axis=0)
-                full_batch_count = np.concatenate((full_batch_count, np.zeros(shape=(len(full_output_locs), H, W, C), dtype=np.uint8)), axis=0)
+            canvas_np = concatenate_none(old_arr=canvas_np, new_arr=full_batch_output)
+            count_np = concatenate_none(old_arr=count_np, new_arr=full_batch_count)
 
-            canvas_np = concatenate_np(old_arr=canvas_np, new_arr=full_batch_output)
-            count_np = concatenate_np(old_arr=count_np, new_arr=full_batch_count)
+
 
             change_indices = np.where(np.diff(output_locs[:, 1]) != 0)[0] + 1
 
@@ -747,7 +750,7 @@ class SemanticSegmentor(PatchPredictor):
                         f"Canvas task graph length: {len(canvas.dask)} "
                         f"Increase Memory threshold."
                     )
-                    logger.warning(msg)
+                    logger.info(msg)
                     # Flush data in Memory and clear dask graph
                     canvas_zarr, count_zarr = save_to_cache(
                         canvas, count, canvas_zarr, count_zarr, save_path=save_path,
@@ -988,7 +991,7 @@ class SemanticSegmentor(PatchPredictor):
         )
 
 
-def concatenate_np(old_arr, new_arr):
+def concatenate_none(old_arr, new_arr):
     return new_arr if old_arr is None else np.concatenate((old_arr, new_arr), axis=0)
 
 
@@ -1335,7 +1338,7 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
                     shape=(0, *probabilities.shape[1:]),
                     chunks=(chunk_shape[0], *probabilities.shape[1:]),
                     dtype=probabilities.dtype,
-                    # overwrite=True,
+                    overwrite=True,
                 )
 
             probabilities_zarr.resize(

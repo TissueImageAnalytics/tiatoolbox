@@ -475,6 +475,7 @@ class WSIPatchDataset(PatchDatasetABC):
                 stride_shape=stride_shape[::-1],
                 patch_output_shape=patch_output_shape,
             )
+            self.full_outputs = self.outputs
         else:
             self.inputs = PatchExtractor.get_coordinates(
                 image_shape=wsi_shape,
