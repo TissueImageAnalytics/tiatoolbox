@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -488,8 +489,6 @@ class SemanticSegmentor(PatchPredictor):
                         save_path=save_path,
                     )
                     canvas, count = None, None
-                    import gc
-
                     gc.collect()
                     tqdm_loop.desc = "Inferring patches"
 
@@ -793,26 +792,18 @@ def flush_patches(
         canvas_merge, count_merge = merge_horizontal(
             canvas_np_, count_np_, output_locs_
         )
-        canvas = (
-            canvas_merge
-            if canvas is None
-            else da.concatenate((canvas, canvas_merge), axis=0)
-        )
-        count = (
-            count_merge
-            if count is None
-            else da.concatenate((count, count_merge), axis=0)
+
+        canvas = concatenate_none(old_arr=canvas, new_arr=canvas_merge)
+        count = concatenate_none(old_arr=count, new_arr=count_merge)
+        output_locs_y_ = concatenate_none(
+            old_arr=output_locs_y_, new_arr=output_locs[:, (1, 3)]
         )
 
-        output_locs_y_ = (
-            output_locs_[:, (1, 3)]
-            if output_locs_y_ is None
-            else np.concatenate((output_locs_y_, output_locs_[:, (1, 3)]), axis=0)
-        )
         canvas_np = canvas_np[c_idx - start_idx :]
         count_np = count_np[c_idx - start_idx :]
         output_locs = output_locs[c_idx - start_idx :]
         start_idx = c_idx
+
     return canvas, count, canvas_np, count_np, output_locs, output_locs_y_
 
 
@@ -962,12 +953,8 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
             )
             probabilities_zarr[-probabilities.shape[0] :] = probabilities
         else:
-            probabilities_da = (
-                da.from_array(probabilities)
-                if probabilities_da is None
-                else da.concatenate(
-                    [probabilities_da, da.from_array(probabilities)], axis=0
-                )
+            probabilities_da = concatenate_none(
+                old_arr=probabilities_da, new_arr=da.from_array(probabilities)
             )
 
         prev_chunk, prev_count = curr_chunk, curr_count
