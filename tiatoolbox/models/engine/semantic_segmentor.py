@@ -11,12 +11,12 @@ import numpy as np
 import psutil
 import torch
 import zarr
-from dask import compute, delayed
+from dask import compute
 from dask.diagnostics import ProgressBar
 from dask.utils import SerializableLock
 from typing_extensions import Unpack
 
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
@@ -378,86 +378,6 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode=patch_mode,
         )
 
-    def _merge_model_output_to_dask_canvas(
-        self: SemanticSegmentor,
-        batch_data: dict[str, Any],
-        merged_shape: zarr.Array,
-        canvas_dtype: zarr.Array,
-    ) -> tuple[da.Array, da.Array]:
-        """Merge model outputs from a batch into a shared canvas and count map.
-
-        This method performs inference on a batch of image patches, aligns the
-        outputs based on their spatial locations, and merges them into a full-resolution
-        canvas. It also maintains a count map to track the number of contributions
-        per pixel.
-
-        Args:
-            batch_data (dict[str, Any]):
-                Dictionary containing batch input data. Expected keys:
-                - "image": Batch of input images (as a Tensor) for inference.
-                - "output_locs": Tensor with bounding box coordinates for each output.
-            merged_shape (tuple[int, int, int]):
-                Shape of the final merged canvas (height, width, channels).
-            canvas_dtype (np.dtype):
-                Data type for the canvas array.
-
-        Returns:
-            tuple[dask.array.Array, dask.array.Array]:
-                - canvas: Dask array containing the merged outputs.
-                - count: Dask array indicating the number of times
-                  each pixel was updated.
-
-        """
-        canvas = da.zeros(
-            merged_shape,
-            dtype=canvas_dtype,
-        )
-        count = da.zeros(
-            merged_shape[:2],
-            dtype=np.uint8,
-        )
-        batch_output = self.model.infer_batch(
-            self.model,
-            batch_data["image"],
-            device=self.device,
-        )
-
-        output_locs = batch_data["output_locs"].numpy()
-
-        batch_xs, batch_ys = np.min(output_locs[:, 0:2], axis=0)
-        batch_xe, batch_ye = np.max(output_locs[:, 2:4], axis=0)
-
-        merged_shape_batch = (
-            batch_ye - batch_ys,
-            batch_xe - batch_xs,
-            batch_output.shape[3],
-        )
-
-        merged_output, merged_count = merge_batch_to_canvas(
-            batch_output,
-            output_locs - np.array([batch_xs, batch_ys, batch_xs, batch_ys]),
-            merged_shape_batch,
-            batch_output.dtype,
-        )
-
-        batch_ye, batch_xe = (
-            min(batch_ye, canvas.shape[0]),
-            min(batch_xe, canvas.shape[1]),
-        )
-
-        canvas[
-            batch_ys:batch_ye,
-            batch_xs:batch_xe,
-            :,
-        ] += merged_output
-
-        count[
-            batch_ys:batch_ye,
-            batch_xs:batch_xe,
-        ] += merged_count
-
-        return canvas, count
-
     @staticmethod
     def _write_canvas_count_to_zarr(
         slice_to_write: slice,
@@ -674,6 +594,8 @@ class SemanticSegmentor(PatchPredictor):
             else dataloader.dataset.outputs
         )
 
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
         for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = self.model.infer_batch(
                 self.model,
@@ -702,24 +624,30 @@ class SemanticSegmentor(PatchPredictor):
             full_batch_output[matches] = batch_output
             full_batch_count[matches] = 1
 
-            output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs[:total_size])
+            output_locs = concatenate_none(
+                old_arr=output_locs, new_arr=full_output_locs[:total_size]
+            )
             full_output_locs = full_output_locs[total_size:]
 
             if batch_idx == len(dataloader) - 1:
-                output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs)
+                output_locs = concatenate_none(
+                    old_arr=output_locs, new_arr=full_output_locs
+                )
                 full_batch_output = concatenate_none(
                     old_arr=full_batch_output,
-                    new_arr=np.zeros(shape=(len(full_output_locs), H, W, C), dtype=np.uint8)
+                    new_arr=np.zeros(
+                        shape=(len(full_output_locs), H, W, C), dtype=np.uint8
+                    ),
                 )
                 full_batch_count = concatenate_none(
                     old_arr=full_batch_count,
-                    new_arr=np.zeros(shape=(len(full_output_locs), H, W, 1), dtype=np.uint8)
+                    new_arr=np.zeros(
+                        shape=(len(full_output_locs), H, W, 1), dtype=np.uint8
+                    ),
                 )
 
             canvas_np = concatenate_none(old_arr=canvas_np, new_arr=full_batch_output)
             count_np = concatenate_none(old_arr=count_np, new_arr=full_batch_count)
-
-
 
             change_indices = np.where(np.diff(output_locs[:, 1]) != 0)[0] + 1
 
@@ -740,20 +668,23 @@ class SemanticSegmentor(PatchPredictor):
                 # Cache the output if Memory threshold is reached
                 # Or if length of dask graph is too long.
                 # 50000 is estimated based on trial and error for 64 GB RAM
-                if (
-                    used_percent > memory_threshold
-                    or len(canvas.dask) > 25e3 * memory_threshold / 100
-                ):
+                if used_percent > memory_threshold or len(canvas.dask) > 25e3:
                     tqdm_loop.desc = "Spilling to disk "
                     msg = (
-                        f"Current Memory usage: {vm.total} bytes. "
-                        f"Canvas task graph length: {len(canvas.dask)} "
-                        f"Increase Memory threshold."
-                    )
+                        f"Current Memory usage: {used_percent} %  "
+                        f"exceeds specified threshold: {memory_threshold}. "
+                        if used_percent > memory_threshold
+                        else f"Canvas task graph length: {len(canvas.dask)} "
+                        f"exceeds specified threshold: {25e3}. "
+                    ) + "Saving intermediate results to disk."
                     logger.info(msg)
                     # Flush data in Memory and clear dask graph
                     canvas_zarr, count_zarr = save_to_cache(
-                        canvas, count, canvas_zarr, count_zarr, save_path=save_path,
+                        canvas,
+                        count,
+                        canvas_zarr,
+                        count_zarr,
+                        save_path=save_path,
                     )
                     canvas, count = None, None
                     import gc
@@ -770,6 +701,7 @@ class SemanticSegmentor(PatchPredictor):
             if self.return_labels:
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
+        logger.removeFilter(duplicate_filter)
         canvas, count, _, _, _, output_locs_y_ = flush_patches(
             canvas,
             count,
@@ -991,8 +923,16 @@ class SemanticSegmentor(PatchPredictor):
         )
 
 
-def concatenate_none(old_arr, new_arr):
-    return new_arr if old_arr is None else np.concatenate((old_arr, new_arr), axis=0)
+def concatenate_none(
+    old_arr: np.ndarray | da.Array, new_arr: np.ndarray | da.Array
+) -> np.ndarray | da.Array:
+    """Helper to concatenate None arrays."""
+    if isinstance(new_arr, np.ndarray):
+        return (
+            new_arr if old_arr is None else np.concatenate((old_arr, new_arr), axis=0)
+        )
+
+    return new_arr if old_arr is None else da.concatenate([old_arr, new_arr], axis=0)
 
 
 def stack_blocks_to_dask(blocks, count=False):
@@ -1038,29 +978,6 @@ def merge_horizontal(canvas_np_, count_np_, output_locs_):
     count_merge = count_merge.rechunk(chunks=count_merge.shape)
 
     return canvas_merge, count_merge
-
-
-def merge_vertical(canvas, count, output_locs_y_):
-    y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
-    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
-    max_overlap = np.max(overlaps)
-    merge_func = vertical_merge_func(overlaps, max_overlap)
-
-    canvas = canvas.map_overlap(
-        merge_func,
-        depth={0: max_overlap, 1: 0, 2: 0},
-        boundary="none",
-        trim=False,
-        dtype=canvas.dtype,
-    )
-    count = count.map_overlap(
-        merge_func,
-        depth={0: max_overlap, 1: 0, 2: 0},
-        boundary="none",
-        trim=False,
-        dtype=count.dtype,
-    )
-    return canvas, count
 
 
 def flush_patches(
@@ -1154,84 +1071,9 @@ def vertical_merge_func(overlaps, max_overlap):
     return merge_vertical_seams_var
 
 
-def safe_blockwise_divide_float(canvas, count, *, output_dtype=None, persist=True):
-    """Safely divide canvas by count blockwise, preserving float precision.
-
-    Parameters
-    ----------
-    canvas :
-        dask.array, shape (H, W, C)
-    count :
-        dask.array, shape (H, W) or (H, W, 1)
-    output_dtype : np.dtype or None
-        If set, casts final result to this dtype
-    persist : bool
-        If True, persists the result in memory
-
-    Returns:
-    -------
-    dask.array
-        Result of canvas / max(count, 1), safely computed blockwise
-
-    """
-    if canvas.chunks[:2] != count.chunks[:2]:
-        raise ValueError(
-            f"Chunk mismatch:\nCanvas: {canvas.chunks[:2]}\nCount: {count.chunks[:2]}"
-        )
-
-    canvas_delayed = canvas.to_delayed().flatten()
-    count_delayed = count.to_delayed().flatten()
-
-    chunks_h = canvas.chunks[0]
-    chunks_w = canvas.chunks[1]
-    C = canvas.shape[2]
-    out_blocks = []
-
-    def _div_block(canvas_block, count_block):
-        if canvas_block.shape[:2] != count_block.shape[:2]:
-            raise ValueError(
-                f"Shape mismatch: canvas {canvas_block.shape}, count {count_block.shape}"
-            )
-
-        count_block = np.maximum(count_block, 1)
-        if count_block.ndim == 2:
-            count_block = count_block[:, :, np.newaxis]
-
-        result = canvas_block.astype(np.float32) / count_block.astype(np.float32)
-
-        # if scale_factor is not None:
-        #     result *= scale_factor
-        # if clip_range is not None:
-        #     result = np.clip(result, clip_range[0], clip_range[1])
-        # if round:
-        #     result = np.round(result)
-
-        if output_dtype is not None:
-            result = result.astype(output_dtype)
-
-        return result
-
-    for i, h in enumerate(chunks_h):
-        row = []
-        for j, w in enumerate(chunks_w):
-            idx = i * len(chunks_w) + j
-            canvas_blk = canvas_delayed[idx]
-            count_blk = count_delayed[idx]
-            block_shape = (h, w, C)
-            out_blk = da.from_delayed(
-                delayed(_div_block)(canvas_blk, count_blk),
-                shape=block_shape,
-                dtype=output_dtype or np.float32,
-            )
-            row.append(out_blk)
-        out_blocks.append(row)
-
-    rows = [da.concatenate(row, axis=1) for row in out_blocks]
-    result = da.concatenate(rows, axis=0)
-    return result.persist() if persist else result
-
-
-def save_to_cache(canvas, count, canvas_zarr, count_zarr, save_path: str | Path = "temp.zarr"):
+def save_to_cache(
+    canvas, count, canvas_zarr, count_zarr, save_path: str | Path = "temp.zarr"
+):
     canvas_computed = canvas.compute()
     count_computed = count.compute()
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
