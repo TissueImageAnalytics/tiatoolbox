@@ -39,47 +39,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore import WSIReader
 
 
-def merge_batch_to_canvas(
-    blocks: np.ndarray,
-    output_locations: np.ndarray,
-    merged_shape: tuple[int, int, int],
-    dtype_: type,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Merge patch-level predictions into a single canvas.
-
-    This function aggregates overlapping patch predictions into a unified
-    output canvas and maintains a count map to normalize overlapping regions.
-
-    Args:
-        blocks (np.ndarray):
-            Array of predicted blocks with shape (N, H, W, C), where N is the
-            number of patches.
-        output_locations (np.ndarray):
-            Array of coordinates for each block in the format
-            [start_x, start_y, end_x, end_y] with shape (N, 4).
-        merged_shape (tuple[int, int, int]):
-            Shape of the final merged canvas (H, W, C).
-        dtype_ (type):
-            Data type of the output canvas.
-
-    Returns:
-        tuple[np.ndarray, np.ndarray]:
-            - canvas: Merged prediction map of shape (H, W, C).
-            - count: Count map indicating how many times each pixel was updated,
-              shape (H, W).
-
-    """
-    canvas = np.zeros(merged_shape, dtype=dtype_)
-    count = np.zeros(merged_shape[:2], dtype=np.uint8)
-    for i, block in enumerate(blocks):
-        xs, ys, xe, ye = output_locations[i]
-        # To deal with edge cases
-        ye, xe = min(ye, canvas.shape[0]), min(xe, canvas.shape[1])
-        canvas[ys:ye, xs:xe, :] += block[0 : ye - ys, 0 : xe - xs, :]
-        count[ys:ye, xs:xe] += 1
-    return canvas, count
-
-
 class SemanticSegmentorRunParams(PredictorRunParams, total=False):
     """Runtime parameters for configuring the `SemanticSegmentor.run()` method.
 
