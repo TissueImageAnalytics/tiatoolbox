@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import gc
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
@@ -30,7 +29,6 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
 
     from torch.utils.data import DataLoader
-    from tqdm import tqdm
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
@@ -367,128 +365,6 @@ class SemanticSegmentor(PatchPredictor):
         with ProgressBar():
             compute(*write_task)
         print("\nWriting done!!!\n")  # noqa: T201
-
-    def _spill_to_disk(
-        self: SemanticSegmentor,
-        batch_info: list[dict[str, Any]],
-        canvas: da.Array,
-        count: da.Array,
-        canvas_zarr: zarr.Array,
-        count_zarr: zarr.Array,
-        tqdm_loop: tqdm.tqdm,
-        max_save_y: int,
-        min_save_y: int,
-        memory_threshold: int,
-    ) -> tuple[da.Array, da.Array, int, int]:
-        vm = psutil.virtual_memory()
-        used_percent = vm.percent
-
-        # If within threshold limit return
-        if used_percent < memory_threshold:
-            return canvas, count, min_save_y, max_save_y
-
-        # Else Spill to disk
-        y_info = batch_info.pop(0)
-        min_y = y_info["min_starty"]
-
-        tqdm_loop.desc = "Memory Overload: Spilling to Disk"
-
-        # Try to continue if there is available memory for an entire row
-        if min_y == 0:
-            msg = (
-                f"Memory usage is too high ({used_percent}%). "
-                f"Current memory usage: {vm.total} bytes. "
-                f"Increase Memory threshold, reduce batch size "
-                f"or switch device to CPU."
-            )
-            logger.warning(msg)
-            return canvas, count, min_save_y, max_save_y
-
-        # # When Spill is triggered for first time
-        # # Avoids zero slice
-        # if max_save_y == 0:
-        #     max_save_y = min_y - 1
-
-        # Check if all rows have been processed
-        if max_save_y < min_y:
-            canvas_slice = slice(min_save_y, max_save_y)
-
-            canvas = canvas.rechunk(canvas_zarr.chunks)
-            count = count.rechunk(count_zarr.chunks)
-
-            # Spill to disk
-            self._write_canvas_count_to_zarr(
-                slice_to_write=canvas_slice,
-                canvas=canvas,
-                count=count,
-                canvas_zarr=canvas_zarr,
-                count_zarr=count_zarr,
-            )
-
-            # canvas[canvas_slice, :, :] = 0
-            # count[canvas_slice, :] = 0
-
-            # canvas = da.from_array(
-            #     canvas.compute()
-            # )
-            # count = da.from_array(
-            #     count.compute()
-            # )
-
-            # # Align chunks only if needed
-            # if canvas.chunks != canvas_zarr.chunks:
-            #     canvas_ = canvas.rechunk(canvas_zarr.chunks)
-            # else:
-            #     canvas_ = canvas
-            #
-            # if count.chunks != count_zarr.chunks:
-            #     count_ = count.rechunk(count_zarr.chunks)
-            # else:
-            #     count_ = count
-            #
-            # canvas_ = canvas_.persist()
-            # count_ = count_.persist()
-
-            # Update boundaries
-            min_save_y = max_save_y
-            max_save_y = y_info["max_endy"]
-            restore_slice = slice(min_save_y, max_save_y)
-
-            canvas_ = canvas[restore_slice, :, :].compute()
-            count_ = count[restore_slice, :].compute()
-
-            # Reinitialize with sparse arrays
-            canvas = da.zeros(
-                shape=canvas_zarr.shape,
-                dtype=canvas_zarr.dtype,
-                chunks=canvas_zarr.chunks,
-            )
-            count = da.zeros(
-                shape=count_zarr.shape,
-                dtype=np.uint8,
-                chunks=count_zarr.chunks,
-            )
-
-            #
-            # # Restore unsaved region
-            #
-            #
-            # # Restore unsaved region (explicit compute)
-            # restored_canvas = canvas_[restore_slice, :, :]
-            # restored_count = count_[restore_slice, :]
-            canvas[restore_slice, :, :] = canvas_
-            count[restore_slice, :] = count_
-
-            # Cleanup
-            del (
-                canvas_,
-                count_,
-            )
-            gc.collect()
-
-        tqdm_loop.desc = "Inferring patches"
-
-        return canvas, count, min_save_y, max_save_y
 
     def infer_wsi(
         self: SemanticSegmentor,
@@ -1127,7 +1003,7 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
 
         # Normalize
         count_safe = np.where(count_chunk == 0, 1.0, count_chunk)
-        if count_safe.ndim == 2:
+        if count_safe.ndim == 2:  # noqa: PLR2004
             count_safe = count_safe[:, :, np.newaxis]
 
         probabilities = chunk / count_safe.astype(np.float32)
