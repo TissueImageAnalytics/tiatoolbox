@@ -10,9 +10,6 @@ import numpy as np
 import psutil
 import torch
 import zarr
-from dask import compute
-from dask.diagnostics import ProgressBar
-from dask.utils import SerializableLock
 from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger
@@ -334,37 +331,6 @@ class SemanticSegmentor(PatchPredictor):
             ioconfig=ioconfig,
             patch_mode=patch_mode,
         )
-
-    @staticmethod
-    def _write_canvas_count_to_zarr(
-        slice_to_write: slice,
-        canvas: da.Array,
-        count: da.Array,
-        canvas_zarr: zarr.Array,
-        count_zarr: zarr.Array,
-    ) -> None:
-        lock = SerializableLock()
-        write_task = []
-        task = canvas[slice_to_write, :, :].to_zarr(
-            canvas_zarr,
-            region=(slice_to_write, slice(None), slice(None)),
-            compute=False,
-            lock=lock,
-        )
-        write_task.append(task)
-
-        task = count[slice_to_write, :].to_zarr(
-            count_zarr,
-            region=(slice_to_write, slice(None)),
-            compute=False,
-            lock=lock,
-        )
-        write_task.append(task)
-
-        print("\nWriting done... \n")  # noqa: T201
-        with ProgressBar():
-            compute(*write_task)
-        print("\nWriting done!!!\n")  # noqa: T201
 
     def infer_wsi(
         self: SemanticSegmentor,
@@ -876,34 +842,6 @@ def horizontal_merge_func(overlaps, max_overlap):
         return chunk
 
     return merge_horizontal_seams_var
-
-
-def vertical_merge_func(overlaps, max_overlap):
-    def merge_vertical_seams_var(chunk, block_info=None):
-        info = block_info[0]
-        i = info["chunk-location"][0]  # row-chunk index
-        nI = info["num-chunks"][0]
-        TH = max_overlap if i > 0 else 0  # top halo rows
-        BH = max_overlap if i < nI - 1 else 0
-        H = chunk.shape[0] - TH - BH  # interior rows
-
-        # Fold bottom seam
-        r = overlaps[i]
-        if r > 0:
-            chunk[TH + H - r : TH + H, :, :] += chunk[TH + H : TH + H + r, :, :]
-
-        # Drop bottom halo
-        if BH > 0:
-            chunk = chunk[: TH + H, :, :]
-
-        # Drop top halo + duplicate seam rows
-        if i > 0:
-            l = overlaps[i - 1]
-            chunk = chunk[TH + l :, :, :]
-
-        return chunk
-
-    return merge_vertical_seams_var
 
 
 def save_to_cache(
