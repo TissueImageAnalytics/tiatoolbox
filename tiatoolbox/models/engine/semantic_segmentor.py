@@ -412,11 +412,11 @@ class SemanticSegmentor(PatchPredictor):
             matches = [full_output_dict[tuple(row)] for row in batch_locs]
 
             total_size = np.max(matches).astype(np.uint16) + 1
-            H, W, C = batch_output.shape[1:]
+            h, w, c = batch_output.shape[1:]
 
             # Initialize full output array
             full_batch_output = np.zeros(
-                (total_size, H, W, C), dtype=batch_output.dtype
+                (total_size, h, w, c), dtype=batch_output.dtype
             )
             full_batch_count = np.zeros_like(full_batch_output[:, :, :, 0:1]).astype(
                 np.uint8
@@ -438,13 +438,13 @@ class SemanticSegmentor(PatchPredictor):
                 full_batch_output = concatenate_none(
                     old_arr=full_batch_output,
                     new_arr=np.zeros(
-                        shape=(len(full_output_locs), H, W, C), dtype=np.uint8
+                        shape=(len(full_output_locs), h, w, c), dtype=np.uint8
                     ),
                 )
                 full_batch_count = concatenate_none(
                     old_arr=full_batch_count,
                     new_arr=np.zeros(
-                        shape=(len(full_output_locs), H, W, 1), dtype=np.uint8
+                        shape=(len(full_output_locs), h, w, 1), dtype=np.uint8
                     ),
                 )
 
