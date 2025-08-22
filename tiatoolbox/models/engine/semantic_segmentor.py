@@ -832,9 +832,11 @@ def horizontal_merge_func(overlaps, max_overlap):
         W = chunk.shape[1] - LH - RH
 
         # Fold right halo
-        r = overlaps[j]
-        if r > 0:
-            chunk[:, LH + W - r : LH + W, :] += chunk[:, LH + W : LH + W + r, :]
+        right_overlap = overlaps[j]
+        if right_overlap > 0:
+            chunk[:, LH + W - right_overlap : LH + W, :] += chunk[
+                :, LH + W : LH + W + right_overlap, :
+            ]
 
         # Drop right halo
         if RH > 0:
@@ -842,8 +844,8 @@ def horizontal_merge_func(overlaps, max_overlap):
 
         # Drop left halo + duplicate seam cols
         if j > 0:
-            l = overlaps[j - 1]
-            chunk = chunk[:, LH + l :, :]
+            left_overlap = overlaps[j - 1]
+            chunk = chunk[:, LH + left_overlap :, :]
 
         return chunk
 
@@ -941,9 +943,9 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
 
         # Drop top halo + duplicate seam
         if i > 0:
-            l = overlaps[i - 1]
-            chunk = chunk[TH + l :]
-            count_chunk = count_chunk[TH + l :]
+            overlap_above = overlaps[i - 1]
+            chunk = chunk[TH + overlap_above :]
+            count_chunk = count_chunk[TH + overlap_above :]
 
         # Normalize
         count_safe = np.where(count_chunk == 0, 1.0, count_chunk)
