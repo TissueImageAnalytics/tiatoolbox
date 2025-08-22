@@ -1280,8 +1280,8 @@ class EngineABC(ABC):  # noqa: B024
 
     def run(
         self: EngineABC,
-        images: list[os.PathLike | WSIReader] | np.ndarray,
-        masks: list[os.PathLike] | np.ndarray | None = None,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
@@ -1298,9 +1298,9 @@ class EngineABC(ABC):  # noqa: B024
         and WSI modes.
 
         Args:
-            images (list[PathLike | WSIReader] | np.ndarray):
+            images (list[PathLike | Path | WSIReader] | np.ndarray):
                 List of input images or a NumPy array of patches.
-            masks (list[PathLike] | np.ndarray | None):
+            masks (list[PathLike | Path] | np.ndarray | None):
                 Optional list of masks for WSI processing.
                 Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
