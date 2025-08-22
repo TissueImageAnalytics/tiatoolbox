@@ -76,59 +76,61 @@ class EngineABCRunParams(TypedDict, total=False):
     """Parameters for configuring the :func:`EngineABC.run()` method.
 
     Optional Keys:
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
         batch_size (int):
             Number of image patches per forward pass.
         class_dict (dict):
             Mapping of classification outputs to class names.
+        da_length_threshold (int):
+            Dask graph length threshold to trigger caching behavior.
         device (str):
-            Device to run the model on (e.g., "cpu", "cuda"). Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device.
+            Device to run the model on (e.g., "cpu", "cuda").
+            See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details.
+        input_resolutions (list[dict[Units, Resolution]]):
+            Resolution settings for input heads. Supported units are `level`,
+            `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+            [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for details.
         ioconfig (ModelIOConfigABC):
             IO configuration (:class:`ModelIOConfigABC`) for model input/output.
-        return_labels (bool):
-            Whether to return labels with predictions.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
-            Number of workers for DataLoader.
+            Number of workers for DataLoader and post-processing.
         output_file (str):
             Filename for saving output (e.g., .zarr or .db).
         patch_input_shape (IntPair):
-            Shape of input patches (height, width).
-            Patches are requested at read resolution, not with respect to level 0,
-            and must be positive.
-        input_resolutions (list[dict[Units, Resolution]]):
-            Resolution settings for input heads. Supported
-            units are `level`, `power` and `mpp`. Keys should be "units" and
-            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
-            :class:`WSIReader` for details.
+            Shape of input patches (height, width), requested at read resolution.
+            Must be positive.
+        return_labels (bool):
+            Whether to return labels with predictions.
         scale_factor (tuple[float, float]):
-            Scale factor for annotations (model_mpp / slide_mpp). All coordinates
-            are multiplied by this factor to allow conversion of annotations
-            saved at non-baseline resolution to baseline. Should be model_mpp/slide_mpp.
+            Scale factor for annotations (model_mpp / slide_mpp).
+            Used to convert coordinates from non-baseline to baseline resolution.
         stride_shape (IntPair):
-            Stride used during WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
+            Stride used during WSI processing, at requested read resolution.
+            Must be positive. Defaults to `patch_input_shape` if not provided.
         verbose (bool):
             Whether to enable verbose logging.
 
     """
 
+    auto_get_mask: bool
     batch_size: int
     class_dict: dict
+    da_length_threshold: int
     device: str
+    input_resolutions: list[dict[Units, Resolution]]
     ioconfig: ModelIOConfigABC
+    memory_threshold: int
     num_workers: int
     output_file: str
     patch_input_shape: IntPair
-    input_resolutions: list[dict[Units, Resolution]]
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
-    memory_threshold: int
-    da_length_threshold: int
-    auto_get_mask: bool
     verbose: bool
 
 
