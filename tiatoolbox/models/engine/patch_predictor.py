@@ -1,4 +1,22 @@
-"""Defines PatchPredictor Engine."""
+"""Defines the PatchPredictor engine for patch-level inference in digital pathology.
+
+This module implements the PatchPredictor class, which extends the EngineABC base
+class to support patch-based and whole slide image (WSI) inference using deep learning
+models from TIAToolbox. It provides utilities for model initialization, post-processing,
+and output management, including support for multiple output formats.
+
+Classes:
+    - PatchPredictor:
+        Engine for performing patch-level predictions.
+    - PredictorRunParams:
+        TypedDict for configuring runtime parameters.
+
+Example:
+    >>> images = [np.ndarray, np.ndarray]
+    >>> predictor = PatchPredictor(model="resnet18-kather100k")
+    >>> output = predictor.run(images, patch_mode=True)
+
+"""
 
 from __future__ import annotations
 
@@ -255,7 +273,7 @@ class PatchPredictor(EngineABC):
                 Number of workers for data loading. Default is 0.
             weights (str | Path | None): Path to model weights.
                 If None, default weights are used.
-            device (str): D
+            device (str):
                 device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
             verbose (bool):
                 Whether to enable verbose logging. Default is True.
@@ -272,7 +290,7 @@ class PatchPredictor(EngineABC):
 
     def post_process_patches(
         self: PatchPredictor,
-        raw_predictions: da.Array | np.ndarray,
+        raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
@@ -284,15 +302,14 @@ class PatchPredictor(EngineABC):
         efficient computation and memory handling.
 
         Args:
-            raw_predictions (dask.array.Array | np.ndarray):
+            raw_predictions (da.Array | np.ndarray):
                 Raw model predictions.
             prediction_shape (tuple[int, ...]):
                 Expected shape of the prediction output.
             prediction_dtype (type):
                 Data type of the prediction output.
             **kwargs (PredictorRunParams):
-                Additional runtime parameters, including
-                `return_probabilities`.
+                Additional runtime parameters, including `return_probabilities`.
 
         Returns:
             dask.array.Array: Post-processed predictions as a Dask array.
@@ -305,7 +322,7 @@ class PatchPredictor(EngineABC):
 
     def post_process_wsi(
         self: PatchPredictor,
-        raw_predictions: da.Array | np.ndarray,
+        raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
@@ -318,15 +335,14 @@ class PatchPredictor(EngineABC):
         `post_process_patches()`.
 
         Args:
-            raw_predictions (dask.array.Array | np.ndarray):
+            raw_predictions (dask.array.Array):
                 Raw model predictions.
             prediction_shape (tuple[int, ...]):
                 Expected shape of the prediction output.
             prediction_dtype (type):
                 Data type of the prediction output.
             **kwargs (PredictorRunParams):
-                Additional runtime parameters, including
-                `return_probabilities`.
+                Additional runtime parameters, including `return_probabilities`.
 
         Returns:
             dask.array.Array: Post-processed predictions as a Dask array.
