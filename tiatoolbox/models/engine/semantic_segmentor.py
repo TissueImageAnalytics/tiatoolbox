@@ -13,7 +13,7 @@ import torch
 import zarr
 from typing_extensions import Unpack
 
-from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
@@ -408,8 +408,6 @@ class SemanticSegmentor(PatchPredictor):
             else dataloader.dataset.outputs
         )
 
-        duplicate_filter = DuplicateFilter()
-        logger.addFilter(duplicate_filter)
         for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = self.model.infer_batch(
                 self.model,
@@ -419,46 +417,15 @@ class SemanticSegmentor(PatchPredictor):
 
             batch_locs = batch_data["output_locs"].numpy()
 
-            # Use np.intersect1d once numpy version is upgraded to 2.0
-            full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
-            matches = [full_output_dict[tuple(row)] for row in batch_locs]
-
-            total_size = np.max(matches).astype(np.uint16) + 1
-            h, w, c = batch_output.shape[1:]
-
-            # Initialize full output array
-            full_batch_output = np.zeros(
-                (total_size, h, w, c), dtype=batch_output.dtype
-            )
-            full_batch_count = np.zeros_like(full_batch_output[:, :, :, 0:1]).astype(
-                np.uint8
-            )
-
-            # Place matching outputs using matching indices
-            full_batch_output[matches] = batch_output
-            full_batch_count[matches] = 1
-
-            output_locs = concatenate_none(
-                old_arr=output_locs, new_arr=full_output_locs[:total_size]
-            )
-            full_output_locs = full_output_locs[total_size:]
-
-            if batch_idx == len(dataloader) - 1:
-                output_locs = concatenate_none(
-                    old_arr=output_locs, new_arr=full_output_locs
+            full_batch_output, full_batch_count, full_output_locs, output_locs = (
+                prepare_full_batch(
+                    batch_output,
+                    batch_locs,
+                    full_output_locs,
+                    output_locs,
+                    is_last=(batch_idx == (len(dataloader) - 1)),
                 )
-                full_batch_output = concatenate_none(
-                    old_arr=full_batch_output,
-                    new_arr=np.zeros(
-                        shape=(len(full_output_locs), h, w, c), dtype=np.uint8
-                    ),
-                )
-                full_batch_count = concatenate_none(
-                    old_arr=full_batch_count,
-                    new_arr=np.zeros(
-                        shape=(len(full_output_locs), h, w, 1), dtype=np.uint8
-                    ),
-                )
+            )
 
             canvas_np = concatenate_none(old_arr=canvas_np, new_arr=full_batch_output)
             count_np = concatenate_none(old_arr=count_np, new_arr=full_batch_count)
@@ -516,7 +483,6 @@ class SemanticSegmentor(PatchPredictor):
             if self.return_labels:
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
-        logger.removeFilter(duplicate_filter)
         canvas, count, _, _, _, output_locs_y_ = flush_patches(
             canvas,
             count,
@@ -824,7 +790,7 @@ def flush_patches(
     canvas_np: np.ndarray,
     count_np: np.ndarray,
     output_locs: np.ndarray,
-    change_indices: np.ndarray,
+    change_indices: np.ndarray | list[np.ndarray],
 ) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Merge horizontal patches incrementally for each row of patches.
 
@@ -1003,7 +969,7 @@ def merge_vertical_chunkwise(
     canvas: da.Array,
     count: da.Array,
     output_locs_y_: np.ndarray,
-    zarr_group: zarr.Array,
+    zarr_group: zarr.Group,
 ) -> da.Array:
     """Merge vertically chunked canvas and count arrays into a single probability map.
 
@@ -1020,7 +986,7 @@ def merge_vertical_chunkwise(
         output_locs_y_ (np.ndarray):
             Array of shape (N, 2) specifying vertical output locations
             for each chunk, used to compute overlaps.
-        zarr_group (zarr.Array):
+        zarr_group (zarr.Group):
             Zarr group to store the merged probability dataset. If None,
             the result is returned as a Dask array.
 
@@ -1066,25 +1032,26 @@ def merge_vertical_chunkwise(
             )
 
         # Apply seam folding
-        th = top_halo
-        bh = bottom_halo
-        h = chunk.shape[0] - th - bh
-
+        h = chunk.shape[0] - top_halo - bottom_halo
         r = overlaps[i]
-        if r > 0 and chunk.shape[0] >= th + h + r:
-            chunk[th + h - r : th + h] += chunk[th + h : th + h + r]
-            count_chunk[th + h - r : th + h] += count_chunk[th + h : th + h + r]
+        if r > 0 and chunk.shape[0] >= top_halo + h + r:
+            chunk[top_halo + h - r : top_halo + h] += chunk[
+                top_halo + h : top_halo + h + r
+            ]
+            count_chunk[top_halo + h - r : top_halo + h] += count_chunk[
+                top_halo + h : top_halo + h + r
+            ]
 
         # Drop bottom halo
-        if bh > 0:
-            chunk = chunk[: th + h]
-            count_chunk = count_chunk[: th + h]
+        if bottom_halo > 0:
+            chunk = chunk[: top_halo + h]
+            count_chunk = count_chunk[: top_halo + h]
 
         # Drop top halo + duplicate seam
         if i > 0:
             overlap_above = overlaps[i - 1]
-            chunk = chunk[th + overlap_above :]
-            count_chunk = count_chunk[th + overlap_above :]
+            chunk = chunk[top_halo + overlap_above :]
+            count_chunk = count_chunk[top_halo + overlap_above :]
 
         # Normalize
         count_safe = np.where(count_chunk == 0, 1.0, count_chunk)
@@ -1093,27 +1060,13 @@ def merge_vertical_chunkwise(
 
         probabilities = chunk / count_safe.astype(np.float32)
 
-        if zarr_group is not None:
-            if probabilities_zarr is None:
-                probabilities_zarr = zarr_group.create_dataset(
-                    name="probabilities",
-                    shape=(0, *probabilities.shape[1:]),
-                    chunks=(chunk_shape[0], *probabilities.shape[1:]),
-                    dtype=probabilities.dtype,
-                    overwrite=True,
-                )
-
-            probabilities_zarr.resize(
-                (
-                    probabilities_zarr.shape[0] + probabilities.shape[0],
-                    *probabilities_zarr.shape[1:],
-                )
-            )
-            probabilities_zarr[-probabilities.shape[0] :] = probabilities
-        else:
-            probabilities_da = concatenate_none(
-                old_arr=probabilities_da, new_arr=da.from_array(probabilities)
-            )
+        probabilities_zarr, probabilities_da = store_probabilities(
+            probabilities,
+            chunk_shape,
+            probabilities_zarr,
+            probabilities_da,
+            zarr_group,
+        )
 
         prev_chunk, prev_count = curr_chunk, curr_count
         curr_chunk, curr_count = next_chunk, next_count
@@ -1127,3 +1080,126 @@ def merge_vertical_chunkwise(
         return da.from_zarr(probabilities_zarr)
 
     return probabilities_da
+
+
+def store_probabilities(
+    probabilities: np.ndarray,
+    chunk_shape: tuple[int, ...],
+    probabilities_zarr: zarr.Array | None,
+    probabilities_da: da.Array | None,
+    zarr_group: zarr.Group | None,
+) -> tuple[zarr.Array, da.Array]:
+    """Store computed probability data into a Zarr dataset or accumulate in memory.
+
+    If a Zarr group is provided, the function appends the given probability array
+    to the 'probabilities' dataset, resizing as needed. Otherwise, it concatenates
+    the array into an existing Dask array for in-memory accumulation.
+
+    Parameters:
+        probabilities (np.ndarray):
+            Computed probability array to store.
+        chunk_shape (tuple[int, ...]):
+            Chunk shape used for Zarr dataset creation.
+        probabilities_zarr (zarr.Array | None):
+            Existing Zarr dataset, or None to initialize.
+        probabilities_da (da.Array | None):
+            Existing Dask array for in-memory accumulation.
+        zarr_group (zarr.Group | None):
+            Zarr group used to create or access the dataset.
+
+    Returns:
+        tuple[zarr.Array | None, da.Array | None]:
+            Updated Zarr dataset and/or Dask array.
+
+    """
+    if zarr_group is not None:
+        if probabilities_zarr is None:
+            probabilities_zarr = zarr_group.create_dataset(
+                name="probabilities",
+                shape=(0, *probabilities.shape[1:]),
+                chunks=(chunk_shape[0], *probabilities.shape[1:]),
+                dtype=probabilities.dtype,
+            )
+
+        probabilities_zarr.resize(
+            (
+                probabilities_zarr.shape[0] + probabilities.shape[0],
+                *probabilities_zarr.shape[1:],
+            )
+        )
+        probabilities_zarr[-probabilities.shape[0] :] = probabilities
+    else:
+        probabilities_da = concatenate_none(
+            old_arr=probabilities_da, new_arr=da.from_array(probabilities)
+        )
+
+    return probabilities_zarr, probabilities_da
+
+
+def prepare_full_batch(
+    batch_output: np.ndarray,
+    batch_locs: np.ndarray,
+    full_output_locs: np.ndarray,
+    output_locs: np.ndarray,
+    *,
+    is_last: bool,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Prepare full-sized output and count arrays for a batch of patch predictions.
+
+    This function aligns patch-level predictions with global output locations when
+    a mask (e.g., auto_get_mask) is applied. This function initializes full-sized
+    arrays, and fills them using matched indices. If the batch is the last in
+    the sequence, it pads the arrays to cover remaining locations.
+
+    Parameters:
+        batch_output (np.ndarray):
+            Patch-level model predictions of shape (N, H, W, C).
+        batch_locs (np.ndarray):
+            Output locations corresponding to batch_output.
+        full_output_locs (np.ndarray):
+            Remaining global output locations to be matched.
+        output_locs (np.ndarray):
+            Accumulated output location array across batches.
+        is_last (bool):
+            Flag indicating whether this is the final batch.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+            - full_batch_output: Full-sized output array with predictions placed.
+            - full_batch_count: Count array indicating valid prediction positions.
+            - full_output_locs: Updated remaining global output locations.
+            - output_locs: Updated accumulated output locations.
+
+    """
+    # Use np.intersect1d once numpy version is upgraded to 2.0
+    full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
+    matches = [full_output_dict[tuple(row)] for row in batch_locs]
+
+    total_size = np.max(matches).astype(np.uint16) + 1
+    h, w, c = batch_output.shape[1:]
+
+    # Initialize full output array
+    full_batch_output = np.zeros((total_size, h, w, c), dtype=batch_output.dtype)
+    full_batch_count = np.zeros_like(full_batch_output[:, :, :, 0:1]).astype(np.uint8)
+
+    # Place matching outputs using matching indices
+    full_batch_output[matches] = batch_output
+    full_batch_count[matches] = 1
+
+    output_locs = concatenate_none(
+        old_arr=output_locs, new_arr=full_output_locs[:total_size]
+    )
+    full_output_locs = full_output_locs[total_size:]
+
+    if is_last:
+        output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs)
+        full_batch_output = concatenate_none(
+            old_arr=full_batch_output,
+            new_arr=np.zeros(shape=(len(full_output_locs), h, w, c), dtype=np.uint8),
+        )
+        full_batch_count = concatenate_none(
+            old_arr=full_batch_count,
+            new_arr=np.zeros(shape=(len(full_output_locs), h, w, 1), dtype=np.uint8),
+        )
+
+    return full_batch_output, full_batch_count, full_output_locs, output_locs
