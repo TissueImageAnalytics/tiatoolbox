@@ -871,6 +871,25 @@ def horizontal_merge_func(
     def merge_horizontal_seams_var(
         chunk: np.ndarray, block_info: list[dict[str, Any]] | None = None
     ) -> np.ndarray:
+        """Merge horizontal seams in a chunked array using overlap metadata.
+
+        This function folds overlapping regions between adjacent horizontal chunks,
+        trims halo regions, and removes duplicate seam columns to ensure smooth
+        transitions across chunk boundaries.
+
+        Parameters:
+            chunk (np.ndarray):
+                A chunk of the full array to be processed.
+            block_info (list[dict[str, Any]] | None):
+                Metadata describing the chunk's
+                location and total number of chunks along each axis.
+
+        Returns:
+            np.ndarray:
+                The processed chunk with horizontal seams merged and
+                halos trimmed.
+
+        """
         info = block_info[0]
         j = info["chunk-location"][1]
         n_j = info["num-chunks"][1]
