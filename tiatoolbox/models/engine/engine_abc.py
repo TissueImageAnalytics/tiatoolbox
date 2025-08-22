@@ -574,7 +574,7 @@ class EngineABC(ABC):  # noqa: B024
 
     def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: dask.array.Array | np.ndarray,
+        raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],  # noqa: ARG002
         prediction_dtype: type,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
@@ -586,8 +586,8 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array | np.ndarray):
-                Raw model predictions as a Dask array.
+            raw_predictions (dask.array.Array):
+                Raw model predictions as a dask array.
             prediction_shape (tuple[int, ...]):
                 Shape of the prediction output.
             prediction_dtype (type):
@@ -633,8 +633,8 @@ class EngineABC(ABC):  # noqa: B024
             dict | AnnotationStore | Path:
                 - If output_type is "dict": returns predictions as a dictionary.
                 - If output_type is "zarr": returns path to saved zarr file.
-                - If output_type is "annotationstore":
-                  returns an AnnotationStore or path to .db file.
+                - If output_type is "annotationstore": returns an AnnotationStore
+                  or path to .db file.
 
         Raises:
             TypeError:
@@ -731,7 +731,7 @@ class EngineABC(ABC):  # noqa: B024
     # This is not a static model for child classes.
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: dask.array.Array | np.ndarray,
+        raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],  # noqa: ARG002
         prediction_dtype: type,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
@@ -743,7 +743,7 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array | np.ndarray):
+            raw_predictions (dask.array.Array):
                 Raw model predictions as a Dask array.
             prediction_shape (tuple[int, ...]):
                 Shape of the prediction output.
@@ -806,19 +806,16 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             ioconfig (ModelIOConfigABC):
                 Existing IO configuration to update. If None, a new one is created.
-
             patch_input_shape (IntPair):
                 Size of patches input to the model (height, width). Patches are at
                 requested read resolution, not with respect to level 0,
                 and must be positive.
-
             stride_shape (IntPair):
                 Stride used during patch extraction.
                 If None, defaults to patch_input_shape.
                 Stride is at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
                 `stride_shape=patch_input_shape`.
-
             input_resolutions (list[dict[Units, Resolution]]):
                 List of dictionaries specifying resolution and units
                 for each input head. Supported units are `level`, `power` and `mpp`.
@@ -892,7 +889,6 @@ class EngineABC(ABC):  # noqa: B024
         Raises:
             TypeError:
                 If the input is neither a list nor a NumPy array.
-
             ValueError:
                 If the input is a NumPy array but not 4D (NHWC).
 
@@ -965,8 +961,8 @@ class EngineABC(ABC):  # noqa: B024
 
     def _update_run_params(
         self: EngineABC,
-        images: list[os.PathLike | WSIReader] | np.ndarray,
-        masks: list[os.PathLike] | np.ndarray | None = None,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
@@ -982,9 +978,9 @@ class EngineABC(ABC):  # noqa: B024
         IO configuration, and output format based on user input and keyword arguments.
 
         Args:
-            images (list[PathLike | WSIReader] | np.ndarray):
+            images (list[PathLike | Path | WSIReader] | np.ndarray):
                 List of input images or a NumPy array of patches.
-            masks (list[PathLike] | np.ndarray | None):
+            masks (list[PathLike | Path] | np.ndarray | None):
                 Optional list of masks for WSI processing.
             labels (list | None):
                 Optional list of labels for input images.
