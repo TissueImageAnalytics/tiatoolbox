@@ -1503,6 +1503,27 @@ def _tiles(
     colormap: int = cv2.COLORMAP_JET,
     level: int = 0,
 ) -> Iterator[np.ndarray]:
+    """Generate color-mapped tiles from an input image or Zarr array.
+
+    This function iterates over the input image in non-overlapping tiles of the
+    specified size, optionally downsampling by a power-of-two factor (`level`),
+    and applies a colormap to each tile before yielding it.
+
+    Parameters:
+        in_img (np.ndarray | zarr.core.Array):
+            Input image or Zarr array to be tiled.
+        tile_size (tuple[int, int]):
+            Height and width of each tile.
+        colormap (int, optional):
+            OpenCV colormap to apply to each tile. Defaults to cv2.COLORMAP_JET.
+        level (int, optional):
+            Downsampling factor as a power of two. Defaults to 0 (no downsampling).
+
+    Yields:
+        np.ndarray:
+            A color-mapped tile extracted from the input image.
+
+    """
     for y in trange(0, in_img.shape[0], tile_size[0]):
         for x in range(0, in_img.shape[1], tile_size[1]):
             in_img_ = in_img[
