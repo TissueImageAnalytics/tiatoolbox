@@ -441,20 +441,7 @@ class WSIPatchDataset(PatchDatasetABC):
         patch_input_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
 
-        if (
-            not np.issubdtype(patch_input_shape.dtype, np.integer)
-            or np.size(patch_input_shape) > 2  # noqa: PLR2004
-            or np.any(patch_input_shape < 0)
-        ):
-            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
-            raise ValueError(msg)
-        if (
-            not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2  # noqa: PLR2004
-            or np.any(stride_shape < 0)
-        ):
-            msg = f"Invalid `stride_shape` value {stride_shape}."
-            raise ValueError(msg)
+        _validate_patch_stride_shape(patch_input_shape, stride_shape)
 
         self.preproc_func = preproc_func
         img_path = Path(img_path)
@@ -475,6 +462,7 @@ class WSIPatchDataset(PatchDatasetABC):
                 stride_shape=stride_shape[::-1],
                 patch_output_shape=patch_output_shape,
             )
+            self.full_outputs = self.outputs
         else:
             self.inputs = PatchExtractor.get_coordinates(
                 image_shape=wsi_shape,
@@ -510,6 +498,7 @@ class WSIPatchDataset(PatchDatasetABC):
             )
             self.inputs = self.inputs[selected]
             if hasattr(self, "outputs"):
+                self.full_outputs = self.outputs  # Full list of outputs
                 self.outputs = self.outputs[selected]
 
         if len(self.inputs) == 0:
@@ -639,3 +628,40 @@ class PatchDataset(PatchDatasetABC):
             return data
 
         return data
+
+
+def _validate_patch_stride_shape(
+    patch_input_shape: np.ndarray, stride_shape: np.ndarray
+) -> None:
+    """Validate patch and stride shape inputs for semantic segmentation.
+
+    Checks that both `patch_input_shape` and `stride_shape` are integer arrays of
+    length ≤ 2 and contain non-negative values. Raises a ValueError if any
+    condition fails.
+
+    Parameters:
+        patch_input_shape (np.ndarray):
+            Shape of the input patch (e.g., height, width).
+        stride_shape (np.ndarray):
+            Stride dimensions used for patch extraction.
+
+    Raises:
+        ValueError:
+            If either input is not a valid integer array of appropriate
+            shape and values.
+
+    """
+    if (
+        not np.issubdtype(patch_input_shape.dtype, np.integer)
+        or np.size(patch_input_shape) > 2  # noqa: PLR2004
+        or np.any(patch_input_shape < 0)
+    ):
+        msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+        raise ValueError(msg)
+    if (
+        not np.issubdtype(stride_shape.dtype, np.integer)
+        or np.size(stride_shape) > 2  # noqa: PLR2004
+        or np.any(stride_shape < 0)
+    ):
+        msg = f"Invalid `stride_shape` value {stride_shape}."
+        raise ValueError(msg)

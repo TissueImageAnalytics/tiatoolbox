@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
@@ -15,6 +15,9 @@ from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
+
+if TYPE_CHECKING:
+    import pytest
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -212,14 +215,16 @@ def test_wsi_segmentor_zarr(
     remote_sample: Callable,
     sample_svs: Path,
     tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test SemanticSegmentor for WSIs with zarr output."""
     wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
 
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
-        batch_size=32,
+        batch_size=64,
         verbose=False,
+        num_loader_workers=1,
     )
     # Return Probabilities is False
     output = segmentor.run(
@@ -229,15 +234,26 @@ def test_wsi_segmentor_zarr(
         device=device,
         patch_mode=False,
         save_dir=tmp_path / "wsi_out_check",
+        batch_size=2,
         output_type="zarr",
+        memory_threshold=1,
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
     assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
     assert "probabilities" not in output_
+    assert "canvas" not in output_
+    assert "count" not in output_
+    assert "Current Memory usage:" in caplog.text
 
     # Return Probabilities is True
     # Using small image for faster run
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=32,
+        verbose=False,
+        num_loader_workers=1,
+    )
     segmentor.drop_keys = []
     output = segmentor.run(
         images=[sample_svs, wsi1_2k_2k_svs],
