@@ -423,7 +423,7 @@ class UNetModel(ModelABC):
         batch_data: torch.Tensor,
         *,
         device: str,
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as i/o

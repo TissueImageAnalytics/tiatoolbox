@@ -40,7 +40,7 @@ def test_functionality(
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=map_location)
-    output, _ = model.postproc(output[0])
+    output, _ = model.postproc(output)
     assert np.max(np.unique(output)) == 46
 
 
@@ -61,17 +61,15 @@ def test_micronet_output(remote_sample: Callable, tmp_path: Path) -> None:
     pretrained_model = "micronet-consep"
     batch_size = 5
     num_loader_workers = 0
-    num_postproc_workers = 0
 
     predictor = SemanticSegmentor(
-        pretrained_model=pretrained_model,
+        model=pretrained_model,
         batch_size=batch_size,
         num_loader_workers=num_loader_workers,
-        num_postproc_workers=num_postproc_workers,
     )
 
-    output = predictor.predict(
-        imgs=[
+    output = predictor.run(
+        images=[
             svs_1_small,
         ],
         save_dir=tmp_path / "output",
