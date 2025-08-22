@@ -1008,7 +1008,7 @@ class EngineABC(ABC):  # noqa: B024
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
 
-        if self.num_post_proc_workers is not None and self.num_post_proc_workers > 0:
+        if self.num_loader_workers is not None and self.num_loader_workers > 0:
             dask.config.set(scheduler="threads", num_workers=self.num_loader_workers)
         else:
             dask.config.set(scheduler="threads")

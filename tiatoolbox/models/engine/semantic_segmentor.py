@@ -376,7 +376,7 @@ class SemanticSegmentor(PatchPredictor):
         memory_threshold = kwargs.get("memory_threshold", 80)
         vm = psutil.virtual_memory()
 
-        # Based on conservative estimate dask length of 10K runs
+        # Based on conservative estimate dask length of 10K
         # without errors on 32GB virtual memory.
         da_length_threshold = vm.available / 32e9 * 10e3
         da_length_threshold = kwargs.get("da_length_threshold", da_length_threshold)
@@ -446,9 +446,6 @@ class SemanticSegmentor(PatchPredictor):
                 )
 
                 used_percent = vm.percent
-                # Cache the output if Memory threshold is reached
-                # Or if length of dask graph is too long.
-                # 50000 is estimated based on trial and error for 64 GB RAM
                 if (
                     used_percent > memory_threshold
                     or len(canvas.dask) > da_length_threshold
@@ -501,8 +498,6 @@ class SemanticSegmentor(PatchPredictor):
             canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
             zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
-
-        np.save("output-locs-y.npy", output_locs_y_)
 
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
@@ -984,7 +979,7 @@ def save_to_cache(
     return canvas_zarr, count_zarr
 
 
-def merge_vertical_chunkwise(
+def merge_vertical_chunkwise(  # skipcq: PY-R1000
     canvas: da.Array,
     count: da.Array,
     output_locs_y_: np.ndarray,
