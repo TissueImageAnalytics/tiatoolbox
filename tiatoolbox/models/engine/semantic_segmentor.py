@@ -768,6 +768,26 @@ def stack_blocks_to_dask(blocks: np.ndarray, *, count: bool = False) -> da.Array
 def merge_horizontal(
     canvas_np_: np.ndarray, count_np_: np.ndarray, output_locs_: np.ndarray
 ) -> tuple[da.Array, da.Array]:
+    """Merge horizontally stacked canvas and count patches.
+
+    Computes overlaps between adjacent patches and applies seam folding using
+    Dask's map_overlap. Returns merged canvas and count arrays.
+
+    Parameters:
+        canvas_np_ (np.ndarray):
+            Array of canvas patches to be merged horizontally.
+        count_np_ (np.ndarray):
+            Array of count patches corresponding to canvas_np_.
+        output_locs_ (np.ndarray):
+            Array of shape (N, 4) containing spatial coordinates
+            for each patch, used to calculate overlaps.
+
+    Returns:
+        tuple[da.Array, da.Array]:
+            - canvas_merge: Dask array of merged canvas patches with seams folded.
+            - count_merge: Dask array of merged count patches aligned with canvas_merge.
+
+    """
     overlaps = np.append(output_locs_[:-1, 2] - output_locs_[1:, 0], 0)
     max_overlap = np.max(overlaps)
     merge_func = horizontal_merge_func(overlaps, max_overlap)
@@ -806,6 +826,37 @@ def flush_patches(
     output_locs: np.ndarray,
     change_indices: np.ndarray,
 ) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Merge horizontal patches incrementally for each row of patches.
+
+    Additionally, updates canvas, count, and location arrays based on change indices.
+
+    This function processes segments of NumPy patch arrays (`canvas_np`, `count_np`,
+    `output_locs`) based on `change_indices`, merging them horizontally and appending
+    the results to Dask arrays. It also updates the vertical output locations
+    (`output_locs_y_`) for downstream merging.
+
+    Parameters:
+        canvas (None | da.Array):
+            Existing Dask array for canvas data, or None if uninitialized.
+        count (None | da.Array):
+            Existing Dask array for count data, or None if uninitialized.
+        output_locs_y_ (np.ndarray):
+            Array tracking vertical output locations for merged patches.
+        canvas_np (np.ndarray):
+            NumPy array of canvas patches to be merged.
+        count_np (np.ndarray):
+            NumPy array of count patches to be merged.
+        output_locs (np.ndarray):
+            Array of output locations for each patch.
+        change_indices (np.ndarray):
+            Indices indicating where to flush and merge patches.
+
+    Returns:
+        tuple:
+            Updated canvas and count Dask arrays, along with remaining canvas_np,
+            count_np, output_locs, and output_locs_y_ arrays after processing.
+
+    """
     start_idx = 0
     for c_idx in change_indices:
         output_locs_ = output_locs[: c_idx - start_idx]
@@ -833,6 +884,24 @@ def flush_patches(
 def horizontal_merge_func(
     overlaps: np.ndarray, max_overlap: int
 ) -> Callable[[np.ndarray, list[dict[str, Any]]], np.ndarray]:
+    """Create a function to merge horizontal seams in chunked arrays.
+
+    Returns a callable that folds overlapping regions, trims halos, and removes
+    duplicate seam columns based on chunk metadata and overlap configuration.
+
+    Parameters:
+        overlaps (np.ndarray):
+            Array of overlap widths between adjacent chunks.
+        max_overlap (int):
+            Maximum overlap size used to define halo regions.
+
+    Returns:
+        Callable:
+            A function that takes a chunk and its block info, and returns
+            the horizontally merged chunk.
+
+    """
+
     def merge_horizontal_seams_var(
         chunk: np.ndarray, block_info: list[dict[str, Any]] | None = None
     ) -> np.ndarray:
@@ -871,6 +940,30 @@ def save_to_cache(
     count_zarr: zarr.Array,
     save_path: str | Path = "temp.zarr",
 ) -> tuple[zarr.Array, zarr.Array]:
+    """Save computed canvas and count arrays to Zarr cache.
+
+    This function computes the given Dask arrays (`canvas` and `count`), resizes the
+    corresponding Zarr datasets to accommodate the new data, and appends the results.
+    If the Zarr datasets do not exist, it initializes them within the specified
+    Zarr group.
+
+    Parameters:
+        canvas (da.Array):
+            Dask array representing image or feature data.
+        count (da.Array):
+            Dask array representing count or normalization data.
+        canvas_zarr (zarr.Array):
+            Existing Zarr dataset for canvas data. If None, a new one is created.
+        count_zarr (zarr.Array):
+            Existing Zarr dataset for count data. If None, a new one is created.
+        save_path (str | Path, optional):
+            Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
+
+    Returns:
+        tuple[zarr.Array, zarr.Array]:
+            Updated Zarr datasets for canvas and count arrays.
+
+    """
     canvas_computed = canvas.compute()
     count_computed = count.compute()
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
@@ -912,6 +1005,31 @@ def merge_vertical_chunkwise(
     output_locs_y_: np.ndarray,
     zarr_group: zarr.Array,
 ) -> da.Array:
+    """Merge vertically chunked canvas and count arrays into a single probability map.
+
+    This function processes vertically stacked image blocks (canvas) and their
+    associated count arrays to compute normalized probabilities. It handles overlapping
+    regions between chunks by applying seam folding and trimming halos to ensure smooth
+    transitions.
+
+    Parameters:
+        canvas (da.Array):
+            Dask array containing image data split into vertical chunks.
+        count (da.Array):
+            Dask array containing count data corresponding to the canvas.
+        output_locs_y_ (np.ndarray):
+            Array of shape (N, 2) specifying vertical output locations
+            for each chunk, used to compute overlaps.
+        zarr_group (zarr.Array):
+            Zarr group to store the merged probability dataset. If None,
+            the result is returned as a Dask array.
+
+    Returns:
+        da.Array:
+            A merged Dask array of normalized probabilities, either loaded from Zarr
+            or constructed in memory.
+
+    """
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
     overlaps = np.append(y1s[:-1] - y0s[1:], 0)
     max_overlap = np.max(overlaps)
