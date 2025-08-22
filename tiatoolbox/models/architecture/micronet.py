@@ -629,7 +629,7 @@ class MicroNet(ModelABC):
         batch_data: torch.Tensor,
         *,
         device: str,
-    ) -> np.ndarray:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -660,4 +660,8 @@ class MicroNet(ModelABC):
             pred, _, _, _ = model(patch_imgs_gpu)
 
         pred = pred.permute(0, 2, 3, 1).contiguous()
-        return pred.cpu().numpy()
+        pred = pred.cpu().numpy()
+
+        return [
+            pred,
+        ]

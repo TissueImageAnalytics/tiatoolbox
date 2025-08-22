@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models import MicroNet, SemanticSegmentor
+from tiatoolbox.models import MicroNet, NucleusInstanceSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
@@ -40,7 +40,7 @@ def test_functionality(
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=map_location)
-    output, _ = model.postproc(output)
+    output, _ = model.postproc(output[0])
     assert np.max(np.unique(output)) == 46
 
 
@@ -61,15 +61,17 @@ def test_micronet_output(remote_sample: Callable, tmp_path: Path) -> None:
     pretrained_model = "micronet-consep"
     batch_size = 5
     num_loader_workers = 0
+    num_postproc_workers = 0
 
-    predictor = SemanticSegmentor(
-        model=pretrained_model,
+    predictor = NucleusInstanceSegmentor(
+        pretrained_model=pretrained_model,
         batch_size=batch_size,
         num_loader_workers=num_loader_workers,
+        num_postproc_workers=num_postproc_workers,
     )
 
-    output = predictor.run(
-        images=[
+    output = predictor.predict(
+        imgs=[
             svs_1_small,
         ],
         save_dir=tmp_path / "output",
