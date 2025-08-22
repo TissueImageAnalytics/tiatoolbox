@@ -100,7 +100,7 @@ class EngineABCRunParams(TypedDict, total=False):
         num_workers (int):
             Number of workers for DataLoader and post-processing.
         output_file (str):
-            Filename for saving output (e.g., .zarr or .db).
+            Filename for saving output (e.g., "zarr" or "annotationstore").
         patch_input_shape (IntPair):
             Shape of input patches (height, width), requested at read resolution.
             Must be positive.
@@ -181,7 +181,7 @@ class EngineABC(ABC):  # noqa: B024
             the saved image masks. These are only utilized when patch_mode is False.
             Patches are only generated within a masked area.
             If not provided, then a tissue mask will be automatically
-            generated for whole slide images.
+            generated for whole slide images, if auto_get_mask is True.
         patch_mode (bool):
             Whether input is treated as patches. TIAToolbox defines
             an image as a patch if HWC of the input image matches with the HWC expected
@@ -219,13 +219,27 @@ class EngineABC(ABC):  # noqa: B024
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
         batch_size (int):
-            Number of images fed into the model each time.
+            Number of patches per forward pass.
         labels (list | None):
-            Optional labels for input images.
-            Only a single label per image is supported.
+            Optional labels for input images. Only a single label per image is
+            supported.
+        num_workers (int):
+            Number of workers for data loading.
+        patch_input_shape (IntPair | None):
+            Shape of input patches.
+        input_resolutions (list[dict[Units, Resolution]] | None):
+            Resolution settings for input heads.
+        return_labels (bool):
+            Whether to return labels with predictions.
+        stride_shape (IntPair | None):
+            Stride used during WSI processing.
+        verbose (bool):
+            Whether to enable verbose logging.
+        dataloader (DataLoader | None):
+            Torch DataLoader for inference.
         drop_keys (list):
             Keys to exclude from model output.
-        output_type (str):
+        output_type (Any):
             Format of output ("dict", "zarr", "AnnotationStore").
         verbose (bool):
             Whether to enable verbose logging.
