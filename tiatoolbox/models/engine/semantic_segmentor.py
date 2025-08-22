@@ -376,6 +376,11 @@ class SemanticSegmentor(PatchPredictor):
         memory_threshold = kwargs.get("memory_threshold", 80)
         vm = psutil.virtual_memory()
 
+        # Based on conservative estimate dask length of 10K runs
+        # without errors on 32GB virtual memory.
+        da_length_threshold = vm.available / 32e9 * 10e3
+        da_length_threshold = kwargs.get("da_length_threshold", da_length_threshold)
+
         keys = ["probabilities", "coordinates"]
         if self.return_labels:
             keys.append("labels")
@@ -477,14 +482,17 @@ class SemanticSegmentor(PatchPredictor):
                 # Cache the output if Memory threshold is reached
                 # Or if length of dask graph is too long.
                 # 50000 is estimated based on trial and error for 64 GB RAM
-                if used_percent > memory_threshold or len(canvas.dask) > 10e3:
+                if (
+                    used_percent > memory_threshold
+                    or len(canvas.dask) > da_length_threshold
+                ):
                     tqdm_loop.desc = "Spilling to disk "
                     msg = (
                         f"Current Memory usage: {used_percent} %  "
                         f"exceeds specified threshold: {memory_threshold}. "
                         if used_percent > memory_threshold
                         else f"Canvas task graph length: {len(canvas.dask)} "
-                        f"exceeds specified threshold: {10e3}. "
+                        f"exceeds specified threshold: {da_length_threshold}. "
                     ) + "Saving intermediate results to disk."
                     logger.info(msg)
                     # Flush data in Memory and clear dask graph

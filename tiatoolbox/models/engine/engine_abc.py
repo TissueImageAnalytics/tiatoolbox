@@ -129,6 +129,7 @@ class EngineABCRunParams(TypedDict, total=False):
     scale_factor: tuple[float, float]
     stride_shape: IntPair
     memory_threshold: int
+    da_length_threshold: int
     auto_get_mask: bool
     verbose: bool
 
