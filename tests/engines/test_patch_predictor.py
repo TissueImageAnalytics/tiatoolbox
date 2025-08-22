@@ -225,7 +225,6 @@ def test_patch_predictor_api(
         model="resnet18-kather100k",
         weights=pretrained_weights,
         batch_size=1,
-        num_loader_workers=1,
     )
     ioconfig = predictor.ioconfig
 
@@ -239,6 +238,7 @@ def test_patch_predictor_api(
         return_labels=True,
         ioconfig=ioconfig,
         return_probabilities=True,
+        num_loader_workers=1,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["probabilities"]) == len(output["labels"])
@@ -330,7 +330,6 @@ def test_patch_predictor_kather100k_output(
             classification_check=[6, 3],
         )
 
-    # cache mode
     for model, expected_prob in pretrained_info.items():
         _test_predictor_output(
             inputs,

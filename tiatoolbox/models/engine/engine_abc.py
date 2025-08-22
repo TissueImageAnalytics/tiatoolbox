@@ -1046,7 +1046,7 @@ class EngineABC(ABC):  # noqa: B024
 
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
-        self.model.to(device=self.device)
+        self.model = self.model.to(device=self.device)
         self._ioconfig = self._update_ioconfig(
             ioconfig,
             self.patch_input_shape,

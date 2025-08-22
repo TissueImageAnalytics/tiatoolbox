@@ -68,7 +68,6 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         return_labels=False,
         device=device,
         patch_mode=True,
-        cache_mode=True,
         save_dir=tmp_path / "output0",
     )
 
@@ -84,7 +83,6 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         return_labels=False,
         device=device,
         patch_mode=True,
-        cache_mode=True,
         output_type="zarr",
         save_dir=tmp_path / "output1",
     )
@@ -101,7 +99,6 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         return_labels=False,
         device=device,
         patch_mode=True,
-        cache_mode=False,
         save_dir=tmp_path / "output2",
         output_type="zarr",
     )
@@ -156,7 +153,6 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
         return_labels=False,
         device=device,
         patch_mode=True,
-        cache_mode=False,
         save_dir=tmp_path / "output1",
         output_type="annotationstore",
         verbose=True,
@@ -176,7 +172,7 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
     sample_image = remote_sample("thumbnail-1k-1k")
 
     input_image = imread(sample_image)
-    inputs_list = [input_image, input_image]
+    inputs_list = np.array([input_image, input_image])
 
     output = segmentor.run(
         images=inputs_list,
@@ -184,7 +180,6 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
         return_labels=False,
         device=device,
         patch_mode=True,
-        cache_mode=True,
         save_dir=tmp_path / "output1",
         output_type="annotationstore",
     )
@@ -203,7 +198,6 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
         return_labels=False,
         device=device,
         patch_mode=True,
-        cache_mode=True,
         save_dir=tmp_path / "output2",
         output_type="annotationstore",
     )
