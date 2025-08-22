@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import gc
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 import dask.array as da
 import numpy as np
@@ -750,7 +750,7 @@ def concatenate_none(
     return new_arr if old_arr is None else da.concatenate([old_arr, new_arr], axis=0)
 
 
-def stack_blocks_to_dask(blocks, count=False):
+def stack_blocks_to_dask(blocks: np.ndarray, *, count: bool = False) -> da.Array:
     """Stack a list of NumPy blocks into a Dask array with column-wise chunking."""
     if count:
         return da.concatenate(
@@ -765,7 +765,9 @@ def stack_blocks_to_dask(blocks, count=False):
     )
 
 
-def merge_horizontal(canvas_np_, count_np_, output_locs_):
+def merge_horizontal(
+    canvas_np_: np.ndarray, count_np_: np.ndarray, output_locs_: np.ndarray
+) -> tuple[da.Array, da.Array]:
     overlaps = np.append(output_locs_[:-1, 2] - output_locs_[1:, 0], 0)
     max_overlap = np.max(overlaps)
     merge_func = horizontal_merge_func(overlaps, max_overlap)
@@ -796,8 +798,14 @@ def merge_horizontal(canvas_np_, count_np_, output_locs_):
 
 
 def flush_patches(
-    canvas, count, output_locs_y_, canvas_np, count_np, output_locs, change_indices
-):
+    canvas: None | da.Array,
+    count: None | da.Array,
+    output_locs_y_: np.ndarray,
+    canvas_np: np.ndarray,
+    count_np: np.ndarray,
+    output_locs: np.ndarray,
+    change_indices: np.ndarray,
+) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     start_idx = 0
     for c_idx in change_indices:
         output_locs_ = output_locs[: c_idx - start_idx]
@@ -822,30 +830,34 @@ def flush_patches(
     return canvas, count, canvas_np, count_np, output_locs, output_locs_y_
 
 
-def horizontal_merge_func(overlaps, max_overlap):
-    def merge_horizontal_seams_var(chunk, block_info=None):
+def horizontal_merge_func(
+    overlaps: np.ndarray, max_overlap: int
+) -> Callable[[np.ndarray, list[dict[str, Any]]], np.ndarray]:
+    def merge_horizontal_seams_var(
+        chunk: np.ndarray, block_info: list[dict[str, Any]] | None = None
+    ) -> np.ndarray:
         info = block_info[0]
         j = info["chunk-location"][1]
-        nJ = info["num-chunks"][1]
-        LH = max_overlap if j > 0 else 0
-        RH = max_overlap if j < nJ - 1 else 0
-        W = chunk.shape[1] - LH - RH
+        n_j = info["num-chunks"][1]
+        lh = max_overlap if j > 0 else 0
+        rh = max_overlap if j < n_j - 1 else 0
+        w = chunk.shape[1] - lh - rh
 
         # Fold right halo
         right_overlap = overlaps[j]
         if right_overlap > 0:
-            chunk[:, LH + W - right_overlap : LH + W, :] += chunk[
-                :, LH + W : LH + W + right_overlap, :
+            chunk[:, lh + w - right_overlap : lh + w, :] += chunk[
+                :, lh + w : lh + w + right_overlap, :
             ]
 
         # Drop right halo
-        if RH > 0:
-            chunk = chunk[:, : LH + W, :]
+        if rh > 0:
+            chunk = chunk[:, : lh + w, :]
 
         # Drop left halo + duplicate seam cols
         if j > 0:
             left_overlap = overlaps[j - 1]
-            chunk = chunk[:, LH + left_overlap :, :]
+            chunk = chunk[:, lh + left_overlap :, :]
 
         return chunk
 
@@ -853,8 +865,12 @@ def horizontal_merge_func(overlaps, max_overlap):
 
 
 def save_to_cache(
-    canvas, count, canvas_zarr, count_zarr, save_path: str | Path = "temp.zarr"
-):
+    canvas: da.Array,
+    count: da.Array,
+    canvas_zarr: zarr.Array,
+    count_zarr: zarr.Array,
+    save_path: str | Path = "temp.zarr",
+) -> tuple[zarr.Array, zarr.Array]:
     canvas_computed = canvas.compute()
     count_computed = count.compute()
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
@@ -890,7 +906,12 @@ def save_to_cache(
     return canvas_zarr, count_zarr
 
 
-def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
+def merge_vertical_chunkwise(
+    canvas: da.Array,
+    count: da.Array,
+    output_locs_y_: np.ndarray,
+    zarr_group: zarr.Array,
+) -> da.Array:
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
     overlaps = np.append(y1s[:-1] - y0s[1:], 0)
     max_overlap = np.max(overlaps)
@@ -927,25 +948,25 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
             )
 
         # Apply seam folding
-        TH = top_halo
-        BH = bottom_halo
-        H = chunk.shape[0] - TH - BH
+        th = top_halo
+        bh = bottom_halo
+        h = chunk.shape[0] - th - bh
 
         r = overlaps[i]
-        if r > 0 and chunk.shape[0] >= TH + H + r:
-            chunk[TH + H - r : TH + H] += chunk[TH + H : TH + H + r]
-            count_chunk[TH + H - r : TH + H] += count_chunk[TH + H : TH + H + r]
+        if r > 0 and chunk.shape[0] >= th + h + r:
+            chunk[th + h - r : th + h] += chunk[th + h : th + h + r]
+            count_chunk[th + h - r : th + h] += count_chunk[th + h : th + h + r]
 
         # Drop bottom halo
-        if BH > 0:
-            chunk = chunk[: TH + H]
-            count_chunk = count_chunk[: TH + H]
+        if bh > 0:
+            chunk = chunk[: th + h]
+            count_chunk = count_chunk[: th + h]
 
         # Drop top halo + duplicate seam
         if i > 0:
             overlap_above = overlaps[i - 1]
-            chunk = chunk[TH + overlap_above :]
-            count_chunk = count_chunk[TH + overlap_above :]
+            chunk = chunk[th + overlap_above :]
+            count_chunk = count_chunk[th + overlap_above :]
 
         # Normalize
         count_safe = np.where(count_chunk == 0, 1.0, count_chunk)
