@@ -275,6 +275,7 @@ class SemanticSegmentor(PatchPredictor):
         ioconfig: SemanticSegmentorRunParams | None = None,
         *,
         patch_mode: bool = True,
+        auto_get_mask: bool = True,
     ) -> torch.utils.data.DataLoader:
         """Pre-process images and masks and return a DataLoader for inference.
 
@@ -294,6 +295,12 @@ class SemanticSegmentor(PatchPredictor):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
+            auto_get_mask (bool):
+                Auto generates tissue mask using `wsireader.tissue_mask()` when
+                patch_mode is False.
+                If set to `True`, this mask processes only the tissue regions in the
+                image. If `False` all the patches in the image are processed.
+                Default is `True`.
 
         Returns:
             torch.utils.data.DataLoader:
@@ -310,7 +317,7 @@ class SemanticSegmentor(PatchPredictor):
                 stride_shape=ioconfig.stride_shape,
                 resolution=ioconfig.input_resolutions[0]["resolution"],
                 units=ioconfig.input_resolutions[0]["units"],
-                # auto_get_mask=False,
+                auto_get_mask=auto_get_mask,
             )
 
             dataset.preproc_func = self.model.preproc_func
@@ -470,14 +477,14 @@ class SemanticSegmentor(PatchPredictor):
                 # Cache the output if Memory threshold is reached
                 # Or if length of dask graph is too long.
                 # 50000 is estimated based on trial and error for 64 GB RAM
-                if used_percent > memory_threshold or len(canvas.dask) > 25e3:
+                if used_percent > memory_threshold or len(canvas.dask) > 10e3:
                     tqdm_loop.desc = "Spilling to disk "
                     msg = (
                         f"Current Memory usage: {used_percent} %  "
                         f"exceeds specified threshold: {memory_threshold}. "
                         if used_percent > memory_threshold
                         else f"Canvas task graph length: {len(canvas.dask)} "
-                        f"exceeds specified threshold: {25e3}. "
+                        f"exceeds specified threshold: {10e3}. "
                     ) + "Saving intermediate results to disk."
                     logger.info(msg)
                     # Flush data in Memory and clear dask graph

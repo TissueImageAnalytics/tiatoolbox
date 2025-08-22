@@ -71,58 +71,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def prepare_engines_save_dir(
-    save_dir: str | Path | None,
-    *,
-    patch_mode: bool,
-    overwrite: bool = False,
-) -> Path | None:
-    """Create or validate the save directory for engine outputs.
-
-    Args:
-        save_dir (str | Path | None):
-            Path to the output directory.
-        patch_mode (bool):
-            Whether the input is treated as patches.
-        overwrite (bool):
-            Whether to overwrite existing directory. Default is False.
-
-    Returns:
-        Path | None:
-            Path to the output directory if created or validated, else None.
-
-    Raises:
-        OSError:
-            If patch_mode is False and save_dir is not provided.
-
-    """
-    if patch_mode:
-        if save_dir is not None:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=overwrite)
-            return save_dir
-        return None
-
-    if save_dir is None:
-        msg = (
-            "Input WSIs detected but no save directory provided. "
-            "Please provide a 'save_dir'."
-        )
-        raise OSError(msg)
-
-    logger.info(
-        "When providing multiple whole slide images, "
-        "the outputs will be saved and the locations of outputs "
-        "will be returned to the calling function when `run()` "
-        "finishes successfully."
-    )
-
-    save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=overwrite)
-
-    return save_dir
-
-
 class EngineABCRunParams(TypedDict, total=False):
     """Parameters for configuring the :func:`EngineABC.run()` method.
 
@@ -181,6 +129,7 @@ class EngineABCRunParams(TypedDict, total=False):
     scale_factor: tuple[float, float]
     stride_shape: IntPair
     memory_threshold: int
+    auto_get_mask: bool
     verbose: bool
 
 
@@ -433,6 +382,7 @@ class EngineABC(ABC):  # noqa: B024
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
+        auto_get_mask: bool = True,
     ) -> torch.utils.data.DataLoader:
         """Pre-process images and masks and return a DataLoader for inference.
 
@@ -451,6 +401,12 @@ class EngineABC(ABC):  # noqa: B024
                 IO configuration object specifying patch size, stride, and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
+            auto_get_mask (bool):
+                Auto generates tissue mask using `wsireader.tissue_mask()` when
+                patch_mode is False.
+                If set to `True`, this mask processes only the tissue regions in the
+                image. If `False` all the patches in the image are processed.
+                Default is `True`.
 
         Returns:
             torch.utils.data.DataLoader:
@@ -469,6 +425,7 @@ class EngineABC(ABC):  # noqa: B024
                 stride_shape=ioconfig.stride_shape,
                 resolution=ioconfig.input_resolutions[0]["resolution"],
                 units=ioconfig.input_resolutions[0]["units"],
+                auto_get_mask=auto_get_mask,
             )
 
             dataset.preproc_func = self.model.preproc_func
@@ -1273,6 +1230,7 @@ class EngineABC(ABC):  # noqa: B024
                 masks=mask,
                 patch_mode=False,
                 ioconfig=self._ioconfig,
+                auto_get_mask=kwargs.get("auto_get_mask", True),
             )
 
             scale_factor = self._calculate_scale_factor(dataloader=self.dataloader)
@@ -1410,3 +1368,55 @@ class EngineABC(ABC):  # noqa: B024
             save_dir=save_dir,
             **kwargs,
         )
+
+
+def prepare_engines_save_dir(
+    save_dir: str | Path | None,
+    *,
+    patch_mode: bool,
+    overwrite: bool = False,
+) -> Path | None:
+    """Create or validate the save directory for engine outputs.
+
+    Args:
+        save_dir (str | Path | None):
+            Path to the output directory.
+        patch_mode (bool):
+            Whether the input is treated as patches.
+        overwrite (bool):
+            Whether to overwrite existing directory. Default is False.
+
+    Returns:
+        Path | None:
+            Path to the output directory if created or validated, else None.
+
+    Raises:
+        OSError:
+            If patch_mode is False and save_dir is not provided.
+
+    """
+    if patch_mode:
+        if save_dir is not None:
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=overwrite)
+            return save_dir
+        return None
+
+    if save_dir is None:
+        msg = (
+            "Input WSIs detected but no save directory provided. "
+            "Please provide a 'save_dir'."
+        )
+        raise OSError(msg)
+
+    logger.info(
+        "When providing multiple whole slide images, "
+        "the outputs will be saved and the locations of outputs "
+        "will be returned to the calling function when `run()` "
+        "finishes successfully."
+    )
+
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=overwrite)
+
+    return save_dir
