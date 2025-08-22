@@ -412,7 +412,7 @@ class EngineABC(ABC):  # noqa: B024
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             auto_get_mask (bool):
                 Auto generates tissue mask using `wsireader.tissue_mask()` when
-                patch_mode is False.
+                `patch_mode` is False.
                 If set to `True`, this mask processes only the tissue regions in the
                 image. If `False` all the patches in the image are processed.
                 Default is `True`.
@@ -512,8 +512,8 @@ class EngineABC(ABC):  # noqa: B024
                 Keys include:
                     - "probabilities": Model output probabilities.
                     - "labels": Ground truth labels (if `return_labels` is True).
-                    - "coordinates": Patch coordinates (if `return_coordinates`
-                      is True).
+                    - "coordinates": Patch coordinates (if `return_coordinates` is
+                      True).
 
         """
         keys = ["probabilities"]
