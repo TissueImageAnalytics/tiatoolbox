@@ -876,12 +876,12 @@ def save_to_cache(
         )
 
     canvas_zarr.resize(
-        (canvas_zarr.shape[0] + canvas_computed.shape[0],) + canvas_zarr.shape[1:]
+        (canvas_zarr.shape[0] + canvas_computed.shape[0], *canvas_zarr.shape[1:])
     )
     canvas_zarr[-canvas_computed.shape[0] :] = canvas_computed
 
     count_zarr.resize(
-        (count_zarr.shape[0] + count_computed.shape[0],) + count_zarr.shape[1:]
+        (count_zarr.shape[0] + count_computed.shape[0], *count_zarr.shape[1:])
     )
     count_zarr[-count_computed.shape[0] :] = count_computed
 
@@ -963,8 +963,10 @@ def merge_vertical_chunkwise(canvas, count, output_locs_y_, zarr_group):
                 )
 
             probabilities_zarr.resize(
-                (probabilities_zarr.shape[0] + probabilities.shape[0],)
-                + probabilities_zarr.shape[1:]
+                (
+                    probabilities_zarr.shape[0] + probabilities.shape[0],
+                    *probabilities_zarr.shape[1:],
+                )
             )
             probabilities_zarr[-probabilities.shape[0] :] = probabilities
         else:
