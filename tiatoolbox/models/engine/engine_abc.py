@@ -58,6 +58,7 @@ from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
     get_tqdm,
 )
+from tiatoolbox.wsicore.wsireader import is_zarr
 
 from .io_config import ModelIOConfigABC
 
@@ -644,6 +645,9 @@ class EngineABC(ABC):  # noqa: B024
         keys_to_compute = [k for k in processed_predictions if k not in self.drop_keys]
 
         if output_type.lower() == "zarr":
+            if is_zarr(save_path):
+                zarr_group = zarr.open(save_path, mode="r")
+                keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
             write_tasks = []
             for key in keys_to_compute:
                 dask_array = processed_predictions[key]
@@ -651,7 +655,6 @@ class EngineABC(ABC):  # noqa: B024
                     url=save_path,
                     component=key,
                     compute=False,
-                    overwrite=True,
                 )
                 write_tasks.append(task)
             msg = f"Saving output to {save_path}."

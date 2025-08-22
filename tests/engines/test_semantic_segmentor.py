@@ -246,6 +246,32 @@ def test_wsi_segmentor_zarr(
     assert "count" not in output_
     assert "Current Memory usage:" in caplog.text
 
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=64,
+        verbose=False,
+        num_workers=1,
+    )
+    # Return Probabilities is False
+    output = segmentor.run(
+        images=[sample_svs],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "task_length_cache",
+        batch_size=2,
+        output_type="zarr",
+        da_length_threshold=1,
+    )
+
+    output_ = zarr.open(output[sample_svs], mode="r")
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
+    assert "probabilities" in output_
+    assert "canvas" not in output_
+    assert "count" not in output_
+    assert "Canvas task graph length:" in caplog.text
+
     # Return Probabilities is True
     # Using small image for faster run
     segmentor = SemanticSegmentor(
