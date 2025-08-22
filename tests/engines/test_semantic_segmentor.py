@@ -248,6 +248,8 @@ def test_wsi_segmentor_zarr(
     output_ = zarr.open(output[sample_svs], mode="r")
     assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
     assert "probabilities" not in output_
+    assert "canvas" not in output_
+    assert "count" not in output_
     assert "Current Memory usage:" in caplog.text
 
     # Return Probabilities is True

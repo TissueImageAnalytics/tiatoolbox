@@ -1077,6 +1077,7 @@ def merge_vertical_chunkwise(
             next_chunk, next_count = None, None
 
     if probabilities_zarr:
+        del zarr_group["canvas"], zarr_group["count"]
         return da.from_zarr(probabilities_zarr)
 
     return probabilities_da

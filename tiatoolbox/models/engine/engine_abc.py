@@ -43,6 +43,7 @@ import dask
 import dask.array as da
 import numpy as np
 import torch
+import zarr
 from dask import compute
 from dask.diagnostics import ProgressBar
 from torch import nn
@@ -650,6 +651,11 @@ class EngineABC(ABC):  # noqa: B024
             logger.info(msg=msg)
             with ProgressBar():
                 compute(*write_tasks)
+
+            zarr_group = zarr.open(save_path, mode="r+")
+            for key in self.drop_keys:
+                if key in zarr_group:
+                    del zarr_group[key]
 
             return save_path
 
