@@ -88,10 +88,8 @@ class EngineABCRunParams(TypedDict, total=False):
             IO configuration (:class:`ModelIOConfigABC`) for model input/output.
         return_labels (bool):
             Whether to return labels with predictions.
-        num_loader_workers (int):
+        num_workers (int):
             Number of workers for DataLoader.
-        num_post_proc_workers (int):
-            Number of workers for post-processing.
         output_file (str):
             Filename for saving output (e.g., .zarr or .db).
         patch_input_shape (IntPair):
@@ -121,8 +119,7 @@ class EngineABCRunParams(TypedDict, total=False):
     class_dict: dict
     device: str
     ioconfig: ModelIOConfigABC
-    num_loader_workers: int
-    num_post_proc_workers: int
+    num_workers: int
     output_file: str
     patch_input_shape: IntPair
     input_resolutions: list[dict[Units, Resolution]]
@@ -153,10 +150,8 @@ class EngineABC(ABC):  # noqa: B024
             of weights using the `weights` parameter.
         batch_size (int):
             Number of patches per forward pass. Default is 8.
-        num_loader_workers (int):
+        num_workers (int):
             Number of workers for data loading. Default is 0.
-        num_post_proc_workers (int):
-            Number of workers for post-processing. Default is 0.
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
@@ -268,8 +263,7 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         model: str | ModelABC,
         batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_post_proc_workers: int = 0,
+        num_workers: int = 0,
         weights: str | Path | None = None,
         *,
         device: str = "cpu",
@@ -282,10 +276,8 @@ class EngineABC(ABC):  # noqa: B024
                 Model name from TIAToolbox or a PyTorch model instance.
             batch_size (int):
                 Number of patches per forward pass. Default is 8.
-            num_loader_workers (int):
+            num_workers (int):
                 Number of workers for data loading. Default is 0.
-            num_post_proc_workers (int):
-                Number of workers for post-processing. Default is 0.
             weights (str | Path | None):
                 Path to model weights. If None, default weights are used.
             device (str):
@@ -313,8 +305,7 @@ class EngineABC(ABC):  # noqa: B024
         self._ioconfig = self.ioconfig  # runtime ioconfig
         self.batch_size = batch_size
         self.labels: list | None = None
-        self.num_loader_workers = num_loader_workers
-        self.num_post_proc_workers = num_post_proc_workers
+        self.num_workers = num_workers
         self.patch_input_shape: IntPair | None = None
         self.input_resolutions: list[dict[Units, Resolution]] | None = None
         self.return_labels: bool = False
@@ -435,11 +426,11 @@ class EngineABC(ABC):  # noqa: B024
             # preprocessing must be defined with the dataset
             return torch.utils.data.DataLoader(
                 dataset,
-                num_workers=self.num_loader_workers,
+                num_workers=self.num_workers,
                 batch_size=self.batch_size,
                 drop_last=False,
                 shuffle=False,
-                persistent_workers=self.num_loader_workers > 0,
+                persistent_workers=self.num_workers > 0,
             )
 
         dataset = PatchDataset(
@@ -451,7 +442,7 @@ class EngineABC(ABC):  # noqa: B024
         # preprocessing must be defined with the dataset
         return torch.utils.data.DataLoader(
             dataset,
-            num_workers=self.num_loader_workers,
+            num_workers=self.num_workers,
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
@@ -1008,8 +999,8 @@ class EngineABC(ABC):  # noqa: B024
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
 
-        if self.num_loader_workers is not None and self.num_loader_workers > 0:
-            dask.config.set(scheduler="threads", num_workers=self.num_loader_workers)
+        if self.num_workers is not None and self.num_workers > 0:
+            dask.config.set(scheduler="threads", num_workers=self.num_workers)
         else:
             dask.config.set(scheduler="threads")
 

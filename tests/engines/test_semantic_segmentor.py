@@ -224,7 +224,7 @@ def test_wsi_segmentor_zarr(
         model="fcn-tissue_mask",
         batch_size=64,
         verbose=False,
-        num_loader_workers=1,
+        num_workers=1,
     )
     # Return Probabilities is False
     output = segmentor.run(
@@ -252,7 +252,7 @@ def test_wsi_segmentor_zarr(
         model="fcn-tissue_mask",
         batch_size=32,
         verbose=False,
-        num_loader_workers=1,
+        num_workers=1,
     )
     segmentor.drop_keys = []
     output = segmentor.run(

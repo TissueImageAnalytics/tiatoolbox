@@ -52,10 +52,8 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Input/output configuration for patch extraction and resolution.
         return_labels (bool):
             Whether to return labels with predictions.
-        num_loader_workers (int):
+        num_workers (int):
             Number of workers used in DataLoader.
-        num_post_proc_workers (int):
-            Number of workers used for post-processing.
         output_file (str):
             Output file name for saving results (e.g., .zarr or .db).
         patch_input_shape (tuple[int, int]):
@@ -134,10 +132,8 @@ class SemanticSegmentor(PatchPredictor):
             of weights using the `weights` parameter. Default is `None`.
         batch_size (int):
             Number of image patches processed per forward pass. Default is 8.
-        num_loader_workers (int):
+        num_workers (int):
             Number of workers for data loading. Default is 0.
-        num_post_proc_workers (int):
-            Number of workers for post-processing. Default is 0.
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
@@ -228,8 +224,7 @@ class SemanticSegmentor(PatchPredictor):
         self: SemanticSegmentor,
         model: str | ModelABC,
         batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_post_proc_workers: int = 0,
+        num_workers: int = 0,
         weights: str | Path | None = None,
         *,
         device: str = "cpu",
@@ -244,10 +239,8 @@ class SemanticSegmentor(PatchPredictor):
                 downloaded unless overridden via `weights`.
             batch_size (int):
                 Number of image patches processed per forward pass. Default is 8.
-            num_loader_workers (int):
+            num_workers (int):
                 Number of workers for data loading. Default is 0.
-            num_post_proc_workers (int):
-                Number of workers for post-processing. Default is 0.
             weights (str | Path | None):
                 Path to model weights. If None, default weights are used.
             device (str):
@@ -259,8 +252,7 @@ class SemanticSegmentor(PatchPredictor):
         super().__init__(
             model=model,
             batch_size=batch_size,
-            num_loader_workers=num_loader_workers,
-            num_post_proc_workers=num_post_proc_workers,
+            num_workers=num_workers,
             weights=weights,
             device=device,
             verbose=verbose,
@@ -326,7 +318,7 @@ class SemanticSegmentor(PatchPredictor):
             # preprocessing must be defined with the dataset
             return torch.utils.data.DataLoader(
                 dataset,
-                num_workers=self.num_loader_workers,
+                num_workers=self.num_workers,
                 batch_size=self.batch_size,
                 drop_last=False,
                 shuffle=False,

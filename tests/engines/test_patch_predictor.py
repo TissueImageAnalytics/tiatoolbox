@@ -238,7 +238,7 @@ def test_patch_predictor_api(
         return_labels=True,
         ioconfig=ioconfig,
         return_probabilities=True,
-        num_loader_workers=1,
+        num_workers=1,
     )
     assert sorted(output.keys()) == sorted(["labels", "predictions", "probabilities"])
     assert len(output["probabilities"]) == len(output["labels"])

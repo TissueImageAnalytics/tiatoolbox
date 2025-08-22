@@ -141,10 +141,8 @@ class PatchPredictor(EngineABC):
         batch_size (int):
             Number of image patches processed per forward pass.
             Default is 8.
-        num_loader_workers (int):
+        num_workers (int):
             Number of workers for data loading. Default is 0.
-        num_post_proc_workers (int):
-            Number of workers for post-processing. Default is 0.
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
@@ -238,8 +236,7 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         model: str | ModelABC,
         batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_post_proc_workers: int = 0,
+        num_workers: int = 0,
         weights: str | Path | None = None,
         *,
         device: str = "cpu",
@@ -254,10 +251,8 @@ class PatchPredictor(EngineABC):
                 weights will be downloaded unless overridden via `weights`.
             batch_size (int):
                 Number of image patches processed per forward pass. Default is 8.
-            num_loader_workers (int):
+            num_workers (int):
                 Number of workers for data loading. Default is 0.
-            num_post_proc_workers (int):
-                Number of workers for post-processing. Default is 0.
             weights (str | Path | None): Path to model weights.
                 If None, default weights are used.
             device (str): D
@@ -269,8 +264,7 @@ class PatchPredictor(EngineABC):
         super().__init__(
             model=model,
             batch_size=batch_size,
-            num_loader_workers=num_loader_workers,
-            num_post_proc_workers=num_post_proc_workers,
+            num_workers=num_workers,
             weights=weights,
             device=device,
             verbose=verbose,
