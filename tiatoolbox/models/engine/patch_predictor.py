@@ -45,10 +45,42 @@ class PredictorRunParams(EngineABCRunParams, total=False):
     This class extends `EngineABCRunParams` with additional parameters specific
     to patch-level prediction workflows.
 
-    Optional Keys:
+    Attributes:
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
+        batch_size (int):
+            Number of image patches to feed to the model in a forward pass.
+        class_dict (dict):
+            Optional dictionary mapping classification outputs to class names.
+        da_length_threshold (int):
+            Dask graph length threshold to trigger caching behavior.
+        device (str):
+            Device to run the model on (e.g., "cpu", "cuda").
+        input_resolutions (list[dict]):
+            Resolution used for reading the image. See `WSIReader` for details.
+        ioconfig (ModelIOConfigABC):
+            Input/output configuration for patch extraction and resolution.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
+        num_workers (int):
+            Number of workers used in DataLoader.
+        output_file (str):
+            Output file name for saving results (e.g., .zarr or .db).
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width).
+        return_labels (bool):
+            Whether to return labels with predictions.
         return_probabilities (bool):
-            Whether to return per-class probabilities
-            in the output. If False, only predicted labels are returned.
+            Whether to return per-class probabilities in the output.
+            If False, only predicted labels are returned.
+        scale_factor (tuple[float, float]):
+            Scale factor for converting annotations to baseline resolution.
+            Typically model_mpp / slide_mpp.
+        stride_shape (tuple[int, int]):
+            Stride used during WSI processing. Defaults to patch_input_shape.
+        verbose (bool):
+            Whether to output logging information.
 
     """
 
@@ -213,7 +245,7 @@ class PatchPredictor(EngineABC):
         output_type (str):
             Format of output ("dict", "zarr", "annotationstore").
 
-    Examples:
+    Example:
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")

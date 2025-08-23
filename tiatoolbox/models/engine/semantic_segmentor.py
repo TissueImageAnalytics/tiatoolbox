@@ -1,4 +1,47 @@
-"""Defines SemanticSegmentor Engine."""
+"""Defines the SemanticSegmentor engine for semantic segmentation in WSIs.
+
+This module implements the `SemanticSegmentor` class, which extends the `PatchPredictor`
+engine to support semantic segmentation workflows using deep learning models from
+TIAToolbox. It provides utilities for model initialization, patch-level and
+WSI-level inference, post-processing, and saving predictions in multiple formats.
+
+Classes:
+    - SemanticSegmentorRunParams:
+        Runtime configuration parameters for semantic segmentation.
+    - SemanticSegmentor:
+        Engine for performing semantic segmentation on patches or whole slide images.
+
+Functions:
+    - concatenate_none:
+        Helper to concatenate arrays, handling None values.
+    - stack_blocks_to_dask:
+        Stack NumPy blocks into a Dask array with column-wise chunking.
+    - merge_horizontal:
+        Merge horizontally stacked canvas and count patches.
+    - flush_patches:
+        Incrementally merge horizontal patches and update location arrays.
+    - horizontal_merge_func:
+        Create a callable for merging horizontal seams in chunked arrays.
+    - save_to_cache:
+        Save canvas and count arrays to Zarr cache.
+    - merge_vertical_chunkwise:
+        Merge vertically chunked canvas and count arrays into a probability map.
+    - store_probabilities:
+        Store computed probability data in Zarr or Dask.
+    - prepare_full_batch:
+        Prepare full-sized output and count arrays for a batch of predictions.
+
+Example:
+    >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+    >>> segmentor = SemanticSegmentor(model="fcn_resnet50_unet-bcss")
+    >>> wsis = ["slide1.svs", "slide2.svs"]
+    >>> output = segmentor.run(wsis, patch_mode=False)
+
+    >>> patches = [np.ndarray, np.ndarray]
+    >>> segmentor = SemanticSegmentor(model="fcn_resnet50_unet-bcss")
+    >>> output = segmentor.run(patches, patch_mode=True, output_type="dict")
+
+"""
 
 from __future__ import annotations
 
@@ -38,28 +81,39 @@ if TYPE_CHECKING:  # pragma: no cover
 class SemanticSegmentorRunParams(PredictorRunParams, total=False):
     """Runtime parameters for configuring the `SemanticSegmentor.run()` method.
 
-    This class extends `PredictorRunParams` with additional parameters
-    specific to semantic segmentation workflows.
+    This class extends `PredictorRunParams`, which itself extends `EngineABCRunParams`,
+    and adds parameters specific to semantic segmentation workflows.
 
     Attributes:
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
         batch_size (int):
             Number of image patches to feed to the model in a forward pass.
         class_dict (dict):
             Optional dictionary mapping classification outputs to class names.
+        da_length_threshold (int):
+            Dask graph length threshold to trigger caching behavior.
         device (str):
             Device to run the model on (e.g., "cpu", "cuda").
+        input_resolutions (list[dict]):
+            Resolution used for reading the image. See `WSIReader` for details.
         ioconfig (ModelIOConfigABC):
             Input/output configuration for patch extraction and resolution.
-        return_labels (bool):
-            Whether to return labels with predictions.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
             Number of workers used in DataLoader.
         output_file (str):
             Output file name for saving results (e.g., .zarr or .db).
+        output_resolutions (Resolution):
+            Resolution used for writing output predictions.
         patch_input_shape (tuple[int, int]):
             Shape of input patches (height, width).
-        input_resolutions (list[dict]):
-            Resolution used for reading the image. See `WSIReader` for details.
+        patch_output_shape (tuple[int, int]):
+            Shape of output patches (height, width).
+        return_labels (bool):
+            Whether to return labels with predictions.
         return_probabilities (bool):
             Whether to return per-class probabilities.
         scale_factor (tuple[float, float]):
@@ -69,17 +123,10 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Stride used during WSI processing. Defaults to patch_input_shape.
         verbose (bool):
             Whether to output logging information.
-        patch_output_shape (tuple[int, int]):
-            Shape of output patches (height, width).
-        output_resolutions (Resolution):
-            Resolution used for writing output predictions.
 
     """
 
     patch_output_shape: tuple[int, int]
-    output_resolutions: Resolution
-
-    patch_output_shape: tuple
     output_resolutions: Resolution
 
 
@@ -272,7 +319,9 @@ class SemanticSegmentor(PatchPredictor):
         """Pre-process images and masks and return a DataLoader for inference.
 
         This method prepares the dataset and returns a PyTorch DataLoader
-        for either patch-based or WSI-based semantic segmentation.
+        for either patch-based or WSI-based semantic segmentation. It overrides
+        the base method to support additional WSI-specific logic, including
+        patch output shape and output location tracking.
 
         Args:
             images (str | Path | list[str | Path] | np.ndarray):
@@ -288,15 +337,14 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             auto_get_mask (bool):
-                Auto generates tissue mask using `wsireader.tissue_mask()` when
-                patch_mode is False.
-                If set to `True`, this mask processes only the tissue regions in the
-                image. If `False` all the patches in the image are processed.
-                Default is `True`.
+                Whether to automatically generate a tissue mask using
+                `wsireader.tissue_mask()` when `patch_mode` is False.
+                If `True`, only tissue regions are processed. If `False`,
+                all patches are processed. Default is `True`.
 
         Returns:
             torch.utils.data.DataLoader:
-                A PyTorch DataLoader configured for inference.
+                A PyTorch DataLoader configured for semantic segmentation inference.
 
         """
         # Overwrite when patch_mode is False.
@@ -342,19 +390,23 @@ class SemanticSegmentor(PatchPredictor):
 
         This method processes a WSI using the provided DataLoader, merges
         patch-level predictions into a full-resolution canvas, and returns
-        the aggregated output. It supports optional inclusion of coordinates
-        and labels.
+        the aggregated output. It supports memory-aware caching and optional
+        inclusion of coordinates and labels.
 
         Args:
             dataloader (DataLoader):
                 PyTorch DataLoader configured for WSI processing.
             save_path (Path):
-                Path to save the intermediate output. The intermediate output is saved
-                in a zarr file.
+                Path to save the intermediate output. The intermediate output
+                is saved in a Zarr file.
             **kwargs (SemanticSegmentorRunParams):
                 Additional runtime parameters, including:
                 - return_probabilities (bool): Whether to return probability maps.
                 - return_labels (bool): Whether to include labels in the output.
+                - memory_threshold (int): Memory usage threshold to trigger disk
+                  caching.
+                - da_length_threshold (int): Dask graph length threshold to trigger
+                  caching.
 
         Returns:
             dict[str, dask.array.Array]:
@@ -623,8 +675,8 @@ class SemanticSegmentor(PatchPredictor):
         """Run the semantic segmentation engine on input images.
 
         This method orchestrates the full inference pipeline, including preprocessing,
-        model inference, post-processing, and saving results.
-        It supports both patch-level and whole slide image (WSI) modes.
+        model inference, post-processing, and saving results. It supports both
+        patch-level and whole slide image (WSI) modes.
 
         Args:
             images (list[PathLike | WSIReader] | np.ndarray):
@@ -637,15 +689,15 @@ class SemanticSegmentor(PatchPredictor):
             ioconfig (IOSegmentorConfig | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
-                Whether to treat input as patches (`True`) or WSIs (`False`).
-                Default is True.
+                Whether to treat input as patches (`True`) or WSIs (`False`). Default
+                is True.
             save_dir (PathLike | None):
                 Directory to save output files. Required for WSI mode.
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
-                Default is "dict".
+                Desired output format: "dict", "zarr", or "annotationstore". Default
+                is "dict".
             **kwargs (SemanticSegmentorRunParams):
                 Additional runtime parameters to update engine attributes.
 
@@ -658,24 +710,24 @@ class SemanticSegmentor(PatchPredictor):
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
             >>> image_patches = [np.ndarray, np.ndarray]
-            >>> class SemanticSegmentor(PatchPredictor):
-            >>> # Define all Abstract methods.
-            >>>     ...
             >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
             >>> output = segmentor.run(image_patches, patch_mode=True)
             >>> output
             ... "/path/to/Output.db"
+
             >>> output = segmentor.run(
-            >>>     image_patches,
-            >>>     patch_mode=True,
-            >>>     output_type="zarr")
+            ...     image_patches,
+            ...     patch_mode=True,
+            ...     output_type="zarr"
+            ... )
             >>> output
             ... "/path/to/Output.zarr"
+
             >>> output = segmentor.run(wsis, patch_mode=False)
             >>> output.keys()
             ... ['wsi1.svs', 'wsi2.svs']
             >>> output['wsi1.svs']
-            ... {'/path/to/wsi1.db'}
+            ... "/path/to/wsi1.db"
 
         """
         return super().run(
@@ -692,9 +744,26 @@ class SemanticSegmentor(PatchPredictor):
 
 
 def concatenate_none(
-    old_arr: np.ndarray | da.Array, new_arr: np.ndarray | da.Array
+    old_arr: np.ndarray | da.Array,
+    new_arr: np.ndarray | da.Array,
 ) -> np.ndarray | da.Array:
-    """Helper to concatenate None arrays."""
+    """Concatenate arrays, handling None values gracefully.
+
+    This utility function concatenates `new_arr` to `old_arr` along the first axis.
+    If `old_arr` is None, it returns `new_arr` directly. Supports both NumPy and Dask
+    arrays.
+
+    Args:
+        old_arr (np.ndarray | da.Array):
+            Existing array to append to. Can be None.
+        new_arr (np.ndarray | da.Array):
+            New array to append.
+
+    Returns:
+        np.ndarray | da.Array:
+            Concatenated array of the same type as `new_arr`.
+
+    """
     if isinstance(new_arr, np.ndarray):
         return (
             new_arr if old_arr is None else np.concatenate((old_arr, new_arr), axis=0)
@@ -703,8 +772,29 @@ def concatenate_none(
     return new_arr if old_arr is None else da.concatenate([old_arr, new_arr], axis=0)
 
 
-def stack_blocks_to_dask(blocks: np.ndarray, *, count: bool = False) -> da.Array:
-    """Stack a list of NumPy blocks into a Dask array with column-wise chunking."""
+def stack_blocks_to_dask(
+    blocks: np.ndarray,
+    *,
+    count: bool = False,
+) -> da.Array:
+    """Stack a list of NumPy blocks into a Dask array with column-wise chunking.
+
+    This function converts a list of NumPy arrays (blocks) into a single Dask array,
+    chunked along the horizontal axis. If `count=True`, the third dimension is treated
+    as a singleton channel for normalization counts.
+
+    Args:
+        blocks (np.ndarray):
+            A NumPy array of shape (N, H, W, C) representing stacked blocks.
+        count (bool):
+            Whether the blocks represent count data. If True, chunks are shaped
+            as (H, W, 1). Default is False.
+
+    Returns:
+        da.Array:
+            A Dask array with column-wise chunking suitable for overlap-aware merging.
+
+    """
     if count:
         return da.concatenate(
             [
@@ -719,18 +809,21 @@ def stack_blocks_to_dask(blocks: np.ndarray, *, count: bool = False) -> da.Array
 
 
 def merge_horizontal(
-    canvas_np_: np.ndarray, count_np_: np.ndarray, output_locs_: np.ndarray
+    canvas_np_: np.ndarray,
+    count_np_: np.ndarray,
+    output_locs_: np.ndarray,
 ) -> tuple[da.Array, da.Array]:
     """Merge horizontally stacked canvas and count patches.
 
     Computes overlaps between adjacent patches and applies seam folding using
-    Dask's map_overlap. Returns merged canvas and count arrays.
+    Dask's `map_overlap`. Returns merged canvas and count arrays with smooth
+    transitions across patch boundaries.
 
-    Parameters:
+    Args:
         canvas_np_ (np.ndarray):
             Array of canvas patches to be merged horizontally.
         count_np_ (np.ndarray):
-            Array of count patches corresponding to canvas_np_.
+            Array of count patches corresponding to `canvas_np_`.
         output_locs_ (np.ndarray):
             Array of shape (N, 4) containing spatial coordinates
             for each patch, used to calculate overlaps.
@@ -781,14 +874,12 @@ def flush_patches(
 ) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Merge horizontal patches incrementally for each row of patches.
 
-    Additionally, updates canvas, count, and location arrays based on change indices.
-
     This function processes segments of NumPy patch arrays (`canvas_np`, `count_np`,
     `output_locs`) based on `change_indices`, merging them horizontally and appending
     the results to Dask arrays. It also updates the vertical output locations
-    (`output_locs_y_`) for downstream merging.
+    (`output_locs_y_`) for downstream vertical merging.
 
-    Parameters:
+    Args:
         canvas (None | da.Array):
             Existing Dask array for canvas data, or None if uninitialized.
         count (None | da.Array):
@@ -801,7 +892,7 @@ def flush_patches(
             NumPy array of count patches to be merged.
         output_locs (np.ndarray):
             Array of output locations for each patch.
-        change_indices (np.ndarray):
+        change_indices (np.ndarray | list[np.ndarray]):
             Indices indicating where to flush and merge patches.
 
     Returns:
@@ -835,14 +926,16 @@ def flush_patches(
 
 
 def horizontal_merge_func(
-    overlaps: np.ndarray, max_overlap: int
+    overlaps: np.ndarray,
+    max_overlap: int,
 ) -> Callable[[np.ndarray, list[dict[str, Any]]], np.ndarray]:
     """Create a function to merge horizontal seams in chunked arrays.
 
     Returns a callable that folds overlapping regions, trims halos, and removes
     duplicate seam columns based on chunk metadata and overlap configuration.
+    This is used with Dask's `map_overlap` to merge horizontally adjacent chunks.
 
-    Parameters:
+    Args:
         overlaps (np.ndarray):
             Array of overlap widths between adjacent chunks.
         max_overlap (int):
@@ -856,25 +949,26 @@ def horizontal_merge_func(
     """
 
     def merge_horizontal_seams_var(
-        chunk: np.ndarray, block_info: list[dict[str, Any]] | None = None
+        chunk: np.ndarray,
+        block_info: list[dict[str, Any]] | None = None,
     ) -> np.ndarray:
         """Merge horizontal seams in a chunked array using overlap metadata.
 
         This function folds overlapping regions between adjacent horizontal chunks,
         trims halo regions, and removes duplicate seam columns to ensure smooth
-        transitions across chunk boundaries.
+        transitions across chunk boundaries. It is designed to be used with Dask's
+        `map_overlap`.
 
-        Parameters:
+        Args:
             chunk (np.ndarray):
                 A chunk of the full array to be processed.
             block_info (list[dict[str, Any]] | None):
-                Metadata describing the chunk's
-                location and total number of chunks along each axis.
+                Metadata describing the chunk's location and total number of chunks
+                along each axis.
 
         Returns:
             np.ndarray:
-                The processed chunk with horizontal seams merged and
-                halos trimmed.
+                The processed chunk with horizontal seams merged and halos trimmed.
 
         """
         info = block_info[0]
@@ -919,7 +1013,7 @@ def save_to_cache(
     If the Zarr datasets do not exist, it initializes them within the specified
     Zarr group.
 
-    Parameters:
+    Args:
         canvas (da.Array):
             Dask array representing image or feature data.
         count (da.Array):
@@ -928,7 +1022,7 @@ def save_to_cache(
             Existing Zarr dataset for canvas data. If None, a new one is created.
         count_zarr (zarr.Array):
             Existing Zarr dataset for count data. If None, a new one is created.
-        save_path (str | Path, optional):
+        save_path (str | Path):
             Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
 
     Returns:
@@ -971,7 +1065,7 @@ def save_to_cache(
     return canvas_zarr, count_zarr
 
 
-def merge_vertical_chunkwise(  # skipcq: PY-R1000
+def merge_vertical_chunkwise(
     canvas: da.Array,
     count: da.Array,
     output_locs_y_: np.ndarray,
@@ -979,12 +1073,12 @@ def merge_vertical_chunkwise(  # skipcq: PY-R1000
 ) -> da.Array:
     """Merge vertically chunked canvas and count arrays into a single probability map.
 
-    This function processes vertically stacked image blocks (canvas) and their
+    This function processes vertically stacked image blocks (`canvas`) and their
     associated count arrays to compute normalized probabilities. It handles overlapping
     regions between chunks by applying seam folding and trimming halos to ensure smooth
-    transitions.
+    transitions. If a Zarr group is provided, the result is stored incrementally.
 
-    Parameters:
+    Args:
         canvas (da.Array):
             Dask array containing image data split into vertical chunks.
         count (da.Array):
@@ -993,8 +1087,7 @@ def merge_vertical_chunkwise(  # skipcq: PY-R1000
             Array of shape (N, 2) specifying vertical output locations
             for each chunk, used to compute overlaps.
         zarr_group (zarr.Group):
-            Zarr group to store the merged probability dataset. If None,
-            the result is returned as a Dask array.
+            Zarr group to store the merged probability dataset.
 
     Returns:
         da.Array:
@@ -1095,14 +1188,14 @@ def store_probabilities(
     probabilities_zarr: zarr.Array | None,
     probabilities_da: da.Array | None,
     zarr_group: zarr.Group | None,
-) -> tuple[zarr.Array, da.Array]:
+) -> tuple[zarr.Array | None, da.Array | None]:
     """Store computed probability data into a Zarr dataset or accumulate in memory.
 
     If a Zarr group is provided, the function appends the given probability array
     to the 'probabilities' dataset, resizing as needed. Otherwise, it concatenates
     the array into an existing Dask array for in-memory accumulation.
 
-    Parameters:
+    Args:
         probabilities (np.ndarray):
             Computed probability array to store.
         chunk_shape (tuple[int, ...]):
@@ -1154,15 +1247,15 @@ def prepare_full_batch(
     """Prepare full-sized output and count arrays for a batch of patch predictions.
 
     This function aligns patch-level predictions with global output locations when
-    a mask (e.g., auto_get_mask) is applied. This function initializes full-sized
-    arrays, and fills them using matched indices. If the batch is the last in
-    the sequence, it pads the arrays to cover remaining locations.
+    a mask (e.g., auto_get_mask) is applied. It initializes full-sized arrays and
+    fills them using matched indices. If the batch is the last in the sequence,
+    it pads the arrays to cover remaining locations.
 
-    Parameters:
+    Args:
         batch_output (np.ndarray):
             Patch-level model predictions of shape (N, H, W, C).
         batch_locs (np.ndarray):
-            Output locations corresponding to batch_output.
+            Output locations corresponding to `batch_output`.
         full_output_locs (np.ndarray):
             Remaining global output locations to be matched.
         output_locs (np.ndarray):

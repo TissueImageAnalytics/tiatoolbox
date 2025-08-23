@@ -412,11 +412,10 @@ class EngineABC(ABC):  # noqa: B024
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             auto_get_mask (bool):
-                Auto generates tissue mask using `wsireader.tissue_mask()` when
-                `patch_mode` is False.
-                If set to `True`, this mask processes only the tissue regions in the
-                image. If `False` all the patches in the image are processed.
-                Default is `True`.
+                Whether to automatically generate a tissue mask using
+                `wsireader.tissue_mask()` when `patch_mode` is False.
+                If `True`, only tissue regions are processed. If `False`,
+                all patches are processed. Default is `True`.
 
         Returns:
             torch.utils.data.DataLoader:
