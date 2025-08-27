@@ -14,6 +14,7 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
+from tiatoolbox.models.engine import semantic_segmentor
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
@@ -219,6 +220,59 @@ def test_save_annotation_store_nparray(
 
     _test_store_output_patch(output[0])
     _test_store_output_patch(output[1])
+
+
+def test_non_overlapping_blocks() -> None:
+    """Test for non-overlapping merge to canvas."""
+    blocks = np.array([np.ones((2, 2, 1)), np.ones((2, 2, 1)) * 2])
+    output_locations = np.array([[0, 0, 2, 2], [2, 0, 4, 2]])
+    merged_shape = (2, 4, 1)
+    canvas, count = semantic_segmentor.merge_batch_to_canvas(
+        blocks, output_locations, merged_shape
+    )
+    assert np.array_equal(canvas[:, :2, :], np.ones((2, 2, 1)))
+    assert np.array_equal(canvas[:, 2:, :], np.ones((2, 2, 1)) * 2)
+    assert np.array_equal(count, np.ones((2, 4, 1)))
+
+
+def test_overlapping_blocks() -> None:
+    """Test for overlapping merge to canvas."""
+    blocks = np.array([np.ones((2, 2, 1)), np.ones((2, 2, 1)) * 3])
+    output_locations = np.array([[0, 0, 2, 2], [1, 0, 3, 2]])
+    merged_shape = (2, 3, 1)
+    canvas, count = semantic_segmentor.merge_batch_to_canvas(
+        blocks, output_locations, merged_shape
+    )
+    expected_canvas = np.array([[[1], [4], [3]], [[1], [4], [3]]])
+    expected_count = np.array([[[1], [2], [1]], [[1], [2], [1]]])
+    assert np.array_equal(canvas, expected_canvas)
+    assert np.array_equal(count, expected_count)
+
+
+def test_zero_block() -> None:
+    """Test for zero merge to canvas."""
+    blocks = np.array([np.zeros((2, 2, 1)), np.ones((2, 2, 1))])
+    output_locations = np.array([[0, 0, 2, 2], [2, 0, 4, 2]])
+    merged_shape = (2, 4, 1)
+    canvas, count = semantic_segmentor.merge_batch_to_canvas(
+        blocks, output_locations, merged_shape
+    )
+    assert np.array_equal(canvas[:, :2, :], np.zeros((2, 2, 1)))
+    assert np.array_equal(canvas[:, 2:, :], np.ones((2, 2, 1)))
+    assert np.array_equal(count[:, :2, :], np.zeros((2, 2, 1)))
+    assert np.array_equal(count[:, 2:, :], np.ones((2, 2, 1)))
+
+
+def test_empty_blocks() -> None:
+    """Test for empty merge to canvas."""
+    blocks = np.empty((0, 2, 2, 1))
+    output_locations = np.empty((0, 4))
+    merged_shape = (2, 2, 1)
+    canvas, count = semantic_segmentor.merge_batch_to_canvas(
+        blocks, output_locations, merged_shape
+    )
+    assert np.array_equal(canvas, np.zeros((2, 2, 1)))
+    assert np.array_equal(count, np.zeros((2, 2, 1), dtype=np.uint8))
 
 
 def test_wsi_segmentor_zarr(
