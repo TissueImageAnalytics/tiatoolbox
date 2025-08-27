@@ -429,7 +429,7 @@ class SemanticSegmentor(PatchPredictor):
         coordinates, labels = [], []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys)))
+        raw_predictions = dict(zip(keys, [da.empty(shape=(0, 0))] * len(keys)))
 
         # Inference loop
         tqdm = get_tqdm()
@@ -490,7 +490,7 @@ class SemanticSegmentor(PatchPredictor):
                     used_percent > memory_threshold
                     or ((canvas.nbytes / vm.free) * 100) > memory_threshold
                 ):
-                    tqdm_loop.desc = "Spilling to disk "
+                    tqdm_loop.desc = "Spill intermediate data to disk"
                     if ((canvas.nbytes / vm.free) * 100) > memory_threshold:
                         used_percent = (canvas.nbytes / vm.free) * 100
                     msg = (
@@ -547,7 +547,7 @@ class SemanticSegmentor(PatchPredictor):
             zarr_group,
             save_path,
             memory_threshold,
-        ).rechunk("auto")
+        )
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
         if self.return_labels:
             labels = [label.reshape(-1) for label in labels]
@@ -1008,10 +1008,11 @@ def merge_vertical_chunkwise(
         probabilities = curr_chunk / curr_count.astype(np.float32)
 
         probabilities_zarr, probabilities_da = store_probabilities(
-            probabilities,
-            probabilities_zarr,
-            probabilities_da,
-            zarr_group,
+            probabilities=probabilities,
+            chunk_shape=chunk_shape,
+            probabilities_zarr=probabilities_zarr,
+            probabilities_da=probabilities_da,
+            zarr_group=zarr_group,
         )
 
         if probabilities_da is not None:
@@ -1049,8 +1050,7 @@ def merge_vertical_chunkwise(
         if "count" in zarr_group:
             del zarr_group["count"]
         return da.from_zarr(
-            probabilities_zarr,
-            chunks="auto",
+            probabilities_zarr, chunks=(chunk_shape[0], *probabilities.shape[1:])
         )
 
     return probabilities_da
@@ -1058,6 +1058,7 @@ def merge_vertical_chunkwise(
 
 def store_probabilities(
     probabilities: np.ndarray,
+    chunk_shape: tuple[int, ...],
     probabilities_zarr: zarr.Array | None,
     probabilities_da: da.Array | None,
     zarr_group: zarr.Group | None,
@@ -1071,6 +1072,8 @@ def store_probabilities(
     Args:
         probabilities (np.ndarray):
             Computed probability array to store.
+        chunk_shape (tuple[int, ...]):
+            Chunk shape used for Zarr dataset creation.
         probabilities_zarr (zarr.Array | None):
             Existing Zarr dataset, or None to initialize.
         probabilities_da (da.Array | None):
@@ -1088,6 +1091,7 @@ def store_probabilities(
             probabilities_zarr = zarr_group.create_dataset(
                 name="probabilities",
                 shape=(0, *probabilities.shape[1:]),
+                chunks=(chunk_shape[0], *probabilities.shape[1:]),
                 dtype=probabilities.dtype,
             )
 
@@ -1101,7 +1105,9 @@ def store_probabilities(
     else:
         probabilities_da = concatenate_none(
             old_arr=probabilities_da,
-            new_arr=da.from_array(probabilities, chunks="auto"),
+            new_arr=da.from_array(
+                probabilities, chunks=(chunk_shape[0], *probabilities.shape[1:])
+            ),
         )
 
     return probabilities_zarr, probabilities_da
