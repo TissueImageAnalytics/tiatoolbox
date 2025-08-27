@@ -1009,7 +1009,6 @@ def merge_vertical_chunkwise(
 
         probabilities_zarr, probabilities_da = store_probabilities(
             probabilities,
-            chunk_shape,
             probabilities_zarr,
             probabilities_da,
             zarr_group,
