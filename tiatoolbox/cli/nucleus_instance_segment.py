@@ -5,15 +5,14 @@ from __future__ import annotations
 import click
 
 from tiatoolbox.cli.common import (
-    cli_auto_generate_mask,
+    cli_auto_get_mask,
     cli_batch_size,
     cli_device,
     cli_file_type,
     cli_img_input,
     cli_masks,
     cli_mode,
-    cli_num_loader_workers,
-    cli_num_postproc_workers,
+    cli_num_workers,
     cli_output_path,
     cli_pretrained_model,
     cli_pretrained_weights,
@@ -45,10 +44,9 @@ from tiatoolbox.cli.common import (
 @cli_batch_size()
 @cli_masks(default=None)
 @cli_yaml_config_path(default=None)
-@cli_num_loader_workers()
+@cli_num_workers()
 @cli_verbose(default=True)
-@cli_num_postproc_workers(default=0)
-@cli_auto_generate_mask(default=False)
+@cli_auto_get_mask(default=False)
 def nucleus_instance_segment(
     pretrained_model: str,
     pretrained_weights: str,
@@ -60,7 +58,6 @@ def nucleus_instance_segment(
     batch_size: int,
     yaml_config_path: str,
     num_loader_workers: int,
-    num_postproc_workers: int,
     device: str,
     *,
     auto_generate_mask: bool,
@@ -91,7 +88,6 @@ def nucleus_instance_segment(
         pretrained_weights=pretrained_weights,
         batch_size=batch_size,
         num_loader_workers=num_loader_workers,
-        num_postproc_workers=num_postproc_workers,
         auto_generate_mask=auto_generate_mask,
         verbose=verbose,
     )

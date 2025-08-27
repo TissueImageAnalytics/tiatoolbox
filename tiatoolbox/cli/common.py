@@ -387,14 +387,28 @@ def cli_masks(
     )
 
 
-def cli_auto_generate_mask(
+def cli_memory_threshold(
+    usage_help: str = (
+        "Memory usage threshold (in percentage) to trigger caching behavior."
+    ),
+    default: int = 80,
+) -> Callable:
+    """Enables --batch-size option for cli."""
+    return click.option(
+        "--memory-threshold",
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_auto_get_mask(
     usage_help: str = "Automatically generate tile/WSI tissue mask.",
     *,
     default: bool = False,
 ) -> Callable:
     """Enables --auto-generate-mask option for cli."""
     return click.option(
-        "--auto-generate-mask",
+        "--auto-get-mask",
         help=add_default_to_usage_help(usage_help, default=default),
         type=bool,
         default=default,
@@ -415,27 +429,14 @@ def cli_yaml_config_path(
     )
 
 
-def cli_num_loader_workers(
+def cli_num_workers(
     usage_help: str = "Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
     default: int = 0,
 ) -> Callable:
     """Enables --num-loader-workers option for cli."""
     return click.option(
-        "--num-loader-workers",
-        help=add_default_to_usage_help(usage_help, default=default),
-        type=int,
-        default=default,
-    )
-
-
-def cli_num_postproc_workers(
-    usage_help: str = "Number of workers to post-process the network output.",
-    default: int = 0,
-) -> Callable:
-    """Enables --num-postproc-workers option for cli."""
-    return click.option(
-        "--num-postproc-workers",
+        "--num-workers",
         help=add_default_to_usage_help(usage_help, default=default),
         type=int,
         default=default,

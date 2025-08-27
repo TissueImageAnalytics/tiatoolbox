@@ -1,4 +1,4 @@
-"""Command line interface for patch_predictor."""
+"""Command line interface for semantic segmentation."""
 
 from __future__ import annotations
 
@@ -29,13 +29,13 @@ from tiatoolbox.cli.common import (
 @tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
-    usage_help="Output directory where model predictions will be saved.",
-    default="patch_prediction",
+    usage_help="Output directory where model segmentation will be saved.",
+    default="semantic_segmentation",
 )
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
-@cli_model(default="resnet18-kather100k")
+@cli_model(default="fcn-tissue_mask")
 @cli_weights()
 @cli_device(default="cpu")
 @cli_batch_size(default=1)
@@ -51,7 +51,7 @@ from tiatoolbox.cli.common import (
 @cli_return_labels(default=False)
 @cli_auto_get_mask(default=True)
 @cli_verbose(default=True)
-def patch_predictor(
+def semantic_segmentor(
     model: str,
     weights: str,
     img_input: str,
@@ -71,11 +71,8 @@ def patch_predictor(
     auto_get_mask: bool,
     verbose: bool,
 ) -> None:
-    """Process an image/directory of input images with a patch classification engine."""
-    from tiatoolbox.models.engine.io_config import (  # noqa: PLC0415
-        IOPatchPredictorConfig,
-    )
-    from tiatoolbox.models.engine.patch_predictor import PatchPredictor  # noqa: PLC0415
+    """Process a set of input images with a semantic segmentation engine."""
+    from tiatoolbox.models import IOSegmentorConfig, SemanticSegmentor  # noqa: PLC0415
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
@@ -84,7 +81,13 @@ def patch_predictor(
         file_types=file_types,
     )
 
-    predictor = PatchPredictor(
+    ioconfig = prepare_ioconfig(
+        IOSegmentorConfig,
+        pretrained_weights=weights,
+        yaml_config_path=yaml_config_path,
+    )
+
+    segmentor = SemanticSegmentor(
         model=model,
         weights=weights,
         batch_size=batch_size,
@@ -92,13 +95,7 @@ def patch_predictor(
         verbose=verbose,
     )
 
-    ioconfig = prepare_ioconfig(
-        IOPatchPredictorConfig,
-        pretrained_weights=weights,
-        yaml_config_path=yaml_config_path,
-    )
-
-    _ = predictor.run(
+    _ = segmentor.run(
         images=files_all,
         masks=masks_all,
         patch_mode=patch_mode,

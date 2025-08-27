@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Callable
 import numpy as np
 import torch
 import zarr
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
@@ -354,3 +356,28 @@ def test_wsi_segmentor_annotationstore(
     zarr_group = zarr.open(output[sample_svs].with_suffix(".zarr"), mode="r")
     assert "probabilities" in zarr_group
     assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+
+
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
+    """Test for models CLI single file."""
+    runner = CliRunner()
+    models_wsi_result = runner.invoke(
+        cli.main,
+        [
+            "semantic-segmentor",
+            "--img-input",
+            str(sample_svs),
+            "--patch-mode",
+            "False",
+            "--output-path",
+            str(tmp_path / "output"),
+        ],
+    )
+
+    assert models_wsi_result.exit_code == 0
+    assert (tmp_path / "output" / (sample_svs.stem + ".db")).exists()
