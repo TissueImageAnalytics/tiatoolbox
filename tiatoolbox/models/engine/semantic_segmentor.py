@@ -1040,7 +1040,9 @@ def merge_vertical_chunkwise(
 
             probabilities_da = None
 
-        curr_chunk, curr_count = next_chunk, next_count
+        if next_chunk is not None:
+            curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
+
         if i + 2 < num_chunks:
             next_chunk = canvas.blocks[i + 2, 0].compute()
             next_count = count.blocks[i + 2, 0].compute()

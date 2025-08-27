@@ -646,7 +646,7 @@ class EngineABC(ABC):  # noqa: B024
                 keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
             write_tasks = []
             for key in keys_to_compute:
-                dask_array = processed_predictions[key]
+                dask_array = processed_predictions[key].rechunk("auto")
                 task = dask_array.to_zarr(
                     url=save_path,
                     component=key,
