@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import torch
@@ -15,6 +15,9 @@ from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
+
+if TYPE_CHECKING:
+    import pytest
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -160,7 +163,9 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
     _test_store_output_patch(output[0])
 
 
-def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) -> None:
+def test_save_annotation_store_nparray(
+    remote_sample: Callable, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Test for saving output as annotation store using a numpy array."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
@@ -184,7 +189,12 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
     assert output[0] == tmp_path / "output1" / "0.db"
     assert output[1] == tmp_path / "output1" / "1.db"
 
-    assert (tmp_path / "output1.zarr").exists()
+    assert (tmp_path / "output1" / "output.zarr").exists()
+
+    zarr_group = zarr.open(str(tmp_path / "output1" / "output.zarr"), mode="r")
+    assert "probabilities" in zarr_group
+
+    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
 
     _test_store_output_patch(output[0])
     _test_store_output_patch(output[1])
@@ -201,6 +211,7 @@ def test_save_annotation_store_nparray(remote_sample: Callable, tmp_path: Path) 
 
     assert output[0] == tmp_path / "output2" / "0.db"
     assert output[1] == tmp_path / "output2" / "1.db"
+    assert not (tmp_path / "output2" / "output.zarr").exists()
 
     assert len(output) == 2
 
@@ -294,7 +305,9 @@ def test_wsi_segmentor_zarr(
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
-def test_wsi_segmentor_annotationstore(sample_svs: Path, tmp_path: Path) -> None:
+def test_wsi_segmentor_annotationstore(
+    sample_svs: Path, tmp_path: Path, caplog: pytest.CaptureFixture
+) -> None:
     """Test SemanticSegmentor for WSIs with AnnotationStore output."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
@@ -314,3 +327,30 @@ def test_wsi_segmentor_annotationstore(sample_svs: Path, tmp_path: Path) -> None
     )
 
     assert output[sample_svs] == tmp_path / "wsi_out_check" / (sample_svs.stem + ".db")
+
+    # Return Probabilities
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=32,
+        verbose=False,
+    )
+    # Return Probabilities is False
+    output = segmentor.run(
+        images=[sample_svs],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=tmp_path / "wsi_prob_out_check",
+        verbose=True,
+        output_type="annotationstore",
+    )
+
+    assert output[sample_svs] == tmp_path / "wsi_prob_out_check" / (
+        sample_svs.stem + ".db"
+    )
+    assert output[sample_svs].with_suffix(".zarr").exists()
+
+    zarr_group = zarr.open(output[sample_svs].with_suffix(".zarr"), mode="r")
+    assert "probabilities" in zarr_group
+    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text

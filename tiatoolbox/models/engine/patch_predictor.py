@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import Unpack
 
+from tiatoolbox.utils.misc import cast_to_min_dtype
+
 from .engine_abc import EngineABC, EngineABCRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -348,7 +350,8 @@ class PatchPredictor(EngineABC):
         _ = kwargs.get("return_probabilities")
         _ = prediction_shape
         _ = prediction_dtype
-        return self.model.postproc_func(raw_predictions)
+        raw_predictions = self.model.postproc_func(raw_predictions)
+        return cast_to_min_dtype(raw_predictions)
 
     def post_process_wsi(
         self: PatchPredictor,

@@ -66,9 +66,9 @@ from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
-    dict_to_zarr,
     get_tqdm,
 )
+from tiatoolbox.wsicore.wsireader import is_zarr
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -599,12 +599,22 @@ class SemanticSegmentor(PatchPredictor):
                 processed_predictions, output_type, save_path=save_path, **kwargs
             )
 
-        logger.info("Saving predictions as AnnotationStore.")
-        processed_predictions = super().save_predictions(
-            processed_predictions, output_type="dict", **kwargs
+        return_probabilities = kwargs.get("return_probabilities", False)
+        output_type_ = (
+            "zarr"
+            if is_zarr(save_path.with_suffix(".zarr")) or return_probabilities
+            else "dict"
         )
 
-        return_probabilities = kwargs.get("return_probabilities", False)
+        processed_predictions = super().save_predictions(
+            processed_predictions,
+            output_type=output_type_,
+            save_path=save_path.with_suffix(".zarr"),
+            **kwargs,
+        )
+
+        if isinstance(processed_predictions, Path):
+            processed_predictions = zarr.open(str(processed_predictions), mode="r")
 
         # scale_factor set from kwargs
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
@@ -614,6 +624,7 @@ class SemanticSegmentor(PatchPredictor):
         # Need to add support for zarr conversion.
         save_paths = []
 
+        logger.info("Saving predictions as AnnotationStore.")
         if self.patch_mode:
             for i, predictions in enumerate(processed_predictions["predictions"]):
                 if isinstance(self.images[i], Path):
@@ -639,21 +650,13 @@ class SemanticSegmentor(PatchPredictor):
             save_paths = out_file
 
         if return_probabilities:
-            zarr_save_path = save_path.parent.with_suffix(".zarr")
             msg = (
                 f"Probability maps cannot be saved as AnnotationStore. "
                 f"To visualise heatmaps in TIAToolbox Visualization tool,"
-                f"convert heatmaps in {zarr_save_path} to ome.tiff using"
+                f"convert heatmaps in {save_path} to ome.tiff using"
                 f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
             )
             logger.info(msg)
-            processed_predictions = {
-                "predictions": processed_predictions.get("predictions"),
-            }
-            dict_to_zarr(
-                raw_predictions=processed_predictions,
-                save_path=zarr_save_path,
-            )
 
         return save_paths
 

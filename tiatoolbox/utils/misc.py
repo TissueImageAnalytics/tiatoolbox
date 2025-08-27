@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING
 
 import cv2
+import dask.array as da
 import joblib
 import numcodecs
 import numpy as np
@@ -1369,12 +1370,11 @@ def dict_to_store_semantic_segmentor(
             for each patch.
 
     """
-    preds = patch_output["predictions"]
+    preds = da.from_array(patch_output["predictions"], chunks="auto")
 
     # Get the number of unique predictions
-    layer_list = np.unique(preds)
-
-    layer_list = np.delete(layer_list, np.where(layer_list == 0))
+    layer_list = da.unique(preds).compute()
+    layer_list = layer_list[layer_list != 0]
 
     store = SQLiteStore()
 
@@ -1383,13 +1383,12 @@ def dict_to_store_semantic_segmentor(
     annotations_list: list[Annotation] = []
 
     for type_class in layer_list:
-        layer = np.where(preds[:] == type_class, 1, 0)
+        layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
         contours, hierarchy = cv2.findContours(
-            layer.astype("uint8"),
+            layer,
             cv2.RETR_CCOMP,
             cv2.CHAIN_APPROX_NONE,
         )
-
         annotations_list_ = process_contours(contours, hierarchy, scale_factor)
         annotations_list.extend(annotations_list_)
 
@@ -1815,3 +1814,37 @@ def get_tqdm() -> type[tqdm_notebook | tqdm]:
     if is_notebook():  # pragma: no cover
         return tqdm_notebook.tqdm
     return tqdm
+
+
+def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
+    """Cast the input array to the minimal data type required to represent its values.
+
+    This function determines the maximum value in the array and casts it to the smallest
+    unsigned integer type (or boolean) that can accommodate all values. It supports both
+    NumPy and Dask arrays and preserves the input type in the output.
+
+    For Dask arrays, the maximum value is computed lazily and only when needed.
+
+    Args:
+        array (Union[np.ndarray, da.Array]): Input array containing integer values.
+
+    Returns:
+        (np.ndarray or da.Array):
+             A copy of the input array cast to the minimal required dtype.
+            - If the maximum value is 1, the array is cast to boolean.
+            - Otherwise, it is cast to the smallest suitable unsigned integer type.
+
+    """
+    is_dask = isinstance(array, da.Array)
+    max_value = da.max(array) if is_dask else np.max(array)
+    max_value = max_value.compute() if is_dask else max_value
+
+    if max_value == 1:
+        return array.astype(bool)
+
+    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64]
+    for dtype in dtypes:
+        if max_value <= np.iinfo(dtype).max:
+            return array.astype(dtype)
+
+    return array
