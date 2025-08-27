@@ -84,8 +84,6 @@ class EngineABCRunParams(TypedDict, total=False):
             Number of image patches per forward pass.
         class_dict (dict):
             Mapping of classification outputs to class names.
-        da_length_threshold (int):
-            Dask graph length threshold to trigger caching behavior.
         device (str):
             Device to run the model on (e.g., "cpu", "cuda").
             See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
@@ -121,7 +119,6 @@ class EngineABCRunParams(TypedDict, total=False):
     auto_get_mask: bool
     batch_size: int
     class_dict: dict
-    da_length_threshold: int
     device: str
     input_resolutions: list[dict[Units, Resolution]]
     ioconfig: ModelIOConfigABC

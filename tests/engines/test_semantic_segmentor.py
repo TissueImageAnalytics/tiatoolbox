@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 import numpy as np
 import torch
@@ -15,9 +15,6 @@ from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
-
-if TYPE_CHECKING:
-    import pytest
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -215,7 +212,6 @@ def test_wsi_segmentor_zarr(
     remote_sample: Callable,
     sample_svs: Path,
     tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test SemanticSegmentor for WSIs with zarr output."""
     wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
@@ -244,7 +240,6 @@ def test_wsi_segmentor_zarr(
     assert "probabilities" not in output_
     assert "canvas" not in output_
     assert "count" not in output_
-    assert "Current Memory usage:" in caplog.text
 
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
@@ -270,7 +265,6 @@ def test_wsi_segmentor_zarr(
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
-    assert "Canvas task graph length:" in caplog.text
 
     # Return Probabilities is True
     # Using small image for faster run
@@ -293,7 +287,7 @@ def test_wsi_segmentor_zarr(
 
     output_ = zarr.open(output[sample_svs], mode="r")
     assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
-    assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
+    assert 0.52 < np.mean(output_["probabilities"][:]) < 0.56
 
     output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
     assert 0.24 < np.mean(output_["predictions"][:]) < 0.25

@@ -53,8 +53,6 @@ class PredictorRunParams(EngineABCRunParams, total=False):
             Number of image patches to feed to the model in a forward pass.
         class_dict (dict):
             Optional dictionary mapping classification outputs to class names.
-        da_length_threshold (int):
-            Dask graph length threshold to trigger caching behavior.
         device (str):
             Device to run the model on (e.g., "cpu", "cuda").
         input_resolutions (list[dict]):
