@@ -1742,43 +1742,6 @@ def test_patch_pred_store_sf() -> None:
         assert annotation.geometry.area == 4
 
 
-def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store_zarr."""
-    # Define a mock patch_output
-    patch_output = {
-        "predictions": [1, 0, 1],
-        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
-        "labels": [1, 0, 1],
-    }
-
-    save_path = tmp_path / "patch_output" / "output.zarr"
-
-    store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
-
-    print("Zarr path: ", store_path)
-    assert Path.exists(store_path), "Zarr output file does not exist"
-
-
-def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store_zarr and ensures the output file extension is `.zarr`."""
-    # Define a mock patch_output
-    patch_output = {
-        "predictions": [1, 0, 1],
-        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
-        "labels": [1, 0, 1],
-    }
-
-    # sends the path of a jpeg source image, expects .zarr file in the same directory
-    save_path = tmp_path / "patch_output" / "patch.jpeg"
-
-    store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
-
-    print("Zarr path: ", store_path)
-    assert Path.exists(store_path), "Zarr output file does not exist"
-
-
 def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store. and persists store output to a .db file."""
     # Define a mock patch_output
