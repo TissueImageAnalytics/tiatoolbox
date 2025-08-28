@@ -1002,7 +1002,7 @@ def merge_vertical_chunkwise(
     next_count = count.blocks[1, 0].compute() if num_chunks > 1 else None
 
     for i, overlap in enumerate(tqdm_loop):
-        if next_chunk is not None:
+        if next_chunk is not None and overlap > 0:
             curr_chunk[-overlap:] += next_chunk[:overlap]
             curr_count[-overlap:] += next_count[:overlap]
 

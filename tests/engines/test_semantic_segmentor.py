@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
+from unittest import mock
 
+import dask.array as da
 import numpy as np
 import torch
 import zarr
@@ -15,7 +18,10 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine import semantic_segmentor
-from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+from tiatoolbox.models.engine.semantic_segmentor import (
+    SemanticSegmentor,
+    merge_vertical_chunkwise,
+)
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
 
@@ -273,6 +279,45 @@ def test_empty_blocks() -> None:
     )
     assert np.array_equal(canvas, np.zeros((2, 2, 1)))
     assert np.array_equal(count, np.zeros((2, 2, 1), dtype=np.uint8))
+
+
+def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
+    """Test merge vertical chunkwise for memory threshold."""
+    # Create dummy canvas and count arrays with 3 vertical chunks
+    data = np.ones((30, 10), dtype=np.uint8)
+    canvas = da.from_array(data, chunks=(10, 10))
+    count = da.from_array(data, chunks=(10, 10))
+
+    # Output locations to simulate overlaps
+    output_locs_y_ = np.array([[0, 10], [10, 20], [20, 30]])
+
+    # Temporary Zarr group
+    with tempfile.TemporaryDirectory() as tmpdir:
+        save_path = Path(tmpdir)
+
+        # Mock psutil to simulate low memory
+        with mock.patch(
+            "tiatoolbox.models.engine.semantic_segmentor.psutil.virtual_memory"
+        ) as mock_vm:
+            mock_vm.return_value.free = 1  # Very low free memory
+
+            result = merge_vertical_chunkwise(
+                canvas=canvas,
+                count=count,
+                output_locs_y_=output_locs_y_,
+                zarr_group=None,
+                save_path=save_path,
+                memory_threshold=0.01,  # Very low threshold to trigger the condition
+            )
+
+        # Assertions
+        assert isinstance(result, da.Array)
+        assert hasattr(result, "name")
+        assert result.name.startswith("from-zarr")
+        assert np.all(result.compute() == data)
+
+        zarr_group = zarr.open(tmpdir, mode="r")
+        assert np.all(zarr_group["probabilities"][:] == data)
 
 
 def test_wsi_segmentor_zarr(
