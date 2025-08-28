@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import cv2
+import dask.array as da
 import joblib
 import numpy as np
 import pandas as pd
@@ -34,6 +35,7 @@ from tiatoolbox.models.architecture.utils import (
 )
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
+from tiatoolbox.utils.misc import cast_to_min_dtype
 from tiatoolbox.utils.transforms import locsize2bounds
 
 if TYPE_CHECKING:
@@ -2179,3 +2181,45 @@ def test_save_zarr_array_probability_ome_tiff(
     assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+
+
+@pytest.mark.parametrize(
+    ("input_array", "expected_dtype"),
+    [
+        (np.array([0, 1]), np.bool_),  # Should cast to bool
+        (np.array([0, 255]), np.uint8),  # Should cast to uint8
+        (np.array([0, 256]), np.uint16),  # Should cast to uint16
+        (np.array([0, 70000]), np.uint32),  # Should cast to uint32
+        (np.array([0, 2**32]), np.uint64),  # Should cast to uint64
+    ],
+)
+def test_cast_to_min_dtype_numpy(input_array: np.ndarray, expected_dtype: type) -> None:
+    """Check expected np array dtype cast_to_min_dtype."""
+    result = cast_to_min_dtype(input_array)
+    assert isinstance(result, np.ndarray)
+    assert result.dtype == expected_dtype
+
+
+@pytest.mark.parametrize(
+    ("input_array", "expected_dtype"),
+    [
+        (da.from_array(np.array([0, 1])), np.bool_),  # Should cast to bool
+        (da.from_array(np.array([0, 255])), np.uint8),  # Should cast to uint8
+        (da.from_array(np.array([0, 256])), np.uint16),  # Should cast to uint16
+        (da.from_array(np.array([0, 70000])), np.uint32),  # Should cast to uint32
+        (da.from_array(np.array([0, 2**32])), np.uint64),  # Should cast to uint64
+    ],
+)
+def test_cast_to_min_dtype_dask(input_array: da.Array, expected_dtype: type) -> None:
+    """Check expected dask array dtype cast_to_min_dtype."""
+    result = cast_to_min_dtype(input_array)
+    assert isinstance(result, da.Array)
+    assert result.dtype == expected_dtype
+
+
+def test_cast_to_min_dtype_numpy_large_value() -> None:
+    """Check if return type is changed for large value."""
+    large_value = np.array([np.iinfo(np.uint64).max + 1], dtype=object)
+    result = cast_to_min_dtype(large_value)
+    assert result == large_value
+    assert result.dtype == object
