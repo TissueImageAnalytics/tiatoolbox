@@ -436,7 +436,7 @@ class SemanticSegmentor(PatchPredictor):
         tqdm_loop = (
             tqdm(dataloader, leave=False, desc="Inferring patches")
             if self.verbose
-            else self.dataloader
+            else dataloader
         )
 
         canvas_np, output_locs_y_ = None, None

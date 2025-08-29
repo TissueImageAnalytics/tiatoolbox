@@ -1010,7 +1010,7 @@ class EngineABC(ABC):  # noqa: B024
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
 
-        if self.num_workers is not None and self.num_workers > 0:
+        if self.num_workers > 0:
             dask.config.set(scheduler="threads", num_workers=self.num_workers)
         else:
             dask.config.set(scheduler="threads")

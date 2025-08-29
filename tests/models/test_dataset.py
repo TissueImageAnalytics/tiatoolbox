@@ -540,3 +540,23 @@ def test_patch_dataset_abc() -> None:
     # test assign uncallable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
         ds.preproc_func = 1  # skipcq: PYL-W0201
+
+
+def test_none_patch_input_shape(sample_svs: Path) -> None:
+    """Test for None patch input shape."""
+    with pytest.raises(ValueError, match=r".*`patch_input_shape` must be specified.*"):
+        WSIPatchDataset(
+            img_path=sample_svs,
+            stride_shape=(256, 256),
+            auto_get_mask=False,
+        )
+
+
+def test_none_stride_shape_shape(sample_svs: Path) -> None:
+    """Test for None stride shape."""
+    with pytest.raises(ValueError, match=r".*`stride_shape` must be specified.*"):
+        WSIPatchDataset(
+            img_path=sample_svs,
+            patch_input_shape=(256, 256),
+            auto_get_mask=False,
+        )
