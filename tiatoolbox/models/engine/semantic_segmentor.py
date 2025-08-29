@@ -33,7 +33,7 @@ Example:
 >>> segmentor = SemanticSegmentor(model="fcn_resnet50_unet-bcss")
 >>> wsis = ["slide1.svs", "slide2.svs"]
 >>> output = segmentor.run(wsis, patch_mode=False)
-
+>>>
 >>> patches = [np.ndarray, np.ndarray]
 >>> segmentor = SemanticSegmentor(model="fcn_resnet50_unet-bcss")
 >>> output = segmentor.run(patches, patch_mode=True, output_type="dict")
