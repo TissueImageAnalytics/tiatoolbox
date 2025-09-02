@@ -11,19 +11,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -454,6 +454,8 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0.4
 
     # check loading a new layer with same stem uses full file name to disambiguate
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
+    layer_drop._trigger_event(click)
     click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
     layer_drop._trigger_event(click)
     full_name = data_path["img_overlay"].name
