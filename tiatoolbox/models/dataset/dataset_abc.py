@@ -434,11 +434,9 @@ class WSIPatchDataset(PatchDatasetABC):
         """
         super().__init__()
 
-        if isinstance(input_img, (str, Path)) and Path(input_img).is_file():
-            valid_path = True
-        else:
-            valid_path = False
-
+        valid_path = bool(
+            isinstance(input_img, (str, Path)) and Path(input_img).is_file()
+        )
         # Is there a generic func for path test in toolbox?
         if not valid_path and not isinstance(input_img, WSIReader):
             msg = "`input_img` must be a valid file path or a `WSIReader` instance."
