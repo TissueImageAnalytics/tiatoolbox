@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Union
@@ -364,7 +365,7 @@ class WSIPatchDataset(PatchDatasetABC):
 
     def __init__(  # skipcq: PY-R1000
         self: WSIPatchDataset,
-        img_path: str | Path,
+        input_img: str | Path | WSIReader,
         mask_path: str | Path | None = None,
         patch_input_shape: IntPair = None,
         patch_output_shape: IntPair = None,
@@ -379,9 +380,8 @@ class WSIPatchDataset(PatchDatasetABC):
         """Create a WSI-level patch dataset.
 
         Args:
-            img_path (str or Path):
-                Valid to pyramidal whole-slide image or large tile to
-                read.
+            input_img (str or Path or WSIReader):
+                Valid path to a whole-slide image class:`WSIReader`.
             mask_path (str or Path):
                 Valid mask image.
             patch_input_shape:
@@ -424,7 +424,7 @@ class WSIPatchDataset(PatchDatasetABC):
             >>> # Create a dataset to get patches from WSI with above
             >>> # preprocessing function
             >>> ds = WSIPatchDataset(
-            ...     img_path='/A/B/C/wsi.svs',
+            ...     input_img='/A/B/C/wsi.svs',
             ...     patch_input_shape=[512, 512],
             ...     stride_shape=[256, 256],
             ...     auto_get_mask=False,
@@ -434,9 +434,14 @@ class WSIPatchDataset(PatchDatasetABC):
         """
         super().__init__()
 
+        if isinstance(input_img, (str, Path)) and Path(input_img).is_file():
+            valid_path = True
+        else:
+            valid_path = False
+
         # Is there a generic func for path test in toolbox?
-        if not Path.is_file(Path(img_path)):
-            msg = "`img_path` must be a valid file path."
+        if not valid_path and not isinstance(input_img, WSIReader):
+            msg = "`input_img` must be a valid file path or a `WSIReader` instance."
             raise ValueError(msg)
         patch_input_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
@@ -444,11 +449,18 @@ class WSIPatchDataset(PatchDatasetABC):
         _validate_patch_stride_shape(patch_input_shape, stride_shape)
 
         self.preproc_func = preproc_func
-        img_path = Path(img_path)
+        img_path = (
+            input_img if not isinstance(input_img, WSIReader) else input_img.input_path
+        )
         self.img_path = Path(img_path)
-        self.reader = None
-        reader = self._get_reader(self.img_path)
-
+        reader = (
+            input_img
+            if isinstance(input_img, WSIReader)
+            else WSIReader.open(self.img_path)
+        )
+        # To support multi-threading on Windows
+        # Helps pickle using Path
+        self.reader = None if os.name == "nt" else reader
         # may decouple into misc ?
         # the scaling factor will scale base level to requested read resolution/units
         wsi_shape = reader.slide_dimensions(resolution=resolution, units=units)
@@ -501,9 +513,7 @@ class WSIPatchDataset(PatchDatasetABC):
                 self.full_outputs = self.outputs  # Full list of outputs
                 self.outputs = self.outputs[selected]
 
-        if len(self.inputs) == 0:
-            msg = "No patch coordinates remain after filtering."
-            raise ValueError(msg)
+        self._check_inputs()
 
         self.patch_input_shape = patch_input_shape
         self.resolution = resolution
@@ -511,6 +521,12 @@ class WSIPatchDataset(PatchDatasetABC):
 
         # Perform check on the input
         self._check_input_integrity(mode="wsi")
+
+    def _check_inputs(self: WSIPatchDataset) -> None:
+        """Check if input length is valid after filtering."""
+        if len(self.inputs) == 0:
+            msg = "No patch coordinates remain after filtering."
+            raise ValueError(msg)
 
     def _get_reader(self: WSIPatchDataset, img_path: str | Path) -> WSIReader:
         """Get a reader for the image."""

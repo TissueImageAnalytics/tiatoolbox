@@ -354,7 +354,7 @@ class SemanticSegmentor(PatchPredictor):
         # Overwrite when patch_mode is False.
         if not patch_mode:
             dataset = WSIPatchDataset(
-                img_path=images,
+                input_img=images,
                 mask_path=masks,
                 patch_input_shape=ioconfig.patch_input_shape,
                 patch_output_shape=ioconfig.patch_output_shape,

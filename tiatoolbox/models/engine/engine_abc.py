@@ -58,7 +58,7 @@ from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
     get_tqdm,
 )
-from tiatoolbox.wsicore.wsireader import is_zarr
+from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
 from .io_config import ModelIOConfigABC
 
@@ -70,7 +70,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore.wsireader import WSIReader
 
 
 class EngineABCRunParams(TypedDict, total=False):
@@ -425,7 +424,7 @@ class EngineABC(ABC):  # noqa: B024
 
         if not patch_mode:
             dataset = WSIPatchDataset(
-                img_path=images,
+                input_img=images,
                 mask_path=masks,
                 patch_input_shape=ioconfig.patch_input_shape,
                 stride_shape=ioconfig.stride_shape,
@@ -1224,10 +1223,18 @@ class EngineABC(ABC):  # noqa: B024
         if output_type == "AnnotationStore":
             suffix = ".db"
 
-        out = {image: save_dir / (str(image.stem) + suffix) for image in self.images}
+        def get_path(image: Path | WSIReader) -> Path:
+            """Return path to output file."""
+            return image.input_path if isinstance(image, WSIReader) else image
+
+        out = {
+            get_path(image): save_dir / (get_path(image).stem + suffix)
+            for image in self.images
+        }
 
         save_path = {
-            image: save_dir / (str(image.stem) + ".zarr") for image in self.images
+            get_path(image): save_dir / (get_path(image).stem + ".zarr")
+            for image in self.images
         }
 
         for image_num, image in enumerate(self.images):
@@ -1246,7 +1253,7 @@ class EngineABC(ABC):  # noqa: B024
 
             raw_predictions = self.infer_wsi(
                 dataloader=self.dataloader,
-                save_path=save_path[image],
+                save_path=save_path[get_path(image)],
                 **kwargs,
             )
 
@@ -1257,16 +1264,16 @@ class EngineABC(ABC):  # noqa: B024
                 **kwargs,
             )
 
-            kwargs["output_file"] = out[image]
+            kwargs["output_file"] = out[get_path(image)]
             kwargs["scale_factor"] = scale_factor
-            out[image] = self.save_predictions(
+            out[get_path(image)] = self.save_predictions(
                 processed_predictions=raw_predictions,
                 output_type=output_type,
-                save_path=save_path[image],
+                save_path=save_path[get_path(image)],
                 **kwargs,
             )
             logger.removeFilter(duplicate_filter)
-            msg = f"Output file saved at {out[image]}."
+            msg = f"Output file saved at {out[get_path(image)]}."
             logger.info(msg=msg)
 
             if progress_bar:

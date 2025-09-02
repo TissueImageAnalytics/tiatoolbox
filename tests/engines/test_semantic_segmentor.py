@@ -24,6 +24,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
+from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
     import pytest
@@ -359,9 +360,10 @@ def test_wsi_segmentor_zarr(
         verbose=False,
         num_workers=1,
     )
-    # Return Probabilities is False
+    # Return Probabilities is True
+    # Testing with WSIReader
     output = segmentor.run(
-        images=[sample_svs],
+        images=[WSIReader.open(sample_svs)],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -369,7 +371,7 @@ def test_wsi_segmentor_zarr(
         save_dir=tmp_path / "task_length_cache",
         batch_size=2,
         output_type="zarr",
-        da_length_threshold=1,
+        memory_threshold=1,
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")

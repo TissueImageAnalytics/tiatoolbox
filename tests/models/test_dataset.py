@@ -350,7 +350,7 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
 
     def reuse_init(img_path: Path = mini_wsi_svs, **kwargs: dict) -> WSIPatchDataset:
         """Testing function."""
-        return WSIPatchDataset(img_path=img_path, **kwargs)
+        return WSIPatchDataset(input_img=img_path, **kwargs)
 
     def reuse_init_wsi(**kwargs: dict) -> WSIPatchDataset:
         """Testing function."""
@@ -376,9 +376,9 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         Proto()  # skipcq
 
     # invalid path input
-    with pytest.raises(ValueError, match=r".*`img_path` must be a valid file path.*"):
+    with pytest.raises(ValueError, match=r".*`input_img` must be a valid file path.*"):
         WSIPatchDataset(
-            img_path="aaaa",
+            input_img="aaaa",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
             auto_get_mask=False,
@@ -387,7 +387,7 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     # invalid mask path input
     with pytest.raises(ValueError, match=r".*`mask_path` must be a valid file path.*"):
         WSIPatchDataset(
-            img_path=mini_wsi_svs,
+            input_img=mini_wsi_svs,
             mask_path="aaaa",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
@@ -437,9 +437,10 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     # * for wsi
     # dummy test for analysing the output
     # stride and patch size should be as expected
-    patch_size = [512, 512]
-    stride_size = [256, 256]
-    ds = reuse_init_wsi(
+    patch_size = (512, 512)
+    stride_size = (256, 256)
+    ds = WSIPatchDataset(
+        input_img=WSIReader.open(mini_wsi_svs),
         patch_input_shape=patch_size,
         stride_shape=stride_size,
         resolution=1.0,
@@ -467,7 +468,8 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     assert np.min(correlation) > 0.9, correlation
 
     # test creation with auto mask gen and input mask
-    ds = reuse_init_wsi(
+    ds = WSIPatchDataset(
+        input_img=mini_wsi_svs,
         patch_input_shape=patch_size,
         stride_shape=stride_size,
         resolution=1.0,
@@ -475,8 +477,8 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         auto_get_mask=True,
     )
     assert len(ds) > 0
-    ds = WSIPatchDataset(
-        img_path=mini_wsi_svs,
+    _ = WSIPatchDataset(
+        input_img=mini_wsi_svs,
         mask_path=mini_wsi_msk,
         patch_input_shape=(512, 512),
         stride_shape=(256, 256),
@@ -489,8 +491,8 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     negative_mask_path = tmp_path / "negative_mask.png"
     imwrite(negative_mask_path, negative_mask)
     with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
-        ds = WSIPatchDataset(
-            img_path=mini_wsi_svs,
+        _ = WSIPatchDataset(
+            input_img=mini_wsi_svs,
             mask_path=negative_mask_path,
             patch_input_shape=(512, 512),
             stride_shape=(256, 256),
