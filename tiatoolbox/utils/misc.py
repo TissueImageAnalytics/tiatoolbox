@@ -1352,7 +1352,7 @@ def dict_to_store_semantic_segmentor(
             cv2.RETR_CCOMP,
             cv2.CHAIN_APPROX_NONE,
         )
-        contours = cast(list[np.ndarray], contours)
+        contours = cast("list[np.ndarray]", contours)
 
         annotations_list_ = process_contours(contours, hierarchy, scale_factor)
         annotations_list.extend(annotations_list_)
