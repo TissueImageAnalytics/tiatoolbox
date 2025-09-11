@@ -483,13 +483,17 @@ class SemanticSegmentor(PatchPredictor):
                 )
 
                 used_percent = vm.percent
+                canvas_used_percent = (canvas.nbytes / vm.free) * 100
                 if (
                     used_percent > memory_threshold
-                    or ((canvas.nbytes / vm.free) * 100) > memory_threshold
+                    or canvas_used_percent > memory_threshold
                 ):
                     tqdm_loop.desc = "Spill intermediate data to disk"
-                    if ((canvas.nbytes / vm.free) * 100) > memory_threshold:
-                        used_percent = (canvas.nbytes / vm.free) * 100
+                    used_percent = (
+                        canvas_used_percent
+                        if (canvas_used_percent > memory_threshold)
+                        else used_percent
+                    )
                     msg = (
                         f"Current Memory usage: {used_percent} %  "
                         f"exceeds specified threshold: {memory_threshold}. "
