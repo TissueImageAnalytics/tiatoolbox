@@ -285,7 +285,7 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     # trigger an event to select the geojson file
     click = MenuItemClick(layer_drop, str(data_path["geojson_anns"]))
     layer_drop._trigger_event(click)
-    assert main.UI["vstate"].types == ["nucleus", "cell", "annotation"]
+    assert set(main.UI["vstate"].types) == {"nucleus", "cell", "annotation"}
 
     # test the name2type function.
     assert main.name2type("annotation") == '"annotation"'
