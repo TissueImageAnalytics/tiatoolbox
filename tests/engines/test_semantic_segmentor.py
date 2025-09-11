@@ -6,11 +6,12 @@ import json
 import sqlite3
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 from unittest import mock
 
 import dask.array as da
 import numpy as np
+import pytest
 import torch
 import zarr
 from click.testing import CliRunner
@@ -25,9 +26,6 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore import WSIReader
-
-if TYPE_CHECKING:
-    import pytest
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -319,6 +317,33 @@ def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
 
         zarr_group = zarr.open(tmpdir, mode="r")
         assert np.all(zarr_group["probabilities"][:] == data)
+
+
+def test_raise_value_error_return_labels_wsi(
+    sample_svs: Path,
+    tmp_path: Path,
+) -> None:
+    """Test for raises value error for return_labels in wsi mode."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=64,
+        verbose=False,
+        num_workers=1,
+    )
+    with pytest.raises(
+        ValueError,
+        match=r".*return_labels` is not supported when `patch_mode` is False",
+    ):
+        _ = segmentor.run(
+            images=[sample_svs],
+            return_probabilities=False,
+            return_labels=True,
+            device=device,
+            patch_mode=False,
+            save_dir=tmp_path / "wsi_out_check",
+            batch_size=2,
+            output_type="zarr",
+        )
 
 
 def test_wsi_segmentor_zarr(

@@ -423,10 +423,7 @@ class SemanticSegmentor(PatchPredictor):
         vm = psutil.virtual_memory()
 
         keys = ["probabilities", "coordinates"]
-        if self.return_labels:
-            keys.append("labels")
-
-        coordinates, labels = [], []
+        coordinates = []
 
         # Main output dictionary
         raw_predictions = dict(zip(keys, [da.empty(shape=(0, 0))] * len(keys)))
@@ -517,9 +514,6 @@ class SemanticSegmentor(PatchPredictor):
                 )
             )
 
-            if self.return_labels:
-                labels.append(da.from_array(np.array(batch_data["label"])))
-
         canvas, count, _, _, output_locs_y_ = merge_horizontal(
             canvas,
             count,
@@ -549,9 +543,6 @@ class SemanticSegmentor(PatchPredictor):
             memory_threshold,
         )
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
-        if self.return_labels:
-            labels = [label.reshape(-1) for label in labels]
-            raw_predictions["labels"] = da.concatenate(labels, axis=0)
 
         return raw_predictions
 
@@ -659,6 +650,72 @@ class SemanticSegmentor(PatchPredictor):
             logger.info(msg)
 
         return save_paths
+
+    def _update_run_params(
+        self: SemanticSegmentor,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        save_dir: os.PathLike | Path | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
+        output_type: str = "dict",
+        *,
+        overwrite: bool = False,
+        patch_mode: bool,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> Path | None:
+        """Update runtime parameters for the PatchPredictor engine.
+
+        This method sets internal attributes such as caching, batch size,
+        IO configuration, and output format based on user input and keyword arguments.
+        It also configures whether to include probabilities in the output.
+
+        Args:
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
+            labels (list | None):
+                Optional labels for input images.
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore".
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            **kwargs (SemanticSegmentorRunParams):
+                Additional runtime parameters.
+
+        Returns:
+            Path | None:
+                Path to the save directory if applicable, otherwise None.
+
+        Raises:
+            ValueError:
+                If `labels` are requested for WSI processing.
+
+        """
+        return_labels = kwargs.get("return_labels")
+
+        if return_labels and not patch_mode:
+            msg = "`return_labels` is not supported when `patch_mode` is False."
+            raise ValueError(msg)
+
+        return super()._update_run_params(
+            images=images,
+            masks=masks,
+            labels=labels,
+            save_dir=save_dir,
+            ioconfig=ioconfig,
+            overwrite=overwrite,
+            patch_mode=patch_mode,
+            output_type=output_type,
+            **kwargs,
+        )
 
     def run(
         self: SemanticSegmentor,
