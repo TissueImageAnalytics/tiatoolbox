@@ -8,7 +8,7 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, cast
 
 import cv2
 import dask.array as da
@@ -1341,7 +1341,7 @@ def process_contours(
 
 
 def dict_to_store_semantic_segmentor(
-    patch_output: dict | zarr.group,
+    patch_output: dict | zarr.Group,
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
@@ -1388,6 +1388,9 @@ def dict_to_store_semantic_segmentor(
             cv2.RETR_CCOMP,
             cv2.CHAIN_APPROX_NONE,
         )
+
+        contours = cast("list[np.ndarray]", contours)
+
         annotations_list_ = process_contours(contours, hierarchy, scale_factor)
         annotations_list.extend(annotations_list_)
 
