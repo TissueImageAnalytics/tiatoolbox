@@ -73,6 +73,7 @@ class TileServer(Flask):
         title: str,
         layers: dict[str, WSIReader | str] | list[WSIReader | str],
         renderer: AnnotationRenderer | None = None,
+        patient_id: str = None,  # <-- add patient_id argument
     ) -> None:
         """Initialize :class:`TileServer`."""
         super().__init__(
@@ -86,6 +87,7 @@ class TileServer(Flask):
             ),
         )
         self.title = title
+        self.patient_id = patient_id  # <-- store patient_id
         self.layers = {}
         self.pyramids = {}
         self.renderer = renderer
@@ -369,6 +371,7 @@ class TileServer(Flask):
             "index.html",
             title=self.title,
             layers=json.dumps(layers),
+            patient_id=self.patient_id,  # <-- pass patient_id to template
         )
 
     def change_prop(self: TileServer) -> str:
