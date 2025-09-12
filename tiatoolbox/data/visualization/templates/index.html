@@ -101,12 +101,59 @@
             left: 6pt;
             top: 116pt;
         }
+        .patient-id {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            background: #fff;
+            padding: 10px 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #333;
+            border: 1px solid #eee;
+        }
+        .icon-btn {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            outline: none;
+            position: relative;
+        }
+        .icon-btn:hover {
+            background: #f0f0f0;
+            color: #007bff;
+        }
+        .icon-btn:active {
+            background: #e0e0e0;
+        }
     </style>
     <title>{{ title }}</title>
 </head>
 
 <body>
+    {% if patient_id %}
+      <div class="patient-id">Patient ID: {{ patient_id }}</div>
+    {% endif %}
     <div id="map" class="map" data-layers="{{ layers }}"></div>
+    <div id="toolbar" style="position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:2100;display:flex;gap:18px;align-items:center;">
+      <button id="measure-btn" class="icon-btn" title="Measure Distance"><i class="fas fa-ruler-horizontal"></i></button>
+      <button id="freehand-btn" class="icon-btn" title="Freehand Annotation"><i class="fas fa-pen"></i></button>
+      <button id="clear-btn" class="icon-btn" title="Clear Annotations"><i class="fas fa-trash"></i></button>
+    </div>
     <script type="text/javascript">
         layersData = JSON.parse(document.getElementById('map').dataset.layers);
         var layers = layersData.map(function (layer) {
@@ -119,7 +166,6 @@
             return new ol.layer.Tile({
                 title: layer.name,
                 source: source
-
             });
         });
         var resolutions = layers[0].getSource().getTileGrid().getResolutions();
@@ -301,6 +347,95 @@
             },
         });
         map.addControl(screenSpaceGraticuleToggle);
+        // --- Drawing Tools ---
+        var measureBtn = document.getElementById('measure-btn');
+        var freehandBtn = document.getElementById('freehand-btn');
+        var clearBtn = document.getElementById('clear-btn');
+        var drawLayer = new ol.layer.Vector({
+            source: new ol.source.Vector(),
+            style: function(feature) {
+                var styles = [
+                    new ol.style.Style({
+                        stroke: new ol.style.Stroke({
+                            color: '#ff0000', width: 2
+                        }),
+                        image: new ol.style.Circle({
+                            radius: 5,
+                            fill: new ol.style.Fill({color: '#ff0000'})
+                        }),
+                        fill: new ol.style.Fill({color: 'rgba(255,0,0,0.1)'})
+                    })
+                ];
+                var geom = feature.getGeometry();
+                if (geom.getType() === 'LineString') {
+                    var coords = geom.getCoordinates();
+                    if (coords.length === 2) {
+                        var dx = coords[1][0] - coords[0][0];
+                        var dy = coords[1][1] - coords[0][1];
+                        var pxDist = Math.sqrt(dx*dx + dy*dy);
+                        var mpp = layersData[0].mpp; // microns per pixel
+                        var mmDist = pxDist * mpp / 1000.0;
+                        var label = mmDist.toFixed(2) + ' mm';
+                        styles.push(new ol.style.Style({
+                            text: new ol.style.Text({
+                                text: label,
+                                font: 'bold 16px Calibri,sans-serif',
+                                fill: new ol.style.Fill({color: '#ff0000'}),
+                                stroke: new ol.style.Stroke({color: '#fff', width: 3}),
+                                offsetY: -10,
+                                placement: 'line',
+                            })
+                        }));
+                    }
+                }
+                return styles;
+            }
+        });
+        map.addLayer(drawLayer);
+        var measureDraw = null;
+        var freehandDraw = null;
+        function activateMeasure() {
+            if (measureDraw) map.removeInteraction(measureDraw);
+            measureDraw = new ol.interaction.Draw({
+                source: drawLayer.getSource(),
+                type: 'LineString',
+                maxPoints: 2
+            });
+            map.addInteraction(measureDraw);
+            measureDraw.on('drawend', function(evt) {
+                // allow multiple lines
+                setTimeout(function() {
+                    map.removeInteraction(measureDraw);
+                    measureDraw = null;
+                }, 100);
+            });
+        }
+        function activateFreehand() {
+            if (freehandDraw) map.removeInteraction(freehandDraw);
+            freehandDraw = new ol.interaction.Draw({
+                source: drawLayer.getSource(),
+                type: 'Polygon',
+                freehand: true
+            });
+            map.addInteraction(freehandDraw);
+            freehandDraw.on('drawend', function(evt) {
+                // allow multiple polygons
+                setTimeout(function() {
+                    map.removeInteraction(freehandDraw);
+                    freehandDraw = null;
+                }, 100);
+            });
+        }
+        measureBtn.addEventListener('click', function() {
+            activateMeasure();
+        });
+        freehandBtn.addEventListener('click', function() {
+            activateFreehand();
+        });
+        clearBtn.addEventListener('click', function() {
+            drawLayer.getSource().clear();
+        });
+        // --- End Drawing Tools ---
         map.getView().fit(extent);
     </script>
 </body>
