@@ -1262,7 +1262,7 @@ def process_contours(
 
     """
     annotations_list: list[Annotation] = []
-    outer_contours: list[np.ndarray] = []
+    outer_contours: dict[int, np.ndarray] = {}
     holes_dict: dict[int, list[np.ndarray]] = {}
 
     for i, layer_ in enumerate(contours):
@@ -1272,7 +1272,7 @@ def process_contours(
         # save one points as a line, otherwise save the Polygon
         if len(layer_) > 2:  # noqa: PLR2004
             if int(hierarchy[0][i][3]) == -1:  # Outer contour
-                outer_contours.append(scaled_coords[0])
+                outer_contours[i] = scaled_coords[0]
             else:  # Hole
                 parent_idx: int = int(hierarchy[0][i][3])
                 if parent_idx not in holes_dict:
@@ -1311,7 +1311,7 @@ def process_contours(
                 ]
             )
 
-    for idx, outer in enumerate(outer_contours):
+    for idx, outer in outer_contours.items():
         holes: list[np.ndarray] = holes_dict.get(idx, [])
         if len(holes) != 0:
             feature_geom = feature2geometry(
