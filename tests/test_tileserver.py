@@ -100,11 +100,7 @@ def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     imwrite(thumb_path, thumb)
 
     sample_store = Path(remote_sample("annotation_store_svs_1"))
-    store = SQLiteStore(sample_store)
-    geo_path = tmp_path / "test.geojson"
-    store.to_geojson(geo_path)
-    store.commit()
-    store.close()
+    geo_path = Path(remote_sample("geojson_cmu_1"))
 
     # make tileserver with layers representing all the types
     # of things it should be able to handle
@@ -115,7 +111,7 @@ def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
             "tile": str(thumb_path),
             "im_array": np.zeros(wsi.slide_dimensions(1.25, "power"), dtype=np.uint8).T,
             "overlay": str(sample_store),
-            "store_geojson": tmp_path / "test.geojson",
+            "store_geojson": str(geo_path),
         },
     )
     app.config.from_mapping({"TESTING": True})
@@ -446,13 +442,21 @@ def test_change_overlay(  # noqa: PLR0915
         assert response.status_code == 200
         response = client.put(
             "/tileserver/overlay",
-            data={"overlay_path": safe_str(geo_path)},
+            data={"overlay_path": safe_str(sample_store)},
         )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
         # check that the annotations have been correctly loaded
         assert len(empty_app.pyramids[session_id]["overlay"].store) == num_annotations
+
+        # check loading a geojson from qupath with cells/nuclei
+        qpath_geo_path = Path(remote_sample("geojson_cmu_1"))
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(qpath_geo_path)},
+        )
+        assert response.status_code == 200
 
         # add another image layer
         response = client.put(
@@ -462,9 +466,17 @@ def test_change_overlay(  # noqa: PLR0915
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
+        lname = Path(overlay_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == overlay_path
+
+        # add same image again to check if duplicate names triggers disambiguation
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(overlay_path)},
+        )
+        assert response.status_code == 200
+        assert Path(overlay_path).name in empty_app.pyramids[session_id]
 
         # replace existing store overlay
         response = client.put(
@@ -494,7 +506,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(jpg_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
+        lname = Path(jpg_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert np.all(layer.wsi.img == imread(jpg_path))
 
@@ -518,7 +530,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(tiff_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
+        lname = Path(tiff_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
 
