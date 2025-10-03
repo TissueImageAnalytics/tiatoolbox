@@ -270,15 +270,37 @@ def test_sub_tile_levels(fill_store: Callable, tmp_path: Path) -> None:
     assert tile.size == (112, 112)
 
 
+def test_multi_point() -> None:
+    """Test multi-point rendering."""
+    renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
+    tile = np.zeros((256, 256, 3), dtype=np.uint8)
+    renderer.render_by_type(
+        tile=tile,
+        annotation=Annotation(MultiPoint([(5.0, 5.0), (10.0, 10.0)])),
+        top_left=(0, 0),
+        scale=1,
+    )
+    # check point locations are now non-zero
+    assert np.any(tile[5, 5, :] > 0)
+    assert np.any(tile[10, 10, :] > 0)
+    # check a non-point region still zero
+    assert np.all(tile[100:150, 100:150, :] == 0)
+
+
 def test_unknown_geometry(
-    fill_store: Callable,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test warning when unknown geometries cannot be rendered."""
     renderer = AnnotationRenderer(max_scale=8, edge_thickness=0)
+    unknown_ann = Annotation(
+        MultiPolygon(
+            [Polygon.from_bounds(0, 0, 1, 1), Polygon.from_bounds(2, 2, 3, 3)]
+        ),
+        {},
+    )
     renderer.render_by_type(
         tile=np.zeros((256, 256, 3), dtype=np.uint8),
-        annotation=Annotation(MultiPoint([(5.0, 5.0), (10.0, 10.0)])),
+        annotation=unknown_ann,
         top_left=(0, 0),
         scale=1,
     )
