@@ -13,13 +13,17 @@ import cv2
 import joblib
 import numpy as np
 import torch
+import torch.distributed as dist
 import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
 from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import (
+    compile_model,
+    is_torch_compile_compatible,
+)
 from tiatoolbox.models.models_abc import IOConfigABC, model_to
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
@@ -799,7 +803,7 @@ class SemanticSegmentor:
         pbar = tqdm.tqdm(
             desc=pbar_desc,
             leave=True,
-            total=int(len(self._loader)),
+            total=len(self._loader),
             ncols=80,
             ascii=True,
             position=0,
@@ -1421,6 +1425,13 @@ class SemanticSegmentor:
             logger.warning("Unable to remove %s", self._cache_dir)
 
         self._memory_cleanup()
+
+        if (
+            device == "cuda"
+            and torch.cuda.device_count() > 1
+            and is_torch_compile_compatible()
+        ):  # pragma: no cover
+            dist.destroy_process_group()
 
         return self._outputs
 

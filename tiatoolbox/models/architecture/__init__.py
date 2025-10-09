@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 from pydoc import locate
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -13,8 +13,6 @@ from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.utils import download_data
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pathlib import Path
-
     from tiatoolbox.models.models_abc import IOConfigABC
 
 
@@ -53,10 +51,14 @@ def fetch_pretrained_weights(
 
     if save_path is None:
         file_name = info["url"].split("/")[-1]
-        save_path = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
+        processed_save_path = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
+    elif type(save_path) is str:
+        processed_save_path = Path(save_path)
+    else:
+        processed_save_path = save_path
 
-    download_data(info["url"], save_path=save_path, overwrite=overwrite)
-    return save_path
+    download_data(info["url"], save_path=processed_save_path, overwrite=overwrite)
+    return processed_save_path
 
 
 def get_pretrained_model(
@@ -129,9 +131,15 @@ def get_pretrained_model(
     info = PRETRAINED_INFO[pretrained_model]
 
     arch_info = info["architecture"]
-    creator = locate(f"tiatoolbox.models.architecture.{arch_info['class']}")
+    model_class_info = arch_info["class"]
+    model_module_name = str(".".join(model_class_info.split(".")[:-1]))
+    model_name = str(model_class_info.split(".")[-1])
 
-    model = creator(**arch_info["kwargs"])
+    # Import module containing required model class
+    arch_module = locate(f"tiatoolbox.models.architecture.{model_module_name}")
+    # Get model class form module
+    model_class = getattr(arch_module, model_name)
+    model = model_class(**arch_info["kwargs"])
     # TODO(TBC): Dictionary of dataset specific or transformation?  # noqa: FIX002,TD003
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
@@ -152,7 +160,12 @@ def get_pretrained_model(
     # !
 
     io_info = info["ioconfig"]
-    creator = locate(f"tiatoolbox.models.engine.{io_info['class']}")
+    io_class_info = io_info["class"]
+    io_module_name = str(".".join(io_class_info.split(".")[:-1]))
+    io_class_name = str(io_class_info.split(".")[-1])
 
-    iostate = creator(**io_info["kwargs"])
+    engine_module = locate(f"tiatoolbox.models.engine.{io_module_name}")
+    engine_class = getattr(engine_module, io_class_name)
+
+    iostate = engine_class(**io_info["kwargs"])
     return model, iostate

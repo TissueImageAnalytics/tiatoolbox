@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-import os
+import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
@@ -13,16 +13,25 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
+import tifffile
 import torch
+import zarr
+from defusedxml import ElementTree as ET  # noqa: N817
 from PIL import Image
 from requests import HTTPError
 from shapely.geometry import Polygon
+from tifffile import TiffFile
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
+from tiatoolbox.enums import GeometryType
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import (
+    compile_model,
+    is_torch_compile_compatible,
+)
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
@@ -1056,7 +1065,11 @@ def test_download_unzip_data(tmp_path: Path) -> None:
 
     extracted_path = save_dir_path / "test_directory"
     # to avoid hidden files in case of MAC-OS or Windows (?)
-    extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith(".")]
+    extracted_dirs = [
+        f.name
+        for f in extracted_path.iterdir()
+        if f.is_dir() and not f.name.startswith(".")
+    ]
     extracted_dirs.sort()  # ensure same ordering
     assert extracted_dirs == ["dir1", "dir2", "dir3"]
 
@@ -1339,8 +1352,6 @@ def test_select_device() -> None:
 def test_save_as_json(tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
-    import json
-
     # dict with nested dict, list, and np.array
     key_dict = {
         "a1": {"name": "John", "age": 23, "sex": "male"},
@@ -1614,9 +1625,16 @@ def test_fetch_pretrained_weights(tmp_path: Path) -> None:
     fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=file_path)
     assert file_path.exists()
     assert file_path.stat().st_size > 0
+    file_path.unlink()
 
     with pytest.raises(ValueError, match="does not exist"):
         fetch_pretrained_weights("abc", file_path)
+
+    # Test save_path is str
+    file_path_str = str(file_path)
+    file_path = fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path_str)
+    assert Path(file_path).exists()
+    assert Path(file_path).stat().st_size > 0
 
 
 def test_imwrite(tmp_path: Path) -> NoReturn:
@@ -1844,7 +1862,339 @@ def test_torch_compile_disable() -> None:
 
 def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
     """Test if torch-compile compatibility is checked correctly."""
-    from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
-
     is_torch_compile_compatible()
     assert "torch.compile" in caplog.text
+
+
+def test_dict_to_store_semantic_segment() -> None:
+    """Tests multipoint behaviour in dict_to_store."""
+    test_pred = np.zeros(shape=(224, 224))
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert not store_.values()
+
+    # single point
+    patch_output["predictions"][100, 100] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert len(store_) == 1
+
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" not in annotations_geometry_type
+
+    patch_output["predictions"][110:155, 110:115] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert len(store_) == 2
+
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
+
+    patch_output["predictions"][50, 50] = 1
+    patch_output["predictions"][50, 51] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+    assert len(store_) == 3
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
+    assert "Line String" in annotations_geometry_type
+
+
+def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
+    """Tests behaviour of holes in dict_to_store and save_path."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    save_dir_path = tmp_path / "tmp"
+    save_dir_path.mkdir()
+
+    _ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=save_dir_path,
+    )
+
+    assert save_dir_path.exists()
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 1, "There should be one hole in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_multiple_holes() -> None:
+    """Tests behaviour of multiple holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 2, "There should be two holes in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_no_holes() -> None:
+    """Tests behaviour of no holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 0, "There should be no holes in the Polygon"
+
+
+def get_ome_metadata(tiff_path: Path) -> str | None:
+    """Extracts the OME metadata string from a TIFF file."""
+    with TiffFile(tiff_path) as tif:
+        if tif.ome_metadata:
+            return tif.ome_metadata
+    return None
+
+
+def assert_ome_metadata_value(
+    ome_xml: ET.Element, tag: str, expected_value: str
+) -> None:
+    """Asserts the value of a specific OME metadata tag (as an attribute)."""
+    namespace = "{http://www.openmicroscopy.org/Schemas/OME/2016-06}"
+    image_elements = ome_xml.findall(f".//{namespace}Image")
+    if image_elements:
+        pixels_elements = image_elements[0].findall(f"./{namespace}Pixels")
+        if pixels_elements:
+            actual_value = pixels_elements[0].get(tag)
+            assert actual_value == expected_value, (
+                f"Expected attribute '{tag}' to be '{expected_value}', "
+                f"but got '{actual_value}'."
+            )
+            return
+
+    # If we reach here, the tag or attribute was not found
+    pytest.fail(f"Attribute '{tag}' not found in OME metadata.")
+
+
+def test_iwrite_probability_heatmap_as_ome_tiff_errors(tmp_path: Path) -> None:
+    """Test expected errors in `write_probability_heatmap_as_ome_tiff`."""
+    probability = np.zeros(shape=(256, 256, 3))
+
+    # Input image must have 2 (CY) dimensions.
+    with pytest.raises(ValueError, match=r".*must have 2 \(YX\).*"):
+        misc.write_probability_heatmap_as_ome_tiff(
+            image_path=tmp_path / "failed_test.tif",
+            probability=probability,
+        )
+
+    probability = np.zeros(shape=(256, 256, 3))
+    probability = torch.from_numpy(probability)
+
+    # Input image must be a NumPy array or a Zarr array.
+    with pytest.raises(TypeError, match=r".*must be a NumPy array or a Zarr.*"):
+        misc.write_probability_heatmap_as_ome_tiff(
+            image_path=tmp_path / "failed_test.tif",
+            probability=probability,
+        )
+
+
+def test_save_numpy_array_proability_ome_tiff(
+    tmp_path: Path, source_image: Path
+) -> None:
+    """Tests saving a basic NumPy array."""
+    image_path = tmp_path / "numpy_image.ome.tif"
+    probability = utils.imread(source_image)
+    probability_0 = probability[:, :, 0]
+    misc.write_probability_heatmap_as_ome_tiff(
+        image_path=image_path,
+        probability=probability_0,
+        tile_size=(64, 64),
+        mpp=(0.5, 0.5),
+        levels=2,
+        colormap=cv2.COLORMAP_JET,
+    )
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path)
+    assert probability.shape == saved_img.shape
+    assert probability.dtype == saved_img.dtype
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
+    assert ome_xml is not None
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(probability.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(probability.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+
+
+def test_save_zarr_array_probability_ome_tiff(
+    tmp_path: Path, source_image: Path
+) -> None:
+    """Tests saving a Zarr array with uint8 dtype."""
+    image_path = tmp_path / "zarr_uint8_image.ome.tif"
+
+    img = utils.imread(source_image)
+    probability = img[:, 0:200, 0]
+    img_zarr = zarr.zeros(shape=probability.shape, dtype=np.uint8)
+    img_zarr[:] = probability
+
+    misc.write_probability_heatmap_as_ome_tiff(
+        image_path,
+        img_zarr,
+        tile_size=(32, 32),
+        levels=2,
+        colormap=cv2.COLORMAP_INFERNO,
+    )
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path, squeeze=True)
+    assert img_zarr.shape == saved_img.shape[0:2]
+    assert img_zarr.dtype == saved_img.dtype
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
+    assert ome_xml is not None
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")

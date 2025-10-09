@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Callable, cast
 import numpy as np
 import torch
 import umap
+from matplotlib import collections as mc
 from matplotlib import pyplot as plt
 from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
@@ -408,7 +409,7 @@ class SlideGraphConstructor:
             dthresh=connectivity_distance,
         )
         edge_index = affinity_to_edge_index(adjacency_matrix)
-        edge_index = cast(np.ndarray, edge_index)
+        edge_index = cast("np.ndarray", edge_index)
         return {
             "x": feature_centroids_arr,
             "edge_index": edge_index,
@@ -479,8 +480,6 @@ class SlideGraphConstructor:
             >>> plt.show()
 
         """
-        from matplotlib import collections as mc
-
         # Check that the graph is valid
         if "x" not in graph:
             msg = "Graph must contain key `x`."

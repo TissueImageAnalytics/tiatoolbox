@@ -48,8 +48,8 @@ def stain_norm(
     file_types: str,
 ) -> None:
     """Stain normalize an input image/directory of input images."""
-    from tiatoolbox.tools import stainnorm as sn
-    from tiatoolbox.utils import imread, imwrite
+    from tiatoolbox.tools import stainnorm as sn  # noqa: PLC0415
+    from tiatoolbox.utils import imread, imwrite  # noqa: PLC0415
 
     files_all, output_path = prepare_file_dir_cli(
         img_input,

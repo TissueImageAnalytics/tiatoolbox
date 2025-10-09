@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 import pandas as pd
 import pytest
 import requests
-from bokeh.client.session import ClientSession, pull_session
 
+from bokeh.client.session import ClientSession, pull_session
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
 
@@ -87,10 +87,10 @@ def test_slides_available(bk_session: ClientSession) -> None:
     assert slide_select.value[0] == "CMU-1-Small-Region.svs"
 
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.options) == 2
+    assert len(layer_drop.menu) == 2
     # check that the overlays are available.
     slide_select.value = ["CMU-1.ndpi"]
-    assert len(layer_drop.options) == 2
+    assert len(layer_drop.menu) == 2
 
     # check the metadata wasnt found as the column name was wrong
     desc = doc.get_model_by_name("description")

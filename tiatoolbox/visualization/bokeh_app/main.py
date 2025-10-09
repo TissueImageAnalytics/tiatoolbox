@@ -16,7 +16,11 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
-from bokeh.events import ButtonClick, DoubleTap
+from matplotlib import colormaps
+from PIL import Image
+from requests.adapters import HTTPAdapter, Retry
+
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -33,6 +37,7 @@ from bokeh.models import (
     CustomJSTickFormatter,
     DataTable,
     Div,
+    Dropdown,
     Glyph,
     HoverTool,
     HTMLTemplateFormatter,
@@ -59,9 +64,6 @@ from bokeh.models.dom import HTML
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from bokeh.util import token
-from matplotlib import colormaps
-from PIL import Image
-from requests.adapters import HTTPAdapter, Retry
 
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -515,7 +517,6 @@ def add_layer(lname: str) -> None:
             end=1,
             value=0.75,
             step=0.01,
-            title=lname,
             height=40,
             width=100,
             max_width=90,
@@ -719,19 +720,33 @@ def populate_layer_list(slide_name: str, overlay_path: Path) -> None:
         "*.jpg",
         "*.json",
         "*.tiff",
+        "*.mrxs",
+        "*.ndpi",
+        "*.svs",
+        "*.tif",
+        "*.npy",
+        "*.mha",
     ]:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
     file_list = [(str(p), str(p)) for p in sorted(file_list) if slide_name in str(p)]
-    UI["layer_drop"].options = file_list
+    UI["layer_drop"].menu = file_list
 
 
 def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> None:
     """Populate the slide list with the available slides."""
     file_list = []
     len_slidepath = len(slide_folder.parts)
-    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png", "*.tif"]:
-        file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
+    for ext in [
+        "*.svs",
+        "*.ndpi",
+        "*.tiff",
+        "*.mrxs",
+        "*.jpg",
+        "*.png",
+        "*.tif",
+        "*.dcm",
+    ]:
         file_list.extend(list(Path(slide_folder).glob(ext)))
     if search_txt is None:
         file_list = [
@@ -884,8 +899,9 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
 
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
-        for f in UI["layer_drop"].options:
-            layer_drop_cb("", "", f[0])
+        for f in UI["layer_drop"].menu:
+            dummy_attr = DummyAttr(f[0])
+            layer_drop_cb(dummy_attr)
 
 
 def handle_graph_layer(graph_path: str) -> None:  # skipcq: PY-R1000
@@ -997,25 +1013,26 @@ def update_ui_on_new_annotations(ann_types: list[str]) -> None:
     change_tiles("overlay")
 
 
-def layer_drop_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+def layer_drop_cb(attr: MenuItemClick) -> None:
     """Set up the newly chosen overlay."""
-    if Path(new).suffix == ".json":
+    if Path(attr.item).suffix == ".json":
         # It's a graph
-        handle_graph_layer(new)
+        handle_graph_layer(attr.item)
         return
 
     # Otherwise it's a tile-based overlay of some form
-    fname = make_safe_name(new)
+    fname = make_safe_name(attr.item)
     resp = UI["s"].put(
         f"http://{host2}:5000/tileserver/overlay",
         data={"overlay_path": fname},
     )
     resp = json.loads(resp.text)
 
-    if Path(new).suffix in [".db", ".dat", ".geojson"]:
+    if Path(attr.item).suffix in [".db", ".dat", ".geojson"]:
         update_ui_on_new_annotations(resp)
     else:
-        add_layer(resp)
+        if resp != "slide":
+            add_layer(resp)
         change_tiles(resp)
 
 
@@ -1065,7 +1082,9 @@ def layer_slider_cb(
             UI["vstate"].layer_dict[obj.name.split("_")[0]]
         ].glyph.line_alpha = new
     else:
-        UI["p"].renderers[UI["vstate"].layer_dict[obj.name.split("_")[0]]].alpha = new
+        UI["p"].renderers[
+            UI["vstate"].layer_dict["_".join(obj.name.split("_")[0:-1])]
+        ].alpha = new
 
 
 def color_input_cb(
@@ -1549,9 +1568,9 @@ def gather_ui_elements(  # noqa: PLR0915
         ColorPicker(color=col[0:3], width=60, max_width=60, sizing_mode="stretch_width")
         for col in vstate.colors
     ]
-    layer_drop = Select(
-        title="Add Overlay",
-        options=[None],
+    layer_drop = Dropdown(
+        label="Add Overlay",
+        menu=[None],
         sizing_mode="stretch_width",
         name=f"layer_drop{win_num}",
     )
@@ -1575,7 +1594,7 @@ def gather_ui_elements(  # noqa: PLR0915
     scale_spinner.on_change("value", scale_spinner_cb)
     to_model_button.on_click(to_model_cb)
     model_drop.on_change("value", model_drop_cb)
-    layer_drop.on_change("value", layer_drop_cb)
+    layer_drop.on_click(layer_drop_cb)
     opt_buttons.on_change("active", opt_buttons_cb)
     slide_toggle.on_click(slide_toggle_cb)
     overlay_toggle.on_click(overlay_toggle_cb)
@@ -2152,7 +2171,16 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in [
+            "*.svs",
+            "*ndpi",
+            "*.tiff",
+            "*.tif",
+            "*.mrxs",
+            "*.png",
+            "*.jpg",
+            "*.dcm",
+        ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),

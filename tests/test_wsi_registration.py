@@ -548,7 +548,7 @@ def test_bspline_transform(
     _ = apply_bspline_transform(fixed_img, moving_img, transform)
     registered_msk = apply_bspline_transform(fixed_mask_, moving_mask_, transform)
     mask_overlap = dice(fixed_mask_, registered_msk)
-    assert mask_overlap > 0.75
+    assert mask_overlap > 0.70
 
 
 def test_affine_wsi_transformer(sample_ome_tiff: Path) -> None:

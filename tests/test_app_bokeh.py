@@ -11,19 +11,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import requests
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.events import ButtonClick, DoubleTap
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
 from scipy.ndimage import label
 
+import bokeh.models as bkmodels
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.visualization.bokeh_app import main
 from tiatoolbox.visualization.tileserver import TileServer
@@ -129,6 +129,11 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
         "annotation_dat_svs_1",
         data_path["base_path"] / "overlays",
     )
+    data_path["affine_trans"] = (
+        data_path["base_path"] / "overlays" / (data_path["slide1"].stem + ".npy")
+    )
+    # save eye as test identity transform
+    np.save(data_path["affine_trans"], np.eye(3))
     data_path["config"] = _fetch_remote_sample(
         "config_2",
         data_path["base_path"] / "overlays",
@@ -263,6 +268,31 @@ def test_remove_dual_window(doc: Document, data_path: pytest.TempPathFactory) ->
     assert main.UI["vstate"].slide_path == data_path["slide1"]
 
 
+def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
+    """Test adding a non-annotation slide layer."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["slide1"].name]
+
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    slide_layer_path = str(data_path["slide1"])
+
+    click = MenuItemClick(layer_drop, slide_layer_path)
+    layer_drop._trigger_event(click)
+
+    assert len(layer_drop.menu) == 6
+
+
+def test_transform_overlay(doc: Document, data_path: pytest.TempPathFactory) -> None:
+    """Test adding a transform overlay."""
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    affine_layer_path = str(data_path["affine_trans"])  # sample .npy file
+
+    click = MenuItemClick(layer_drop, affine_layer_path)
+    layer_drop._trigger_event(click)
+
+    assert len(layer_drop.menu) == 6
+
+
 def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding annotation layers."""
     # test loading a geojson file.
@@ -270,8 +300,9 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     slide_select.value = [data_path["slide2"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the geojson file
-    layer_drop.value = str(data_path["geojson_anns"])
-    assert main.UI["vstate"].types == ["annotation"]
+    click = MenuItemClick(layer_drop, str(data_path["geojson_anns"]))
+    layer_drop._trigger_event(click)
+    assert set(main.UI["vstate"].types) == {"nucleus", "cell", "annotation"}
 
     # test the name2type function.
     assert main.name2type("annotation") == '"annotation"'
@@ -279,10 +310,11 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    assert len(layer_drop.options) == 5
+    assert len(layer_drop.menu) == 6
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
     # trigger an event to select the annotation .db file
-    layer_drop.value = str(data_path["annotations"])
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
+    layer_drop._trigger_event(click)
     # should be one more renderer now
     assert len(doc.get_model_by_name("slide_windows").children[0].renderers) == (
         n_renderers + 1
@@ -375,7 +407,8 @@ def test_load_graph(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test loading a graph."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph file
-    layer_drop.value = str(data_path["graph"])
+    click = MenuItemClick(layer_drop, str(data_path["graph"]))
+    layer_drop._trigger_event(click)
     # we should have 2144 nodes in the node_source now
     assert len(main.UI["node_source"].data["x_"]) == 2144
 
@@ -384,7 +417,8 @@ def test_graph_with_feats(doc: Document, data_path: pytest.TempPathFactory) -> N
     """Test loading a graph with features."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .json file
-    layer_drop.value = str(data_path["graph_feats"])
+    click = MenuItemClick(layer_drop, str(data_path["graph_feats"]))
+    layer_drop._trigger_event(click)
     # we should have keys for the features in node data source now
     for i in range(10):
         assert f"feat_{i}" in main.UI["node_source"].data
@@ -406,7 +440,8 @@ def test_graph_with_feats(doc: Document, data_path: pytest.TempPathFactory) -> N
     )
 
     # test graph overlay option remains on loading new overlay
-    layer_drop.value = str(data_path["annotations"])
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
+    layer_drop._trigger_event(click)
     assert "graph_overlay" in cmap_select.options
 
 
@@ -414,8 +449,10 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     """Test loading an image overlay."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the image overlay
-    layer_drop.value = str(data_path["img_overlay"])
-    layer_slider = doc.get_model_by_name("layer2_slider")
+    click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
+    layer_drop._trigger_event(click)
+    l_name = data_path["img_overlay"].stem
+    layer_slider = doc.get_model_by_name(f"{l_name}_slider")
     assert layer_slider is not None
 
     # check alpha controls
@@ -424,14 +461,22 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     assert type_column_list[-1].active
     # toggle off and check alpha is 0
     type_column_list[-1].active = False
-    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0
     # toggle back on and check alpha is back to default 0.75
     type_column_list[-1].active = True
-    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0.75
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0.75
     # set alpha to 0.4
     layer_slider.value = 0.4
     # check that the alpha values have been set correctly
-    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict["layer2"]].alpha == 0.4
+    assert main.UI["p"].renderers[main.UI["vstate"].layer_dict[l_name]].alpha == 0.4
+
+    # check loading a new layer with same stem uses full file name to disambiguate
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
+    layer_drop._trigger_event(click)
+    click = MenuItemClick(layer_drop, str(data_path["img_overlay"]))
+    layer_drop._trigger_event(click)
+    full_name = data_path["img_overlay"].name
+    assert full_name in main.UI["vstate"].layer_dict
 
 
 def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> None:
@@ -476,7 +521,8 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     cprop_select = doc.get_model_by_name("cprop0")
     cprop_select.value = ["prob"]
     layer_drop = doc.get_model_by_name("layer_drop0")
-    layer_drop.value = str(data_path["dat_anns"])
+    click = MenuItemClick(layer_drop, str(data_path["dat_anns"]))
+    layer_drop._trigger_event(click)
     assert main.UI["vstate"].types == ["annotation"]
     # check the per-type ui controls have been updated
     assert len(main.UI["color_column"].children) == 1
@@ -517,7 +563,8 @@ def test_type_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test selecting/deselecting specific types."""
     # load annotation layer
     layer_drop = doc.get_model_by_name("layer_drop0")
-    layer_drop.value = str(data_path["annotations"])
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
+    layer_drop._trigger_event(click)
     time.sleep(1)
     im = get_tile("overlay", 4, 8, 4, show=False)
     _, num_before = label(np.any(im[:, :, :3], axis=2))
@@ -569,7 +616,8 @@ def test_node_and_edge_alpha(doc: Document, data_path: pytest.TempPathFactory) -
     """Test sliders for adjusting graph node and edge alpha."""
     layer_drop = doc.get_model_by_name("layer_drop0")
     # trigger an event to select the graph .db file
-    layer_drop.value = str(data_path["graph"])
+    click = MenuItemClick(layer_drop, str(data_path["graph"]))
+    layer_drop._trigger_event(click)
 
     type_column_list = doc.get_model_by_name("type_column0").children
     color_column_list = doc.get_model_by_name("color_column0").children
