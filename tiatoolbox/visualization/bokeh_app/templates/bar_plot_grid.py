@@ -1,15 +1,14 @@
 """This module contains a class for creating bar plots for CSV files in a folder."""
 
-import os
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
 from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource, HoverTool
 from bokeh.plotting import figure
 from bokeh.transform import dodge
-
 from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.ui_utils import UIPlugin
 
@@ -36,7 +35,7 @@ class BarPlotGrid(UIPlugin):
         folder_path = slide_path.with_name(slide_path.stem + "_files")
         if not folder_path.is_dir():
             return []
-        csv_files = [f for f in os.listdir(folder_path) if f.endswith(".csv")]
+        csv_files = [f.name for f in folder_path.iterdir() if f.suffix == ".csv"]
         plots = []
 
         for file in csv_files:
