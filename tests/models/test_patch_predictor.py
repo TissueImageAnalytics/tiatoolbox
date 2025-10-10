@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import copy
 import shutil
-from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -27,6 +27,9 @@ from tiatoolbox.utils import download_data, imread, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 ON_GPU = toolbox_env.has_gpu()
 RNG = np.random.default_rng()  # Numpy Random Generator

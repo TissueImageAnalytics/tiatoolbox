@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 from collections import OrderedDict
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,6 +21,8 @@ from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 

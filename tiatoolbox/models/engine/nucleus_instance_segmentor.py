@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections import deque
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 # replace with the sql database once the PR in place
 import joblib
@@ -20,6 +20,9 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     WSIStreamDataset,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _process_instance_predictions(

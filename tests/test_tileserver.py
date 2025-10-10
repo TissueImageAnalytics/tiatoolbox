@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import urllib
-from collections.abc import Callable
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, NoReturn
 
@@ -25,6 +24,8 @@ from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from flask.testing import FlaskClient
 
 RNG = np.random.default_rng(0)  # Numpy Random Generator

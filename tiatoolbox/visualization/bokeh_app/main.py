@@ -7,7 +7,6 @@ import sys
 import tempfile
 import urllib
 from cmath import pi
-from collections.abc import Callable
 from pathlib import Path, PureWindowsPath
 from shutil import rmtree
 from typing import TYPE_CHECKING, Any, SupportsFloat
@@ -76,6 +75,8 @@ from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from bokeh.document import Document
 
 rng = np.random.default_rng()

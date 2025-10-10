@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 import logging
 import shutil
-from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -31,6 +30,7 @@ from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
     from multiprocessing.managers import Namespace
 
     from tiatoolbox.type_hints import IntPair, Resolution, Units

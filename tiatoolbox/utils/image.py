@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -19,6 +18,8 @@ from tiatoolbox.utils.transforms import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from tiatoolbox.type_hints import IntBounds, NumpyPadLiteral
 
 PADDING_TO_BOUNDS = np.array([-1, -1, 1, 1])

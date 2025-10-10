@@ -23,7 +23,6 @@
 from __future__ import annotations
 
 import shutil
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 # replace with the sql database once the PR in place
@@ -42,6 +41,8 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     import torch
 
     from tiatoolbox.type_hints import IntBounds

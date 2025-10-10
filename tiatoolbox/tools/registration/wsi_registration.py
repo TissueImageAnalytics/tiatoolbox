@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import itertools
-from collections.abc import Callable
 from typing import TYPE_CHECKING, cast
 
 import cv2
@@ -25,6 +24,8 @@ from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from tiatoolbox.type_hints import IntBounds, Resolution, Units
 
 RGB_IMAGE_DIM = 3

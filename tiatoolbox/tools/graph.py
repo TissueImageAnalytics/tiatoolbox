@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
 from numbers import Number
 from typing import TYPE_CHECKING, cast
 
@@ -16,6 +15,8 @@ from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 

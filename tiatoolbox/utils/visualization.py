@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import colorsys
 import random
-from collections.abc import Callable
 from typing import TYPE_CHECKING, TypedDict, cast
 
 import cv2
@@ -19,6 +18,8 @@ from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from matplotlib.axes import Axes
     from matplotlib.cm import ScalarMappable
     from numpy.typing import ArrayLike
