@@ -1900,29 +1900,29 @@ def test_command_line_jp2_read_bounds(sample_jp2: Path, tmp_path: Path) -> None:
     assert Path(tmp_path).joinpath("../im_region.jpg").is_file()
 
 
-# @pytest.mark.skipif(
-#     utils.env_detection.running_on_ci(),
-#     reason="No need to display image on travis.",
-# )
-# def test_command_line_jp2_read_bounds_show(sample_jp2: Path) -> None:
-#     """Test JP2 read_bounds with mode as 'show'."""
-#     runner = CliRunner()
-#     read_bounds_result = runner.invoke(
-#         cli.main,
-#         [
-#             "read-bounds",
-#             "--img-input",
-#             str(Path(sample_jp2)),
-#             "--resolution",
-#             "0",
-#             "--units",
-#             "level",
-#             "--mode",
-#             "show",
-#         ],
-#     )
-#
-#     assert read_bounds_result.exit_code == 0
+@pytest.mark.skipif(
+    utils.env_detection.running_on_ci(),
+    reason="No need to display image on travis.",
+)
+def test_command_line_jp2_read_bounds_show(sample_jp2: Path) -> None:
+    """Test JP2 read_bounds with mode as 'show'."""
+    runner = CliRunner()
+    read_bounds_result = runner.invoke(
+        cli.main,
+        [
+            "read-bounds",
+            "--img-input",
+            str(Path(sample_jp2)),
+            "--resolution",
+            "0",
+            "--units",
+            "level",
+            "--mode",
+            "show",
+        ],
+    )
+
+    assert read_bounds_result.exit_code == 0
 
 
 def test_command_line_unsupported_file_read_bounds(sample_svs: Path) -> None:
