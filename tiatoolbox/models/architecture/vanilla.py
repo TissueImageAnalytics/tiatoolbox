@@ -19,7 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _get_architecture(
     arch_name: str,
-    weights: str or WeightsEnum = None,
+    weights: str | WeightsEnum | None = None,
     **kwargs: dict,
 ) -> list[nn.Sequential, ...] | nn.Sequential:
     """Retrieve a CNN model architecture.
@@ -33,7 +33,7 @@ def _get_architecture(
             Name of the architecture (e.g. 'resnet50', 'alexnet').
         weights (str or WeightsEnum):
             Pretrained torchvision model weights to use (get_model_weights).
-            Defaults is None to avoid downloading ImageNet weights.
+            Default is None to avoid downloading ImageNet weights.
             To initiate the models with ImageNet weights, use "DEFAULT".
         **kwargs (dict):
             Key-word arguments.
@@ -299,7 +299,7 @@ class CNNModel(ModelABC):
         super().__init__()
         self.num_classes = num_classes
 
-        # set num_classes to 100 to avoid downloading weights
+        # By default pretrained weights are not downloaded
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -550,7 +550,7 @@ class CNNBackbone(ModelABC):
     def __init__(self: CNNBackbone, backbone: str) -> None:
         """Initialize :class:`CNNBackbone`."""
         super().__init__()
-        # set num_classes=1000 to avoid downloading weights
+        # By default pretrained weights are not downloaded
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 

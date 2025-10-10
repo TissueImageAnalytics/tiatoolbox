@@ -25,7 +25,7 @@ def fetch_pretrained_weights(
     save_path: str | Path | None = None,
     *,
     overwrite: bool = False,
-) -> Path:
+) -> str:
     """Get the pretrained model information from yml file.
 
     Args:
@@ -47,15 +47,16 @@ def fetch_pretrained_weights(
         raise ValueError(msg)
 
     info = PRETRAINED_INFO[model_name]
+    hf_repo_id = info["hf_repo_id"]
+    file_name = f"{model_name}.pth"
 
-    file_name = info["url"].split("/")[-1]
     if save_path is None:
         local_dir = rcParam["TIATOOLBOX_HOME"] / "models"
     else:
         local_dir = Path(save_path)
 
     return hf_hub_download(
-        repo_id="TIACentre/TIAToolbox_pretrained_weights",
+        repo_id=hf_repo_id,
         filename=file_name,
         local_dir=local_dir,
         force_download=overwrite,
