@@ -470,7 +470,7 @@ def test_filter_coordinates() -> None:
     # Test for bad mask input
     with pytest.raises(
         TypeError,
-        match="`mask_reader` should be wsireader.VirtualWSIReader.",
+        match=r"`mask_reader` should be wsireader.VirtualWSIReader.",
     ):
         PatchExtractor.filter_coordinates(
             mask,
@@ -495,14 +495,14 @@ def test_filter_coordinates() -> None:
         )
 
     # Test for put of range min_mask_ratio
-    with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
+    with pytest.raises(ValueError, match=r"`min_mask_ratio` must be between 0 and 1."):
         PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,
             slide_shape,
             min_mask_ratio=-0.5,
         )
-    with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
+    with pytest.raises(ValueError, match=r"`min_mask_ratio` must be between 0 and 1."):
         PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,

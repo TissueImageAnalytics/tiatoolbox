@@ -701,7 +701,7 @@ def test_no_ann_layer(empty_app: TileServer, remote_sample: Callable) -> None:
             "/tileserver/slide",
             data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
-        with pytest.raises(ValueError, match="No annotation layer found."):
+        with pytest.raises(ValueError, match=r"No annotation layer found."):
             client.get("/tileserver/prop_names/all")
 
 
