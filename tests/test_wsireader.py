@@ -2165,7 +2165,7 @@ def test_is_ngff_regular_zarr(tmp_path: Path) -> None:
     assert not is_ngff(zarr_path)
 
     # check we get the appropriate error message if we open it
-    with pytest.raises(FileNotSupportedError, match="does not appear to be a v0.4"):
+    with pytest.raises(FileNotSupportedError, match=r"does not appear to be a v0.4"):
         WSIReader.open(zarr_path)
 
 
@@ -3252,7 +3252,7 @@ def test_read_rect_transformedreader_svs_baseline(
 
     with pytest.raises(
         ValueError,
-        match="Transform cannot be None. Please provide a valid transformation",
+        match=r"Transform cannot be None. Please provide a valid transformation",
     ):
         wsi2 = wsireader.TransformedWSIReader(
             sample_svs, target_img=sample_svs, transform=None
