@@ -96,7 +96,7 @@ def test_engine_abc_incorrect_model_type() -> NoReturn:
 
     with pytest.raises(
         TypeError,
-        match="Input model must be a string or 'torch.nn.Module'.",
+        match=r"Input model must be a string or 'torch.nn.Module'.",
     ):
         TestEngineABC(model=1)
 
@@ -255,7 +255,7 @@ def test_engine_initalization() -> NoReturn:
     """Test engine initialization."""
     with pytest.raises(
         TypeError,
-        match="Input model must be a string or 'torch.nn.Module'.",
+        match=r"Input model must be a string or 'torch.nn.Module'.",
     ):
         _ = TestEngineABC(model=0)
 
