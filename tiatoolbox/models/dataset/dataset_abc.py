@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Iterable
@@ -20,7 +20,7 @@ import torch
 
 from tiatoolbox.utils import imread
 
-input_type = Union[list[str | Path | np.ndarray], np.ndarray]
+input_type = list[str | Path | np.ndarray] | np.ndarray
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
