@@ -179,6 +179,7 @@ def overlay_prediction_mask(
             raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
     # If `min_val` is defined, only display the overlay for areas with pred > min_val
+    prediction_sel: np.ndarray = np.ones_like(prediction, dtype=bool)
     if min_val > 0:
         prediction_sel = prediction >= min_val
 
@@ -200,7 +201,7 @@ def overlay_prediction_mask(
         msg = f"Missing label for: {missing_label_uids}."
         raise ValueError(msg)
 
-    rgb_prediction = np.zeros(
+    rgb_prediction: np.ndarray = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3],
         dtype=np.uint8,
     )
@@ -1129,7 +1130,9 @@ class AnnotationRenderer:
 
         min_area = 0.0005 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
 
-        tile = np.zeros((output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8)
+        tile: np.ndarray = np.zeros(
+            (output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8
+        )
 
         if scale <= self.max_scale:
             # get all annotations

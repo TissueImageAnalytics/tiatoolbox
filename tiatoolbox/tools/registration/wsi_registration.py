@@ -798,13 +798,13 @@ class DFBRegister:
                 Indices of points enclosed by a boundary.
 
         """
-        kernel = np.ones((25, 25), np.uint8)
+        kernel: np.ndarray = np.ones((25, 25), np.uint8)
         mask = cv2.dilate(mask, kernel, iterations=1)
         mask_reader = VirtualWSIReader(mask)
 
         # convert coordinates of shape [N, 2] to [N, 4]
-        end_x_y = points[:, 0:2] + 1
-        bbox_coord = np.c_[points, end_x_y].astype(int)
+        end_x_y: np.ndarray = points[:, 0:2] + 1
+        bbox_coord: np.ndarray = np.c_[points, end_x_y].astype(int)
         return PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_coord,

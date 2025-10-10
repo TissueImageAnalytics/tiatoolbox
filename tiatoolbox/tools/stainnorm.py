@@ -307,7 +307,7 @@ class ReinhardNormalizer(StainNormalizer):
         """
         img = img.astype("uint8")  # ensure input image is uint8
         img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
-        img_float = img.astype(np.float32)
+        img_float: np.ndarray = img.astype(np.float32)
         chan1, chan2, chan3 = cv2.split(img_float)
         chan1 /= np.asarray(2.55)  # should now be in range [0,100]
         chan2 -= np.asarray(128.0)  # should now be in range [-127,127]
