@@ -149,7 +149,7 @@ def test_transform_before_fit_otsu() -> None:
     """Test otsu masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.OtsuTissueMasker()
-    with pytest.raises(SyntaxError, match="Fit must be called before transform."):
+    with pytest.raises(SyntaxError, match=r"Fit must be called before transform."):
         masker.transform([image])[0]
 
 
@@ -157,7 +157,7 @@ def test_transform_before_fit_morphological() -> None:
     """Test morphological masker error on transform before fit."""
     image = np.ones((1, 10, 10))
     masker = tissuemask.MorphologicalMasker()
-    with pytest.raises(SyntaxError, match="Fit must be called before transform."):
+    with pytest.raises(SyntaxError, match=r"Fit must be called before transform."):
         masker.transform([image])[0]
 
 
@@ -165,7 +165,7 @@ def test_transform_fit_otsu_wrong_shape() -> None:
     """Test giving the incorrect input shape to otsu masker."""
     image = np.ones((10, 10))
     masker = tissuemask.OtsuTissueMasker()
-    with pytest.raises(ValueError, match="Expected 4 dimensional input shape *"):
+    with pytest.raises(ValueError, match=r"Expected 4 dimensional input shape *"):
         masker.fit([image])
 
 
@@ -173,7 +173,7 @@ def test_transform_morphological_conflicting_args() -> None:
     """Test giving conflicting arguments to morphological masker."""
     with pytest.raises(
         ValueError,
-        match="Only one of mpp, power, kernel_size can be given.",
+        match=r"Only one of mpp, power, kernel_size can be given.",
     ):
         tissuemask.MorphologicalMasker(mpp=32, power=1.25)
 
