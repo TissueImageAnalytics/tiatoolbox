@@ -6,8 +6,8 @@ Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerat
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np

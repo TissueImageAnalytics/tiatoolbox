@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 from numbers import Number
-from typing import Callable, ClassVar
+from typing import ClassVar
 
 import pytest
 

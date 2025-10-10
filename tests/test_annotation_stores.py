@@ -6,11 +6,11 @@ import json
 import pickle
 import sqlite3
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from itertools import repeat, zip_longest
 from pathlib import Path
 from timeit import timeit
-from typing import TYPE_CHECKING, Callable, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 import pandas as pd

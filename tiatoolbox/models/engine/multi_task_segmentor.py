@@ -23,7 +23,8 @@
 from __future__ import annotations
 
 import shutil
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 # replace with the sql database once the PR in place
 import joblib
@@ -115,7 +116,7 @@ def _process_tile_predictions(  # skipcq: PY-R1000
             (top_left_x, top_left_y, bottom_x, bottom_y).
 
     """
-    locations, predictions = list(zip(*tile_output))
+    locations, predictions = list(zip(*tile_output, strict=False))
 
     # convert from WSI space to tile space
     tile_tl = tile_bounds[:2]

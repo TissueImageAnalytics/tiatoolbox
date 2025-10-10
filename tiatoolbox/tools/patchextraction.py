@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable, TypedDict, overload
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypedDict, overload
 
 import numpy as np
 from typing_extensions import Unpack

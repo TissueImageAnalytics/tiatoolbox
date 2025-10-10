@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import colorsys
 import random
-from typing import TYPE_CHECKING, Callable, TypedDict, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import cv2
 import matplotlib as mpl
@@ -217,7 +218,7 @@ def overlay_prediction_mask(
         return overlay
 
     # Create colorbar parameters
-    name_list, color_list = zip(*label_info.values())  # Unzip values
+    name_list, color_list = zip(*label_info.values(), strict=False)  # Unzip values
     color_list_arr = np.array(color_list) / 255
     uid_list = list(label_info.keys())
     cmap = mpl.colors.ListedColormap(color_list_arr)
@@ -1048,7 +1049,7 @@ class AnnotationRenderer:
         if isinstance(value, list):
             colors = random_colors(len(value), bright=True)
             self.__dict__["mapper"] = {
-                key: (*color, 1) for key, color in zip(value, colors)
+                key: (*color, 1) for key, color in zip(value, colors, strict=False)
             }
         if isinstance(value, dict):
             self.raw_mapper = value

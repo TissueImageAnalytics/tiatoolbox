@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Callable, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, cast
 
 import cv2
 import numpy as np
@@ -1382,11 +1383,14 @@ def estimate_bspline_transform(
         for size, spacing in zip(
             fixed_image_inv_sitk.GetSize(),
             fixed_image_inv_sitk.GetSpacing(),
+            strict=False,
         )
     ]
     mesh_size = [
         int(image_size / grid_spacing + 0.5)
-        for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)
+        for image_size, grid_spacing in zip(
+            image_physical_size, grid_physical_spacing, strict=False
+        )
     ]
     mesh_size = [int(sz / 4 + 0.5) for sz in mesh_size]
 

@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import logging
 import urllib
+from collections.abc import Callable
 from pathlib import Path, PureWindowsPath
-from typing import TYPE_CHECKING, Callable, NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import joblib
 import numpy as np

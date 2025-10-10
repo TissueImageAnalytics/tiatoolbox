@@ -240,7 +240,7 @@ def has_network(
         # Connect to host
         connection = socket.create_connection((host, 80), timeout=timeout)
         connection.close()
-    except (socket.gaierror, socket.timeout):
+    except (TimeoutError, socket.gaierror):
         return False
     else:
         return True
