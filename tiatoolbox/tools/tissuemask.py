@@ -265,7 +265,7 @@ class MorphologicalMasker(OtsuTissueMasker):
 
         # Set min region size to kernel area if None
         if self.min_region_size is None:
-            self.min_region_size = np.sum(self.kernel)
+            self.min_region_size = int(np.sum(self.kernel))
 
     def transform(self: MorphologicalMasker, images: np.ndarray) -> np.ndarray:
         """Create masks using the found threshold followed by morphological operations.
