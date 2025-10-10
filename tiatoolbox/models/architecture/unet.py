@@ -439,8 +439,8 @@ class UNetModel(ModelABC):
                 Transfers model to the specified device. Default is "cpu".
 
         Returns:
-            dict:
-                A dict with "probabilities" key and a :class:`numpy.ndarray` as output.
+            np.ndarray:
+                The model predictions as a :class:`numpy.ndarray`.
 
         """
         model.eval()
