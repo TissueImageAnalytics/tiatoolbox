@@ -467,7 +467,7 @@ class TestPredicate:
         """Test has_key function with exception."""
         eval_globals, eval_locals, _ = extract_variables(scenario_variables)
         query = "has_key(1, 'a')"
-        with pytest.raises(TypeError, match="(not iterable)|(Unsupported type)"):
+        with pytest.raises(TypeError, match=r"(not iterable)|(Unsupported type)"):
             _ = eval(  # skipcq: PYL-W0123
                 query,
                 eval_globals,
