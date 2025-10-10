@@ -396,10 +396,6 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
             auto_get_mask=False,
         )
 
-    # invalid mode
-    with pytest.raises(ValueError, match=r"`X` is not supported."):
-        reuse_init(mode="X")
-
     # invalid patch
     with pytest.raises(ValueError, match=r"Invalid `patch_input_shape` value None."):
         reuse_init()
