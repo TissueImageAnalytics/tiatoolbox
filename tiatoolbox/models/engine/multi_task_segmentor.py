@@ -346,15 +346,17 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         indices_sem = [i for i, x in enumerate(self.output_types) if x == "semantic"]
 
         for s_id in range(len(indices_sem)):
+            shape = tuple(map(int, np.fliplr([wsi_proc_shape])[0]))
             self.wsi_layers.append(
                 np.lib.format.open_memmap(
                     f"{cache_dir}/{s_id}.npy",
                     mode="w+",
-                    shape=tuple(np.fliplr([wsi_proc_shape])[0]),
+                    shape=shape,
                     dtype=np.uint8,
                 ),
             )
             self.wsi_layers[s_id][:] = 0
+            self.wsi_layers[s_id].flush()
 
         indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
 

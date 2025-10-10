@@ -113,7 +113,7 @@ def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> 
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=NUM_POSTPROC_WORKERS,
+        num_postproc_workers=0,
     )
     output = multi_segmentor.predict(
         [mini_wsi_svs],
