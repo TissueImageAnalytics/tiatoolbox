@@ -356,7 +356,6 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
                 ),
             )
             self.wsi_layers[s_id][:] = 0
-            self.wsi_layers[s_id].flush()
 
         indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
 

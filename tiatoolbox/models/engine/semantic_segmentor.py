@@ -55,12 +55,12 @@ def _estimate_canvas_parameters(
     """
     if len(sample_prediction.shape) == 3:  # noqa: PLR2004
         num_output_ch = sample_prediction.shape[-1]
-        canvas_cum_shape_ = (*tuple(canvas_shape), num_output_ch)
-        canvas_count_shape_ = (*tuple(canvas_shape), 1)
+        canvas_cum_shape_ = tuple(map(int, (*tuple(canvas_shape), num_output_ch)))
+        canvas_count_shape_ = tuple(map(int, (*tuple(canvas_shape), 1)))
         add_singleton_dim = num_output_ch == 1
     else:
-        canvas_cum_shape_ = (*tuple(canvas_shape), 1)
-        canvas_count_shape_ = (*tuple(canvas_shape), 1)
+        canvas_cum_shape_ = tuple(map(int, (*tuple(canvas_shape), 1)))
+        canvas_count_shape_ = tuple(map(int, (*tuple(canvas_shape), 1)))
         add_singleton_dim = True
 
     return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
