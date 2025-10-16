@@ -288,7 +288,7 @@ class ReinhardNormalizer(StainNormalizer):
         return self.merge_back(norm1, norm2, norm3)
 
     @staticmethod
-    def lab_split(img: np.ndarray) -> tuple[float, float, float]:
+    def lab_split(img: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Convert from RGB uint8 to LAB and split into channels.
 
         Args:
@@ -307,15 +307,17 @@ class ReinhardNormalizer(StainNormalizer):
         """
         img = img.astype("uint8")  # ensure input image is uint8
         img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
-        img_float = img.astype(np.float32)
+        img_float: np.ndarray = img.astype(np.float32)
         chan1, chan2, chan3 = cv2.split(img_float)
-        chan1 /= 2.55  # should now be in range [0,100]
-        chan2 -= 128.0  # should now be in range [-127,127]
-        chan3 -= 128.0  # should now be in range [-127,127]
+        chan1 /= np.asarray(2.55)  # should now be in range [0,100]
+        chan2 -= np.asarray(128.0)  # should now be in range [-127,127]
+        chan3 -= np.asarray(128.0)  # should now be in range [-127,127]
         return chan1, chan2, chan3
 
     @staticmethod
-    def merge_back(chan1: float, chan2: float, chan3: float) -> np.ndarray:
+    def merge_back(
+        chan1: np.ndarray, chan2: np.ndarray, chan3: np.ndarray
+    ) -> np.ndarray:
         """Take separate LAB channels and merge back to give RGB uint8.
 
         Args:
@@ -357,11 +359,11 @@ class ReinhardNormalizer(StainNormalizer):
         """
         img = img.astype("uint8")  # ensure input image is uint8
         chan1, chan2, chan3 = self.lab_split(img)
-        m1, sd1 = cv2.meanStdDev(chan1)
-        m2, sd2 = cv2.meanStdDev(chan2)
-        m3, sd3 = cv2.meanStdDev(chan3)
-        means = m1, m2, m3
-        stds = sd1, sd2, sd3
+        m1, sd1 = cv2.meanStdDev(np.asarray(chan1))
+        m2, sd2 = cv2.meanStdDev(np.asarray(chan2))
+        m3, sd3 = cv2.meanStdDev(np.asarray(chan3))
+        means = float(m1[0][0]), float(m2[0][0]), float(m3[0][0])
+        stds = float(sd1[0][0]), float(sd2[0][0]), float(sd3[0][0])
         return means, stds
 
 

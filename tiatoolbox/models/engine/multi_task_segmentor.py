@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import shutil
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 # replace with the sql database once the PR in place
 import joblib
@@ -41,6 +41,8 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     import torch
 
     from tiatoolbox.type_hints import IntBounds
@@ -115,7 +117,7 @@ def _process_tile_predictions(  # skipcq: PY-R1000
             (top_left_x, top_left_y, bottom_x, bottom_y).
 
     """
-    locations, predictions = list(zip(*tile_output))
+    locations, predictions = list(zip(*tile_output, strict=False))
 
     # convert from WSI space to tile space
     tile_tl = tile_bounds[:2]
@@ -344,11 +346,12 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
         indices_sem = [i for i, x in enumerate(self.output_types) if x == "semantic"]
 
         for s_id in range(len(indices_sem)):
+            shape = tuple(map(int, np.fliplr([wsi_proc_shape])[0]))
             self.wsi_layers.append(
                 np.lib.format.open_memmap(
                     f"{cache_dir}/{s_id}.npy",
                     mode="w+",
-                    shape=tuple(np.fliplr([wsi_proc_shape])[0]),
+                    shape=shape,
                     dtype=np.uint8,
                 ),
             )
