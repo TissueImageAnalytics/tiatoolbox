@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import sqlite3
 import tempfile
-from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import dask.array as da
@@ -26,6 +26,9 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore import WSIReader
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
