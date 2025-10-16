@@ -27,8 +27,8 @@ jobs:
             mtag: py3.12-debian
           - dockerfile: ./docker/3.12/Ubuntu/Dockerfile
             mtag: py3.12-ubuntu
-          - dockerfile: ./docker/3.12/Ubuntu/Dockerfile
-            mtag: latest
+          - dockerfile: ./docker/3.13/Ubuntu/Dockerfile
+            mtag: py3.13-debian
           - dockerfile: ./docker/3.13/Ubuntu/Dockerfile
             mtag: py3.13-ubuntu
           - dockerfile: ./docker/3.13/Ubuntu/Dockerfile
