@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable, TypedDict, overload
+from typing import TYPE_CHECKING, TypedDict, overload
 
 import numpy as np
 from typing_extensions import Unpack
@@ -16,6 +16,7 @@ from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
     from pathlib import Path
 
     from pandas import DataFrame
@@ -418,7 +419,7 @@ class PatchExtractor(PatchExtractorABC):
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
         scale_factors = np.array(tissue_mask.shape[1::-1]) / np.array(wsi_shape)
-        scaled_coords = coordinates_list.copy().astype(np.float32)
+        scaled_coords: np.ndarray = coordinates_list.copy().astype(np.float32)
         scaled_coords[:, [0, 2]] *= scale_factors[0]
         scaled_coords[:, [0, 2]] = np.clip(
             scaled_coords[:, [0, 2]],

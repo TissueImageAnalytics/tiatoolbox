@@ -9,7 +9,7 @@ import gc
 import multiprocessing
 import shutil
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -34,6 +34,9 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 ON_GPU = toolbox_env.has_gpu()
 # The value is based on 2 TitanXP each with 12GB

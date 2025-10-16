@@ -103,7 +103,7 @@ def compile_model(
 
 def centre_crop(
     img: np.ndarray | torch.Tensor,
-    crop_shape: np.ndarray | torch.Tensor | tuple,
+    crop_shape: np.ndarray | torch.Tensor | tuple[int, int],
     data_format: str = "NCHW",
 ) -> np.ndarray | torch.Tensor:
     """A function to center crop image with given crop shape.
@@ -126,10 +126,10 @@ def centre_crop(
         msg = f"Unknown input format `{data_format}`."
         raise ValueError(msg)
 
-    crop_t = crop_shape[0] // 2
-    crop_b = crop_shape[0] - crop_t
-    crop_l = crop_shape[1] // 2
-    crop_r = crop_shape[1] - crop_l
+    crop_t: int = int(crop_shape[0] // 2)
+    crop_b: int = int(crop_shape[0] - crop_t)
+    crop_l: int = int(crop_shape[1] // 2)
+    crop_r: int = int(crop_shape[1] - crop_l)
     if data_format == "NCHW":
         return img[:, :, crop_t:-crop_b, crop_l:-crop_r]
 

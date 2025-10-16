@@ -61,9 +61,9 @@ from __future__ import annotations
 import json
 import operator
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Number
-from typing import Callable
 
 from typing_extensions import TypedDict
 

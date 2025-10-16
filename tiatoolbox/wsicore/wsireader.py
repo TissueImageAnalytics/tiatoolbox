@@ -3439,7 +3439,7 @@ class ArrayView:
         """
         self.array = array
         self.axes = axes
-        self._shape = dict(zip(self.axes, self.array.shape))
+        self._shape = dict(zip(self.axes, self.array.shape, strict=False))
 
     @property
     def shape(self: ArrayView) -> tuple:
@@ -6254,6 +6254,7 @@ class TransformedWSIReader(WSIReader):
                 for s_dims, t_dims in zip(
                     self.wsi_reader.info.level_dimensions,
                     self.target_wsi_reader.info.level_dimensions,
+                    strict=False,
                 )
             ]
             self.level_pads = [
@@ -6261,6 +6262,7 @@ class TransformedWSIReader(WSIReader):
                 for s_dims, t_dims in zip(
                     self.wsi_reader.info.level_dimensions,
                     self.target_wsi_reader.info.level_dimensions,
+                    strict=False,
                 )
             ]
             self.get_location_array(disp_array)
@@ -6317,6 +6319,7 @@ class TransformedWSIReader(WSIReader):
             for s_dims, t_dims in zip(
                 self.wsi_reader.info.level_dimensions,
                 self.target_wsi_reader.info.level_dimensions,
+                strict=False,
             )
         )
         wsimeta.slide_dimensions = wsimeta.level_dimensions[0]

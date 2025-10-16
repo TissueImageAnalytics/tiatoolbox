@@ -5,8 +5,8 @@ import copy
 # ! The garbage collector
 import gc
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import joblib
 import numpy as np
