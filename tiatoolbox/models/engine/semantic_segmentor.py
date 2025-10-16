@@ -7,7 +7,7 @@ import logging
 import shutil
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import cv2
 import joblib
@@ -29,6 +29,8 @@ from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 from .io_config import IOSegmentorConfig
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
@@ -503,13 +505,13 @@ class SemanticSegmentor:
             # repackage so that it's an N list, each contains
             # L x etc. output
             sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
-            sample_outputs = list(zip(*sample_outputs))
+            sample_outputs = list(zip(*sample_outputs, strict=False))
 
             # tensor to numpy, costly?
             sample_infos = sample_infos.numpy()
             sample_infos = np.split(sample_infos, batch_size, axis=0)
 
-            sample_outputs = list(zip(sample_infos, sample_outputs))
+            sample_outputs = list(zip(sample_infos, sample_outputs, strict=False))
             if self.process_prediction_per_batch:
                 self._process_predictions(
                     sample_outputs,
@@ -567,7 +569,7 @@ class SemanticSegmentor:
             return
 
         # assume predictions is N, each item has L output element
-        locations, predictions = list(zip(*cum_batch_predictions))
+        locations, predictions = list(zip(*cum_batch_predictions, strict=False))
         # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
         # output patch this can exceed the image bound at the requested
         # resolution remove singleton due to split.
@@ -677,7 +679,7 @@ class SemanticSegmentor:
             """Helper to shorten indexing."""
             return arr[tl[0] : br[0], tl[1] : br[1]]
 
-        patch_infos = list(zip(locations, predictions))
+        patch_infos = list(zip(locations, predictions, strict=False))
         for _, patch_info in enumerate(patch_infos):
             # position is assumed to be in XY coordinate
             (bound_in_wsi, prediction) = patch_info
@@ -1236,7 +1238,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
         """
         # assume prediction_list is N, each item has L output elements
-        location_list, prediction_list = list(zip(*cum_batch_predictions))
+        location_list, prediction_list = list(zip(*cum_batch_predictions, strict=False))
         # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output
         # patch, this can exceed the image bound at the requested resolution
         # remove singleton due to split.

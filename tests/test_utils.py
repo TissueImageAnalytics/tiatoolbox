@@ -803,7 +803,7 @@ def test_fuzz_bounds2locsize() -> None:
     for _ in range(1000):
         size = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
         location = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
-        bounds = (*location, *(sum(x) for x in zip(size, location)))
+        bounds = (*location, *(sum(x) for x in zip(size, location, strict=False)))
         assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
@@ -1137,7 +1137,7 @@ def test_parse_cv2_interpolaton() -> None:
     cases = [str.upper, str.lower, str.capitalize]
     mode_strings = ["cubic", "linear", "area", "lanczos"]
     mode_enums = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
-    for string, cv2_enum in zip(mode_strings, mode_enums):
+    for string, cv2_enum in zip(mode_strings, mode_enums, strict=False):
         for case in cases:
             assert utils.misc.parse_cv2_interpolaton(case(string)) == cv2_enum
             assert utils.misc.parse_cv2_interpolaton(cv2_enum) == cv2_enum

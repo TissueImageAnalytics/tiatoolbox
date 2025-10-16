@@ -220,7 +220,7 @@ def in_common_consistent(all_requirements: dict[Path, dict[str, Requirement]]) -
         ]
 
         # Unzip the specs to get a list of constraints and versions
-        _, constraints, versions = zip(*zipped_file_specs)
+        _, constraints, versions = zip(*zipped_file_specs, strict=False)
 
         # Check that the constraints and versions are the same across files
         formatted_reqs = [f"{c}{v} ({p.name})" for p, c, v in zipped_file_specs]

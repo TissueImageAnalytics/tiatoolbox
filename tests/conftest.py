@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
 import torch
@@ -15,6 +15,9 @@ import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils.env_detection import has_gpu, running_on_ci
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
