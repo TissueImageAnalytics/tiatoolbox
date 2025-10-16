@@ -26,6 +26,7 @@ from tiatoolbox.utils.misc import download_data, get_zarr_array, imwrite
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
     import pytest
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
