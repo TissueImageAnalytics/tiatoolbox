@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import copy
+import itertools
 import json
 import logging
 import re
 import shutil
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import cv2
@@ -50,7 +51,7 @@ from tiatoolbox.wsicore.wsireader import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     import requests
     from openslide import OpenSlide
@@ -135,7 +136,7 @@ def strictly_increasing(sequence: Iterable) -> bool:
         bool: True if strictly increasing.
 
     """
-    return all(a < b for a, b in zip(sequence, sequence[1:]))
+    return all(a < b for a, b in itertools.pairwise(sequence))
 
 
 def strictly_decreasing(sequence: Iterable) -> bool:
@@ -149,7 +150,7 @@ def strictly_decreasing(sequence: Iterable) -> bool:
         bool: True if strictly decreasing.
 
     """
-    return all(a > b for a, b in zip(sequence, sequence[1:]))
+    return all(a > b for a, b in itertools.pairwise(sequence))
 
 
 def read_rect_objective_power(wsi: WSIReader, location: IntPair, size: IntPair) -> None:
@@ -557,6 +558,7 @@ def test_find_optimal_level_and_downsample_mpp(sample_ndpi: Path) -> None:
         mpps,
         expected_levels,
         expected_scales,
+        strict=False,
     ):
         read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
             mpp,
@@ -573,7 +575,9 @@ def test_find_optimal_level_and_downsample_power(sample_ndpi: Path) -> None:
 
     objective_powers = [20, 10, 5, 2.5, 1.25]
     expected_levels = [0, 1, 2, 3, 4]
-    for objective_power, expected_level in zip(objective_powers, expected_levels):
+    for objective_power, expected_level in zip(
+        objective_powers, expected_levels, strict=False
+    ):
         read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
             objective_power,
             "power",
@@ -1498,7 +1502,7 @@ def test_tissue_mask_morphological(sample_svs: Path) -> None:
     resolutions = [5, 10]
     units = ["power", "mpp"]
     scale_fns = [lambda x: x * 2, lambda x: 32 / x]
-    for unit, scaler in zip(units, scale_fns):
+    for unit, scaler in zip(units, scale_fns, strict=False):
         for resolution in resolutions:
             mask = wsi.tissue_mask(
                 method="morphological",

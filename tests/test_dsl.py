@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from numbers import Number
-from typing import Callable, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 
@@ -18,6 +18,9 @@ from tiatoolbox.annotation.dsl import (
     json_list_sum,
     py_regexp,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 BINARY_OP_STRINGS = [
     "+",
