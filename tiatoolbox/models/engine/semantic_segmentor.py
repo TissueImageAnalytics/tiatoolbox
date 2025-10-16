@@ -426,7 +426,9 @@ class SemanticSegmentor(PatchPredictor):
         coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [da.empty(shape=(0, 0))] * len(keys)))
+        raw_predictions = dict(
+            zip(keys, [da.empty(shape=(0, 0))] * len(keys), strict=False)
+        )
 
         # Inference loop
         tqdm = get_tqdm()

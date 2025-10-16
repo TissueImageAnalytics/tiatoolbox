@@ -373,7 +373,7 @@ def bounds2slices(
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
 
     slices = []
-    for x, s in zip(slice_array, stride_array):
+    for x, s in zip(slice_array, stride_array, strict=False):
         slices.append(slice(x[0], x[1], s))
 
     return tuple(slices)
