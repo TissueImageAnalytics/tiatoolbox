@@ -6,7 +6,6 @@ import copy
 import json
 import shutil
 import sqlite3
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -26,6 +25,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, get_zarr_array, imwrite
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     import pytest
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
