@@ -524,7 +524,7 @@ class EngineABC(ABC):  # noqa: B024
             coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys)))
+        raw_predictions = dict(zip(keys, [[]] * len(keys), strict=False))
 
         # Inference loop
         tqdm = get_tqdm()
@@ -670,7 +670,9 @@ class EngineABC(ABC):  # noqa: B024
         computed_values = compute(*values_to_compute)
 
         # Assign computed values
-        processed_predictions = dict(zip(keys_to_compute, computed_values))
+        processed_predictions = dict(
+            zip(keys_to_compute, computed_values, strict=False)
+        )
 
         if output_type.lower() == "dict":
             return processed_predictions
