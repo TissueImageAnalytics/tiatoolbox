@@ -345,13 +345,13 @@ class PromptSegmentor(SemanticSegmentor):
             sample_outputs = [
                 np.split(np.array(v), batch_size, axis=0) for v in sample_outputs
             ]
-            sample_outputs = list(zip(*sample_outputs))
+            sample_outputs = list(zip(*sample_outputs, strict=False))
 
             # tensor to numpy, costly?
             sample_infos = sample_infos.numpy()
             sample_infos = np.split(sample_infos, batch_size, axis=0)
 
-            sample_outputs = list(zip(sample_infos, sample_outputs))
+            sample_outputs = list(zip(sample_infos, sample_outputs, strict=False))
             cum_output.extend(sample_outputs)
             pbar.update()
 
@@ -712,7 +712,7 @@ class PromptSegmentor(SemanticSegmentor):
                 score_memmap.flush()
 
         else:
-            locations, predictions = list(zip(*cum_batch_predictions))
+            locations, predictions = list(zip(*cum_batch_predictions, strict=False))
             # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
             # output patch this can exceed the image bound at the requested
             # resolution remove singleton due to split.
