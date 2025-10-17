@@ -6,8 +6,8 @@ import copy
 import gc
 import multiprocessing
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import joblib
 import numpy as np

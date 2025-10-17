@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import colorsys
 import random
-from typing import TYPE_CHECKING, Callable, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import cv2
 import matplotlib as mpl
@@ -18,6 +18,8 @@ from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from matplotlib.axes import Axes
     from matplotlib.cm import ScalarMappable
     from numpy.typing import ArrayLike
@@ -177,6 +179,7 @@ def overlay_prediction_mask(
             raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
     # If `min_val` is defined, only display the overlay for areas with pred > min_val
+    prediction_sel: np.ndarray = np.ones_like(prediction, dtype=bool)
     if min_val > 0:
         prediction_sel = prediction >= min_val
 
@@ -184,13 +187,13 @@ def overlay_prediction_mask(
 
     predicted_classes = sorted(np.unique(prediction).tolist())
     # Generate random colours if None are given
-    rand_state = np.random.default_rng().__getstate__()
+    rand_state = np.random.default_rng().bit_generator.state
     rng = np.random.default_rng(123)
     label_info = label_info or {  # Use label_info if provided OR generate
         label_uid: (str(label_uid), rng.integers(0, 255, 3))
         for label_uid in predicted_classes
     }
-    np.random.default_rng().__setstate__(rand_state)
+    np.random.default_rng().bit_generator.state = rand_state
 
     # Validate label_info
     missing_label_uids = _validate_label_info(label_info, predicted_classes)
@@ -198,7 +201,7 @@ def overlay_prediction_mask(
         msg = f"Missing label for: {missing_label_uids}."
         raise ValueError(msg)
 
-    rgb_prediction = np.zeros(
+    rgb_prediction: np.ndarray = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3],
         dtype=np.uint8,
     )
@@ -217,7 +220,7 @@ def overlay_prediction_mask(
         return overlay
 
     # Create colorbar parameters
-    name_list, color_list = zip(*label_info.values())  # Unzip values
+    name_list, color_list = zip(*label_info.values(), strict=False)  # Unzip values
     color_list_arr = np.array(color_list) / 255
     uid_list = list(label_info.keys())
     cmap = mpl.colors.ListedColormap(color_list_arr)
@@ -1048,7 +1051,7 @@ class AnnotationRenderer:
         if isinstance(value, list):
             colors = random_colors(len(value), bright=True)
             self.__dict__["mapper"] = {
-                key: (*color, 1) for key, color in zip(value, colors)
+                key: (*color, 1) for key, color in zip(value, colors, strict=False)
             }
         if isinstance(value, dict):
             self.raw_mapper = value
@@ -1127,7 +1130,9 @@ class AnnotationRenderer:
 
         min_area = 0.0005 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
 
-        tile = np.zeros((output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8)
+        tile: np.ndarray = np.zeros(
+            (output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8
+        )
 
         if scale <= self.max_scale:
             # get all annotations

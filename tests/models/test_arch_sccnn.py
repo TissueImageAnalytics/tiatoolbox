@@ -1,6 +1,6 @@
 """Unit test package for SCCNN."""
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import torch
