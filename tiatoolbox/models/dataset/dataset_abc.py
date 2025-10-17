@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -18,18 +18,14 @@ from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from multiprocessing.managers import Namespace
+    from typing import TypeGuard
 
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
-    try:
-        from typing import TypeGuard
-    except ImportError:
-        from typing_extensions import TypeGuard  # to support python <=3.9
-
-input_type = Union[list[Union[str, Path, np.ndarray]], np.ndarray]
+input_type = list[str | Path | np.ndarray] | np.ndarray
 
 
 class PatchDatasetABC(ABC, torch.utils.data.Dataset):
