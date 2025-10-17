@@ -42,6 +42,7 @@ def test_functionality(
     output = model.infer_batch(model, batch, device=map_location)
     output, _ = model.postproc(output[0])
     assert np.max(np.unique(output)) == 46
+    Path(weights_path).unlink()
 
 
 def test_value_error() -> None:
