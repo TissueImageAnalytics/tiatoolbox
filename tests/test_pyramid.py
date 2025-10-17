@@ -95,7 +95,7 @@ def test_zoomify_tile_group_index_error() -> None:
         dz.tile_group(0, 100, 100)
 
 
-def test_zoomify_dump_options_combinations(tmp_path: Path) -> None:
+def test_zoomify_dump_options_combinations(track_tmp_path: Path) -> None:
     """Test for no fatal errors on all option combinations for dump."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
@@ -110,19 +110,19 @@ def test_zoomify_dump_options_combinations(tmp_path: Path) -> None:
         if container is None:
             compression_methods = [None]
         for compression in compression_methods:
-            out_path = tmp_path / f"{compression}-pyramid"
+            out_path = track_tmp_path / f"{compression}-pyramid"
             if container is not None:
                 out_path = out_path.with_suffix(f".{container}")
             dz.dump(out_path, container=container, compression=compression)
             assert out_path.exists()
 
 
-def test_zoomify_dump_compression_error(tmp_path: Path) -> None:
+def test_zoomify_dump_compression_error(track_tmp_path: Path) -> None:
     """Test ValueError is raised on invalid compression modes."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
-    out_path = tmp_path / "pyramid_dump"
+    out_path = track_tmp_path / "pyramid_dump"
 
     with pytest.raises(ValueError, match="Unsupported compression for container None"):
         dz.dump(out_path, container=None, compression="deflate")
@@ -134,23 +134,23 @@ def test_zoomify_dump_compression_error(tmp_path: Path) -> None:
         dz.dump(out_path, container="tar", compression="deflate")
 
 
-def test_zoomify_dump_container_error(tmp_path: Path) -> None:
+def test_zoomify_dump_container_error(track_tmp_path: Path) -> None:
     """Test ValueError is raised on invalid containers."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
-    out_path = tmp_path / "pyramid_dump"
+    out_path = track_tmp_path / "pyramid_dump"
 
     with pytest.raises(ValueError, match="Unsupported container"):
         dz.dump(out_path, container="foo")
 
 
-def test_zoomify_dump(tmp_path: Path) -> None:
+def test_zoomify_dump(track_tmp_path: Path) -> None:
     """Test dumping to directory."""
     array = data.camera()
     wsi = wsireader.VirtualWSIReader(array)
     dz = pyramid.ZoomifyGenerator(wsi, tile_size=64)
-    out_path = tmp_path / "pyramid_dump"
+    out_path = track_tmp_path / "pyramid_dump"
     dz.dump(out_path)
     assert out_path.exists()
     assert len(list((out_path / "TileGroup0").glob("0-*"))) == 1
