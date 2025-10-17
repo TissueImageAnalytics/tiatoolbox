@@ -1,7 +1,7 @@
 """Unit test package for Unet."""
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 import pytest

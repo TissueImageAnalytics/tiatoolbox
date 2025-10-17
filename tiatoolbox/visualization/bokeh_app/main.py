@@ -9,7 +9,7 @@ import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
 from shutil import rmtree
-from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
+from typing import TYPE_CHECKING, Any, SupportsFloat
 
 import numpy as np
 import requests
@@ -75,6 +75,8 @@ from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from bokeh.document import Document
 
 rng = np.random.default_rng()
@@ -1634,6 +1636,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 model_row,
                 type_select_row,
             ],
+            strict=False,
         ),
     )
     if "ui_elements_1" in doc_config:
@@ -1667,6 +1670,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 edge_size_spinner,
                 res_switch,
             ],
+            strict=False,
         ),
     )
     if "ui_elements_2" in doc_config:

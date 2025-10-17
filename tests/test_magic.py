@@ -2,9 +2,10 @@
 
 import sqlite3
 import zipfile
+from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO, Callable
+from typing import BinaryIO
 
 import pytest
 

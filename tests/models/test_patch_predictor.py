@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import shutil
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -27,6 +27,9 @@ from tiatoolbox.utils import download_data, imread, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 ON_GPU = toolbox_env.has_gpu()
 RNG = np.random.default_rng()  # Numpy Random Generator
@@ -147,7 +150,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
         ],
         dtype=object,
     )
-    with pytest.raises(ValueError, match="Provided input array is non-numerical."):
+    with pytest.raises(ValueError, match=r"Provided input array is non-numerical."):
         _ = PatchDataset(imgs)
 
     # ndarray(s) of NHW images
@@ -160,7 +163,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
         RNG.integers(0, 255, (4, 4, 3)),
         RNG.integers(0, 255, (4, 5, 3)),
     ]
-    with pytest.raises(ValueError, match="Images must have the same dimensions."):
+    with pytest.raises(ValueError, match=r"Images must have the same dimensions."):
         _ = PatchDataset(imgs)
 
     # list of ndarray(s) with HW and HWC mixed up
@@ -170,7 +173,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
     ]
     with pytest.raises(
         ValueError,
-        match="Each sample must be an array of the form HWC.",
+        match=r"Each sample must be an array of the form HWC.",
     ):
         _ = PatchDataset(imgs)
 
@@ -178,7 +181,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
     imgs = [RNG.integers(0, 255, (4, 4, 3)), "you_should_crash_here", 123, 456]
     with pytest.raises(
         ValueError,
-        match="Input must be either a list/array of images or a list of "
+        match=r"Input must be either a list/array of images or a list of "
         "valid image paths.",
     ):
         _ = PatchDataset(imgs)
@@ -187,7 +190,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
     imgs = ["you_should_crash_here", 123, 456]
     with pytest.raises(
         ValueError,
-        match="Input must be either a list/array of images or a list of "
+        match=r"Input must be either a list/array of images or a list of "
         "valid image paths.",
     ):
         _ = PatchDataset(imgs)
@@ -290,11 +293,11 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         )
 
     # invalid mode
-    with pytest.raises(ValueError, match="`X` is not supported."):
+    with pytest.raises(ValueError, match=r"`X` is not supported."):
         reuse_init(mode="X")
 
     # invalid patch
-    with pytest.raises(ValueError, match="Invalid `patch_input_shape` value None."):
+    with pytest.raises(ValueError, match=r"Invalid `patch_input_shape` value None."):
         reuse_init()
     with pytest.raises(
         ValueError,
@@ -306,7 +309,7 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         match=r"Invalid `patch_input_shape` value \['512' 'a'\].",
     ):
         reuse_init_wsi(patch_input_shape=[512, "a"])
-    with pytest.raises(ValueError, match="Invalid `stride_shape` value None."):
+    with pytest.raises(ValueError, match=r"Invalid `stride_shape` value None."):
         reuse_init_wsi(patch_input_shape=512)
     # invalid stride
     with pytest.raises(

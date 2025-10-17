@@ -6,7 +6,7 @@ import json
 import logging
 import urllib
 from pathlib import Path, PureWindowsPath
-from typing import TYPE_CHECKING, Callable, NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import joblib
 import numpy as np
@@ -24,6 +24,8 @@ from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from flask.testing import FlaskClient
 
 RNG = np.random.default_rng(0)  # Numpy Random Generator
@@ -701,7 +703,7 @@ def test_no_ann_layer(empty_app: TileServer, remote_sample: Callable) -> None:
             "/tileserver/slide",
             data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
-        with pytest.raises(ValueError, match="No annotation layer found."):
+        with pytest.raises(ValueError, match=r"No annotation layer found."):
             client.get("/tileserver/prop_names/all")
 
 

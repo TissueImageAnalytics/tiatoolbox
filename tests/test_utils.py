@@ -787,7 +787,7 @@ def test_sub_pixel_read_empty_bounds() -> None:
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
-    with pytest.raises(ValueError, match="Bounds have zero size after padding."):
+    with pytest.raises(ValueError, match=r"Bounds have zero size after padding."):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -803,7 +803,7 @@ def test_fuzz_bounds2locsize() -> None:
     for _ in range(1000):
         size = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
         location = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
-        bounds = (*location, *(sum(x) for x in zip(size, location)))
+        bounds = (*location, *(sum(x) for x in zip(size, location, strict=False)))
         assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
@@ -1137,7 +1137,7 @@ def test_parse_cv2_interpolaton() -> None:
     cases = [str.upper, str.lower, str.capitalize]
     mode_strings = ["cubic", "linear", "area", "lanczos"]
     mode_enums = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
-    for string, cv2_enum in zip(mode_strings, mode_enums):
+    for string, cv2_enum in zip(mode_strings, mode_enums, strict=False):
         for case in cases:
             assert utils.misc.parse_cv2_interpolaton(case(string)) == cv2_enum
             assert utils.misc.parse_cv2_interpolaton(cv2_enum) == cv2_enum
@@ -1315,7 +1315,7 @@ def test_crop_and_pad_edges_negative_max_dims() -> None:
 
 def test_crop_and_pad_edges_non_positive_bounds_size() -> None:
     """Test crop and pad edges for non positive bound size."""
-    with pytest.raises(ValueError, match="[bB]ounds.*> 0"):
+    with pytest.raises(ValueError, match=r"[bB]ounds.*> 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, -1, -1),
