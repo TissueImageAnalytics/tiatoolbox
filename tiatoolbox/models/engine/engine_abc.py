@@ -906,7 +906,7 @@ class EngineABC(ABC):  # noqa: B024
             )
             raise ValueError(msg)
 
-        return [Path(image) for image in images]
+        return [Path(image) if isinstance(image, str) else image for image in images]
 
     @staticmethod
     def _validate_input_numbers(
