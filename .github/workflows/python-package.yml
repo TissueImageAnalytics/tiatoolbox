@@ -32,8 +32,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install ruff==0.13.3 pytest pytest-cov pytest-runner
         pip install -r requirements/requirements.txt
-    - name: List tiatoolbox contents
-      run: ls -lahR ~/.tiatoolbox
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v3
       with:
@@ -78,6 +76,8 @@ jobs:
         coverage-file: coverage.xml
         dsn: ${{ secrets.DEEPSOURCE_DSN }}
         fail-ci-on-error: false
+    - name: List tiatoolbox contents
+      run: ls -lahR ~/.tiatoolbox
 
   release:
     runs-on: ubuntu-24.04
