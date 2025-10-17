@@ -241,7 +241,13 @@ def create_channel_color_ui() -> Column:
 
     def apply_changes() -> None:
         """Apply the changes to the image."""
-        colors = dict(zip(channel_source.data["channels"], color_source.data["colors"]))
+        colors = dict(
+            zip(
+                channel_source.data["channels"],
+                color_source.data["colors"],
+                strict=False,
+            )
+        )
         active_channels = channel_source.selected.indices
 
         set_channel_info({ch: hex2rgb(colors[ch]) for ch in colors}, active_channels)

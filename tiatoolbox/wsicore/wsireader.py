@@ -3790,6 +3790,7 @@ class TIFFWSIReader(WSIReader):
             for k, v in zip(
                 color_info.iterfind("ScanColorTable-k"),
                 color_info.iterfind("ScanColorTable-v"),
+                strict=False,
             )
         }
         # values will be either a string of 3 ints e.g 155, 128, 0, or
@@ -3827,7 +3828,7 @@ class TIFFWSIReader(WSIReader):
 
         keys = filter_colors_section.findall(".//FilterColors-k")
         vals = filter_colors_section.findall(".//FilterColors-v")
-        for k, v in zip(keys, vals):
+        for k, v in zip(keys, vals, strict=False):
             filter_colors[k.text] = v.text
 
         # Helper function to convert color strings like "Lime" or

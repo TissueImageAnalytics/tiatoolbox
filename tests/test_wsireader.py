@@ -8,10 +8,11 @@ import json
 import logging
 import re
 import shutil
+from collections.abc import Callable
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import cv2
