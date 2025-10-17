@@ -31,7 +31,7 @@ def test_wsireader_get_thumbnail_jp2(sample_jp2: Path) -> None:
 def command_line_slide_thumbnail(
     runner: CliRunner,
     sample: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
     mode: str = "save",
 ) -> None:
     """Command line slide thumbnail helper."""
@@ -44,20 +44,22 @@ def command_line_slide_thumbnail(
             "--mode",
             mode,
             "--output-path",
-            str(Path(tmp_path)),
+            str(Path(track_tmp_path)),
         ],
     )
 
     assert slide_thumb_result.exit_code == 0
     if mode == "save":
-        assert (Path(tmp_path) / (sample.stem + ".jpg")).is_file()
+        assert (Path(track_tmp_path) / (sample.stem + ".jpg")).is_file()
 
 
-def test_command_line_slide_thumbnail(sample_ndpi: Path, tmp_path: Path) -> None:
+def test_command_line_slide_thumbnail(sample_ndpi: Path, track_tmp_path: Path) -> None:
     """Test for the slide_thumbnail CLI."""
     runner = CliRunner()
 
-    command_line_slide_thumbnail(runner, sample=sample_ndpi, tmp_path=tmp_path)
+    command_line_slide_thumbnail(
+        runner, sample=sample_ndpi, track_tmp_path=track_tmp_path
+    )
 
 
 def test_command_line_slide_thumbnail_output_none(sample_svs: Path) -> None:
@@ -80,11 +82,15 @@ def test_command_line_slide_thumbnail_output_none(sample_svs: Path) -> None:
     ).is_file()
 
 
-def test_command_line_jp2_slide_thumbnail(sample_jp2: Path, tmp_path: Path) -> None:
+def test_command_line_jp2_slide_thumbnail(
+    sample_jp2: Path, track_tmp_path: Path
+) -> None:
     """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
 
-    command_line_slide_thumbnail(runner, sample=sample_jp2, tmp_path=tmp_path)
+    command_line_slide_thumbnail(
+        runner, sample=sample_jp2, track_tmp_path=track_tmp_path
+    )
 
 
 @pytest.mark.skipif(running_on_ci(), reason="No display on CI.")
@@ -94,7 +100,7 @@ def test_command_line_jp2_slide_thumbnail(sample_jp2: Path, tmp_path: Path) -> N
 )
 def test_command_line_jp2_slide_thumbnail_mode_show(
     sample_jp2: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for the jp2 slide_thumbnail CLI mode='show'."""
     runner = CliRunner()
@@ -102,14 +108,14 @@ def test_command_line_jp2_slide_thumbnail_mode_show(
     command_line_slide_thumbnail(
         runner,
         sample=sample_jp2,
-        tmp_path=tmp_path,
+        track_tmp_path=track_tmp_path,
         mode="show",
     )
 
 
 def test_command_line_jp2_slide_thumbnail_file_not_supported(
     sample_jp2: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for the jp2 slide_thumbnail CLI."""
     runner = CliRunner()
@@ -123,7 +129,7 @@ def test_command_line_jp2_slide_thumbnail_file_not_supported(
             "--mode",
             "save",
             "--output-path",
-            str(Path(tmp_path)),
+            str(Path(track_tmp_path)),
         ],
     )
 

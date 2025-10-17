@@ -11,7 +11,7 @@ from tiatoolbox import cli
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_slide_info(sample_all_wsis: Path, tmp_path: Path) -> None:
+def test_command_line_slide_info(sample_all_wsis: Path, track_tmp_path: Path) -> None:
     """Test the Slide information CLI."""
     runner = CliRunner()
     slide_info_result = runner.invoke(
@@ -25,16 +25,16 @@ def test_command_line_slide_info(sample_all_wsis: Path, tmp_path: Path) -> None:
             "--file-types",
             "*.ndpi, *.svs",
             "--output-path",
-            str(tmp_path),
+            str(track_tmp_path),
             "--verbose",
             "True",
         ],
     )
 
     assert slide_info_result.exit_code == 0
-    assert Path(tmp_path, "CMU-1-Small-Region.yaml").exists()
-    assert Path(tmp_path, "CMU-1.yaml").exists()
-    assert not Path(tmp_path, "test1.yaml").exists()
+    assert Path(track_tmp_path, "CMU-1-Small-Region.yaml").exists()
+    assert Path(track_tmp_path, "CMU-1.yaml").exists()
+    assert not Path(track_tmp_path, "test1.yaml").exists()
 
 
 def test_command_line_slide_info_jp2(sample_all_wsis: Path) -> None:

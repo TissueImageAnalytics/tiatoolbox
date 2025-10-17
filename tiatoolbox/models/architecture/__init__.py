@@ -6,6 +6,8 @@ from pathlib import Path
 from pydoc import locate
 from typing import TYPE_CHECKING
 
+from huggingface_hub import hf_hub_download
+
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.models.models_abc import load_torch_model
@@ -25,7 +27,7 @@ def fetch_pretrained_weights(
     save_path: str | Path | None = None,
     *,
     overwrite: bool = False,
-) -> Path:
+) -> str:
     """Get the pretrained model information from yml file.
 
     Args:
@@ -33,10 +35,9 @@ def fetch_pretrained_weights(
             Refer to `::py::meth:get_pretrained_model` for all supported
             model names.
         save_path (str | Path):
-            Path to save the weight of the
-          corresponding `model_name`.
+            Path to the directory in which the pretrained weight will be cached.
         overwrite (bool):
-            Overwrite existing downloaded weights.
+            Overwrite existing downloaded weights (force downloading).
 
     Returns:
         Path:
@@ -48,17 +49,20 @@ def fetch_pretrained_weights(
         raise ValueError(msg)
 
     info = PRETRAINED_INFO[model_name]
+    hf_repo_id = info["hf_repo_id"]
+    file_name = f"{model_name}.pth"
 
     if save_path is None:
-        file_name = info["url"].split("/")[-1]
-        processed_save_path = rcParam["TIATOOLBOX_HOME"] / "models" / file_name
-    elif type(save_path) is str:
-        processed_save_path = Path(save_path)
+        local_dir = rcParam["TIATOOLBOX_HOME"] / "models"
     else:
-        processed_save_path = save_path
+        local_dir = Path(save_path)
 
-    download_data(info["url"], save_path=processed_save_path, overwrite=overwrite)
-    return processed_save_path
+    return hf_hub_download(
+        repo_id=hf_repo_id,
+        filename=file_name,
+        local_dir=local_dir,
+        force_download=overwrite,
+    )
 
 
 def get_pretrained_model(
@@ -153,8 +157,6 @@ def get_pretrained_model(
         )
 
     model = load_torch_model(model=model, weights=pretrained_weights)
-
-    # !
 
     io_info = info["ioconfig"]
     io_class_info = io_info["class"]
