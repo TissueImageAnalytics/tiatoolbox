@@ -11,7 +11,6 @@ from huggingface_hub import hf_hub_download
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.models.models_abc import load_torch_model
-from tiatoolbox.utils import download_data
 
 if TYPE_CHECKING:  # pragma: no cover
     import torch
