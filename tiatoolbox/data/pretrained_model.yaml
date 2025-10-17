@@ -1,5 +1,5 @@
 alexnet-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/alexnet-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -13,7 +13,7 @@ alexnet-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet18-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -27,7 +27,7 @@ resnet18-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet34-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet34-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -41,7 +41,7 @@ resnet34-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet50-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet50-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -55,7 +55,7 @@ resnet50-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet101-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet101-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -69,7 +69,7 @@ resnet101-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnext50_32x4d-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext50_32x4d-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -83,7 +83,7 @@ resnext50_32x4d-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnext101_32x8d-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext101_32x8d-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -97,7 +97,7 @@ resnext101_32x8d-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 wide_resnet50_2-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet50_2-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -111,7 +111,7 @@ wide_resnet50_2-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 wide_resnet101_2-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet101_2-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -125,7 +125,7 @@ wide_resnet101_2-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet121-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet121-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -139,7 +139,7 @@ densenet121-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet161-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet161-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -153,7 +153,7 @@ densenet161-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet169-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet169-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -167,7 +167,7 @@ densenet169-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet201-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet201-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -181,7 +181,7 @@ densenet201-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 mobilenet_v2-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v2-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -195,7 +195,7 @@ mobilenet_v2-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 mobilenet_v3_large-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_large-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -209,7 +209,7 @@ mobilenet_v3_large-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 mobilenet_v3_small-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_small-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -223,7 +223,7 @@ mobilenet_v3_small-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 googlenet-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/googlenet-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -238,7 +238,7 @@ googlenet-kather100k:
     dataset: kather100k
 
 alexnet-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/alexnet-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -252,7 +252,7 @@ alexnet-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet18-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -266,7 +266,7 @@ resnet18-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet34-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet34-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -280,7 +280,7 @@ resnet34-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet50-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet50-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -294,7 +294,7 @@ resnet50-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet101-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet101-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -308,7 +308,7 @@ resnet101-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnext50_32x4d-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext50_32x4d-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -322,7 +322,7 @@ resnext50_32x4d-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnext101_32x8d-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext101_32x8d-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -336,7 +336,7 @@ resnext101_32x8d-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 wide_resnet50_2-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet50_2-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -350,7 +350,7 @@ wide_resnet50_2-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 wide_resnet101_2-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet101_2-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -364,7 +364,7 @@ wide_resnet101_2-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet121-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet121-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -378,7 +378,7 @@ densenet121-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet161-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet161-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -392,7 +392,7 @@ densenet161-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet169-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet169-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -406,7 +406,7 @@ densenet169-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet201-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet201-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -420,7 +420,7 @@ densenet201-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 mobilenet_v2-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v2-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -434,7 +434,7 @@ mobilenet_v2-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 mobilenet_v3_large-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_large-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -448,7 +448,7 @@ mobilenet_v3_large-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 mobilenet_v3_small-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_small-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -462,7 +462,7 @@ mobilenet_v3_small-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 googlenet-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/googlenet-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -477,7 +477,7 @@ googlenet-pcam:
     dataset: pcam
 
 resnet18-idars-tumour:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet18-idars-tumour.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -490,7 +490,7 @@ resnet18-idars-tumour:
             stride_shape: [512, 512]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
 resnet34-idars-msi:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -503,7 +503,7 @@ resnet34-idars-msi:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-braf:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-braf.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -516,7 +516,7 @@ resnet34-idars-braf:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-cimp:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cimp.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -529,7 +529,7 @@ resnet34-idars-cimp:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-cin:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cin.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -542,7 +542,7 @@ resnet34-idars-cin:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-tp53:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-tp53.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -555,7 +555,7 @@ resnet34-idars-tp53:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-hm:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-hm.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -570,7 +570,7 @@ resnet34-idars-hm:
 
 
 fcn-tissue_mask:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -591,7 +591,7 @@ fcn-tissue_mask:
             save_resolution: {'units': 'mpp', 'resolution': 8.0}
 
 fcn_resnet50_unet-bcss:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn_resnet50_unet-bcss.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -612,7 +612,7 @@ fcn_resnet50_unet-bcss:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 unet_tissue_mask_tsef:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/registration/UNET-v0.0-TSEF.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     description: >
       These weights can be used to segment a grayscale image to
       create a tissue mask excluding the fatty region. TSEF stands for tissue
@@ -637,7 +637,7 @@ unet_tissue_mask_tsef:
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
 hovernet_fast-pannuke:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-pannuke.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -668,7 +668,7 @@ hovernet_fast-pannuke:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernet_fast-monusac:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-monusac.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -698,7 +698,7 @@ hovernet_fast-monusac:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernet_original-consep:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-consep.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -728,7 +728,7 @@ hovernet_original-consep:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernet_original-kumar:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-kumar.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -750,7 +750,7 @@ hovernet_original-kumar:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernetplus-oed:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernetplus-oed.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernetplus.HoVerNetPlus
         kwargs:
@@ -786,7 +786,7 @@ hovernetplus-oed:
             save_resolution: {'units': 'mpp', 'resolution': 0.50}
 
 micronet-consep:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/micronet-consep.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: micronet.MicroNet
         kwargs:
@@ -806,7 +806,7 @@ micronet-consep:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 mapde-crchisto:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-crchisto.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -828,7 +828,7 @@ mapde-crchisto:
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 mapde-conic:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-conic.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -850,7 +850,7 @@ mapde-conic:
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 sccnn-crchisto:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-crchisto.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -873,7 +873,7 @@ sccnn-crchisto:
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 sccnn-conic:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-conic.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -896,7 +896,7 @@ sccnn-conic:
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 nuclick_original-pannuke:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_original-pannuke.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: nuclick.NuClick
         kwargs:
@@ -914,7 +914,7 @@ nuclick_original-pannuke:
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
 nuclick_light-pannuke:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_unet-pannuke.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: unet.UNetModel
         kwargs:

@@ -9,23 +9,22 @@ from tiatoolbox.data import _fetch_remote_sample, small_svs, stain_norm_target
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 
-def test_fetch_sample(tmp_path: Path) -> None:
+def test_fetch_sample(track_tmp_path: Path) -> None:
     """Test for fetching sample via code name."""
     # Load a dictionary of sample files data (names and urls)
     # code name retrieved from TOOLBOX_ROOT/data/remote_samples.yaml
-    tmp_path = Path(tmp_path)
     path = _fetch_remote_sample("stainnorm-source")
     assert Path.exists(path)
     # Test if corrupted
     WSIReader.open(path)
 
-    path = _fetch_remote_sample("stainnorm-source", tmp_path)
+    path = _fetch_remote_sample("stainnorm-source", track_tmp_path)
     # Assuming Path has no trailing '/'
     assert Path.exists(path)
-    assert str(tmp_path) in str(path)
+    assert str(track_tmp_path) in str(path)
 
     # Test not directory path
-    test_path = Path(f"{tmp_path}/dummy.npy")
+    test_path = Path(f"{track_tmp_path}/dummy.npy")
     np.save(str(test_path), np.zeros([3, 3, 3]))
     with pytest.raises(ValueError, match=r".*tmp_path must be a directory.*"):
         _ = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
@@ -35,10 +34,9 @@ def test_fetch_sample(tmp_path: Path) -> None:
     assert isinstance(arr, np.ndarray)
 
 
-def test_fetch_sample_skip(tmp_path: Path) -> None:
+def test_fetch_sample_skip(track_tmp_path: Path) -> None:
     """Test skipping fetching sample via code name if already downloaded."""
     # Fetch the remote file twice
-    tmp_path = Path(tmp_path)
     path_a = _fetch_remote_sample("wsi1_8k_8k_svs")
     path_b = _fetch_remote_sample("wsi1_8k_8k_svs")
     assert Path.exists(path_a)
@@ -46,13 +44,13 @@ def test_fetch_sample_skip(tmp_path: Path) -> None:
     # Test if corrupted
     WSIReader.open(path_a)
 
-    path = _fetch_remote_sample("wsi1_8k_8k_svs", tmp_path)
+    path = _fetch_remote_sample("wsi1_8k_8k_svs", track_tmp_path)
     # Assuming Path has no trailing '/'
     assert Path.exists(path)
-    assert str(tmp_path) in str(path)
+    assert str(track_tmp_path) in str(path)
 
     # Test not directory path
-    test_path = Path(f"{tmp_path}/dummy.npy")
+    test_path = Path(f"{track_tmp_path}/dummy.npy")
     np.save(str(test_path), np.zeros([3, 3, 3]))
     with pytest.raises(ValueError, match=r".*tmp_path must be a directory.*"):
         _ = _fetch_remote_sample("wsi1_8k_8k_svs", test_path)
@@ -61,7 +59,7 @@ def test_fetch_sample_skip(tmp_path: Path) -> None:
     arr = stain_norm_target()
     assert isinstance(arr, np.ndarray)
 
-    _ = _fetch_remote_sample("stainnorm-source", tmp_path)
+    _ = _fetch_remote_sample("stainnorm-source", track_tmp_path)
 
 
 def test_small_svs() -> None:
