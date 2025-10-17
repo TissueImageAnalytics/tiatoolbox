@@ -1,6 +1,5 @@
 """Unit test package for MicroNet."""
 
-import shutil
 from collections.abc import Callable
 from pathlib import Path
 
@@ -85,4 +84,4 @@ def test_micronet_output(remote_sample: Callable, track_tmp_path: Path) -> None:
     diff = new_output - output_on_server
     assert diff.mean() < 1e-5
     weights_path = fetch_pretrained_weights(pretrained_model)
-    shutil.rmtree(weights_path)
+    Path(weights_path).unlink()

@@ -1,7 +1,7 @@
 """Unit test package for SCCNN."""
 
-import shutil
 from collections.abc import Callable
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -49,7 +49,7 @@ def test_functionality(remote_sample: Callable) -> None:
     output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     output = model.postproc(output[0])
     assert np.all(output[0:2] == [[19, 171], [53, 89]])
-    shutil.rmtree(weights_path)
+    Path(weights_path).unlink()
 
 
 def test_multiclass_output() -> None:
