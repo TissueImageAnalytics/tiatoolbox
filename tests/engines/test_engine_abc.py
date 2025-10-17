@@ -171,26 +171,26 @@ def test_ioconfig() -> NoReturn:
 
 
 def test_prepare_engines_save_dir(
-    tmp_path: pytest.TempPathFactory,
+    track_tmp_path: pytest.TempPathFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> NoReturn:
     """Test prepare save directory for engines."""
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output",
+        save_dir=track_tmp_path / "patch_output",
         patch_mode=True,
         overwrite=False,
     )
 
-    assert out_dir == tmp_path / "patch_output"
+    assert out_dir == track_tmp_path / "patch_output"
     assert out_dir.exists()
 
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output",
+        save_dir=track_tmp_path / "patch_output",
         patch_mode=True,
         overwrite=True,
     )
 
-    assert out_dir == tmp_path / "patch_output"
+    assert out_dir == track_tmp_path / "patch_output"
     assert out_dir.exists()
 
     out_dir = prepare_engines_save_dir(
@@ -211,35 +211,35 @@ def test_prepare_engines_save_dir(
         )
 
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "wsi_single_output",
+        save_dir=track_tmp_path / "wsi_single_output",
         patch_mode=False,
         overwrite=False,
     )
 
-    assert out_dir == tmp_path / "wsi_single_output"
+    assert out_dir == track_tmp_path / "wsi_single_output"
     assert out_dir.exists()
     assert r"When providing multiple whole-slide images / tiles" not in caplog.text
 
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "wsi_multiple_output",
+        save_dir=track_tmp_path / "wsi_multiple_output",
         patch_mode=False,
         overwrite=False,
     )
 
-    assert out_dir == tmp_path / "wsi_multiple_output"
+    assert out_dir == track_tmp_path / "wsi_multiple_output"
     assert out_dir.exists()
     assert r"When providing multiple whole slide images" in caplog.text
 
     # test for file overwrite with Path.mkdirs() method
     out_path = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output" / "output.zarr",
+        save_dir=track_tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
         overwrite=True,
     )
     assert out_path.exists()
 
     out_path = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output" / "output.zarr",
+        save_dir=track_tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
         overwrite=True,
     )
@@ -247,7 +247,7 @@ def test_prepare_engines_save_dir(
 
     with pytest.raises(FileExistsError):
         out_path = prepare_engines_save_dir(
-            save_dir=tmp_path / "patch_output" / "output.zarr",
+            save_dir=track_tmp_path / "patch_output" / "output.zarr",
             patch_mode=True,
             overwrite=False,
         )
@@ -371,9 +371,9 @@ def test_engine_run_with_verbose() -> NoReturn:
     assert "labels" in out
 
 
-def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
+def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoReturn:
     """Test the engine run and patch pred store."""
-    save_dir = tmp_path / "patch_output"
+    save_dir = track_tmp_path / "patch_output"
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
@@ -485,7 +485,9 @@ def test_get_dataloader(sample_svs: Path) -> None:
     assert isinstance(dataloader.dataset, WSIPatchDataset)
 
 
-def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_io_config_delegation(
+    track_tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Test for delegating args to io config."""
     # test not providing config / full input info for not pretrained models
     model = CNNModel("resnet50")
@@ -499,12 +501,12 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         eng.run(
             np.zeros((10, 224, 224, 3)),
             patch_mode=True,
-            save_dir=tmp_path / "dump",
+            save_dir=track_tmp_path / "dump",
             patch_input_shape=kwargs["patch_input_shape"],
             input_resolutions=kwargs["input_resolutions"],
         )
         assert "provide a valid ModelIOConfigABC" in caplog.text
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     # test providing config / full input info for non pretrained models
     ioconfig = ModelIOConfigABC(
@@ -515,24 +517,24 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
     eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
         ioconfig=ioconfig,
     )
     assert eng._ioconfig.patch_input_shape == (224, 224)
     assert eng._ioconfig.stride_shape == (256, 256)
     assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
         **kwargs,
     )
     assert eng._ioconfig.patch_input_shape == [224, 224]
     assert eng._ioconfig.stride_shape == [224, 224]
     assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -542,13 +544,13 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         stride_shape=(300, 300),
         input_resolutions=[{"units": "baseline", "resolution": 1.99}],
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert eng._ioconfig.patch_input_shape == (300, 300)
     assert eng._ioconfig.stride_shape == (300, 300)
     assert eng._ioconfig.input_resolutions[0]["resolution"] == 1.99
     assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     eng.run(
         images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
@@ -556,11 +558,11 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         stride_shape=(300, 300),
         input_resolutions=None,
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert eng._ioconfig.patch_input_shape == (300, 300)
     assert eng._ioconfig.stride_shape == (300, 300)
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     eng.ioconfig = None
     _ioconfig = eng._update_ioconfig(

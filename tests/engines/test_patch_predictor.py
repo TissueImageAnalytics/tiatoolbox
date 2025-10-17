@@ -38,11 +38,11 @@ def _test_predictor_output(
     probabilities_check: list | None = None,
     classification_check: list | None = None,
     output_type: str = "dict",
-    tmp_path: Path | None = None,
+    track_tmp_path: Path | None = None,
 ) -> None:
     """Test the predictions of multiple models included in tiatoolbox."""
-    cache_mode = None if tmp_path is None else True
-    save_dir = None if tmp_path is None else tmp_path / "output"
+    cache_mode = None if track_tmp_path is None else True
+    save_dir = None if track_tmp_path is None else track_tmp_path / "output"
     predictor = PatchPredictor(
         model=model,
         batch_size=32,
@@ -59,7 +59,7 @@ def _test_predictor_output(
         return_probabilities=True,
     )
 
-    if tmp_path is not None:
+    if track_tmp_path is not None:
         output = zarr.open(output, mode="r")
 
     probabilities = output["probabilities"]
@@ -84,7 +84,7 @@ def _test_predictor_output(
         shutil.rmtree(save_dir)
 
 
-def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
+def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
     model = CNNModel("resnet50")
@@ -104,17 +104,17 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         images=[mini_wsi_svs],
         ioconfig=ioconfig,
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
         images=[mini_wsi_svs],
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
         **kwargs,
     )
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
     predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
@@ -122,66 +122,66 @@ def test_io_config_delegation(remote_sample: Callable, tmp_path: Path) -> None:
         images=[mini_wsi_svs],
         patch_input_shape=(300, 300),
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert predictor._ioconfig.patch_input_shape == (300, 300)
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
         images=[mini_wsi_svs],
         stride_shape=(300, 300),
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert predictor._ioconfig.stride_shape == (300, 300)
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "mpp", "resolution": 1.99}],
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "level", "resolution": 0}],
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "level"
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 0
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "power", "resolution": 20}],
         patch_mode=False,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "power"
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 20
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
 
 def test_patch_predictor_api(
     sample_patch1: Path,
     sample_patch2: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test PatchPredictor API."""
-    save_dir_path = tmp_path
+    save_dir_path = track_tmp_path
 
     # convert to pathlib Path to prevent reader complaint
     inputs = [Path(sample_patch1), Path(sample_patch2)]
@@ -249,10 +249,10 @@ def test_patch_predictor_api(
 
 def test_wsi_predictor_api(
     sample_wsi_dict: dict,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test normal run of wsi predictor."""
-    save_dir_path = tmp_path
+    save_dir_path = track_tmp_path
 
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -301,7 +301,7 @@ def test_wsi_predictor_api(
 def test_patch_predictor_kather100k_output(
     sample_patch1: Path,
     sample_patch2: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test the output of patch classification models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
@@ -338,7 +338,7 @@ def test_patch_predictor_kather100k_output(
             model,
             probabilities_check=expected_prob,
             classification_check=[6, 3],
-            tmp_path=tmp_path,
+            track_tmp_path=track_tmp_path,
         )
 
 
@@ -384,7 +384,7 @@ def _validate_probabilities(output: list | dict | zarr.group) -> bool:
 
 
 def test_wsi_predictor_zarr(
-    sample_wsi_dict: dict, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    sample_wsi_dict: dict, track_tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test normal run of patch predictor for WSIs."""
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
@@ -401,7 +401,7 @@ def test_wsi_predictor_zarr(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=tmp_path / "wsi_out_check",
+        save_dir=track_tmp_path / "wsi_out_check",
     )
 
     assert output[mini_wsi_svs].exists()
@@ -425,7 +425,7 @@ def test_wsi_predictor_zarr(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=tmp_path / "wsi_out_check_no_probabilities",
+        save_dir=track_tmp_path / "wsi_out_check_no_probabilities",
     )
 
     assert output[mini_wsi_svs].exists()
@@ -446,7 +446,7 @@ def test_wsi_predictor_zarr(
 def test_patch_predictor_patch_mode_annotation_store(
     sample_patch1: Path,
     sample_patch2: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test the output of patch classification models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
@@ -463,7 +463,7 @@ def test_patch_predictor_patch_mode_annotation_store(
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=tmp_path / "patch_out_check",
+        save_dir=track_tmp_path / "patch_out_check",
         output_type="annotationstore",
     )
 
@@ -477,7 +477,7 @@ def test_patch_predictor_patch_mode_annotation_store(
 def test_patch_predictor_patch_mode_no_probabilities(
     sample_patch1: Path,
     sample_patch2: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test the output of patch classification models on Kather100K dataset."""
     inputs = [Path(sample_patch1), Path(sample_patch2)]
@@ -505,7 +505,7 @@ def test_patch_predictor_patch_mode_no_probabilities(
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=tmp_path / "patch_out_check",
+        save_dir=track_tmp_path / "patch_out_check",
         output_type="annotationstore",
     )
 
@@ -517,7 +517,7 @@ def test_patch_predictor_patch_mode_no_probabilities(
 
 def test_engine_run_wsi_annotation_store(
     sample_wsi_dict: dict,
-    tmp_path: Path,
+    track_tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the engine run for Whole slide images."""
@@ -528,7 +528,7 @@ def test_engine_run_wsi_annotation_store(
     eng = PatchPredictor(model="alexnet-kather100k")
 
     patch_size = np.array([224, 224])
-    save_dir = f"{tmp_path}/model_wsi_output"
+    save_dir = f"{track_tmp_path}/model_wsi_output"
 
     kwargs = {
         "patch_input_shape": patch_size,
@@ -569,14 +569,14 @@ def test_engine_run_wsi_annotation_store(
 def test_patch_predictor_torch_compile(
     sample_patch1: Path,
     sample_patch2: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test PatchPredictor with torch.compile functionality.
 
     Args:
         sample_patch1 (Path): Path to sample patch 1.
         sample_patch2 (Path): Path to sample patch 2.
-        tmp_path (Path): Path to temporary directory.
+        track_tmp_path (Path): Path to temporary directory.
 
     """
     torch_compile_mode = rcParam["torch_compile_mode"]
@@ -586,7 +586,7 @@ def test_patch_predictor_torch_compile(
         test_patch_predictor_api,
         sample_patch1,
         sample_patch2,
-        tmp_path,
+        track_tmp_path,
     )
     logger.info("torch.compile default mode: %s", compile_time)
     torch._dynamo.reset()
@@ -595,7 +595,7 @@ def test_patch_predictor_torch_compile(
         test_patch_predictor_api,
         sample_patch1,
         sample_patch2,
-        tmp_path,
+        track_tmp_path,
     )
     logger.info("torch.compile reduce-overhead mode: %s", compile_time)
     torch._dynamo.reset()
@@ -604,7 +604,7 @@ def test_patch_predictor_torch_compile(
         test_patch_predictor_api,
         sample_patch1,
         sample_patch2,
-        tmp_path,
+        track_tmp_path,
     )
     logger.info("torch.compile max-autotune mode: %s", compile_time)
     torch._dynamo.reset()
@@ -616,7 +616,7 @@ def test_patch_predictor_torch_compile(
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
+def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
     """Test for models CLI single file."""
     runner = CliRunner()
     models_wsi_result = runner.invoke(
@@ -628,27 +628,29 @@ def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
             "--patch-mode",
             "False",
             "--output-path",
-            str(tmp_path / "output"),
+            str(track_tmp_path / "output"),
         ],
     )
 
     assert models_wsi_result.exit_code == 0
-    assert (tmp_path / "output" / (sample_svs.stem + ".db")).exists()
+    assert (track_tmp_path / "output" / (sample_svs.stem + ".db")).exists()
 
 
-def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -> None:
+def test_cli_model_multiple_file_mask(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
     """Test for models CLI multiple file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    mini_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    mini_wsi_msk = track_tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
     # Make multiple copies for test
-    dir_path = tmp_path.joinpath("new_copies")
+    dir_path = track_tmp_path.joinpath("new_copies")
     dir_path.mkdir()
 
-    dir_path_masks = tmp_path.joinpath("new_copies_masks")
+    dir_path_masks = track_tmp_path.joinpath("new_copies_masks")
     dir_path_masks.mkdir()
 
     config = {
@@ -656,7 +658,7 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
         "patch_input_shape": [224, 224],
     }
 
-    with Path.open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+    with Path.open(track_tmp_path.joinpath("config.yaml"), "w") as fptr:
         yaml.dump(config, fptr)
 
     model = "alexnet-kather100k"
@@ -696,15 +698,15 @@ def test_cli_model_multiple_file_mask(remote_sample: Callable, tmp_path: Path) -
             "--weights",
             str(weights),
             "--yaml-config-path",
-            tmp_path / "config.yaml",
+            track_tmp_path / "config.yaml",
             "--output-path",
-            str(tmp_path / "output"),
+            str(track_tmp_path / "output"),
             "--output-type",
             "zarr",
         ],
     )
 
     assert models_tiles_result.exit_code == 0
-    assert (tmp_path / "output" / ("1_" + mini_wsi_svs.stem + ".zarr")).exists()
-    assert (tmp_path / "output" / ("2_" + mini_wsi_svs.stem + ".zarr")).exists()
-    assert (tmp_path / "output" / ("3_" + mini_wsi_svs.stem + ".zarr")).exists()
+    assert (track_tmp_path / "output" / ("1_" + mini_wsi_svs.stem + ".zarr")).exists()
+    assert (track_tmp_path / "output" / ("2_" + mini_wsi_svs.stem + ".zarr")).exists()
+    assert (track_tmp_path / "output" / ("3_" + mini_wsi_svs.stem + ".zarr")).exists()

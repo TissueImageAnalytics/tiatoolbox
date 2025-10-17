@@ -41,7 +41,9 @@ def test_semantic_segmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
-def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> None:
+def test_semantic_segmentor_patches(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
     """Tests SemanticSegmentor on image patches."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
@@ -79,10 +81,10 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=tmp_path / "output0",
+        save_dir=track_tmp_path / "output0",
     )
 
-    assert output == tmp_path / "output0" / "output.zarr"
+    assert output == track_tmp_path / "output0" / "output.zarr"
 
     output = zarr.open(output, mode="r")
     assert 0.62 < np.mean(output["predictions"][:]) < 0.66
@@ -95,10 +97,10 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         device=device,
         patch_mode=True,
         output_type="zarr",
-        save_dir=tmp_path / "output1",
+        save_dir=track_tmp_path / "output1",
     )
 
-    assert output == tmp_path / "output1" / "output.zarr"
+    assert output == track_tmp_path / "output1" / "output.zarr"
 
     output = zarr.open(output, mode="r")
     assert 0.62 < np.mean(output["predictions"][:]) < 0.66
@@ -110,11 +112,11 @@ def test_semantic_segmentor_patches(remote_sample: Callable, tmp_path: Path) -> 
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=tmp_path / "output2",
+        save_dir=track_tmp_path / "output2",
         output_type="zarr",
     )
 
-    assert output == tmp_path / "output2" / "output.zarr"
+    assert output == track_tmp_path / "output2" / "output.zarr"
 
     output = zarr.open(output, mode="r")
     assert 0.62 < np.mean(output["predictions"][:]) < 0.66
@@ -148,7 +150,7 @@ def _test_store_output_patch(output: Path) -> None:
     assert annotations_properties is not None
 
 
-def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
+def test_save_annotation_store(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for saving output as annotation store."""
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
@@ -164,18 +166,18 @@ def test_save_annotation_store(remote_sample: Callable, tmp_path: Path) -> None:
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=tmp_path / "output1",
+        save_dir=track_tmp_path / "output1",
         output_type="annotationstore",
         verbose=True,
     )
 
-    assert output[0] == tmp_path / "output1" / (sample_image.stem + ".db")
+    assert output[0] == track_tmp_path / "output1" / (sample_image.stem + ".db")
     assert len(output) == 1
     _test_store_output_patch(output[0])
 
 
 def test_save_annotation_store_nparray(
-    remote_sample: Callable, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    remote_sample: Callable, track_tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test for saving output as annotation store using a numpy array."""
     segmentor = SemanticSegmentor(
@@ -193,16 +195,16 @@ def test_save_annotation_store_nparray(
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=tmp_path / "output1",
+        save_dir=track_tmp_path / "output1",
         output_type="annotationstore",
     )
 
-    assert output[0] == tmp_path / "output1" / "0.db"
-    assert output[1] == tmp_path / "output1" / "1.db"
+    assert output[0] == track_tmp_path / "output1" / "0.db"
+    assert output[1] == track_tmp_path / "output1" / "1.db"
 
-    assert (tmp_path / "output1" / "output.zarr").exists()
+    assert (track_tmp_path / "output1" / "output.zarr").exists()
 
-    zarr_group = zarr.open(str(tmp_path / "output1" / "output.zarr"), mode="r")
+    zarr_group = zarr.open(str(track_tmp_path / "output1" / "output.zarr"), mode="r")
     assert "probabilities" in zarr_group
 
     assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
@@ -216,13 +218,13 @@ def test_save_annotation_store_nparray(
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=tmp_path / "output2",
+        save_dir=track_tmp_path / "output2",
         output_type="annotationstore",
     )
 
-    assert output[0] == tmp_path / "output2" / "0.db"
-    assert output[1] == tmp_path / "output2" / "1.db"
-    assert not (tmp_path / "output2" / "output.zarr").exists()
+    assert output[0] == track_tmp_path / "output2" / "0.db"
+    assert output[1] == track_tmp_path / "output2" / "1.db"
+    assert not (track_tmp_path / "output2" / "output.zarr").exists()
 
     assert len(output) == 2
 
@@ -324,7 +326,7 @@ def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
 
 def test_raise_value_error_return_labels_wsi(
     sample_svs: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for raises value error for return_labels in wsi mode."""
     segmentor = SemanticSegmentor(
@@ -343,7 +345,7 @@ def test_raise_value_error_return_labels_wsi(
             return_labels=True,
             device=device,
             patch_mode=False,
-            save_dir=tmp_path / "wsi_out_check",
+            save_dir=track_tmp_path / "wsi_out_check",
             batch_size=2,
             output_type="zarr",
         )
@@ -352,7 +354,7 @@ def test_raise_value_error_return_labels_wsi(
 def test_wsi_segmentor_zarr(
     remote_sample: Callable,
     sample_svs: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test SemanticSegmentor for WSIs with zarr output."""
     wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
@@ -370,7 +372,7 @@ def test_wsi_segmentor_zarr(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=tmp_path / "wsi_out_check",
+        save_dir=track_tmp_path / "wsi_out_check",
         batch_size=2,
         output_type="zarr",
         memory_threshold=1,
@@ -396,7 +398,7 @@ def test_wsi_segmentor_zarr(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=tmp_path / "task_length_cache",
+        save_dir=track_tmp_path / "task_length_cache",
         batch_size=2,
         output_type="zarr",
         memory_threshold=1,
@@ -423,7 +425,7 @@ def test_wsi_segmentor_zarr(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=tmp_path / "wsi_out_check_prob",
+        save_dir=track_tmp_path / "wsi_out_check_prob",
         output_type="zarr",
     )
 
@@ -437,7 +439,7 @@ def test_wsi_segmentor_zarr(
 
 
 def test_wsi_segmentor_annotationstore(
-    sample_svs: Path, tmp_path: Path, caplog: pytest.CaptureFixture
+    sample_svs: Path, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
     """Test SemanticSegmentor for WSIs with AnnotationStore output."""
     segmentor = SemanticSegmentor(
@@ -452,12 +454,14 @@ def test_wsi_segmentor_annotationstore(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=tmp_path / "wsi_out_check",
+        save_dir=track_tmp_path / "wsi_out_check",
         verbose=True,
         output_type="annotationstore",
     )
 
-    assert output[sample_svs] == tmp_path / "wsi_out_check" / (sample_svs.stem + ".db")
+    assert output[sample_svs] == track_tmp_path / "wsi_out_check" / (
+        sample_svs.stem + ".db"
+    )
 
     # Return Probabilities
     segmentor = SemanticSegmentor(
@@ -472,12 +476,12 @@ def test_wsi_segmentor_annotationstore(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=tmp_path / "wsi_prob_out_check",
+        save_dir=track_tmp_path / "wsi_prob_out_check",
         verbose=True,
         output_type="annotationstore",
     )
 
-    assert output[sample_svs] == tmp_path / "wsi_prob_out_check" / (
+    assert output[sample_svs] == track_tmp_path / "wsi_prob_out_check" / (
         sample_svs.stem + ".db"
     )
     assert output[sample_svs].with_suffix(".zarr").exists()
@@ -492,7 +496,7 @@ def test_wsi_segmentor_annotationstore(
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
+def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
     """Test for models CLI single file."""
     runner = CliRunner()
     models_wsi_result = runner.invoke(
@@ -504,9 +508,9 @@ def test_cli_model_single_file(sample_svs: Path, tmp_path: Path) -> None:
             "--patch-mode",
             "False",
             "--output-path",
-            str(tmp_path / "output"),
+            str(track_tmp_path / "output"),
         ],
     )
 
     assert models_wsi_result.exit_code == 0
-    assert (tmp_path / "output" / (sample_svs.stem + ".db")).exists()
+    assert (track_tmp_path / "output" / (sample_svs.stem + ".db")).exists()
