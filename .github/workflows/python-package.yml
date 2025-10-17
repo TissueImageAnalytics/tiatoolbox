@@ -78,6 +78,15 @@ jobs:
         fail-ci-on-error: false
     - name: List tiatoolbox contents
       run: ls -lahR ~/.tiatoolbox
+    - name: Delete Hugging Face cache for large models
+      run: |
+        find ~/.tiatoolbox/models -type f -size +250M -exec bash -c '
+          for model_path; do
+            model_name=$(basename "$model_path")
+            cache_dir="$HOME/.tiatoolbox/models/.cache/huggingface/download"
+            rm -vf "$cache_dir/${model_name}.lock" "$cache_dir/${model_name}.metadata"
+          done
+          ' bash {} +
 
   release:
     runs-on: ubuntu-24.04
