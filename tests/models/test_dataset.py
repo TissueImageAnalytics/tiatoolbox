@@ -145,9 +145,9 @@ def test_patch_dataset_path_imgs(
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_list_imgs(tmp_path: Path) -> None:
+def test_patch_dataset_list_imgs(track_tmp_path: Path) -> None:
     """Test for patch dataset with a list of images as input."""
-    save_dir_path = tmp_path
+    save_dir_path = track_tmp_path
 
     size = (5, 5, 3)
     img = RNG.integers(low=0, high=255, size=size)
@@ -212,10 +212,10 @@ def test_patch_datasetarray_imgs() -> None:
         assert sampled_img_shape[2] == size[2]
 
 
-def test_patch_dataset_crash(tmp_path: Path) -> None:
+def test_patch_dataset_crash(track_tmp_path: Path) -> None:
     """Test to make sure patch dataset crashes with incorrect input."""
     # all below examples should fail when input to PatchDataset
-    save_dir_path = tmp_path
+    save_dir_path = track_tmp_path
 
     # not supported input type
     imgs = {"a": RNG.integers(0, 255, (4, 4, 4))}
@@ -324,7 +324,7 @@ def test_patch_dataset_crash(tmp_path: Path) -> None:
 
 def test_wsi_patch_dataset(  # noqa: PLR0915
     sample_wsi_dict: dict,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
@@ -477,7 +477,7 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     )
     negative_mask = imread(mini_wsi_msk)
     negative_mask = np.zeros_like(negative_mask)
-    negative_mask_path = tmp_path / "negative_mask.png"
+    negative_mask_path = track_tmp_path / "negative_mask.png"
     imwrite(negative_mask_path, negative_mask)
     with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
         ds = WSIPatchDataset(
