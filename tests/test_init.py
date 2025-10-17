@@ -12,14 +12,14 @@ import tiatoolbox
 from tiatoolbox import DuplicateFilter, logger
 
 
-def test_set_root_dir(tmp_path: Path) -> None:
+def test_set_root_dir(track_tmp_path: Path) -> None:
     """Test for setting new root dir."""
     # skipcq
     importlib.reload(tiatoolbox)
     from tiatoolbox import rcParam  # noqa: PLC0415
 
     old_root_dir = rcParam["TIATOOLBOX_HOME"]
-    test_dir_path = tmp_path / "tmp_check"
+    test_dir_path = track_tmp_path / "tmp_check"
     # clean up previous test
     if Path.exists(test_dir_path):
         Path.rmdir(test_dir_path)
