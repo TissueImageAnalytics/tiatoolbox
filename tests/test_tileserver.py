@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import urllib
 from pathlib import Path, PureWindowsPath
-from typing import TYPE_CHECKING, Callable, NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import joblib
 import numpy as np
@@ -23,6 +24,8 @@ from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from flask.testing import FlaskClient
 
 RNG = np.random.default_rng(0)  # Numpy Random Generator
@@ -99,11 +102,7 @@ def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
     imwrite(thumb_path, thumb)
 
     sample_store = Path(remote_sample("annotation_store_svs_1"))
-    store = SQLiteStore(sample_store)
-    geo_path = tmp_path / "test.geojson"
-    store.to_geojson(geo_path)
-    store.commit()
-    store.close()
+    geo_path = Path(remote_sample("geojson_cmu_1"))
 
     # make tileserver with layers representing all the types
     # of things it should be able to handle
@@ -114,7 +113,7 @@ def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
             "tile": str(thumb_path),
             "im_array": np.zeros(wsi.slide_dimensions(1.25, "power"), dtype=np.uint8).T,
             "overlay": str(sample_store),
-            "store_geojson": tmp_path / "test.geojson",
+            "store_geojson": str(geo_path),
         },
     )
     app.config.from_mapping({"TESTING": True})
@@ -445,13 +444,21 @@ def test_change_overlay(  # noqa: PLR0915
         assert response.status_code == 200
         response = client.put(
             "/tileserver/overlay",
-            data={"overlay_path": safe_str(geo_path)},
+            data={"overlay_path": safe_str(sample_store)},
         )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
         # check that the annotations have been correctly loaded
         assert len(empty_app.pyramids[session_id]["overlay"].store) == num_annotations
+
+        # check loading a geojson from qupath with cells/nuclei
+        qpath_geo_path = Path(remote_sample("geojson_cmu_1"))
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(qpath_geo_path)},
+        )
+        assert response.status_code == 200
 
         # add another image layer
         response = client.put(
@@ -461,9 +468,17 @@ def test_change_overlay(  # noqa: PLR0915
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
+        lname = Path(overlay_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == overlay_path
+
+        # add same image again to check if duplicate names triggers disambiguation
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(overlay_path)},
+        )
+        assert response.status_code == 200
+        assert Path(overlay_path).name in empty_app.pyramids[session_id]
 
         # replace existing store overlay
         response = client.put(
@@ -493,7 +508,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(jpg_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
+        lname = Path(jpg_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert np.all(layer.wsi.img == imread(jpg_path))
 
@@ -517,7 +532,7 @@ def test_change_overlay(  # noqa: PLR0915
             data={"overlay_path": safe_str(tiff_path)},
         )
         # check that the overlay has been correctly added
-        lname = f"layer{len(empty_app.pyramids[session_id]) - 1}"
+        lname = Path(tiff_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
 
@@ -688,7 +703,7 @@ def test_no_ann_layer(empty_app: TileServer, remote_sample: Callable) -> None:
             "/tileserver/slide",
             data={"slide_path": safe_str(remote_sample("svs-1-small"))},
         )
-        with pytest.raises(ValueError, match="No annotation layer found."):
+        with pytest.raises(ValueError, match=r"No annotation layer found."):
             client.get("/tileserver/prop_names/all")
 
 
@@ -734,3 +749,170 @@ def test_prop_range(app: TileServer) -> None:
         assert response.status_code == 200
         # should be back to no scaling
         assert layer.renderer.score_fn(0.5) == 0.5
+
+
+def test_registration_dual_window(
+    empty_app: TileServer, tmp_path: Path, remote_sample: Callable
+) -> None:
+    """Test registering slides."""
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    with empty_app.test_client() as client, empty_app.test_client() as client2:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Open new window with other slide...
+        setup_app(client2)
+        response = client2.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client2.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+        )
+        assert response.status_code == 200
+
+
+def test_registration_single_window_same_slide(
+    empty_app: TileServer,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides."""
+    # First is testing with a single sldie and single registration
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Capture logger output to check for warning
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "No suitable overlay found. Using current slide as target. "
+                "This may display incorrectly if dimensions differ." in caplog.text
+            )
+            assert response.status_code == 200
+
+
+def test_registration_single_window_nonslide_overlay(
+    empty_app: TileServer,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides with non-slide overlay."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+        # check behaviour when an overlay is there, but it isn't suitabe (e.g jpg)
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("wsi2_4k_4k_jpg"))},
+        )
+        assert response.status_code == 200
+
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "No suitable overlay found. Using current slide as target. "
+                "This may display incorrectly if dimensions differ." in caplog.text
+            )
+            assert response.status_code == 200
+
+
+def test_registration_single_window_different_slide(
+    empty_app: TileServer,
+    tmp_path: Path,
+    remote_sample: Callable,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test registering slides."""
+    # Repeat but provide extra overlays
+    data = make_simple_dat()
+    joblib.dump(data, tmp_path / "test.dat")
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        # Now add extra slide (i.e. IHC slide as target to register with)
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(remote_sample("svs-1-small"))},
+        )
+
+        # Capture logger output to check for warning
+        with caplog.at_level(logging.WARNING):
+            response = client.put(
+                "/tileserver/overlay",
+                data={"overlay_path": safe_str(remote_sample("reg_disp_mha_example"))},
+            )
+            assert (
+                "Using slide as source and last overlay as target for registration."
+                in caplog.text
+            )
+            assert response.status_code == 200
+
+
+def test_healthcheck(empty_app: TileServer) -> None:
+    """Test the /tileserver/healthcheck endpoint."""
+    with empty_app.test_client() as client:
+        response = client.get("/tileserver/healthcheck")
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+        assert response.get_json() == {"status": "OK"}
+
+
+def test_sessions_no_slide_loaded(empty_app: TileServer) -> None:
+    """Test /tileserver/sessions when no slides are loaded."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        response = client.get("/tileserver/sessions")
+        assert response.status_code == 200
+        assert response.is_json
+        assert response.get_json() == {}
+
+
+def test_sessions_one_slide_loaded(
+    empty_app: TileServer, remote_sample: Callable
+) -> None:
+    """Test /tileserver/sessions after loading one slide."""
+    with empty_app.test_client() as client:
+        setup_app(client)
+        slide_path = safe_str(remote_sample("svs-1-small"))
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": slide_path},
+        )
+        assert response.status_code == 200
+
+        response = client.get("/tileserver/sessions")
+        assert response.status_code == 200
+        sessions = response.get_json()
+
+        assert isinstance(sessions, dict)
+        assert len(sessions) == 1

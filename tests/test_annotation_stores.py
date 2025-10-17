@@ -6,11 +6,11 @@ import json
 import pickle
 import sqlite3
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from itertools import repeat, zip_longest
 from pathlib import Path
 from timeit import timeit
-from typing import TYPE_CHECKING, Callable, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -569,7 +569,7 @@ def test_sqlite_store_index_version_error(monkeypatch: object) -> None:
     """Test adding an index with SQlite <3.9."""
     store = SQLiteStore()
     monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
-    with pytest.raises(EnvironmentError, match="Requires sqlite version 3.9.0"):
+    with pytest.raises(EnvironmentError, match=r"Requires sqlite version 3.9.0"):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 

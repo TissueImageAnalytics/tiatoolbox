@@ -8,7 +8,7 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, cast
 
 import cv2
 import joblib
@@ -162,7 +162,7 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
         raise OSError(msg)
 
 
-def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
+def imread(image_path: PathLike, *, as_uint8: bool | None = None) -> np.ndarray:
     """Read an image as a NumPy array.
 
     Args:
@@ -1206,6 +1206,107 @@ def add_from_dat(
 
 def dict_to_store_semantic_segmentor(
     patch_output: dict | zarr.group,
+def process_contours(
+    contours: list[np.ndarray],
+    hierarchy: np.ndarray,
+    scale_factor: tuple[float, float] = (1, 1),
+) -> list[Annotation]:
+    """Process contours and hierarchy to create annotations.
+
+    Args:
+        contours (list[np.ndarray]):
+            A list of contours.
+        hierarchy (list[np.ndarray]):
+            A list of hierarchy.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the annotations.
+
+    Returns:
+        list:
+            A list of annotations.
+
+    """
+    annotations_list: list[Annotation] = []
+    outer_contours: dict[int, np.ndarray] = {}
+    holes_dict: dict[int, list[np.ndarray]] = {}
+
+    for i, layer_ in enumerate(contours):
+        coords: np.ndarray = layer_.squeeze()
+        scaled_coords: np.ndarray = np.array([np.array(scale_factor) * coords])
+
+        # save one points as a line, otherwise save the Polygon
+        if len(layer_) > 2:  # noqa: PLR2004
+            if int(hierarchy[0][i][3]) == -1:  # Outer contour
+                outer_contours[i] = scaled_coords[0]
+            else:  # Hole
+                parent_idx: int = int(hierarchy[0][i][3])
+                if parent_idx not in holes_dict:
+                    holes_dict[parent_idx] = []
+                holes_dict[parent_idx].append(scaled_coords[0])
+        # if two points, save as a line string
+        elif len(layer_) == 2:  # noqa: PLR2004
+            feature_geom = feature2geometry(
+                {
+                    "type": "linestring",
+                    "coordinates": scaled_coords[0],
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties={"type": "mask"},
+                    )
+                ]
+            )
+        # if single point, save it is a point
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "point",
+                    "coordinates": scaled_coords,
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties={"type": "mask"},
+                    )
+                ]
+            )
+
+    for idx, outer in outer_contours.items():
+        holes: list[np.ndarray] = holes_dict.get(idx, [])
+        if len(holes) != 0:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer, *holes],
+                },
+            )
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer],
+                },
+            )
+        feature_geom = make_valid_poly(feature_geom)
+        annotations_list.extend(
+            [
+                Annotation(
+                    geometry=feature_geom,
+                    properties={"type": "mask"},
+                )
+            ]
+        )
+
+    return annotations_list
+
+
+def dict_to_store_semantic_segmentor(
+    patch_output: dict | zarr.Group,
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
@@ -1231,6 +1332,7 @@ def dict_to_store_semantic_segmentor(
             An SQLiteStore containing Annotations for each patch
             or Path to file storing SQLiteStore containing Annotations
             for each patch.
+
     """
     preds = patch_output["predictions"]
 
@@ -1245,55 +1347,19 @@ def dict_to_store_semantic_segmentor(
 
     _ = class_dict  # use it once overlay is working
 
-    annotations_list = []
+    annotations_list: list[Annotation] = []
 
     for type_class in layer_list:
         layer = np.where(preds == type_class, 1, 0)
-        contours, _ = cv2.findContours(
+        contours, hierarchy = cv2.findContours(
             layer.astype("uint8"),
-            cv2.RETR_TREE,
+            cv2.RETR_CCOMP,
             cv2.CHAIN_APPROX_NONE,
         )
-        for layer_ in contours:
-            coords = layer_.squeeze()
-            count += 1
+        contours = cast("list[np.ndarray]", contours)
 
-            scaled_coords = np.array([scale_factor * coords])
-
-            # save one points as a line, otherwise save the Polygon
-            if len(layer_) > 2:  # noqa: PLR2004
-                feature_geom = feature2geometry(
-                    {
-                        "type": "Polygon",
-                        "coordinates": scaled_coords,
-                    },
-                )
-                feature_geom = make_valid_poly(feature_geom)
-            # if two points, save as a line string
-            elif len(layer_) == 2:  # noqa: PLR2004
-                feature_geom = feature2geometry(
-                    {
-                        "type": "linestring",
-                        "coordinates": scaled_coords[0],
-                    },
-                )
-            # if single point, save it is a point
-            else:
-                feature_geom = feature2geometry(
-                    {
-                        "type": "point",
-                        "coordinates": scaled_coords,
-                    },
-                )
-
-            annotations_list.extend(
-                [
-                    Annotation(
-                        geometry=feature_geom,
-                        properties={"type": "mask"},
-                    )
-                ]
-            )
+        annotations_list_ = process_contours(contours, hierarchy, scale_factor)
+        annotations_list.extend(annotations_list_)
 
     _ = store.append_many(
         annotations_list, [str(i) for i in range(len(annotations_list))]

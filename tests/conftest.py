@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
 import torch
@@ -15,6 +15,9 @@ import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils.env_detection import has_gpu, running_on_ci
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
@@ -160,6 +163,17 @@ def sample_jp2(remote_sample: Callable) -> Path:
 
     """
     return remote_sample("jp2-omnyx-small")
+
+
+@pytest.fixture(scope="session")
+def sample_dicom(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for DICOM images.
+
+    This fixture downloads a sample DICOM file in a standard format for testing.
+    The file represents a single DICOM image and is stored in a temporary directory.
+
+    """
+    return remote_sample("dicom-1")
 
 
 @pytest.fixture(scope="session")
@@ -578,9 +592,9 @@ def chdir() -> Callable:
 
     """
     try:
-        from contextlib import chdir
+        from contextlib import chdir  # noqa: PLC0415
     except ImportError:
-        from contextlib import AbstractContextManager
+        from contextlib import AbstractContextManager  # noqa: PLC0415
 
         class chdir(AbstractContextManager):  # noqa: N801
             """Non thread-safe context manager to change the current working directory.

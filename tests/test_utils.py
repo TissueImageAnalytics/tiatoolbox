@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
@@ -12,6 +13,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
 import tifffile
 import torch
 import zarr
@@ -24,8 +26,12 @@ from tifffile import TiffFile
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
+from tiatoolbox.enums import GeometryType
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import (
+    compile_model,
+    is_torch_compile_compatible,
+)
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import locsize2bounds
@@ -781,7 +787,7 @@ def test_sub_pixel_read_empty_bounds() -> None:
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
-    with pytest.raises(ValueError, match="Bounds have zero size after padding."):
+    with pytest.raises(ValueError, match=r"Bounds have zero size after padding."):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -797,7 +803,7 @@ def test_fuzz_bounds2locsize() -> None:
     for _ in range(1000):
         size = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
         location = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
-        bounds = (*location, *(sum(x) for x in zip(size, location)))
+        bounds = (*location, *(sum(x) for x in zip(size, location, strict=False)))
         assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
@@ -1131,7 +1137,7 @@ def test_parse_cv2_interpolaton() -> None:
     cases = [str.upper, str.lower, str.capitalize]
     mode_strings = ["cubic", "linear", "area", "lanczos"]
     mode_enums = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
-    for string, cv2_enum in zip(mode_strings, mode_enums):
+    for string, cv2_enum in zip(mode_strings, mode_enums, strict=False):
         for case in cases:
             assert utils.misc.parse_cv2_interpolaton(case(string)) == cv2_enum
             assert utils.misc.parse_cv2_interpolaton(cv2_enum) == cv2_enum
@@ -1309,7 +1315,7 @@ def test_crop_and_pad_edges_negative_max_dims() -> None:
 
 def test_crop_and_pad_edges_non_positive_bounds_size() -> None:
     """Test crop and pad edges for non positive bound size."""
-    with pytest.raises(ValueError, match="[bB]ounds.*> 0"):
+    with pytest.raises(ValueError, match=r"[bB]ounds.*> 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, -1, -1),
@@ -1346,8 +1352,6 @@ def test_select_device() -> None:
 def test_save_as_json(tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
-    import json
-
     # dict with nested dict, list, and np.array
     key_dict = {
         "a1": {"name": "John", "age": 23, "sex": "male"},
@@ -1858,8 +1862,6 @@ def test_torch_compile_disable() -> None:
 
 def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
     """Test if torch-compile compatibility is checked correctly."""
-    from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
-
     is_torch_compile_compatible()
     assert "torch.compile" in caplog.text
 
@@ -1878,6 +1880,7 @@ def test_dict_to_store_semantic_segment() -> None:
     )
     assert not store_.values()
 
+    # single point
     patch_output["predictions"][100, 100] = 1
 
     store_ = misc.dict_to_store_semantic_segmentor(
@@ -1938,6 +1941,147 @@ def test_dict_to_store_semantic_segment() -> None:
 
 
 # Tests for OME tiff writer
+def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
+    """Tests behaviour of holes in dict_to_store and save_path."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    save_dir_path = tmp_path / "tmp"
+    save_dir_path.mkdir()
+
+    _ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=save_dir_path,
+    )
+
+    assert save_dir_path.exists()
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 1, "There should be one hole in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_multiple_holes() -> None:
+    """Tests behaviour of multiple holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 2, "There should be two holes in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_no_holes() -> None:
+    """Tests behaviour of no holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    assert len(store_) == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    annotation = annotations_[0]
+    assert isinstance(annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 0, "There should be no holes in the Polygon"
 
 
 def get_ome_metadata(tiff_path: Path) -> str | None:

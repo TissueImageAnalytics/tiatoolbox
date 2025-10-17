@@ -38,7 +38,7 @@ def save_tiles(
     verbose: bool,
 ) -> None:
     """Display or save WSI metadata."""
-    from tiatoolbox.wsicore.wsireader import WSIReader
+    from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: PLC0415
 
     files_all, output_path = prepare_file_dir_cli(
         img_input,
