@@ -426,7 +426,7 @@ class TileServer(Flask):
         session_id = self._get_session_id()
         cmap = json.loads(request.form["cmap"])
         if isinstance(cmap, dict):
-            cmap = dict(zip(cmap["keys"], cmap["values"]))
+            cmap = dict(zip(cmap["keys"], cmap["values"], strict=False))
             self.renderers[session_id].score_fn = lambda x: x
         self.renderers[session_id].mapper = cmap
         self.renderers[session_id].function_mapper = None

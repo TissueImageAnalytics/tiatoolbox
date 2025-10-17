@@ -7,7 +7,7 @@ Test for annotation rendering using AnnotationRenderer and AnnotationTileGenerat
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,6 +25,9 @@ from tiatoolbox.tools.pyramid import AnnotationTileGenerator
 from tiatoolbox.utils.env_detection import running_on_travis
 from tiatoolbox.utils.visualization import AnnotationRenderer, _find_minimum_mpp_sf
 from tiatoolbox.wsicore import wsireader
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 RNG = np.random.default_rng(0)  # Numpy Random Generator
 

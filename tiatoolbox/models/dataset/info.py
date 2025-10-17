@@ -119,7 +119,7 @@ class KatherPatchDataset(DatasetInfoABC):
             paths.sort()
             all_paths.extend(paths)
             uid_name_map[label_id] = label_name
-        inputs, labels = list(zip(*all_paths))
+        inputs, labels = list(zip(*all_paths, strict=False))
 
         self.label_names = uid_name_map
         self.inputs = list(inputs)  # type casting to list
