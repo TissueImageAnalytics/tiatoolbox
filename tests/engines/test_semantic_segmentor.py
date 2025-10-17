@@ -156,9 +156,10 @@ def test_save_annotation_store(remote_sample: Callable, track_tmp_path: Path) ->
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
     )
 
+    # Test str input
     sample_image = remote_sample("thumbnail-1k-1k")
 
-    inputs = [sample_image]
+    inputs = [str(sample_image)]
 
     output = segmentor.run(
         images=inputs,

@@ -183,8 +183,8 @@ def test_patch_predictor_api(
     """Test PatchPredictor API."""
     save_dir_path = track_tmp_path
 
-    # convert to pathlib Path to prevent reader complaint
-    inputs = [Path(sample_patch1), Path(sample_patch2)]
+    # Test both Path and str
+    inputs = [Path(sample_patch1), str(sample_patch2)]
     predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1)
     # don't run test on GPU
     # Default run
@@ -254,10 +254,10 @@ def test_wsi_predictor_api(
     """Test normal run of wsi predictor."""
     save_dir_path = track_tmp_path
 
-    # convert to pathlib Path to prevent wsireader complaint
+    # Test both Path and str input
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_jpg = Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
-    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi_jpg = sample_wsi_dict["wsi2_4k_4k_jpg"]
+    mini_wsi_msk = str(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
     predictor = PatchPredictor(model="resnet18-kather100k", batch_size=32)
@@ -278,7 +278,7 @@ def test_wsi_predictor_api(
     _kwargs = copy.deepcopy(kwargs)
     # test reading of multiple whole-slide images
     output = predictor.run(
-        images=[mini_wsi_svs, mini_wsi_jpg],
+        images=[mini_wsi_svs, str(mini_wsi_jpg)],
         masks=[mini_wsi_msk, mini_wsi_msk],
         patch_mode=False,
         return_probabilities=True,
