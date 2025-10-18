@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Callable, cast
 
 import numpy as np
 import torch
-import umap
+
+# import umap
 from matplotlib import pyplot as plt
 from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree

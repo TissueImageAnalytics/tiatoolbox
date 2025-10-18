@@ -93,7 +93,7 @@ class SAM(ModelABC):
             def format_coords(coords: np.ndarray | list) -> list:
                 """Helper function that converts coordinates to list format."""
                 if isinstance(coords, np.ndarray):
-                    return coords.tolist()
+                    return coords[:, None, :].tolist()
                 if isinstance(coords[0], np.ndarray):
                     return [
                         item.tolist() if isinstance(item, np.ndarray) else item
@@ -105,7 +105,7 @@ class SAM(ModelABC):
                 points = point_coords[i]
                 # Convert point coordinates to list
                 if points is not None:
-                    point_labels = [[[1] * len(points)]]
+                    point_labels = np.ones((1, len(points), 1), dtype=int).tolist()
                     points = [format_coords(points)]
 
             if box_coords is not None:
@@ -113,7 +113,6 @@ class SAM(ModelABC):
                 # Convert box coordinates to list
                 if boxes is not None:
                     boxes = [format_coords(boxes)]
-
             inputs = self.processor(
                 image,
                 input_points=points,
@@ -184,6 +183,8 @@ class SAM(ModelABC):
         if isinstance(batch_data, torch.Tensor):
             batch_data = batch_data.cpu().numpy()
 
+        print("inputs are:")
+        print(point_coords, box_coords)
         with torch.inference_mode():
             masks, scores = model(batch_data, point_coords, box_coords)
 

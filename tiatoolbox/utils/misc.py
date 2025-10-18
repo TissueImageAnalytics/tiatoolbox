@@ -1207,6 +1207,7 @@ def add_from_dat(
 def dict_to_store_semantic_segmentor(
     patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
+    offset: tuple[float, float] | None = None,
     class_dict: dict | None = None,
     save_path: Path | None = None,
 ) -> AnnotationStore | Path:
@@ -1258,7 +1259,10 @@ def dict_to_store_semantic_segmentor(
             coords = layer_.squeeze()
             count += 1
 
-            scaled_coords = np.array([scale_factor * coords])
+            if offset is not None:
+                scaled_coords = np.array([scale_factor * coords]) + np.array(offset)
+            else:
+                scaled_coords = np.array([scale_factor * coords])
 
             # save one points as a line, otherwise save the Polygon
             if len(layer_) > 2:  # noqa: PLR2004

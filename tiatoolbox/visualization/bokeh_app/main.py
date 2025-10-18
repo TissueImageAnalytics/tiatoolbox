@@ -66,7 +66,9 @@ from requests.adapters import HTTPAdapter, Retry
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
-from tiatoolbox.models.engine.prompt_segmentor import PromptSegmentor
+from tiatoolbox.models.engine.prompt_segmentor import (
+    PromptSegmentorV3,
+)
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
@@ -1276,18 +1278,28 @@ def sam_segment() -> None:
     y = np.round(UI["box_source"].data["y"])
     height = np.round(UI["box_source"].data["height"])
     width = np.round(UI["box_source"].data["width"])
+    x = [
+        round(UI["box_source"].data["x"][i] - 0.5 * UI["box_source"].data["width"][i])
+        for i in range(len(x))
+    ]
+    y = [
+        -round(UI["box_source"].data["y"][i] + 0.5 * UI["box_source"].data["height"][i])
+        for i in range(len(y))
+    ]
+    width = [round(UI["box_source"].data["width"][i]) for i in range(len(x))]
+    height = [round(UI["box_source"].data["height"][0]) for i in range(len(x))]
     box_coords = (
         np.array(
-            [[[x[i], -y[i], x[i] + width[i], height[i] - y[i]] for i in range(len(x))]],
+            [[[x[i], y[i], x[i] + width[i], height[i] + y[i]] for i in range(len(x))]],
             np.uint32,
         )
         if len(x) > 0
         else None
     )
 
-    prompt_segmentor = PromptSegmentor()
+    prompt_segmentor = PromptSegmentorV3()
     tmp_save_dir = Path(tempfile.mkdtemp())
-    tmp_mask_dir = Path(tempfile.mkdtemp())
+    # tmp_mask_dir = Path(tempfile.mkdtemp())
 
     x_start = max(0, UI["p"].x_range.start)
     y_start = max(0, -UI["p"].y_range.end)
@@ -1296,40 +1308,40 @@ def sam_segment() -> None:
 
     height = y_end - y_start
     width = x_end - x_start
-    res = prompt_segmentor.calc_mpp((width, height), UI["vstate"].mpp[0], 1500)
+    res, scale_factor = prompt_segmentor.calc_mpp(
+        (width, height), UI["vstate"].mpp[0], 1500
+    )
+    # scale_factor = scale_factor * res
+    # prompt_segmentor.scale = scale_factor
 
-    # Make a mask defining the box
-    thumb = UI["vstate"].wsi.slide_thumbnail()
-    conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
-    x = round(x_start / conv_mpp)
-    y = round(y_start / conv_mpp)
-    width = round((x_end - x_start) / conv_mpp)
-    height = round((y_end - y_start) / conv_mpp)
+    # read the region of interest from the slide
+    if UI["vstate"].wsi is None:
+        raise ValueError("No slide loaded, cannot run SAM")
+    roi = UI["vstate"].wsi.read_bounds(
+        (int(x_start), int(y_start), int(x_end), int(y_end)),
+        resolution=res,
+        units="mpp",
+    )
 
-    mask = np.zeros((thumb.shape[0], thumb.shape[1]), dtype=np.uint8)
-    mask[y : y + height, x : x + width] = 1
-
-    Image.fromarray(mask).save(tmp_mask_dir / "mask.png")
-    # ! Mask is currently causing issues. Tool works fine without it,
-    # ! but reduction in segmentation quality for larger WSIs.
+    # transform point_coords and box_coords to the roi coordinate system
+    if point_coords is not None:
+        point_coords = (point_coords - np.array([[x_start, y_start]])) / scale_factor
+    if box_coords is not None:
+        box_coords = (
+            box_coords - np.array([[x_start, y_start, x_start, y_start]])
+        ) / scale_factor
+    prompt_segmentor.offset = np.array([x_start, y_start])
 
     # Run SAM on the point
     prediction = prompt_segmentor.predict(
-        imgs=[UI["vstate"].slide_path],
-        masks=[tmp_mask_dir / "mask.png"],
+        imgs=[roi],
         device=select_device(on_gpu=torch.cuda.is_available()),
         save_dir=tmp_save_dir / "sam_out",
         point_coords=point_coords,
         box_coords=box_coords,
-        mode="wsi",
-        patch_input_shape=(1024, 1024),
-        patch_output_shape=(1024, 1024),
-        resolution=res,
-        units="mpp",
-        multi_prompt=True,
     )
 
-    ann_loc = f"{prediction[0][1]}.0.db"
+    ann_loc = str(prediction)  # f"{prediction[0][1]}.0.db"
 
     slide_filename = UI["vstate"].slide_path.stem + ".db"
     destination = doc_config["overlay_folder"] / slide_filename
