@@ -1952,6 +1952,7 @@ def test_dict_to_store_semantic_segment() -> None:
     assert "Polygon" in annotations_geometry_type
     assert "Line String" in annotations_geometry_type
 
+
 # Tests for OME tiff writer
 def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
     """Tests behaviour of holes in dict_to_store and save_path."""
