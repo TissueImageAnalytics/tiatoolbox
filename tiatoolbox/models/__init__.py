@@ -20,11 +20,10 @@ from .engine.io_config import (
 from .engine.multi_task_segmentor import MultiTaskSegmentor
 from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from .engine.patch_predictor import PatchPredictor
-from .engine.semantic_segmentor import DeepFeatureExtractor, SemanticSegmentor
+from .engine.semantic_segmentor import SemanticSegmentor
 
 __all__ = [
     "SCCNN",
-    "DeepFeatureExtractor",
     "HoVerNet",
     "HoVerNetPlus",
     "IDaRS",

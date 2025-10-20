@@ -1,17 +1,51 @@
-"""Defines Abstract Base Class for TIAToolbox Engines."""
+"""Abstract Base Class for TIAToolbox Deep Learning Engines.
+
+This module defines the `EngineABC` class, which serves as a base for implementing
+deep learning inference workflows in TIAToolbox. It supports both patch-based and
+whole slide image (WSI) processing, and provides a unified interface for model
+initialization, data loading, inference, post-processing, and output saving.
+
+Classes:
+    - EngineABC: Abstract base class for deep learning engines.
+    - EngineABCRunParams: TypedDict for runtime configuration parameters.
+
+Functions:
+    - prepare_engines_save_dir: Utility to create or validate output directories.
+
+Features:
+    - Supports patch and WSI modes.
+    - Handles caching and memory-efficient inference using Dask.
+    - Integrates with TIAToolbox models and IO configurations.
+    - Outputs predictions in multiple formats including dict, zarr, and AnnotationStore.
+
+Intended Usage:
+    Subclass `EngineABC` to implement specific inference logic by overriding
+    abstract methods such as preprocessing, postprocessing, and model-specific behavior.
+
+Example:
+    >>> class MyEngine(EngineABC):
+    >>>     def __init__(self, model, weights, verbose):
+    >>>         super().__init__(model=model, weights=weights, verbose=verbose)
+    >>> # Implement base class functions and then call.
+    >>> engine = MyEngine(model="resnet18-kather100k")
+    >>> output = engine.run(images, patch_mode=True)
+
+"""
 
 from __future__ import annotations
 
 import copy
-import shutil
 from abc import ABC
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
+import dask
+import dask.array as da
 import numpy as np
 import torch
-import tqdm
 import zarr
+from dask import compute
+from dask.diagnostics import ProgressBar
 from torch import nn
 from typing_extensions import Unpack
 
@@ -21,10 +55,10 @@ from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
-    dict_to_store,
-    dict_to_zarr,
-    write_to_zarr_in_cache_mode,
+    dict_to_store_patch_predictions,
+    get_tqdm,
 )
+from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
 from .io_config import ModelIOConfigABC
 
@@ -36,133 +70,61 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore.wsireader import WSIReader
-
-
-def prepare_engines_save_dir(
-    save_dir: os | Path | None,
-    *,
-    patch_mode: bool,
-    overwrite: bool = False,
-) -> Path | None:
-    """Create a save directory.
-
-    If patch_mode is False and the save directory is not defined,
-    this function will raise an error.
-
-    If patch_mode is True and the save directory is defined it will
-    create save_dir otherwise returns None.
-
-    Args:
-        save_dir (str or Path):
-            Path to output directory.
-        patch_mode(bool):
-            Whether to treat input image as a patch or WSI.
-        overwrite (bool):
-            Whether to overwrite the results. Default = False.
-
-    Returns:
-        :class:`Path`:
-            Path to output directory.
-
-    Raises:
-        OSError:
-            If the save directory is not defined.
-
-    """
-    if patch_mode is True:
-        if save_dir is not None:
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=overwrite)
-        return save_dir
-
-    if save_dir is None:
-        msg = (
-            "Input WSIs detected but no save directory provided."
-            "Please provide a 'save_dir'."
-        )
-        raise OSError(msg)
-
-    logger.info(
-        "When providing multiple whole slide images, "
-        "the outputs will be saved and the locations of outputs "
-        "will be returned to the calling function when `run()`"
-        "finishes successfully.",
-    )
-
-    save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=overwrite)
-
-    return save_dir
 
 
 class EngineABCRunParams(TypedDict, total=False):
-    """Class describing the input parameters for the :func:`EngineABC.run()` method.
+    """Parameters for configuring the :func:`EngineABC.run()` method.
 
-    Attributes:
+    Optional Keys:
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
         batch_size (int):
-            Number of image patches to feed to the model in a forward pass.
-        cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory.
-        cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size.
+            Number of image patches per forward pass.
         class_dict (dict):
-            Optional dictionary mapping classification outputs to class names.
+            Mapping of classification outputs to class names.
         device (str):
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device.
+            Device to run the model on (e.g., "cpu", "cuda").
+            See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+            for more details.
+        input_resolutions (list[dict[Units, Resolution]]):
+            Resolution settings for input heads. Supported units are `level`,
+            `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+            [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for details.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
-        return_labels (bool):
-            Whether to return the labels with the predictions.
-        num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
+            IO configuration (:class:`ModelIOConfigABC`) for model input/output.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
+        num_workers (int):
+            Number of workers for DataLoader and post-processing.
         output_file (str):
-            Output file name to save "zarr" or "db". If None, path to output is
-            returned by the engine.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tuple of height and width (HW).
-            Patches are requested at read resolution, not with respect to level 0,
-            and must be positive.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
-            units are `level`, `power` and `mpp`. Keys should be "units" and
-            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
-            :class:`WSIReader` for details.
+            Filename for saving output (e.g., "zarr" or "annotationstore").
+        patch_input_shape (IntPair):
+            Shape of input patches (height, width), requested at read resolution.
+            Must be positive.
+        return_labels (bool):
+            Whether to return labels with predictions.
         scale_factor (tuple[float, float]):
-            The scale factor to use when loading the annotations. All coordinates
-            will be multiplied by this factor to allow conversion of annotations
-            saved at non-baseline resolution to baseline. Should be model_mpp/slide_mpp.
-        stride_shape (tuple):
-            Stride used during WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
+            Scale factor for annotations (model_mpp / slide_mpp).
+            Used to convert coordinates from non-baseline to baseline resolution.
+        stride_shape (IntPair):
+            Stride used during WSI processing, at requested read resolution.
+            Must be positive. Defaults to `patch_input_shape` if not provided.
         verbose (bool):
-            Whether to output logging information.
+            Whether to enable verbose logging.
 
     """
 
+    auto_get_mask: bool
     batch_size: int
-    cache_mode: bool
-    cache_size: int
     class_dict: dict
     device: str
+    input_resolutions: list[dict[Units, Resolution]]
     ioconfig: ModelIOConfigABC
-    num_loader_workers: int
-    num_post_proc_workers: int
+    memory_threshold: int
+    num_workers: int
     output_file: str
     patch_input_shape: IntPair
-    input_resolutions: list[dict[Units, Resolution]]
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
@@ -172,9 +134,13 @@ class EngineABCRunParams(TypedDict, total=False):
 class EngineABC(ABC):  # noqa: B024
     """Abstract base class for TIAToolbox deep learning engines to run CNN models.
 
+    This class provides a unified interface for running inference on image patches
+    or whole slide images (WSIs), handling preprocessing, batching, postprocessing,
+    and saving predictions.
+
     Args:
         model (str | ModelABC):
-            A PyTorch model. Default is `None`.
+            Model name from TIAToolbox or a PyTorch model instance.
             The user can request pretrained models from the toolbox model zoo using
             the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
@@ -182,16 +148,11 @@ class EngineABC(ABC):  # noqa: B024
             be downloaded. However, you can override with your own set
             of weights using the `weights` parameter.
         batch_size (int):
-            Number of image patches fed into the model each time in a
-            forward/backward pass. Default value is 8.
-        num_loader_workers (int):
-            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
-            Please note that they will also perform preprocessing. Default value is 0.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-            Default value is 0.
-        weights (str or Path):
-            Path to the weight of the corresponding `model`.
+            Number of patches per forward pass. Default is 8.
+        num_workers (int):
+            Number of workers for data loading. Default is 0.
+        weights (str | Path | None):
+            Path to model weights. If None, default weights are used.
 
             >>> engine = EngineABC(
             ...    model="pretrained-model",
@@ -199,34 +160,35 @@ class EngineABC(ABC):  # noqa: B024
             ... )
 
         device (str):
-            Select the device to run the model. Please see
+            Device to run the model on (e.g., "cpu", "cuda"). Please see
             https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
             for more details on input parameters for device. Default is "cpu".
         verbose (bool):
-            Whether to output logging information. Default value is False.
+            Enable verbose logging. Default is False.
 
     Attributes:
-        images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+        images (list[str | Path] | np.ndarray):
+            Input images or patches.
             A list of image patches in NHWC format as a numpy array
             or a list of str/paths to WSIs.
-        masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
+        masks (list[str | Path] | np.ndarray):
+            Optional masks for WSIs.
             A list of tissue masks or binary masks corresponding to processing area of
             input images. These can be a list of numpy arrays or paths to
             the saved image masks. These are only utilized when patch_mode is False.
             Patches are only generated within a masked area.
             If not provided, then a tissue mask will be automatically
-            generated for whole slide images.
-        patch_mode (str):
-            Whether to treat input images as a set of image patches. TIAToolbox defines
+            generated for whole slide images, if auto_get_mask is True.
+        patch_mode (bool):
+            Whether input is treated as patches. TIAToolbox defines
             an image as a patch if HWC of the input image matches with the HWC expected
             by the model. If HWC of the input image does not match with the HWC expected
             by the model, then the patch_mode must be set to False which will allow the
             engine to extract patches from the input image.
             In this case, when the patch_mode is False the input images are treated
             as WSIs. Default value is True.
-        model (str | ModelABC):
-            A PyTorch model or a name of an existing model from the TIAToolbox model zoo
-            for processing the data. For a full list of pretrained models,
+        model (ModelABC):
+            Loaded PyTorch model. For a full list of pretrained models,
             refer to the `docs
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
@@ -234,72 +196,59 @@ class EngineABC(ABC):  # noqa: B024
             of weights via the `weights` argument. Argument
             is case-insensitive.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration of type :class:`ModelIOConfigABC` to run the Engine.
-        _ioconfig (ModelIOConfigABC):
-            Runtime ioconfig.
+            IO configuration (:class:`ModelIOConfigABC`) for model input/output.
+        dataloader (DataLoader):
+            Torch DataLoader for inference.
         return_labels (bool):
-            Whether to return the labels with the predictions.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
+            Whether to return labels with probabilities and predictions.
+        input_resolutions (list[dict[Units, Resolution]]):
+            Resolution settings for input heads. Supported
             units are `level`, `power` and `mpp`. Keys should be "units" and
             "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
             :class:`WSIReader` for details.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tupled of HW. Patches are at
+        patch_input_shape (IntPair):
+            Shape of input patches. Patches are at
             requested read resolution, not with respect to level 0,
             and must be positive.
-        stride_shape (tuple):
+        stride_shape (IntPair):
             Stride used during WSI processing. Stride is
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
         batch_size (int):
-            Number of images fed into the model each time.
-        cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory. cache_mode is always True when
-            processing WSIs i.e., when `patch_mode` is False. Default value is False.
-        cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size. Default value is 10,000.
+            Number of patches per forward pass.
         labels (list | None):
-                List of labels. Only a single label per image is supported.
-        device (str):
-            :class:`torch.device` to run the model.
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device. Default value is "cpu".
-        num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
+            Optional labels for input images. Only a single label per image is
+            supported.
+        num_workers (int):
+            Number of workers for data loading.
+        patch_input_shape (IntPair | None):
+            Shape of input patches.
+        input_resolutions (list[dict[Units, Resolution]] | None):
+            Resolution settings for input heads.
         return_labels (bool):
-            Whether to return the output labels. Default value is False.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
-            units are `level`, `power` and `mpp`. When `patch_mode` is `True`,
-            the input image patches are expected to be at the correct resolution and
-            units. When `patch_mode` is `False`, the patches are extracted at the
-            requested resolution and units. Default value is [{"units": "baseline",
-            "resolution": 1.0}].
+            Whether to return labels with predictions.
+        stride_shape (IntPair | None):
+            Stride used during WSI processing.
         verbose (bool):
-            Whether to output logging information. Default value is False.
+            Whether to enable verbose logging.
+        dataloader (DataLoader | None):
+            Torch DataLoader for inference.
+        drop_keys (list):
+            Keys to exclude from model output.
+        output_type (Any):
+            Format of output ("dict", "zarr", "AnnotationStore").
+        verbose (bool):
+            Whether to enable verbose logging.
 
-    Examples:
+    Example:
         >>> # Inherit from EngineABC
-        >>> class TestEngineABC(EngineABC):
-        >>>     def __init__(
-        >>>        self,
-        >>>        model,
-        >>>        weights,
-        >>>        verbose,
-        >>>     ):
-        >>>       super().__init__(model=model, weights=weights, verbose=verbose)
+        >>> class MyEngine(EngineABC):
+        >>>     def __init__(self, model, weights, verbose):
+        >>>         super().__init__(model=model, weights=weights, verbose=verbose)
+        >>> engine = MyEngine(model="resnet18-kather100k")
+        >>> output = engine.run(images, patch_mode=True)
+
         >>> # Define all the abstract classes
 
         >>> data = np.array([np.ndarray, np.ndarray])
@@ -327,14 +276,29 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         model: str | ModelABC,
         batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_post_proc_workers: int = 0,
+        num_workers: int = 0,
         weights: str | Path | None = None,
         *,
         device: str = "cpu",
         verbose: bool = False,
     ) -> None:
-        """Initialize Engine."""
+        """Initialize the EngineABC instance.
+
+        Args:
+            model (str | ModelABC):
+                Model name from TIAToolbox or a PyTorch model instance.
+            batch_size (int):
+                Number of patches per forward pass. Default is 8.
+            num_workers (int):
+                Number of workers for data loading. Default is 0.
+            weights (str | Path | None):
+                Path to model weights. If None, default weights are used.
+            device (str):
+                Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+            verbose (bool):
+                Enable verbose logging. Default is False.
+
+        """
         self.images = None
         self.masks = None
         self.patch_mode = None
@@ -342,8 +306,7 @@ class EngineABC(ABC):  # noqa: B024
 
         # Initialize model with specified weights and ioconfig.
         self.model, self.ioconfig = self._initialize_model_ioconfig(
-            model=model,
-            weights=weights,
+            model=model, weights=weights
         )
         self.model.to(device=self.device)
         self.model = (
@@ -353,35 +316,32 @@ class EngineABC(ABC):  # noqa: B024
             )
         )
         self._ioconfig = self.ioconfig  # runtime ioconfig
-
         self.batch_size = batch_size
-        self.cache_mode: bool = False
-        self.cache_size: int = self.batch_size if self.batch_size else 10000
         self.labels: list | None = None
-        self.num_loader_workers = num_loader_workers
-        self.num_post_proc_workers = num_post_proc_workers
+        self.num_workers = num_workers
         self.patch_input_shape: IntPair | None = None
         self.input_resolutions: list[dict[Units, Resolution]] | None = None
         self.return_labels: bool = False
         self.stride_shape: IntPair | None = None
-        self.verbose = verbose
+        self.verbose: bool = verbose
+        self.dataloader: DataLoader | None = None
+        self.drop_keys: list = []
+        self.output_type = None
 
     @staticmethod
     def _initialize_model_ioconfig(
         model: str | ModelABC,
         weights: str | Path | None,
     ) -> tuple[nn.Module, ModelIOConfigABC | None]:
-        """Helper function to initialize model and ioconfig attributes.
+        """Helper function to initialize model and IO configuration.
 
-        If a pretrained model provided by the TIAToolbox is requested. The model
-        can be specified as a string otherwise :class:`torch.nn.Module` is required.
-        This function also loads the :class:`ModelIOConfigABC` using the information
-        from the pretrained models in TIAToolbox. If ioconfig is not available then it
-        should be provided in the :func:`run()` function.
+        If a pretrained model from TIAToolbox is specified by name, this function
+        loads the model and its associated IO configuration. If a custom model is
+        provided, it loads the weights if specified and returns None for IO config.
 
         Args:
             model (str | ModelABC):
-                A PyTorch model. Default is `None`.
+                A model name from TIAToolbox or a PyTorch model instance.
                 The user can request pretrained models from the toolbox model zoo using
                 the list of pretrained models available at this `link
                 <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
@@ -390,18 +350,18 @@ class EngineABC(ABC):  # noqa: B024
                 of weights using the `weights` parameter.
 
             weights (str | Path | None):
-                Path to pretrained weights. If no pretrained weights are provided
-                and the `model` is provided by TIAToolbox, then pretrained weights will
-                be automatically loaded from the TIA servers.
+                Path to pretrained weights. If None and a TIAToolbox model is used,
+                default weights are automatically downloaded.
 
         Returns:
-            ModelABC:
-                The requested PyTorch model as a :class:`ModelABC` instance.
+            tuple[nn.Module, ModelIOConfigABC | None]:
+                A tuple containing the loaded PyTorch model and its IO configuration.
+                If the model is not from TIAToolbox, IO config will be None.
 
-            ModelIOConfigABC | None:
-                The model io configuration for TIAToolbox pretrained models.
-                If the specified model is not in TIAToolbox model zoo, then the function
-                returns None.
+        Raises:
+            TypeError:
+                If the model is neither a string (TIAToolbox model)
+                nor a torch.nn.Module.
 
         """
         if not isinstance(model, (str, nn.Module)):
@@ -428,29 +388,34 @@ class EngineABC(ABC):  # noqa: B024
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
+        auto_get_mask: bool = True,
     ) -> torch.utils.data.DataLoader:
-        """Pre-process images and masks and return dataloader for inference.
+        """Pre-process images and masks and return a DataLoader for inference.
 
         Args:
-            images (list of str or :class:`Path` or :class:`numpy.ndarray`):
-                A list of image patches in NHWC format as a numpy array
-                or a list of str/paths to WSIs. When `patch_mode` is False
-                the function expects list of str/paths to WSIs.
-            masks (list | None):
-                List of masks. Only utilised when patch_mode is False.
-                Patches are only generated within a masked area.
-                If not provided, then a tissue mask will be automatically
-                generated for whole slide images.
+            images (list[str | Path] | np.ndarray):
+                A list of image patches in NHWC format as a numpy array,
+                or a list of file paths to WSIs. When `patch_mode` is False,
+                expects file paths to WSIs.
+            masks (Path | None):
+                Optional list of masks used when `patch_mode` is False.
+                Patches are generated only within masked areas. If not provided,
+                tissue masks are automatically generated.
             labels (list | None):
-                List of labels. Only a single label per image is supported.
-            ioconfig (ModelIOConfigABC):
-                A :class:`ModelIOConfigABC` object.
+                Optional list of labels. Only one label per image is supported.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration object specifying patch size, stride, and resolution.
             patch_mode (bool):
-                Whether to treat input image as a patch or WSI.
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            auto_get_mask (bool):
+                Whether to automatically generate a tissue mask using
+                `wsireader.tissue_mask()` when `patch_mode` is False.
+                If `True`, only tissue regions are processed. If `False`,
+                all patches are processed. Default is `True`.
 
         Returns:
             torch.utils.data.DataLoader:
-                :class:`torch.utils.data.DataLoader` for inference.
+                A PyTorch DataLoader configured for inference.
 
         """
         if labels:
@@ -459,13 +424,13 @@ class EngineABC(ABC):  # noqa: B024
 
         if not patch_mode:
             dataset = WSIPatchDataset(
-                img_path=images,
-                mode="wsi",
+                input_img=images,
                 mask_path=masks,
                 patch_input_shape=ioconfig.patch_input_shape,
                 stride_shape=ioconfig.stride_shape,
                 resolution=ioconfig.input_resolutions[0]["resolution"],
                 units=ioconfig.input_resolutions[0]["units"],
+                auto_get_mask=auto_get_mask,
             )
 
             dataset.preproc_func = self.model.preproc_func
@@ -473,294 +438,345 @@ class EngineABC(ABC):  # noqa: B024
             # preprocessing must be defined with the dataset
             return torch.utils.data.DataLoader(
                 dataset,
-                num_workers=self.num_loader_workers,
+                num_workers=self.num_workers,
                 batch_size=self.batch_size,
                 drop_last=False,
                 shuffle=False,
+                persistent_workers=self.num_workers > 0,
             )
 
-        dataset = PatchDataset(inputs=images, labels=labels)
+        dataset = PatchDataset(
+            inputs=images, labels=labels, patch_input_shape=ioconfig.patch_input_shape
+        )
+
         dataset.preproc_func = self.model.preproc_func
 
         # preprocessing must be defined with the dataset
         return torch.utils.data.DataLoader(
             dataset,
-            num_workers=self.num_loader_workers,
+            num_workers=self.num_workers,
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
         )
 
-    @staticmethod
-    def _update_model_output(raw_predictions: dict, raw_output: dict) -> dict:
-        """Helper function to append raw output during inference."""
-        for key, value in raw_output.items():
-            if raw_predictions[key] is None:
-                raw_predictions[key] = value
-            else:
-                raw_predictions[key] = np.append(raw_predictions[key], value, axis=0)
-
-        return raw_predictions
-
     def _get_coordinates(self: EngineABC, batch_data: dict) -> np.ndarray:
-        """Helper function to collect coordinates for AnnotationStore."""
+        """Extract coordinates for each image patch in a batch.
+
+        This method returns coordinates for each patch, either based on
+        the patch dimensions (if in patch mode) or from precomputed values
+        (if in WSI mode).
+
+        Args:
+            batch_data (dict):
+                Dictionary containing batch data, including image and
+                optional coordinates.
+
+        Returns:
+            np.ndarray:
+                Array of coordinates for each patch in the batch.
+                Shape is (N, 4), where N is the number of patches.
+
+        """
         if self.patch_mode:
             coordinates = [0, 0, *batch_data["image"].shape[1:3]]
             return np.tile(coordinates, reps=(batch_data["image"].shape[0], 1))
-        return batch_data["coords"].numpy()
+        return np.array(batch_data["coords"])
 
     def infer_patches(
         self: EngineABC,
         dataloader: DataLoader,
-        save_path: Path | None,
         *,
         return_coordinates: bool = False,
-    ) -> dict | Path:
-        """Runs model inference on image patches and returns output as a dictionary.
+    ) -> dict[str, da.Array]:
+        """Run model inference on image patches and return predictions.
+
+        This method performs batched inference using a PyTorch DataLoader,
+        and accumulates predictions in Dask arrays. It supports optional inclusion
+        of coordinates and labels in the output.
 
         Args:
             dataloader (DataLoader):
-                An :class:`torch.utils.data.DataLoader` object to run inference.
-            save_path (Path | None):
-                If `cache_mode` is True then path to save zarr file must be provided.
+                PyTorch DataLoader containing image patches for inference.
             return_coordinates (bool):
-                Whether to save coordinates in the output. This is required when
-                this function is called by `infer_wsi` and `patch_mode` is False.
+                Whether to include coordinates in the output. Required when
+                called by `infer_wsi` and `patch_mode` is False.
 
         Returns:
-            dict or Path:
-                Result of model inference as a dictionary. Returns path to
-                saved zarr file if `cache_mode` is True.
+            dict[str, dask.array.Array]:
+                Dictionary containing prediction results as Dask arrays.
+                Keys include:
+                    - "probabilities": Model output probabilities.
+                    - "labels": Ground truth labels (if `return_labels` is True).
+                    - "coordinates": Patch coordinates (if `return_coordinates` is
+                      True).
 
         """
-        progress_bar = None
-
-        if self.verbose:
-            progress_bar = tqdm.tqdm(
-                total=len(dataloader),
-                leave=True,
-                ncols=80,
-                ascii=True,
-                position=0,
-            )
-
         keys = ["probabilities"]
+        probabilities, labels, coordinates = [], [], []
 
         if self.return_labels:
             keys.append("labels")
+            labels = []
 
         if return_coordinates:
             keys.append("coordinates")
+            coordinates = []
 
-        raw_predictions = dict.fromkeys(keys)
+        # Main output dictionary
+        raw_predictions = dict(zip(keys, [[]] * len(keys), strict=False))
 
-        zarr_group = None
+        # Inference loop
+        tqdm = get_tqdm()
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else self.dataloader
+        )
 
-        if self.cache_mode:
-            zarr_group = zarr.open(save_path, mode="w")
-
-        for _, batch_data in enumerate(dataloader):
+        for batch_data in tqdm_loop:
             batch_output = self.model.infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
             )
-            if return_coordinates:
-                batch_output["coordinates"] = self._get_coordinates(batch_data)
 
-            if self.return_labels:  # be careful of `s`
-                if isinstance(batch_data["label"], torch.Tensor):
-                    batch_output["labels"] = batch_data["label"].numpy()
-                else:
-                    batch_output["labels"] = batch_data["label"]
-
-            raw_predictions = self._update_model_output(
-                raw_predictions=raw_predictions,
-                raw_output=batch_output,
+            probabilities.append(
+                da.from_array(
+                    batch_output,  # probabilities
+                )
             )
 
-            if self.cache_mode:
-                zarr_group = write_to_zarr_in_cache_mode(
-                    zarr_group=zarr_group, output_data_to_save=raw_predictions
+            if return_coordinates:
+                coordinates.append(
+                    da.from_array(
+                        self._get_coordinates(batch_data),
+                    )
                 )
-                raw_predictions = dict.fromkeys(keys)
 
-            if progress_bar:
-                progress_bar.update()
+            if self.return_labels:
+                labels.append(da.from_array(np.array(batch_data["label"])))
 
-        if progress_bar:
-            progress_bar.close()
+        raw_predictions["probabilities"] = da.concatenate(probabilities, axis=0)
 
-        return save_path if self.cache_mode else raw_predictions
+        if return_coordinates:
+            raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
 
-    def post_process_patches(
+        if self.return_labels:
+            labels = [label.reshape(-1) for label in labels]
+            raw_predictions["labels"] = da.concatenate(labels, axis=0)
+
+        return raw_predictions
+
+    def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: dict | Path,
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> dict | Path:
+        raw_predictions: da.Array,
+        prediction_shape: tuple[int, ...],  # noqa: ARG002
+        prediction_dtype: type,  # noqa: ARG002
+        **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
+    ) -> dask.array.Array:
         """Post-process raw patch predictions from inference.
 
-        The output of :func:`infer_patches()` with patch prediction information will be
-        post-processed using this function. The processed output will be saved in the
-        respective input format. If `cache_mode` is True, the function processes the
-        input using zarr group with size specified by `cache_size`.
+        This method applies a post-processing function (e.g., smoothing, filtering)
+        to the raw model predictions. It supports delayed execution using Dask
+        and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dict | Path):
-                A dictionary or path to zarr with patch prediction information.
+            raw_predictions (dask.array.Array):
+                Raw model predictions as a dask array.
+            prediction_shape (tuple[int, ...]):
+                Shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
             **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+                Additional runtime parameters used for post-processing.
 
         Returns:
-            dict or Path:
-                Returns patch based output after post-processing. Returns path to
-                saved zarr file if `cache_mode` is True.
+            dask.array.Array:
+                Post-processed predictions as a Dask array.
 
         """
-        _ = kwargs.get("return_labels")  # Key values required for post-processing
-
-        if self.cache_mode:  # cache mode
-            _ = zarr.open(raw_predictions, mode="w")
-
         return raw_predictions
 
     def save_predictions(
         self: EngineABC,
-        processed_predictions: dict | Path,
+        processed_predictions: dict,
         output_type: str,
-        save_dir: Path | None = None,
-        **kwargs: dict,
+        save_path: Path | None = None,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | AnnotationStore | Path:
-        """Save model predictions.
+        """Save model predictions to disk or return them in memory.
+
+        Depending on the output type, this method saves predictions as a zarr group,
+        an AnnotationStore (SQLite database), or returns them as a dictionary.
 
         Args:
-            processed_predictions (dict | Path):
-                A dictionary or path to zarr with model prediction information.
-            save_dir (Path):
-                Optional output path to directory to save the patch dataset output to a
-                `.zarr` or `.db` file, provided `patch_mode` is True. If the
-                `patch_mode` is False then `save_dir` is required.
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
             output_type (str):
-                The desired output type for resulting patch dataset.
+                Desired output format.
+                Supported values are "dict", "zarr", and "annotationstore".
+            save_path (Path | None):
+                Path to save the output file.
+                Required for "zarr" and "annotationstore" formats.
             **kwargs (EngineABCRunParams):
-                Keyword Args required to save the output.
+                Additional runtime parameters including:
+                    - output_file: Name of the output file.
+                    - scale_factor: Scaling factor for annotations.
+                    - class_dict: Mapping of class indices to names.
 
         Returns:
-            dict or Path or :class:`AnnotationStore`:
-                If the `output_type` is "AnnotationStore", the function returns
-                the patch predictor output as an SQLiteStore containing Annotations
-                for each or the Path to a `.db` file depending on whether a
-                save_dir Path is provided. Otherwise, the function defaults to
-                returning patch predictor output, either as a dict or the Path to a
-                `.zarr` file depending on whether a save_dir Path is provided.
+            dict | AnnotationStore | Path:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "annotationstore": returns an AnnotationStore
+                  or path to .db file.
+
+        Raises:
+            TypeError:
+                If an unsupported output_type is provided.
 
         """
-        if (
-            self.cache_mode or not save_dir
-        ) and output_type.lower() != "annotationstore":
+        keys_to_compute = [k for k in processed_predictions if k not in self.drop_keys]
+
+        if output_type.lower() == "zarr":
+            if is_zarr(save_path):
+                zarr_group = zarr.open(save_path, mode="r")
+                keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
+            write_tasks = []
+            for key in keys_to_compute:
+                dask_array = processed_predictions[key].rechunk("auto")
+                task = dask_array.to_zarr(
+                    url=save_path,
+                    component=key,
+                    compute=False,
+                )
+                write_tasks.append(task)
+            msg = f"Saving output to {save_path}."
+            logger.info(msg=msg)
+            with ProgressBar():
+                compute(*write_tasks)
+
+            zarr_group = zarr.open(save_path, mode="r+")
+            for key in self.drop_keys:
+                if key in zarr_group:
+                    del zarr_group[key]
+
+            return save_path
+
+        values_to_compute = [processed_predictions[k] for k in keys_to_compute]
+
+        # Compute all at once
+        computed_values = compute(*values_to_compute)
+
+        # Assign computed values
+        processed_predictions = dict(
+            zip(keys_to_compute, computed_values, strict=False)
+        )
+
+        if output_type.lower() == "dict":
             return processed_predictions
 
-        save_path = Path(kwargs.get("output_file", save_dir / "output.db"))
-
         if output_type.lower() == "annotationstore":
+            save_path = Path(kwargs.get("output_file", save_path.parent / "output.db"))
+
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
 
-            processed_predictions_path: str | Path | None = None
-
-            # Need to add support for zarr conversion.
-            if self.cache_mode:
-                processed_predictions_path = processed_predictions
-                processed_predictions = zarr.open(processed_predictions, mode="r")
-
-            out_file = dict_to_store(
+            return dict_to_store_patch_predictions(
                 processed_predictions,
                 scale_factor,
                 class_dict,
                 save_path,
             )
-            if processed_predictions_path is not None:
-                shutil.rmtree(processed_predictions_path)
 
-            return out_file
-
-        return (
-            dict_to_zarr(
-                processed_predictions,
-                save_path,
-                **kwargs,
-            )
-            if isinstance(processed_predictions, dict)
-            else processed_predictions
-        )
+        msg = f"Unsupported output type: {output_type}"
+        raise TypeError(msg)
 
     def infer_wsi(
         self: EngineABC,
         dataloader: DataLoader,
         save_path: Path,
-        **kwargs: EngineABCRunParams,
-    ) -> Path:
-        """Model inference on a WSI.
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict:
+        """Run model inference on a whole slide image (WSI).
+
+        This method performs inference on a WSI using the provided DataLoader,
+        and accumulates predictions in Dask arrays. Optionally includes
+        coordinates and labels in the output.
 
         Args:
             dataloader (DataLoader):
-                A torch dataloader to process WSIs.
-
+                PyTorch DataLoader configured for WSI processing.
             save_path (Path):
                 Path to save the intermediate output. The intermediate output is saved
                 in a zarr file.
             **kwargs (EngineABCRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`EngineRunParams` for accepted keyword arguments.
+                Additional runtime parameters used during inference.
 
         Returns:
-            save_path (Path):
-                Path to zarr file where intermediate output is saved.
+            dict:
+                Dictionary containing prediction results as Dask arrays.
 
         """
         _ = kwargs.get("patch_mode", False)
+        _ = save_path
         return self.infer_patches(
             dataloader=dataloader,
-            save_path=save_path,
             return_coordinates=True,
         )
 
     # This is not a static model for child classes.
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: dict | Path,
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> dict | Path:
-        """Post process WSI output.
+        raw_predictions: da.Array,
+        prediction_shape: tuple[int, ...],  # noqa: ARG002
+        prediction_dtype: type,  # noqa: ARG002
+        **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
+    ) -> dask.array.Array:
+        """Post-process predictions from whole slide image (WSI) inference.
 
-        Takes the raw output from patch predictions and post-processes it to improve the
-        results e.g., using information from neighbouring patches.
+        This method applies a post-processing function (e.g., smoothing, filtering)
+        to the raw model predictions. It supports delayed execution using Dask
+        and returns a Dask array for efficient computation.
+
+        Args:
+            raw_predictions (dask.array.Array):
+                Raw model predictions as a Dask array.
+            prediction_shape (tuple[int, ...]):
+                Shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters used for post-processing.
+
+        Returns:
+            dask.array.Array:
+                Post-processed predictions as a Dask array.
 
         """
-        _ = kwargs.get("return_labels")  # Key values required for post-processing
         return raw_predictions
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
-        """Helper function to load ioconfig.
+        """Load or validate the IO configuration for the engine.
 
-        If the model is provided by TIAToolbox it will load the default ioconfig.
-        Otherwise, ioconfig must be specified.
+        If the model is from TIAToolbox and no IO configuration is provided,
+        this method attempts to use the default configuration. Otherwise,
+        it validates and sets the provided configuration.
 
         Args:
             ioconfig (ModelIOConfigABC):
-                IO configuration to run the engines.
-
-        Raises:
-             ValueError:
-                If no io configuration is provided or found in the pretrained TIAToolbox
-                models.
+                IO configuration to use for model inference.
 
         Returns:
             ModelIOConfigABC:
-                The ioconfig used for the run.
+                The IO configuration to be used during inference.
+
+        Raises:
+            ValueError:
+                If no IO configuration is provided and none is available from the model.
 
         """
         if self.ioconfig is None and ioconfig is None:
@@ -782,29 +798,39 @@ class EngineABC(ABC):  # noqa: B024
         stride_shape: IntPair,
         input_resolutions: list[dict[Units, Resolution]],
     ) -> ModelIOConfigABC:
-        """Update IOConfig.
+        """Update the IO configuration used for patch-based inference.
+
+        This method updates the patch input shape, stride, and input resolutions
+        in the IO configuration. If no configuration is provided, it creates a new one.
 
         Args:
-            ioconfig (:class:`ModelIOConfigABC`):
-                Input ioconfig for PatchPredictor.
-            patch_input_shape (tuple):
-                Size of patches input to the model. Patches are at
+            ioconfig (ModelIOConfigABC):
+                Existing IO configuration to update. If None, a new one is created.
+            patch_input_shape (IntPair):
+                Size of patches input to the model (height, width). Patches are at
                 requested read resolution, not with respect to level 0,
                 and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. Stride is
-                at requested read resolution, not with respect to
+            stride_shape (IntPair):
+                Stride used during patch extraction.
+                If None, defaults to patch_input_shape.
+                Stride is at requested read resolution, not with respect to
                 level 0, and must be positive. If not provided,
                 `stride_shape=patch_input_shape`.
-            input_resolutions (list(dict(Units, Resolution))):
-                List of Python dictionaries with units and resolution for each
-                input head for model inference for reading the image. Supported
-                units are `level`, `power` and `mpp`. Keys should be "units" and
-                "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
+            input_resolutions (list[dict[Units, Resolution]]):
+                List of dictionaries specifying resolution and units
+                for each input head. Supported units are `level`, `power` and `mpp`.
+                Keys should be "units" and "resolution"
+                e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
                 :class:`WSIReader` for details.
 
         Returns:
-            Updated Patch Predictor IO configuration.
+            ModelIOConfigABC:
+                Updated IO configuration for patch-based inference.
+
+        Raises:
+            ValueError:
+                If neither an IO configuration nor patch/resolution parameters
+                are provided.
 
         """
         config_flag = (
@@ -847,7 +873,26 @@ class EngineABC(ABC):  # noqa: B024
 
     @staticmethod
     def _validate_images_masks(images: list | np.ndarray) -> list | np.ndarray:
-        """Validate input images for a run."""
+        """Validate the format and shape of input images or masks.
+
+        Ensures that the input is either a list of file paths or a 4D NumPy array
+        in NHWC format.
+
+        Args:
+            images (list | np.ndarray):
+                List of image paths or a NumPy array of image patches.
+
+        Returns:
+            list | np.ndarray:
+                The validated input images or masks.
+
+        Raises:
+            TypeError:
+                If the input is neither a list nor a NumPy array.
+            ValueError:
+                If the input is a NumPy array but not 4D (NHWC).
+
+        """
         if not isinstance(images, (list, np.ndarray)):
             msg = "Input must be a list of file paths or a numpy array."
             raise TypeError(
@@ -861,15 +906,35 @@ class EngineABC(ABC):  # noqa: B024
             )
             raise ValueError(msg)
 
-        return images
+        return [Path(image) if isinstance(image, str) else image for image in images]
 
     @staticmethod
     def _validate_input_numbers(
         images: list | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        masks: list[os.PathLike] | np.ndarray | None = None,
         labels: list | None = None,
     ) -> None:
-        """Validates number of input images, masks and labels."""
+        """Validate that the number of images, masks, and labels match.
+
+        Ensures that the lengths of masks and labels (if provided) match
+        the number of input images.
+
+        Args:
+            images (list | np.ndarray):
+                List of input images or a NumPy array.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional list of masks corresponding to the input images.
+            labels (list | None):
+                Optional list of labels corresponding to the input images.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError:
+                If the number of masks or labels does not match the number of images.
+
+        """
         if masks is None and labels is None:
             return
 
@@ -896,10 +961,10 @@ class EngineABC(ABC):  # noqa: B024
 
     def _update_run_params(
         self: EngineABC,
-        images: list[os | Path | WSIReader] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
-        save_dir: os | Path | None = None,
+        save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
         *,
@@ -907,25 +972,73 @@ class EngineABC(ABC):  # noqa: B024
         patch_mode: bool,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> Path | None:
-        """Updates runtime parameters.
+        """Update runtime parameters for the engine before running inference.
 
-        Updates runtime parameters for an EngineABC for EngineABC.run().
+        This method sets internal attributes such as caching, batch size,
+        IO configuration, and output format based on user input and keyword arguments.
+
+        Args:
+            images (list[PathLike | Path | WSIReader] | np.ndarray):
+                List of input images or a NumPy array of patches.
+            masks (list[PathLike | Path] | np.ndarray | None):
+                Optional list of masks for WSI processing.
+            labels (list | None):
+                Optional list of labels for input images.
+            save_dir (PathLike | Path | None):
+                Directory to save output files. Required for WSI mode.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution settings.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore".
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters to update engine attributes.
+
+        Returns:
+            Path | None:
+                Path to the save directory if applicable, otherwise None.
+
+        Raises:
+            TypeError:
+                If an unsupported output_type is provided.
+            ValueError:
+                If required configuration or input parameters are missing.
 
         """
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
 
-        self.patch_mode = patch_mode
-        if not self.patch_mode:
-            self.cache_mode = True  # if input is WSI run using cache mode.
+        if self.num_workers > 0:
+            dask.config.set(scheduler="threads", num_workers=self.num_workers)
+        else:
+            dask.config.set(scheduler="threads")
 
-        if self.cache_mode and self.batch_size > self.cache_size:
-            self.batch_size = self.cache_size
+        if not self.return_labels:
+            self.drop_keys.append("label")
+
+        self.patch_mode = patch_mode
 
         self._validate_input_numbers(images=images, masks=masks, labels=labels)
         if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
             msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
             raise TypeError(msg)
+
+        self.output_type = output_type
+
+        if save_dir is not None and output_type.lower() not in [
+            "zarr",
+            "annotationstore",
+        ]:
+            self.output_type = "zarr"
+            msg = (
+                f"output_type has been updated to 'zarr' "
+                f"for saving the file to {save_dir}."
+                f"Remove `save_dir` input to return the output as a `dict`."
+            )
+            logger.info(msg)
 
         self.images = self._validate_images_masks(images=images)
 
@@ -936,7 +1049,7 @@ class EngineABC(ABC):  # noqa: B024
 
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
-        self.model.to(device=self.device)
+        self.model = self.model.to(device=self.device)
         self._ioconfig = self._update_ioconfig(
             ioconfig,
             self.patch_input_shape,
@@ -951,66 +1064,95 @@ class EngineABC(ABC):  # noqa: B024
         )
 
     def _run_patch_mode(
-        self: EngineABC, output_type: str, save_dir: Path, **kwargs: EngineABCRunParams
+        self: EngineABC,
+        output_type: str,
+        save_dir: Path,
+        **kwargs: EngineABCRunParams,
     ) -> dict | AnnotationStore | Path:
-        """Runs the Engine in the patch mode.
+        """Run the engine in patch mode.
 
-        Input arguments are passed from :func:`EngineABC.run()`.
+        This method performs inference on image patches, post-processes the predictions,
+        and saves the output in the specified format.
+
+        Args:
+            output_type (str):
+                Desired output format. Supported values are "dict", "zarr",
+                and "annotationstore".
+            save_dir (Path):
+                Directory to save the output files.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters including:
+                    - output_file: Name of the output file.
+                    - scale_factor: Scaling factor for annotations.
+                    - class_dict: Mapping of class indices to names.
+
+        Returns:
+            dict | AnnotationStore | Path:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "annotationstore": returns an AnnotationStore
+                  or path to .db file.
 
         """
         save_path = None
-        if self.cache_mode:
+        if save_dir:
             output_file = Path(kwargs.get("output_file", "output.zarr"))
             save_path = save_dir / (str(output_file.stem) + ".zarr")
 
         duplicate_filter = DuplicateFilter()
         logger.addFilter(duplicate_filter)
 
-        dataloader = self.get_dataloader(
+        self.dataloader = self.get_dataloader(
             images=self.images,
             masks=self.masks,
             labels=self.labels,
             patch_mode=True,
+            ioconfig=self._ioconfig,
         )
         raw_predictions = self.infer_patches(
-            dataloader=dataloader,
-            save_path=save_path,
+            dataloader=self.dataloader,
             return_coordinates=output_type == "annotationstore",
         )
-        processed_predictions = self.post_process_patches(
-            raw_predictions=raw_predictions,
+
+        raw_predictions["predictions"] = self.post_process_patches(
+            raw_predictions=raw_predictions["probabilities"],
+            prediction_shape=raw_predictions["probabilities"].shape[:-1],
+            prediction_dtype=raw_predictions["probabilities"].dtype,
             **kwargs,
         )
+
         logger.removeFilter(duplicate_filter)
 
         out = self.save_predictions(
-            processed_predictions=processed_predictions,
+            processed_predictions=raw_predictions,
             output_type=output_type,
-            save_dir=save_dir,
+            save_path=save_path,
             **kwargs,
         )
 
-        if save_dir:
-            msg = f"Output file saved at {out}."
-            logger.info(msg=msg)
-            return out
-
+        msg = f"Output file saved at {out}."
+        logger.info(msg=msg)
         return out
 
     @staticmethod
     def _calculate_scale_factor(dataloader: DataLoader) -> float | tuple[float, float]:
-        """Calculates scale factor for final output.
+        """Calculate the scale factor for final output based on dataloader resolution.
 
-        Uses the dataloader resolution and the WSI resolution to calculate scale
-        factor for final WSI output.
+        This method compares the resolution used during reading with the slide's
+        baseline resolution to compute a scale factor for coordinate transformation.
 
         Args:
             dataloader (DataLoader):
-                Dataloader for the current run.
+                PyTorch DataLoader used for WSI inference. Must contain resolution
+                and unit metadata in its dataset.
 
         Returns:
-            scale_factor (float | tuple[float, float]):
-                Scale factor for final output.
+            float | tuple[float, float]:
+                Scale factor for converting coordinates to baseline resolution.
+                - If units are "mpp": returns (model_mpp / slide_mpp).
+                - If units are "level": returns downsample ratio.
+                - If units are "power": returns objective_power / model_power.
+                - If units are "baseline": returns the resolution directly.
 
         """
         # get units and resolution from dataloader.
@@ -1048,122 +1190,151 @@ class EngineABC(ABC):  # noqa: B024
         save_dir: Path,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | AnnotationStore | Path:
-        """Runs the Engine in the WSI mode (patch_mode = False).
+        """Run the engine in WSI mode (patch_mode = False).
 
-        Input arguments are passed from :func:`EngineABC.run()`.
+        This method performs inference on each whole slide image (WSI),
+        post-processes the predictions, and saves the output in the specified format.
+
+        Args:
+            output_type (str):
+                Desired output format. Supported values are "dict", "zarr",
+                and "annotationstore".
+            save_dir (Path):
+                Directory to save the output files.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters including:
+                    - output_file: Name of the output file.
+                    - scale_factor: Scaling factor for annotations.
+                    - class_dict: Mapping of class indices to names.
+
+        Returns:
+            dict | AnnotationStore | Path:
+                Dictionary mapping each input WSI to its corresponding output path.
+                Output may be a zarr file, SQLite database, or in-memory dictionary.
 
         """
+        progress_bar = None
+        tqdm = get_tqdm()
+
+        if self.verbose:
+            progress_bar = tqdm(
+                total=len(self.images),
+                desc="Processing WSIs",
+            )
         suffix = ".zarr"
         if output_type == "AnnotationStore":
             suffix = ".db"
 
-        out = {image: save_dir / (str(image.stem) + suffix) for image in self.images}
+        def get_path(image: Path | WSIReader) -> Path:
+            """Return path to output file."""
+            return image.input_path if isinstance(image, WSIReader) else image
+
+        out = {
+            get_path(image): save_dir / (get_path(image).stem + suffix)
+            for image in self.images
+        }
 
         save_path = {
-            image: save_dir / (str(image.stem) + ".zarr") for image in self.images
+            get_path(image): save_dir / (get_path(image).stem + ".zarr")
+            for image in self.images
         }
 
         for image_num, image in enumerate(self.images):
             duplicate_filter = DuplicateFilter()
             logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
-            dataloader = self.get_dataloader(
+            self.dataloader = self.get_dataloader(
                 images=image,
                 masks=mask,
                 patch_mode=False,
                 ioconfig=self._ioconfig,
+                auto_get_mask=kwargs.get("auto_get_mask", True),
             )
 
-            scale_factor = self._calculate_scale_factor(dataloader=dataloader)
+            scale_factor = self._calculate_scale_factor(dataloader=self.dataloader)
 
             raw_predictions = self.infer_wsi(
-                dataloader=dataloader,
-                save_path=save_path[image],
+                dataloader=self.dataloader,
+                save_path=save_path[get_path(image)],
                 **kwargs,
             )
-            processed_predictions = self.post_process_wsi(
-                raw_predictions=raw_predictions,
+
+            raw_predictions["predictions"] = self.post_process_wsi(
+                raw_predictions=raw_predictions["probabilities"],
+                prediction_shape=raw_predictions["probabilities"].shape[:-1],
+                prediction_dtype=raw_predictions["probabilities"].dtype,
                 **kwargs,
             )
-            kwargs["output_file"] = out[image]
+
+            kwargs["output_file"] = out[get_path(image)]
             kwargs["scale_factor"] = scale_factor
-            out[image] = self.save_predictions(
-                processed_predictions=processed_predictions,
+            out[get_path(image)] = self.save_predictions(
+                processed_predictions=raw_predictions,
                 output_type=output_type,
-                save_dir=save_dir,
+                save_path=save_path[get_path(image)],
                 **kwargs,
             )
             logger.removeFilter(duplicate_filter)
-            msg = f"Output file saved at {out[image]}."
+            msg = f"Output file saved at {out[get_path(image)]}."
             logger.info(msg=msg)
+
+            if progress_bar:
+                progress_bar.update()
+
+        if progress_bar:
+            progress_bar.close()
 
         return out
 
     def run(
         self: EngineABC,
-        images: list[os | Path | WSIReader] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
-        save_dir: os | Path | None = None,  # None will not save output
+        save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
         output_type: str = "dict",
         **kwargs: Unpack[EngineABCRunParams],
     ) -> AnnotationStore | Path | str | dict:
         """Run the engine on input images.
 
+        This method orchestrates the full inference pipeline, including preprocessing,
+        model inference, post-processing, and saving results. It supports both patch
+        and WSI modes.
+
         Args:
-            images (list, ndarray):
-                List of inputs to process. when using `patch` mode, the
-                input must be either a list of images, a list of image
-                file paths or a numpy array of an image list.
-            masks (list | None):
-                List of masks. Only utilised when patch_mode is False.
+            images (list[PathLike | Path | WSIReader] | np.ndarray):
+                List of input images or a NumPy array of patches.
+            masks (list[PathLike | Path] | np.ndarray | None):
+                Optional list of masks for WSI processing.
+                Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
             labels (list | None):
-                List of labels. Only a single label per image is supported.
+                Optional list of labels for input images.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution settings.
             patch_mode (bool):
-                Whether to treat input image as a patch or WSI.
-                default = True.
-            ioconfig (IOPatchPredictorConfig):
-                IO configuration.
-            save_dir (str or pathlib.Path):
-                Output directory to save the results.
-                If save_dir is not provided when patch_mode is False,
-                then for a single image the output is created in the current directory.
-                If there are multiple WSIs as input then the user must provide
-                path to save directory otherwise an OSError will be raised.
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+                Default is True.
+            save_dir (PathLike | Path | None):
+                Directory to save output files. Required for WSI mode.
             overwrite (bool):
-                Whether to overwrite the results. Default = False.
+                Whether to overwrite existing output files. Default is False.
             output_type (str):
-                The format of the output type. "output_type" can be
-                "dict", "zarr" or "AnnotationStore". Default value is "zarr".
-                When saving in the zarr format the output is saved using the
-                `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
-                as a zarr group. If the required output type is an "AnnotationStore"
-                then the output will be intermediately saved as zarr but converted
-                to :class:`AnnotationStore` and saved as a `.db` file
-                at the end of the loop.
+                Desired output format: "dict", "zarr", or "annotationstore".
             **kwargs (EngineABCRunParams):
-                Keyword Args to update :class:`EngineABC` attributes during runtime.
+                Additional runtime parameters to update engine attributes.
 
         Returns:
-            (:class:`numpy.ndarray`, dict):
-                Model predictions of the input dataset. If multiple
-                whole slide images are provided as input,
-                or save_output is True, then results are saved to
-                `save_dir` and a dictionary indicating save location for
-                each input is returned.
-
-                The dict has the following format:
-
-                - img_path: path of the input image.
-                - raw: path to save location for raw prediction,
-                  saved in .json.
+            AnnotationStore | Path | str | dict:
+                - If patch_mode is True: returns predictions or path to saved output.
+                - If patch_mode is False: returns a dictionary mapping each WSI to
+                  its output path.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
@@ -1201,7 +1372,7 @@ class EngineABC(ABC):  # noqa: B024
 
         if patch_mode:
             return self._run_patch_mode(
-                output_type=output_type,
+                output_type=self.output_type,
                 save_dir=save_dir,
                 **kwargs,
             )
@@ -1211,7 +1382,59 @@ class EngineABC(ABC):  # noqa: B024
         # pre-processing, post-processing and save_output
         # for WSIs separately.
         return self._run_wsi_mode(
-            output_type=output_type,
+            output_type=self.output_type,
             save_dir=save_dir,
             **kwargs,
         )
+
+
+def prepare_engines_save_dir(
+    save_dir: str | Path | None,
+    *,
+    patch_mode: bool,
+    overwrite: bool = False,
+) -> Path | None:
+    """Create or validate the save directory for engine outputs.
+
+    Args:
+        save_dir (str | Path | None):
+            Path to the output directory.
+        patch_mode (bool):
+            Whether the input is treated as patches.
+        overwrite (bool):
+            Whether to overwrite existing directory. Default is False.
+
+    Returns:
+        Path | None:
+            Path to the output directory if created or validated, else None.
+
+    Raises:
+        OSError:
+            If patch_mode is False and save_dir is not provided.
+
+    """
+    if patch_mode:
+        if save_dir is not None:
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=overwrite)
+            return save_dir
+        return None
+
+    if save_dir is None:
+        msg = (
+            "Input WSIs detected but no save directory provided. "
+            "Please provide a 'save_dir'."
+        )
+        raise OSError(msg)
+
+    logger.info(
+        "When providing multiple whole slide images, "
+        "the outputs will be saved and the locations of outputs "
+        "will be returned to the calling function when `run()` "
+        "finishes successfully."
+    )
+
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=overwrite)
+
+    return save_dir

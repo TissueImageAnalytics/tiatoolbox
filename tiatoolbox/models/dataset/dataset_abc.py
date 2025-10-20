@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,6 +16,7 @@ import torch.utils.data as torch_data
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
+from tiatoolbox.utils.exceptions import DimensionMismatchError
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -357,12 +359,12 @@ class WSIPatchDataset(PatchDatasetABC):
 
     """
 
-    def __init__(  # skipcq: PY-R1000  # noqa: PLR0915
+    def __init__(  # skipcq: PY-R1000
         self: WSIPatchDataset,
-        img_path: str | Path,
-        mode: str = "wsi",
+        input_img: str | Path | WSIReader,
         mask_path: str | Path | None = None,
         patch_input_shape: IntPair = None,
+        patch_output_shape: IntPair = None,
         stride_shape: IntPair = None,
         resolution: Resolution = None,
         units: Units = None,
@@ -374,18 +376,19 @@ class WSIPatchDataset(PatchDatasetABC):
         """Create a WSI-level patch dataset.
 
         Args:
-            mode (str):
-                Can be either `wsi` or `tile` to denote the image to
-                read is either a whole-slide image or a large image
-                tile.
-            img_path (str or Path):
-                Valid to pyramidal whole-slide image or large tile to
-                read.
+            input_img (str or Path or WSIReader):
+                Valid path to a whole-slide image class:`WSIReader`.
             mask_path (str or Path):
                 Valid mask image.
             patch_input_shape:
                 A tuple (int, int) or ndarray of shape (2,). Expected
                 shape to read from `reader` at requested `resolution`
+                and `units`. Expected to be positive and of (height,
+                width). Note, this is not at `resolution` coordinate
+                space.
+            patch_output_shape:
+                A tuple (int, int) or ndarray of shape (2,). Expected
+                output shape from the model at requested `resolution`
                 and `units`. Expected to be positive and of (height,
                 width). Note, this is not at `resolution` coordinate
                 space.
@@ -417,8 +420,7 @@ class WSIPatchDataset(PatchDatasetABC):
             >>> # Create a dataset to get patches from WSI with above
             >>> # preprocessing function
             >>> ds = WSIPatchDataset(
-            ...     img_path='/A/B/C/wsi.svs',
-            ...     mode="wsi",
+            ...     input_img='/A/B/C/wsi.svs',
             ...     patch_input_shape=[512, 512],
             ...     stride_shape=[256, 256],
             ...     auto_get_mask=False,
@@ -428,52 +430,51 @@ class WSIPatchDataset(PatchDatasetABC):
         """
         super().__init__()
 
+        valid_path = bool(
+            isinstance(input_img, (str, Path)) and Path(input_img).is_file()
+        )
         # Is there a generic func for path test in toolbox?
-        if not Path.is_file(Path(img_path)):
-            msg = "`img_path` must be a valid file path."
-            raise ValueError(msg)
-        if mode not in ["wsi", "tile"]:
-            msg = f"`{mode}` is not supported."
+        if not valid_path and not isinstance(input_img, WSIReader):
+            msg = "`input_img` must be a valid file path or a `WSIReader` instance."
             raise ValueError(msg)
         patch_input_shape = np.array(patch_input_shape)
         stride_shape = np.array(stride_shape)
 
-        if (
-            not np.issubdtype(patch_input_shape.dtype, np.integer)
-            or np.size(patch_input_shape) > 2  # noqa: PLR2004
-            or np.any(patch_input_shape < 0)
-        ):
-            msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
-            raise ValueError(msg)
-        if (
-            not np.issubdtype(stride_shape.dtype, np.integer)
-            or np.size(stride_shape) > 2  # noqa: PLR2004
-            or np.any(stride_shape < 0)
-        ):
-            msg = f"Invalid `stride_shape` value {stride_shape}."
-            raise ValueError(msg)
+        _validate_patch_stride_shape(patch_input_shape, stride_shape)
 
         self.preproc_func = preproc_func
+        img_path = (
+            input_img if not isinstance(input_img, WSIReader) else input_img.input_path
+        )
         self.img_path = Path(img_path)
-        self.mode = mode
-        self.reader = None
-        reader = self._get_reader(self.img_path)
-        if mode != "wsi":
-            units = "mpp"
-            resolution = 1.0
-
+        reader = (
+            input_img
+            if isinstance(input_img, WSIReader)
+            else WSIReader.open(self.img_path)
+        )
+        # To support multi-threading on Windows
+        # Helps pickle using Path
+        self.reader = None if os.name == "nt" else reader
         # may decouple into misc ?
         # the scaling factor will scale base level to requested read resolution/units
         wsi_shape = reader.slide_dimensions(resolution=resolution, units=units)
         self.reader_info = reader.info
 
         # use all patches, as long as it overlaps source image
-        self.inputs = PatchExtractor.get_coordinates(
-            image_shape=wsi_shape,
-            patch_input_shape=patch_input_shape[::-1],
-            stride_shape=stride_shape[::-1],
-            input_within_bound=False,
-        )
+        if patch_output_shape is not None:
+            self.inputs, self.outputs = PatchExtractor.get_coordinates(
+                image_shape=wsi_shape,
+                patch_input_shape=patch_input_shape[::-1],
+                stride_shape=stride_shape[::-1],
+                patch_output_shape=patch_output_shape,
+            )
+            self.full_outputs = self.outputs
+        else:
+            self.inputs = PatchExtractor.get_coordinates(
+                image_shape=wsi_shape,
+                patch_input_shape=patch_input_shape[::-1],
+                stride_shape=stride_shape[::-1],
+            )
 
         mask_reader = None
         if mask_path is not None:
@@ -486,13 +487,13 @@ class WSIPatchDataset(PatchDatasetABC):
             mask = np.array(mask > 0, dtype=np.uint8)
 
             mask_reader = VirtualWSIReader(mask)
-            mask_reader.info = reader.info
-        elif auto_get_mask and mode == "wsi" and mask_path is None:
+            mask_reader.info = self.reader_info
+        elif auto_get_mask and mask_path is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
             mask_reader = reader.tissue_mask(resolution=1.25, units="power")
             # ? will this mess up  ?
-            mask_reader.info = reader.info
+            mask_reader.info = self.reader_info
 
         if mask_reader is not None:
             selected = PatchExtractor.filter_coordinates(
@@ -502,10 +503,11 @@ class WSIPatchDataset(PatchDatasetABC):
                 min_mask_ratio=min_mask_ratio,
             )
             self.inputs = self.inputs[selected]
+            if hasattr(self, "outputs"):
+                self.full_outputs = self.outputs  # Full list of outputs
+                self.outputs = self.outputs[selected]
 
-        if len(self.inputs) == 0:
-            msg = "No patch coordinates remain after filtering."
-            raise ValueError(msg)
+        self._check_inputs()
 
         self.patch_input_shape = patch_input_shape
         self.resolution = resolution
@@ -514,44 +516,26 @@ class WSIPatchDataset(PatchDatasetABC):
         # Perform check on the input
         self._check_input_integrity(mode="wsi")
 
+    def _check_inputs(self: WSIPatchDataset) -> None:
+        """Check if input length is valid after filtering."""
+        if len(self.inputs) == 0:
+            msg = "No patch coordinates remain after filtering."
+            raise ValueError(msg)
+
     def _get_reader(self: WSIPatchDataset, img_path: str | Path) -> WSIReader:
         """Get a reader for the image."""
-        if self.mode == "wsi":
-            reader = WSIReader.open(img_path)
-        else:
-            logger.warning(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"` and `resolution=1.0`.',
-                stacklevel=2,
-            )
-            img = imread(img_path)
-            axes = "YXS"[: len(img.shape)]
-            # initialise metadata for VirtualWSIReader.
-            # here, we simulate a whole-slide image, but with a single level.
-            # ! should we expose this so that use can provide their metadata ?
-            metadata = WSIMeta(
-                mpp=np.array([1.0, 1.0]),
-                axes=axes,
-                objective_power=10,
-                slide_dimensions=np.array(img.shape[:2][::-1]),
-                level_downsamples=[1.0],
-                level_dimensions=[np.array(img.shape[:2][::-1])],
-            )
-            # infer value such that read if mask provided is through
-            # 'mpp' or 'power' as varying 'baseline' is locked atm
-            reader = VirtualWSIReader(
-                img,
-                info=metadata,
-            )
-        return reader
+        # To avoid ruff errors and compatibility with base class.
+        return self.reader if self.reader else WSIReader.open(img_path)
 
     def __getitem__(self: WSIPatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
         coords = self.inputs[idx]
+        output_locs = None
+        if hasattr(self, "outputs"):
+            output_locs = self.outputs[idx]
+
         # Read image patch from the whole-slide image
-        if self.reader is None:
-            # only set the reader on first call so that it is initially picklable
-            self.reader = self._get_reader(self.img_path)
+        self.reader = self._get_reader(self.img_path)
         patch = self.reader.read_bounds(
             coords,
             resolution=self.resolution,
@@ -562,6 +546,13 @@ class WSIPatchDataset(PatchDatasetABC):
 
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)
+
+        if output_locs is not None:
+            return {
+                "image": patch,
+                "coords": np.array(coords),
+                "output_locs": output_locs,
+            }
 
         return {"image": patch, "coords": np.array(coords)}
 
@@ -580,6 +571,10 @@ class PatchDataset(PatchDatasetABC):
         labels (list):
             List of labels for sample at the same index in `inputs`.
             Default is `None`.
+        patch_input_shape (tuple):
+            Size of patches input to the model. Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
 
     Examples:
         >>> # A user defined preproc func and expected behavior
@@ -589,6 +584,7 @@ class PatchDataset(PatchDatasetABC):
         >>> ds = PatchDataset(
         ...     inputs=['/A/B/C/img1.png', '/A/B/C/img2.png'],
         ...     labels=["labels1", "labels2"],
+        ...     patch_input_shape=(224, 224),
         ... )
 
     """
@@ -597,6 +593,7 @@ class PatchDataset(PatchDatasetABC):
         self: PatchDataset,
         inputs: np.ndarray | list,
         labels: list | None = None,
+        patch_input_shape: IntPair | None = None,
     ) -> None:
         """Initialize :class:`PatchDataset`."""
         super().__init__()
@@ -605,6 +602,7 @@ class PatchDataset(PatchDatasetABC):
 
         self.inputs = inputs
         self.labels = labels
+        self.patch_input_shape = patch_input_shape
 
         # perform check on the input
         self._check_input_integrity(mode="patch")
@@ -617,6 +615,18 @@ class PatchDataset(PatchDatasetABC):
         if not self.data_is_npy_alike:
             patch = self.load_img(patch)
 
+        if patch.shape[:-1] != tuple(self.patch_input_shape):
+            msg = (
+                f"Patch size is not compatible with the model. "
+                f"Expected dimensions {tuple(self.patch_input_shape)}, but got "
+                f"{patch.shape[:-1]}."
+            )
+            logger.error(msg=msg)
+            raise DimensionMismatchError(
+                expected_dims=tuple(self.patch_input_shape),
+                actual_dims=patch.shape[:-1],
+            )
+
         # Apply preprocessing to selected patch
         patch = self._preproc(patch)
 
@@ -628,3 +638,40 @@ class PatchDataset(PatchDatasetABC):
             return data
 
         return data
+
+
+def _validate_patch_stride_shape(
+    patch_input_shape: np.ndarray, stride_shape: np.ndarray
+) -> None:
+    """Validate patch and stride shape inputs for semantic segmentation.
+
+    Checks that both `patch_input_shape` and `stride_shape` are integer arrays of
+    length ≤ 2 and contain non-negative values. Raises a ValueError if any
+    condition fails.
+
+    Parameters:
+        patch_input_shape (np.ndarray):
+            Shape of the input patch (e.g., height, width).
+        stride_shape (np.ndarray):
+            Stride dimensions used for patch extraction.
+
+    Raises:
+        ValueError:
+            If either input is not a valid integer array of appropriate
+            shape and values.
+
+    """
+    if (
+        not np.issubdtype(patch_input_shape.dtype, np.integer)
+        or np.size(patch_input_shape) > 2  # noqa: PLR2004
+        or np.any(patch_input_shape < 0)
+    ):
+        msg = f"Invalid `patch_input_shape` value {patch_input_shape}."
+        raise ValueError(msg)
+    if (
+        not np.issubdtype(stride_shape.dtype, np.integer)
+        or np.size(stride_shape) > 2  # noqa: PLR2004
+        or np.any(stride_shape < 0)
+    ):
+        msg = f"Invalid `stride_shape` value {stride_shape}."
+        raise ValueError(msg)

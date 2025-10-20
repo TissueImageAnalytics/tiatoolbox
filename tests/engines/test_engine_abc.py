@@ -6,10 +6,11 @@ import copy
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn
+from typing import NoReturn
 
 import numpy as np
 import pytest
+import torch
 import torchvision.models as torch_models
 from typing_extensions import Unpack
 
@@ -26,8 +27,7 @@ from tiatoolbox.models.engine.engine_abc import (
 )
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
-if TYPE_CHECKING:
-    import torch.nn
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
 class TestEngineABC(EngineABC):
@@ -69,6 +69,8 @@ class TestEngineABC(EngineABC):
         """Post process WSI output."""
         return super().post_process_wsi(
             raw_predictions=raw_predictions,
+            prediction_shape=(self.batch_size, 1),
+            prediction_dtype=int,
             **kwargs,
         )
 
@@ -79,7 +81,7 @@ class TestEngineABC(EngineABC):
         **kwargs: dict,
     ) -> dict | np.ndarray:
         """Test infer_wsi."""
-        return super().infer_wsi(
+        return super().infer_wsi(  # skipcq: PYL-E1121
             dataloader,
             save_path,
             **kwargs,
@@ -169,26 +171,26 @@ def test_ioconfig() -> NoReturn:
 
 
 def test_prepare_engines_save_dir(
-    tmp_path: pytest.TempPathFactory,
+    track_tmp_path: pytest.TempPathFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> NoReturn:
     """Test prepare save directory for engines."""
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output",
+        save_dir=track_tmp_path / "patch_output",
         patch_mode=True,
         overwrite=False,
     )
 
-    assert out_dir == tmp_path / "patch_output"
+    assert out_dir == track_tmp_path / "patch_output"
     assert out_dir.exists()
 
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output",
+        save_dir=track_tmp_path / "patch_output",
         patch_mode=True,
         overwrite=True,
     )
 
-    assert out_dir == tmp_path / "patch_output"
+    assert out_dir == track_tmp_path / "patch_output"
     assert out_dir.exists()
 
     out_dir = prepare_engines_save_dir(
@@ -209,35 +211,35 @@ def test_prepare_engines_save_dir(
         )
 
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "wsi_single_output",
+        save_dir=track_tmp_path / "wsi_single_output",
         patch_mode=False,
         overwrite=False,
     )
 
-    assert out_dir == tmp_path / "wsi_single_output"
+    assert out_dir == track_tmp_path / "wsi_single_output"
     assert out_dir.exists()
     assert r"When providing multiple whole-slide images / tiles" not in caplog.text
 
     out_dir = prepare_engines_save_dir(
-        save_dir=tmp_path / "wsi_multiple_output",
+        save_dir=track_tmp_path / "wsi_multiple_output",
         patch_mode=False,
         overwrite=False,
     )
 
-    assert out_dir == tmp_path / "wsi_multiple_output"
+    assert out_dir == track_tmp_path / "wsi_multiple_output"
     assert out_dir.exists()
     assert r"When providing multiple whole slide images" in caplog.text
 
     # test for file overwrite with Path.mkdirs() method
     out_path = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output" / "output.zarr",
+        save_dir=track_tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
         overwrite=True,
     )
     assert out_path.exists()
 
     out_path = prepare_engines_save_dir(
-        save_dir=tmp_path / "patch_output" / "output.zarr",
+        save_dir=track_tmp_path / "patch_output" / "output.zarr",
         patch_mode=True,
         overwrite=True,
     )
@@ -245,7 +247,7 @@ def test_prepare_engines_save_dir(
 
     with pytest.raises(FileExistsError):
         out_path = prepare_engines_save_dir(
-            save_dir=tmp_path / "patch_output" / "output.zarr",
+            save_dir=track_tmp_path / "patch_output" / "output.zarr",
             patch_mode=True,
             overwrite=False,
         )
@@ -362,16 +364,16 @@ def test_engine_run_with_verbose() -> NoReturn:
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         labels=list(range(10)),
-        on_gpu=False,
+        device=device,
     )
 
     assert "probabilities" in out
     assert "labels" in out
 
 
-def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
+def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoReturn:
     """Test the engine run and patch pred store."""
-    save_dir = tmp_path / "patch_output"
+    save_dir = track_tmp_path / "patch_output"
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
@@ -457,37 +459,6 @@ def test_patch_pred_zarr_store(tmp_path: pytest.TempPathFactory) -> NoReturn:
         )
 
 
-def test_cache_mode_patches(tmp_path: pytest.TempPathFactory) -> NoReturn:
-    """Test the caching mode."""
-    save_dir = tmp_path / "patch_output"
-
-    eng = TestEngineABC(model="alexnet-kather100k")
-    out = eng.run(
-        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        on_gpu=False,
-        save_dir=save_dir,
-        overwrite=True,
-        cache_mode=True,
-    )
-    assert out.exists(), "Zarr output file does not exist"
-
-    output_file_name = "output2.zarr"
-    cache_size = 4
-    out = eng.run(
-        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        on_gpu=False,
-        save_dir=save_dir,
-        overwrite=True,
-        cache_mode=True,
-        cache_size=4,
-        batch_size=8,
-        output_file=output_file_name,
-    )
-    assert out.stem == output_file_name.split(".")[0]
-    assert eng.batch_size == cache_size
-    assert out.exists(), "Zarr output file does not exist"
-
-
 def test_get_dataloader(sample_svs: Path) -> None:
     """Test the get_dataloader function."""
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -514,82 +485,84 @@ def test_get_dataloader(sample_svs: Path) -> None:
     assert isinstance(dataloader.dataset, WSIPatchDataset)
 
 
-def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_io_config_delegation(
+    track_tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Test for delegating args to io config."""
     # test not providing config / full input info for not pretrained models
     model = CNNModel("resnet50")
     eng = TestEngineABC(model=model)
 
     kwargs = {
-        "patch_input_shape": [512, 512],
+        "patch_input_shape": [224, 224],
         "input_resolutions": [{"units": "mpp", "resolution": 1.75}],
     }
     with caplog.at_level(logging.WARNING):
         eng.run(
             np.zeros((10, 224, 224, 3)),
             patch_mode=True,
-            save_dir=tmp_path / "dump",
+            save_dir=track_tmp_path / "dump",
             patch_input_shape=kwargs["patch_input_shape"],
             input_resolutions=kwargs["input_resolutions"],
         )
         assert "provide a valid ModelIOConfigABC" in caplog.text
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     # test providing config / full input info for non pretrained models
     ioconfig = ModelIOConfigABC(
-        patch_input_shape=(512, 512),
+        patch_input_shape=(224, 224),
         stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
     )
     eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
         ioconfig=ioconfig,
     )
-    assert eng._ioconfig.patch_input_shape == (512, 512)
+    assert eng._ioconfig.patch_input_shape == (224, 224)
     assert eng._ioconfig.stride_shape == (256, 256)
     assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
         **kwargs,
     )
-    assert eng._ioconfig.patch_input_shape == [512, 512]
-    assert eng._ioconfig.stride_shape == [512, 512]
+    assert eng._ioconfig.patch_input_shape == [224, 224]
+    assert eng._ioconfig.stride_shape == [224, 224]
     assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
     eng = TestEngineABC(model="alexnet-kather100k")
     eng.run(
-        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
         input_resolutions=[{"units": "baseline", "resolution": 1.99}],
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert eng._ioconfig.patch_input_shape == (300, 300)
     assert eng._ioconfig.stride_shape == (300, 300)
     assert eng._ioconfig.input_resolutions[0]["resolution"] == 1.99
     assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     eng.run(
-        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
         input_resolutions=None,
         patch_mode=True,
-        save_dir=f"{tmp_path}/dump",
+        save_dir=f"{track_tmp_path}/dump",
     )
     assert eng._ioconfig.patch_input_shape == (300, 300)
     assert eng._ioconfig.stride_shape == (300, 300)
-    shutil.rmtree(tmp_path / "dump", ignore_errors=True)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     eng.ioconfig = None
     _ioconfig = eng._update_ioconfig(
@@ -618,3 +591,11 @@ def test_io_config_delegation(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
                 stride_shape=(1, 1),
                 input_resolutions=_kwargs["input_resolutions"],
             )
+
+
+def test_save_predictions_incorrect_output_type() -> None:
+    """Engine should raise TypeError if incorrect output type is requested."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    with pytest.raises(TypeError, match=r".*Unsupported output type.* "):
+        eng.save_predictions({"predictions": np.zeros((20, 9))}, output_type="random")

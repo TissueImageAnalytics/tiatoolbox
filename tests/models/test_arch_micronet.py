@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models import MicroNet, SemanticSegmentor
+from tiatoolbox.models import MicroNet, NucleusInstanceSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
@@ -64,7 +64,7 @@ def test_micronet_output(remote_sample: Callable, track_tmp_path: Path) -> None:
     num_loader_workers = 0
     num_postproc_workers = 0
 
-    predictor = SemanticSegmentor(
+    predictor = NucleusInstanceSegmentor(
         pretrained_model=pretrained_model,
         batch_size=batch_size,
         num_loader_workers=num_loader_workers,

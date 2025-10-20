@@ -1,12 +1,30 @@
-"""Defines PatchPredictor Engine."""
+"""Defines the PatchPredictor engine for patch-level inference in digital pathology.
+
+This module implements the PatchPredictor class, which extends the EngineABC base
+class to support patch-based and whole slide image (WSI) inference using deep learning
+models from TIAToolbox. It provides utilities for model initialization, post-processing,
+and output management, including support for multiple output formats.
+
+Classes:
+    - PatchPredictor:
+        Engine for performing patch-level predictions.
+    - PredictorRunParams:
+        TypedDict for configuring runtime parameters.
+
+Example:
+    >>> images = [np.ndarray, np.ndarray]
+    >>> predictor = PatchPredictor(model="resnet18-kather100k")
+    >>> output = predictor.run(images, patch_mode=True)
+
+"""
 
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING
 
-import zarr
 from typing_extensions import Unpack
+
+from tiatoolbox.utils.misc import cast_to_min_dtype
 
 from .engine_abc import EngineABC, EngineABCRunParams
 
@@ -14,6 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
     from pathlib import Path
 
+    import dask.array as da
     import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
@@ -22,60 +41,44 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore import WSIReader
 
 
-class PredictorRunParams(EngineABCRunParams):
-    """Class describing the input parameters for the :func:`EngineABC.run()` method.
+class PredictorRunParams(EngineABCRunParams, total=False):
+    """Parameters for configuring the `PatchPredictor.run()` method.
+
+    This class extends `EngineABCRunParams` with additional parameters specific
+    to patch-level prediction workflows.
 
     Attributes:
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
         batch_size (int):
             Number of image patches to feed to the model in a forward pass.
-        cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory.
-        cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size.
         class_dict (dict):
             Optional dictionary mapping classification outputs to class names.
         device (str):
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device.
+            Device to run the model on (e.g., "cpu", "cuda").
+        input_resolutions (list[dict]):
+            Resolution used for reading the image. See `WSIReader` for details.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration (:class:`ModelIOConfigABC`) to run the Engine.
-        return_labels (bool):
-            Whether to return the labels with the predictions.
-        num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
+            Input/output configuration for patch extraction and resolution.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
+        num_workers (int):
+            Number of workers used in DataLoader.
         output_file (str):
-            Output file name to save "zarr" or "db". If None, path to output is
-            returned by the engine.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tuple of height and width (HW).
-            Patches are requested at read resolution, not with respect to level 0,
-            and must be positive.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
-            units are `level`, `power` and `mpp`. Keys should be "units" and
-            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
-            :class:`WSIReader` for details.
+            Output file name for saving results (e.g., .zarr or .db).
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width).
+        return_labels (bool):
+            Whether to return labels with predictions.
         return_probabilities (bool):
-                Whether to return per-class probabilities.
+            Whether to return per-class probabilities in the output.
+            If False, only predicted labels are returned.
         scale_factor (tuple[float, float]):
-            The scale factor to use when loading the
-            annotations. All coordinates will be multiplied by this factor to allow
-            conversion of annotations saved at non-baseline resolution to baseline.
-            Should be model_mpp/slide_mpp.
-        stride_shape (tuple):
-            Stride used during WSI processing. Stride is
-            at requested read resolution, not with respect to
-            level 0, and must be positive. If not provided,
-            `stride_shape=patch_input_shape`.
+            Scale factor for converting annotations to baseline resolution.
+            Typically model_mpp / slide_mpp.
+        stride_shape (tuple[int, int]):
+            Stride used during WSI processing. Defaults to patch_input_shape.
         verbose (bool):
             Whether to output logging information.
 
@@ -85,112 +88,113 @@ class PredictorRunParams(EngineABCRunParams):
 
 
 class PatchPredictor(EngineABC):
-    r"""Patch level prediction for digital histology images.
+    r"""Patch-level prediction engine for digital histology images.
 
-    The models provided by TIAToolbox should give the following results:
+    This class extends `EngineABC` to support patch-based inference using
+    pretrained or custom models from TIAToolbox. It supports both patch and
+    whole slide image (WSI) modes, and provides utilities for post-processing
+    and saving predictions.
 
-    .. list-table:: PatchPredictor performance on the Kather100K dataset [1]
-       :widths: 15 15
-       :header-rows: 1
+    Supported Models:
+        .. list-table:: PatchPredictor performance on the Kather100K dataset [1].
+           :widths: 15 15
+           :header-rows: 1
 
-       * - Model name
-         - F\ :sub:`1`\ score
-       * - alexnet-kather100k
-         - 0.965
-       * - resnet18-kather100k
-         - 0.990
-       * - resnet34-kather100k
-         - 0.991
-       * - resnet50-kather100k
-         - 0.989
-       * - resnet101-kather100k
-         - 0.989
-       * - resnext50_32x4d-kather100k
-         - 0.992
-       * - resnext101_32x8d-kather100k
-         - 0.991
-       * - wide_resnet50_2-kather100k
-         - 0.989
-       * - wide_resnet101_2-kather100k
-         - 0.990
-       * - densenet121-kather100k
-         - 0.993
-       * - densenet161-kather100k
-         - 0.992
-       * - densenet169-kather100k
-         - 0.992
-       * - densenet201-kather100k
-         - 0.991
-       * - mobilenet_v2-kather100k
-         - 0.990
-       * - mobilenet_v3_large-kather100k
-         - 0.991
-       * - mobilenet_v3_small-kather100k
-         - 0.992
-       * - googlenet-kather100k
-         - 0.992
+           * - Model name
+             - F\ :sub:`1`\ score
+           * - alexnet-kather100k
+             - 0.965
+           * - resnet18-kather100k
+             - 0.990
+           * - resnet34-kather100k
+             - 0.991
+           * - resnet50-kather100k
+             - 0.989
+           * - resnet101-kather100k
+             - 0.989
+           * - resnext50_32x4d-kather100k
+             - 0.992
+           * - resnext101_32x8d-kather100k
+             - 0.991
+           * - wide_resnet50_2-kather100k
+             - 0.989
+           * - wide_resnet101_2-kather100k
+             - 0.990
+           * - densenet121-kather100k
+             - 0.993
+           * - densenet161-kather100k
+             - 0.992
+           * - densenet169-kather100k
+             - 0.992
+           * - densenet201-kather100k
+             - 0.991
+           * - mobilenet_v2-kather100k
+             - 0.990
+           * - mobilenet_v3_large-kather100k
+             - 0.991
+           * - mobilenet_v3_small-kather100k
+             - 0.992
+           * - googlenet-kather100k
+             - 0.992
 
-    .. list-table:: PatchPredictor performance on the PCam dataset [2]
-       :widths: 15 15
-       :header-rows: 1
+        .. list-table:: PatchPredictor performance on the PCam dataset [2]
+           :widths: 15 15
+           :header-rows: 1
 
-       * - Model name
-         - F\ :sub:`1`\ score
-       * - alexnet-pcam
-         - 0.840
-       * - resnet18-pcam
-         - 0.888
-       * - resnet34-pcam
-         - 0.889
-       * - resnet50-pcam
-         - 0.892
-       * - resnet101-pcam
-         - 0.888
-       * - resnext50_32x4d-pcam
-         - 0.900
-       * - resnext101_32x8d-pcam
-         - 0.892
-       * - wide_resnet50_2-pcam
-         - 0.901
-       * - wide_resnet101_2-pcam
-         - 0.898
-       * - densenet121-pcam
-         - 0.897
-       * - densenet161-pcam
-         - 0.893
-       * - densenet169-pcam
-         - 0.895
-       * - densenet201-pcam
-         - 0.891
-       * - mobilenet_v2-pcam
-         - 0.899
-       * - mobilenet_v3_large-pcam
-         - 0.895
-       * - mobilenet_v3_small-pcam
-         - 0.890
-       * - googlenet-pcam
-         - 0.867
+           * - Model name
+             - F\ :sub:`1`\ score
+           * - alexnet-pcam
+             - 0.840
+           * - resnet18-pcam
+             - 0.888
+           * - resnet34-pcam
+             - 0.889
+           * - resnet50-pcam
+             - 0.892
+           * - resnet101-pcam
+             - 0.888
+           * - resnext50_32x4d-pcam
+             - 0.900
+           * - resnext101_32x8d-pcam
+             - 0.892
+           * - wide_resnet50_2-pcam
+             - 0.901
+           * - wide_resnet101_2-pcam
+             - 0.898
+           * - densenet121-pcam
+             - 0.897
+           * - densenet161-pcam
+             - 0.893
+           * - densenet169-pcam
+             - 0.895
+           * - densenet201-pcam
+             - 0.891
+           * - mobilenet_v2-pcam
+             - 0.899
+           * - mobilenet_v3_large-pcam
+             - 0.895
+           * - mobilenet_v3_small-pcam
+             - 0.890
+           * - googlenet-pcam
+             - 0.867
 
     Args:
         model (str | ModelABC):
-            A PyTorch model or name of pretrained model.
+            A PyTorch model instance or name of a pretrained model from TIAToolbox.
+            If a string is provided, pretrained weights
+            will be downloaded unless overridden via `weights`.
             The user can request pretrained models from the toolbox model zoo using
             the list of pretrained models available at this `link
             <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
             By default, the corresponding pretrained weights will also
-            be downloaded. However, you can override with your own set
-            of weights using the `weights` parameter. Default is `None`.
+            be downloaded.
         batch_size (int):
-            Number of image patches fed into the model each time in a
-            forward/backward pass. Default value is 8.
-        num_loader_workers (int):
-            Number of workers to load the data using :class:`torch.utils.data.Dataset`.
-            Please note that they will also perform preprocessing. Default value is 0.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-            Default value is 0.
-        weights (str or Path):
-            Path to the weight of the corresponding `model`.
+            Number of image patches processed per forward pass.
+            Default is 8.
+        num_workers (int):
+            Number of workers for data loading. Default is 0.
+        weights (str | Path | None):
+            Path to model weights. If None, default weights are used.
 
             >>> engine = PatchPredictor(
             ...    model="pretrained-model",
@@ -198,98 +202,50 @@ class PatchPredictor(EngineABC):
             ... )
 
         device (str):
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device. Default is "cpu".
+            Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
         verbose (bool):
-            Whether to output logging information. Default value is False.
+            Whether to enable verbose logging. Default is True.
+
 
     Attributes:
-        images (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
-            A list of image patches in NHWC format as a numpy array
-            or a list of str/paths to WSIs.
-        masks (list of str or list of :obj:`Path` or NHWC :obj:`numpy.ndarray`):
-            A list of tissue masks or binary masks corresponding to processing area of
-            input images. These can be a list of numpy arrays or paths to
-            the saved image masks. These are only utilized when patch_mode is False.
-            Patches are only generated within a masked area.
+        images (list[str | Path] | np.ndarray):
+            Input image patches or WSI paths.
+        masks (list[str | Path] | np.ndarray):
+            Optional tissue masks for WSI processing.
+            These are only utilized when patch_mode is False.
             If not provided, then a tissue mask will be automatically
             generated for whole slide images.
-        patch_mode (str):
-            Whether to treat input images as a set of image patches. TIAToolbox defines
-            an image as a patch if HWC of the input image matches with the HWC expected
-            by the model. If HWC of the input image does not match with the HWC expected
-            by the model, then the patch_mode must be set to False which will allow the
-            engine to extract patches from the input image.
-            In this case, when the patch_mode is False the input images are treated
-            as WSIs. Default value is True.
-        model (str | ModelABC):
-            A PyTorch model or a name of an existing model from the TIAToolbox model zoo
-            for processing the data. For a full list of pretrained models,
-            refer to the `docs
-            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
-            By default, the corresponding pretrained weights will also
-            be downloaded. However, you can override with your own set
-            of weights via the `weights` argument. Argument
-            is case-insensitive.
+        patch_mode (bool):
+            Whether input is treated as patches (`True`) or WSIs (`False`).
+        model (ModelABC):
+            Loaded PyTorch model.
         ioconfig (ModelIOConfigABC):
-            Input IO configuration of type :class:`ModelIOConfigABC` to run the Engine.
-        _ioconfig (ModelIOConfigABC):
-            Runtime ioconfig.
+            IO configuration for patch extraction and resolution.
         return_labels (bool):
-            Whether to return the labels with the predictions.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
+            Whether to include labels in the output.
+        input_resolutions (list[dict]):
+            Resolution settings for model input. Supported
             units are `level`, `power` and `mpp`. Keys should be "units" and
             "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
             :class:`WSIReader` for details.
-        patch_input_shape (tuple):
-            Shape of patches input to the model as tupled of HW. Patches are at
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width). Patches are at
             requested read resolution, not with respect to level 0,
             and must be positive.
-        stride_shape (tuple):
-            Stride used during WSI processing. Stride is
+        stride_shape (tuple[int, int]):
+            Stride used during patch extraction. Stride is
             at requested read resolution, not with respect to
             level 0, and must be positive. If not provided,
             `stride_shape=patch_input_shape`.
-        batch_size (int):
-            Number of images fed into the model each time.
-        cache_mode (bool):
-            Whether to run the Engine in cache_mode. For large datasets,
-            we recommend to set this to True to avoid out of memory errors.
-            For smaller datasets, the cache_mode is set to False as
-            the results can be saved in memory. cache_mode is always True when
-            processing WSIs i.e., when `patch_mode` is False. Default value is False.
-        cache_size (int):
-            Specifies how many image patches to process in a batch when
-            cache_mode is set to True. If cache_size is less than the batch_size
-            batch_size is set to cache_size. Default value is 10,000.
         labels (list | None):
-                List of labels. Only a single label per image is supported.
-        device (str):
-            :class:`torch.device` to run the model.
-            Select the device to run the model. Please see
-            https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-            for more details on input parameters for device. Default value is "cpu".
-        num_loader_workers (int):
-            Number of workers used in :class:`torch.utils.data.DataLoader`.
-        num_post_proc_workers (int):
-            Number of workers to postprocess the results of the model.
-        return_labels (bool):
-            Whether to return the output labels. Default value is False.
-        input_resolutions (list(dict(Units, Resolution))):
-            List of Python dictionaries with units and resolution for each
-            input head for model inference for reading the image. Supported
-            units are `level`, `power` and `mpp`. When `patch_mode` is `True`,
-            the input image patches are expected to be at the correct resolution and
-            units. When `patch_mode` is `False`, the patches are extracted at the
-            requested resolution and units. Default value is [{"units": "baseline",
-            "resolution": 1.0}].
-        verbose (bool):
-            Whether to output logging information. Default value is False.
+            Optional labels for input images.
+            Only a single label per image is supported.
+        drop_keys (list):
+            Keys to exclude from model output.
+        output_type (str):
+            Format of output ("dict", "zarr", "annotationstore").
 
-    Examples:
+    Example:
         >>> # list of 2 image patches as input
         >>> data = ['path/img.svs', 'path/img.svs']
         >>> predictor = PatchPredictor(model="resnet18-kather100k")
@@ -330,182 +286,219 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         model: str | ModelABC,
         batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_post_proc_workers: int = 0,
+        num_workers: int = 0,
         weights: str | Path | None = None,
         *,
         device: str = "cpu",
         verbose: bool = True,
     ) -> None:
-        """Initialize :class:`PatchPredictor`."""
+        """Initialize the PatchPredictor engine.
+
+        Args:
+            model (str | ModelABC):
+                A PyTorch model instance or name of a pretrained model from TIAToolbox.
+                If a string is provided, the corresponding pretrained
+                weights will be downloaded unless overridden via `weights`.
+            batch_size (int):
+                Number of image patches processed per forward pass. Default is 8.
+            num_workers (int):
+                Number of workers for data loading. Default is 0.
+            weights (str | Path | None): Path to model weights.
+                If None, default weights are used.
+            device (str):
+                device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+            verbose (bool):
+                Whether to enable verbose logging. Default is True.
+
+        """
         super().__init__(
             model=model,
             batch_size=batch_size,
-            num_loader_workers=num_loader_workers,
-            num_post_proc_workers=num_post_proc_workers,
+            num_workers=num_workers,
             weights=weights,
             device=device,
             verbose=verbose,
         )
 
-    def post_process_cache_mode(
-        self: PatchPredictor,
-        raw_predictions: Path,
-        **kwargs: Unpack[PredictorRunParams],
-    ) -> Path:
-        """Returns an array from raw predictions."""
-        return_probabilities = kwargs.get("return_probabilities")
-        zarr_group = zarr.open(str(raw_predictions), mode="r+")
-
-        num_iter = math.ceil(len(zarr_group["probabilities"]) / self.batch_size)
-        start = 0
-        for _ in range(num_iter):
-            # Probabilities for post-processing
-            probabilities = zarr_group["probabilities"][start : start + self.batch_size]
-            start = start + self.batch_size
-            predictions = self.model.postproc_func(
-                probabilities,
-            )
-            if "predictions" in zarr_group:
-                zarr_group["predictions"].append(predictions)
-                continue
-
-            zarr_dataset = zarr_group.create_dataset(
-                name="predictions",
-                shape=predictions.shape,
-                compressor=zarr_group["probabilities"].compressor,
-            )
-            zarr_dataset[:] = predictions
-
-        if return_probabilities is not False:
-            return raw_predictions
-
-        del zarr_group["probabilities"]
-
-        return raw_predictions
-
     def post_process_patches(
         self: PatchPredictor,
-        raw_predictions: dict | Path,
+        raw_predictions: da.Array,
+        prediction_shape: tuple[int, ...],
+        prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
-    ) -> dict | Path:
-        """Post-process raw patch predictions from inference.
+    ) -> da.Array:
+        """Post-process raw patch predictions from model inference.
 
-        The output of :func:`infer_patches()` with patch prediction information will be
-        post-processed using this function. The processed output will be saved in the
-        respective input format. If `cache_mode` is True, the function processes the
-        input using zarr group with size specified by `cache_size`.
+        This method applies the model's post-processing function to the raw predictions
+        obtained from `infer_patches()`. The output is wrapped in a Dask array for
+        efficient computation and memory handling.
 
         Args:
-            raw_predictions (dict | Path):
-                A dictionary or path to zarr with patch prediction information.
+            raw_predictions (da.Array | np.ndarray):
+                Raw model predictions.
+            prediction_shape (tuple[int, ...]):
+                Expected shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
             **kwargs (PredictorRunParams):
-                Keyword Args to update setup_patch_dataset() method attributes. See
-                :class:`PredictorRunParams` for accepted keyword arguments.
+                Additional runtime parameters, including `return_probabilities`.
 
         Returns:
-            dict or Path:
-                Returns patch based output after post-processing. Returns path to
-                saved zarr file if `cache_mode` is True.
+            dask.array.Array: Post-processed predictions as a Dask array.
 
         """
-        return_probabilities = kwargs.get("return_probabilities")
-        if self.cache_mode:
-            return self.post_process_cache_mode(raw_predictions, **kwargs)
-
-        probabilities = raw_predictions.get("probabilities")
-
-        predictions = self.model.postproc_func(
-            probabilities,
-        )
-
-        raw_predictions["predictions"] = predictions
-
-        if return_probabilities is not False:
-            return raw_predictions
-
-        del raw_predictions["probabilities"]
-
-        return raw_predictions
+        _ = kwargs.get("return_probabilities")
+        _ = prediction_shape
+        _ = prediction_dtype
+        raw_predictions = self.model.postproc_func(raw_predictions)
+        return cast_to_min_dtype(raw_predictions)
 
     def post_process_wsi(
         self: PatchPredictor,
-        raw_predictions: dict | Path,
+        raw_predictions: da.Array,
+        prediction_shape: tuple[int, ...],
+        prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
-    ) -> dict | Path:
-        """Post process WSI output.
+    ) -> da.Array:
+        """Post-process predictions from whole slide image (WSI) inference.
 
-        Takes the raw output from patch predictions and post-processes it to improve the
-        results e.g., using information from neighbouring patches.
+        This method refines the raw patch-level predictions obtained from WSI inference.
+        It typically applies spatial smoothing or other contextual operations using
+        neighboring patch information. Internally, it delegates to
+        `post_process_patches()`.
+
+        Args:
+            raw_predictions (dask.array.Array):
+                Raw model predictions.
+            prediction_shape (tuple[int, ...]):
+                Expected shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters, including `return_probabilities`.
+
+        Returns:
+            dask.array.Array: Post-processed predictions as a Dask array.
 
         """
-        return self.post_process_cache_mode(raw_predictions, **kwargs)
+        return self.post_process_patches(
+            raw_predictions=raw_predictions,
+            prediction_shape=prediction_shape,
+            prediction_dtype=prediction_dtype,
+            **kwargs,
+        )
+
+    def _update_run_params(
+        self: PatchPredictor,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        save_dir: os.PathLike | Path | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+        output_type: str = "dict",
+        *,
+        overwrite: bool = False,
+        patch_mode: bool,
+        **kwargs: Unpack[PredictorRunParams],
+    ) -> Path | None:
+        """Update runtime parameters for the PatchPredictor engine.
+
+        This method sets internal attributes such as caching, batch size,
+        IO configuration, and output format based on user input and keyword arguments.
+        It also configures whether to include probabilities in the output.
+
+        Args:
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
+            labels (list | None):
+                Optional labels for input images.
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore".
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters.
+
+        Returns:
+            Path | None:
+                Path to the save directory if applicable, otherwise None.
+
+        """
+        return_probabilities = kwargs.get("return_probabilities")
+        if not return_probabilities:
+            self.drop_keys.append("probabilities")
+        return super()._update_run_params(
+            images=images,
+            masks=masks,
+            labels=labels,
+            save_dir=save_dir,
+            ioconfig=ioconfig,
+            overwrite=overwrite,
+            patch_mode=patch_mode,
+            output_type=output_type,
+            **kwargs,
+        )
 
     def run(
         self: PatchPredictor,
-        images: list[os | Path | WSIReader] | np.ndarray,
-        masks: list[os | Path] | np.ndarray | None = None,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
-        save_dir: os | Path | None = None,  # None will not save output
+        save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
         output_type: str = "dict",
         **kwargs: Unpack[PredictorRunParams],
     ) -> AnnotationStore | Path | str | dict:
-        """Run the engine on input images.
+        """Run the PatchPredictor engine on input images.
+
+        This method orchestrates the full inference pipeline, including preprocessing,
+        model inference, post-processing, and saving results. It supports both patch
+        and whole slide image (WSI) modes.
 
         Args:
-            images (list, ndarray):
-                List of inputs to process. when using `patch` mode, the
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches. When using `patch` mode, the
                 input must be either a list of images, a list of image
                 file paths or a numpy array of an image list.
-            masks (list | None):
-                List of masks. Only utilised when patch_mode is False.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
+                Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
             labels (list | None):
-                List of labels. Only a single label per image is supported.
+                Optional labels for input images.
+                Only a single label per image is supported.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution.
             patch_mode (bool):
-                Whether to treat input image as a patch or WSI.
-                default = True.
-            ioconfig (IOPatchPredictorConfig):
-                IO configuration.
-            save_dir (str or pathlib.Path):
-                Output directory to save the results.
-                If save_dir is not provided when patch_mode is False,
-                then for a single image the output is created in the current directory.
-                If there are multiple WSIs as input then the user must provide
-                path to save directory otherwise an OSError will be raised.
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
             overwrite (bool):
-                Whether to overwrite the results. Default = False.
+                Whether to overwrite existing output files. Default is False.
             output_type (str):
-                The format of the output type. "output_type" can be
-                "zarr" or "AnnotationStore". Default value is "zarr".
-                When saving in the zarr format the output is saved using the
-                `python zarr library <https://zarr.readthedocs.io/en/stable/>`__
-                as a zarr group. If the required output type is an "AnnotationStore"
-                then the output will be intermediately saved as zarr but converted
-                to :class:`AnnotationStore` and saved as a `.db` file
-                at the end of the loop.
+                Desired output format: "dict", "zarr", or "annotationstore".
+                Default value is "zarr".
             **kwargs (PredictorRunParams):
-                Keyword Args to update :class:`EngineABC` attributes during runtime.
+                Additional runtime parameters.
 
         Returns:
-            (:class:`numpy.ndarray`, dict):
-                Model predictions of the input dataset. If multiple
-                whole slide images are provided as input,
-                or save_output is True, then results are saved to
-                `save_dir` and a dictionary indicating save location for
-                each input is returned.
-
-                The dict has the following format:
-
-                - img_path: path of the input image.
-                - raw: path to save location for raw prediction,
-                  saved in .json.
+            AnnotationStore | Path | str | dict:
+                - If `patch_mode` is True: returns predictions or path to saved output.
+                - If `patch_mode` is False: returns a dictionary mapping each WSI to
+                  its output path.
 
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']

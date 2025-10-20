@@ -234,3 +234,20 @@ class UpSample2x(nn.Module):
         ret = torch.tensordot(x, mat, dims=1)  # bxcxhxwxshxsw
         ret = ret.permute(0, 1, 2, 4, 3, 5)
         return ret.reshape((-1, input_shape[1], input_shape[2] * 2, input_shape[3] * 2))
+
+
+def argmax_last_axis(image: np.ndarray) -> np.ndarray:
+    """Define the post-processing of this class of model.
+
+    This simply applies argmax along last axis of the input.
+
+    Args:
+        image (np.ndarray):
+            The input image array.
+
+    Returns:
+        np.ndarray:
+            The post-processed image array.
+
+    """
+    return image.argmax(axis=-1)

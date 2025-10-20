@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, cast
 
 import cv2
+import dask.array as da
 import joblib
-import numcodecs
 import numpy as np
 import pandas as pd
 import requests
@@ -24,10 +24,12 @@ from shapely.affinity import translate
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
-from tqdm import trange
+from tqdm import notebook as tqdm_notebook
+from tqdm import tqdm, trange
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
+from tiatoolbox.utils.env_detection import is_notebook
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -163,7 +165,7 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
 
 
 def imread(image_path: PathLike, *, as_uint8: bool | None = None) -> np.ndarray:
-    """Read an image as a NumPy array.
+    """Read an image as :class:`numpy.ndarray`.
 
     Args:
         image_path (PathLike):
@@ -1367,12 +1369,11 @@ def dict_to_store_semantic_segmentor(
             for each patch.
 
     """
-    preds = patch_output["predictions"]
+    preds = da.from_array(patch_output["predictions"], chunks="auto")
 
     # Get the number of unique predictions
-    layer_list = np.unique(preds)
-
-    layer_list = np.delete(layer_list, np.where(layer_list == 0))
+    layer_list = da.unique(preds).compute()
+    layer_list = layer_list[layer_list != 0]
 
     store = SQLiteStore()
 
@@ -1381,12 +1382,13 @@ def dict_to_store_semantic_segmentor(
     annotations_list: list[Annotation] = []
 
     for type_class in layer_list:
-        layer = np.where(preds == type_class, 1, 0)
+        layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
         contours, hierarchy = cv2.findContours(
-            layer.astype("uint8"),
+            layer,
             cv2.RETR_CCOMP,
             cv2.CHAIN_APPROX_NONE,
         )
+
         contours = cast("list[np.ndarray]", contours)
 
         annotations_list_ = process_contours(contours, hierarchy, scale_factor)
@@ -1409,13 +1411,13 @@ def dict_to_store_semantic_segmentor(
     return store
 
 
-def dict_to_store(
+def dict_to_store_patch_predictions(
     patch_output: dict | zarr.group,
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
 ) -> AnnotationStore | Path:
-    """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
+    """Converts output of TIAToolbox PatchPredictor engine to AnnotationStore.
 
     Args:
         patch_output (dict | zarr.Group):
@@ -1451,7 +1453,7 @@ def dict_to_store(
     patch_coords = np.array(patch_output.get("coordinates", []))
     if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
-    patch_coords = patch_coords.astype(float)
+
     labels = patch_output.get("labels", [])
     # get classes to consider
     if len(class_probs) == 0:
@@ -1472,11 +1474,11 @@ def dict_to_store(
 
     # put patch predictions into a store
     annotations = patch_predictions_as_annotations(
-        preds,
+        preds.astype(float),
         keys,
         class_dict,
-        class_probs,
-        patch_coords,
+        class_probs.astype(float),
+        patch_coords.astype(float),
         classes_predicted,
         labels,
     )
@@ -1502,6 +1504,27 @@ def _tiles(
     colormap: int = cv2.COLORMAP_JET,
     level: int = 0,
 ) -> Iterator[np.ndarray]:
+    """Generate color-mapped tiles from an input image or Zarr array.
+
+    This function iterates over the input image in non-overlapping tiles of the
+    specified size, optionally downsampling by a power-of-two factor (`level`),
+    and applies a colormap to each tile before yielding it.
+
+    Parameters:
+        in_img (np.ndarray | zarr.core.Array):
+            Input image or Zarr array to be tiled.
+        tile_size (tuple[int, int]):
+            Height and width of each tile.
+        colormap (int, optional):
+            OpenCV colormap to apply to each tile. Defaults to cv2.COLORMAP_JET.
+        level (int, optional):
+            Downsampling factor as a power of two. Defaults to 0 (no downsampling).
+
+    Yields:
+        np.ndarray:
+            A color-mapped tile extracted from the input image.
+
+    """
     for y in trange(0, in_img.shape[0], tile_size[0]):
         for x in range(0, in_img.shape[1], tile_size[1]):
             in_img_ = in_img[
@@ -1607,185 +1630,42 @@ def write_probability_heatmap_as_ome_tiff(
     logger.info(msg)
 
 
-def dict_to_zarr(
-    raw_predictions: dict,
-    save_path: Path,
-    **kwargs: dict,
-) -> Path:
-    """Saves the output of TIAToolbox engines to a zarr file.
+def get_tqdm() -> type[tqdm_notebook | tqdm]:
+    """Returns appropriate tqdm tqdm object."""
+    if is_notebook():  # pragma: no cover
+        return tqdm_notebook.tqdm
+    return tqdm
+
+
+def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
+    """Cast the input array to the minimal data type required to represent its values.
+
+    This function determines the maximum value in the array and casts it to the smallest
+    unsigned integer type (or boolean) that can accommodate all values. It supports both
+    NumPy and Dask arrays and preserves the input type in the output.
+
+    For Dask arrays, the maximum value is computed lazily and only when needed.
 
     Args:
-        raw_predictions (dict):
-            A dictionary in the TIAToolbox Engines output format.
-        save_path (str or Path):
-            Path to save the zarr file.
-        **kwargs (dict):
-            Keyword Args to update patch_pred_store_zarr attributes.
-
+        array (Union[np.ndarray, da.Array]): Input array containing integer values.
 
     Returns:
-        Path to zarr file storing the patch predictor output
+        (np.ndarray or da.Array):
+             A copy of the input array cast to the minimal required dtype.
+            - If the maximum value is 1, the array is cast to boolean.
+            - Otherwise, it is cast to the smallest suitable unsigned integer type.
 
     """
-    # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = (
-        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-    )
-    chunks = kwargs.get("chunks", 10000)
+    is_dask = isinstance(array, da.Array)
+    max_value = da.max(array) if is_dask else np.max(array)
+    max_value = max_value.compute() if is_dask else max_value
 
-    # ensure proper zarr extension
-    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
+    if max_value == 1:
+        return array.astype(bool)
 
-    # save to zarr
-    probabilities_array = np.array(raw_predictions["probabilities"])
-    z = zarr.open(
-        str(save_path),
-        mode="w",
-        shape=probabilities_array.shape,
-        chunks=chunks,
-        compressor=compressor,
-    )
-    z[:] = probabilities_array
+    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64]
+    for dtype in dtypes:
+        if max_value <= np.iinfo(dtype).max:
+            return array.astype(dtype)
 
-    return save_path
-
-
-def wsi_batch_output_to_zarr_group(
-    wsi_batch_zarr_group: zarr.group | None,
-    batch_output_probabilities: np.ndarray,
-    batch_output_predictions: np.ndarray,
-    batch_output_coordinates: np.ndarray | None,
-    batch_output_label: np.ndarray | None,
-    save_path: Path,
-    **kwargs: dict,
-) -> zarr.group | Path:
-    """Saves the intermediate batch outputs of TIAToolbox engines to a zarr file.
-
-    Args:
-        wsi_batch_zarr_group (zarr.group):
-            Optional zarr group name consisting of zarrs to save the batch output
-            values.
-        batch_output_probabilities (np.ndarray):
-            Probability batch output from infer wsi.
-        batch_output_predictions (np.ndarray):
-            Predictions batch output from infer wsi.
-        batch_output_coordinates (np.ndarray):
-            Coordinates batch output from infer wsi.
-        batch_output_label (np.ndarray):
-            Labels batch output from infer wsi.
-        save_path (str or Path):
-            Path to save the zarr file.
-        **kwargs (dict):
-            Keyword Args to update wsi_batch_output_to_zarr_group attributes.
-
-    Returns:
-        Path to the zarr file storing the :class:`EngineABC` output.
-
-    """
-    # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = (
-        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-    )
-    chunks = kwargs.get("chunks", 10000)
-
-    # case 1 - new zarr group
-    if not wsi_batch_zarr_group:
-        # ensure proper zarr extension and create persistant zarr group
-        save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
-        wsi_batch_zarr_group = zarr.open(save_path, mode="w")
-
-        # populate the zarr group for the first time
-        probabilities_zarr = wsi_batch_zarr_group.create_dataset(
-            name="probabilities",
-            shape=batch_output_probabilities.shape,
-            chunks=chunks,
-            compressor=compressor,
-        )
-        probabilities_zarr[:] = batch_output_probabilities
-
-        predictions_zarr = wsi_batch_zarr_group.create_dataset(
-            name="predictions",
-            shape=batch_output_predictions.shape,
-            chunks=chunks,
-            compressor=compressor,
-        )
-        predictions_zarr[:] = batch_output_predictions
-
-        if batch_output_coordinates is not None:
-            coordinates_zarr = wsi_batch_zarr_group.create_dataset(
-                name="coordinates",
-                shape=batch_output_coordinates.shape,
-                chunks=chunks,
-                compressor=compressor,
-            )
-            coordinates_zarr[:] = batch_output_coordinates
-
-        if batch_output_label is not None:
-            labels_zarr = wsi_batch_zarr_group.create_dataset(
-                name="labels",
-                shape=batch_output_label.shape,
-                chunks=chunks,
-                compressor=compressor,
-            )
-            labels_zarr[:] = batch_output_label
-
-    # case 2 - append to existing zarr group
-    probabilities_zarr = wsi_batch_zarr_group["probabilities"]
-    probabilities_zarr.append(batch_output_probabilities)
-
-    predictions_zarr = wsi_batch_zarr_group["predictions"]
-    predictions_zarr.append(batch_output_predictions)
-
-    if batch_output_coordinates is not None:
-        coordinates_zarr = wsi_batch_zarr_group["coordinates"]
-        coordinates_zarr.append(batch_output_coordinates)
-
-    if batch_output_label is not None:
-        labels_zarr = wsi_batch_zarr_group["labels"]
-        labels_zarr.append(batch_output_label)
-
-    return wsi_batch_zarr_group
-
-
-def write_to_zarr_in_cache_mode(
-    zarr_group: zarr.group,
-    output_data_to_save: dict,
-    **kwargs: dict,
-) -> zarr.group | Path:
-    """Saves the intermediate batch outputs of TIAToolbox engines to a zarr file.
-
-    Args:
-        zarr_group (zarr.group):
-            Zarr group name consisting of zarr(s) to save the batch output
-            values.
-        output_data_to_save (dict):
-            Output data from the Engine to save to Zarr. Expects the data saved in
-            dictionary to be a numpy array.
-        **kwargs (dict):
-            Keyword Args to update zarr_group attributes.
-
-    Returns:
-        Path to the zarr file storing the :class:`EngineABC` output.
-
-    """
-    # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = kwargs.get("compressor", numcodecs.Zstd(level=1))
-
-    # case 1 - new zarr group
-    if not zarr_group:
-        for key, value in output_data_to_save.items():
-            # populate the zarr group for the first time
-            zarr_dataset = zarr_group.create_dataset(
-                name=key,
-                shape=value.shape,
-                compressor=compressor,
-            )
-            zarr_dataset[:] = value
-
-        return zarr_group
-
-    # case 2 - append to existing zarr group
-    for key, value in output_data_to_save.items():
-        zarr_group[key].append(value)
-
-    return zarr_group
+    return array

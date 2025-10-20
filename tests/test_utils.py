@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import cv2
+import dask.array as da
 import joblib
 import numpy as np
 import pandas as pd
@@ -34,6 +35,7 @@ from tiatoolbox.models.architecture.utils import (
 )
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
+from tiatoolbox.utils.misc import cast_to_min_dtype
 from tiatoolbox.utils.transforms import locsize2bounds
 
 if TYPE_CHECKING:
@@ -1685,7 +1687,7 @@ def test_patch_pred_store() -> None:
         "other": "other",
     }
 
-    store = misc.dict_to_store(patch_output, (1.0, 1.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1698,7 +1700,7 @@ def test_patch_pred_store() -> None:
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
     patch_output = {
         "predictions": [1, 0, 1],
@@ -1706,7 +1708,7 @@ def test_patch_pred_store() -> None:
         "other": "other",
     }
 
-    store = misc.dict_to_store(patch_output, (1.0, 1.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1723,7 +1725,9 @@ def test_patch_pred_store_cdict() -> None:
         "other": "other",
     }
     class_dict = {0: "class0", 1: "class1"}
-    store = misc.dict_to_store(patch_output, (1.0, 1.0), class_dict=class_dict)
+    store = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), class_dict=class_dict
+    )
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1744,50 +1748,13 @@ def test_patch_pred_store_sf() -> None:
         "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
         "labels": [1, 0, 1],
     }
-    store = misc.dict_to_store(patch_output, (2.0, 2.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (2.0, 2.0))
 
     # Check that its an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
     assert len(store) == 3
     for annotation in store.values():
         assert annotation.geometry.area == 4
-
-
-def test_patch_pred_store_zarr(track_tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store_zarr."""
-    # Define a mock patch_output
-    patch_output = {
-        "predictions": [1, 0, 1],
-        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
-        "labels": [1, 0, 1],
-    }
-
-    save_path = track_tmp_path / "patch_output" / "output.zarr"
-
-    store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
-
-    print("Zarr path: ", store_path)
-    assert Path.exists(store_path), "Zarr output file does not exist"
-
-
-def test_patch_pred_store_zarr_ext(track_tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store_zarr and ensures the output file extension is `.zarr`."""
-    # Define a mock patch_output
-    patch_output = {
-        "predictions": [1, 0, 1],
-        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
-        "labels": [1, 0, 1],
-    }
-
-    # sends the path of a jpeg source image, expects .zarr file in the same directory
-    save_path = track_tmp_path / "patch_output" / "patch.jpeg"
-
-    store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
-
-    print("Zarr path: ", store_path)
-    assert Path.exists(store_path), "Zarr output file does not exist"
 
 
 def test_patch_pred_store_persist(track_tmp_path: pytest.TempPathFactory) -> None:
@@ -1801,7 +1768,9 @@ def test_patch_pred_store_persist(track_tmp_path: pytest.TempPathFactory) -> Non
     }
     save_path = track_tmp_path / "patch_output" / "output.db"
 
-    store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), save_path=save_path
+    )
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
@@ -1819,7 +1788,7 @@ def test_patch_pred_store_persist(track_tmp_path: pytest.TempPathFactory) -> Non
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
 
 def test_patch_pred_store_persist_ext(track_tmp_path: pytest.TempPathFactory) -> None:
@@ -1835,7 +1804,9 @@ def test_patch_pred_store_persist_ext(track_tmp_path: pytest.TempPathFactory) ->
     # sends the path of a jpeg source image, expects .db file in the same directory
     save_path = track_tmp_path / "patch_output" / "output.jpeg"
 
-    store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), save_path=save_path
+    )
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
@@ -1853,7 +1824,7 @@ def test_patch_pred_store_persist_ext(track_tmp_path: pytest.TempPathFactory) ->
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
 
 def test_torch_compile_already_compiled() -> None:
@@ -2223,3 +2194,45 @@ def test_save_zarr_array_probability_ome_tiff(
     assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
     assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+
+
+@pytest.mark.parametrize(
+    ("input_array", "expected_dtype"),
+    [
+        (np.array([0, 1]), np.bool_),  # Should cast to bool
+        (np.array([0, 255]), np.uint8),  # Should cast to uint8
+        (np.array([0, 256]), np.uint16),  # Should cast to uint16
+        (np.array([0, 70000]), np.uint32),  # Should cast to uint32
+        (np.array([0, 2**32]), np.uint64),  # Should cast to uint64
+    ],
+)
+def test_cast_to_min_dtype_numpy(input_array: np.ndarray, expected_dtype: type) -> None:
+    """Check expected np array dtype cast_to_min_dtype."""
+    result = cast_to_min_dtype(input_array)
+    assert isinstance(result, np.ndarray)
+    assert result.dtype == expected_dtype
+
+
+@pytest.mark.parametrize(
+    ("input_array", "expected_dtype"),
+    [
+        (da.from_array(np.array([0, 1])), np.bool_),  # Should cast to bool
+        (da.from_array(np.array([0, 255])), np.uint8),  # Should cast to uint8
+        (da.from_array(np.array([0, 256])), np.uint16),  # Should cast to uint16
+        (da.from_array(np.array([0, 70000])), np.uint32),  # Should cast to uint32
+        (da.from_array(np.array([0, 2**32])), np.uint64),  # Should cast to uint64
+    ],
+)
+def test_cast_to_min_dtype_dask(input_array: da.Array, expected_dtype: type) -> None:
+    """Check expected dask array dtype cast_to_min_dtype."""
+    result = cast_to_min_dtype(input_array)
+    assert isinstance(result, da.Array)
+    assert result.dtype == expected_dtype
+
+
+def test_cast_to_min_dtype_numpy_large_value() -> None:
+    """Check if return type is changed for large value."""
+    large_value = np.array([np.iinfo(np.uint64).max + 1], dtype=object)
+    result = cast_to_min_dtype(large_value)
+    assert result == large_value
+    assert result.dtype == object

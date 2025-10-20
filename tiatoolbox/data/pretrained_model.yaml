@@ -587,7 +587,7 @@ fcn-tissue_mask:
                 - {'units': 'mpp', 'resolution': 2.0}
             patch_input_shape: [1024, 1024]
             patch_output_shape: [512, 512]
-            stride_shape: [256, 256]
+            stride_shape: [450, 450]
             save_resolution: {'units': 'mpp', 'resolution': 8.0}
 
 fcn_resnet50_unet-bcss:
@@ -608,7 +608,7 @@ fcn_resnet50_unet-bcss:
                 - {'units': 'mpp', 'resolution': 0.25}
             patch_input_shape: [1024, 1024]
             patch_output_shape: [512, 512]
-            stride_shape: [256, 256]
+            stride_shape: [450, 450]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 unet_tissue_mask_tsef:

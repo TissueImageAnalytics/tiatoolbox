@@ -20,6 +20,7 @@ from tiatoolbox.models.dataset import (
 )
 from tiatoolbox.utils import download_data, imread, imwrite, unzip_data
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.exceptions import DimensionMismatchError
 from tiatoolbox.wsicore import WSIReader
 
 RNG = np.random.default_rng()  # Numpy Random Generator
@@ -120,13 +121,27 @@ def test_kather_dataset(track_tmp_path: Path) -> None:
     assert len(dataset.inputs) == len(dataset.labels)
 
     # to actually get the image, we feed it to PatchDataset
-    actual_ds = PatchDataset(dataset.inputs, dataset.labels)
+    actual_ds = PatchDataset(
+        dataset.inputs, dataset.labels, patch_input_shape=(224, 224)
+    )
     sample_patch = actual_ds[89]
     assert isinstance(sample_patch["image"], np.ndarray)
     assert sample_patch["label"] is not None
 
     # remove generated data
     shutil.rmtree(save_dir_path, ignore_errors=True)
+
+
+def test_incorrect_input_shape() -> None:
+    """Incorrect input patch dimensions should raise DimensionMismatchError."""
+    size = (5, 5, 3)
+    img = RNG.integers(low=0, high=255, size=size)
+    list_imgs = [img, img, img]
+    dataset = PatchDataset(list_imgs, patch_input_shape=(100, 100))
+    with pytest.raises(
+        DimensionMismatchError, match=r".*\(100, 100\), but got \(5, 5\).*"
+    ):
+        _ = dataset[0]
 
 
 def test_patch_dataset_path_imgs(
@@ -136,7 +151,9 @@ def test_patch_dataset_path_imgs(
     """Test for patch dataset with a list of file paths as input."""
     size = (224, 224, 3)
 
-    dataset = PatchDataset([Path(sample_patch1), Path(sample_patch2)])
+    dataset = PatchDataset(
+        [Path(sample_patch1), Path(sample_patch2)], patch_input_shape=size[:-1]
+    )
 
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
@@ -152,7 +169,7 @@ def test_patch_dataset_list_imgs(track_tmp_path: Path) -> None:
     size = (5, 5, 3)
     img = RNG.integers(low=0, high=255, size=size)
     list_imgs = [img, img, img]
-    dataset = PatchDataset(list_imgs)
+    dataset = PatchDataset(list_imgs, patch_input_shape=size[:-1])
 
     dataset.preproc_func = lambda x: x
 
@@ -197,14 +214,14 @@ def test_patch_datasetarray_imgs() -> None:
     array_imgs = np.array(list_imgs)
 
     # test different setter for label
-    dataset = PatchDataset(array_imgs, labels=labels)
+    dataset = PatchDataset(array_imgs, labels=labels, patch_input_shape=(5, 5))
     an_item = dataset[2]
     assert an_item["label"] == 3
-    dataset = PatchDataset(array_imgs, labels=None)
+    dataset = PatchDataset(array_imgs, labels=None, patch_input_shape=(5, 5))
     an_item = dataset[2]
     assert "label" not in an_item
 
-    dataset = PatchDataset(array_imgs)
+    dataset = PatchDataset(array_imgs, patch_input_shape=size[:-1])
     for _, sample_data in enumerate(dataset):
         sampled_img_shape = sample_data["image"].shape
         assert sampled_img_shape[0] == size[0]
@@ -329,16 +346,15 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     """A test for creation and bare output."""
     # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
-    mini_wsi_jpg = Path(sample_wsi_dict["wsi2_4k_4k_jpg"])
     mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     def reuse_init(img_path: Path = mini_wsi_svs, **kwargs: dict) -> WSIPatchDataset:
         """Testing function."""
-        return WSIPatchDataset(img_path=img_path, **kwargs)
+        return WSIPatchDataset(input_img=img_path, **kwargs)
 
     def reuse_init_wsi(**kwargs: dict) -> WSIPatchDataset:
         """Testing function."""
-        return reuse_init(mode="wsi", **kwargs)
+        return reuse_init(**kwargs)
 
     # test for ABC validate
     # intentionally created to check error
@@ -360,10 +376,9 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         Proto()  # skipcq
 
     # invalid path input
-    with pytest.raises(ValueError, match=r".*`img_path` must be a valid file path.*"):
+    with pytest.raises(ValueError, match=r".*`input_img` must be a valid file path.*"):
         WSIPatchDataset(
-            img_path="aaaa",
-            mode="wsi",
+            input_img="aaaa",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
             auto_get_mask=False,
@@ -372,19 +387,14 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     # invalid mask path input
     with pytest.raises(ValueError, match=r".*`mask_path` must be a valid file path.*"):
         WSIPatchDataset(
-            img_path=mini_wsi_svs,
+            input_img=mini_wsi_svs,
             mask_path="aaaa",
-            mode="wsi",
             patch_input_shape=[512, 512],
             stride_shape=[256, 256],
             resolution=1.0,
             units="mpp",
             auto_get_mask=False,
         )
-
-    # invalid mode
-    with pytest.raises(ValueError, match=r"`X` is not supported."):
-        reuse_init(mode="X")
 
     # invalid patch
     with pytest.raises(ValueError, match=r"Invalid `patch_input_shape` value None."):
@@ -427,9 +437,10 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     # * for wsi
     # dummy test for analysing the output
     # stride and patch size should be as expected
-    patch_size = [512, 512]
-    stride_size = [256, 256]
-    ds = reuse_init_wsi(
+    patch_size = (512, 512)
+    stride_size = (256, 256)
+    ds = WSIPatchDataset(
+        input_img=WSIReader.open(mini_wsi_svs),
         patch_input_shape=patch_size,
         stride_shape=stride_size,
         resolution=1.0,
@@ -457,7 +468,8 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     assert np.min(correlation) > 0.9, correlation
 
     # test creation with auto mask gen and input mask
-    ds = reuse_init_wsi(
+    ds = WSIPatchDataset(
+        input_img=mini_wsi_svs,
         patch_input_shape=patch_size,
         stride_shape=stride_size,
         resolution=1.0,
@@ -465,12 +477,11 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         auto_get_mask=True,
     )
     assert len(ds) > 0
-    ds = WSIPatchDataset(
-        img_path=mini_wsi_svs,
+    _ = WSIPatchDataset(
+        input_img=mini_wsi_svs,
         mask_path=mini_wsi_msk,
-        mode="wsi",
-        patch_input_shape=[512, 512],
-        stride_shape=[256, 256],
+        patch_input_shape=(512, 512),
+        stride_shape=(256, 256),
         auto_get_mask=False,
         resolution=1.0,
         units="mpp",
@@ -480,43 +491,15 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     negative_mask_path = track_tmp_path / "negative_mask.png"
     imwrite(negative_mask_path, negative_mask)
     with pytest.raises(ValueError, match="No patch coordinates remain after filtering"):
-        ds = WSIPatchDataset(
-            img_path=mini_wsi_svs,
+        _ = WSIPatchDataset(
+            input_img=mini_wsi_svs,
             mask_path=negative_mask_path,
-            mode="wsi",
-            patch_input_shape=[512, 512],
-            stride_shape=[256, 256],
+            patch_input_shape=(512, 512),
+            stride_shape=(256, 256),
             auto_get_mask=False,
             resolution=1.0,
             units="mpp",
         )
-
-    # * for tile
-    reader = WSIReader.open(mini_wsi_jpg)
-    tile_ds = WSIPatchDataset(
-        img_path=mini_wsi_jpg,
-        mode="tile",
-        patch_input_shape=patch_size,
-        stride_shape=stride_size,
-        auto_get_mask=False,
-    )
-    step_idx = 3  # manually calibrate
-    start = (step_idx * stride_size[1], 0)
-    end = (start[0] + patch_size[0], start[1] + patch_size[1])
-    roi2 = reader.read_bounds(
-        start + end,
-        resolution=1.0,
-        units="baseline",
-        coord_space="resolution",
-    )
-    roi1 = tile_ds[3]["image"]  # match with step_index
-    correlation = np.corrcoef(
-        cv2.cvtColor(roi1, cv2.COLOR_RGB2GRAY).flatten(),
-        cv2.cvtColor(roi2, cv2.COLOR_RGB2GRAY).flatten(),
-    )
-    assert roi1.shape[0] == roi2.shape[0]
-    assert roi1.shape[1] == roi2.shape[1]
-    assert np.min(correlation) > 0.9, correlation
 
 
 def test_patch_dataset_abc() -> None:

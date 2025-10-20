@@ -1,1374 +1,1247 @@
-"""This module implements semantic segmentation."""
+"""Semantic Segmentation Engine for Whole Slide Images (WSIs) using TIAToolbox.
+
+This module defines the `SemanticSegmentor` class, which extends the `PatchPredictor`
+engine to support semantic segmentation workflows on digital pathology images.
+It leverages deep learning models from TIAToolbox to perform patch-level and
+WSI-level inference, and includes utilities for preprocessing, postprocessing,
+and saving predictions in various formats.
+
+Key Components:
+---------------
+Classes:
+- SemanticSegmentorRunParams:
+    Configuration parameters for controlling runtime behavior during segmentation.
+- SemanticSegmentor:
+    Core engine for performing semantic segmentation on image patches or WSIs.
+
+Functions:
+- concatenate_none:
+    Concatenate arrays while gracefully handling None values.
+- merge_horizontal:
+    Incrementally merge horizontal patches and update location arrays.
+- save_to_cache:
+    Save intermediate canvas and count arrays to Zarr cache.
+- merge_vertical_chunkwise:
+    Merge vertically chunked canvas and count arrays into a probability map.
+- store_probabilities:
+    Store computed probability data in Zarr or Dask arrays.
+- prepare_full_batch:
+    Align patch-level predictions with global output locations.
+
+Example:
+>>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+>>> segmentor = SemanticSegmentor(model="fcn_resnet50_unet-bcss")
+>>> wsis = ["slide1.svs", "slide2.svs"]
+>>> output = segmentor.run(wsis, patch_mode=False)
+>>>
+>>> patches = [np.ndarray, np.ndarray]
+>>> segmentor = SemanticSegmentor(model="fcn_resnet50_unet-bcss")
+>>> output = segmentor.run(patches, patch_mode=True, output_type="dict")
+
+Notes:
+------
+- Supports both patch-based and WSI-based segmentation.
+- Compatible with TIAToolbox pretrained models and custom PyTorch models.
+- Outputs can be saved as dictionaries, Zarr arrays, or AnnotationStore databases.
+- Includes memory-aware caching and efficient merging strategies for large-scale
+  inference.
+
+"""
 
 from __future__ import annotations
 
-import copy
-import logging
-import shutil
-from concurrent.futures import ProcessPoolExecutor
+import gc
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import cv2
-import joblib
+import dask.array as da
 import numpy as np
+import psutil
 import torch
-import torch.multiprocessing as torch_mp
-import torch.utils.data as torch_data
-import tqdm
+import zarr
+from dask import compute
+from typing_extensions import Unpack
 
-from tiatoolbox import logger, rcParam
-from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.architecture.utils import compile_model
-from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
-from tiatoolbox.models.models_abc import model_to
-from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils import imread
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
+from tiatoolbox import logger
+from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
+from tiatoolbox.utils.misc import (
+    dict_to_store_semantic_segmentor,
+    get_tqdm,
+)
+from tiatoolbox.wsicore.wsireader import is_zarr
 
-from .io_config import IOSegmentorConfig
+from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable
+    import os
 
-    from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from torch.utils.data import DataLoader
 
-
-def _estimate_canvas_parameters(
-    sample_prediction: np.ndarray,
-    canvas_shape: np.ndarray,
-) -> tuple[tuple, tuple, bool]:
-    """Estimates canvas parameters.
-
-    Args:
-        sample_prediction (:class:`numpy.ndarray`):
-            Patch prediction assuming to be of shape HWC.
-        canvas_shape (:class:`numpy.ndarray`):
-            HW of the supposed assembled image.
-
-    Returns:
-        (tuple, tuple, bool):
-            Canvas Shape, Canvas Count and whether to add singleton dimension.
-
-    """
-    if len(sample_prediction.shape) == 3:  # noqa: PLR2004
-        num_output_ch = sample_prediction.shape[-1]
-        canvas_cum_shape_ = (*tuple(canvas_shape), num_output_ch)
-        canvas_count_shape_ = (*tuple(canvas_shape), 1)
-        add_singleton_dim = num_output_ch == 1
-    else:
-        canvas_cum_shape_ = (*tuple(canvas_shape), 1)
-        canvas_count_shape_ = (*tuple(canvas_shape), 1)
-        add_singleton_dim = True
-
-    return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
+    from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+    from tiatoolbox.models.models_abc import ModelABC
+    from tiatoolbox.type_hints import Resolution
+    from tiatoolbox.wsicore import WSIReader
 
 
-def _prepare_save_output(
-    save_path: str | Path,
-    cache_count_path: str | Path,
-    canvas_cum_shape_: tuple[int, ...],
-    canvas_count_shape_: tuple[int, ...],
-) -> tuple:
-    """Prepares for saving the cached output."""
-    if save_path is not None:
-        save_path = Path(save_path)
-        cache_count_path = Path(cache_count_path)
-        if Path.exists(save_path) and Path.exists(cache_count_path):
-            cum_canvas = np.load(str(save_path), mmap_mode="r+")
-            count_canvas = np.load(str(cache_count_path), mmap_mode="r+")
-            if canvas_cum_shape_ != cum_canvas.shape:
-                msg = "Existing image shape in `save_path` does not match."
-                raise ValueError(msg)
-            if canvas_count_shape_ != count_canvas.shape:
-                msg = "Existing image shape in `cache_count_path` does not match."
-                raise ValueError(
-                    msg,
-                )
-        else:
-            cum_canvas = np.lib.format.open_memmap(
-                save_path,
-                mode="w+",
-                shape=canvas_cum_shape_,
-                dtype=np.float32,
-            )
-            # assuming no more than 255 overlapping times
-            count_canvas = np.lib.format.open_memmap(
-                cache_count_path,
-                mode="w+",
-                shape=canvas_count_shape_,
-                dtype=np.uint8,
-            )
-            # flush fill
-            count_canvas[:] = 0
-        is_on_drive = True
-    else:
-        is_on_drive = False
-        cum_canvas = np.zeros(
-            shape=canvas_cum_shape_,
-            dtype=np.float32,
-        )
-        # for pixel occurrence counting
-        count_canvas = np.zeros(canvas_count_shape_, dtype=np.float32)
+class SemanticSegmentorRunParams(PredictorRunParams, total=False):
+    """Runtime parameters for configuring the `SemanticSegmentor.run()` method.
 
-    return is_on_drive, count_canvas, cum_canvas
-
-
-class SemanticSegmentor:
-    """Pixel-wise segmentation predictor.
-
-    The tiatoolbox model should produce the following results on the BCSS dataset
-    using fcn_resnet50_unet-bcss.
-
-    .. list-table:: Semantic segmentation performance on the BCSS dataset
-       :widths: 15 15 15 15 15 15 15
-       :header-rows: 1
-
-       * -
-         - Tumour
-         - Stroma
-         - Inflammatory
-         - Necrosis
-         - Other
-         - All
-       * - Amgad et al.
-         - 0.851
-         - 0.800
-         - 0.712
-         - 0.723
-         - 0.666
-         - 0.750
-       * - TIAToolbox
-         - 0.885
-         - 0.825
-         - 0.761
-         - 0.765
-         - 0.581
-         - 0.763
-
-    Note, if `model` is supplied in the arguments, it will ignore the
-    `pretrained_model` and `pretrained_weights` arguments.
-
-    Args:
-        model (nn.Module):
-            Use externally defined PyTorch model for prediction with
-            weights already loaded. Default is `None`. If provided,
-            `pretrained_model` argument is ignored.
-        pretrained_model (str):
-            Name of the existing models support by tiatoolbox for
-            processing the data. For a full list of pretrained models,
-            refer to the `docs
-            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_.
-            By default, the corresponding pretrained weights will also
-            be downloaded. However, you can override with your own set
-            of weights via the `pretrained_weights` argument. Argument
-            is case-insensitive.
-        pretrained_weights (str):
-            Path to the weight of the corresponding `pretrained_model`.
-        batch_size (int):
-            Number of images fed into the model each time.
-        num_loader_workers (int):
-            Number of workers to load the data. Take note that they will
-            also perform preprocessing.
-        num_postproc_workers (int):
-            This value is there to maintain input compatibility with
-            `tiatoolbox.models.classification` and is not used.
-        verbose (bool):
-            Whether to output logging information.
-        dataset_class (obj):
-            Dataset class to be used instead of default.
-        auto_generate_mask (bool):
-            To automatically generate tile/WSI tissue mask if is not
-            provided.
+    This class extends `PredictorRunParams`, which itself extends `EngineABCRunParams`,
+    and adds parameters specific to semantic segmentation workflows.
 
     Attributes:
-        process_prediction_per_batch (bool):
-            A flag to denote whether post-processing for inference
-            output is applied after each batch or after finishing an entire
-            tile or WSI.
-
-    Examples:
-        >>> # Sample output of a network
-        >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
-        >>> output = predictor.predict(wsis, mode='wsi')
-        >>> list(output.keys())
-        [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
-        >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
-        >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
-
-    """
-
-    def __init__(
-        self: SemanticSegmentor,
-        batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
-        model: torch.nn.Module | None = None,
-        pretrained_model: str | None = None,
-        pretrained_weights: str | None = None,
-        dataset_class: Callable = WSIStreamDataset,
-        *,
-        verbose: bool = True,
-        auto_generate_mask: bool = False,
-    ) -> None:
-        """Initialize :class:`SemanticSegmentor`."""
-        super().__init__()
-
-        if model is None and pretrained_model is None:
-            msg = "Must provide either of `model` or `pretrained_model`"
-            raise ValueError(msg)
-
-        if model is not None:
-            self.model = model
-            # template ioconfig, usually coming from pretrained
-            self.ioconfig = None
-        else:
-            model, ioconfig = get_pretrained_model(pretrained_model, pretrained_weights)
-            self.ioconfig = ioconfig
-            self.model = model
-
-        # local variables for flagging mode within class,
-        # subclass should have overwritten to alter some specific behavior
-        self.process_prediction_per_batch = True
-
-        # for runtime, such as after wrapping with nn.DataParallel
-        self._cache_dir = None
-        self._loader = None
-        self._model = None
-        self._device = None
-        self._mp_shared_space = None
-        self._postproc_workers = None
-        self.num_postproc_workers = num_postproc_workers
-        self._futures = None
-        self._outputs = []
-        self.imgs = None
-        self.masks = None
-
-        self.dataset_class: WSIStreamDataset = dataset_class
-        self.model = compile_model(
-            model,
-            mode=rcParam["torch_compile_mode"],
-        )
-        self.pretrained_model = pretrained_model
-        self.batch_size = batch_size
-        self.num_loader_workers = num_loader_workers
-        self.num_postproc_workers = None
-        self.verbose = verbose
-        self.auto_generate_mask = auto_generate_mask
-
-    @staticmethod
-    def get_coordinates(
-        image_shape: tuple[int, int] | np.ndarray,
-        ioconfig: IOSegmentorConfig,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Calculate patch tiling coordinates.
-
-        By default, internally, it will call the
-        `PatchExtractor.get_coordinates`. To use your own approach,
-        either subclass to overwrite or directly assign your own
-        function to this name. In either cases, the function must obey
-        the API defined here.
-
-        Args:
-            image_shape (tuple(int), :class:`numpy.ndarray`):
-                This argument specifies the shape of mother image (the
-                image we want to extract patches from) at requested
-                `resolution` and `units` and it is expected to be in
-                (width, height) format.
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object that contains information about input and output
-                placement of patches. Check `IOSegmentorConfig` for
-                details about available attributes.
-
-        Returns:
-            tuple:
-                List of patch inputs and outputs
-
-                - :py:obj:`list` - patch_inputs:
-                    A list of corrdinates in `[start_x, start_y, end_x,
-                    end_y]` format indicating the read location of the
-                    patch in the mother image.
-
-                - :py:obj:`list` - patch_outputs:
-                    A list of corrdinates in `[start_x, start_y, end_x,
-                    end_y]` format indicating to write location of the
-                    patch in the mother image.
-
-        Examples:
-            >>> # API of function expected to overwrite `get_coordinates`
-            >>> def func(image_shape, ioconfig):
-            ...   patch_inputs = np.array([[0, 0, 256, 256]])
-            ...   patch_outputs = np.array([[0, 0, 256, 256]])
-            ...   return patch_inputs, patch_outputs
-            >>> segmentor = SemanticSegmentor(model='unet')
-            >>> segmentor.get_coordinates = func
-
-        """
-        results = PatchExtractor.get_coordinates(
-            patch_output_shape=ioconfig.patch_output_shape,
-            image_shape=image_shape,
-            patch_input_shape=ioconfig.patch_input_shape,
-            stride_shape=ioconfig.stride_shape,
-        )
-        return results[0], results[1]
-
-    @staticmethod
-    def filter_coordinates(
-        mask_reader: VirtualWSIReader,
-        bounds: np.ndarray,
-        resolution: Resolution | None = None,
-        units: Units | None = None,
-    ) -> np.ndarray:
-        """Indicates which coordinate is valid basing on the mask.
-
-        To use your own approaches, either subclass to overwrite or
-        directly assign your own function to this name. In either cases,
-        the function must obey the API defined here.
-
-        Args:
-            mask_reader (:class:`.VirtualReader`):
-                A virtual pyramidal reader of the mask related to the
-                WSI from which we want to extract the patches.
-            bounds (ndarray and np.int32):
-                Coordinates to be checked via the `func`. They must be
-                in the same resolution as requested `resolution` and
-                `units`. The shape of `coordinates` is (N, K) where N is
-                the number of coordinate sets and K is either 2 for
-                centroids or 4 for bounding boxes. When using the
-                default `func=None`, K should be 4, as we expect the
-                `coordinates` to be bounding boxes in `[start_x,
-                start_y, end_x, end_y]` format.
-            resolution (Resolution):
-                Resolution of the requested patch.
-            units (Units):
-                Units of the requested patch.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                List of flags to indicate which coordinate is valid.
-
-        Examples:
-            >>> # API of function expected to overwrite `filter_coordinates`
-            >>> def func(reader, bounds, resolution, units):
-            ...   # as example, only select first bound
-            ...   return np.array([1, 0])
-            >>> coords = [[0, 0, 256, 256], [128, 128, 384, 384]]
-            >>> segmentor = SemanticSegmentor(model='unet')
-            >>> segmentor.filter_coordinates = func
-
-        """
-        if not isinstance(mask_reader, VirtualWSIReader):
-            msg = "`mask_reader` should be VirtualWSIReader."
-            raise TypeError(msg)
-
-        if not isinstance(bounds, np.ndarray) or not np.issubdtype(
-            bounds.dtype,
-            np.integer,
-        ):
-            msg = "`coordinates` should be ndarray of integer type."
-            raise ValueError(msg)
-
-        mask_real_shape = mask_reader.img.shape[:2]
-        mask_resolution_shape = mask_reader.slide_dimensions(
-            resolution=resolution,
-            units=units,
-        )[::-1]
-        mask_real_shape = np.array(mask_real_shape)
-        mask_resolution_shape = np.array(mask_resolution_shape)
-        scale_factor = mask_real_shape / mask_resolution_shape
-        scale_factor = scale_factor[0]  # what if ratio x != y
-
-        def sel_func(coord: np.ndarray) -> bool:
-            """Accept coord as long as its box contains part of mask."""
-            coord_in_real_mask = np.ceil(scale_factor * coord).astype(np.int32)
-            start_x, start_y, end_x, end_y = coord_in_real_mask
-            roi = mask_reader.img[start_y:end_y, start_x:end_x]
-            return np.sum(roi > 0) > 0
-
-        flags = [sel_func(bound) for bound in bounds]
-        return np.array(flags)
-
-    @staticmethod
-    def get_reader(
-        img_path: str | Path,
-        mask_path: str | Path,
-        mode: str,
-        *,
-        auto_get_mask: bool,
-    ) -> tuple[WSIReader, WSIReader]:
-        """Define how to get reader for mask and source image."""
-        img_path = Path(img_path)
-        reader = WSIReader.open(img_path)
-
-        mask_reader = None
-        if mask_path is not None:
-            mask_path = Path(mask_path)
-            if not Path.is_file(mask_path):
-                msg = "`mask_path` must be a valid file path."
-                raise ValueError(msg)
-            mask = imread(mask_path)  # assume to be gray
-            mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
-            mask = np.array(mask > 0, dtype=np.uint8)
-
-            mask_reader = VirtualWSIReader(mask)
-            mask_reader.info = reader.info
-        elif auto_get_mask and mode == "wsi" and mask_path is None:
-            # if no mask provided and `wsi` mode, generate basic tissue
-            # mask on the fly
-            mask_reader = reader.tissue_mask(resolution=1.25, units="power")
-            mask_reader.info = reader.info
-        return reader, mask_reader
-
-    def _predict_one_wsi(
-        self: SemanticSegmentor,
-        wsi_idx: int,
-        ioconfig: IOSegmentorConfig,
-        save_path: str,
-        mode: str,
-    ) -> None:
-        """Make a prediction on tile/wsi.
-
-        Args:
-            wsi_idx (int):
-                Index of the tile/wsi to be processed within `self`.
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object which defines I/O placement during inference and
-                when assembling back to full tile/wsi.
-            save_path (str):
-                Location to save output prediction as well as possible
-                intermediate results.
-            mode (str):
-                Either `"tile"` or `"wsi"` to indicate run mode.
-
-        """
-        cache_dir = self._cache_dir / str(wsi_idx)
-        cache_dir.mkdir(parents=True)
-
-        wsi_path = self.imgs[wsi_idx]
-        mask_path = None if self.masks is None else self.masks[wsi_idx]
-        wsi_reader, mask_reader = self.get_reader(
-            wsi_path,
-            mask_path,
-            mode,
-            auto_get_mask=self.auto_generate_mask,
-        )
-
-        # assume ioconfig has already been converted to `baseline` for `tile` mode
-        resolution = ioconfig.highest_input_resolution
-        wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
-
-        # * retrieve patch and tile placement
-        # this is in XY
-        (patch_inputs, patch_outputs) = self.get_coordinates(wsi_proc_shape, ioconfig)
-        if mask_reader is not None:
-            sel = self.filter_coordinates(mask_reader, patch_outputs, **resolution)
-            patch_outputs = patch_outputs[sel]
-            patch_inputs = patch_inputs[sel]
-
-        # modify the shared space so that we can update worker info
-        # without needing to re-create the worker. There should be no
-        # race-condition because only the following enumerate loop
-        # triggers the parallelism, and this portion is still in
-        # sequential execution order
-        patch_inputs = torch.from_numpy(patch_inputs).share_memory_()
-        patch_outputs = torch.from_numpy(patch_outputs).share_memory_()
-        self._mp_shared_space.patch_inputs = patch_inputs
-        self._mp_shared_space.patch_outputs = patch_outputs
-        self._mp_shared_space.wsi_idx = torch.Tensor([wsi_idx]).share_memory_()
-
-        pbar_desc = "Process Batch: "
-        pbar = tqdm.tqdm(
-            desc=pbar_desc,
-            leave=True,
-            total=len(self._loader),
-            ncols=80,
-            ascii=True,
-            position=0,
-        )
-
-        cum_output = []
-        for _, batch_data in enumerate(self._loader):
-            sample_datas, sample_infos = batch_data
-            batch_size = sample_infos.shape[0]
-            # ! depending on the protocol of the output within infer_batch
-            # ! this may change, how to enforce/document/expose this in a
-            # ! sensible way?
-
-            # assume to return a list of L output,
-            # each of shape N x etc. (N=batch size)
-            sample_outputs = self.model.infer_batch(
-                self._model,
-                sample_datas,
-                device=self._device,
-            )
-            # repackage so that it's an N list, each contains
-            # L x etc. output
-            sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
-            sample_outputs = list(zip(*sample_outputs, strict=False))
-
-            # tensor to numpy, costly?
-            sample_infos = sample_infos.numpy()
-            sample_infos = np.split(sample_infos, batch_size, axis=0)
-
-            sample_outputs = list(zip(sample_infos, sample_outputs, strict=False))
-            if self.process_prediction_per_batch:
-                self._process_predictions(
-                    sample_outputs,
-                    wsi_reader,
-                    ioconfig,
-                    save_path,
-                    cache_dir,
-                )
-            else:
-                cum_output.extend(sample_outputs)
-            pbar.update()
-        pbar.close()
-
-        self._process_predictions(
-            cum_output,
-            wsi_reader,
-            ioconfig,
-            save_path,
-            cache_dir,
-        )
-
-        # clean up the cache directories
-        shutil.rmtree(cache_dir)
-
-    def _process_predictions(
-        self: SemanticSegmentor,
-        cum_batch_predictions: list,
-        wsi_reader: WSIReader,
-        ioconfig: IOSegmentorConfig,
-        save_path: str,
-        cache_dir: str,
-    ) -> None:
-        """Define how the aggregated predictions are processed.
-
-        This includes merging the prediction if necessary and also saving afterwards.
-        Note that items within `cum_batch_predictions` will be consumed during
-        the operation.
-
-        Args:
-            cum_batch_predictions (list):
-                List of batch predictions. Each item within the list
-                should be of (location, patch_predictions).
-            wsi_reader (:class:`WSIReader`):
-                A reader for the image where the predictions come from.
-            ioconfig (:class:`IOSegmentorConfig`):
-                A configuration object contains input and output
-                information.
-            save_path (str):
-                Root path to save current WSI predictions.
-            cache_dir (str):
-                Root path to cache current WSI data.
-
-        """
-        if len(cum_batch_predictions) == 0:
-            return
-
-        # assume predictions is N, each item has L output element
-        locations, predictions = list(zip(*cum_batch_predictions, strict=False))
-        # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
-        # output patch this can exceed the image bound at the requested
-        # resolution remove singleton due to split.
-        locations = np.array([v[0] for v in locations])
-        for index, output_resolution in enumerate(ioconfig.output_resolutions):
-            # assume resolution index to be in the same order as L
-            merged_resolution = ioconfig.highest_input_resolution
-            merged_locations = locations
-            # ! location is w.r.t the highest resolution, hence still need conversion
-            if ioconfig.save_resolution is not None:
-                merged_resolution = ioconfig.save_resolution
-                output_shape = wsi_reader.slide_dimensions(**output_resolution)
-                merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
-                fx = merged_shape[0] / output_shape[0]
-                merged_locations = np.ceil(locations * fx).astype(np.int64)
-            merged_shape = wsi_reader.slide_dimensions(**merged_resolution)
-            # 0 idx is to remove singleton without removing other axes singleton
-            to_merge_predictions = [v[index][0] for v in predictions]
-            sub_save_path = f"{save_path}.raw.{index}.npy"
-            sub_count_path = f"{cache_dir}/count.{index}.npy"
-            self.merge_prediction(
-                merged_shape[::-1],  # XY to YX
-                to_merge_predictions,
-                merged_locations,
-                save_path=sub_save_path,
-                cache_count_path=sub_count_path,
-            )
-
-    @staticmethod
-    def merge_prediction(
-        canvas_shape: tuple[int] | list[int] | np.ndarray,
-        predictions: list[np.ndarray],
-        locations: list | np.ndarray,
-        save_path: str | Path | None = None,
-        cache_count_path: str | Path | None = None,
-    ) -> np.ndarray:
-        """Merge patch-level predictions to form a 2-dimensional prediction map.
-
-        When accumulating the raw prediction onto a same canvas (via
-        calling the function multiple times), `save_path` and
-        `cache_count_path` must be the same. If either of these two do
-        not exist, the function will create new files. However, if
-        `save_path` is `None`, the function will perform the
-        accumulation using CPU-RAM as storage.
-
-        Args:
-            canvas_shape (:class:`numpy.ndarray`):
-                HW of the supposed assembled image.
-            predictions (list):
-                List of :class:`np.ndarray`, each item is a patch prediction,
-                assuming to be of shape HWC.
-            locations (list):
-                List of :class:`np.ndarray`, each item is the location of the patch
-                at the same index within `predictions`. The location is
-                in the to be assembled canvas and of the form
-                `(top_left_x, top_left_y, bottom_right_x,
-                bottom_right_x)`.
-            save_path (str):
-                Location to save the assembled image.
-            cache_count_path (str):
-                Location to store the canvas for counting how many times
-                each pixel get overlapped when assembling.
-
-        Returns:
-            :class:`numpy.ndarray`:
-                An image contains merged data.
-
-        Examples:
-        >>> SemanticSegmentor.merge_prediction(
-        ...     canvas_shape=[4, 4],
-        ...     predictions=[
-        ...         np.full((2, 2), 1),
-        ...         np.full((2, 2), 2)],
-        ...     locations=[
-        ...         [0, 0, 2, 2],
-        ...         [2, 2, 4, 4]],
-        ...     save_path=None,
-        ... )
-        ... array([[1, 1, 0, 0],
-        ...        [1, 1, 0, 0],
-        ...        [0, 0, 2, 2],
-        ...        [0, 0, 2, 2]])
-
-        """
-        canvas_shape = np.array(canvas_shape)
-
-        sample_prediction = predictions[0]
-
-        if len(sample_prediction.shape) not in (2, 3):
-            msg = f"Prediction is no HW or HWC: {sample_prediction.shape}."
-            raise ValueError(msg)
-
-        (
-            canvas_cum_shape_,
-            canvas_count_shape_,
-            add_singleton_dim,
-        ) = _estimate_canvas_parameters(sample_prediction, canvas_shape)
-
-        is_on_drive, count_canvas, cum_canvas = _prepare_save_output(
-            save_path,
-            cache_count_path,
-            canvas_cum_shape_,
-            canvas_count_shape_,
-        )
-
-        def index(arr: np.ndarray, tl: np.ndarray, br: np.ndarray) -> np.ndarray:
-            """Helper to shorten indexing."""
-            return arr[tl[0] : br[0], tl[1] : br[1]]
-
-        patch_infos = list(zip(locations, predictions, strict=False))
-        for _, patch_info in enumerate(patch_infos):
-            # position is assumed to be in XY coordinate
-            (bound_in_wsi, prediction) = patch_info
-            # convert to XY to YX, and in tl, br
-            tl_in_wsi = np.array(bound_in_wsi[:2][::-1])
-            br_in_wsi = np.array(bound_in_wsi[2:][::-1])
-            old_tl_in_wsi = tl_in_wsi.copy()
-
-            # need to do conversion
-            patch_shape_in_wsi = tuple(br_in_wsi - tl_in_wsi)
-            # conversion to make cv2 happy
-            prediction = prediction.astype(np.float32)
-            prediction = cv2.resize(prediction, patch_shape_in_wsi[::-1])
-            # ! cv2 resize will remove singleton !
-            if add_singleton_dim:
-                prediction = prediction[..., None]
-
-            sel = tl_in_wsi < 0
-            tl_in_wsi[sel] = 0
-
-            if np.any(tl_in_wsi >= canvas_shape):
-                continue
-
-            sel = br_in_wsi > canvas_shape
-            br_in_wsi[sel] = canvas_shape[sel]
-
-            # re-calibrate the position in case patch passing the image bound
-            br_in_patch = br_in_wsi - old_tl_in_wsi
-            patch_actual_shape = br_in_wsi - tl_in_wsi
-            tl_in_patch = br_in_patch - patch_actual_shape
-
-            # now cropping the prediction region
-            patch_pred = prediction[
-                tl_in_patch[0] : br_in_patch[0],
-                tl_in_patch[1] : br_in_patch[1],
-            ]
-
-            patch_count = np.ones(patch_pred.shape[:2])[..., None]
-            if not is_on_drive:
-                index(cum_canvas, tl_in_wsi, br_in_wsi)[:] += patch_pred
-                index(count_canvas, tl_in_wsi, br_in_wsi)[:] += patch_count
-            else:
-                old_avg_pred = np.array(index(cum_canvas, tl_in_wsi, br_in_wsi))
-                old_count = np.array(index(count_canvas, tl_in_wsi, br_in_wsi))
-                # ! there will be precision error, but we have to live with this
-                new_count = old_count + patch_count
-                # retrieve old raw probabilities after summation
-                old_raw_pred = old_avg_pred * old_count
-                new_avg_pred = (old_raw_pred + patch_pred) / new_count
-                index(cum_canvas, tl_in_wsi, br_in_wsi)[:] = new_avg_pred
-                index(count_canvas, tl_in_wsi, br_in_wsi)[:] = new_count
-        if not is_on_drive:
-            cum_canvas /= count_canvas + 1.0e-6
-        return cum_canvas
-
-    @staticmethod
-    def _prepare_save_dir(save_dir: str | Path | None) -> tuple[Path, Path]:
-        """Prepare save directory and cache."""
-        if save_dir is None:
-            logger.warning(
-                "Segmentor will only output to directory. "
-                "All subsequent output will be saved to current runtime "
-                "location under folder 'output'. Overwriting may happen! ",
-                stacklevel=2,
-            )
-            save_dir = Path.cwd() / "output"
-
-        save_dir = Path(save_dir).resolve()
-        if save_dir.is_dir():
-            msg = f"`save_dir` already exists! {save_dir}"
-            raise ValueError(msg)
-        save_dir.mkdir(parents=True)
-        cache_dir = Path(f"{save_dir}/cache")
-        Path.mkdir(cache_dir, parents=True)
-
-        return save_dir, cache_dir
-
-    @staticmethod
-    def _update_ioconfig(
-        ioconfig: IOSegmentorConfig,
-        mode: str,
-        patch_input_shape: IntPair,
-        patch_output_shape: IntPair,
-        stride_shape: IntPair,
-        resolution: Resolution,
-        units: Units,
-    ) -> IOSegmentorConfig:
-        """Update ioconfig according to input parameters.
-
-        Args:
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object defines information about input and output
-                placement of patches. When provided,
-                `patch_input_shape`, `patch_output_shape`,
-                `stride_shape`, `resolution`, and `units` arguments are
-                ignored. Otherwise, those arguments will be internally
-                converted to a :class:`IOSegmentorConfig` object.
-            mode (str):
-                Type of input to process. Choose from either `tile` or
-                `wsi`.
-            patch_input_shape (tuple):
-                Size of patches input to the model. The values
-                are at requested read resolution and must be positive.
-            patch_output_shape (tuple):
-                Size of patches output by the model. The values are at
-                the requested read resolution and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. The values
-                are at requested read resolution and must be positive.
-                If not provided, `stride_shape=patch_input_shape` is
-                used.
-            resolution (Resolution):
-                Resolution used for reading the image.
-            units (Units):
-                Units of resolution used for reading the image.
-
-        Returns:
-            :class:`IOSegmentorConfig`:
-                Updated ioconfig.
-
-        """
-        if patch_output_shape is None:
-            patch_output_shape = patch_input_shape
-        if stride_shape is None:
-            stride_shape = patch_output_shape
-
-        if ioconfig is None:
-            ioconfig = IOSegmentorConfig(
-                input_resolutions=[{"resolution": resolution, "units": units}],
-                output_resolutions=[{"resolution": resolution, "units": units}],
-                patch_input_shape=patch_input_shape,
-                patch_output_shape=patch_output_shape,
-                stride_shape=stride_shape,
-            )
-        if mode == "tile":
-            logger.warning(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"`. Resolutions will be converted '
-                "to baseline value.",
-                stacklevel=2,
-            )
-            return ioconfig.to_baseline()
-
-        return ioconfig
-
-    def _prepare_workers(self: SemanticSegmentor) -> None:
-        """Prepare number of workers."""
-        self._postproc_workers = None
-        if self.num_postproc_workers is not None:
-            self._postproc_workers = ProcessPoolExecutor(
-                max_workers=self.num_postproc_workers,
-            )
-
-    def _memory_cleanup(self: SemanticSegmentor) -> None:
-        """Memory clean up."""
-        self.imgs = None
-        self.masks = None
-        self._cache_dir = None
-        self._model = None
-        self._loader = None
-        self._device = None
-        self._futures = None
-        self._mp_shared_space = None
-        if self._postproc_workers is not None:
-            self._postproc_workers.shutdown()
-        self._postproc_workers = None
-
-    def _predict_wsi_handle_exception(
-        self: SemanticSegmentor,
-        imgs: list,
-        wsi_idx: int,
-        img_path: str | Path,
-        mode: str,
-        ioconfig: IOSegmentorConfig,
-        save_dir: str | Path,
-        *,
-        crash_on_exception: bool,
-    ) -> None:
-        """Predict on multiple WSIs.
-
-        Args:
-            imgs (list, ndarray):
-                List of inputs to process. When using `"patch"` mode,
-                the input must be either a list of images, a list of
-                image file paths or a numpy array of an image list. When
-                using `"tile"` or `"wsi"` mode, the input must be a list
-                of file paths.
-            wsi_idx (int):
-                index of current WSI being processed.
-            img_path(str or Path):
-                Path to current image.
-            mode (str):
-                Type of input to process. Choose from either `tile` or
-                `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object defines information about input and output
-                placement of patches. When provided,
-                `patch_input_shape`, `patch_output_shape`,
-                `stride_shape`, `resolution`, and `units` arguments are
-                ignored. Otherwise, those arguments will be internally
-                converted to a :class:`IOSegmentorConfig` object.
-            save_dir (str or Path):
-                Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output`
-                where the running script is invoked.
-            crash_on_exception (bool):
-                If `True`, the running loop will crash if there is any
-                error during processing a WSI. Otherwise, the loop will
-                move on to the next wsi for processing.
-
-        Returns:
-            list:
-                A list of tuple(input_path, save_path) where
-                `input_path` is the path of the input wsi while
-                `save_path` corresponds to the output predictions.
-
-        """
-        try:
-            wsi_save_path = save_dir / f"{wsi_idx}"
-            self._predict_one_wsi(wsi_idx, ioconfig, str(wsi_save_path), mode)
-
-            # Do not use dict with file name as key, because it can be
-            # overwritten. It may be user intention to provide files with a
-            # same name multiple times (maybe they have different root path)
-            self._outputs.append([str(img_path), str(wsi_save_path)])
-
-            # ? will this corrupt old version if control + c midway?
-            map_file_path = save_dir / "file_map.dat"
-            # backup old version first
-            if Path.exists(map_file_path):
-                old_map_file_path = save_dir / "file_map_old.dat"
-                shutil.copy(map_file_path, old_map_file_path)
-            joblib.dump(self._outputs, map_file_path)
-
-            # verbose mode, error by passing ?
-            logging.info("Finish: %d", wsi_idx / len(imgs))
-            logging.info("--Input: %s", str(img_path))
-            logging.info("--Output: %s", str(wsi_save_path))
-        # prevent deep source check because this is bypass and
-        # delegating error message
-        except Exception as err:  # skipcq: PYL-W0703
-            wsi_save_path = save_dir.joinpath(f"{wsi_idx}")
-            if crash_on_exception:
-                raise err  # noqa: TRY201
-            logging.exception("Crashed on %s", wsi_save_path)
-
-    def predict(  # noqa: PLR0913
-        self: SemanticSegmentor,
-        imgs: list,
-        masks: list | None = None,
-        mode: str = "tile",
-        ioconfig: IOSegmentorConfig = None,
-        patch_input_shape: IntPair = None,
-        patch_output_shape: IntPair = None,
-        stride_shape: IntPair = None,
-        resolution: Resolution = 1.0,
-        units: Units = "baseline",
-        save_dir: str | Path | None = None,
-        device: str = "cpu",
-        *,
-        crash_on_exception: bool = False,
-    ) -> list[tuple[Path, Path]]:
-        """Make a prediction for a list of input data.
-
-        By default, if the input model at the object instantiation time
-        is a pretrained model in the toolbox as well as
-        `patch_input_shape`, `patch_output_shape`, `stride_shape`,
-        `resolution`, `units` and `ioconfig` are `None`. The method will
-        use the `ioconfig` retrieved together with the pretrained model.
-        Otherwise, either `patch_input_shape`, `patch_output_shape`,
-        `stride_shape`, `resolution`, `units` or `ioconfig` must be set
-        else a `Value Error` will be raised.
-
-        Args:
-            imgs (list, ndarray):
-                List of inputs to process. When using `"patch"` mode,
-                the input must be either a list of images, a list of
-                image file paths or a numpy array of an image list. When
-                using `"tile"` or `"wsi"` mode, the input must be a list
-                of file paths.
-            masks (list):
-                List of masks. Only utilised when processing image tiles
-                and whole-slide images. Patches are only processed if
-                they are within a masked area. If not provided, then a
-                tissue mask will be automatically generated for
-                whole-slide images or the entire image is processed for
-                image tiles.
-            mode (str):
-                Type of input to process. Choose from either `tile` or
-                `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object defines information about input and output
-                placement of patches. When provided,
-                `patch_input_shape`, `patch_output_shape`,
-                `stride_shape`, `resolution`, and `units` arguments are
-                ignored. Otherwise, those arguments will be internally
-                converted to a :class:`IOSegmentorConfig` object.
-            device (str):
-                :class:`torch.device` to run the model.
-                Select the device to run the model. Please see
-                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-                for more details on input parameters for device. Default value is "cpu".
-            patch_input_shape (tuple):
-                Size of patches input to the model. The values
-                are at requested read resolution and must be positive.
-            patch_output_shape (tuple):
-                Size of patches output by the model. The values are at
-                the requested read resolution and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. The values
-                are at requested read resolution and must be positive.
-                If not provided, `stride_shape=patch_input_shape` is
-                used.
-            resolution (float):
-                Resolution used for reading the image.
-            units (Units):
-                Units of resolution used for reading the image. Choose
-                from either `"level"`, `"power"` or `"mpp"`.
-            save_dir (str or pathlib.Path):
-                Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output`
-                where the running script is invoked.
-            crash_on_exception (bool):
-                If `True`, the running loop will crash if there is any
-                error during processing a WSI. Otherwise, the loop will
-                move on to the next wsi for processing.
-
-        Returns:
-            list:
-                A list of tuple(input_path, save_path) where
-                `input_path` is the path of the input wsi while
-                `save_path` corresponds to the output predictions.
-
-        Examples:
-            >>> # Sample output of a network
-            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-            >>> predictor = SemanticSegmentor(model='fcn-tissue_mask')
-            >>> output = predictor.predict(wsis, mode='wsi')
-            >>> list(output.keys())
-            [('A/wsi.svs', 'output/0.raw') , ('B/wsi.svs', 'output/1.raw')]
-            >>> # if a network have 2 output heads, each head output of 'A/wsi.svs'
-            >>> # will be respectively stored in 'output/0.raw.0', 'output/0.raw.1'
-
-        """
-        if mode not in ["wsi", "tile"]:
-            msg = f"{mode} is not a valid mode. Use either `tile` or `wsi`."
-            raise ValueError(msg)
-
-        save_dir, self._cache_dir = self._prepare_save_dir(save_dir)
-
-        if ioconfig is None:
-            ioconfig = copy.deepcopy(self.ioconfig)
-
-        if ioconfig is None and patch_input_shape is None:
-            msg = (
-                "Must provide either `ioconfig` or "
-                "`patch_input_shape` and `patch_output_shape`"
-            )
-            raise ValueError(
-                msg,
-            )
-
-        if resolution is None and units is None:
-            if ioconfig is None:
-                msg = f"Invalid resolution: `{resolution}` and units: `{units}`. "
-                raise ValueError(
-                    msg,
-                )
-
-            resolution = ioconfig.input_resolutions[0]["resolution"]
-            units = ioconfig.input_resolutions[0]["units"]
-
-        ioconfig = self._update_ioconfig(
-            ioconfig,
-            mode,
-            patch_input_shape,
-            patch_output_shape,
-            stride_shape,
-            resolution,
-            units,
-        )
-
-        # use external for testing
-        self._device = device
-        self._model = model_to(model=self.model, device=device)
-
-        # workers should be > 0 else Value Error will be thrown
-        self._prepare_workers()
-
-        mp_manager = torch_mp.Manager()
-        mp_shared_space = mp_manager.Namespace()
-        self._mp_shared_space = mp_shared_space
-
-        ds = self.dataset_class(
-            ioconfig=ioconfig,
-            preproc=self.model.preproc_func,
-            wsi_paths=imgs,
-            mp_shared_space=mp_shared_space,
-            mode=mode,
-        )
-
-        loader = torch_data.DataLoader(
-            ds,
-            drop_last=False,
-            batch_size=self.batch_size,
-            num_workers=self.num_loader_workers,
-            persistent_workers=self.num_loader_workers > 0,
-        )
-
-        self._loader = loader
-        self.imgs = imgs
-        self.masks = masks
-
-        # contain input / output prediction mapping
-        self._outputs = []
-        # ? what will happen if this crash midway?
-        # => may not be able to retrieve the result dict
-        for wsi_idx, img_path in enumerate(imgs):
-            self._predict_wsi_handle_exception(
-                imgs=imgs,
-                wsi_idx=wsi_idx,
-                img_path=img_path,
-                mode=mode,
-                ioconfig=ioconfig,
-                save_dir=save_dir,
-                crash_on_exception=crash_on_exception,
-            )
-
-        # clean up the cache directories
-        try:
-            shutil.rmtree(self._cache_dir)
-        except PermissionError:  # pragma: no cover
-            logger.warning("Unable to remove %s", self._cache_dir)
-
-        self._memory_cleanup()
-
-        return self._outputs
-
-
-class DeepFeatureExtractor(SemanticSegmentor):
-    """Generic CNN Feature Extractor.
-
-    AN engine for using any CNN model as a feature extractor. Note, if
-    `model` is supplied in the arguments, it will ignore the
-    `pretrained_model` and `pretrained_weights` arguments.
-
-    Args:
-        model (nn.Module):
-            Use externally defined PyTorch model for prediction with
-            weights already loaded. Default is `None`. If provided,
-            `pretrained_model` argument is ignored.
-        pretrained_model (str):
-            Name of the existing models support by tiatoolbox for
-            processing the data. By default, the corresponding
-            pretrained weights will also be downloaded. However, you can
-            override with your own set of weights via the
-            `pretrained_weights` argument. Argument is case-insensitive.
-            Refer to
-            :class:`tiatoolbox.models.architecture.vanilla.CNNBackbone`
-            for list of supported pretrained models.
-        pretrained_weights (str):
-            Path to the weight of the corresponding `pretrained_model`.
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
         batch_size (int):
-            Number of images fed into the model each time.
-        num_loader_workers (int):
-            Number of workers to load the data. Take note that they will
-            also perform preprocessing.
-        num_postproc_workers (int):
-            This value is there to maintain input compatibility with
-            `tiatoolbox.models.classification` and is not used.
+            Number of image patches to feed to the model in a forward pass.
+        class_dict (dict):
+            Optional dictionary mapping classification outputs to class names.
+        device (str):
+            Device to run the model on (e.g., "cpu", "cuda").
+        input_resolutions (list[dict]):
+            Resolution used for reading the image. See `WSIReader` for details.
+        ioconfig (ModelIOConfigABC):
+            Input/output configuration for patch extraction and resolution.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
+        num_workers (int):
+            Number of workers used in DataLoader.
+        output_file (str):
+            Output file name for saving results (e.g., .zarr or .db).
+        output_resolutions (Resolution):
+            Resolution used for writing output predictions.
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width).
+        patch_output_shape (tuple[int, int]):
+            Shape of output patches (height, width).
+        return_labels (bool):
+            Whether to return labels with predictions.
+        return_probabilities (bool):
+            Whether to return per-class probabilities.
+        scale_factor (tuple[float, float]):
+            Scale factor for converting annotations to baseline resolution.
+            Typically model_mpp / slide_mpp.
+        stride_shape (tuple[int, int]):
+            Stride used during WSI processing. Defaults to patch_input_shape.
         verbose (bool):
             Whether to output logging information.
-        dataset_class (obj):
-            Dataset class to be used instead of default.
-        auto_generate_mask(bool):
-            To automatically generate tile/WSI tissue mask if is not
-            provided.
+
+    """
+
+    patch_output_shape: tuple[int, int]
+    output_resolutions: Resolution
+
+
+class SemanticSegmentor(PatchPredictor):
+    r"""Semantic segmentation engine for digital histology images.
+
+    This class extends `PatchPredictor` to support semantic segmentation tasks
+    using pretrained or custom models from TIAToolbox. It supports both patch-level
+    and whole slide image (WSI) processing, and provides utilities for merging,
+    post-processing, and saving predictions.
+
+    Performance:
+        The TIAToolbox model `fcn_resnet50_unet-bcss` achieves the following
+        results on the BCSS dataset:
+
+        .. list-table:: Semantic segmentation performance on the BCSS dataset
+           :widths: 15 15 15 15 15 15 15
+           :header-rows: 1
+
+           * -
+             - Tumour
+             - Stroma
+             - Inflammatory
+             - Necrosis
+             - Other
+             - All
+           * - Amgad et al.
+             - 0.851
+             - 0.800
+             - 0.712
+             - 0.723
+             - 0.666
+             - 0.750
+           * - TIAToolbox
+             - 0.885
+             - 0.825
+             - 0.761
+             - 0.765
+             - 0.581
+             - 0.763
+
+    Args:
+        model (str | ModelABC):
+            A PyTorch model instance or name of a pretrained model from TIAToolbox.
+            The user can request pretrained models from the toolbox model zoo using
+            the list of pretrained models available at this `link
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights using the `weights` parameter. Default is `None`.
+        batch_size (int):
+            Number of image patches processed per forward pass. Default is 8.
+        num_workers (int):
+            Number of workers for data loading. Default is 0.
+        weights (str | Path | None):
+            Path to model weights. If None, default weights are used.
+
+            >>> engine = SemanticSegmentor(
+            ...    model="pretrained-model",
+            ...    weights="/path/to/pretrained-local-weights.pth"
+            ... )
+
+        device (str):
+            Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+        verbose (bool):
+            Whether to enable verbose logging. Default is True.
+
+    Attributes:
+        images (list[str | Path] | np.ndarray):
+            Input image patches or WSI paths.
+        masks (list[str | Path] | np.ndarray):
+            Optional tissue masks for WSI processing.
+            These are only utilized when patch_mode is False.
+            If not provided, then a tissue mask will be automatically
+            generated for whole slide images.
+        patch_mode (bool):
+            Whether input is treated as patches (`True`) or WSIs (`False`).
+        model (ModelABC):
+            Loaded PyTorch model.
+        ioconfig (ModelIOConfigABC):
+            IO configuration for patch extraction and resolution.
+        return_labels (bool):
+            Whether to include labels in the output.
+        input_resolutions (list[dict]):
+            Resolution settings for model input. Supported
+            units are `level`, `power` and `mpp`. Keys should be "units" and
+            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
+            :class:`WSIReader` for details.
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width). Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
+        stride_shape (tuple[int, int]):
+            Stride used during patch extraction. Stride is
+            at requested read resolution, not with respect to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
+        labels (list | None):
+            Optional labels for input images.
+            Only a single label per image is supported.
+        drop_keys (list):
+            Keys to exclude from model output.
+        output_type (str):
+            Format of output ("dict", "zarr", "annotationstore").
+        output_locations (list | None):
+            Coordinates of output patches used during WSI processing.
 
     Examples:
-        >>> # Sample output of a network
-        >>> from tiatoolbox.models.architecture.vanilla import CNNBackbone
-        >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> # create resnet50 with pytorch pretrained weights
-        >>> model = CNNBackbone('resnet50')
-        >>> predictor = DeepFeatureExtractor(model=model)
-        >>> output = predictor.predict(wsis, mode='wsi')
-        >>> list(output.keys())
-        [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
-        >>> # If a network have 2 output heads, for 'A/wsi.svs',
-        >>> # there will be 3 outputs, and they are respectively stored at
-        >>> # 'output/0.position.npy'   # will always be output
-        >>> # 'output/0.features.0.npy' # output of head 0
-        >>> # 'output/0.features.1.npy' # output of head 1
-        >>> # Each file will contain a same number of items, and the item at each
-        >>> # index corresponds to 1 patch. The item in `.*position.npy` will
-        >>> # be the corresponding patch bounding box. The box coordinates are at
-        >>> # the inference resolution defined within the provided `ioconfig`.
+        >>> # list of 2 image patches as input
+        >>> wsis = ['path/img.svs', 'path/img.svs']
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(wsis, patch_mode=False)
+
+        >>> # array of list of 2 image patches as input
+        >>> image_patches = [np.ndarray, np.ndarray]
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(data, patch_mode=True)
+
+        >>> # list of 2 image patch files as input
+        >>> data = ['path/img.png', 'path/img.png']
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(data, patch_mode=False)
+
+        >>> # list of 2 image tile files as input
+        >>> tile_file = ['path/tile1.png', 'path/tile2.png']
+        >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+        >>> output = segmentor.run(tile_file, patch_mode=False)
+
+        >>> # list of 2 wsi files as input
+        >>> wsis = ['path/wsi1.svs', 'path/wsi2.svs']
+        >>> segmentor = SemanticSegmentor(model="resnet18-kather100k")
+        >>> output = segmentor.run(wsis, patch_mode=False)
+
+    References:
+        [1] Amgad M, Elfandy H, ..., Gutman DA, Cooper LAD. Structured crowdsourcing
+        enables convolutional segmentation of histology images. Bioinformatics 2019.
+        doi: 10.1093/bioinformatics/btz083
 
     """
 
     def __init__(
-        self: DeepFeatureExtractor,
+        self: SemanticSegmentor,
+        model: str | ModelABC,
         batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
-        model: torch.nn.Module | None = None,
-        pretrained_model: str | None = None,
-        pretrained_weights: str | None = None,
-        dataset_class: Callable = WSIStreamDataset,
+        num_workers: int = 0,
+        weights: str | Path | None = None,
         *,
+        device: str = "cpu",
         verbose: bool = True,
-        auto_generate_mask: bool = False,
     ) -> None:
-        """Initialize :class:`DeepFeatureExtractor`."""
-        super().__init__(
-            batch_size=batch_size,
-            num_loader_workers=num_loader_workers,
-            num_postproc_workers=num_postproc_workers,
-            model=model,
-            pretrained_model=pretrained_model,
-            pretrained_weights=pretrained_weights,
-            verbose=verbose,
-            auto_generate_mask=auto_generate_mask,
-            dataset_class=dataset_class,
-        )
-        self.process_prediction_per_batch = False
-
-    def _process_predictions(
-        self: DeepFeatureExtractor,
-        cum_batch_predictions: list,
-        wsi_reader: WSIReader,  # skipcq: PYL-W0613  # noqa: ARG002
-        ioconfig: IOSegmentorConfig,
-        save_path: str,
-        cache_dir: str,  # skipcq: PYL-W0613  # noqa: ARG002
-    ) -> None:
-        """Define how the aggregated predictions are processed.
-
-        This includes merging the prediction if necessary and also
-        saving afterward.
+        """Initialize :class:`SemanticSegmentor`.
 
         Args:
-            cum_batch_predictions (list):
-                List of batch predictions. Each item within the list
-                should be of (location, patch_predictions).
-            wsi_reader (:class:`WSIReader`):
-                A reader for the image where the predictions come from.
-                Not used here. Added for consistency with the API.
-            ioconfig (:class:`IOSegmentorConfig`):
-                A configuration object contains input and output
-                information.
-            save_path (str):
-                Root path to save current WSI predictions.
-            cache_dir (str):
-                Root path to cache current WSI data.
-                Not used here. Added for consistency with the API.
+            model (str | ModelABC):
+                A PyTorch model instance or name of a pretrained model from TIAToolbox.
+                If a string is provided, the corresponding pretrained weights will be
+                downloaded unless overridden via `weights`.
+            batch_size (int):
+                Number of image patches processed per forward pass. Default is 8.
+            num_workers (int):
+                Number of workers for data loading. Default is 0.
+            weights (str | Path | None):
+                Path to model weights. If None, default weights are used.
+            device (str):
+                Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+            verbose (bool):
+                Whether to enable verbose logging. Default is True.
 
         """
-        # assume prediction_list is N, each item has L output elements
-        location_list, prediction_list = list(zip(*cum_batch_predictions, strict=False))
-        # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output
-        # patch, this can exceed the image bound at the requested resolution
-        # remove singleton due to split.
-        location_list = np.array([v[0] for v in location_list])
-        np.save(f"{save_path}.position.npy", location_list)
-        for idx, _ in enumerate(ioconfig.output_resolutions):
-            # assume resolution idx to be in the same order as L
-            # 0 idx is to remove singleton without removing other axes singleton
-            prediction_list = [v[idx][0] for v in prediction_list]
-            prediction_list = np.array(prediction_list)
-            np.save(f"{save_path}.features.{idx}.npy", prediction_list)
+        super().__init__(
+            model=model,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            weights=weights,
+            device=device,
+            verbose=verbose,
+        )
+        self.output_locations: list | None = None
 
-    def predict(  # noqa: PLR0913
-        self: DeepFeatureExtractor,
-        imgs: list,
-        masks: list | None = None,
-        mode: str = "tile",
-        ioconfig: IOSegmentorConfig | None = None,
-        patch_input_shape: IntPair | None = None,
-        patch_output_shape: IntPair | None = None,
-        stride_shape: IntPair = None,
-        resolution: Resolution = 1.0,
-        units: Units = "baseline",
-        save_dir: str | Path | None = None,
-        device: str = "cpu",
+    def get_dataloader(
+        self: SemanticSegmentor,
+        images: str | Path | list[str | Path] | np.ndarray,
+        masks: Path | None = None,
+        labels: list | None = None,
+        ioconfig: SemanticSegmentorRunParams | None = None,
         *,
-        crash_on_exception: bool = False,
-    ) -> list[tuple[Path, Path]]:
-        """Make a prediction for a list of input data.
+        patch_mode: bool = True,
+        auto_get_mask: bool = True,
+    ) -> torch.utils.data.DataLoader:
+        """Pre-process images and masks and return a DataLoader for inference.
 
-        By default, if the input model at the time of object
-        instantiation is a pretrained model in the toolbox as well as
-        `patch_input_shape`, `patch_output_shape`, `stride_shape`,
-        `resolution`, `units` and `ioconfig` are `None`. The method will
-        use the `ioconfig` retrieved together with the pretrained model.
-        Otherwise, either `patch_input_shape`, `patch_output_shape`,
-        `stride_shape`, `resolution`, `units` or `ioconfig` must be set
-        - else a `Value Error` will be raised.
+        This method prepares the dataset and returns a PyTorch DataLoader
+        for either patch-based or WSI-based semantic segmentation. It overrides
+        the base method to support additional WSI-specific logic, including
+        patch output shape and output location tracking.
 
         Args:
-            imgs (list, ndarray):
-                List of inputs to process. When using `"patch"` mode,
-                the input must be either a list of images, a list of
-                image file paths or a numpy array of an image list. When
-                using `"tile"` or `"wsi"` mode, the input must be a list
-                of file paths.
-            masks (list):
-                List of masks. Only utilised when processing image tiles
-                and whole-slide images. Patches are only processed if
-                they are within a masked area. If not provided, then a
-                tissue mask will be automatically generated for each
-                whole-slide image or all image tiles in the entire image
-                are processed.
-            mode (str):
-                Type of input to process. Choose from either `tile` or
-                `wsi`.
-            ioconfig (:class:`IOSegmentorConfig`):
-                Object that defines information about input and output
-                placement of patches. When provided,
-                `patch_input_shape`, `patch_output_shape`,
-                `stride_shape`, `resolution`, and `units` arguments are
-                ignored. Otherwise, those arguments will be internally
-                converted to a :class:`IOSegmentorConfig` object.
-            device (str):
-                :class:`torch.device` to run the model.
-                Select the device to run the model. Please see
-                https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-                for more details on input parameters for device. Default value is "cpu".
-            patch_input_shape (IntPair):
-                Size of patches input to the model. The values are at
-                requested read resolution and must be positive.
-            patch_output_shape (tuple):
-                Size of patches output by the model. The values are at
-                the requested read resolution and must be positive.
-            stride_shape (tuple):
-                Stride using during tile and WSI processing. The values
-                are at requested read resolution and must be positive.
-                If not provided, `stride_shape=patch_input_shape` is
-                used.
-            resolution (Resolution):
-                Resolution used for reading the image.
-            units (Units):
-                Units of resolution used for reading the image.
-            save_dir (str or pathlib.Path):
-                Output directory when processing multiple tiles and
-                whole-slide images. By default, it is folder `output`
-                where the running script is invoked.
-            crash_on_exception (bool):
-                If `True`, the running loop will crash if there is any
-                error during processing a WSI. Otherwise, the loop will
-                move on to the next wsi for processing.
+            images (str | Path | list[str | Path] | np.ndarray):
+                Input images. Can be a list of file paths or a NumPy array
+                of image patches in NHWC format.
+            masks (Path | None):
+                Optional tissue masks for WSI processing. Only used when
+                `patch_mode` is False.
+            labels (list | None):
+                Optional labels for input images. Only one label per image is supported.
+            ioconfig (SemanticSegmentorRunParams | None):
+                IO configuration for patch extraction and resolution.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            auto_get_mask (bool):
+                Whether to automatically generate a tissue mask using
+                `wsireader.tissue_mask()` when `patch_mode` is False.
+                If `True`, only tissue regions are processed. If `False`,
+                all patches are processed. Default is `True`.
 
         Returns:
-            list:
-                A list of tuple(input_path, save_path) where
-                `input_path` is the path of the input wsi while
-                `save_path` corresponds to the output predictions.
-
-        Examples:
-            >>> # Sample output of a network
-            >>> from tiatoolbox.models.architecture.vanilla import CNNBackbone
-            >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-            >>> # create resnet50 with pytorch pretrained weights
-            >>> model = CNNBackbone('resnet50')
-            >>> predictor = DeepFeatureExtractor(model=model)
-            >>> output = predictor.predict(wsis, mode='wsi')
-            >>> list(output.keys())
-            [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
-            >>> # If a network have 2 output heads, for 'A/wsi.svs',
-            >>> # there will be 3 outputs, and they are respectively stored at
-            >>> # 'output/0.position.npy'   # will always be output
-            >>> # 'output/0.features.0.npy' # output of head 0
-            >>> # 'output/0.features.1.npy' # output of head 1
-            >>> # Each file will contain a same number of items, and the item at each
-            >>> # index corresponds to 1 patch. The item in `.*position.npy` will
-            >>> # be the corresponding patch bounding box. The box coordinates are at
-            >>> # the inference resolution defined within the provided `ioconfig`.
+            torch.utils.data.DataLoader:
+                A PyTorch DataLoader configured for semantic segmentation inference.
 
         """
-        return super().predict(
-            imgs=imgs,
+        # Overwrite when patch_mode is False.
+        if not patch_mode:
+            dataset = WSIPatchDataset(
+                input_img=images,
+                mask_path=masks,
+                patch_input_shape=ioconfig.patch_input_shape,
+                patch_output_shape=ioconfig.patch_output_shape,
+                stride_shape=ioconfig.stride_shape,
+                resolution=ioconfig.input_resolutions[0]["resolution"],
+                units=ioconfig.input_resolutions[0]["units"],
+                auto_get_mask=auto_get_mask,
+            )
+
+            dataset.preproc_func = self.model.preproc_func
+            self.output_locations = dataset.outputs
+
+            # preprocessing must be defined with the dataset
+            return torch.utils.data.DataLoader(
+                dataset,
+                num_workers=self.num_workers,
+                batch_size=self.batch_size,
+                drop_last=False,
+                shuffle=False,
+            )
+
+        return super().get_dataloader(
+            images=images,
             masks=masks,
-            mode=mode,
-            device=device,
+            labels=labels,
             ioconfig=ioconfig,
-            patch_input_shape=patch_input_shape,
-            patch_output_shape=patch_output_shape,
-            stride_shape=stride_shape,
-            resolution=resolution,
-            units=units,
-            save_dir=save_dir,
-            crash_on_exception=crash_on_exception,
+            patch_mode=patch_mode,
         )
+
+    def infer_wsi(
+        self: SemanticSegmentor,
+        dataloader: DataLoader,
+        save_path: Path,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict[str, da.Array]:
+        """Perform model inference on a whole slide image (WSI).
+
+        This method processes a WSI using the provided DataLoader, merges
+        patch-level predictions into a full-resolution canvas, and returns
+        the aggregated output. It supports memory-aware caching and optional
+        inclusion of coordinates and labels.
+
+        Args:
+            dataloader (DataLoader):
+                PyTorch DataLoader configured for WSI processing.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output
+                is saved in a Zarr file.
+            **kwargs (SemanticSegmentorRunParams):
+                Additional runtime parameters, including:
+                - return_probabilities (bool): Whether to return probability maps.
+                - return_labels (bool): Whether to include labels in the output.
+                - memory_threshold (int): Memory usage threshold to trigger disk
+                  caching.
+
+        Returns:
+            dict[str, dask.array.Array]:
+                Dictionary containing merged prediction results:
+                - "probabilities": Full-resolution probability map.
+                - "coordinates": Patch coordinates.
+                - "labels": Ground truth labels (if `return_labels` is True).
+
+        """
+        # Default Memory threshold percentage is 80.
+        memory_threshold = kwargs.get("memory_threshold", 80)
+        vm = psutil.virtual_memory()
+
+        keys = ["probabilities", "coordinates"]
+        coordinates = []
+
+        # Main output dictionary
+        raw_predictions = dict(
+            zip(keys, [da.empty(shape=(0, 0))] * len(keys), strict=False)
+        )
+
+        # Inference loop
+        tqdm = get_tqdm()
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else dataloader
+        )
+
+        canvas_np, output_locs_y_ = None, None
+        canvas, count, output_locs = None, None, None
+        canvas_zarr, count_zarr = None, None
+
+        full_output_locs = (
+            dataloader.dataset.full_outputs
+            if hasattr(dataloader.dataset, "full_outputs")
+            else dataloader.dataset.outputs
+        )
+
+        for batch_idx, batch_data in enumerate(tqdm_loop):
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+
+            batch_locs = batch_data["output_locs"].numpy()
+
+            # Interpolate outputs for masked regions
+            full_batch_output, full_output_locs, output_locs = prepare_full_batch(
+                batch_output,
+                batch_locs,
+                full_output_locs,
+                output_locs,
+                is_last=(batch_idx == (len(dataloader) - 1)),
+            )
+
+            canvas_np = concatenate_none(old_arr=canvas_np, new_arr=full_batch_output)
+
+            # Determine if dataloader is moved to next row of patches
+            change_indices = np.where(np.diff(output_locs[:, 1]) != 0)[0] + 1
+
+            # If a row of patches has been processed.
+            if change_indices.size > 0:
+                canvas, count, canvas_np, output_locs, output_locs_y_ = (
+                    merge_horizontal(
+                        canvas,
+                        count,
+                        output_locs_y_,
+                        canvas_np,
+                        output_locs,
+                        change_indices,
+                    )
+                )
+
+                used_percent = vm.percent
+                canvas_used_percent = (canvas.nbytes / vm.free) * 100
+                if (
+                    used_percent > memory_threshold
+                    or canvas_used_percent > memory_threshold
+                ):
+                    tqdm_loop.desc = "Spill intermediate data to disk"
+                    used_percent = (
+                        canvas_used_percent
+                        if (canvas_used_percent > memory_threshold)
+                        else used_percent
+                    )
+                    msg = (
+                        f"Current Memory usage: {used_percent} %  "
+                        f"exceeds specified threshold: {memory_threshold}. "
+                        f"Saving intermediate results to disk."
+                    )
+                    tqdm.write(msg)
+                    # Flush data in Memory and clear dask graph
+                    canvas_zarr, count_zarr = save_to_cache(
+                        canvas,
+                        count,
+                        canvas_zarr,
+                        count_zarr,
+                        save_path=save_path,
+                    )
+                    canvas, count = None, None
+                    gc.collect()
+                    tqdm_loop.desc = "Inferring patches"
+
+            coordinates.append(
+                da.from_array(
+                    self._get_coordinates(batch_data),
+                )
+            )
+
+        canvas, count, _, _, output_locs_y_ = merge_horizontal(
+            canvas,
+            count,
+            output_locs_y_,
+            canvas_np,
+            output_locs,
+            change_indices=[len(output_locs)],
+        )
+
+        zarr_group = None
+        if canvas_zarr is not None:
+            canvas_zarr, count_zarr = save_to_cache(
+                canvas, count, canvas_zarr, count_zarr
+            )
+            # Wrap zarr in dask array
+            canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
+            count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
+            zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
+
+        # Final vertical merge
+        raw_predictions["probabilities"] = merge_vertical_chunkwise(
+            canvas,
+            count,
+            output_locs_y_,
+            zarr_group,
+            save_path,
+            memory_threshold,
+        )
+        raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+
+        return raw_predictions
+
+    def save_predictions(
+        self: SemanticSegmentor,
+        processed_predictions: dict,
+        output_type: str,
+        save_path: Path | None = None,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict | AnnotationStore | Path:
+        """Save semantic segmentation predictions to disk or return them in memory.
+
+        This method saves predictions in one of the supported formats:
+        - "dict": returns predictions as a Python dictionary.
+        - "zarr": saves predictions as a Zarr group and returns the path.
+        - "annotationstore": converts predictions to an AnnotationStore (.db file).
+
+        If `patch_mode` is True, predictions are saved per image. If False,
+        predictions are merged and saved as a single output.
+
+        Args:
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore".
+            save_path (Path | None):
+                Path to save the output file. Required for "zarr" and "annotationstore".
+            **kwargs (SemanticSegmentorRunParams):
+                Additional runtime parameters including:
+                - scale_factor (tuple[float, float]): For coordinate transformation.
+                - class_dict (dict): Mapping of class indices to names.
+                - return_probabilities (bool): Whether to save probability maps.
+
+        Returns:
+            dict | AnnotationStore | Path:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved Zarr file.
+                - If output_type is "annotationstore": returns AnnotationStore
+                  or path to .db file.
+
+        """
+        # Conversion to annotationstore uses a different function for SemanticSegmentor
+        if output_type.lower() != "annotationstore":
+            return super().save_predictions(
+                processed_predictions, output_type, save_path=save_path, **kwargs
+            )
+
+        return_probabilities = kwargs.get("return_probabilities", False)
+        output_type_ = (
+            "zarr"
+            if is_zarr(save_path.with_suffix(".zarr")) or return_probabilities
+            else "dict"
+        )
+
+        processed_predictions = super().save_predictions(
+            processed_predictions,
+            output_type=output_type_,
+            save_path=save_path.with_suffix(".zarr"),
+            **kwargs,
+        )
+
+        if isinstance(processed_predictions, Path):
+            processed_predictions = zarr.open(str(processed_predictions), mode="r")
+
+        # scale_factor set from kwargs
+        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+        # class_dict set from kwargs
+        class_dict = kwargs.get("class_dict")
+
+        # Need to add support for zarr conversion.
+        save_paths = []
+
+        logger.info("Saving predictions as AnnotationStore.")
+        if self.patch_mode:
+            for i, predictions in enumerate(processed_predictions["predictions"]):
+                if isinstance(self.images[i], Path):
+                    output_path = save_path.parent / (self.images[i].stem + ".db")
+                else:
+                    output_path = save_path.parent / (str(i) + ".db")
+
+                out_file = dict_to_store_semantic_segmentor(
+                    patch_output={"predictions": predictions},
+                    scale_factor=scale_factor,
+                    class_dict=class_dict,
+                    save_path=output_path,
+                )
+
+                save_paths.append(out_file)
+        else:
+            out_file = dict_to_store_semantic_segmentor(
+                patch_output=processed_predictions,
+                scale_factor=scale_factor,
+                class_dict=class_dict,
+                save_path=save_path.with_suffix(".db"),
+            )
+            save_paths = out_file
+
+        if return_probabilities:
+            msg = (
+                f"Probability maps cannot be saved as AnnotationStore. "
+                f"To visualise heatmaps in TIAToolbox Visualization tool,"
+                f"convert heatmaps in {save_path} to ome.tiff using"
+                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+            )
+            logger.info(msg)
+
+        return save_paths
+
+    def _update_run_params(
+        self: SemanticSegmentor,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        save_dir: os.PathLike | Path | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
+        output_type: str = "dict",
+        *,
+        overwrite: bool = False,
+        patch_mode: bool,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> Path | None:
+        """Update runtime parameters for the PatchPredictor engine.
+
+        This method sets internal attributes such as caching, batch size,
+        IO configuration, and output format based on user input and keyword arguments.
+        It also configures whether to include probabilities in the output.
+
+        Args:
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
+            labels (list | None):
+                Optional labels for input images.
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore".
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`).
+            **kwargs (SemanticSegmentorRunParams):
+                Additional runtime parameters.
+
+        Returns:
+            Path | None:
+                Path to the save directory if applicable, otherwise None.
+
+        Raises:
+            ValueError:
+                If `labels` are requested for WSI processing.
+
+        """
+        return_labels = kwargs.get("return_labels")
+
+        if return_labels and not patch_mode:
+            msg = "`return_labels` is not supported when `patch_mode` is False."
+            raise ValueError(msg)
+
+        return super()._update_run_params(
+            images=images,
+            masks=masks,
+            labels=labels,
+            save_dir=save_dir,
+            ioconfig=ioconfig,
+            overwrite=overwrite,
+            patch_mode=patch_mode,
+            output_type=output_type,
+            **kwargs,
+        )
+
+    def run(
+        self: SemanticSegmentor,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
+        *,
+        patch_mode: bool = True,
+        save_dir: os.PathLike | Path | None = None,
+        overwrite: bool = False,
+        output_type: str = "dict",
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> AnnotationStore | Path | str | dict | list[Path]:
+        """Run the semantic segmentation engine on input images.
+
+        This method orchestrates the full inference pipeline, including preprocessing,
+        model inference, post-processing, and saving results. It supports both
+        patch-level and whole slide image (WSI) modes.
+
+        Args:
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches. Can be a list of file paths, WSIReader objects,
+                or a NumPy array of image patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing. Only used when `patch_mode` is False.
+            labels (list | None):
+                Optional labels for input images. Only one label per image is supported.
+            ioconfig (IOSegmentorConfig | None):
+                IO configuration for patch extraction and resolution.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`). Default
+                is True.
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore". Default
+                is "dict".
+            **kwargs (SemanticSegmentorRunParams):
+                Additional runtime parameters to update engine attributes.
+
+        Returns:
+            AnnotationStore | Path | str | dict | list[Path]:
+                - If `patch_mode` is True: returns predictions or path to saved output.
+                - If `patch_mode` is False: returns a dictionary mapping each WSI
+                  to its output path.
+
+        Examples:
+            >>> wsis = ['wsi1.svs', 'wsi2.svs']
+            >>> image_patches = [np.ndarray, np.ndarray]
+            >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
+            >>> output = segmentor.run(image_patches, patch_mode=True)
+            >>> output
+            ... "/path/to/Output.db"
+
+            >>> output = segmentor.run(
+            ...     image_patches,
+            ...     patch_mode=True,
+            ...     output_type="zarr"
+            ... )
+            >>> output
+            ... "/path/to/Output.zarr"
+
+            >>> output = segmentor.run(wsis, patch_mode=False)
+            >>> output.keys()
+            ... ['wsi1.svs', 'wsi2.svs']
+            >>> output['wsi1.svs']
+            ... "/path/to/wsi1.db"
+
+        """
+        return super().run(
+            images=images,
+            masks=masks,
+            labels=labels,
+            ioconfig=ioconfig,
+            patch_mode=patch_mode,
+            save_dir=save_dir,
+            overwrite=overwrite,
+            output_type=output_type,
+            **kwargs,
+        )
+
+
+def concatenate_none(
+    old_arr: np.ndarray | da.Array,
+    new_arr: np.ndarray | da.Array,
+) -> np.ndarray | da.Array:
+    """Concatenate arrays, handling None values gracefully.
+
+    This utility function concatenates `new_arr` to `old_arr` along the first axis.
+    If `old_arr` is None, it returns `new_arr` directly. Supports both NumPy and Dask
+    arrays.
+
+    Args:
+        old_arr (np.ndarray | da.Array):
+            Existing array to append to. Can be None.
+        new_arr (np.ndarray | da.Array):
+            New array to append.
+
+    Returns:
+        np.ndarray | da.Array:
+            Concatenated array of the same type as `new_arr`.
+
+    """
+    if isinstance(new_arr, np.ndarray):
+        return (
+            new_arr if old_arr is None else np.concatenate((old_arr, new_arr), axis=0)
+        )
+
+    return new_arr if old_arr is None else da.concatenate([old_arr, new_arr], axis=0)
+
+
+def merge_batch_to_canvas(
+    blocks: np.ndarray,
+    output_locations: np.ndarray,
+    merged_shape: tuple[int, int, int],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Merge patch-level predictions into a single canvas.
+
+    This function aggregates overlapping patch predictions into a unified
+    output canvas and maintains a count map to normalize overlapping regions.
+
+    Args:
+        blocks (np.ndarray):
+            Array of predicted blocks with shape (N, H, W, C), where N is the
+            number of patches.
+        output_locations (np.ndarray):
+            Array of coordinates for each block in the format
+            [start_x, start_y, end_x, end_y] with shape (N, 4).
+        merged_shape (tuple[int, int, int]):
+            Shape of the final merged canvas (H, W, C).
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]:
+            - canvas: Merged prediction map of shape (H, W, C).
+            - count: Count map indicating how many times each pixel was updated,
+              shape (H, W).
+
+    """
+    canvas = np.zeros(merged_shape, dtype=blocks.dtype)
+    count = np.zeros((*merged_shape[:2], 1), dtype=np.uint8)
+    for i, block in enumerate(blocks):
+        xs, ys, xe, ye = output_locations[i]
+        if not np.any(block):
+            continue
+        # To deal with edge cases
+        canvas[0 : ye - ys, xs:xe, :] += block[0 : ye - ys, 0 : xe - xs, :]
+        count[ys:ye, xs:xe, 0] += 1
+    return canvas, count
+
+
+def merge_horizontal(
+    canvas: None | da.Array,
+    count: None | da.Array,
+    output_locs_y_: np.ndarray,
+    canvas_np: np.ndarray,
+    output_locs: np.ndarray,
+    change_indices: np.ndarray | list[np.ndarray],
+) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray]:
+    """Merge horizontal patches incrementally for each row of patches.
+
+    This function processes segments of NumPy patch arrays (`canvas_np`, `count_np`,
+    `output_locs`) based on `change_indices`, merging them horizontally and appending
+    the results to Dask arrays. It also updates the vertical output locations
+    (`output_locs_y_`) for downstream vertical merging.
+
+    Args:
+        canvas (None | da.Array):
+            Existing Dask array for canvas data, or None if uninitialized.
+        count (None | da.Array):
+            Existing Dask array for count data, or None if uninitialized.
+        output_locs_y_ (np.ndarray):
+            Array tracking vertical output locations for merged patches.
+        canvas_np (np.ndarray):
+            NumPy array of canvas patches to be merged.
+        output_locs (np.ndarray):
+            Array of output locations for each patch.
+        change_indices (np.ndarray | list[np.ndarray]):
+            Indices indicating where to flush and merge patches.
+
+    Returns:
+        tuple:
+            Updated canvas and count Dask arrays, along with remaining canvas_np,
+            count_np, output_locs, and output_locs_y_ arrays after processing.
+
+    """
+    start_idx = 0
+    for c_idx in change_indices:
+        output_locs_ = output_locs[: c_idx - start_idx]
+        canvas_np_ = canvas_np[: c_idx - start_idx]
+
+        batch_xs = np.min(output_locs[:, 0], axis=0)
+        batch_xe = np.max(output_locs[:, 2], axis=0)
+
+        merged_shape = (canvas_np_.shape[1], batch_xe - batch_xs, canvas_np.shape[3])
+
+        canvas_merge, count_merge = merge_batch_to_canvas(
+            blocks=canvas_np_,
+            output_locations=output_locs_,
+            merged_shape=merged_shape,
+        )
+
+        canvas_merge = da.from_array(canvas_merge, chunks=canvas_merge.shape)
+        count_merge = da.from_array(count_merge, chunks=count_merge.shape)
+
+        canvas = concatenate_none(old_arr=canvas, new_arr=canvas_merge)
+        count = concatenate_none(old_arr=count, new_arr=count_merge)
+
+        output_locs_y_ = concatenate_none(
+            old_arr=output_locs_y_, new_arr=output_locs[:, (1, 3)]
+        )
+
+        canvas_np = canvas_np[c_idx - start_idx :]
+        output_locs = output_locs[c_idx - start_idx :]
+        start_idx = c_idx
+
+    return canvas, count, canvas_np, output_locs, output_locs_y_
+
+
+def save_to_cache(
+    canvas: da.Array,
+    count: da.Array,
+    canvas_zarr: zarr.Array,
+    count_zarr: zarr.Array,
+    save_path: str | Path = "temp.zarr",
+) -> tuple[zarr.Array, zarr.Array]:
+    """Save computed canvas and count arrays to Zarr cache.
+
+    This function computes the given Dask arrays (`canvas` and `count`), resizes the
+    corresponding Zarr datasets to accommodate the new data, and appends the results.
+    If the Zarr datasets do not exist, it initializes them within the specified
+    Zarr group.
+
+    Args:
+        canvas (da.Array):
+            Dask array representing image or feature data.
+        count (da.Array):
+            Dask array representing count or normalization data.
+        canvas_zarr (zarr.Array):
+            Existing Zarr dataset for canvas data. If None, a new one is created.
+        count_zarr (zarr.Array):
+            Existing Zarr dataset for count data. If None, a new one is created.
+        save_path (str | Path):
+            Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
+
+    Returns:
+        tuple[zarr.Array, zarr.Array]:
+            Updated Zarr datasets for canvas and count arrays.
+
+    """
+    computed_values = compute(*[canvas, count])
+    canvas_computed, count_computed = computed_values
+
+    chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
+    if canvas_zarr is None:
+        zarr_group = zarr.open(str(save_path), mode="w")
+
+        canvas_zarr = zarr_group.create_dataset(
+            name="canvas",
+            shape=(0, *canvas_computed.shape[1:]),
+            chunks=(chunk_shape[0], *canvas_computed.shape[1:]),
+            dtype=canvas_computed.dtype,
+            overwrite=True,
+        )
+
+        count_zarr = zarr_group.create_dataset(
+            name="count",
+            shape=(0, *count_computed.shape[1:]),
+            dtype=count_computed.dtype,
+            chunks=(chunk_shape[0], *count_computed.shape[1:]),
+            overwrite=True,
+        )
+
+    canvas_zarr.resize(
+        (canvas_zarr.shape[0] + canvas_computed.shape[0], *canvas_zarr.shape[1:])
+    )
+    canvas_zarr[-canvas_computed.shape[0] :] = canvas_computed
+
+    count_zarr.resize(
+        (count_zarr.shape[0] + count_computed.shape[0], *count_zarr.shape[1:])
+    )
+    count_zarr[-count_computed.shape[0] :] = count_computed
+
+    return canvas_zarr, count_zarr
+
+
+def merge_vertical_chunkwise(
+    canvas: da.Array,
+    count: da.Array,
+    output_locs_y_: np.ndarray,
+    zarr_group: zarr.Group,
+    save_path: Path,
+    memory_threshold: int = 80,
+) -> da.Array:
+    """Merge vertically chunked canvas and count arrays into a single probability map.
+
+    This function processes vertically stacked image blocks (`canvas`) and their
+    associated count arrays to compute normalized probabilities. It handles overlapping
+    regions between chunks by applying seam folding and trimming halos to ensure smooth
+    transitions. If a Zarr group is provided, the result is stored incrementally.
+
+    Args:
+        canvas (da.Array):
+            Dask array containing image data split into vertical chunks.
+        count (da.Array):
+            Dask array containing count data corresponding to the canvas.
+        output_locs_y_ (np.ndarray):
+            Array of shape (N, 2) specifying vertical output locations
+            for each chunk, used to compute overlaps.
+        zarr_group (zarr.Group):
+            Zarr group to store the merged probability dataset.
+        save_path (Path):
+            Path to save the intermediate output. The intermediate output
+            is saved in a Zarr file.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
+
+    Returns:
+        da.Array:
+            A merged Dask array of normalized probabilities, either loaded from Zarr
+            or constructed in memory.
+
+    """
+    y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
+    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
+
+    num_chunks = canvas.numblocks[0]
+    probabilities_zarr, probabilities_da = None, None
+    chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
+
+    tqdm = get_tqdm()
+    tqdm_loop = tqdm(overlaps, leave=False, desc="Merging rows")
+
+    used_percent = 0
+
+    curr_chunk = canvas.blocks[0, 0].compute()
+    curr_count = count.blocks[0, 0].compute()
+    next_chunk = canvas.blocks[1, 0].compute() if num_chunks > 1 else None
+    next_count = count.blocks[1, 0].compute() if num_chunks > 1 else None
+
+    for i, overlap in enumerate(tqdm_loop):
+        if next_chunk is not None and overlap > 0:
+            curr_chunk[-overlap:] += next_chunk[:overlap]
+            curr_count[-overlap:] += next_count[:overlap]
+
+        # Normalize
+        curr_count = np.where(curr_count == 0, 1, curr_count)
+        probabilities = curr_chunk / curr_count.astype(np.float32)
+
+        probabilities_zarr, probabilities_da = store_probabilities(
+            probabilities=probabilities,
+            chunk_shape=chunk_shape,
+            probabilities_zarr=probabilities_zarr,
+            probabilities_da=probabilities_da,
+            zarr_group=zarr_group,
+        )
+
+        if probabilities_da is not None:
+            vm = psutil.virtual_memory()
+            used_percent = (probabilities_da.nbytes / vm.free) * 100
+        if probabilities_zarr is None and used_percent > memory_threshold:
+            msg = (
+                f"Current Memory usage: {used_percent} %  "
+                f"exceeds specified threshold: {memory_threshold}. "
+                f"Saving intermediate results to disk."
+            )
+            tqdm.write(msg)
+            zarr_group = zarr.open(str(save_path), mode="a")
+            probabilities_zarr = zarr_group.create_dataset(
+                name="probabilities",
+                shape=probabilities_da.shape,
+                chunks=(chunk_shape[0], *probabilities.shape[1:]),
+                dtype=probabilities.dtype,
+                overwrite=True,
+            )
+            probabilities_zarr[:] = probabilities_da.compute()
+
+            probabilities_da = None
+
+        if next_chunk is not None:
+            curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
+
+        if i + 2 < num_chunks:
+            next_chunk = canvas.blocks[i + 2, 0].compute()
+            next_count = count.blocks[i + 2, 0].compute()
+        else:
+            next_chunk, next_count = None, None
+
+    if probabilities_zarr:
+        if "canvas" in zarr_group:
+            del zarr_group["canvas"]
+        if "count" in zarr_group:
+            del zarr_group["count"]
+        return da.from_zarr(
+            probabilities_zarr, chunks=(chunk_shape[0], *probabilities.shape[1:])
+        )
+
+    return probabilities_da
+
+
+def store_probabilities(
+    probabilities: np.ndarray,
+    chunk_shape: tuple[int, ...],
+    probabilities_zarr: zarr.Array | None,
+    probabilities_da: da.Array | None,
+    zarr_group: zarr.Group | None,
+) -> tuple[zarr.Array | None, da.Array | None]:
+    """Store computed probability data into a Zarr dataset or accumulate in memory.
+
+    If a Zarr group is provided, the function appends the given probability array
+    to the 'probabilities' dataset, resizing as needed. Otherwise, it concatenates
+    the array into an existing Dask array for in-memory accumulation.
+
+    Args:
+        probabilities (np.ndarray):
+            Computed probability array to store.
+        chunk_shape (tuple[int, ...]):
+            Chunk shape used for Zarr dataset creation.
+        probabilities_zarr (zarr.Array | None):
+            Existing Zarr dataset, or None to initialize.
+        probabilities_da (da.Array | None):
+            Existing Dask array for in-memory accumulation.
+        zarr_group (zarr.Group | None):
+            Zarr group used to create or access the dataset.
+
+    Returns:
+        tuple[zarr.Array | None, da.Array | None]:
+            Updated Zarr dataset and/or Dask array.
+
+    """
+    if zarr_group is not None:
+        if probabilities_zarr is None:
+            probabilities_zarr = zarr_group.create_dataset(
+                name="probabilities",
+                shape=(0, *probabilities.shape[1:]),
+                chunks=(chunk_shape[0], *probabilities.shape[1:]),
+                dtype=probabilities.dtype,
+            )
+
+        probabilities_zarr.resize(
+            (
+                probabilities_zarr.shape[0] + probabilities.shape[0],
+                *probabilities_zarr.shape[1:],
+            )
+        )
+        probabilities_zarr[-probabilities.shape[0] :] = probabilities
+    else:
+        probabilities_da = concatenate_none(
+            old_arr=probabilities_da,
+            new_arr=da.from_array(
+                probabilities, chunks=(chunk_shape[0], *probabilities.shape[1:])
+            ),
+        )
+
+    return probabilities_zarr, probabilities_da
+
+
+def prepare_full_batch(
+    batch_output: np.ndarray,
+    batch_locs: np.ndarray,
+    full_output_locs: np.ndarray,
+    output_locs: np.ndarray,
+    *,
+    is_last: bool,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Prepare full-sized output and count arrays for a batch of patch predictions.
+
+    This function aligns patch-level predictions with global output locations when
+    a mask (e.g., auto_get_mask) is applied. It initializes full-sized arrays and
+    fills them using matched indices. If the batch is the last in the sequence,
+    it pads the arrays to cover remaining locations.
+
+    Args:
+        batch_output (np.ndarray):
+            Patch-level model predictions of shape (N, H, W, C).
+        batch_locs (np.ndarray):
+            Output locations corresponding to `batch_output`.
+        full_output_locs (np.ndarray):
+            Remaining global output locations to be matched.
+        output_locs (np.ndarray):
+            Accumulated output location array across batches.
+        is_last (bool):
+            Flag indicating whether this is the final batch.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+            - full_batch_output: Full-sized output array with predictions placed.
+            - full_output_locs: Updated remaining global output locations.
+            - output_locs: Updated accumulated output locations.
+
+    """
+    # Use np.intersect1d once numpy version is upgraded to 2.0
+    full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
+    matches = [full_output_dict[tuple(row)] for row in batch_locs]
+
+    total_size = np.max(matches).astype(np.uint16) + 1
+
+    # Initialize full output array
+    full_batch_output = np.zeros(
+        shape=(total_size, *batch_output.shape[1:]),
+        dtype=batch_output.dtype,
+    )
+
+    # Place matching outputs using matching indices
+    full_batch_output[matches] = batch_output
+
+    output_locs = concatenate_none(
+        old_arr=output_locs, new_arr=full_output_locs[:total_size]
+    )
+    full_output_locs = full_output_locs[total_size:]
+
+    if is_last:
+        output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs)
+        full_batch_output = concatenate_none(
+            old_arr=full_batch_output,
+            new_arr=np.zeros(
+                shape=(len(full_output_locs), *batch_output.shape[1:]), dtype=np.uint8
+            ),
+        )
+
+    return full_batch_output, full_output_locs, output_locs
