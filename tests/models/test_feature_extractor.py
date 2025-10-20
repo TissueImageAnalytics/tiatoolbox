@@ -24,9 +24,9 @@ ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 # -------------------------------------------------------------------------------------
 
 
-def test_engine(remote_sample: Callable, tmp_path: Path) -> None:
+def test_engine(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test feature extraction with DeepFeatureExtractor engine."""
-    save_dir = tmp_path / "output"
+    save_dir = track_tmp_path / "output"
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
 
@@ -55,10 +55,10 @@ def test_engine(remote_sample: Callable, tmp_path: Path) -> None:
     "model", [CNNBackbone("resnet50"), TimmBackbone("efficientnet_b0", pretrained=True)]
 )
 def test_full_inference(
-    remote_sample: Callable, tmp_path: Path, model: Callable
+    remote_sample: Callable, track_tmp_path: Path, model: Callable
 ) -> None:
     """Test full inference with CNNBackbone and TimmBackbone models."""
-    save_dir = tmp_path / "output"
+    save_dir = track_tmp_path / "output"
     # pre-emptive clean up
     shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
 
@@ -121,9 +121,11 @@ def test_full_inference(
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_multi_gpu_feature_extraction(remote_sample: Callable, tmp_path: Path) -> None:
+def test_multi_gpu_feature_extraction(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
     """Local functionality test for feature extraction using multiple GPUs."""
-    save_dir = tmp_path / "output"
+    save_dir = track_tmp_path / "output"
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
     shutil.rmtree(save_dir, ignore_errors=True)
 

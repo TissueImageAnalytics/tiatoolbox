@@ -658,3 +658,39 @@ def timed(fn: Callable, *args: object) -> (Callable, float):
         end = time.time()
         compile_time = end - start
     return result, compile_time
+
+
+_tmp_paths: list[Path] = []
+
+
+@pytest.fixture
+def track_tmp_path(tmp_path: Path) -> Path:
+    """This fixture tracks `tmp_path` for clean up.
+
+    Fixture that wraps pytest's built-in `tmp_path` and tracks each temporary path
+    for later cleanup at the module level.
+
+    Returns:
+        Path: The temporary directory path for the current test function.
+
+    """
+    _tmp_paths.append(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture(scope="module", autouse=True)
+def module_teardown() -> None:
+    """This module tears down temporary data directories.
+
+    Module-scoped fixture that automatically runs after all tests in a module.
+    It cleans up all temporary paths tracked during the module's execution.
+
+    Yields:
+        None: Allows pytest to run tests before executing the teardown logic.
+
+    """
+    yield
+    for path in _tmp_paths:
+        if path.exists():
+            shutil.rmtree(path)
+            print(f"Cleaned up: {path}")
