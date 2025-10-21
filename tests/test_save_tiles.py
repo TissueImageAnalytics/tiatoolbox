@@ -11,7 +11,9 @@ from tiatoolbox import cli
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_save_tiles(sample_svs_ndpi_wsis: Path, tmp_path: Path) -> None:
+def test_command_line_save_tiles(
+    sample_svs_ndpi_wsis: Path, track_tmp_path: Path
+) -> None:
     """Test for save_tiles CLI."""
     runner = CliRunner()
     save_tiles_result = runner.invoke(
@@ -25,13 +27,12 @@ def test_command_line_save_tiles(sample_svs_ndpi_wsis: Path, tmp_path: Path) -> 
             "--tile-objective-value",
             "5",
             "--output-path",
-            str(tmp_path / "all_tiles"),
+            str(track_tmp_path / "all_tiles"),
         ],
     )
 
-    tmp_path = Path(tmp_path)
-    cmu_small_region = tmp_path / "all_tiles" / "CMU-1-Small-Region.svs"
-    bioformatspull2759 = tmp_path / "all_tiles" / "bioformatspull2759.ndpi"
+    cmu_small_region = track_tmp_path / "all_tiles" / "CMU-1-Small-Region.svs"
+    bioformatspull2759 = track_tmp_path / "all_tiles" / "bioformatspull2759.ndpi"
 
     assert save_tiles_result.exit_code == 0
     assert (cmu_small_region / "Output.csv").exists()
@@ -43,7 +44,9 @@ def test_command_line_save_tiles(sample_svs_ndpi_wsis: Path, tmp_path: Path) -> 
     assert (bioformatspull2759 / "Tile_5_0_0.jpg").exists()
 
 
-def test_command_line_save_tiles_single_file(sample_svs: Path, tmp_path: Path) -> None:
+def test_command_line_save_tiles_single_file(
+    sample_svs: Path, track_tmp_path: Path
+) -> None:
     """Test for save_tiles CLI single file."""
     runner = CliRunner()
     save_svs_tiles_result = runner.invoke(
@@ -57,7 +60,7 @@ def test_command_line_save_tiles_single_file(sample_svs: Path, tmp_path: Path) -
             "--tile-objective-value",
             "5",
             "--output-path",
-            tmp_path,
+            track_tmp_path,
             "--verbose",
             "True",
         ],
@@ -65,19 +68,19 @@ def test_command_line_save_tiles_single_file(sample_svs: Path, tmp_path: Path) -
 
     assert save_svs_tiles_result.exit_code == 0
     assert (
-        Path(tmp_path)
+        Path(track_tmp_path)
         .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Output.csv")
         .exists()
     )
     assert (
-        Path(tmp_path)
+        Path(track_tmp_path)
         .joinpath("CMU-1-Small-Region.svs")
         .joinpath("slide_thumbnail.jpg")
         .exists()
     )
     assert (
-        Path(tmp_path)
+        Path(track_tmp_path)
         .joinpath("CMU-1-Small-Region.svs")
         .joinpath("Tile_5_0_0.jpg")
         .exists()
@@ -86,7 +89,7 @@ def test_command_line_save_tiles_single_file(sample_svs: Path, tmp_path: Path) -
 
 def test_command_line_save_tiles_file_not_found(
     sample_svs: Path,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for save_tiles CLI file not found error."""
     runner = CliRunner()
@@ -101,7 +104,7 @@ def test_command_line_save_tiles_file_not_found(
             "--tile-objective-value",
             "5",
             "--output-path",
-            tmp_path,
+            track_tmp_path,
         ],
     )
 
