@@ -110,7 +110,7 @@ def test_tiffreader_non_tiled_metadata(
 
 def test_tiffreader_fallback_to_virtual(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test fallback to VirtualWSIReader.
 
@@ -135,7 +135,7 @@ def test_tiffreader_fallback_to_virtual(
 
     monkeypatch.setattr(wsireader, "TIFFWSIReader", DummyTIFFWSIReader)
 
-    dummy_file = tmp_path / "dummy.tiff"
+    dummy_file = track_tmp_path / "dummy.tiff"
     dummy_img = np.zeros((10, 10, 3), dtype=np.uint8)
     cv2.imwrite(str(dummy_file), dummy_img)
 
@@ -144,10 +144,10 @@ def test_tiffreader_fallback_to_virtual(
 
 
 def test_try_tiff_raises_other_valueerror(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path
 ) -> None:
     """Test try_tiff raises ValueError if not an unsupported TIFF format."""
-    tiff_path = tmp_path / "test.tiff"
+    tiff_path = track_tmp_path / "test.tiff"
     Image.new("RGB", (10, 10), color="white").save(tiff_path)
 
     # Patch TIFFWSIReader to raise a different ValueError
@@ -480,11 +480,11 @@ def test_get_ome_objective_power_none() -> None:
 
 
 def test_handle_tiff_wsi_returns_tiff_reader(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path
 ) -> None:
     """Test that _handle_tiff_wsi returns TIFFWSIReader for valid TIFF image."""
     # Create a valid TIFF image using PIL
-    tiff_path = tmp_path / "dummy.tiff"
+    tiff_path = track_tmp_path / "dummy.tiff"
     image = Image.new("RGB", (10, 10), color="white")
     image.save(tiff_path)
 
@@ -513,11 +513,11 @@ def raise_openslide_error(*args: object, **kwargs: object) -> None:
 
 
 def test_handle_tiff_wsi_openslide_error(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path
 ) -> None:
     """Test _handle_tiff_wsi when OpenSlideWSIReader raises."""
     # Create a valid TIFF image
-    tiff_path = tmp_path / "test.tiff"
+    tiff_path = track_tmp_path / "test.tiff"
     Image.new("RGB", (10, 10), color="white").save(tiff_path)
 
     # Patch detect_format to return a non-None value
@@ -543,11 +543,11 @@ def test_handle_tiff_wsi_openslide_error(
 
 
 def test_handle_tiff_wsi_openslide_success(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path
 ) -> None:
     """Test _handle_tiff_wsi returns OpenSlideWSIReader when detect_format is valid."""
     # Create a valid TIFF image
-    tiff_path = tmp_path / "test.tiff"
+    tiff_path = track_tmp_path / "test.tiff"
     Image.new("RGB", (10, 10), color="white").save(tiff_path)
 
     # Patch detect_format to return a valid format
