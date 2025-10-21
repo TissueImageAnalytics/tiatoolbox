@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -13,6 +12,7 @@ from defusedxml import ElementTree
 from PIL import Image
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 from tiatoolbox.wsicore import wsireader
