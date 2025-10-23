@@ -13,13 +13,22 @@ import torch
 import tqdm
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
+from typing_extensions import Unpack
 
 from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
-from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+from tiatoolbox.models.engine.semantic_segmentor import (
+    SemanticSegmentor,
+    SemanticSegmentorRunParams,
+)
 from tiatoolbox.tools.patchextraction import PatchExtractor
 
 if TYPE_CHECKING:  # pragma: no cover
+    import os
     from collections.abc import Callable
+    from pathlib import Path
+
+    from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.wsicore import WSIReader
 
     from .io_config import IOInstanceSegmentorConfig, IOSegmentorConfig
 
@@ -812,3 +821,29 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             # manually call the callback rather than
             # attaching it when receiving/creating the future
             callback(*result)
+
+    def run(
+        self: NucleusInstanceSegmentor,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        labels: list | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
+        *,
+        patch_mode: bool = True,
+        save_dir: os.PathLike | Path | None = None,
+        overwrite: bool = False,
+        output_type: str = "dict",
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> AnnotationStore | Path | str | dict | list[Path]:
+        """Run the nucleus instance segmentor engine on input images."""
+        return super().run(
+            images=images,
+            masks=masks,
+            labels=labels,
+            ioconfig=ioconfig,
+            patch_mode=patch_mode,
+            save_dir=save_dir,
+            overwrite=overwrite,
+            output_type=output_type,
+            **kwargs,
+        )
