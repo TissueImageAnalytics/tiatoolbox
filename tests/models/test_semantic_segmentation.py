@@ -264,7 +264,7 @@ def test_functional_wsi_stream_dataset(remote_sample: Callable) -> None:
 # -------------------------------------------------------------------------------------
 
 
-def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
+def test_crash_segmentor(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Functional crash tests for segmentor."""
     # # convert to pathlib Path to prevent wsireader complaint
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
@@ -273,7 +273,7 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
 
     model = _CNNTo1()
 
-    save_dir = tmp_path / "test_crash_segmentor"
+    save_dir = track_tmp_path / "test_crash_segmentor"
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
 
     # fake injection to trigger Segmentor to create parallel
@@ -359,9 +359,9 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
     )
 
 
-def test_functional_segmentor_merging(tmp_path: Path) -> None:
+def test_functional_segmentor_merging(track_tmp_path: Path) -> None:
     """Functional test for assmebling output."""
-    save_dir = Path(tmp_path)
+    save_dir = Path(track_tmp_path)
 
     model = _CNNTo1()
     semantic_segmentor = SemanticSegmentor(batch_size=BATCH_SIZE, model=model)
@@ -468,19 +468,19 @@ def test_functional_segmentor_merging(tmp_path: Path) -> None:
 
 def test_functional_segmentor(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
     chdir: Callable,
 ) -> None:
     """Functional test for segmentor."""
-    save_dir = tmp_path / "dump"
+    save_dir = track_tmp_path / "dump"
     # # convert to pathlib Path to prevent wsireader complaint
     resolution = 2.0
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
     reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="baseline")
-    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    mini_wsi_jpg = f"{track_tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
-    mini_wsi_msk = f"{tmp_path}/mini_mask.jpg"
+    mini_wsi_msk = f"{track_tmp_path}/mini_mask.jpg"
     imwrite(mini_wsi_msk, (thumb > 0).astype(np.uint8))
 
     # preemptive clean up
@@ -518,7 +518,7 @@ def test_functional_segmentor(
     )
     shutil.rmtree(save_dir, ignore_errors=True)
 
-    with chdir(tmp_path):
+    with chdir(track_tmp_path):
         # * check exception bypass in the log
         # there should be no exception, but how to check the log?
         semantic_segmentor.predict(
@@ -533,7 +533,7 @@ def test_functional_segmentor(
             crash_on_exception=False,
         )
         shutil.rmtree(
-            tmp_path / "output",
+            track_tmp_path / "output",
             ignore_errors=True,
         )  # default output dir test
 
@@ -615,9 +615,9 @@ def test_functional_segmentor(
     )
 
 
-def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
+def test_subclass(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Create subclass and test parallel processing setup."""
-    save_dir = Path(tmp_path)
+    save_dir = Path(track_tmp_path)
     mini_wsi_jpg = Path(remote_sample("wsi2_4k_4k_jpg"))
 
     model = _CNNTo1()
@@ -646,13 +646,13 @@ def test_subclass(remote_sample: Callable, tmp_path: Path) -> None:
 
 
 # specifically designed for travis
-def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functional_pretrained(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for load up pretrained and over-writing tile mode ioconfig."""
-    save_dir = Path(f"{tmp_path}/output")
+    save_dir = Path(f"{track_tmp_path}/output")
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=1.0, units="baseline")
-    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    mini_wsi_jpg = f"{track_tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
     semantic_segmentor = SemanticSegmentor(
@@ -688,9 +688,11 @@ def test_functional_pretrained(remote_sample: Callable, tmp_path: Path) -> None:
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> None:
+def test_behavior_tissue_mask_local(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
-    save_dir = tmp_path
+    save_dir = track_tmp_path
     wsi_with_artifacts = Path(remote_sample("wsi3_20k_20k_svs"))
     mini_wsi_jpg = Path(remote_sample("wsi2_4k_4k_jpg"))
 
@@ -728,9 +730,9 @@ def test_behavior_tissue_mask_local(remote_sample: Callable, tmp_path: Path) -> 
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_behavior_bcss_local(remote_sample: Callable, tmp_path: Path) -> None:
+def test_behavior_bcss_local(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Contain test for behavior of the segmentor and pretrained models."""
-    save_dir = tmp_path
+    save_dir = track_tmp_path
 
     wsi_breast = Path(remote_sample("wsi4_4k_4k_svs"))
     semantic_segmentor = SemanticSegmentor(
@@ -759,14 +761,14 @@ def test_behavior_bcss_local(remote_sample: Callable, tmp_path: Path) -> None:
 
 def test_cli_semantic_segment_out_exists_error(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for semantic segmentation if output path exists."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{track_tmp_path}/small_svs_tissue_mask.jpg"
     runner = CliRunner()
     semantic_segment_result = runner.invoke(
         cli.main,
@@ -779,7 +781,7 @@ def test_cli_semantic_segment_out_exists_error(
             "--masks",
             str(sample_wsi_msk),
             "--output-path",
-            tmp_path,
+            track_tmp_path,
         ],
     )
 
@@ -790,14 +792,14 @@ def test_cli_semantic_segment_out_exists_error(
 
 def test_cli_semantic_segmentation_ioconfig(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for semantic segmentation single file custom ioconfig."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = f"{tmp_path}/small_svs_tissue_mask.jpg"
+    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = f"{track_tmp_path}/small_svs_tissue_mask.jpg"
 
     pretrained_weights = fetch_pretrained_weights("fcn-tissue_mask")
 
@@ -809,7 +811,7 @@ def test_cli_semantic_segmentation_ioconfig(
         "stride_shape": [256, 256],
         "save_resolution": {"units": "mpp", "resolution": 8.0},
     }
-    with Path.open(tmp_path.joinpath("config.yaml"), "w") as fptr:
+    with Path.open(track_tmp_path.joinpath("config.yaml"), "w") as fptr:
         yaml.dump(config, fptr)
 
     runner = CliRunner()
@@ -827,34 +829,34 @@ def test_cli_semantic_segmentation_ioconfig(
             "--masks",
             str(sample_wsi_msk),
             "--output-path",
-            tmp_path.joinpath("output"),
+            track_tmp_path.joinpath("output"),
             "--yaml-config-path",
-            tmp_path.joinpath("config.yaml"),
+            track_tmp_path.joinpath("config.yaml"),
         ],
     )
 
     assert semantic_segment_result.exit_code == 0
-    assert tmp_path.joinpath("output/0.raw.0.npy").exists()
-    assert tmp_path.joinpath("output/file_map.dat").exists()
-    assert tmp_path.joinpath("output/results.json").exists()
+    assert track_tmp_path.joinpath("output/0.raw.0.npy").exists()
+    assert track_tmp_path.joinpath("output/file_map.dat").exists()
+    assert track_tmp_path.joinpath("output/results.json").exists()
 
 
 def test_cli_semantic_segmentation_multi_file(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for models CLI multiple file with mask."""
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = tmp_path / "small_svs_tissue_mask.jpg"
+    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = track_tmp_path / "small_svs_tissue_mask.jpg"
 
     # Make multiple copies for test
-    dir_path = tmp_path / "new_copies"
+    dir_path = track_tmp_path / "new_copies"
     dir_path.mkdir()
 
-    dir_path_masks = tmp_path / "new_copies_masks"
+    dir_path_masks = track_tmp_path / "new_copies_masks"
     dir_path_masks.mkdir()
 
     try:
@@ -871,7 +873,7 @@ def test_cli_semantic_segmentation_multi_file(
         shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("1_" + sample_wsi_msk.name))
         shutil.copy(sample_wsi_msk, dir_path_masks.joinpath("2_" + sample_wsi_msk.name))
 
-    tmp_path = tmp_path / "output"
+    track_tmp_path = track_tmp_path / "output"
 
     runner = CliRunner()
     semantic_segment_result = runner.invoke(
@@ -885,19 +887,19 @@ def test_cli_semantic_segmentation_multi_file(
             "--masks",
             str(dir_path_masks),
             "--output-path",
-            str(tmp_path),
+            str(track_tmp_path),
         ],
     )
 
     assert semantic_segment_result.exit_code == 0
-    assert tmp_path.joinpath("0.raw.0.npy").exists()
-    assert tmp_path.joinpath("1.raw.0.npy").exists()
-    assert tmp_path.joinpath("file_map.dat").exists()
-    assert tmp_path.joinpath("results.json").exists()
+    assert track_tmp_path.joinpath("0.raw.0.npy").exists()
+    assert track_tmp_path.joinpath("1.raw.0.npy").exists()
+    assert track_tmp_path.joinpath("file_map.dat").exists()
+    assert track_tmp_path.joinpath("results.json").exists()
 
     # load up the raw prediction and perform precision check
     _cache_pred = imread(Path(remote_sample("small_svs_tissue_mask")))
-    _test_pred = np.load(str(tmp_path.joinpath("0.raw.0.npy")))
+    _test_pred = np.load(str(track_tmp_path.joinpath("0.raw.0.npy")))
     _test_pred = (_test_pred[..., 1] > 0.50) * 255
 
     assert np.mean(np.abs(_cache_pred - _test_pred) / 255) < 1e-3
@@ -910,13 +912,13 @@ def test_cli_semantic_segmentation_multi_file(
 
 def test_semantic_segmentor_torch_compile(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test SemanticSegmentor using pretrained model with torch.compile functionality.
 
     Args:
         remote_sample (Callable): Callable object used to extract remote sample.
-        tmp_path (Path): Path to temporary directory.
+        track_tmp_path (Path): Path to temporary directory.
 
     """
     torch_compile_mode = rcParam["torch_compile_mode"]
@@ -925,7 +927,7 @@ def test_semantic_segmentor_torch_compile(
     _, compile_time = timed(
         test_functional_pretrained,
         remote_sample,
-        tmp_path,
+        track_tmp_path,
     )
     logger.info("torch.compile default mode: %s", compile_time)
     torch._dynamo.reset()
@@ -933,7 +935,7 @@ def test_semantic_segmentor_torch_compile(
     _, compile_time = timed(
         test_functional_pretrained,
         remote_sample,
-        tmp_path,
+        track_tmp_path,
     )
     logger.info("torch.compile reduce-overhead mode: %s", compile_time)
     torch._dynamo.reset()
@@ -941,7 +943,7 @@ def test_semantic_segmentor_torch_compile(
     _, compile_time = timed(
         test_functional_pretrained,
         remote_sample,
-        tmp_path,
+        track_tmp_path,
     )
     logger.info("torch.compile max-autotune mode: %s", compile_time)
     torch._dynamo.reset()

@@ -42,6 +42,7 @@ def test_functionality(
     output = model.infer_batch(model, batch, device=map_location)
     output, _ = model.postproc(output[0])
     assert np.max(np.unique(output)) == 46
+    Path(weights_path).unlink()
 
 
 def test_value_error() -> None:
@@ -54,7 +55,7 @@ def test_value_error() -> None:
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_micronet_output(remote_sample: Callable, tmp_path: Path) -> None:
+def test_micronet_output(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test the output of MicroNet."""
     svs_1_small = Path(remote_sample("svs-1-small"))
     micronet_output = Path(remote_sample("micronet-output"))
@@ -74,7 +75,7 @@ def test_micronet_output(remote_sample: Callable, tmp_path: Path) -> None:
         imgs=[
             svs_1_small,
         ],
-        save_dir=tmp_path / "output",
+        save_dir=track_tmp_path / "output",
     )
 
     output = np.load(output[0][1] + ".raw.0.npy")

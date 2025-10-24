@@ -514,7 +514,7 @@ def test_filter_coordinates() -> None:
 def test_mask_based_patch_extractor_ndpi(
     sample_ndpi: Path,
     caplog: pytest.LogCaptureFixture,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
@@ -622,13 +622,13 @@ def test_mask_based_patch_extractor_ndpi(
         ),
         {"label": "region2"},
     )
-    store = SQLiteStore(tmp_path / "test.db")
+    store = SQLiteStore(track_tmp_path / "test.db")
     store.append_many([ann, ann2])
     store.close()
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        input_mask=str(tmp_path / "test.db"),
+        input_mask=str(track_tmp_path / "test.db"),
         method_name="slidingwindow",
         patch_size=patch_size,
         resolution=res,
@@ -640,7 +640,7 @@ def test_mask_based_patch_extractor_ndpi(
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        input_mask=str(tmp_path / "test.db"),
+        input_mask=str(track_tmp_path / "test.db"),
         method_name="slidingwindow",
         patch_size=patch_size,
         resolution=res,
@@ -652,7 +652,7 @@ def test_mask_based_patch_extractor_ndpi(
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        input_mask=str(tmp_path / "test.db"),
+        input_mask=str(track_tmp_path / "test.db"),
         method_name="slidingwindow",
         patch_size=patch_size,
         resolution=res,
