@@ -1572,11 +1572,7 @@ class WSIReader:
             )
         elif method == "otsu":
             masker = tissuemask.OtsuTissueMasker(**masker_kwargs)
-        else:  # grandqc
-            masker = tissuemask.GrandQCMasker(**masker_kwargs)
-            # GrandQC model is trained on 10mpp images
-            thumbnail = self.slide_thumbnail(resolution=10, units="mpp")
-        mask_img = masker.fit_transform(np.array([thumbnail]))[0]
+        mask_img = masker.fit_transform([thumbnail])[0]
         return VirtualWSIReader(mask_img.astype(np.uint8), info=self.info, mode="bool")
 
     def save_tiles(
