@@ -34,15 +34,20 @@ class TissueDetectionModel(ModelABC):
 
     """
 
-    def __init__(self: TissueDetectionModel) -> None:
+    def __init__(
+        self: TissueDetectionModel, num_input_channels: int, num_output_channels: int
+    ) -> None:
         """Initialize TissueDetectionModel."""
         super().__init__()
+        self.num_input_channels = num_input_channels
+        self.num_output_channels = num_output_channels
         self._postproc = self.postproc
         self._preproc = self.preproc
         self.tissue_detection_model = smp.UnetPlusPlus(
             encoder_name="timm-efficientnet-b0",
             encoder_weights=None,
-            classes=2,
+            in_channels=self.num_input_channels,
+            classes=self.num_output_channels,
             activation=None,
         )
 

@@ -25,7 +25,7 @@ def test_functional_grandqc(remote_sample: Callable) -> None:
     assert pretrained_weights is not None
 
     # test creation
-    model = TissueDetectionModel()
+    model = TissueDetectionModel(num_input_channels=3, num_output_channels=2)
     assert model is not None
 
     # load pretrained weights
@@ -36,6 +36,8 @@ def test_functional_grandqc(remote_sample: Callable) -> None:
     model, ioconfig = get_pretrained_model("grandqc_tissue_detection_mpp10")
     assert isinstance(model, TissueDetectionModel)
     assert isinstance(ioconfig, IOSegmentorConfig)
+    assert model.num_input_channels == 3
+    assert model.num_output_channels == 2
 
     # test inference
     mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
