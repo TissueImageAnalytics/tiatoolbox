@@ -16,7 +16,23 @@ from tiatoolbox.models.models_abc import ModelABC
 
 
 class TissueDetectionModel(ModelABC):
-    """GrandQC Tissue Detection Model."""
+    """GrandQC Tissue Detection Model.
+
+    Example:
+        >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+        >>> semantic_segmentor = SemanticSegmentor(
+        ...     model="grandqc_tissue_detection_mpp10",
+        ... )
+        >>> results = semantic_segmentor.run(
+        ...     ["/example_wsi.svs"],
+        ...     masks=None,
+        ...     auto_get_mask=False,
+        ...     patch_mode=False,
+        ...     save_dir=Path("/tissue_mask/"),
+        ...     output_type="annotationstore",
+        ... )
+
+    """
 
     def __init__(self: TissueDetectionModel) -> None:
         """Initialize TissueDetectionModel."""
