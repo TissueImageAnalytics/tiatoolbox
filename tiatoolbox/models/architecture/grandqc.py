@@ -66,8 +66,8 @@ class TissueDetectionModel(ModelABC):
     def postproc(image: np.ndarray) -> np.ndarray:
         """Define post-processing for this model.
 
-        This returns the class index with the minimum probability.
-        In this model, this means selecting tissue class.
+        This simply applies argmin to obtain tissue class.
+        (Tissue = 0, Background = 1)
 
         """
         return image.argmin(axis=-1)
@@ -108,9 +108,7 @@ class TissueDetectionModel(ModelABC):
         """
         model.eval()
 
-        ####
         imgs = batch_data
-
         imgs = imgs.to(device).type(torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
 
