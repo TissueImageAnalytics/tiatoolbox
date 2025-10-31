@@ -237,14 +237,14 @@ def test_cross_section_boundary_boxes() -> None:
     assert np.sum(flag - _flag) == 0, "Fail Cross Section Flag"
 
 
-def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
+def test_crash_segmentor(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test engine crash when given malformed input."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     sample_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = track_tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
     save_dir = f"{root_save_dir}/instance/"
 
@@ -285,17 +285,17 @@ def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
         )
 
 
-def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functionality_ci(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Functionality test for nuclei instance segmentor."""
     gc.collect()
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 2.0
 
     reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
-    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    mini_wsi_jpg = f"{track_tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
     save_dir = f"{root_save_dir}/instance/"
@@ -335,11 +335,11 @@ def test_functionality_ci(remote_sample: Callable, tmp_path: Path) -> None:
 
 def test_functionality_merge_tile_predictions_ci(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Functional tests for merging tile predictions."""
     gc.collect()  # Force clean up everything on hold
-    save_dir = Path(f"{tmp_path}/output")
+    save_dir = Path(f"{track_tmp_path}/output")
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     resolution = 0.5
@@ -438,10 +438,10 @@ def test_functionality_merge_tile_predictions_ci(
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functionality_local(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Local functionality test for nuclei instance segmentor."""
-    root_save_dir = Path(tmp_path)
-    save_dir = Path(f"{tmp_path}/output")
+    root_save_dir = Path(track_tmp_path)
+    save_dir = Path(f"{track_tmp_path}/output")
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
 
     # * generate full output w/o parallel post-processing worker first
@@ -512,17 +512,17 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
 
 def test_cli_nucleus_instance_segment_ioconfig(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test for nucleus segmentation with IOConfig."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
-    output_path = tmp_path / "output"
+    output_path = track_tmp_path / "output"
 
     resolution = 2.0
 
     reader = WSIReader.open(mini_wsi_svs)
     thumb = reader.slide_thumbnail(resolution=resolution, units="mpp")
-    mini_wsi_jpg = f"{tmp_path}/mini_svs.jpg"
+    mini_wsi_jpg = f"{track_tmp_path}/mini_svs.jpg"
     imwrite(mini_wsi_jpg, thumb)
 
     pretrained_weights = fetch_pretrained_weights("hovernet_fast-pannuke")
@@ -543,7 +543,7 @@ def test_cli_nucleus_instance_segment_ioconfig(
         "save_resolution": {"units": "mpp", "resolution": 8.0},
     }
 
-    with Path.open(tmp_path / "config.yaml", "w") as fptr:
+    with Path.open(track_tmp_path / "config.yaml", "w") as fptr:
         yaml.dump(config, fptr)
 
     runner = CliRunner()
@@ -564,7 +564,7 @@ def test_cli_nucleus_instance_segment_ioconfig(
             "--output-path",
             str(output_path),
             "--yaml-config-path",
-            str(tmp_path.joinpath("config.yaml")),
+            str(track_tmp_path.joinpath("config.yaml")),
         ],
     )
 
@@ -574,10 +574,12 @@ def test_cli_nucleus_instance_segment_ioconfig(
     assert output_path.joinpath("results.json").exists()
 
 
-def test_cli_nucleus_instance_segment(remote_sample: Callable, tmp_path: Path) -> None:
+def test_cli_nucleus_instance_segment(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
     """Test for nucleus segmentation."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
-    output_path = tmp_path / "output"
+    output_path = track_tmp_path / "output"
 
     runner = CliRunner()
     nucleus_instance_segment_result = runner.invoke(
