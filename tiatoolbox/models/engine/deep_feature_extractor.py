@@ -23,65 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class DeepFeatureExtractor(SemanticSegmentor):
-    """Generic CNN Feature Extractor.
-
-    AN engine for using any CNN model as a feature extractor. Note, if
-    `model` is supplied in the arguments, it will ignore the
-    `pretrained_model` and `pretrained_weights` arguments.
-
-    Args:
-        model (nn.Module):
-            Use externally defined PyTorch model for prediction with
-            weights already loaded. Default is `None`. If provided,
-            `pretrained_model` argument is ignored.
-        pretrained_model (str):
-            Name of the existing models support by tiatoolbox for
-            processing the data. By default, the corresponding
-            pretrained weights will also be downloaded. However, you can
-            override with your own set of weights via the
-            `pretrained_weights` argument. Argument is case-insensitive.
-            Refer to
-            :class:`tiatoolbox.models.architecture.vanilla.CNNBackbone`
-            for list of supported pretrained models.
-        pretrained_weights (str):
-            Path to the weight of the corresponding `pretrained_model`.
-        batch_size (int):
-            Number of images fed into the model each time.
-        num_loader_workers (int):
-            Number of workers to load the data. Take note that they will
-            also perform preprocessing.
-        num_postproc_workers (int):
-            This value is there to maintain input compatibility with
-            `tiatoolbox.models.classification` and is not used.
-        verbose (bool):
-            Whether to output logging information.
-        dataset_class (obj):
-            Dataset class to be used instead of default.
-        auto_generate_mask(bool):
-            To automatically generate tile/WSI tissue mask if is not
-            provided.
-
-    Examples:
-        >>> # Sample output of a network
-        >>> from tiatoolbox.models.architecture.vanilla import CNNBackbone
-        >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> # create resnet50 with pytorch pretrained weights
-        >>> model = CNNBackbone('resnet50')
-        >>> predictor = DeepFeatureExtractor(model=model)
-        >>> output = predictor.predict(wsis, mode='wsi')
-        >>> list(output.keys())
-        [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
-        >>> # If a network have 2 output heads, for 'A/wsi.svs',
-        >>> # there will be 3 outputs, and they are respectively stored at
-        >>> # 'output/0.position.npy'   # will always be output
-        >>> # 'output/0.features.0.npy' # output of head 0
-        >>> # 'output/0.features.1.npy' # output of head 1
-        >>> # Each file will contain a same number of items, and the item at each
-        >>> # index corresponds to 1 patch. The item in `.*position.npy` will
-        >>> # be the corresponding patch bounding box. The box coordinates are at
-        >>> # the inference resolution defined within the provided `ioconfig`.
-
-    """
+    """Generic CNN Feature Extractor."""
 
     def __init__(
         self: DeepFeatureExtractor,
