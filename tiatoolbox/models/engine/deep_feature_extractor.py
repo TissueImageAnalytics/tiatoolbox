@@ -114,7 +114,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             probabilities.append(da.from_array(batch_output))
             coordinates.append(
                 da.from_array(
-                    self._get_coordinates(batch_data),
+                    batch_data["output_locs"].numpy(),
                 )
             )
 
@@ -155,6 +155,20 @@ class DeepFeatureExtractor(SemanticSegmentor):
         _ = prediction_dtype
 
         return raw_predictions
+
+    def save_predictions(
+        self: SemanticSegmentor,
+        processed_predictions: dict,
+        output_type: str,
+        save_path: Path | None = None,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict | Path:
+        """Save patch predictions to disk."""
+        # no need to compute predictions
+        self.drop_keys.append("predictions")
+        return super().save_predictions(
+            processed_predictions, output_type, save_path=save_path, **kwargs
+        )
 
     def _update_run_params(
         self: SemanticSegmentor,
