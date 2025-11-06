@@ -2,6 +2,7 @@
 
 from . import (
     engine_abc,
+    nucleus_detector,
     nucleus_instance_segmentor,
     patch_predictor,
     semantic_segmentor,
@@ -9,6 +10,7 @@ from . import (
 
 __all__ = [
     "engine_abc",
+    "nucleus_detector",
     "nucleus_instance_segmentor",
     "patch_predictor",
     "semantic_segmentor",

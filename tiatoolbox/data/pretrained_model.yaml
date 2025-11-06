@@ -815,7 +815,7 @@ mapde-crchisto:
             threshold_abs: 250
             num_classes: 1
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
@@ -837,7 +837,7 @@ mapde-conic:
             threshold_abs: 205
             num_classes: 1
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
@@ -860,7 +860,7 @@ sccnn-crchisto:
             threshold_abs: 0.20
             patch_output_shape: [ 13, 13 ]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
@@ -883,7 +883,7 @@ sccnn-conic:
             threshold_abs: 0.05
             patch_output_shape: [ 13, 13 ]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
@@ -903,7 +903,7 @@ nuclick_original-pannuke:
             num_input_channels: 5
             num_output_channels: 1
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'baseline', 'resolution': 0.25}
@@ -925,7 +925,7 @@ nuclick_light-pannuke:
             decoder_block: [3,3]
             skip_type: "add"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'baseline', 'resolution': 0.25}
