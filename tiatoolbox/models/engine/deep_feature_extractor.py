@@ -111,10 +111,10 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 device=self.device,
             )
 
-            probabilities.append(da.from_array(batch_output))
+            probabilities.append(da.from_array(batch_output[0]))
             coordinates.append(
                 da.from_array(
-                    batch_data["output_locs"].numpy(),
+                    self._get_coordinates(batch_data),
                 )
             )
 

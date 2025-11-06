@@ -82,7 +82,7 @@ def test_full_inference(
         images=[mini_wsi_svs],
         device=device,
         save_dir=track_tmp_path / "wsi_out_check",
-        batch_size=2,
+        batch_size=4,
         output_type="zarr",
         ioconfig=ioconfig,
         patch_mode=False,
@@ -145,22 +145,21 @@ def test_multi_gpu_feature_extraction(
     model = TimmBackbone(backbone="UNI", pretrained=True)
     extractor = DeepFeatureExtractor(
         model=model,
-        auto_generate_mask=True,
         batch_size=32,
-        num_loader_workers=4,
-        num_postproc_workers=4,
+        num_workers=4,
     )
 
-    output_list = extractor.predict(
+    output = extractor.run(
         [mini_wsi_svs],
-        mode="wsi",
+        patch_mode=False,
         device=device,
         ioconfig=wsi_ioconfig,
-        crash_on_exception=True,
         save_dir=save_dir,
+        auto_get_mask=True,
     )
-    wsi_0_root_path = output_list[0][1]
-    positions = np.load(f"{wsi_0_root_path}.position.npy")
-    features = np.load(f"{wsi_0_root_path}.features.0.npy")
+    output_ = zarr.open(output[mini_wsi_svs], mode="r")
+
+    positions = output_["coordinates"]
+    features = output_["probabilities"]
     assert len(positions.shape) == 2
     assert len(features.shape) == 2
