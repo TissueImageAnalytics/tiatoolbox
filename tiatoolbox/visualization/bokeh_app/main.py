@@ -66,9 +66,7 @@ from requests.adapters import HTTPAdapter, Retry
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
-from tiatoolbox.models.engine.prompt_segmentor import (
-    PromptSegmentorV3,
-)
+from tiatoolbox.models.engine.prompt_segmentor import PromptSegmentor
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
@@ -1297,9 +1295,8 @@ def sam_segment() -> None:
         else None
     )
 
-    prompt_segmentor = PromptSegmentorV3()
+    prompt_segmentor = PromptSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp())
-    # tmp_mask_dir = Path(tempfile.mkdtemp())
 
     x_start = max(0, UI["p"].x_range.start)
     y_start = max(0, -UI["p"].y_range.end)
@@ -1311,8 +1308,6 @@ def sam_segment() -> None:
     res, scale_factor = prompt_segmentor.calc_mpp(
         (width, height), UI["vstate"].mpp[0], 1500
     )
-    # scale_factor = scale_factor * res
-    # prompt_segmentor.scale = scale_factor
 
     # read the region of interest from the slide
     if UI["vstate"].wsi is None:
@@ -1341,7 +1336,7 @@ def sam_segment() -> None:
         box_coords=box_coords,
     )
 
-    ann_loc = str(prediction)  # f"{prediction[0][1]}.0.db"
+    ann_loc = str(prediction)
 
     slide_filename = UI["vstate"].slide_path.stem + ".db"
     destination = doc_config["overlay_folder"] / slide_filename
