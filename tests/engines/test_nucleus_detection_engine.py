@@ -1,14 +1,5 @@
 """Tests for NucleusDetector."""
 
-import pathlib
-import shutil
-
-import pandas as pd
-import pytest
-
-from tiatoolbox.models.engine.nucleus_detector import (
-    NucleusDetector,
-)
 from tiatoolbox.utils import env_detection as toolbox_env
 
 ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
@@ -64,5 +55,3 @@ ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 #     )
 
 #     check_output(tmp_path / "output" / "0.locations.0.csv")
-
-

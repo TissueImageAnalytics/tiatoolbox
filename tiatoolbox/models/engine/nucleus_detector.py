@@ -1,47 +1,43 @@
 """This module implements nucleus detection engine."""
+
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import sys
-import numpy as np
-import pandas as pd
+from pathlib import Path
+from typing import TYPE_CHECKING, Unpack
+
 import dask.array as da
 import dask.dataframe as dd
-from dask.delayed import delayed
-import dask 
+import numpy as np
+import pandas as pd
+from shapely.geometry import Point
 from skimage.feature import peak_local_max
 from skimage.measure import label, regionprops
 
-from tiatoolbox.models.engine.engine_abc import EngineABCRunParams
+from tiatoolbox.models.engine.io_config import IOSegmentorConfig
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
-    SemanticSegmentorRunParams
+    SemanticSegmentorRunParams,
 )
-from tiatoolbox.models.engine.io_config import IOSegmentorConfig
 from tiatoolbox.models.models_abc import ModelABC
-from shapely.geometry import Point
-from typing import TYPE_CHECKING, Unpack
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
 
-    from torch.utils.data import DataLoader
-
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.type_hints import Resolution
     from tiatoolbox.wsicore import WSIReader
+
 
 def dataframe_to_annotation_store(
     df: pd.DataFrame,
 ) -> AnnotationStore:
-    """
-    Convert a pandas DataFrame with columns ['x','y','type','prob']
+    """Convert a pandas DataFrame with columns ['x','y','type','prob']
     to an AnnotationStore and save to disk.
     """
-    from tiatoolbox.annotation import SQLiteStore, Annotation
+    from tiatoolbox.annotation import Annotation, SQLiteStore
 
     ann_store = SQLiteStore()
     for _, row in df.iterrows():
@@ -49,34 +45,39 @@ def dataframe_to_annotation_store(
         y = int(row["y"])
         obj_type = int(row["type"])
         prob = float(row["prob"])
-        ann = Annotation(geometry=Point(x, y), properties={"type": "nuclei", "probability": prob})
+        ann = Annotation(
+            geometry=Point(x, y), properties={"type": "nuclei", "probability": prob}
+        )
         ann_store.append(ann)
     return ann_store
 
 
-def processed_mask_fn(img2d:np.ndarray, min_distance: int, threshold_abs: float|int) -> np.ndarray:
-    """
-    Build a boolean mask (H, W) of objects from a 2D probability map.
+def processed_mask_fn(
+    img2d: np.ndarray, min_distance: int, threshold_abs: float
+) -> np.ndarray:
+    """Build a boolean mask (H, W) of objects from a 2D probability map.
     Here: 1-pixel objects from peak_local_max. Add morphology inside if you need blobs.
     """
     H, W = img2d.shape
     mask = np.zeros((H, W), dtype=bool)
-    coords = peak_local_max(img2d, min_distance=min_distance, threshold_abs=threshold_abs)
+    coords = peak_local_max(
+        img2d, min_distance=min_distance, threshold_abs=threshold_abs
+    )
     if coords.size:
         r, c = coords[:, 0], coords[:, 1]
         mask[r, c] = True
     return mask
 
+
 def block_regionprops_mapoverlap(
     block: np.ndarray,
     block_info,
     min_distance: int,
-    threshold_abs: float | int,
+    threshold_abs: float,
     depth_h: int,
     depth_w: int,
 ) -> np.ndarray:
-    """
-    Runs inside da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
+    """Runs inside da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
     Builds a processed mask per channel, runs label+regionprops, and writes
     region score (mean_intensity) at centroid pixels. Keeps only centroids
     whose (row,col) lie in the interior window:
@@ -87,10 +88,9 @@ def block_regionprops_mapoverlap(
 
     # --- derive core (pre-overlap) size for THIS block safely ---
     info = block_info[0]
-    locs = info["array-location"]           # [(r0,r1),(c0,c1),(ch0,ch1)]
-    core_h = int(locs[0][1] - locs[0][0])   # r1 - r0
+    locs = info["array-location"]  # [(r0,r1),(c0,c1),(ch0,ch1)]
+    core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
     core_w = int(locs[1][1] - locs[1][0])
-
 
     rmin, rmax = depth_h, depth_h + core_h
     cmin, cmax = depth_w, depth_w + core_w
@@ -118,9 +118,9 @@ def block_regionprops_mapoverlap(
 
 
 def detect_with_map_overlap(probs, min_distance, threshold_abs, depth_pixels):
-    """
-    probs: Dask array (H, W, C), float.
+    """probs: Dask array (H, W, C), float.
     depth_pixels: halo in pixels for H/W (use >= min_distance and >= any morphology radius).
+
     Returns:
       scores: da.Array (H, W, C) with mean_intensity at centroids, 0 elsewhere.
     """
@@ -139,9 +139,9 @@ def detect_with_map_overlap(probs, min_distance, threshold_abs, depth_pixels):
     )
     return scores
 
+
 def scores_to_ddf(scores: da.Array, x_offset: int, y_offset: int) -> dd.DataFrame:
-    """
-    Convert (H, W, C) scores -> Dask DataFrame with columns: x, y, type, prob.
+    """Convert (H, W, C) scores -> Dask DataFrame with columns: x, y, type, prob.
     Uses da.extract(mask, scores) to avoid vindex on Dask indexers.
     """
     # 1) Build a boolean mask of detections
@@ -156,9 +156,9 @@ def scores_to_ddf(scores: da.Array, x_offset: int, y_offset: int) -> dd.DataFram
     # 4) Assemble a Dask DataFrame
     ddf = dd.concat(
         [
-            dd.from_dask_array(xx.astype("int64"),   columns="x"),
-            dd.from_dask_array(yy.astype("int64"),   columns="y"),
-            dd.from_dask_array(cc.astype("int64"),   columns="type"),
+            dd.from_dask_array(xx.astype("int64"), columns="x"),
+            dd.from_dask_array(yy.astype("int64"), columns="y"),
+            dd.from_dask_array(cc.astype("int64"), columns="type"),
             dd.from_dask_array(ss.astype("float32"), columns="prob"),
         ],
         axis=1,
@@ -172,8 +172,7 @@ def scores_to_ddf(scores: da.Array, x_offset: int, y_offset: int) -> dd.DataFram
 
 
 def greedy_radius_nms_pandas_all(df: pd.DataFrame, radius: int) -> pd.DataFrame:
-    """
-    Greedy NMS across ALL detections (no per-type grouping).
+    """Greedy NMS across ALL detections (no per-type grouping).
     Keeps the highest-prob point, suppresses any other point within 'radius' pixels.
 
     Expects columns: ['x','y','type','prob'].
@@ -245,7 +244,7 @@ class NucleusDetector(SemanticSegmentor):
         device (str):
             Device to run the model on, e.g., 'cpu' or 'cuda:0'.
         verbose (bool):
-            Whether to output logging information.  
+            Whether to output logging information.
 
 
     Examples:
@@ -307,11 +306,12 @@ class NucleusDetector(SemanticSegmentor):
             verbose=verbose,
         )
 
-    def post_process_patches(self,
+    def post_process_patches(
+        self,
         raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],  # noqa: ARG002
-        prediction_dtype: type,  # noqa: ARG002
-        **kwargs: Unpack[SemanticSegmentorRunParams],  # noqa: ARG002
+        prediction_shape: tuple[int, ...],
+        prediction_dtype: type,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> da.Array:
         """Define how to post-process patch predictions.
 
@@ -320,9 +320,8 @@ class NucleusDetector(SemanticSegmentor):
 
         """
 
-        pass
-
-    def post_process_wsi(self: NucleusDetector,
+    def post_process_wsi(
+        self: NucleusDetector,
         raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
@@ -340,13 +339,11 @@ class NucleusDetector(SemanticSegmentor):
 
         print("Chunk size:", raw_predictions.chunks)
 
-        
-
         scores = detect_with_map_overlap(
             probs=raw_predictions,
             min_distance=3,
-            threshold_abs=205,   # set your threshold
-            depth_pixels=5
+            threshold_abs=205,  # set your threshold
+            depth_pixels=5,
         )
         print("Scores shape:", scores.shape)
 
@@ -362,10 +359,7 @@ class NucleusDetector(SemanticSegmentor):
         ann_store = dataframe_to_annotation_store(nms_df)
         ann_store.dump(save_path)
 
-
         sys.exit()
-        
-
 
     def run(
         self: NucleusDetector,
@@ -449,5 +443,3 @@ class NucleusDetector(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
-
- 
