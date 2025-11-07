@@ -843,7 +843,7 @@ mapde-conic:
                 - { "units": "mpp", "resolution": 0.5 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
-            tile_shape: [ 2048, 2048 ]
+            # tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 252, 252 ]
             patch_output_shape: [ 252, 252 ]
             stride_shape: [ 150, 150 ]

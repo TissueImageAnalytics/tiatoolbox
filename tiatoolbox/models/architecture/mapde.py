@@ -262,7 +262,7 @@ class MapDe(MicroNet):
         batch_data: torch.Tensor,
         *,
         device: str,
-    ) -> list[np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -293,8 +293,4 @@ class MapDe(MicroNet):
             pred = model(patch_imgs_gpu)
 
         pred = pred.permute(0, 2, 3, 1).contiguous()
-        pred = pred.cpu().numpy()
-
-        return [
-            pred,
-        ]
+        return pred.cpu().numpy()
