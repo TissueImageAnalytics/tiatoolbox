@@ -5,8 +5,8 @@ from __future__ import annotations
 # ! The garbage collector
 import multiprocessing
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 import pytest

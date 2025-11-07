@@ -1357,12 +1357,12 @@ def sam_segment() -> None:
 
     ann_loc = str(prediction)
 
-    #slide_filename = UI["vstate"].slide_path.stem + ".db"
-    #destination = doc_config["overlay_folder"] / slide_filename
+    # slide_filename = UI["vstate"].slide_path.stem + ".db"
+    # destination = doc_config["overlay_folder"] / slide_filename
 
     # Move the database file
     # ! Need to check if this is necessary
-    #move(ann_loc, destination)
+    # move(ann_loc, destination)
 
     fname = make_safe_name(ann_loc)
     resp = UI["s"].put(
@@ -1371,6 +1371,7 @@ def sam_segment() -> None:
     )
     ann_types = json.loads(resp.text)
     update_ui_on_new_annotations(ann_types)
+
 
 # endregion
 
