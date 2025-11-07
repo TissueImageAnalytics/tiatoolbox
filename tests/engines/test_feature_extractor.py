@@ -25,7 +25,46 @@ ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
-def test_engine(remote_sample: Callable, track_tmp_path: Path) -> None:
+def test_feature_extractor_patches(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
+    """Tests DeepFeatureExtractor on image patches."""
+    extractor = DeepFeatureExtractor(
+        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
+    )
+
+    sample_image = remote_sample("thumbnail-1k-1k")
+
+    inputs = [sample_image, sample_image]
+
+    assert not extractor.patch_mode
+    output = extractor.run(
+        images=inputs,
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        output_type="zarr",
+        save_dir=track_tmp_path / "wsi_out_check",
+    )
+
+    output_ = zarr.open(output, mode="r")
+
+    assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
+
+    with pytest.raises(
+        ValueError, match=r".*Only zarr output is supported for `DeepFeatureExtractor`"
+    ):
+        _ = extractor.run(
+            images=inputs,
+            return_probabilities=True,
+            return_labels=False,
+            device=device,
+            patch_mode=True,
+        )
+
+
+def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test feature extraction with DeepFeatureExtractor engine."""
     save_dir = track_tmp_path / "output"
     # # convert to pathlib Path to prevent wsireader complaint

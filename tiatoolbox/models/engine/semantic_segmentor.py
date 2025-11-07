@@ -670,7 +670,7 @@ class SemanticSegmentor(PatchPredictor):
         patch_mode: bool,
         **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> Path | None:
-        """Update runtime parameters for the PatchPredictor engine.
+        """Update runtime parameters for the SemanticSegmentor engine.
 
         This method sets internal attributes such as caching, batch size,
         IO configuration, and output format based on user input and keyword arguments.
