@@ -99,20 +99,20 @@ def test_full_inference(
             positions[patch_idx],
             resolution=0.25,
             units="mpp",
-            pad_constant_values=0,
+            pad_constant_values=255,
             coord_space="resolution",
         )
         for patch_idx in range(4)
     ]
     patches = np.array(patches)
     patches = torch.from_numpy(patches)  # NHWC
-    patches = patches.permute(0, 3, 1, 2)  # NCHW
-    patches = patches.type(torch.float32)
-    model = model.to("cpu")
+    patches = patches.permute(0, 3, 1, 2).contiguous()  # NCHW
+    patches = patches.to(device).type(torch.float32)
+    model = extractor.model
     # Inference mode
     model.eval()
     with torch.inference_mode():
-        _features = model(patches).numpy()
+        _features = model(patches).cpu().numpy()
     # ! must maintain same batch size and likely same ordering
     # ! else the output values will not exactly be the same (still < 1.0e-4
     # ! of epsilon though)
