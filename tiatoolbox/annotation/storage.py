@@ -41,6 +41,7 @@ import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import (
+    Callable,
     Generator,
     ItemsView,
     Iterable,
@@ -56,7 +57,6 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     TypeVar,
     cast,
@@ -746,7 +746,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         if keys:
             result.extend(
                 self.append(annotation, key)
-                for key, annotation in zip(keys, annotations)
+                for key, annotation in zip(keys, annotations, strict=False)
             )
             return result
         result.extend(self.append(annotation) for annotation in annotations)
@@ -816,7 +816,9 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
         properties_iter = properties_iter or ({} for _ in keys)  # pragma: no branch
         geometries = geometries or (None for _ in keys)  # pragma: no branch
         # Update the store
-        for key, geometry, properties in zip(keys, geometries, properties_iter):
+        for key, geometry, properties in zip(
+            keys, geometries, properties_iter, strict=False
+        ):
             properties_ = cast("dict[str, Any]", copy.deepcopy(properties))
             self.patch(key, geometry, properties_)
 
@@ -1995,6 +1997,20 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             )
             for feature in geojson["features"]
         ]
+        # check for presence of 'nucleusGeometry' key in features
+        # if present, add them (support qupath export format)
+        annotations += [
+            transform(
+                Annotation(
+                    transform_geometry(
+                        feature2geometry(feature["nucleusGeometry"]),
+                    ),
+                    {"type": "nucleus"},
+                ),
+            )
+            for feature in geojson["features"]
+            if "nucleusGeometry" in feature
+        ]
 
         logger.info("Adding %d annotations.", len(annotations))
         self.append_many(annotations)
@@ -2708,7 +2724,7 @@ class SQLiteStore(AnnotationStore):
         if self.auto_commit:
             cur.execute("BEGIN")
         result = []
-        for annotation, key in zip(annotations, keys):
+        for annotation, key in zip(annotations, keys, strict=False):
             self._append(key, annotation, cur)
             result.append(key)
         if self.auto_commit:
@@ -3626,7 +3642,9 @@ class SQLiteStore(AnnotationStore):
         # Begin a transaction
         if self.auto_commit:
             cur.execute("BEGIN")
-        for key, geometry, properties in zip(keys, geometries, properties_iter):
+        for key, geometry, properties in zip(
+            keys, geometries, properties_iter, strict=False
+        ):
             # Annotation is not in DB:
             if key not in self:
                 self._append(str(key), Annotation(geometry, properties), cur)
@@ -3666,8 +3684,10 @@ class SQLiteStore(AnnotationStore):
             cur (sqlite3.Cursor): The cursor to use.
 
         """
-        bounds = dict(zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds))
-        xy = dict(zip("xy", np.array(geometry.centroid.coords[0])))
+        bounds = dict(
+            zip(("min_x", "min_y", "max_x", "max_y"), geometry.bounds, strict=False)
+        )
+        xy = dict(zip("xy", np.array(geometry.centroid.coords[0]), strict=False))
         query_parameters = dict(
             **bounds,
             **xy,
@@ -4047,7 +4067,6 @@ class DictionaryStore(AnnotationStore):
         """Return the length of the instance attributes."""
         return len(self._rows)
 
-    # flake8: noqa: A003
     @classmethod
     def open(cls: type[AnnotationStore], fp: Path | str | IO) -> AnnotationStore:
         """Opens :class:`DictionaryStore` from file pointer or path."""

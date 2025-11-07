@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import click
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from tiatoolbox.models.models_abc import IOConfigABC
 
 
 def add_default_to_usage_help(
     usage_help: str,
+    *,
     default: str | float | bool | None,
 ) -> str:
     """Adds default value to usage help string.
@@ -36,6 +39,7 @@ def add_default_to_usage_help(
 
 def cli_img_input(
     usage_help: str = "Path to WSI or directory containing WSIs.",
+    *,
     multiple: bool | None = None,
 ) -> Callable:
     """Enables --img-input option for cli."""
@@ -49,6 +53,7 @@ def cli_img_input(
 
 def cli_name(
     usage_help: str = "User defined name to be used as an identifier.",
+    *,
     multiple: bool | None = None,
 ) -> Callable:
     """Enable --name option for cli."""
@@ -67,7 +72,7 @@ def cli_output_path(
     """Enables --output-path option for cli."""
     return click.option(
         "--output-path",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         type=str,
         default=default,
     )
@@ -80,7 +85,7 @@ def cli_file_type(
     """Enables --file-types option for cli."""
     return click.option(
         "--file-types",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
         type=str,
     )
@@ -96,7 +101,7 @@ def cli_mode(
         input_type = click.Choice(["show", "save"], case_sensitive=False)
     return click.option(
         "--mode",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
         type=input_type,
     )
@@ -130,7 +135,7 @@ def cli_units(
         "--units",
         default=default,
         type=input_type,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
     )
 
 
@@ -143,7 +148,7 @@ def cli_resolution(
         "--resolution",
         type=float,
         default=default,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
     )
 
 
@@ -156,7 +161,7 @@ def cli_tile_objective(
         "--tile-objective-value",
         type=int,
         default=default,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
     )
 
 
@@ -197,7 +202,7 @@ def cli_method(
         "--method",
         type=input_type,
         default=default,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
     )
 
 
@@ -216,7 +221,7 @@ def cli_pretrained_model(
     """Enables --pretrained-model option for cli."""
     return click.option(
         "--pretrained-model",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -229,7 +234,7 @@ def cli_pretrained_weights(
     """Enables --pretrained-weights option for cli."""
     return click.option(
         "--pretrained-weights",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -241,7 +246,7 @@ def cli_device(
     """Enables --pretrained-weights option for cli."""
     return click.option(
         "--device",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -255,7 +260,7 @@ def cli_return_probabilities(
     return click.option(
         "--return-probabilities",
         type=bool,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -270,7 +275,7 @@ def cli_merge_predictions(
         "--merge-predictions",
         type=bool,
         default=default,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
     )
 
 
@@ -283,7 +288,7 @@ def cli_return_labels(
     return click.option(
         "--return-labels",
         type=bool,
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -295,7 +300,7 @@ def cli_batch_size(
     """Enables --batch-size option for cli."""
     return click.option(
         "--batch-size",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -312,7 +317,7 @@ def cli_masks(
     """Enables --masks option for cli."""
     return click.option(
         "--masks",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -325,7 +330,7 @@ def cli_auto_generate_mask(
     """Enables --auto-generate-mask option for cli."""
     return click.option(
         "--auto-generate-mask",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         type=bool,
         default=default,
     )
@@ -340,7 +345,7 @@ def cli_yaml_config_path(
     """Enables --yaml-config-path option for cli."""
     return click.option(
         "--yaml-config-path",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
@@ -353,7 +358,7 @@ def cli_num_loader_workers(
     """Enables --num-loader-workers option for cli."""
     return click.option(
         "--num-loader-workers",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         type=int,
         default=default,
     )
@@ -366,7 +371,7 @@ def cli_num_postproc_workers(
     """Enables --num-postproc-workers option for cli."""
     return click.option(
         "--num-postproc-workers",
-        help=add_default_to_usage_help(usage_help, default),
+        help=add_default_to_usage_help(usage_help, default=default),
         type=int,
         default=default,
     )
@@ -381,7 +386,7 @@ def cli_verbose(
     return click.option(
         "--verbose",
         type=bool,
-        help=add_default_to_usage_help(usage_help, str(default)),
+        help=add_default_to_usage_help(usage_help, default=str(default)),
         default=default,
     )
 
@@ -451,7 +456,10 @@ def prepare_file_dir_cli(
         pathlib.Path: updated output path.
 
     """
-    from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
+    from tiatoolbox.utils.misc import (  # noqa: PLC0415
+        grab_files_from_dir,
+        string_to_tuple,
+    )
 
     img_input = no_input_message(input_file=img_input)
     file_types_tuple = string_to_tuple(in_str=file_types)
@@ -512,7 +520,10 @@ def prepare_model_cli(
             Output path.
 
     """
-    from tiatoolbox.utils.misc import grab_files_from_dir, string_to_tuple
+    from tiatoolbox.utils.misc import (  # noqa: PLC0415
+        grab_files_from_dir,
+        string_to_tuple,
+    )
 
     img_input = no_input_message(input_file=img_input)
     output_path = Path(output_path)
@@ -558,7 +569,7 @@ def prepare_ioconfig_seg(
     yaml_config_path: str | Path,
 ) -> IOConfigABC | None:
     """Prepare ioconfig for segmentation."""
-    import yaml
+    import yaml  # noqa: PLC0415
 
     if pretrained_weights is not None:
         with Path(yaml_config_path).open() as registry_handle:

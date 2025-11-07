@@ -7,25 +7,30 @@ import logging
 import shutil
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import cv2
 import joblib
 import numpy as np
 import torch
+import torch.distributed as dist
 import torch.multiprocessing as torch_mp
 import torch.utils.data as torch_data
 import tqdm
 
 from tiatoolbox import logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import (
+    compile_model,
+    is_torch_compile_compatible,
+)
 from tiatoolbox.models.models_abc import IOConfigABC, model_to
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
     from multiprocessing.managers import Namespace
 
     from tiatoolbox.type_hints import IntPair, Resolution, Units
@@ -50,12 +55,12 @@ def _estimate_canvas_parameters(
     """
     if len(sample_prediction.shape) == 3:  # noqa: PLR2004
         num_output_ch = sample_prediction.shape[-1]
-        canvas_cum_shape_ = (*tuple(canvas_shape), num_output_ch)
-        canvas_count_shape_ = (*tuple(canvas_shape), 1)
+        canvas_cum_shape_ = tuple(map(int, (*tuple(canvas_shape), num_output_ch)))
+        canvas_count_shape_ = tuple(map(int, (*tuple(canvas_shape), 1)))
         add_singleton_dim = num_output_ch == 1
     else:
-        canvas_cum_shape_ = (*tuple(canvas_shape), 1)
-        canvas_count_shape_ = (*tuple(canvas_shape), 1)
+        canvas_cum_shape_ = tuple(map(int, (*tuple(canvas_shape), 1)))
+        canvas_count_shape_ = tuple(map(int, (*tuple(canvas_shape), 1)))
         add_singleton_dim = True
 
     return canvas_cum_shape_, canvas_count_shape_, add_singleton_dim
@@ -828,13 +833,13 @@ class SemanticSegmentor:
             # repackage so that it's an N list, each contains
             # L x etc. output
             sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
-            sample_outputs = list(zip(*sample_outputs))
+            sample_outputs = list(zip(*sample_outputs, strict=False))
 
             # tensor to numpy, costly?
             sample_infos = sample_infos.numpy()
             sample_infos = np.split(sample_infos, batch_size, axis=0)
 
-            sample_outputs = list(zip(sample_infos, sample_outputs))
+            sample_outputs = list(zip(sample_infos, sample_outputs, strict=False))
             if self.process_prediction_per_batch:
                 self._process_predictions(
                     sample_outputs,
@@ -892,7 +897,7 @@ class SemanticSegmentor:
             return
 
         # assume predictions is N, each item has L output element
-        locations, predictions = list(zip(*cum_batch_predictions))
+        locations, predictions = list(zip(*cum_batch_predictions, strict=False))
         # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of
         # output patch this can exceed the image bound at the requested
         # resolution remove singleton due to split.
@@ -1002,7 +1007,7 @@ class SemanticSegmentor:
             """Helper to shorten indexing."""
             return arr[tl[0] : br[0], tl[1] : br[1]]
 
-        patch_infos = list(zip(locations, predictions))
+        patch_infos = list(zip(locations, predictions, strict=False))
         for _, patch_info in enumerate(patch_infos):
             # position is assumed to be in XY coordinate
             (bound_in_wsi, prediction) = patch_info
@@ -1427,6 +1432,13 @@ class SemanticSegmentor:
 
         self._memory_cleanup()
 
+        if (
+            device == "cuda"
+            and torch.cuda.device_count() > 1
+            and is_torch_compile_compatible()
+        ):  # pragma: no cover
+            dist.destroy_process_group()
+
         return self._outputs
 
 
@@ -1549,7 +1561,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
         """
         # assume prediction_list is N, each item has L output elements
-        location_list, prediction_list = list(zip(*cum_batch_predictions))
+        location_list, prediction_list = list(zip(*cum_batch_predictions, strict=False))
         # Nx4 (N x [tl_x, tl_y, br_x, br_y), denotes the location of output
         # patch, this can exceed the image bound at the requested resolution
         # remove singleton due to split.

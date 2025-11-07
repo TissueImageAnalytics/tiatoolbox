@@ -6,8 +6,8 @@ import copy
 import gc
 import multiprocessing
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import joblib
 import numpy as np
@@ -48,10 +48,10 @@ def semantic_postproc_func(raw_output: np.ndarray) -> np.ndarray:
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functionality_local(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Local functionality test for multi task segmentor."""
     gc.collect()
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     save_dir = root_save_dir / "multitask"
     shutil.rmtree(save_dir, ignore_errors=True)
@@ -100,9 +100,11 @@ def test_functionality_local(remote_sample: Callable, tmp_path: Path) -> None:
     assert score > 0.95, "Heavy loss of precision!"
 
 
-def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functionality_hovernetplus(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
     """Functionality test for multitask segmentor."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     required_dims = (258, 258)
     # above image is 512 x 512 at 0.252 mpp resolution. This is 258 x 258 at 0.500 mpp.
@@ -133,9 +135,9 @@ def test_functionality_hovernetplus(remote_sample: Callable, tmp_path: Path) -> 
     )
 
 
-def test_functionality_hovernet(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functionality_hovernet(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Functionality test for multitask segmentor."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     save_dir = root_save_dir / "multi"
@@ -159,14 +161,14 @@ def test_functionality_hovernet(remote_sample: Callable, tmp_path: Path) -> None
     assert len(inst_dict) > 0, "Must have some nuclei."
 
 
-def test_masked_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
+def test_masked_segmentor(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test segmentor when image is masked."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     sample_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = track_tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
     save_dir = root_save_dir / "instance"
 
@@ -208,10 +210,10 @@ def test_masked_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
 
 def test_functionality_process_instance_predictions(
     remote_sample: Callable,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test the functionality of instance predictions processing."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     save_dir = root_save_dir / "semantic"
@@ -251,9 +253,9 @@ def test_functionality_process_instance_predictions(
     assert len(multi_segmentor._wsi_inst_info[0]) == 0
 
 
-def test_empty_image(tmp_path: Path) -> None:
+def test_empty_image(track_tmp_path: Path) -> None:
     """Test MultiTaskSegmentor for an empty image."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     sample_patch = np.ones((256, 256, 3), dtype="uint8") * 255
     sample_patch_path = root_save_dir / "sample_tile.png"
     imwrite(sample_patch_path, sample_patch)
@@ -320,9 +322,9 @@ def test_empty_image(tmp_path: Path) -> None:
     )
 
 
-def test_functionality_semantic(remote_sample: Callable, tmp_path: Path) -> None:
+def test_functionality_semantic(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Functionality test for multitask segmentor."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
 
     save_dir = root_save_dir / "multi"
     shutil.rmtree(save_dir, ignore_errors=True)
@@ -373,14 +375,14 @@ def test_functionality_semantic(remote_sample: Callable, tmp_path: Path) -> None
     assert layer_map is not None, "Must have some segmentations."
 
 
-def test_crash_segmentor(remote_sample: Callable, tmp_path: Path) -> None:
+def test_crash_segmentor(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test engine crash when given malformed input."""
-    root_save_dir = Path(tmp_path)
+    root_save_dir = Path(track_tmp_path)
     sample_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
-    sample_wsi_msk = tmp_path.joinpath("small_svs_tissue_mask.jpg")
+    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    sample_wsi_msk = track_tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
     save_dir = f"{root_save_dir}/multi/"
 

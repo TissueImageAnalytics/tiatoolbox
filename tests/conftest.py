@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
 import torch
@@ -15,6 +15,9 @@ import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils.env_detection import has_gpu, running_on_ci
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
@@ -160,6 +163,17 @@ def sample_jp2(remote_sample: Callable) -> Path:
 
     """
     return remote_sample("jp2-omnyx-small")
+
+
+@pytest.fixture(scope="session")
+def sample_dicom(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for DICOM images.
+
+    This fixture downloads a sample DICOM file in a standard format for testing.
+    The file represents a single DICOM image and is stored in a temporary directory.
+
+    """
+    return remote_sample("dicom-1")
 
 
 @pytest.fixture(scope="session")
@@ -578,9 +592,9 @@ def chdir() -> Callable:
 
     """
     try:
-        from contextlib import chdir
+        from contextlib import chdir  # noqa: PLC0415
     except ImportError:
-        from contextlib import AbstractContextManager
+        from contextlib import AbstractContextManager  # noqa: PLC0415
 
         class chdir(AbstractContextManager):  # noqa: N801
             """Non thread-safe context manager to change the current working directory.
@@ -644,3 +658,39 @@ def timed(fn: Callable, *args: object) -> (Callable, float):
         end = time.time()
         compile_time = end - start
     return result, compile_time
+
+
+_tmp_paths: list[Path] = []
+
+
+@pytest.fixture
+def track_tmp_path(tmp_path: Path) -> Path:
+    """This fixture tracks `tmp_path` for clean up.
+
+    Fixture that wraps pytest's built-in `tmp_path` and tracks each temporary path
+    for later cleanup at the module level.
+
+    Returns:
+        Path: The temporary directory path for the current test function.
+
+    """
+    _tmp_paths.append(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture(scope="module", autouse=True)
+def module_teardown() -> None:
+    """This module tears down temporary data directories.
+
+    Module-scoped fixture that automatically runs after all tests in a module.
+    It cleans up all temporary paths tracked during the module's execution.
+
+    Yields:
+        None: Allows pytest to run tests before executing the teardown logic.
+
+    """
+    yield
+    for path in _tmp_paths:
+        if path.exists():
+            shutil.rmtree(path)
+            print(f"Cleaned up: {path}")

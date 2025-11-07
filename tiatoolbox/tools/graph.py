@@ -4,17 +4,19 @@ from __future__ import annotations
 
 from collections import defaultdict
 from numbers import Number
-from typing import TYPE_CHECKING, Callable, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import torch
-
-# import umap
+import umap
+from matplotlib import collections as mc
 from matplotlib import pyplot as plt
 from scipy.cluster import hierarchy
 from scipy.spatial import Delaunay, cKDTree
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from matplotlib.axes import Axes
     from numpy.typing import ArrayLike
 
@@ -480,8 +482,6 @@ class SlideGraphConstructor:
             >>> plt.show()
 
         """
-        from matplotlib import collections as mc
-
         # Check that the graph is valid
         if "x" not in graph:
             msg = "Graph must contain key `x`."

@@ -61,9 +61,9 @@ from __future__ import annotations
 import json
 import operator
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Number
-from typing import Callable
 
 from typing_extensions import TypedDict
 
@@ -217,7 +217,7 @@ class SQLTriplet(SQLExpression):
 
     def __init__(
         self: SQLExpression,
-        lhs: SQLTriplet | str | SQLExpression | Number | bool | object,
+        lhs: SQLTriplet | str | SQLExpression | Number | bool | object,  # noqa: FBT001
         op: Callable | str | None = None,
         rhs: SQLTriplet | str | SQLExpression | Number | SQLNone | object | None = None,
     ) -> None:
@@ -373,7 +373,7 @@ def json_contains(json_str: str, x: object) -> bool:
     return x in json.loads(json_str)
 
 
-def sql_is_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:
+def sql_is_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:  # noqa: FBT001
     """Check if x is None.
 
     Returns:
@@ -384,7 +384,7 @@ def sql_is_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:
     return SQLTriplet(x, "is_none")
 
 
-def sql_is_not_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:
+def sql_is_not_none(x: SQLExpression | Number | str | bool) -> SQLTriplet:  # noqa: FBT001
     """Check if x is not None.
 
     Returns:

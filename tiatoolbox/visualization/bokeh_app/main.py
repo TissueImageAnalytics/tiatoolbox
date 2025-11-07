@@ -8,8 +8,8 @@ import tempfile
 import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
-from shutil import move, rmtree
-from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
+from shutil import rmtree
+from typing import TYPE_CHECKING, Any, SupportsFloat
 
 import numpy as np
 import requests
@@ -74,6 +74,8 @@ from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from bokeh.document import Document
 
 rng = np.random.default_rng()
@@ -509,7 +511,6 @@ def add_layer(lname: str) -> None:
             end=1,
             value=0.75,
             step=0.01,
-            title=lname,
             height=40,
             width=100,
             max_width=90,
@@ -713,6 +714,12 @@ def populate_layer_list(slide_name: str, overlay_path: Path) -> None:
         "*.jpg",
         "*.json",
         "*.tiff",
+        "*.mrxs",
+        "*.ndpi",
+        "*.svs",
+        "*.tif",
+        "*.npy",
+        "*.mha",
     ]:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
@@ -724,7 +731,16 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     """Populate the slide list with the available slides."""
     file_list = []
     len_slidepath = len(slide_folder.parts)
-    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png", "*.tif"]:
+    for ext in [
+        "*.svs",
+        "*ndpi",
+        "*.tiff",
+        "*.mrxs",
+        "*.jpg",
+        "*.png",
+        "*.tif",
+        "*.dcm",
+    ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
     if search_txt is None:
@@ -1002,7 +1018,8 @@ def layer_drop_cb(attr: MenuItemClick) -> None:
     if Path(attr.item).suffix in [".db", ".dat", ".geojson"]:
         update_ui_on_new_annotations(resp)
     else:
-        add_layer(resp)
+        if resp != "slide":
+            add_layer(resp)
         change_tiles(resp)
 
 
@@ -1052,7 +1069,9 @@ def layer_slider_cb(
             UI["vstate"].layer_dict[obj.name.split("_")[0]]
         ].glyph.line_alpha = new
     else:
-        UI["p"].renderers[UI["vstate"].layer_dict[obj.name.split("_")[0]]].alpha = new
+        UI["p"].renderers[
+            UI["vstate"].layer_dict["_".join(obj.name.split("_")[0:-1])]
+        ].alpha = new
 
 
 def color_input_cb(
@@ -1338,24 +1357,20 @@ def sam_segment() -> None:
 
     ann_loc = str(prediction)
 
-    slide_filename = UI["vstate"].slide_path.stem + ".db"
-    destination = doc_config["overlay_folder"] / slide_filename
+    #slide_filename = UI["vstate"].slide_path.stem + ".db"
+    #destination = doc_config["overlay_folder"] / slide_filename
 
     # Move the database file
     # ! Need to check if this is necessary
-    move(ann_loc, destination)
+    #move(ann_loc, destination)
 
-    fname = make_safe_name(destination)
+    fname = make_safe_name(ann_loc)
     resp = UI["s"].put(
         f"http://{host2}:{port}/tileserver/overlay",
         data={"overlay_path": fname},
     )
     ann_types = json.loads(resp.text)
     update_ui_on_new_annotations(ann_types)
-
-    # Clean up temp files
-    rmtree(tmp_save_dir)
-
 
 # endregion
 
@@ -1720,6 +1735,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 model_row,
                 type_select_row,
             ],
+            strict=False,
         ),
     )
     if "ui_elements_1" in doc_config:
@@ -1753,6 +1769,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 edge_size_spinner,
                 res_switch,
             ],
+            strict=False,
         ),
     )
     if "ui_elements_2" in doc_config:
@@ -2189,7 +2206,16 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in [
+            "*.svs",
+            "*ndpi",
+            "*.tiff",
+            "*.tif",
+            "*.mrxs",
+            "*.png",
+            "*.jpg",
+            "*.dcm",
+        ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),
