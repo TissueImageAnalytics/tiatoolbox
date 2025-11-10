@@ -26,7 +26,7 @@ device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
 def test_feature_extractor_patches(
-    remote_sample: Callable, track_tmp_path: Path
+    remote_sample: Callable,
 ) -> None:
     """Tests DeepFeatureExtractor on image patches."""
     extractor = DeepFeatureExtractor(
@@ -44,15 +44,14 @@ def test_feature_extractor_patches(
         return_labels=False,
         device=device,
         patch_mode=True,
-        save_dir=track_tmp_path / "wsi_out_check",
     )
 
-    output_ = zarr.open(output, mode="r")
-
-    assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
+    assert 0.48 < np.mean(output["probabilities"][:]) < 0.52
 
     with pytest.raises(
-        ValueError, match=r".*Only zarr output is supported for `DeepFeatureExtractor`"
+        ValueError,
+        match=r".*output_type: `annotationstore` is not supported "
+        r"for `DeepFeatureExtractor` engine",
     ):
         _ = extractor.run(
             images=inputs,
@@ -60,6 +59,7 @@ def test_feature_extractor_patches(
             return_labels=False,
             device=device,
             patch_mode=True,
+            output_type="annotationstore",
         )
 
 
