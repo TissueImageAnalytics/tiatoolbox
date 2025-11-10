@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import gc
 from typing import TYPE_CHECKING
 
 import dask.array as da
+import psutil
+import zarr
+from dask import compute
 from typing_extensions import Unpack
 
 from tiatoolbox.utils.misc import get_tqdm
@@ -22,6 +26,62 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.wsicore import WSIReader
+
+
+def save_to_cache(
+    probabilities: list[da.Array],
+    coordinates: list[da.Array],
+    probabilities_zarr: zarr.Array,
+    coordinates_zarr: zarr.Array,
+    save_path: str | Path = "temp.zarr",
+) -> tuple[zarr.Array, zarr.Array]:
+    """Save to cache."""
+    if len(probabilities) == 0:
+        return probabilities_zarr, coordinates_zarr
+
+    coordinates = da.concatenate(coordinates, axis=0)
+    probabilities = da.concatenate(probabilities, axis=0)
+
+    computed_values = compute(*[probabilities, coordinates])
+    probabilities_computed, coordinates_computed = computed_values
+
+    chunk_shape = tuple(chunk[0] for chunk in probabilities.chunks)
+    if probabilities_zarr is None:
+        zarr_group = zarr.open(str(save_path), mode="w")
+
+        probabilities_zarr = zarr_group.create_dataset(
+            name="canvas",
+            shape=(0, *probabilities_computed.shape[1:]),
+            chunks=(chunk_shape[0], *probabilities_computed.shape[1:]),
+            dtype=probabilities_computed.dtype,
+            overwrite=True,
+        )
+
+        coordinates_zarr = zarr_group.create_dataset(
+            name="count",
+            shape=(0, *coordinates_computed.shape[1:]),
+            dtype=coordinates_computed.dtype,
+            chunks=(chunk_shape[0], *coordinates_computed.shape[1:]),
+            overwrite=True,
+        )
+
+    probabilities_zarr.resize(
+        (
+            probabilities_zarr.shape[0] + probabilities_computed.shape[0],
+            *probabilities_zarr.shape[1:],
+        )
+    )
+    probabilities_zarr[-probabilities_computed.shape[0] :] = probabilities_computed
+
+    coordinates_zarr.resize(
+        (
+            coordinates_zarr.shape[0] + coordinates_computed.shape[0],
+            *coordinates_zarr.shape[1:],
+        )
+    )
+    coordinates_zarr[-coordinates_computed.shape[0] :] = coordinates_computed
+
+    return probabilities_zarr, coordinates_zarr
 
 
 class DeepFeatureExtractor(SemanticSegmentor):
@@ -125,7 +185,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 - "coordinates": Patch coordinates corresponding to the features.
 
         """
-        _ = kwargs.get("patch_mode", False)
+        # Default Memory threshold percentage is 80.
+        memory_threshold = kwargs.get("memory_threshold", 80)
+        vm = psutil.virtual_memory()
         _ = save_path
         keys = ["probabilities", "coordinates"]
         probabilities, coordinates = [], []
@@ -143,6 +205,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
             else dataloader
         )
 
+        probabilities_zarr, coordinates_zarr = None, None
+
+        probabilities_used_percent = 0
         for batch_data in tqdm_loop:
             batch_output = self.model.infer_batch(
                 self.model,
@@ -157,8 +222,59 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 )
             )
 
-        raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
-        raw_predictions["probabilities"] = da.concatenate(probabilities, axis=0)
+            used_percent = vm.percent
+            probabilities_used_percent = (
+                probabilities_used_percent + (probabilities[-1].nbytes / vm.free) * 100
+            )
+            if (
+                used_percent > memory_threshold
+                or probabilities_used_percent > memory_threshold
+            ):
+                tqdm_loop.desc = "Spill intermediate data to disk"
+                used_percent = (
+                    probabilities_used_percent
+                    if (probabilities_used_percent > memory_threshold)
+                    else used_percent
+                )
+                msg = (
+                    f"Current Memory usage: {used_percent} %  "
+                    f"exceeds specified threshold: {memory_threshold}. "
+                    f"Saving intermediate results to disk."
+                )
+
+                tqdm.write(msg)
+                # Flush data in Memory and clear dask graph
+                probabilities_zarr, coordinates_zarr = save_to_cache(
+                    probabilities,
+                    coordinates,
+                    probabilities_zarr,
+                    coordinates_zarr,
+                    save_path=save_path,
+                )
+
+                probabilities, coordinates = [], []
+                probabilities_used_percent = 0
+                gc.collect()
+                tqdm_loop.desc = "Inferring patches"
+
+        if probabilities_zarr is not None:
+            probabilities_zarr, coordinates_zarr = save_to_cache(
+                probabilities,
+                coordinates,
+                probabilities_zarr,
+                coordinates_zarr,
+                save_path=save_path,
+            )
+            # Wrap zarr in dask array
+            raw_predictions["probabilities"] = da.from_zarr(
+                probabilities_zarr, chunks=probabilities_zarr.chunks
+            )
+            raw_predictions["coordinates"] = da.from_zarr(
+                coordinates_zarr, chunks=coordinates_zarr.chunks
+            )
+        else:
+            raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+            raw_predictions["probabilities"] = da.concatenate(probabilities, axis=0)
 
         return raw_predictions
 
@@ -286,8 +402,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 If `output_type` is not "zarr", which is the only supported format.
 
         """
-        if output_type != "zarr":
-            msg = "Only zarr output is supported for `DeepFeatureExtractor`."
+        if output_type not in ["zarr", "dict"]:
+            msg = (
+                f"output_type: `{output_type}` is not supported for "
+                f"`DeepFeatureExtractor` engine."
+            )
             raise ValueError(msg)
 
         return super()._update_run_params(
@@ -344,7 +463,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             output_type (str):
-                Desired output format. Must be "zarr".
+                Desired output format. Must be "zarr" or "dict".
             **kwargs (SemanticSegmentorRunParams):
                 Additional runtime parameters to update engine attributes.
 

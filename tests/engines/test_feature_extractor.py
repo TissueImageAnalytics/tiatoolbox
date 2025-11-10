@@ -44,7 +44,6 @@ def test_feature_extractor_patches(
         return_labels=False,
         device=device,
         patch_mode=True,
-        output_type="zarr",
         save_dir=track_tmp_path / "wsi_out_check",
     )
 
@@ -83,6 +82,7 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
         save_dir=track_tmp_path / "wsi_out_check",
         batch_size=2,
         output_type="zarr",
+        memory_threshold=1,
     )
 
     output_ = zarr.open(output[mini_wsi_svs], mode="r")
@@ -195,6 +195,7 @@ def test_multi_gpu_feature_extraction(
         ioconfig=wsi_ioconfig,
         save_dir=save_dir,
         auto_get_mask=True,
+        output_type="zarr",
     )
     output_ = zarr.open(output[mini_wsi_svs], mode="r")
 
