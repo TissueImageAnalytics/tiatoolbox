@@ -8,20 +8,19 @@ Imaging (ISBI 2019). IEEE, 2019.
 
 from __future__ import annotations
 
+import dask.array as da
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
-from skimage.feature import peak_local_max
-import dask.array as da
-from tiatoolbox.annotation.storage import SQLiteStore
-import pandas as pd
 
 from tiatoolbox.models.architecture.micronet import MicroNet
 from tiatoolbox.models.engine.nucleus_detector import (
-    peak_detection_mapoverlap,
     centroids_map_to_dask_dataframe,
     nucleus_detection_nms,
+    peak_detection_mapoverlap,
 )
+
 
 class MapDe(MicroNet):
     """Initialize MapDe [1].
@@ -238,13 +237,11 @@ class MapDe(MicroNet):
         logits, _, _, _ = super().forward(input_tensor)
         out = F.conv2d(logits, self.dist_filter, padding="same")
         return F.relu(out)
-    
-
-    
-
 
     #  skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: MapDe, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype) -> pd.DataFrame:
+    def postproc(
+        self: MapDe, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype
+    ) -> pd.DataFrame:
         """Post-processing script for MapDe.
 
         Performs peak detection and extracts coordinates in x, y format.
@@ -288,7 +285,6 @@ class MapDe(MicroNet):
         print("Total detections after NMS:", len(nms_df))
 
         return nms_df
-
 
     @staticmethod
     def infer_batch(

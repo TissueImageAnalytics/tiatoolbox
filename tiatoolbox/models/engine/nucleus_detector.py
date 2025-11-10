@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
 
@@ -11,44 +9,46 @@ import dask.array as da
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
-from shapely.geometry import Point
 from skimage.feature import peak_local_max
 from skimage.measure import label, regionprops
 
-from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+from tiatoolbox import logger
+from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.annotation import Annotation, SQLiteStore, AnnotationStore
 from tiatoolbox.utils.misc import df_to_store_nucleus_detector
-from tiatoolbox import logger
 
 if TYPE_CHECKING:  # pragma: no cover
-    import os
-    from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.wsicore import WSIReader
 
 
 def probability_to_peak_map(
-    img2d: np.ndarray, min_distance: int, threshold_abs: float, threshold_rel: float = 0.0
+    img2d: np.ndarray,
+    min_distance: int,
+    threshold_abs: float,
+    threshold_rel: float = 0.0,
 ) -> np.ndarray:
     """Build a boolean mask (H, W) of objects from a 2D probability map using peak_local_max.
-    
+
     Args:
         img2d (np.ndarray): 2D probability map.
         min_distance (int): Minimum distance between peaks.
         threshold_abs (float): Absolute threshold for peak detection.
         threshold_rel (float, optional): Relative threshold for peak detection. Defaults to 0.0.
+
     Returns:
         mask (np.ndarray): Boolean mask (H, W) with True at peak locations.
     """
     H, W = img2d.shape
     mask = np.zeros((H, W), dtype=bool)
     coords = peak_local_max(
-        img2d, min_distance=min_distance, threshold_abs=threshold_abs, threshold_rel=threshold_rel
+        img2d,
+        min_distance=min_distance,
+        threshold_abs=threshold_abs,
+        threshold_rel=threshold_rel,
     )
     if coords.size:
         r, c = coords[:, 0], coords[:, 1]
@@ -67,7 +67,7 @@ def peak_detection_mapoverlap(
 ) -> np.ndarray:
     """Runs inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
     Builds a processed mask per channel, runs peak_local_max then
-    label+regionprops, and writes probability (mean_intensity) at centroid pixels. 
+    label+regionprops, and writes probability (mean_intensity) at centroid pixels.
     Keeps only centroids whose (row,col) lie in the interior window:
         rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
     Returns same spatial shape as input block: (h_pad, w_pad, C), float32.
@@ -81,6 +81,7 @@ def peak_detection_mapoverlap(
         depth_w: Halo size in pixels for width (cols).
         calculate_probabilities: If True, write mean_intensity at centroids;
             else write 1.0 at centroids.
+
     Returns:
         out: NumPy array (H, W, C) with probabilities at centroids, 0 elsewhere.
     """
@@ -120,7 +121,9 @@ def peak_detection_mapoverlap(
     return out
 
 
-def detection_with_map_overlap(probs: da.Array, min_distance: int, threshold_abs: float, depth_pixels: int) -> da.Array:
+def detection_with_map_overlap(
+    probs: da.Array, min_distance: int, threshold_abs: float, depth_pixels: int
+) -> da.Array:
     """probs: Dask array (H, W, C), float.
     depth_pixels: halo in pixels for H/W (use >= min_distance and >= any morphology radius).
 
@@ -143,18 +146,21 @@ def detection_with_map_overlap(probs: da.Array, min_distance: int, threshold_abs
     return scores
 
 
-def centroids_map_to_dask_dataframe(scores: da.Array, x_offset: int = 0, y_offset: int = 0) -> dd.DataFrame:
+def centroids_map_to_dask_dataframe(
+    scores: da.Array, x_offset: int = 0, y_offset: int = 0
+) -> dd.DataFrame:
     """Convert centroid map (H, W, C) into a Dask DataFrame with columns: x, y, type, prob.
 
     Args:
         scores: Dask array (H, W, C) with probabilities at centroids, 0 elsewhere.
         x_offset: global x offset to add to all x coordinates.
         y_offset: global y offset to add to all y coordinates.
+
     Returns:
         ddf: Dask DataFrame with columns: x, y, type, prob.
     """
     # 1) Build a boolean mask of detections
-    
+
     mask = scores > 0
     # 2) Get coordinates and class of detections (lazy 1D Dask arrays)
 
@@ -172,7 +178,7 @@ def centroids_map_to_dask_dataframe(scores: da.Array, x_offset: int = 0, y_offse
             dd.from_dask_array(ss.astype("float32"), columns="prob"),
         ],
         axis=1,
-        ignore_unknown_divisions=True
+        ignore_unknown_divisions=True,
     )
 
     # 5) Apply global offsets (if needed)
@@ -184,7 +190,9 @@ def centroids_map_to_dask_dataframe(scores: da.Array, x_offset: int = 0, y_offse
     return ddf
 
 
-def nucleus_detection_nms(df: pd.DataFrame, radius: int, overlap_threshold:float = 0.5) -> pd.DataFrame:
+def nucleus_detection_nms(
+    df: pd.DataFrame, radius: int, overlap_threshold: float = 0.5
+) -> pd.DataFrame:
     """Greedy NMS across ALL detections.
 
     Keeps the highest-prob detection, removes any other point within 'radius' pixels > overlap_threshold.
@@ -215,7 +223,7 @@ def nucleus_detection_nms(df: pd.DataFrame, radius: int, overlap_threshold:float
     coords = sub[["x", "y"]].to_numpy(dtype=np.float64)
     r = float(radius)
     two_r = 2.0 * r
-    two_r2 = (two_r * two_r)  # distance^2 cutoff for any overlap
+    two_r2 = two_r * two_r  # distance^2 cutoff for any overlap
 
     suppressed = np.zeros(len(sub), dtype=bool)
     keep_idx = []
@@ -232,18 +240,19 @@ def nucleus_detection_nms(df: pd.DataFrame, radius: int, overlap_threshold:float
         d2 = dx * dx + dy * dy
 
         # Only points with d < 2r can have nonzero overlap
-        cand = (d2 <= two_r2)
+        cand = d2 <= two_r2
         cand[i] = False  # don't suppress the kept point itself
         if not np.any(cand):
             continue
 
         d = np.sqrt(d2[cand])
 
-
         # Safe cosine argument = (distance ÷ diameter), Clamp for numerical stability
         u = np.clip(d / (2.0 * r), -1.0, 1.0)
         # Exact intersection area of two equal-radius circles.
-        inter = 2.0 * (r * r) * np.arccos(u) - 0.5 * d * np.sqrt(np.clip(4.0 * r * r - d * d, 0.0, None))
+        inter = 2.0 * (r * r) * np.arccos(u) - 0.5 * d * np.sqrt(
+            np.clip(4.0 * r * r - d * d, 0.0, None)
+        )
 
         union = 2.0 * np.pi * (r * r) - inter
         iou = inter / union
@@ -252,7 +261,7 @@ def nucleus_detection_nms(df: pd.DataFrame, radius: int, overlap_threshold:float
         idx_cand = np.where(cand)[0]
         to_suppress = idx_cand[iou >= overlap_threshold]
         suppressed[to_suppress] = True
-    
+
     kept = sub.iloc[keep_idx].copy()
     return kept
 
@@ -363,6 +372,7 @@ class NucleusDetector(SemanticSegmentor):
             raw_predictions (da.Array): The raw predictions from the model.
             prediction_shape (tuple[int, ...]): The shape of the predictions.
             prediction_dtype (type): The data type of the predictions.
+
         Returns:
             A list of DataFrames containing the post-processed predictions for each patch.
 
@@ -375,7 +385,6 @@ class NucleusDetector(SemanticSegmentor):
         for i in range(raw_predictions.shape[0]):
             batch_predictions.append(self.model.postproc_func(raw_predictions[i]))
         return batch_predictions
-
 
     def post_process_wsi(
         self: NucleusDetector,
@@ -396,8 +405,9 @@ class NucleusDetector(SemanticSegmentor):
         logger.info(f"Raw probabilities dtype: {prediction_dtype}")
         logger.info(f"Chunk size: {raw_predictions.chunks}")
 
-        detection_df = self.model.postproc(raw_predictions, prediction_shape, prediction_dtype)
-
+        detection_df = self.model.postproc(
+            raw_predictions, prediction_shape, prediction_dtype
+        )
 
         return detection_df
 
@@ -441,11 +451,9 @@ class NucleusDetector(SemanticSegmentor):
 
                 save_paths.append(out_file)
             return save_paths
-        else:
-            return df_to_store_nucleus_detector(
-                processed_predictions['predictions'],
-                scale_factor=scale_factor,
-                save_path=save_path,
-                class_dict=class_dict,
-            )
-            
+        return df_to_store_nucleus_detector(
+            processed_predictions["predictions"],
+            scale_factor=scale_factor,
+            save_path=save_path,
+            class_dict=class_dict,
+        )

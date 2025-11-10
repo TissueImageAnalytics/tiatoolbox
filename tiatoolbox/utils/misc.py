@@ -21,7 +21,7 @@ import yaml
 import zarr
 from filelock import FileLock
 from shapely.affinity import translate
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Point, Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 from tqdm import notebook as tqdm_notebook
@@ -1345,10 +1345,9 @@ def df_to_store_nucleus_detector(
     scale_factor: tuple[float, float],
     save_path: Path | None = None,
     class_dict: dict | None = None,
-    batch_size: int = 50_000
+    batch_size: int = 50_000,
 ) -> SQLiteStore | Path:
-    """
-    Convert a pandas DataFrame with columns ['x','y','type','prob']
+    """Convert a pandas DataFrame with columns ['x','y','type','prob']
     into an Annotation SQLiteStore efficiently using append_many().
 
     Args:
@@ -1356,7 +1355,7 @@ def df_to_store_nucleus_detector(
             A pandas DataFrame with columns ['x','y','type','prob'].
         save_path (Path, optional):
             Optional Output directory to save the Annotation
-            Store results. 
+            Store results.
         scale_factor (tuple[float, float]):
                 The scale factor to use when saving the
                 annotations. All coordinates will be multiplied by this factor to allow
@@ -1373,7 +1372,6 @@ def df_to_store_nucleus_detector(
             or Path to file storing SQLiteStore containing Annotations
             for each nucleus.
     """
-
     # 1) Select & coerce dtypes once (compact + avoids per-row casts)
     x = df["x"].to_numpy(dtype=np.int64, copy=False)
     y = df["y"].to_numpy(dtype=np.int64, copy=False)
@@ -1387,7 +1385,7 @@ def df_to_store_nucleus_detector(
 
     def make_points(xb, yb):
         return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
-    
+
     if class_dict is None:
         # identity over the actually present types (robust if types aren't 0..K)
         unique_types = np.unique(t)
@@ -1400,9 +1398,16 @@ def df_to_store_nucleus_detector(
 
         pts = make_points(xb, yb)  # array/list of Points
 
-        anns = [Annotation(geometry=pt,
-                            properties={"type": class_dict.get(int(tt), int(tt)), "probability": float(pp)})
-                for pt, tt, pp in zip(pts, tb, pb)]
+        anns = [
+            Annotation(
+                geometry=pt,
+                properties={
+                    "type": class_dict.get(int(tt), int(tt)),
+                    "probability": float(pp),
+                },
+            )
+            for pt, tt, pp in zip(pts, tb, pb)
+        ]
 
         store.append_many(anns)
 
