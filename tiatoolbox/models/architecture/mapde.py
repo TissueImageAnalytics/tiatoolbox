@@ -14,6 +14,10 @@ import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
 
+import dask.array as da
+import pandas as pd
+from tiatoolbox import logger
+
 from tiatoolbox.models.architecture.micronet import MicroNet
 from tiatoolbox.models.engine.nucleus_detector import (
     centroids_map_to_dask_dataframe,
@@ -243,26 +247,24 @@ class MapDe(MicroNet):
         self: MapDe, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype
     ) -> pd.DataFrame:
         """Post-processing script for MapDe.
-
-        Performs peak detection and extracts coordinates in x, y format.
+        
+        Post-process predicted probability map of the input image.
+        Performs peak detection, then non-maximum suppression.
+        Returns a pandas DataFrame containing detected nuclei coordinates [x, y, type, prob].
 
         Args:
             prediction_map (da.array):
                 Predicted probability map (HxWx1) of the entire input image.
+            prediction_shape (tuple):
+                Shape of the prediction map.
+            dtype (np.dtype):
+                Data type of the prediction map.
 
         Returns:
             detected_nuclei (pandas.DataFrame):
                 Detected nuclei coordinates stored in a pandas DataFrame.
 
         """
-        # coordinates = peak_local_max(
-        #     np.squeeze(prediction_map[0], axis=2),
-        #     min_distance=self.min_distance,
-        #     threshold_abs=self.threshold_abs,
-        #     exclude_border=False,
-        # )
-        # return np.fliplr(coordinates)
-
         depth = {0: self.min_distance, 1: self.min_distance, 2: 0}
         scores = da.map_overlap(
             prediction_map,
@@ -280,11 +282,12 @@ class MapDe(MicroNet):
         ddf = centroids_map_to_dask_dataframe(scores, x_offset=0, y_offset=0)
         pandas_df = ddf.compute()
 
-        print("Total detections before NMS:", len(pandas_df))
-        nms_df = nucleus_detection_nms(pandas_df, radius=self.min_distance)
-        print("Total detections after NMS:", len(nms_df))
+        logger.info(f"Total detections before NMS: {len(pandas_df)}")
+        detected_nuclei = nucleus_detection_nms(pandas_df, radius=self.min_distance)
+        logger.info(f"Total detections after NMS: {len(detected_nuclei)}")
 
-        return nms_df
+        return detected_nuclei
+
 
     @staticmethod
     def infer_batch(
