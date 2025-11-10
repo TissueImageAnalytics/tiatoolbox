@@ -35,7 +35,30 @@ def save_to_cache(
     coordinates_zarr: zarr.Array,
     save_path: str | Path = "temp.zarr",
 ) -> tuple[zarr.Array, zarr.Array]:
-    """Save to cache."""
+    """Save computed feature and coordinate arrays to Zarr cache.
+
+    This function computes the given Dask arrays (`probabilities` and `coordinates`),
+    resizes the corresponding Zarr datasets to accommodate the new data, and appends
+    the results. If the Zarr datasets do not exist, it initializes them within the
+    specified Zarr group.
+
+    Args:
+        probabilities (list[dask.array.Array]):
+            List of Dask arrays representing extracted feature maps.
+        coordinates (list[dask.array.Array]):
+            List of Dask arrays representing patch coordinates.
+        probabilities_zarr (zarr.Array | None):
+            Existing Zarr dataset for feature maps. If None, a new one is created.
+        coordinates_zarr (zarr.Array | None):
+            Existing Zarr dataset for coordinates. If None, a new one is created.
+        save_path (str | Path):
+            Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
+
+    Returns:
+        tuple[zarr.Array, zarr.Array]:
+            Updated Zarr datasets for feature maps and coordinates.
+
+    """
     if len(probabilities) == 0:
         return probabilities_zarr, coordinates_zarr
 
@@ -165,18 +188,21 @@ class DeepFeatureExtractor(SemanticSegmentor):
         """Perform model inference on a whole slide image (WSI).
 
         This method processes a WSI using the provided DataLoader and extracts
-        deep features from each patch using the model. The extracted features
-        are returned as a Dask array along with the corresponding patch coordinates.
+        deep features from each patch using the model. It supports memory-aware
+        caching by spilling intermediate results to disk when memory usage exceeds
+        a specified threshold. The final output includes feature maps and their
+        corresponding spatial coordinates.
 
         Args:
             dataloader (DataLoader):
                 PyTorch DataLoader configured for WSI processing.
             save_path (Path):
-                Path to save the intermediate output. (Unused in this implementation.)
+                Path to save intermediate Zarr output. Used for caching.
             **kwargs (SemanticSegmentorRunParams):
                 Additional runtime parameters, including:
                 - return_probabilities (bool): Whether to return feature maps.
-                - memory_threshold (int): Memory usage threshold for caching.
+                - memory_threshold (int): Memory usage threshold (%) to trigger
+                  disk caching.
 
         Returns:
             dict[str, dask.array.Array]:
@@ -385,7 +411,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             ioconfig (IOSegmentorConfig | None):
                 IO configuration for patch extraction and resolution.
             output_type (str):
-                Desired output format. Must be "zarr".
+                Desired output format. Must be "zarr" or "dict".
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             patch_mode (bool):
@@ -399,7 +425,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
         Raises:
             ValueError:
-                If `output_type` is not "zarr", which is the only supported format.
+                If `output_type` is not "zarr" or "dict", which are the
+                only supported formats.
 
         """
         if output_type not in ["zarr", "dict"]:
