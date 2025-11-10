@@ -16,4 +16,6 @@ if __name__ == "__main__":
         device="cuda",
         save_dir=pathlib.Path("/media/u1910100/data/overlays/test"),
         overwrite=True,
+        output_type="annotationstore",
+        class_dict={0: "nucleus"},
     )

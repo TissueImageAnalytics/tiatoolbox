@@ -21,7 +21,7 @@ import yaml
 import zarr
 from filelock import FileLock
 from shapely.affinity import translate
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 from tqdm import notebook as tqdm_notebook
@@ -1338,6 +1338,85 @@ def process_contours(
         )
 
     return annotations_list
+
+
+def df_to_store_nucleus_detector(
+    df: pd.DataFrame,
+    scale_factor: tuple[float, float],
+    save_path: Path | None = None,
+    class_dict: dict | None = None,
+    batch_size: int = 50_000
+) -> SQLiteStore | Path:
+    """
+    Convert a pandas DataFrame with columns ['x','y','type','prob']
+    into an Annotation SQLiteStore efficiently using append_many().
+
+    Args:
+        df (pd.DataFrame):
+            A pandas DataFrame with columns ['x','y','type','prob'].
+        save_path (Path, optional):
+            Optional Output directory to save the Annotation
+            Store results. 
+        scale_factor (tuple[float, float]):
+                The scale factor to use when saving the
+                annotations. All coordinates will be multiplied by this factor to allow
+                conversion of annotations saved at non-baseline resolution to baseline.
+                Should be model_mpp/slide_mpp.
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        batch_size (int):
+            Number of annotations to process in each batch.
+
+    Returns:
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each nucleus
+            or Path to file storing SQLiteStore containing Annotations
+            for each nucleus.
+    """
+
+    # 1) Select & coerce dtypes once (compact + avoids per-row casts)
+    x = df["x"].to_numpy(dtype=np.int64, copy=False)
+    y = df["y"].to_numpy(dtype=np.int64, copy=False)
+    t = df["type"].to_numpy(dtype=np.int64, copy=False)
+    p = df["prob"].to_numpy(dtype=np.float32, copy=False)
+
+    x_scaled = np.rint(x * scale_factor[0]).astype(np.int64, copy=False)
+    y_scaled = np.rint(y * scale_factor[1]).astype(np.int64, copy=False)
+
+    store = SQLiteStore()
+
+    def make_points(xb, yb):
+        return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
+    
+    if class_dict is None:
+        # identity over the actually present types (robust if types aren't 0..K)
+        unique_types = np.unique(t)
+        class_dict = {int(k): int(k) for k in unique_types}
+
+    n = len(df)
+    for i in range(0, n, batch_size):
+        j = min(i + batch_size, n)
+        xb, yb, tb, pb = x_scaled[i:j], y_scaled[i:j], t[i:j], p[i:j]
+
+        pts = make_points(xb, yb)  # array/list of Points
+
+        anns = [Annotation(geometry=pt,
+                            properties={"type": class_dict.get(int(tt), int(tt)), "probability": float(pp)})
+                for pt, tt, pp in zip(pts, tb, pb)]
+
+        store.append_many(anns)
+
+    # # if a save director is provided, then dump store into a file
+    if save_path:
+        # ensure parent directory exists
+        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+        # ensure proper db extension
+        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+        store.commit()
+        store.dump(save_path)
+        return save_path
+
+    return store
 
 
 def dict_to_store_semantic_segmentor(

@@ -12,9 +12,16 @@ import numpy as np
 import torch
 import torch.nn.functional as F  # noqa: N812
 from skimage.feature import peak_local_max
+import dask.array as da
+from tiatoolbox.annotation.storage import SQLiteStore
+import pandas as pd
 
 from tiatoolbox.models.architecture.micronet import MicroNet
-
+from tiatoolbox.models.engine.nucleus_detector import (
+    peak_detection_mapoverlap,
+    centroids_map_to_dask_dataframe,
+    nucleus_detection_nms,
+)
 
 class MapDe(MicroNet):
     """Initialize MapDe [1].
@@ -231,30 +238,57 @@ class MapDe(MicroNet):
         logits, _, _, _ = super().forward(input_tensor)
         out = F.conv2d(logits, self.dist_filter, padding="same")
         return F.relu(out)
+    
+
+    
+
 
     #  skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: MapDe, prediction_map: np.ndarray) -> np.ndarray:
-        """Post-processing script for MicroNet.
+    def postproc(self: MapDe, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype) -> pd.DataFrame:
+        """Post-processing script for MapDe.
 
         Performs peak detection and extracts coordinates in x, y format.
 
         Args:
-            prediction_map (ndarray):
-                Input image of type numpy array.
+            prediction_map (da.array):
+                Predicted probability map (HxWx1) of the entire input image.
 
         Returns:
-            :class:`numpy.ndarray`:
-                Pixel-wise nuclear instance segmentation
-                prediction.
+            detected_nuclei (pandas.DataFrame):
+                Detected nuclei coordinates stored in a pandas DataFrame.
 
         """
-        coordinates = peak_local_max(
-            np.squeeze(prediction_map[0], axis=2),
+        # coordinates = peak_local_max(
+        #     np.squeeze(prediction_map[0], axis=2),
+        #     min_distance=self.min_distance,
+        #     threshold_abs=self.threshold_abs,
+        #     exclude_border=False,
+        # )
+        # return np.fliplr(coordinates)
+
+        depth = {0: self.min_distance, 1: self.min_distance, 2: 0}
+        scores = da.map_overlap(
+            prediction_map,
+            peak_detection_mapoverlap,
+            depth=depth,
+            boundary=0,
+            dtype=dtype,
+            block_info=True,
             min_distance=self.min_distance,
             threshold_abs=self.threshold_abs,
-            exclude_border=False,
+            depth_h=self.min_distance,
+            depth_w=self.min_distance,
+            calculate_probabilities=False,
         )
-        return np.fliplr(coordinates)
+        ddf = centroids_map_to_dask_dataframe(scores, x_offset=0, y_offset=0)
+        pandas_df = ddf.compute()
+
+        print("Total detections before NMS:", len(pandas_df))
+        nms_df = nucleus_detection_nms(pandas_df, radius=self.min_distance)
+        print("Total detections after NMS:", len(nms_df))
+
+        return nms_df
+
 
     @staticmethod
     def infer_batch(
