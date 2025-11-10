@@ -11,18 +11,18 @@ import numpy as np
 import pandas as pd
 from skimage.feature import peak_local_max
 from skimage.measure import label, regionprops
+
 from tiatoolbox import logger
+from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.utils.misc import df_to_store_nucleus_detector
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
-
 
 
 def probability_to_peak_map(

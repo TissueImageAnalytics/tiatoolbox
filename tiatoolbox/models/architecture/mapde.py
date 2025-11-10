@@ -14,10 +14,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
 
-import dask.array as da
-import pandas as pd
 from tiatoolbox import logger
-
 from tiatoolbox.models.architecture.micronet import MicroNet
 from tiatoolbox.models.engine.nucleus_detector import (
     centroids_map_to_dask_dataframe,
@@ -247,7 +244,7 @@ class MapDe(MicroNet):
         self: MapDe, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype
     ) -> pd.DataFrame:
         """Post-processing script for MapDe.
-        
+
         Post-process predicted probability map of the input image.
         Performs peak detection, then non-maximum suppression.
         Returns a pandas DataFrame containing detected nuclei coordinates [x, y, type, prob].
@@ -287,7 +284,6 @@ class MapDe(MicroNet):
         logger.info(f"Total detections after NMS: {len(detected_nuclei)}")
 
         return detected_nuclei
-
 
     @staticmethod
     def infer_batch(
