@@ -12,6 +12,14 @@ from __future__ import annotations
 from collections import OrderedDict
 
 import numpy as np
+import dask.array as da
+import pandas as pd
+from tiatoolbox import logger
+from tiatoolbox.models.architecture.mapde import (
+    centroids_map_to_dask_dataframe,
+    nucleus_detection_nms,
+    peak_detection_mapoverlap,
+)
 import torch
 from skimage.feature import peak_local_max
 from torch import nn
@@ -91,6 +99,7 @@ class SCCNN(ModelABC):
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
+        postproc_tile_shape: tuple[int, int] = (2048, 2048),
     ) -> None:
         """Initialize :class:`SCCNN`."""
         super().__init__()
@@ -99,6 +108,7 @@ class SCCNN(ModelABC):
         self.in_ch = num_input_channels
         self.out_height = out_height
         self.out_width = out_width
+        self.postproc_tile_shape = postproc_tile_shape
 
         # Create mesh grid and convert to 3D vector
         x, y = torch.meshgrid(
@@ -325,36 +335,71 @@ class SCCNN(ModelABC):
         )
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
-    #  skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: SCCNN, prediction_map: np.ndarray) -> np.ndarray:
-        """Post-processing script for MicroNet.
-
-        Performs peak detection and extracts coordinates in x, y format.
+    def postproc(
+        self: SCCNN, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype
+    ) -> pd.DataFrame:
+        """Post-processing script for SCCNN.
+        
+        Post-process predicted probability map of the input image.
+        Performs peak detection, then non-maximum suppression.
+        Returns a pandas DataFrame containing detected nuclei coordinates [x, y, type, prob].
 
         Args:
-            prediction_map (ndarray):
-                Input image of type numpy array.
+            prediction_map (da.array):
+                Predicted probability map (HxWx1) of the entire input image.
+            prediction_shape (tuple):
+                Shape of the prediction map.
+            dtype (np.dtype):
+                Data type of the prediction map.
 
         Returns:
-            :class:`numpy.ndarray`:
-                Pixel-wise nuclear instance segmentation
-                prediction.
+            detected_nuclei (pandas.DataFrame):
+                Detected nuclei coordinates stored in a pandas DataFrame.
 
         """
-        coordinates = peak_local_max(
-            np.squeeze(prediction_map[0], axis=2),
+        depth = {0: self.min_distance, 1: self.min_distance, 2: 0}
+
+        # print("maxmin debug:")  # --- DEBUG ---
+        # lazy_max = prediction_map.max()
+        # max_value = lazy_max.compute()
+        # lazy_min = prediction_map.min()
+        # min_value = lazy_min.compute()
+        # print(f"lazy_max: {max_value}, lazy_min: {min_value}")
+
+        rechunked_prediction_map = prediction_map.rechunk(
+            (self.postproc_tile_shape[0], self.postproc_tile_shape[1], -1)
+        )
+        print(f"rechunked_prediction_map.shape: {rechunked_prediction_map.shape}")
+        print(f"rechunked_prediction_map.chunks: {rechunked_prediction_map.chunks}")
+
+        scores = da.map_overlap(
+            rechunked_prediction_map,
+            peak_detection_mapoverlap,
+            depth=depth,
+            boundary=0,
+            dtype=dtype,
+            block_info=True,
             min_distance=self.min_distance,
             threshold_abs=self.threshold_abs,
-            exclude_border=False,
+            depth_h=self.min_distance,
+            depth_w=self.min_distance,
+            calculate_probabilities=False,
         )
-        return np.fliplr(coordinates)
+        ddf = centroids_map_to_dask_dataframe(scores, x_offset=0, y_offset=0)
+        pandas_df = ddf.compute()
+
+        logger.info(f"Total detections before NMS: {len(pandas_df)}")
+        detected_nuclei = nucleus_detection_nms(pandas_df, radius=self.min_distance)
+        logger.info(f"Total detections after NMS: {len(detected_nuclei)}")
+
+        return detected_nuclei
 
     @staticmethod
     def infer_batch(
         model: nn.Module,
-        batch_data: np.ndarray | torch.Tensor,
+        batch_data: torch.Tensor,
         device: str,
-    ) -> list[np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -387,8 +432,8 @@ class SCCNN(ModelABC):
             pred = model(patch_imgs_gpu)
 
         pred = pred.permute(0, 2, 3, 1).contiguous()
-        pred = pred.cpu().numpy()
+        if torch.max(pred) > 0:
+            print(torch.max(pred), torch.min(pred))  # --- DEBUG ---
+        return pred.cpu().numpy()
 
-        return [
-            pred,
-        ]
+

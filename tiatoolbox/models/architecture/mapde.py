@@ -85,6 +85,7 @@ class MapDe(MicroNet):
         min_distance: int = 4,
         threshold_abs: float = 250,
         num_classes: int = 1,
+        postproc_tile_shape: list[int] = [2048, 2048],
     ) -> None:
         """Initialize :class:`MapDe`."""
         super().__init__(
@@ -92,7 +93,7 @@ class MapDe(MicroNet):
             num_input_channels=num_input_channels,
             out_activation="relu",
         )
-
+        self.postproc_tile_shape = postproc_tile_shape
         dist_filter = np.array(
             [
                 [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -263,8 +264,14 @@ class MapDe(MicroNet):
 
         """
         depth = {0: self.min_distance, 1: self.min_distance, 2: 0}
+
+        rechunked_prediction_map = prediction_map.rechunk(
+            (self.postproc_tile_shape[0], self.postproc_tile_shape[1], -1)
+        )
+        logger.info(f"Post-processing chunk size: {rechunked_prediction_map.chunks}")
+        
         scores = da.map_overlap(
-            prediction_map,
+            rechunked_prediction_map,
             peak_detection_mapoverlap,
             depth=depth,
             boundary=0,

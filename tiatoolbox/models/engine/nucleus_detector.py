@@ -49,6 +49,7 @@ def probability_to_peak_map(
         min_distance=min_distance,
         threshold_abs=threshold_abs,
         threshold_rel=threshold_rel,
+        exclude_border=False,
     )
     if coords.size:
         r, c = coords[:, 0], coords[:, 1]
@@ -121,29 +122,29 @@ def peak_detection_mapoverlap(
     return out
 
 
-def detection_with_map_overlap(
-    probs: da.Array, min_distance: int, threshold_abs: float, depth_pixels: int
-) -> da.Array:
-    """probs: Dask array (H, W, C), float.
-    depth_pixels: halo in pixels for H/W (use >= min_distance and >= any morphology radius).
+# def detection_with_map_overlap(
+#     probs: da.Array, min_distance: int, threshold_abs: float, depth_pixels: int
+# ) -> da.Array:
+#     """probs: Dask array (H, W, C), float.
+#     depth_pixels: halo in pixels for H/W (use >= min_distance and >= any morphology radius).
 
-    Returns:
-      scores: da.Array (H, W, C) with mean_intensity at centroids, 0 elsewhere.
-    """
-    depth = {0: depth_pixels, 1: depth_pixels, 2: 0}
-    scores = da.map_overlap(
-        probs,
-        peak_detection_mapoverlap,
-        depth=depth,
-        boundary=0,
-        dtype=np.float32,
-        block_info=True,
-        min_distance=min_distance,
-        threshold_abs=threshold_abs,
-        depth_h=depth_pixels,
-        depth_w=depth_pixels,
-    )
-    return scores
+#     Returns:
+#       scores: da.Array (H, W, C) with mean_intensity at centroids, 0 elsewhere.
+#     """
+#     depth = {0: depth_pixels, 1: depth_pixels, 2: 0}
+#     scores = da.map_overlap(
+#         probs,
+#         peak_detection_mapoverlap,
+#         depth=depth,
+#         boundary=0,
+#         dtype=np.float32,
+#         block_info=True,
+#         min_distance=min_distance,
+#         threshold_abs=threshold_abs,
+#         depth_h=depth_pixels,
+#         depth_w=depth_pixels,
+#     )
+#     return scores
 
 
 def centroids_map_to_dask_dataframe(
