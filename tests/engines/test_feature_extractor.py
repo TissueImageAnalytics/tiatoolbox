@@ -69,7 +69,7 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
     """Test feature extraction with DeepFeatureExtractor engine."""
     save_dir = track_tmp_path / "output"
     # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
 
     # * test providing pretrained from torch vs pretrained_model.yaml
     shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
@@ -82,7 +82,7 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
         device=device,
         patch_mode=False,
         save_dir=track_tmp_path / "wsi_out_check",
-        batch_size=2,
+        batch_size=1,
         output_type="zarr",
         memory_threshold=1,
     )
