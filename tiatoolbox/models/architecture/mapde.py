@@ -269,7 +269,7 @@ class MapDe(MicroNet):
             (self.postproc_tile_shape[0], self.postproc_tile_shape[1], -1)
         )
         logger.info(f"Post-processing chunk size: {rechunked_prediction_map.chunks}")
-        
+
         scores = da.map_overlap(
             rechunked_prediction_map,
             peak_detection_mapoverlap,
