@@ -1,4 +1,41 @@
-"""Define DeepFeatureExtractor class."""
+"""Deep Feature Extraction Engine for Digital Pathology.
+
+This module defines the `DeepFeatureExtractor` class, which extends
+`SemanticSegmentor` to extract intermediate CNN feature representations
+from whole slide images (WSIs) or image patches. Unlike segmentation
+or classification engines, this extractor focuses on generating feature
+embeddings for downstream tasks such as clustering, visualization, or
+training other machine learning models.
+
+Key Components:
+---------------
+Functions:
+    - save_to_cache:
+        Utility to spill intermediate feature and coordinate arrays to
+        disk using Zarr for memory-efficient processing.
+
+Classes:
+    - DeepFeatureExtractor:
+        Core engine for extracting deep features from WSIs or patches.
+        Supports memory-aware caching and outputs in Zarr format.
+
+Features:
+---------
+- Handles large-scale WSIs with memory-aware caching.
+- Outputs feature maps and patch coordinates for downstream analysis.
+- Compatible with TIAToolbox pretrained models and custom PyTorch models.
+- Supports both patch-based and WSI-based workflows.
+
+Example:
+--------
+>>> from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
+>>> extractor = DeepFeatureExtractor(model="resnet50-kather100k")
+>>> wsis = ["slide1.svs", "slide2.svs"]
+>>> output = extractor.run(wsis, patch_mode=False, output_type="zarr")
+>>> print(output)
+'/path/to/output.zarr'
+
+"""
 
 from __future__ import annotations
 
