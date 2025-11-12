@@ -68,8 +68,8 @@ if TYPE_CHECKING:  # pragma: no cover
 def save_to_cache(
     probabilities: list[da.Array],
     coordinates: list[da.Array],
-    probabilities_zarr: zarr.Array,
-    coordinates_zarr: zarr.Array,
+    probabilities_zarr: zarr.Array | None,
+    coordinates_zarr: zarr.Array | None,
     save_path: str | Path = "temp.zarr",
 ) -> tuple[zarr.Array, zarr.Array]:
     """Save computed feature and coordinate arrays to Zarr cache.
@@ -217,7 +217,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         self.process_prediction_per_batch = False
 
     def infer_wsi(
-        self: SemanticSegmentor,
+        self: DeepFeatureExtractor,
         dataloader: DataLoader,
         save_path: Path,
         **kwargs: Unpack[SemanticSegmentorRunParams],
@@ -251,7 +251,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
         # Default Memory threshold percentage is 80.
         memory_threshold = kwargs.get("memory_threshold", 80)
         vm = psutil.virtual_memory()
-        _ = save_path
         keys = ["probabilities", "coordinates"]
         probabilities, coordinates = [], []
 
@@ -376,7 +375,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         return raw_predictions
 
     def save_predictions(
-        self: SemanticSegmentor,
+        self: DeepFeatureExtractor,
         processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
@@ -418,7 +417,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         )
 
     def _update_run_params(
-        self: SemanticSegmentor,
+        self: DeepFeatureExtractor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
@@ -539,7 +538,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
         Raises:
             ValueError:
-                If `output_type` is not "zarr".
+                If `output_type` is not "zarr" or "dict".
         """
         # return_probabilities is always True for FeatureExtractor.
         kwargs["return_probabilities"] = True
