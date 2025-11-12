@@ -15,11 +15,11 @@ import numpy as np
 import dask.array as da
 import pandas as pd
 from tiatoolbox import logger
-from tiatoolbox.models.architecture.mapde import (
-    centroids_map_to_dask_dataframe,
-    nucleus_detection_nms,
-    peak_detection_mapoverlap,
+from tiatoolbox.models.engine.nucleus_detector import (
+    # centroids_map_to_dask_dataframe,
+    centroids_map_to_ddf_chunkwise,
 )
+
 import torch
 from skimage.feature import peak_local_max
 from torch import nn

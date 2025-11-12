@@ -1340,6 +1340,7 @@ def process_contours(
     return annotations_list
 
 
+
 def df_to_store_nucleus_detector(
     df: pd.DataFrame,
     scale_factor: tuple[float, float],

@@ -8,19 +8,13 @@ Imaging (ISBI 2019). IEEE, 2019.
 
 from __future__ import annotations
 
-import dask.array as da
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
+from skimage.feature import peak_local_max
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture.micronet import MicroNet
-from tiatoolbox.models.engine.nucleus_detector import (
-    centroids_map_to_dask_dataframe,
-    nucleus_detection_nms,
-    peak_detection_mapoverlap,
-)
 
 
 class MapDe(MicroNet):
@@ -242,55 +236,73 @@ class MapDe(MicroNet):
 
     #  skipcq: PYL-W0221  # noqa: ERA001
     def postproc(
-        self: MapDe, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype
-    ) -> pd.DataFrame:
-        """Post-processing script for MapDe.
-
-        Post-process predicted probability map of the input image.
-        Performs peak detection, then non-maximum suppression.
-        Returns a pandas DataFrame containing detected nuclei coordinates [x, y, type, prob].
+        self: MapDe, 
+        block: np.ndarray,
+        block_info: dict,
+        depth_h: int,
+        depth_w: int,
+    ) -> np.ndarray:
+        """Runs inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
+        Builds a processed mask per channel, runs peak_local_max then
+        label+regionprops, and writes probability (mean_intensity) at centroid pixels.
+        Keeps only centroids whose (row,col) lie in the interior window:
+            rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
+        Returns same spatial shape as input block: (h_pad, w_pad, C), float32.
 
         Args:
-            prediction_map (da.array):
-                Predicted probability map (HxWx1) of the entire input image.
-            prediction_shape (tuple):
-                Shape of the prediction map.
-            dtype (np.dtype):
-                Data type of the prediction map.
+            block: NumPy array (H, W, C) with padded block data.
+            block_info: Dask block info dict.
+            min_distance: Minimum distance in pixels between peaks.
+            threshold_abs: Minimum absolute threshold for peak detection.
+            depth_h: Halo size in pixels for height (rows).
+            depth_w: Halo size in pixels for width (cols).
+            calculate_probabilities: If True, write mean_intensity at centroids;
+                else write 1.0 at centroids.
 
         Returns:
-            detected_nuclei (pandas.DataFrame):
-                Detected nuclei coordinates stored in a pandas DataFrame.
-
+            out: NumPy array (H, W, C) with probabilities at centroids, 0 elsewhere.
         """
-        depth = {0: self.min_distance, 1: self.min_distance, 2: 0}
+        H, W, C = block.shape
 
-        rechunked_prediction_map = prediction_map.rechunk(
-            (self.postproc_tile_shape[0], self.postproc_tile_shape[1], -1)
-        )
-        logger.info(f"Post-processing chunk size: {rechunked_prediction_map.chunks}")
-        
-        scores = da.map_overlap(
-            rechunked_prediction_map,
-            peak_detection_mapoverlap,
-            depth=depth,
-            boundary=0,
-            dtype=dtype,
-            block_info=True,
-            min_distance=self.min_distance,
-            threshold_abs=self.threshold_abs,
-            depth_h=self.min_distance,
-            depth_w=self.min_distance,
-            calculate_probabilities=False,
-        )
-        ddf = centroids_map_to_dask_dataframe(scores, x_offset=0, y_offset=0)
-        pandas_df = ddf.compute()
+        # --- derive core (pre-overlap) size for THIS block safely ---
+        info = block_info[0]
+        locs = info["array-location"]  # [(r0,r1),(c0,c1),(ch0,ch1)]
+        core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
+        core_w = int(locs[1][1] - locs[1][0])
 
-        logger.info(f"Total detections before NMS: {len(pandas_df)}")
-        detected_nuclei = nucleus_detection_nms(pandas_df, radius=self.min_distance)
-        logger.info(f"Total detections after NMS: {len(detected_nuclei)}")
+        rmin, rmax = depth_h, depth_h + core_h
+        cmin, cmax = depth_w, depth_w + core_w
 
-        return detected_nuclei
+        out = np.zeros((H, W, C), dtype=np.float32)
+
+        for ch in range(C):
+            img = np.asarray(block[..., ch])  # NumPy 2D view
+
+            coords = peak_local_max(
+                img,
+                min_distance=self.min_distance,
+                threshold_abs=self.threshold_abs,
+                exclude_border=False,
+            )
+
+            for r, c in coords:
+                if (rmin <= r < rmax) and (cmin <= c < cmax):
+                    out[r, c, ch] = 1.0
+            # pmask = probability_to_peak_map(img, self.min_distance, self.threshold_abs)
+            # if not pmask.any():
+            #     continue
+
+            # lab = label(pmask)
+            # props = regionprops(lab, intensity_image=img)
+
+            # for reg in props:
+            #     r, c = reg.centroid  # floats in padded-block coords
+            #     if (rmin <= r < rmax) and (cmin <= c < cmax):
+            #         rr = int(round(r))
+            #         cc = int(round(c))
+            #         if 0 <= rr < H and 0 <= cc < W:
+            #             out[rr, cc, ch] = 1.0
+        return out
 
     @staticmethod
     def infer_batch(

@@ -45,7 +45,7 @@ import numpy as np
 import torch
 import zarr
 from dask import compute
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 from torch import nn
 from typing_extensions import Unpack
 
