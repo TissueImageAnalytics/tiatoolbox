@@ -9,7 +9,6 @@ ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 
 
 if __name__ == "__main__":
-
     # model_name = "sccnn-crchisto"
     model_name = "mapde-conic"
 

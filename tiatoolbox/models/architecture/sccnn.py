@@ -11,9 +11,12 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
-import numpy as np
 import dask.array as da
+import numpy as np
 import pandas as pd
+import torch
+from torch import nn
+
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_detector import (
     # centroids_map_to_dask_dataframe,
@@ -339,7 +342,7 @@ class SCCNN(ModelABC):
         self: SCCNN, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype
     ) -> pd.DataFrame:
         """Post-processing script for SCCNN.
-        
+
         Post-process predicted probability map of the input image.
         Performs peak detection, then non-maximum suppression.
         Returns a pandas DataFrame containing detected nuclei coordinates [x, y, type, prob].
@@ -435,5 +438,3 @@ class SCCNN(ModelABC):
         if torch.max(pred) > 0:
             print(torch.max(pred), torch.min(pred))  # --- DEBUG ---
         return pred.cpu().numpy()
-
-
