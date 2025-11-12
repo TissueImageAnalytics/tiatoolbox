@@ -11,13 +11,11 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
-import dask.array as da
 import numpy as np
-import pandas as pd
 import torch
+from skimage.feature import peak_local_max
 from torch import nn
 
-from tiatoolbox import logger
 from tiatoolbox.models.models_abc import ModelABC
 
 
@@ -330,63 +328,57 @@ class SCCNN(ModelABC):
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
     def postproc(
-        self: SCCNN, prediction_map: da.Array, prediction_shape: tuple, dtype: np.dtype
-    ) -> pd.DataFrame:
-        """Post-processing script for SCCNN.
+        self: SCCNN,
+        block: np.ndarray,
+        block_info: dict,
+        depth_h: int,
+        depth_w: int,
+    ) -> np.ndarray:
+        """Runs inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
 
-        Post-process predicted probability map of the input image.
-        Performs peak detection, then non-maximum suppression.
-        Returns a pandas DataFrame containing detected nuclei coordinates [x, y, type, prob].
+        Builds a processed mask per channel, runs peak_local_max then
+        writes 1.0 at centroid pixels.
+        Keeps only centroids whose (row,col) lie in the interior window:
+            rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
+        Returns same spatial shape as input block: (h_pad, w_pad, C), float32.
 
         Args:
-            prediction_map (da.array):
-                Predicted probability map (HxWx1) of the entire input image.
-            prediction_shape (tuple):
-                Shape of the prediction map.
-            dtype (np.dtype):
-                Data type of the prediction map.
+            block: NumPy array (H, W, C) with padded block data.
+            block_info: Dask block info dict.
+            depth_h: Halo size in pixels for height (rows).
+            depth_w: Halo size in pixels for width (cols).
 
         Returns:
-            detected_nuclei (pandas.DataFrame):
-                Detected nuclei coordinates stored in a pandas DataFrame.
-
+            out: NumPy array (H, W, C) with 1 at centroids, 0 elsewhere.
         """
-        depth = {0: self.min_distance, 1: self.min_distance, 2: 0}
+        block_height, block_width, block_channels = block.shape
 
-        # print("maxmin debug:")  # --- DEBUG ---
-        # lazy_max = prediction_map.max()
-        # max_value = lazy_max.compute()
-        # lazy_min = prediction_map.min()
-        # min_value = lazy_min.compute()
-        # print(f"lazy_max: {max_value}, lazy_min: {min_value}")
+        # --- derive core (pre-overlap) size for THIS block ---
+        info = block_info[0]
+        locs = info["array-location"]  # a list of (start, stop) coordinates per axis
+        core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
+        core_w = int(locs[1][1] - locs[1][0])
 
-        rechunked_prediction_map = prediction_map.rechunk(
-            (self.postproc_tile_shape[0], self.postproc_tile_shape[1], -1)
-        )
-        print(f"rechunked_prediction_map.shape: {rechunked_prediction_map.shape}")
-        print(f"rechunked_prediction_map.chunks: {rechunked_prediction_map.chunks}")
+        rmin, rmax = depth_h, depth_h + core_h
+        cmin, cmax = depth_w, depth_w + core_w
 
-        scores = da.map_overlap(
-            rechunked_prediction_map,
-            peak_detection_mapoverlap,
-            depth=depth,
-            boundary=0,
-            dtype=dtype,
-            block_info=True,
-            min_distance=self.min_distance,
-            threshold_abs=self.threshold_abs,
-            depth_h=self.min_distance,
-            depth_w=self.min_distance,
-            calculate_probabilities=False,
-        )
-        ddf = centroids_map_to_dask_dataframe(scores, x_offset=0, y_offset=0)
-        pandas_df = ddf.compute()
+        out = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
 
-        logger.info(f"Total detections before NMS: {len(pandas_df)}")
-        detected_nuclei = nucleus_detection_nms(pandas_df, radius=self.min_distance)
-        logger.info(f"Total detections after NMS: {len(detected_nuclei)}")
+        for ch in range(block_channels):
+            img = np.asarray(block[..., ch])  # NumPy 2D view
 
-        return detected_nuclei
+            coords = peak_local_max(
+                img,
+                min_distance=self.min_distance,
+                threshold_abs=self.threshold_abs,
+                exclude_border=False,
+            )
+
+            for r, c in coords:
+                if (rmin <= r < rmax) and (cmin <= c < cmax):
+                    out[r, c, ch] = 1.0
+
+        return out
 
     @staticmethod
     def infer_batch(
@@ -426,6 +418,4 @@ class SCCNN(ModelABC):
             pred = model(patch_imgs_gpu)
 
         pred = pred.permute(0, 2, 3, 1).contiguous()
-        if torch.max(pred) > 0:
-            print(torch.max(pred), torch.min(pred))  # --- DEBUG ---
         return pred.cpu().numpy()

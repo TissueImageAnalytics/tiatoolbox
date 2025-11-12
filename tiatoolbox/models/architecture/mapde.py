@@ -78,7 +78,7 @@ class MapDe(MicroNet):
         min_distance: int = 4,
         threshold_abs: float = 250,
         num_classes: int = 1,
-        postproc_tile_shape: list[int] = [2048, 2048],
+        postproc_tile_shape: tuple[int, int] = (2048, 2048),
     ) -> None:
         """Initialize :class:`MapDe`."""
         super().__init__(
@@ -86,7 +86,9 @@ class MapDe(MicroNet):
             num_input_channels=num_input_channels,
             out_activation="relu",
         )
+
         self.postproc_tile_shape = postproc_tile_shape
+
         dist_filter = np.array(
             [
                 [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -242,6 +244,7 @@ class MapDe(MicroNet):
         depth_w: int,
     ) -> np.ndarray:
         """Runs inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
+
         Builds a processed mask per channel, runs peak_local_max then
         writes 1.0 at centroid pixels.
         Keeps only centroids whose (row,col) lie in the interior window:
@@ -257,7 +260,7 @@ class MapDe(MicroNet):
         Returns:
             out: NumPy array (H, W, C) with 1 at centroids, 0 elsewhere.
         """
-        H, W, C = block.shape
+        block_height, block_width, block_channels = block.shape
 
         # --- derive core (pre-overlap) size for THIS block ---
         info = block_info[0]
@@ -268,9 +271,9 @@ class MapDe(MicroNet):
         rmin, rmax = depth_h, depth_h + core_h
         cmin, cmax = depth_w, depth_w + core_w
 
-        out = np.zeros((H, W, C), dtype=np.float32)
+        out = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
 
-        for ch in range(C):
+        for ch in range(block_channels):
             img = np.asarray(block[..., ch])  # NumPy 2D view
 
             coords = peak_local_max(
