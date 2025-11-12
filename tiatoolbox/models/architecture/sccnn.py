@@ -18,6 +18,11 @@ import torch
 from torch import nn
 
 from tiatoolbox import logger
+
+import torch
+from skimage.feature import peak_local_max
+from torch import nn
+
 from tiatoolbox.models.models_abc import ModelABC
 
 

@@ -243,7 +243,7 @@ class MapDe(MicroNet):
     ) -> np.ndarray:
         """Runs inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
         Builds a processed mask per channel, runs peak_local_max then
-        label+regionprops, and writes probability (mean_intensity) at centroid pixels.
+        writes 1.0 at centroid pixels.
         Keeps only centroids whose (row,col) lie in the interior window:
             rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
         Returns same spatial shape as input block: (h_pad, w_pad, C), float32.
@@ -251,21 +251,17 @@ class MapDe(MicroNet):
         Args:
             block: NumPy array (H, W, C) with padded block data.
             block_info: Dask block info dict.
-            min_distance: Minimum distance in pixels between peaks.
-            threshold_abs: Minimum absolute threshold for peak detection.
             depth_h: Halo size in pixels for height (rows).
             depth_w: Halo size in pixels for width (cols).
-            calculate_probabilities: If True, write mean_intensity at centroids;
-                else write 1.0 at centroids.
 
         Returns:
-            out: NumPy array (H, W, C) with probabilities at centroids, 0 elsewhere.
+            out: NumPy array (H, W, C) with 1 at centroids, 0 elsewhere.
         """
         H, W, C = block.shape
 
-        # --- derive core (pre-overlap) size for THIS block safely ---
+        # --- derive core (pre-overlap) size for THIS block ---
         info = block_info[0]
-        locs = info["array-location"]  # [(r0,r1),(c0,c1),(ch0,ch1)]
+        locs = info["array-location"]  # a list of (start, stop) coordinates per axis
         core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
         core_w = int(locs[1][1] - locs[1][0])
 
@@ -287,20 +283,7 @@ class MapDe(MicroNet):
             for r, c in coords:
                 if (rmin <= r < rmax) and (cmin <= c < cmax):
                     out[r, c, ch] = 1.0
-            # pmask = probability_to_peak_map(img, self.min_distance, self.threshold_abs)
-            # if not pmask.any():
-            #     continue
 
-            # lab = label(pmask)
-            # props = regionprops(lab, intensity_image=img)
-
-            # for reg in props:
-            #     r, c = reg.centroid  # floats in padded-block coords
-            #     if (rmin <= r < rmax) and (cmin <= c < cmax):
-            #         rr = int(round(r))
-            #         cc = int(round(c))
-            #         if 0 <= rr < H and 0 <= cc < W:
-            #             out[rr, cc, ch] = 1.0
         return out
 
     @staticmethod

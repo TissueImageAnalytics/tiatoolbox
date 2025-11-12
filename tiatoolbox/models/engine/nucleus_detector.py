@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Unpack
 
 import dask
 import dask.array as da
-import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 from dask.diagnostics.progress import ProgressBar
@@ -22,273 +21,10 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.models.models_abc import ModelABC
+from tiatoolbox.annotation.storage import SQLiteStore, Annotation
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
-
-
-def probability_to_peak_map(
-    img2d: np.ndarray,
-    min_distance: int,
-    threshold_abs: float,
-    threshold_rel: float = 0.0,
-) -> np.ndarray:
-    """Build a boolean mask (H, W) of objects from a 2D probability map using peak_local_max.
-
-    Args:
-        img2d (np.ndarray): 2D probability map.
-        min_distance (int): Minimum distance between peaks.
-        threshold_abs (float): Absolute threshold for peak detection.
-        threshold_rel (float, optional): Relative threshold for peak detection. Defaults to 0.0.
-
-    Returns:
-        mask (np.ndarray): Boolean mask (H, W) with True at peak locations.
-    """
-    H, W = img2d.shape
-    mask = np.zeros((H, W), dtype=bool)
-    coords = peak_local_max(
-        img2d,
-        min_distance=min_distance,
-        threshold_abs=threshold_abs,
-        threshold_rel=threshold_rel,
-        exclude_border=False,
-    )
-    if coords.size:
-        r, c = coords[:, 0], coords[:, 1]
-        mask[r, c] = True
-    return mask
-
-
-# def peak_detection_mapoverlap(
-#     block: np.ndarray,
-#     block_info,
-#     min_distance: int,
-#     threshold_abs: float,
-#     depth_h: int,
-#     depth_w: int,
-# ) -> np.ndarray:
-#     """Runs inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
-#     Builds a processed mask per channel, runs peak_local_max then
-#     label+regionprops, and writes probability (mean_intensity) at centroid pixels.
-#     Keeps only centroids whose (row,col) lie in the interior window:
-#         rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
-#     Returns same spatial shape as input block: (h_pad, w_pad, C), float32.
-
-#     Args:
-#         block: NumPy array (H, W, C) with padded block data.
-#         block_info: Dask block info dict.
-#         min_distance: Minimum distance in pixels between peaks.
-#         threshold_abs: Minimum absolute threshold for peak detection.
-#         depth_h: Halo size in pixels for height (rows).
-#         depth_w: Halo size in pixels for width (cols).
-#         calculate_probabilities: If True, write mean_intensity at centroids;
-#             else write 1.0 at centroids.
-
-#     Returns:
-#         out: NumPy array (H, W, C) with probabilities at centroids, 0 elsewhere.
-#     """
-#     H, W, C = block.shape
-
-#     # --- derive core (pre-overlap) size for THIS block safely ---
-#     info = block_info[0]
-#     locs = info["array-location"]  # [(r0,r1),(c0,c1),(ch0,ch1)]
-#     core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
-#     core_w = int(locs[1][1] - locs[1][0])
-
-#     rmin, rmax = depth_h, depth_h + core_h
-#     cmin, cmax = depth_w, depth_w + core_w
-
-#     out = np.zeros((H, W, C), dtype=np.float32)
-
-#     for ch in range(C):
-#         img = np.asarray(block[..., ch])  # NumPy 2D view
-#         pmask = probability_to_peak_map(img, min_distance, threshold_abs)
-#         if not pmask.any():
-#             continue
-
-#         lab = label(pmask)
-#         props = regionprops(lab, intensity_image=img)
-
-#         for reg in props:
-#             r, c = reg.centroid  # floats in padded-block coords
-#             if (rmin <= r < rmax) and (cmin <= c < cmax):
-#                 rr = int(round(r))
-#                 cc = int(round(c))
-#                 if 0 <= rr < H and 0 <= cc < W:
-#                     if calculate_probabilities:
-#                         out[rr, cc, ch] = float(reg.mean_intensity)
-#                     else:
-#                         out[rr, cc, ch] = 1.0
-
-#     return out
-
-
-def _chunk_to_df(
-    block: np.ndarray, block_info: dict, x_offset: int = 0, y_offset: int = 0
-) -> pd.DataFrame:
-    # block: np.ndarray (h, w, C) for this chunk (no halos here; use after stitching)
-    info = block_info[0] if 0 in block_info else block_info[None]
-    (r0, r1), (c0, c1), _ = info[
-        "array-location"
-    ]  # global interior coords for this chunk
-
-    # find nonzeros per channel
-    ys, xs, cs = np.nonzero(block)
-    if ys.size == 0:
-        DTYPES = {
-            "x": "uint32",  # or "uint32" if you really want
-            "y": "uint32",
-            "type": "uint32",
-            "prob": "float32",
-        }
-        return pd.DataFrame({k: pd.Series(dtype=v) for k, v in DTYPES.items()})
-
-    probs = block[ys, xs, cs].astype(np.float32, copy=False)
-    df = pd.DataFrame(
-        {
-            "x": xs + c0 + int(x_offset),
-            "y": ys + r0 + int(y_offset),
-            "type": cs.astype(np.int64, copy=False),
-            "prob": probs,
-        }
-    )
-    return df
-
-
-def centroids_map_to_ddf_chunkwise(
-    scores: da.Array, x_offset: int = 0, y_offset: int = 0
-) -> dd.DataFrame:
-    # build one delayed pandas DF per chunk
-    dfs = (
-        scores.map_blocks(
-            _chunk_to_df,
-            dtype=object,  # ignored; returning DataFrames
-            block_info=True,
-            x_offset=x_offset,
-            y_offset=y_offset,
-        )
-        .to_delayed()
-        .ravel()
-    )
-
-    meta = pd.DataFrame(
-        {
-            "x": pd.Series([], dtype="uint32"),
-            "y": pd.Series([], dtype="uint32"),
-            "type": pd.Series([], dtype="uint32"),
-            "prob": pd.Series([], dtype="float32"),
-        }
-    )
-    ddf = dd.from_delayed(dfs, meta=meta)
-    return ddf
-
-
-def _chunk_to_records(
-    block: np.ndarray, block_info
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    # block: (h, w, C) NumPy chunk (post-stitching, no halos)
-    info = block_info[0] if 0 in block_info else block_info[None]
-    (r0, r1), (c0, c1), _ = info["array-location"]  # global interior start/stop
-
-    ys, xs, cs = np.nonzero(block)
-    if ys.size == 0:
-        # return empty, dtype-stable arrays to avoid surprises
-        return (
-            np.empty(0, dtype=np.uint32),
-            np.empty(0, dtype=np.uint32),
-            np.empty(0, dtype=np.uint32),
-            np.empty(0, dtype=np.float32),
-        )
-
-    x = xs.astype(np.uint32, copy=False) + int(c0)
-    y = ys.astype(np.uint32, copy=False) + int(r0)
-    t = cs.astype(np.uint32, copy=False)
-    p = block[ys, xs, cs].astype(np.float32, copy=False)
-    return (x, y, t, p)
-
-
-def _write_records_to_store(
-    recs: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-    store: SQLiteStore,
-    scale_factor: tuple[float, float],
-    class_dict: dict | None,
-    batch_size: int = 5000,
-) -> int:
-    x, y, t, p = recs
-    n = len(x)
-    if n == 0:
-        return 0  # nothing to write
-
-    x = np.rint(x * scale_factor[0]).astype(np.uint32, copy=False)
-    y = np.rint(y * scale_factor[1]).astype(np.uint32, copy=False)
-
-    # class mapping
-    if class_dict is None:
-        # identity over actually-present types
-        uniq = np.unique(t)
-        class_dict = {int(k): int(k) for k in uniq}
-    labels = np.array([class_dict.get(int(k), int(k)) for k in t], dtype=object)
-
-    def make_points(xb, yb):
-        return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
-
-    written = 0
-    for i in range(0, n, batch_size):
-        j = min(i + batch_size, n)
-        pts = make_points(x[i:j], y[i:j])
-
-        anns = [
-            Annotation(geometry=pt, properties={"type": lbl, "probability": float(pp)})
-            for pt, lbl, pp in zip(pts, labels[i:j], p[i:j])
-        ]
-        store.append_many(anns)
-        written += j - i
-    return written
-
-
-def write_centroids_to_store(
-    scores: da.Array,
-    scale_factor: tuple[float, float] = (1.0, 1.0),
-    class_dict: dict | None = None,
-    save_path: Path | None = None,
-    batch_size: int = 5000,
-) -> Path | SQLiteStore:
-    # one delayed record-tuple per chunk
-    recs_delayed = (
-        scores.map_blocks(
-            _chunk_to_records,
-            dtype=object,  # we return Python tuples
-            block_info=True,
-        )
-        .to_delayed()
-        .ravel()
-    )
-
-    store = SQLiteStore()
-
-    # one delayed writer per chunk (returns number written)
-    writes = [
-        dask.delayed(_write_records_to_store)(
-            recs, store, scale_factor, class_dict, batch_size
-        )
-        for recs in recs_delayed
-    ]
-
-    # IMPORTANT: SQLite is single-writer; run sequentially
-    with ProgressBar():
-        total = dask.compute(*writes, scheduler="single-threaded")
-    logger.info(f"Total detections written to store: {sum(total)}")
-    # # if a save director is provided, then dump store into a file
-    if save_path:
-        # ensure parent directory exists
-        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-        # ensure proper db extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
-        store.commit()
-        store.dump(save_path)
-        return save_path
-
-    return store
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -445,7 +181,7 @@ class NucleusDetector(SemanticSegmentor):
         output_type: str,
         save_path: Path | None = None,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> AnnotationStore:
+    ) -> AnnotationStore | Path:
         """Save nucleus detections to disk or return them in memory.
 
         This method saves predictions in one of the supported formats:
@@ -504,7 +240,7 @@ class NucleusDetector(SemanticSegmentor):
                 else:
                     output_path = save_path.parent / (str(i) + ".db")
 
-                out_file = write_centroids_to_store(
+                out_file = self.write_centroids_to_store(
                     predictions,
                     scale_factor=scale_factor,
                     class_dict=class_dict,
@@ -513,7 +249,7 @@ class NucleusDetector(SemanticSegmentor):
 
                 save_paths.append(out_file)
             return save_paths
-        return write_centroids_to_store(
+        return self.write_centroids_to_store(
             processed_predictions["predictions"],
             scale_factor=scale_factor,
             save_path=save_path,
@@ -595,3 +331,155 @@ class NucleusDetector(SemanticSegmentor):
 
         kept = sub.iloc[keep_idx].copy()
         return kept
+    
+    @staticmethod
+    def _chunk_to_records(
+        block: np.ndarray, 
+        block_info: dict
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Convert a Dask block of detection maps to detection records.
+
+        Each block is a NumPy array of shape (h, w, C) containing detection scores 
+        of each class c. This function finds non-zero detections and returns their
+        global coordinates, class IDs (channel), and probabilities.
+
+        Args:
+            block: NumPy array (h, w, C) for this chunk (no halos).
+            block_info: Dask block info dict.
+        Returns:
+            Tuple of ([x_coords], [y_coords], [class_ids], [probs])
+        """
+
+        # block: (h, w, C) NumPy chunk (post-stitching, no halos)
+        info = block_info[0] if 0 in block_info else block_info[None]
+        (r0, r1), (c0, c1), _ = info["array-location"]  # global interior start/stop
+
+        # find the coordinates and channel indices of nonzeros
+        ys, xs, cs = np.nonzero(block)
+
+        if ys.size == 0:
+            # return empty arrays
+            return (
+                np.empty(0, dtype=np.uint32),
+                np.empty(0, dtype=np.uint32),
+                np.empty(0, dtype=np.uint32),
+                np.empty(0, dtype=np.float32),
+            )
+
+        x = xs.astype(np.uint32, copy=False) + int(c0)
+        y = ys.astype(np.uint32, copy=False) + int(r0)
+        t = cs.astype(np.uint32, copy=False)
+        
+        # read detection probabilities
+        p = block[ys, xs, cs].astype(np.float32, copy=False)
+        return (x, y, t, p)
+
+    
+    @staticmethod
+    def _write_records_to_store(
+        recs: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        store: SQLiteStore,
+        scale_factor: Tuple[float, float],
+        class_dict: dict[int, str | int] | None,
+        batch_size: int = 5000,
+    ) -> int:
+        """Write detection records to AnnotationStore in batches.
+        
+        Args:
+            recs: Tuple of ([x_coords], [y_coords], [class_ids], [probs])
+            store: SQLiteStore to write the detections to
+            scale_factor: Scaling factors for x and y coordinates
+            class_dict: Mapping from original class IDs to new class names
+            batch_size: Number of records to write in each batch
+        Returns:
+            Total number of records written
+        """
+        x, y, t, p = recs
+        n = len(x)
+        if n == 0:
+            return 0  # nothing to write
+
+        # scale coordinates
+        x = np.rint(x * scale_factor[0]).astype(np.uint32, copy=False)
+        y = np.rint(y * scale_factor[1]).astype(np.uint32, copy=False)
+
+        # class mapping
+        if class_dict is None:
+            # identity over actually-present types
+            uniq = np.unique(t)
+            class_dict = {int(k): int(k) for k in uniq}
+        labels = np.array([class_dict.get(int(k), int(k)) for k in t], dtype=object)
+
+        def make_points(xb, yb): return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
+
+        written = 0
+        for i in range(0, n, batch_size):
+            j = min(i + batch_size, n)
+            pts = make_points(x[i:j], y[i:j])
+
+            anns = [
+                Annotation(geometry=pt,
+                            properties={"type": lbl, "probability": float(pp)})
+                for pt, lbl, pp in zip(pts, labels[i:j], p[i:j])
+            ]
+            store.append_many(anns)
+            written += (j - i)
+        return written
+
+
+    @staticmethod
+    def write_centroids_to_store(
+        detection_maps: da.Array,
+        scale_factor: tuple[float, float] = (1.0, 1.0),
+        class_dict: dict | None = None,
+        save_path: Path | None = None,
+        batch_size: int = 5000
+    ) -> Path | SQLiteStore:
+        """Write post-processed detection maps to an AnnotationStore.
+        This is done in chunks using Dask for efficiency and to handle large 
+        detection maps at WSI level.
+
+        Args:
+            detection_maps: Dask array (H, W, C) of detection scores.
+            scale_factor: Tuple (sx, sy) to scale coordinates before saving.
+            class_dict: Optional dict mapping class indices to names.
+            save_path: Optional Path to save the .db file. If None, returns in-memory store.
+            batch_size: Number of records to write per batch.
+        Returns:
+            Path to saved .db file if save_path is provided, else in-memory SQLiteStore.
+        """
+
+        # Convert each block to detection records first
+        # [block_H, block_W, C] -> [xs, ys, classes, probs]
+        # one delayed record-tuple per chunk
+        recs_delayed = detection_maps.map_blocks(
+            NucleusDetector._chunk_to_records,
+            dtype=object,           # we return Python tuples
+            block_info=True,
+        ).to_delayed().ravel()
+
+        # create annotation store
+        store = SQLiteStore()
+
+        # one delayed writer per chunk (returns number of detections written)
+        writes = [
+            dask.delayed(NucleusDetector._write_records_to_store)(
+                recs, store, scale_factor, class_dict, batch_size
+            )
+            for recs in recs_delayed
+        ]
+
+        # IMPORTANT: SQLite is single-writer; run sequentially
+        with ProgressBar():
+            total = dask.compute(*writes, scheduler="single-threaded")
+        logger.info(f"Total detections written to store: {sum(total)}")
+
+        # if a save directory is provided, then dump store into a file
+        if save_path:
+            save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
+            save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+            store.commit()
+            store.dump(save_path)
+            return save_path
+
+        return store
