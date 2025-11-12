@@ -13,7 +13,6 @@ import torch
 import torch.nn.functional as F  # noqa: N812
 from skimage.feature import peak_local_max
 
-from tiatoolbox import logger
 from tiatoolbox.models.architecture.micronet import MicroNet
 
 
@@ -236,7 +235,7 @@ class MapDe(MicroNet):
 
     #  skipcq: PYL-W0221  # noqa: ERA001
     def postproc(
-        self: MapDe, 
+        self: MapDe,
         block: np.ndarray,
         block_info: dict,
         depth_h: int,

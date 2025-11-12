@@ -18,15 +18,6 @@ import torch
 from torch import nn
 
 from tiatoolbox import logger
-from tiatoolbox.models.engine.nucleus_detector import (
-    # centroids_map_to_dask_dataframe,
-    centroids_map_to_ddf_chunkwise,
-)
-
-import torch
-from skimage.feature import peak_local_max
-from torch import nn
-
 from tiatoolbox.models.models_abc import ModelABC
 
 

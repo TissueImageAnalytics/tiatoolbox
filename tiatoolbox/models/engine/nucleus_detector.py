@@ -3,28 +3,25 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Unpack, Tuple
+from typing import TYPE_CHECKING, Unpack
 
 import dask
 import dask.array as da
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
-from skimage.feature import peak_local_max
-from skimage.measure import label, regionprops
-from tiatoolbox.wsicore.wsireader import is_zarr
 from dask.diagnostics.progress import ProgressBar
+from shapely.geometry import Point
+from skimage.feature import peak_local_max
 
 from tiatoolbox import logger
 from tiatoolbox.annotation import AnnotationStore
+from tiatoolbox.annotation.storage import Annotation, SQLiteStore
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
-from shapely.geometry import Point
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import df_to_store_nucleus_detector
-from tiatoolbox.annotation.storage import SQLiteStore, Annotation
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
@@ -126,52 +123,69 @@ def probability_to_peak_map(
 #     return out
 
 
-def _chunk_to_df(block:np.ndarray, block_info:dict, x_offset:int = 0, y_offset:int = 0) -> pd.DataFrame:
+def _chunk_to_df(
+    block: np.ndarray, block_info: dict, x_offset: int = 0, y_offset: int = 0
+) -> pd.DataFrame:
     # block: np.ndarray (h, w, C) for this chunk (no halos here; use after stitching)
     info = block_info[0] if 0 in block_info else block_info[None]
-    (r0, r1), (c0, c1), _ = info["array-location"]  # global interior coords for this chunk
+    (r0, r1), (c0, c1), _ = info[
+        "array-location"
+    ]  # global interior coords for this chunk
 
     # find nonzeros per channel
     ys, xs, cs = np.nonzero(block)
     if ys.size == 0:
         DTYPES = {
-            "x":    "uint32",     # or "uint32" if you really want
-            "y":    "uint32",
+            "x": "uint32",  # or "uint32" if you really want
+            "y": "uint32",
             "type": "uint32",
             "prob": "float32",
         }
         return pd.DataFrame({k: pd.Series(dtype=v) for k, v in DTYPES.items()})
 
     probs = block[ys, xs, cs].astype(np.float32, copy=False)
-    df = pd.DataFrame({
-        "x": xs + c0 + int(x_offset),
-        "y": ys + r0 + int(y_offset),
-        "type": cs.astype(np.int64, copy=False),
-        "prob": probs,
-    })
+    df = pd.DataFrame(
+        {
+            "x": xs + c0 + int(x_offset),
+            "y": ys + r0 + int(y_offset),
+            "type": cs.astype(np.int64, copy=False),
+            "prob": probs,
+        }
+    )
     return df
 
 
-def centroids_map_to_ddf_chunkwise(scores: da.Array, x_offset: int=0, y_offset: int=0) -> dd.DataFrame:
+def centroids_map_to_ddf_chunkwise(
+    scores: da.Array, x_offset: int = 0, y_offset: int = 0
+) -> dd.DataFrame:
     # build one delayed pandas DF per chunk
-    dfs = scores.map_blocks(
-        _chunk_to_df,
-        dtype=object,                  # ignored; returning DataFrames
-        block_info=True,
-        x_offset=x_offset,
-        y_offset=y_offset,
-    ).to_delayed().ravel()
+    dfs = (
+        scores.map_blocks(
+            _chunk_to_df,
+            dtype=object,  # ignored; returning DataFrames
+            block_info=True,
+            x_offset=x_offset,
+            y_offset=y_offset,
+        )
+        .to_delayed()
+        .ravel()
+    )
 
-    meta = pd.DataFrame({"x": pd.Series([], dtype="uint32"),
-                         "y": pd.Series([], dtype="uint32"),
-                         "type": pd.Series([], dtype="uint32"),
-                         "prob": pd.Series([], dtype="float32")})
+    meta = pd.DataFrame(
+        {
+            "x": pd.Series([], dtype="uint32"),
+            "y": pd.Series([], dtype="uint32"),
+            "type": pd.Series([], dtype="uint32"),
+            "prob": pd.Series([], dtype="float32"),
+        }
+    )
     ddf = dd.from_delayed(dfs, meta=meta)
     return ddf
 
 
-def _chunk_to_records(block: np.ndarray, block_info
-                      ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _chunk_to_records(
+    block: np.ndarray, block_info
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     # block: (h, w, C) NumPy chunk (post-stitching, no halos)
     info = block_info[0] if 0 in block_info else block_info[None]
     (r0, r1), (c0, c1), _ = info["array-location"]  # global interior start/stop
@@ -192,10 +206,11 @@ def _chunk_to_records(block: np.ndarray, block_info
     p = block[ys, xs, cs].astype(np.float32, copy=False)
     return (x, y, t, p)
 
+
 def _write_records_to_store(
-    recs: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    recs: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
     store: SQLiteStore,
-    scale_factor: Tuple[float, float],           
+    scale_factor: tuple[float, float],
     class_dict: dict | None,
     batch_size: int = 5000,
 ) -> int:
@@ -214,7 +229,8 @@ def _write_records_to_store(
         class_dict = {int(k): int(k) for k in uniq}
     labels = np.array([class_dict.get(int(k), int(k)) for k in t], dtype=object)
 
-    def make_points(xb, yb): return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
+    def make_points(xb, yb):
+        return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
 
     written = 0
     for i in range(0, n, batch_size):
@@ -222,28 +238,31 @@ def _write_records_to_store(
         pts = make_points(x[i:j], y[i:j])
 
         anns = [
-            Annotation(geometry=pt,
-                        properties={"type": lbl, "probability": float(pp)})
+            Annotation(geometry=pt, properties={"type": lbl, "probability": float(pp)})
             for pt, lbl, pp in zip(pts, labels[i:j], p[i:j])
         ]
         store.append_many(anns)
-        written += (j - i)
+        written += j - i
     return written
 
 
 def write_centroids_to_store(
     scores: da.Array,
-    scale_factor:tuple[float, float] = (1.0, 1.0),
+    scale_factor: tuple[float, float] = (1.0, 1.0),
     class_dict: dict | None = None,
     save_path: Path | None = None,
-    batch_size: int = 5000) -> Path | SQLiteStore:
-
+    batch_size: int = 5000,
+) -> Path | SQLiteStore:
     # one delayed record-tuple per chunk
-    recs_delayed = scores.map_blocks(
-        _chunk_to_records,
-        dtype=object,           # we return Python tuples
-        block_info=True,
-    ).to_delayed().ravel()
+    recs_delayed = (
+        scores.map_blocks(
+            _chunk_to_records,
+            dtype=object,  # we return Python tuples
+            block_info=True,
+        )
+        .to_delayed()
+        .ravel()
+    )
 
     store = SQLiteStore()
 
@@ -270,9 +289,6 @@ def write_centroids_to_store(
         return save_path
 
     return store
-
-
-
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -387,6 +403,7 @@ class NucleusDetector(SemanticSegmentor):
             raw_predictions (da.Array): The raw predictions from the model.
             prediction_shape (tuple[int, ...]): The shape of the predictions.
             prediction_dtype (type): The data type of the predictions.
+
         Returns:
             Post-processed dask array of detections at the WSI level.
             The array has the same shape and dtype as the input.
@@ -408,7 +425,7 @@ class NucleusDetector(SemanticSegmentor):
             (self.model.postproc_tile_shape[0], self.model.postproc_tile_shape[1], -1)
         )
         logger.info(f"Post-processing chunk size: {rechunked_prediction_map.chunks}")
-        
+
         detection_map = da.map_overlap(
             rechunked_prediction_map,
             self.model.postproc,
@@ -475,7 +492,6 @@ class NucleusDetector(SemanticSegmentor):
         save_paths = []
 
         logger.info("Saving predictions as AnnotationStore.")
-
 
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
         class_dict = kwargs.get("class_dict")

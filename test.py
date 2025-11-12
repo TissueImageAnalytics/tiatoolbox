@@ -22,5 +22,5 @@ if __name__ == "__main__":
         output_type="annotationstore",
         class_dict={0: "nucleus"},
         auto_get_mask=True,
-        memory_threshold=80
+        memory_threshold=80,
     )
