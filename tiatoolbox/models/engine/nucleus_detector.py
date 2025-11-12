@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
-from skimage.feature import peak_local_max
 
 from tiatoolbox import logger
 from tiatoolbox.annotation import AnnotationStore
@@ -21,7 +20,6 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.annotation.storage import SQLiteStore, Annotation
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
@@ -331,25 +329,24 @@ class NucleusDetector(SemanticSegmentor):
 
         kept = sub.iloc[keep_idx].copy()
         return kept
-    
+
     @staticmethod
     def _chunk_to_records(
-        block: np.ndarray, 
-        block_info: dict
+        block: np.ndarray, block_info: dict
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Convert a Dask block of detection maps to detection records.
 
-        Each block is a NumPy array of shape (h, w, C) containing detection scores 
+        Each block is a NumPy array of shape (h, w, C) containing detection scores
         of each class c. This function finds non-zero detections and returns their
         global coordinates, class IDs (channel), and probabilities.
 
         Args:
             block: NumPy array (h, w, C) for this chunk (no halos).
             block_info: Dask block info dict.
+
         Returns:
             Tuple of ([x_coords], [y_coords], [class_ids], [probs])
         """
-
         # block: (h, w, C) NumPy chunk (post-stitching, no halos)
         info = block_info[0] if 0 in block_info else block_info[None]
         (r0, r1), (c0, c1), _ = info["array-location"]  # global interior start/stop
@@ -369,12 +366,11 @@ class NucleusDetector(SemanticSegmentor):
         x = xs.astype(np.uint32, copy=False) + int(c0)
         y = ys.astype(np.uint32, copy=False) + int(r0)
         t = cs.astype(np.uint32, copy=False)
-        
+
         # read detection probabilities
         p = block[ys, xs, cs].astype(np.float32, copy=False)
         return (x, y, t, p)
 
-    
     @staticmethod
     def _write_records_to_store(
         recs: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
@@ -384,7 +380,7 @@ class NucleusDetector(SemanticSegmentor):
         batch_size: int = 5000,
     ) -> int:
         """Write detection records to AnnotationStore in batches.
-        
+
         Args:
             recs: Tuple of ([x_coords], [y_coords], [class_ids], [probs])
             store: SQLiteStore to write the detections to
@@ -410,7 +406,8 @@ class NucleusDetector(SemanticSegmentor):
             class_dict = {int(k): int(k) for k in uniq}
         labels = np.array([class_dict.get(int(k), int(k)) for k in t], dtype=object)
 
-        def make_points(xb, yb): return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
+        def make_points(xb, yb):
+            return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb)]
 
         written = 0
         for i in range(0, n, batch_size):
@@ -418,14 +415,14 @@ class NucleusDetector(SemanticSegmentor):
             pts = make_points(x[i:j], y[i:j])
 
             anns = [
-                Annotation(geometry=pt,
-                            properties={"type": lbl, "probability": float(pp)})
+                Annotation(
+                    geometry=pt, properties={"type": lbl, "probability": float(pp)}
+                )
                 for pt, lbl, pp in zip(pts, labels[i:j], p[i:j])
             ]
             store.append_many(anns)
-            written += (j - i)
+            written += j - i
         return written
-
 
     @staticmethod
     def write_centroids_to_store(
@@ -433,10 +430,10 @@ class NucleusDetector(SemanticSegmentor):
         scale_factor: tuple[float, float] = (1.0, 1.0),
         class_dict: dict | None = None,
         save_path: Path | None = None,
-        batch_size: int = 5000
+        batch_size: int = 5000,
     ) -> Path | SQLiteStore:
         """Write post-processed detection maps to an AnnotationStore.
-        This is done in chunks using Dask for efficiency and to handle large 
+        This is done in chunks using Dask for efficiency and to handle large
         detection maps at WSI level.
 
         Args:
@@ -445,18 +442,22 @@ class NucleusDetector(SemanticSegmentor):
             class_dict: Optional dict mapping class indices to names.
             save_path: Optional Path to save the .db file. If None, returns in-memory store.
             batch_size: Number of records to write per batch.
+
         Returns:
             Path to saved .db file if save_path is provided, else in-memory SQLiteStore.
         """
-
         # Convert each block to detection records first
         # [block_H, block_W, C] -> [xs, ys, classes, probs]
         # one delayed record-tuple per chunk
-        recs_delayed = detection_maps.map_blocks(
-            NucleusDetector._chunk_to_records,
-            dtype=object,           # we return Python tuples
-            block_info=True,
-        ).to_delayed().ravel()
+        recs_delayed = (
+            detection_maps.map_blocks(
+                NucleusDetector._chunk_to_records,
+                dtype=object,  # we return Python tuples
+                block_info=True,
+            )
+            .to_delayed()
+            .ravel()
+        )
 
         # create annotation store
         store = SQLiteStore()
