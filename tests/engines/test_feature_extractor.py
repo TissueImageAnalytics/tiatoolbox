@@ -89,7 +89,7 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
 
     output_ = zarr.open(output[mini_wsi_svs], mode="r")
     assert len(output_["coordinates"].shape) == 2
-    assert len(output_["probabilities"].shape) == 4
+    assert len(output_["probabilities"].shape) == 3
 
 
 @pytest.mark.parametrize(
