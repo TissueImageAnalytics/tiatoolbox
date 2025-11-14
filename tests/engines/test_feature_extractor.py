@@ -48,7 +48,7 @@ def test_feature_extractor_patches(
         patch_mode=True,
     )
 
-    assert 0.48 < np.mean(output["probabilities"][:]) < 0.52
+    assert 0.48 < np.mean(output["features"][:]) < 0.52
 
     with pytest.raises(
         ValueError,
@@ -89,7 +89,7 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
 
     output_ = zarr.open(output[mini_wsi_svs], mode="r")
     assert len(output_["coordinates"].shape) == 2
-    assert len(output_["probabilities"].shape) == 3
+    assert len(output_["features"].shape) == 3
 
 
 @pytest.mark.parametrize(
@@ -132,7 +132,7 @@ def test_full_inference(
     output_ = zarr.open(output[mini_wsi_svs], mode="r")
 
     positions = output_["coordinates"]
-    features = output_["probabilities"]
+    features = output_["features"]
 
     reader = WSIReader.open(mini_wsi_svs)
     patches = [
@@ -202,7 +202,7 @@ def test_multi_gpu_feature_extraction(
     output_ = zarr.open(output[mini_wsi_svs], mode="r")
 
     positions = output_["coordinates"]
-    features = output_["probabilities"]
+    features = output_["features"]
     assert len(positions.shape) == 2
     assert len(features.shape) == 2
 

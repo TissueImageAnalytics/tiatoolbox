@@ -412,6 +412,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         """
         # no need to compute predictions
         self.drop_keys.append("predictions")
+        processed_predictions["features"] = processed_predictions.pop("probabilities")
         return super().save_predictions(
             processed_predictions, output_type, save_path=save_path, **kwargs
         )
