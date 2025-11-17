@@ -863,14 +863,14 @@ sccnn-crchisto:
         class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
+                - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
+                - { "units": "mpp", "resolution": 0.25 }
             tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
-            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
+            save_resolution: { 'units': 'mpp', 'resolution': 0.25 }
 
 sccnn-conic:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
@@ -886,14 +886,14 @@ sccnn-conic:
         class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
+                - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
+                - { "units": "mpp", "resolution": 0.25 }
             tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
-            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
+            save_resolution: { 'units': 'mpp', 'resolution': 0.25 }
 
 nuclick_original-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
