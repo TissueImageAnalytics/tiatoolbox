@@ -940,7 +940,6 @@ grandqc_tissue_detection_mpp10:
     architecture:
         class: grandqc.GrandQCModel
         kwargs:
-            num_input_channels: 3
             num_output_channels: 2
     ioconfig:
         class: io_config.IOSegmentorConfig
