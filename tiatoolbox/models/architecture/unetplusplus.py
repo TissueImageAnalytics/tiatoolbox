@@ -2,73 +2,39 @@
 
 from __future__ import annotations
 
-import warnings
-from collections.abc import Callable, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Sequence
+
+import numpy as np
 import torch
-import torch.nn.functional as F
 from torch import nn
 
-from tiatoolbox.models.architecture.timm_universal import TimmUniversalEncoder
+from tiatoolbox.models.architecture.timm_efficientnet import EfficientNetEncoder
 from tiatoolbox.models.models_abc import ModelABC
 
 
-class ArgMax(nn.Module):
-    def __init__(self, dim=None):
-        super().__init__()
-        self.dim = dim
-
-    def forward(self, x):
-        return torch.argmax(x, dim=self.dim)
-
-
-class Clamp(nn.Module):
-    def __init__(self, min=0, max=1):
-        super().__init__()
-        self.min, self.max = min, max
-
-    def forward(self, x):
-        return torch.clamp(x, self.min, self.max)
-
-
-class Activation(nn.Module):
-    def __init__(self, name, **params):
-        super().__init__()
-        self.activation: nn.Module
-        if name is None or name == "identity":
-            self.activation = nn.Identity(**params)
-        elif name == "sigmoid":
-            self.activation = nn.Sigmoid()
-        elif name == "softmax2d":
-            self.activation = nn.Softmax(dim=1, **params)
-        elif name == "softmax":
-            self.activation = nn.Softmax(**params)
-        elif name == "logsoftmax":
-            self.activation = nn.LogSoftmax(**params)
-        elif name == "tanh":
-            self.activation = nn.Tanh()
-        elif name == "argmax":
-            self.activation = ArgMax(**params)
-        elif name == "argmax2d":
-            self.activation = ArgMax(dim=1, **params)
-        elif name == "clamp":
-            self.activation = Clamp(**params)
-        else:
-            self.activation = nn.Identity(**params)
-            raise ValueError(
-                f"Activation should be callable/sigmoid/softmax/logsoftmax/tanh/"
-                f"argmax/argmax2d/clamp/None; got {name}"
-            )
-
-    def forward(self, x):
-        return self.activation(x)
-
-
 class SegmentationHead(nn.Sequential):
+    """Segmentation head for UNet++ model."""
+
     def __init__(
-        self, in_channels, out_channels, kernel_size=3, activation=None, upsampling=1
-    ):
+        self: SegmentationHead,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        activation: nn.Module | None = None,
+        upsampling: int = 1,
+    ) -> None:
+        """Initialize SegmentationHead.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size. Defaults to 3.
+            activation: Activation function. Defaults to None.
+            upsampling: Upsampling factor. Defaults to 1.
+        """
         conv2d = nn.Conv2d(
             in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
         )
@@ -77,103 +43,32 @@ class SegmentationHead(nn.Sequential):
             if upsampling > 1
             else nn.Identity()
         )
-        activation = Activation(activation)
+        if activation is None:
+            activation = nn.Identity()
         super().__init__(conv2d, upsampling, activation)
 
 
-class ClassificationHead(nn.Sequential):
-    def __init__(
-        self, in_channels, classes, pooling="avg", dropout=0.2, activation=None
-    ):
-        if pooling not in ("max", "avg"):
-            raise ValueError(f"Pooling should be one of ('max', 'avg'), got {pooling}.")
-        pool = nn.AdaptiveAvgPool2d(1) if pooling == "avg" else nn.AdaptiveMaxPool2d(1)
-        flatten = nn.Flatten()
-        dropout = nn.Dropout(p=dropout, inplace=True) if dropout else nn.Identity()
-        linear = nn.Linear(in_channels, classes, bias=True)
-        activation = Activation(activation)
-        super().__init__(pool, flatten, dropout, linear, activation)
-
-
-def get_norm_layer(
-    use_norm: bool | str | dict[str, Any], out_channels: int
-) -> nn.Module:
-    supported_norms = ("inplace", "batchnorm", "identity", "layernorm", "instancenorm")
-
-    # Step 1. Convert tot dict representation
-
-    ## Check boolean
-    if use_norm is True:
-        norm_params = {"type": "batchnorm"}
-    elif use_norm is False:
-        norm_params = {"type": "identity"}
-
-    ## Check string
-    elif isinstance(use_norm, str):
-        norm_str = use_norm.lower()
-        if norm_str == "inplace":
-            norm_params = {
-                "type": "inplace",
-                "activation": "leaky_relu",
-                "activation_param": 0.0,
-            }
-        elif norm_str in supported_norms:
-            norm_params = {"type": norm_str}
-        else:
-            raise ValueError(
-                f"Unrecognized normalization type string provided: {use_norm}. Should be in "
-                f"{supported_norms}"
-            )
-
-    ## Check dict
-    elif isinstance(use_norm, dict):
-        norm_params = use_norm
-
-    else:
-        raise ValueError(
-            f"Invalid type for use_norm should either be a bool (batchnorm/identity), "
-            f"a string in {supported_norms}, or a dict like {{'type': 'batchnorm', **kwargs}}"
-        )
-
-    # Step 2. Check if the dict is valid
-    if "type" not in norm_params:
-        raise ValueError(
-            f"Malformed dictionary given in use_norm: {use_norm}. Should contain key 'type'."
-        )
-    if norm_params["type"] not in supported_norms:
-        raise ValueError(
-            f"Unrecognized normalization type string provided: {use_norm}. Should be in {supported_norms}"
-        )
-
-    # Step 3. Initialize the norm layer
-    norm_type = norm_params["type"]
-    norm_kwargs = {k: v for k, v in norm_params.items() if k != "type"}
-
-    if norm_type == "batchnorm":
-        norm = nn.BatchNorm2d(out_channels, **norm_kwargs)
-    elif norm_type == "identity":
-        norm = nn.Identity()
-    elif norm_type == "layernorm":
-        norm = nn.LayerNorm(out_channels, **norm_kwargs)
-    elif norm_type == "instancenorm":
-        norm = nn.InstanceNorm2d(out_channels, **norm_kwargs)
-    else:
-        raise ValueError(f"Unrecognized normalization type: {norm_type}")
-
-    return norm
-
-
 class Conv2dReLU(nn.Sequential):
+    """Conv2d + BatchNorm + ReLU block."""
+
     def __init__(
-        self,
+        self: Conv2dReLU,
         in_channels: int,
         out_channels: int,
         kernel_size: int,
         padding: int = 0,
         stride: int = 1,
-        use_norm: bool | str | dict[str, Any] = "batchnorm",
-    ):
-        norm = get_norm_layer(use_norm, out_channels)
+    ) -> None:
+        """Initialize Conv2dReLU block.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size.
+            padding: Padding size. Defaults to 0.
+            stride: Stride size. Defaults to 1.
+        """
+        norm = nn.BatchNorm2d(out_channels)
 
         is_identity = isinstance(norm, nn.Identity)
         conv = nn.Conv2d(
@@ -185,128 +80,118 @@ class Conv2dReLU(nn.Sequential):
             bias=is_identity,
         )
 
-        is_inplaceabn = InPlaceABN is not None and isinstance(norm, InPlaceABN)
-        activation = nn.Identity() if is_inplaceabn else nn.ReLU(inplace=True)
+        activation = nn.ReLU(inplace=True)
 
-        super(Conv2dReLU, self).__init__(conv, norm, activation)
-
-
-class SCSEModule(nn.Module):
-    def __init__(self, in_channels, reduction=16):
-        super().__init__()
-        self.cSE = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_channels, in_channels // reduction, 1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels // reduction, in_channels, 1),
-            nn.Sigmoid(),
-        )
-        self.sSE = nn.Sequential(nn.Conv2d(in_channels, 1, 1), nn.Sigmoid())
-
-    def forward(self, x):
-        return x * self.cSE(x) + x * self.sSE(x)
-
-
-class Attention(nn.Module):
-    def __init__(self, name, **params):
-        super().__init__()
-
-        if name is None:
-            self.attention = nn.Identity(**params)
-        elif name == "scse":
-            self.attention = SCSEModule(**params)
-        else:
-            raise ValueError(f"Attention {name} is not implemented")
-
-    def forward(self, x):
-        return self.attention(x)
+        super().__init__(conv, norm, activation)
 
 
 class DecoderBlock(nn.Module):
+    """Decoder block for UNet++ architecture."""
+
     def __init__(
-        self,
+        self: DecoderBlock,
         in_channels: int,
         skip_channels: int,
         out_channels: int,
-        use_norm: bool | str | dict[str, Any] = "batchnorm",
-        attention_type: str | None = None,
-        interpolation_mode: str = "nearest",
-    ):
+    ) -> None:
+        """Initialize DecoderBlock.
+
+        Args:
+            in_channels: Number of input channels.
+            skip_channels: Number of skip connection channels.
+            out_channels: Number of output channels.
+        """
         super().__init__()
         self.conv1 = Conv2dReLU(
             in_channels + skip_channels,
             out_channels,
             kernel_size=3,
             padding=1,
-            use_norm=use_norm,
         )
-        self.attention1 = Attention(
-            attention_type, in_channels=in_channels + skip_channels
-        )
+        self.attention1 = nn.Identity()
         self.conv2 = Conv2dReLU(
             out_channels,
             out_channels,
             kernel_size=3,
             padding=1,
-            use_norm=use_norm,
         )
-        self.attention2 = Attention(attention_type, in_channels=out_channels)
-        self.interpolation_mode = interpolation_mode
+        self.attention2 = nn.Identity()
 
     def forward(
         self, x: torch.Tensor, skip: torch.Tensor | None = None
     ) -> torch.Tensor:
-        x = F.interpolate(x, scale_factor=2.0, mode=self.interpolation_mode)
+        """Forward pass through decoder block.
+
+        Args:
+            x: Input tensor.
+            skip: Skip connection tensor. Defaults to None.
+
+        Returns:
+            torch.Tensor: Output tensor after decoding.
+        """
+        x = torch.nn.functional.interpolate(x, scale_factor=2.0, mode="nearest")
         if skip is not None:
             x = torch.cat([x, skip], dim=1)
             x = self.attention1(x)
         x = self.conv1(x)
         x = self.conv2(x)
-        x = self.attention2(x)
-        return x
+        return self.attention2(x)
 
 
 class CenterBlock(nn.Sequential):
+    """Center block for UNet++ architecture."""
+
     def __init__(
-        self,
+        self: CenterBlock,
         in_channels: int,
         out_channels: int,
-        use_norm: bool | str | dict[str, Any] = "batchnorm",
-    ):
+    ) -> None:
+        """Initialize CenterBlock.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+        """
         conv1 = Conv2dReLU(
             in_channels,
             out_channels,
             kernel_size=3,
             padding=1,
-            use_norm=use_norm,
         )
         conv2 = Conv2dReLU(
             out_channels,
             out_channels,
             kernel_size=3,
             padding=1,
-            use_norm=use_norm,
         )
         super().__init__(conv1, conv2)
 
 
 class UnetPlusPlusDecoder(nn.Module):
+    """UNet++ decoder with dense connections."""
+
     def __init__(
         self,
         encoder_channels: Sequence[int],
         decoder_channels: Sequence[int],
         n_blocks: int = 5,
-        use_norm: bool | str | dict[str, Any] = "batchnorm",
-        attention_type: str | None = None,
-        interpolation_mode: str = "nearest",
-        center: bool = False,
-    ):
+    ) -> None:
+        """Initialize UnetPlusPlusDecoder.
+
+        Args:
+            encoder_channels: List of encoder output channels.
+            decoder_channels: List of decoder output channels.
+            n_blocks: Number of decoder blocks. Defaults to 5.
+
+        Raises:
+            ValueError: If model depth doesn't match decoder_channels length.
+        """
         super().__init__()
 
         if n_blocks != len(decoder_channels):
-            raise ValueError(
-                f"Model depth is {n_blocks}, but you provide `decoder_channels` for {len(decoder_channels)} blocks."
-            )
+            msg = f"Model depth is {n_blocks}, but you provide  \
+            `decoder_channels` for {len(decoder_channels)} blocks."
+            raise ValueError(msg)
 
         # remove first skip with same spatial resolution
         encoder_channels = encoder_channels[1:]
@@ -315,24 +200,11 @@ class UnetPlusPlusDecoder(nn.Module):
 
         # computing blocks input and output channels
         head_channels = encoder_channels[0]
-        self.in_channels = [head_channels] + list(decoder_channels[:-1])
-        self.skip_channels = list(encoder_channels[1:]) + [0]
+        self.in_channels = [head_channels, *list(decoder_channels[:-1])]
+        self.skip_channels = [*list(encoder_channels[1:]), 0]
         self.out_channels = decoder_channels
-        if center:
-            self.center = CenterBlock(
-                head_channels,
-                head_channels,
-                use_norm=use_norm,
-            )
-        else:
-            self.center = nn.Identity()
 
-        # combine decoder keyword arguments
-        kwargs = dict(
-            use_norm=use_norm,
-            attention_type=attention_type,
-            interpolation_mode=interpolation_mode,
-        )
+        self.center = nn.Identity()
 
         blocks = {}
         for layer_idx in range(len(self.in_channels) - 1):
@@ -348,15 +220,23 @@ class UnetPlusPlusDecoder(nn.Module):
                     )
                     in_ch = self.skip_channels[layer_idx - 1]
                 blocks[f"x_{depth_idx}_{layer_idx}"] = DecoderBlock(
-                    in_ch, skip_ch, out_ch, **kwargs
+                    in_ch, skip_ch, out_ch
                 )
         blocks[f"x_{0}_{len(self.in_channels) - 1}"] = DecoderBlock(
-            self.in_channels[-1], 0, self.out_channels[-1], **kwargs
+            self.in_channels[-1], 0, self.out_channels[-1]
         )
         self.blocks = nn.ModuleDict(blocks)
         self.depth = len(self.in_channels) - 1
 
     def forward(self, features: list[torch.Tensor]) -> torch.Tensor:
+        """Forward pass through UNet++ decoder.
+
+        Args:
+            features: List of encoder feature maps.
+
+        Returns:
+            torch.Tensor: Decoded output tensor.
+        """
         features = features[1:]  # remove first skip with same spatial resolution
         features = features[::-1]  # reverse channels to start from head of encoder
 
@@ -376,7 +256,7 @@ class UnetPlusPlusDecoder(nn.Module):
                         for idx in range(depth_idx + 1, dense_l_i + 1)
                     ]
                     cat_features = torch.cat(
-                        cat_features + [features[dense_l_i + 1]], dim=1
+                        [*cat_features, features[dense_l_i + 1]], dim=1
                     )
                     dense_x[f"x_{depth_idx}_{dense_l_i}"] = self.blocks[
                         f"x_{depth_idx}_{dense_l_i}"
@@ -391,77 +271,99 @@ class UNetPlusPlusModel(ModelABC):
     """UNet++ Model."""
 
     def __init__(
-        self,
-        encoder_name: str = "resnet34",
+        self: UNetPlusPlusModel,
         encoder_depth: int = 5,
-        encoder_weights: str | None = "imagenet",
-        decoder_use_norm: bool | str | dict[str, Any] = "batchnorm",
         decoder_channels: Sequence[int] = (256, 128, 64, 32, 16),
-        decoder_attention_type: str | None = None,
-        decoder_interpolation: str = "nearest",
-        in_channels: int = 3,
         classes: int = 1,
-        activation: str | Callable | None = None,
-        aux_params: dict | None = None,
-        **kwargs: dict[str, Any],
-    ):
+    ) -> None:
+        """Initialize UNet++ model.
+
+        Args:
+            encoder_depth: Depth of the encoder. Defaults to 5.
+            decoder_channels: Number of channels in decoder layers.
+                Defaults to (256, 128, 64, 32, 16).
+            classes: Number of output classes. Defaults to 1.
+        """
         super().__init__()
 
-        if encoder_name.startswith("mit_b"):
-            raise ValueError(f"UnetPlusPlus is not support encoder_name={encoder_name}")
-
-        decoder_use_batchnorm = kwargs.pop("decoder_use_batchnorm", None)
-        if decoder_use_batchnorm is not None:
-            warnings.warn(
-                "The usage of decoder_use_batchnorm is deprecated. Please modify your code for decoder_use_norm",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            decoder_use_norm = decoder_use_batchnorm
-
-        self.encoder = TimmUniversalEncoder(
-            name=encoder_name,
-            in_channels=in_channels,
-            depth=encoder_depth,
-            weights=encoder_weights,
-            **kwargs,
+        self.encoder = EfficientNetEncoder(
+            out_channels=[3, 32, 24, 40, 112, 320],
+            stage_idxs=[2, 3, 5],
+            channel_multiplier=1.0,
+            depth_multiplier=1.0,
+            drop_rate=0.2,
         )
-
         self.decoder = UnetPlusPlusDecoder(
             encoder_channels=self.encoder.out_channels,
             decoder_channels=decoder_channels,
             n_blocks=encoder_depth,
-            use_norm=decoder_use_norm,
-            center=True if encoder_name.startswith("vgg") else False,
-            attention_type=decoder_attention_type,
-            interpolation_mode=decoder_interpolation,
         )
 
         self.segmentation_head = SegmentationHead(
             in_channels=decoder_channels[-1],
             out_channels=classes,
-            activation=activation,
             kernel_size=3,
         )
 
-        if aux_params is not None:
-            self.classification_head = ClassificationHead(
-                in_channels=self.encoder.out_channels[-1], **aux_params
-            )
-        else:
-            self.classification_head = None
+        self.name = "unetplusplus-efficientnetb0"
 
-        self.name = f"unetplusplus-{encoder_name}"
+    def forward(
+        self: UNetPlusPlusModel,
+        x: torch.Tensor,
+        *args: tuple[Any, ...],  # skipcq: PYL-W0613  # noqa: ARG002
+        **kwargs: dict,  # skipcq: PYL-W0613  # noqa: ARG002
+    ) -> torch.Tensor:
+        """Sequentially pass `x` through model's encoder, decoder and heads.
 
-    def forward(self, x):
-        """Sequentially pass `x` trough model`s encoder, decoder and heads"""
+        Args:
+            x: Input tensor.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            torch.Tensor: Segmentation output.
+        """
         features = self.encoder(x)
         decoder_output = self.decoder(features)
 
-        masks = self.segmentation_head(decoder_output)
+        return self.segmentation_head(decoder_output)
 
-        if self.classification_head is not None:
-            labels = self.classification_head(features[-1])
-            return masks, labels
+    @staticmethod
+    def infer_batch(
+        model: torch.nn.Module,
+        batch_data: torch.Tensor | np.ndarray,
+        *,
+        device: str,
+    ) -> np.ndarray:
+        """Run inference on an input batch.
 
-        return masks
+        This contains logic for forward operation as well as i/o
+
+        Args:
+            model (nn.Module):
+                PyTorch defined model.
+            batch_data (:class:`torch.Tensor`):
+                A batch of data generated by
+                `torch.utils.data.DataLoader`.
+            device (str):
+                Transfers model to the specified device. Default is "cpu".
+
+        Returns:
+            np.ndarray:
+                The inference results as a numpy array.
+
+        """
+        model.eval()
+
+        imgs = batch_data
+        if isinstance(imgs, np.ndarray):
+            imgs = torch.from_numpy(imgs)
+        imgs = imgs.to(device).type(torch.float32)
+        imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
+
+        with torch.inference_mode():
+            logits = model(imgs)
+            probs = torch.nn.functional.softmax(logits, 1)
+            probs = probs.permute(0, 2, 3, 1)  # to NHWC
+
+        return probs.cpu().numpy()

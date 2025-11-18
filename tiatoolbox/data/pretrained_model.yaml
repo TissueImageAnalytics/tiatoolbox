@@ -938,7 +938,7 @@ nuclick_light-pannuke:
 grandqc_tissue_detection_mpp10:
     hf_repo_id: TIACentre/GrandQC_Tissue_Detection
     architecture:
-        class: grandqc.TissueDetectionModel
+        class: grandqc.GrandQCModel
         kwargs:
             num_input_channels: 3
             num_output_channels: 2

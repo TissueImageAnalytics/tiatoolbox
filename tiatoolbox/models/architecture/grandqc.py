@@ -9,14 +9,14 @@ if TYPE_CHECKING:  # pragma: no cover
 
 import cv2
 import numpy as np
-import segmentation_models_pytorch as smp
 import torch
 
+from tiatoolbox.models.architecture.unetplusplus import UNetPlusPlusModel
 from tiatoolbox.models.models_abc import ModelABC
 
 
-class TissueDetectionModel(ModelABC):
-    """GrandQC Tissue Detection Model.
+class GrandQCModel(ModelABC):
+    """GrandQC Tissue Detection Model [1].
 
     Example:
         >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
@@ -32,10 +32,15 @@ class TissueDetectionModel(ModelABC):
         ...     output_type="annotationstore",
         ... )
 
+    References:
+        [1] Weng Z. et al. "GrandQC: a comprehensive solution to quality control problem
+        in digital pathology".
+        Nature Communications 2024
+
     """
 
     def __init__(
-        self: TissueDetectionModel, num_input_channels: int, num_output_channels: int
+        self: GrandQCModel, num_input_channels: int, num_output_channels: int
     ) -> None:
         """Initialize TissueDetectionModel."""
         super().__init__()
@@ -43,17 +48,23 @@ class TissueDetectionModel(ModelABC):
         self.num_output_channels = num_output_channels
         self._postproc = self.postproc
         self._preproc = self.preproc
-        self.tissue_detection_model = smp.UnetPlusPlus(
-            encoder_name="timm-efficientnet-b0",
-            encoder_weights=None,
-            in_channels=self.num_input_channels,
+        self.tissue_detection_model = UNetPlusPlusModel(
             classes=self.num_output_channels,
-            activation=None,
         )
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
-        """Apply jpg compression then ImageNet normalise."""
+        """Apply JPEG compression and ImageNet normalization to the input image.
+
+        Args:
+            image (np.ndarray):
+                Input image as a NumPy array (H, W, C) in uint8 format.
+
+        Returns:
+            np.ndarray:
+                The preprocessed image.
+
+        """
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
         _, compressed_image = cv2.imencode(".jpg", image, encode_param)
         compressed_image = np.array(cv2.imdecode(compressed_image, 1))
@@ -69,11 +80,19 @@ class TissueDetectionModel(ModelABC):
         This simply applies argmin to obtain tissue class.
         (Tissue = 0, Background = 1)
 
+        Args:
+            image (np.ndarray):
+                Input probability map as a NumPy array (H, W, C).
+
+        Returns:
+            np.ndarray:
+                Tissue mask
+
         """
         return image.argmin(axis=-1)
 
     def forward(
-        self: TissueDetectionModel,
+        self: GrandQCModel,
         imgs: torch.Tensor,
         *args: tuple[Any, ...],  # skipcq: PYL-W0613  # noqa: ARG002
         **kwargs: dict,  # skipcq: PYL-W0613  # noqa: ARG002
@@ -120,9 +139,9 @@ class TissueDetectionModel(ModelABC):
         return probs.cpu().numpy()
 
     def load_state_dict(
-        self: TissueDetectionModel,
+        self: GrandQCModel,
         state_dict: Mapping[str, Any],
         **kwargs: bool,
     ) -> torch.nn.modules.module._IncompatibleKeys:
-        """Load state dict for the TissueDetectionModel."""
+        """Load state dict for the GrandQCModel."""
         return self.tissue_detection_model.load_state_dict(state_dict, **kwargs)

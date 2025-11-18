@@ -7,7 +7,7 @@ from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
 )
-from tiatoolbox.models.architecture.grandqc import TissueDetectionModel
+from tiatoolbox.models.architecture.grandqc import GrandQCModel
 from tiatoolbox.models.engine.io_config import IOSegmentorConfig
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
@@ -22,7 +22,7 @@ def test_functional_grandqc() -> None:
     assert pretrained_weights is not None
 
     # test creation
-    model = TissueDetectionModel(num_input_channels=3, num_output_channels=2)
+    model = GrandQCModel(num_input_channels=3, num_output_channels=2)
     assert model is not None
 
     # load pretrained weights
@@ -31,7 +31,7 @@ def test_functional_grandqc() -> None:
 
     # test get pretrained model
     model, ioconfig = get_pretrained_model("grandqc_tissue_detection_mpp10")
-    assert isinstance(model, TissueDetectionModel)
+    assert isinstance(model, GrandQCModel)
     assert isinstance(ioconfig, IOSegmentorConfig)
     assert model.num_input_channels == 3
     assert model.num_output_channels == 2
@@ -54,7 +54,7 @@ def test_functional_grandqc() -> None:
 
 def test_grandqc_preproc_postproc() -> None:
     """Test GrandQC preproc and postproc functions."""
-    model = TissueDetectionModel(num_input_channels=3, num_output_channels=2)
+    model = GrandQCModel(num_input_channels=3, num_output_channels=2)
 
     generator = np.random.default_rng(1337)
     # test preproc
