@@ -1,5 +1,4 @@
-"""
-TimmUniversalEncoder provides a unified feature extraction interface built on the
+"""TimmUniversalEncoder provides a unified feature extraction interface built on the
 `timm` library, supporting both traditional-style (e.g., ResNet) and transformer-style
 models (e.g., Swin Transformer, ConvNeXt).
 
@@ -30,12 +29,11 @@ from typing import Any
 
 import timm
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class TimmUniversalEncoder(nn.Module):
-    """
-    A universal encoder leveraging the `timm` library for feature extraction from
+    """A universal encoder leveraging the `timm` library for feature extraction from
     various model architectures, including traditional-style and transformer-style models.
 
     Features:
@@ -57,8 +55,7 @@ class TimmUniversalEncoder(nn.Module):
         output_stride: int = 32,
         **kwargs: dict[str, Any],
     ):
-        """
-        Initialize the encoder.
+        """Initialize the encoder.
 
         Args:
             name (str): Model name to load from `timm`.
@@ -158,8 +155,7 @@ class TimmUniversalEncoder(nn.Module):
         self._output_stride = output_stride
 
     def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
-        """
-        Forward pass to extract multi-stage features.
+        """Forward pass to extract multi-stage features.
 
         Args:
             x (torch.Tensor): Input tensor of shape (B, C, H, W).
@@ -189,8 +185,7 @@ class TimmUniversalEncoder(nn.Module):
 
     @property
     def out_channels(self) -> list[int]:
-        """
-        Returns the number of output channels for each feature stage.
+        """Returns the number of output channels for each feature stage.
 
         Returns:
             list[int]: A list of channel dimensions at each scale.
@@ -199,8 +194,7 @@ class TimmUniversalEncoder(nn.Module):
 
     @property
     def output_stride(self) -> int:
-        """
-        Returns the effective output stride based on the model depth.
+        """Returns the effective output stride based on the model depth.
 
         Returns:
             int: The effective output stride.
@@ -230,8 +224,7 @@ class TimmUniversalEncoder(nn.Module):
 
 
 def _merge_kwargs_no_duplicates(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
-    """
-    Merge two dictionaries, ensuring no duplicate keys exist.
+    """Merge two dictionaries, ensuring no duplicate keys exist.
 
     Args:
         a (dict): Base dictionary.
