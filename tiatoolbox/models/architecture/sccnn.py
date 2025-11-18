@@ -239,7 +239,7 @@ class SCCNN(ModelABC):
         return sc2 * out_map_threshold
 
     @staticmethod
-    def preproc(image: torch.Tensor) -> torch.Tensor:
+    def preproc(image: np.ndarray) -> np.ndarray:
         """Transforming network input to desired format.
 
         This method is model and dataset specific, meaning that it can be replaced by
@@ -309,7 +309,6 @@ class SCCNN(ModelABC):
             sigmoid2 = sigmoid[:, 2:3, :, :]
             return sigmoid0, sigmoid1, sigmoid2
 
-        input_tensor = self.preproc(input_tensor)
         l1 = self.layer["l1"]["conv1"](input_tensor)
         p1 = self.layer["pool1"](l1)
         l2 = self.layer["l2"]["conv1"](p1)
