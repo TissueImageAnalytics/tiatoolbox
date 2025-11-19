@@ -524,7 +524,7 @@ class EngineABC(ABC):  # noqa: B024
             coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys), strict=False))
+        raw_predictions = {key: [] for key in keys}
 
         # Inference loop
         tqdm = get_tqdm()

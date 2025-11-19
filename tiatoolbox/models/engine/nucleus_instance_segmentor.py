@@ -6,26 +6,34 @@ import uuid
 from collections import deque
 from typing import TYPE_CHECKING
 
+import dask
 # replace with the sql database once the PR in place
 import joblib
 import numpy as np
 import torch
 import tqdm
+import dask.array as da
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
+from torch.utils.data import DataLoader
 from typing_extensions import Unpack
 
-from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
+from tiatoolbox.models.models_abc import ModelABC
+from tiatoolbox.utils.misc import get_tqdm
+from .engine_abc import EngineABCRunParams
+from tiatoolbox import DuplicateFilter, logger
+from pathlib import Path
+
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
     from collections.abc import Callable
-    from pathlib import Path
+
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore import WSIReader
@@ -381,38 +389,215 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
     def __init__(
         self: NucleusInstanceSegmentor,
+        model: str | ModelABC,
         batch_size: int = 8,
-        num_loader_workers: int = 0,
-        num_postproc_workers: int = 0,
-        model: torch.nn.Module | None = None,
-        pretrained_model: str | None = None,
-        pretrained_weights: str | None = None,
-        dataset_class: Callable = WSIStreamDataset,
+        num_workers: int = 0,
+        weights: str | Path | None = None,
         *,
+        device: str = "cpu",
         verbose: bool = True,
-        auto_generate_mask: bool = False,
     ) -> None:
         """Initialize :class:`NucleusInstanceSegmentor`."""
         super().__init__(
-            batch_size=batch_size,
-            num_loader_workers=num_loader_workers,
-            num_postproc_workers=num_postproc_workers,
             model=model,
-            pretrained_model=pretrained_model,
-            pretrained_weights=pretrained_weights,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            weights=weights,
+            device=device,
             verbose=verbose,
-            auto_generate_mask=auto_generate_mask,
-            dataset_class=dataset_class,
-        )
-        # default is None in base class and is un-settable
-        # hence we redefine the namespace here
-        self.num_postproc_workers = (
-            num_postproc_workers if num_postproc_workers > 0 else None
         )
 
-        # adding more runtime placeholder
-        self._wsi_inst_info = None
-        self._futures = []
+    def infer_patches(
+        self: NucleusInstanceSegmentor,
+        dataloader: DataLoader,
+        *,
+        return_coordinates: bool = False,
+    ) -> dict[str, list[da.Array]]:
+        """Run model inference on image patches and return predictions.
+
+        This method performs batched inference using a PyTorch DataLoader,
+        and accumulates predictions in Dask arrays. It supports optional inclusion
+        of coordinates and labels in the output.
+
+        Args:
+            dataloader (DataLoader):
+                PyTorch DataLoader containing image patches for inference.
+            return_coordinates (bool):
+                Whether to include coordinates in the output. Required when
+                called by `infer_wsi` and `patch_mode` is False.
+
+        Returns:
+            dict[str, dask.array.Array]:
+                Dictionary containing prediction results as Dask arrays.
+                Keys include:
+                    - "probabilities": Model output probabilities.
+                    - "labels": Ground truth labels (if `return_labels` is True).
+                    - "coordinates": Patch coordinates (if `return_coordinates` is
+                      True).
+
+        """
+        keys = ["probabilities"]
+        labels, coordinates = [], []
+
+        # Expected number of outputs from the model
+        batch_output = self.model.infer_batch(
+            self.model,
+            torch.Tensor(dataloader.dataset[0]["image"][np.newaxis, ...]),
+            device=self.device,
+        )
+
+        num_expected_output = len(batch_output)
+        probabilities = [[] for _ in range(num_expected_output)]
+
+        if return_coordinates:
+            keys.append("coordinates")
+            coordinates = []
+
+        # Main output dictionary
+        raw_predictions = {key: [] for key in keys}
+        raw_predictions["probabilities"] = [[] for _ in range(num_expected_output)]
+
+        # Inference loop
+        tqdm = get_tqdm()
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else self.dataloader
+        )
+
+        for batch_data in tqdm_loop:
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+
+            for i in range(num_expected_output):
+                probabilities[i].append(
+                    da.from_array(
+                        batch_output[i],  # probabilities
+                    )
+                )
+
+            if return_coordinates:
+                coordinates.append(
+                    da.from_array(
+                        self._get_coordinates(batch_data),
+                    )
+                )
+
+            if self.return_labels:
+                labels.append(da.from_array(np.array(batch_data["label"])))
+
+        for i in range(num_expected_output):
+            raw_predictions["probabilities"][i] = da.concatenate(probabilities[i], axis=0)
+
+        if return_coordinates:
+            raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+
+        return raw_predictions
+
+    def _run_patch_mode(
+        self: NucleusInstanceSegmentor,
+        output_type: str,
+        save_dir: Path,
+        **kwargs: EngineABCRunParams,
+    ) -> dict | AnnotationStore | Path:
+        """Run the engine in patch mode.
+
+        This method performs inference on image patches, post-processes the predictions,
+        and saves the output in the specified format.
+
+        Args:
+            output_type (str):
+                Desired output format. Supported values are "dict", "zarr",
+                and "annotationstore".
+            save_dir (Path):
+                Directory to save the output files.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters including:
+                    - output_file: Name of the output file.
+                    - scale_factor: Scaling factor for annotations.
+                    - class_dict: Mapping of class indices to names.
+
+        Returns:
+            dict | AnnotationStore | Path:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "annotationstore": returns an AnnotationStore
+                  or path to .db file.
+
+        """
+        save_path = None
+        if save_dir:
+            output_file = Path(kwargs.get("output_file", "output.zarr"))
+            save_path = save_dir / (str(output_file.stem) + ".zarr")
+
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
+
+        self.dataloader = self.get_dataloader(
+            images=self.images,
+            masks=self.masks,
+            labels=self.labels,
+            patch_mode=True,
+            ioconfig=self._ioconfig,
+        )
+        raw_predictions = self.infer_patches(
+            dataloader=self.dataloader,
+            return_coordinates=output_type == "annotationstore",
+        )
+
+        raw_predictions["predictions"] = self.post_process_patches(
+            raw_predictions=raw_predictions["probabilities"],
+            prediction_shape=None,
+            prediction_dtype=None,
+            **kwargs,
+        )
+
+        logger.removeFilter(duplicate_filter)
+
+        out = self.save_predictions(
+            processed_predictions=raw_predictions,
+            output_type=output_type,
+            save_path=save_path,
+            **kwargs,
+        )
+
+        msg = f"Output file saved at {out}."
+        logger.info(msg=msg)
+        return out
+
+    def post_process_patches(  # skipcq: PYL-R0201
+        self: NucleusInstanceSegmentor,
+        raw_predictions: da.Array,
+        prediction_shape: tuple[int, ...],  # noqa: ARG002
+        prediction_dtype: type,  # noqa: ARG002
+        **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
+    ) -> dask.array.Array:
+        """Post-process raw patch predictions from inference.
+
+        This method applies a post-processing function (e.g., smoothing, filtering)
+        to the raw model predictions. It supports delayed execution using Dask
+        and returns a Dask array for efficient computation.
+
+        Args:
+            raw_predictions (dask.array.Array):
+                Raw model predictions as a dask array.
+            prediction_shape (tuple[int, ...]):
+                Shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters used for post-processing.
+
+        Returns:
+            dask.array.Array:
+                Post-processed predictions as a Dask array.
+
+        """
+        raw_predictions = self.model.postproc_func(raw_predictions)
+        return raw_predictions
 
     @staticmethod
     def _get_tile_info(

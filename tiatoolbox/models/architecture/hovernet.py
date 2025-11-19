@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections import OrderedDict
-
+import dask
 import cv2
 import numpy as np
 import torch
@@ -776,7 +776,9 @@ class HoVerNet(ModelABC):
             tp_map = None
             np_map, hv_map = raw_maps
 
-        pred_type = tp_map
+        np_map = np_map.compute() if isinstance(np_map, dask.array.Array) else np_map
+        hv_map = hv_map.compute() if isinstance(hv_map, dask.array.Array) else hv_map
+        pred_type = tp_map.compute() if isinstance(tp_map, dask.array.Array) else tp_map
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
