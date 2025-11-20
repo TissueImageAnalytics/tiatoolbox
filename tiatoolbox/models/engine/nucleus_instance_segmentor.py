@@ -4,40 +4,41 @@ from __future__ import annotations
 
 import uuid
 from collections import deque
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-import dask
+import dask.array as da
+import dask.dataframe as dd
+
 # replace with the sql database once the PR in place
 import joblib
 import numpy as np
+import pandas as pd
 import torch
 import tqdm
-import dask.array as da
 from shapely.geometry import box as shapely_box
 from shapely.strtree import STRtree
-from torch.utils.data import DataLoader
 from typing_extensions import Unpack
 
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import get_tqdm
-from .engine_abc import EngineABCRunParams
-from tiatoolbox import DuplicateFilter, logger
-from pathlib import Path
-
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
     from collections.abc import Callable
 
+    from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.wsicore import WSIReader
 
+    from .engine_abc import EngineABCRunParams
     from .io_config import IOInstanceSegmentorConfig, IOSegmentorConfig
 
 
@@ -490,7 +491,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 labels.append(da.from_array(np.array(batch_data["label"])))
 
         for i in range(num_expected_output):
-            raw_predictions["probabilities"][i] = da.concatenate(probabilities[i], axis=0)
+            raw_predictions["probabilities"][i] = da.concatenate(
+                probabilities[i], axis=0
+            )
 
         if return_coordinates:
             raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
@@ -548,8 +551,8 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             return_coordinates=output_type == "annotationstore",
         )
 
-        raw_predictions["predictions"] = self.post_process_patches(
-            raw_predictions=raw_predictions["probabilities"],
+        raw_predictions = self.post_process_patches(
+            raw_predictions=raw_predictions,
             prediction_shape=None,
             prediction_dtype=None,
             **kwargs,
@@ -570,11 +573,11 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
     def post_process_patches(  # skipcq: PYL-R0201
         self: NucleusInstanceSegmentor,
-        raw_predictions: da.Array,
+        raw_predictions: dict,
         prediction_shape: tuple[int, ...],  # noqa: ARG002
         prediction_dtype: type,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dask.array.Array:
+    ) -> dict:
         """Post-process raw patch predictions from inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -596,8 +599,43 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                 Post-processed predictions as a Dask array.
 
         """
-        raw_predictions = self.model.postproc_func(raw_predictions)
+        probabilities = raw_predictions["probabilities"]
+        predictions = [[] for _ in range(probabilities[0].shape[0])]
+        inst_dict = [[] for _ in range(probabilities[0].shape[0])]
+        for idx in range(probabilities[0].shape[0]):
+            predictions[idx], inst_dict[idx] = self.model.postproc_func(
+                [probabilities[0][idx], probabilities[1][idx], probabilities[2][idx]]
+            )
+            inst_dict[idx] = dd.from_pandas(pd.DataFrame(inst_dict[idx]))
+
+        raw_predictions["predictions"] = da.stack(predictions, axis=0)
+        raw_predictions["inst_dict"] = inst_dict
+
         return raw_predictions
+
+    def save_predictions(
+        self: SemanticSegmentor,
+        processed_predictions: dict,
+        output_type: str,
+        save_path: Path | None = None,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict | AnnotationStore | Path:
+        """Save semantic segmentation predictions to disk or return them in memory."""
+        # Conversion to annotationstore uses a different function for SemanticSegmentor
+        inst_dict: list[dd.DataFrame] | None = processed_predictions.pop(
+            "inst_dict", None
+        )
+        out = super().save_predictions(
+            processed_predictions, output_type, save_path=save_path, **kwargs
+        )
+
+        if isinstance(out, dict):
+            out["inst_dict"] = [[] for _ in range(len(inst_dict))]
+            for idx in range(len(inst_dict)):
+                out["inst_dict"][idx] = inst_dict[idx].compute()
+            return out
+
+        return out
 
     @staticmethod
     def _get_tile_info(
