@@ -39,14 +39,14 @@ class SegmentationHead(nn.Sequential):
         conv2d = nn.Conv2d(
             in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
         )
-        upsampling = (
+        upsampling_layer = (
             nn.UpsamplingBilinear2d(scale_factor=upsampling)
             if upsampling > 1
             else nn.Identity()
         )
         if activation is None:
             activation = nn.Identity()
-        super().__init__(conv2d, upsampling, activation)
+        super().__init__(conv2d, upsampling_layer, activation)
 
 
 class Conv2dReLU(nn.Sequential):
@@ -190,7 +190,7 @@ class UnetPlusPlusDecoder(nn.Module):
         super().__init__()
 
         if n_blocks != len(decoder_channels):
-            msg = f"Model depth is {n_blocks}, but you provide  \
+            msg = f"Model depth is {n_blocks}, but you provide \
             `decoder_channels` for {len(decoder_channels)} blocks."
             raise ValueError(msg)
 
@@ -293,10 +293,9 @@ class GrandQCModel(ModelABC):
     """
 
     def __init__(self: GrandQCModel, num_output_channels: int = 2) -> None:
-        """Initialize UNet++ model.
+        """Initialize GrandQC model.
 
         Args:
-            encoder_depth: Depth of the encoder. Defaults to 5.
             num_output_channels: Number of output classes. Defaults to 2.
         """
         super().__init__()
