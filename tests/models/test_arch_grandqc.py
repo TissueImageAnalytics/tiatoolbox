@@ -2,12 +2,18 @@
 
 import numpy as np
 import torch
+from torch import nn
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
 )
-from tiatoolbox.models.architecture.grandqc import GrandQCModel
+from tiatoolbox.models.architecture.grandqc import (
+    CenterBlock,
+    GrandQCModel,
+    SegmentationHead,
+    UnetPlusPlusDecoder,
+)
 from tiatoolbox.models.engine.io_config import IOSegmentorConfig
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
@@ -68,3 +74,49 @@ def test_grandqc_preproc_postproc() -> None:
     postproc_image = model.postproc(dummy_output)
     assert postproc_image.shape == (512, 512)
     assert postproc_image.dtype == np.int64
+
+
+def test_segmentation_head_behaviour() -> None:
+    """Verify SegmentationHead defaults and upsampling."""
+    head = SegmentationHead(3, 5, activation=None, upsampling=1)
+    assert isinstance(head[1], nn.Identity)
+    assert isinstance(head[2], nn.Identity)
+
+    x = torch.randn(1, 3, 6, 8)
+    out = head(x)
+    assert out.shape == (1, 5, 6, 8)
+
+    head = SegmentationHead(3, 2, activation=nn.Sigmoid(), upsampling=2)
+    x = torch.ones(1, 3, 4, 4)
+    out = head(x)
+    assert out.shape == (1, 2, 8, 8)
+    assert torch.all(out >= 0)
+    assert torch.all(out <= 1)
+
+
+def test_unetplusplus_decoder_forward_shapes() -> None:
+    """Ensure UnetPlusPlusDecoder handles dense connections."""
+    decoder = UnetPlusPlusDecoder(
+        encoder_channels=[1, 2, 4, 8],
+        decoder_channels=[8, 4, 2],
+        n_blocks=3,
+    )
+
+    features = [
+        torch.randn(1, 1, 32, 32),
+        torch.randn(1, 2, 16, 16),
+        torch.randn(1, 4, 8, 8),
+        torch.randn(1, 8, 4, 4),
+    ]
+
+    output = decoder(features)
+    assert output.shape == (1, 2, 32, 32)
+
+
+def test_center_block_behavior() -> None:
+    """Test CenterBlock behavior in UnetPlusPlusDecoder."""
+    center_block = CenterBlock(in_channels=8, out_channels=8)
+
+    x = torch.randn(1, 8, 4, 4)
+    out = center_block(x)
+    assert out.shape == (1, 8, 4, 4)
