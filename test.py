@@ -8,8 +8,8 @@ from tiatoolbox.utils import env_detection as toolbox_env
 ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
 
 if __name__ == "__main__":
-    model_name = "sccnn-crchisto"
-    # model_name = "mapde-conic"
+    # model_name = "sccnn-crchisto"
+    model_name = "mapde-conic"
 
     # test_image_path = "/media/u1910100/data/slides/CMU-1-Small-Region.svs"
     # reader = WSIReader.open(test_image_path)
@@ -35,7 +35,6 @@ if __name__ == "__main__":
         save_dir=Path("/media/u1910100/data/overlays/test"),
         overwrite=True,
         output_type="annotationstore",
-        class_dict={0: "nucleus"},
         auto_get_mask=True,
         memory_threshold=70,
     )

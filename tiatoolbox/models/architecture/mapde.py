@@ -79,6 +79,7 @@ class MapDe(MicroNet):
         threshold_abs: float = 250,
         num_classes: int = 1,
         postproc_tile_shape: tuple[int, int] = (2048, 2048),
+        output_class_dict: dict[int, str] | None = None,
     ) -> None:
         """Initialize :class:`MapDe`."""
         super().__init__(
@@ -86,7 +87,7 @@ class MapDe(MicroNet):
             num_input_channels=num_input_channels,
             out_activation="relu",
         )
-
+        self.output_class_dict = output_class_dict
         self.postproc_tile_shape = postproc_tile_shape
 
         dist_filter = np.array(

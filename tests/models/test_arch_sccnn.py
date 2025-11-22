@@ -10,6 +10,7 @@ from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import env_detection
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 
 
 def _load_sccnn(name: str) -> SCCNN:
@@ -48,7 +49,10 @@ def test_functionality(remote_sample: Callable) -> None:
         device=select_device(on_gpu=env_detection.has_gpu()),
     )
     output = model.postproc(output[0])
-    np.testing.assert_array_equal(output, np.array([[8, 7]]))
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+
+    np.testing.assert_array_equal(xs, np.array([8]))
+    np.testing.assert_array_equal(ys, np.array([7]))
 
     model = _load_sccnn(name="sccnn-conic")
     output = model.infer_batch(
@@ -57,4 +61,6 @@ def test_functionality(remote_sample: Callable) -> None:
         device=select_device(on_gpu=env_detection.has_gpu()),
     )
     output = model.postproc(output[0])
-    np.testing.assert_array_equal(output, np.array([[7, 8]]))
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+    np.testing.assert_array_equal(xs, np.array([7]))
+    np.testing.assert_array_equal(ys, np.array([8]))

@@ -11,6 +11,7 @@ from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 
 ON_GPU = toolbox_env.has_gpu()
 
@@ -48,7 +49,10 @@ def test_functionality(remote_sample: Callable) -> None:
     batch = torch.from_numpy(patch)[None]
     output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     output = model.postproc(output[0])
-    assert np.all(output[0:2] == [[19, 171], [53, 89]])
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+
+    np.testing.assert_array_equal(xs[0:2], np.array([242, 192]))
+    np.testing.assert_array_equal(ys[0:2], np.array([10, 13]))
     Path(weights_path).unlink()
 
 

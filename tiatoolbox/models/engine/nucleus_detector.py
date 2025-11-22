@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Unpack
+from typing import TYPE_CHECKING
 
 import dask
 import dask.array as da
@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
-
 from tiatoolbox import logger
 from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
@@ -19,10 +18,9 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
-from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.models.models_abc import ModelABC
+    from typing import Unpack, Tuple
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -72,27 +70,6 @@ class NucleusDetector(SemanticSegmentor):
         ...     memory_threshold=80
         ... )
     """
-
-    from tiatoolbox.wsicore.wsireader import WSIReader
-
-    def __init__(
-        self: NucleusDetector,
-        model: str | ModelABC,
-        batch_size: int = 8,
-        num_workers: int = 0,
-        weights: str | Path | None = None,
-        *,
-        device: str = "cpu",
-        verbose: bool = True,
-    ):
-        super().__init__(
-            model=model,
-            batch_size=batch_size,
-            num_workers=num_workers,
-            weights=weights,
-            device=device,
-            verbose=verbose,
-        )
 
     def post_process_patches(
         self: NucleusDetector,
@@ -158,7 +135,8 @@ class NucleusDetector(SemanticSegmentor):
         rechunked_prediction_map = raw_predictions.rechunk(
             (self.model.postproc_tile_shape[0], self.model.postproc_tile_shape[1], -1)
         )
-        logger.info(f"Post-processing chunk size: {rechunked_prediction_map.chunks}")
+        logger.info(f"Post-processing tile size: {rechunked_prediction_map.chunks}")
+        logger.info(f"Post-processing tiles overlap: (h={depth_h}, w={depth_w})")
 
         detection_map = da.map_overlap(
             rechunked_prediction_map,
@@ -199,17 +177,13 @@ class NucleusDetector(SemanticSegmentor):
                 Additional runtime parameters including:
                 - scale_factor (tuple[float, float]): For coordinate transformation.
                 - class_dict (dict): Mapping of class indices to names.
-                - return_probabilities (bool): Whether to save probability maps.
 
         Returns:
-            dict | AnnotationStore | Path:
-                - If output_type is "dict": returns predictions as a dictionary.
-                - If output_type is "zarr": returns path to saved Zarr file.
-                - If output_type is "annotationstore": returns AnnotationStore
-                  or path to .db file.
+            AnnotationStore | Path:
+                - returns AnnotationStore or path to .db file.
 
         """
-        # Conversion to annotationstore uses a different function for SemanticSegmentor
+        # Only "annotationstore" output type is supported for NucleusDetector
         if output_type != "annotationstore":
             logger.warning(
                 f"Output type '{output_type}' is not supported by NucleusDetector. "
@@ -221,14 +195,13 @@ class NucleusDetector(SemanticSegmentor):
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
         # class_dict set from kwargs
         class_dict = kwargs.get("class_dict")
+        if class_dict is None:
+            class_dict = self.model.output_class_dict
 
         # Need to add support for zarr conversion.
         save_paths = []
 
         logger.info("Saving predictions as AnnotationStore.")
-
-        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-        class_dict = kwargs.get("class_dict")
 
         if self.patch_mode:
             save_paths = []
@@ -240,7 +213,7 @@ class NucleusDetector(SemanticSegmentor):
                 else:
                     output_path = save_path.parent / (str(i) + ".db")
 
-                out_file = self.write_centroids_to_store(
+                out_file = self.write_centroid_maps_to_store(
                     predictions_da,
                     scale_factor=scale_factor,
                     class_dict=class_dict,
@@ -249,7 +222,7 @@ class NucleusDetector(SemanticSegmentor):
 
                 save_paths.append(out_file)
             return save_paths
-        return self.write_centroids_to_store(
+        return self.write_centroid_maps_to_store(
             processed_predictions["predictions"],
             scale_factor=scale_factor,
             save_path=save_path,
@@ -284,8 +257,6 @@ class NucleusDetector(SemanticSegmentor):
         sub = df.sort_values("prob", ascending=False).reset_index(drop=True)
 
         # Coordinates as float64 for distance math
-        coords = sub[["x", "y"]].to_numpy(dtype=np.float64)
-        r2 = float(radius) * float(radius)
 
         coords = sub[["x", "y"]].to_numpy(dtype=np.float64)
         r = float(radius)
@@ -333,25 +304,28 @@ class NucleusDetector(SemanticSegmentor):
         return kept
 
     @staticmethod
-    def _chunk_to_records(
-        block: np.ndarray, block_info: dict
+    def _centroid_maps_to_detection_records(
+        block: np.ndarray, block_info: dict | None = None
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Convert a Dask block of detection maps to detection records.
+        """Convert a block of centroid maps to detection records.
 
-        Each block is a NumPy array of shape (h, w, C) containing detection scores
+        Each block is a NumPy array of shape (h, w, C) containing detection probabilities
         of each class c. This function finds non-zero detections and returns their
         global coordinates, class IDs (channel), and probabilities.
 
         Args:
-            block: NumPy array (h, w, C) for this chunk (no halos).
+            block: NumPy array (h, w, C) for this chunk.
             block_info: Dask block info dict.
 
         Returns:
             Tuple of ([x_coords], [y_coords], [class_ids], [probs])
         """
         # block: (h, w, C) NumPy chunk (post-stitching, no halos)
-        info = block_info[0] if 0 in block_info else block_info[None]
-        (r0, r1), (c0, c1), _ = info["array-location"]  # global interior start/stop
+        if block_info is not None:
+            info = block_info[0]
+            (r0, _), (c0, _), _ = info["array-location"]  # global interior start/stop
+        else:
+            r0, c0 = 0, 0
 
         # find the coordinates and channel indices of nonzeros
         ys, xs, cs = np.nonzero(block)
@@ -374,7 +348,7 @@ class NucleusDetector(SemanticSegmentor):
         return (x, y, t, p)
 
     @staticmethod
-    def _write_records_to_store(
+    def _write_detection_records_to_store(
         recs: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
         store: SQLiteStore,
         scale_factor: Tuple[float, float],
@@ -427,7 +401,7 @@ class NucleusDetector(SemanticSegmentor):
         return written
 
     @staticmethod
-    def write_centroids_to_store(
+    def write_centroid_maps_to_store(
         detection_maps: da.Array,
         scale_factor: tuple[float, float] = (1.0, 1.0),
         class_dict: dict | None = None,
@@ -453,7 +427,7 @@ class NucleusDetector(SemanticSegmentor):
         # one delayed record-tuple per chunk
         recs_delayed = (
             detection_maps.map_blocks(
-                NucleusDetector._chunk_to_records,
+                NucleusDetector._centroid_maps_to_detection_records,
                 dtype=object,  # we return Python tuples
                 block_info=True,
             )
@@ -466,7 +440,7 @@ class NucleusDetector(SemanticSegmentor):
 
         # one delayed writer per chunk (returns number of detections written)
         writes = [
-            dask.delayed(NucleusDetector._write_records_to_store)(
+            dask.delayed(NucleusDetector._write_detection_records_to_store)(
                 recs, store, scale_factor, class_dict, batch_size
             )
             for recs in recs_delayed
