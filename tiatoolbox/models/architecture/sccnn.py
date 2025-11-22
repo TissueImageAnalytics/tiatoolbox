@@ -333,13 +333,13 @@ class SCCNN(ModelABC):
         depth_h: int = 0,
         depth_w: int = 0,
     ) -> np.ndarray:
-        """ SCCNN post-processing function.
+        """SCCNN post-processing function.
 
         Builds a processed mask per input channel, runs peak_local_max then
         writes 1.0 at peak pixels.
 
         Can be called inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C)
-        to process large prediction maps in chunks. Keeps only centroids whose (row,col) 
+        to process large prediction maps in chunks. Keeps only centroids whose (row,col)
         lie in the interior window:
             rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
 
@@ -348,9 +348,9 @@ class SCCNN(ModelABC):
         Args:
             block: NumPy array (H, W, C).
             block_info: Dask block info dict. Only used when called inside dask.array.map_overlap.
-            depth_h: Halo size in pixels for height (rows). 
+            depth_h: Halo size in pixels for height (rows).
                 Only used when it's called inside dask.array.map_overlap.
-            depth_w: Halo size in pixels for width (cols). 
+            depth_w: Halo size in pixels for width (cols).
                 Only used when it's called inside dask.array.map_overlap.
 
         Returns:
@@ -364,7 +364,9 @@ class SCCNN(ModelABC):
             core_w = block_width - 2 * depth_w
         else:
             info = block_info[0]
-            locs = info["array-location"]  # a list of (start, stop) coordinates per axis
+            locs = info[
+                "array-location"
+            ]  # a list of (start, stop) coordinates per axis
             core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
             core_w = int(locs[1][1] - locs[1][0])
 
