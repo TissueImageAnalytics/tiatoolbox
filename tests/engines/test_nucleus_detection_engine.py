@@ -1,12 +1,11 @@
 """Tests for NucleusDetector."""
 
-from tiatoolbox.utils import env_detection as toolbox_env
 import pathlib
 import shutil
-from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
-import pandas as pd
-import pytest
+
 from tiatoolbox.annotation.storage import SQLiteStore
+from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+from tiatoolbox.utils import env_detection as toolbox_env
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -51,8 +50,6 @@ def test_nucleus_detector_wsi(remote_sample, tmp_path):
     check_output(tmp_path / "output" / "wsi4_512_512_svs.db")
 
     _rm_dir(tmp_path / "output")
-
-
 
     # nucleus_detector = NucleusDetector(pretrained_model="mapde-conic")
     # _ = nucleus_detector.predict(

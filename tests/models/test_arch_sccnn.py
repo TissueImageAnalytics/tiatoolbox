@@ -7,10 +7,10 @@ import torch
 
 from tiatoolbox.models import SCCNN
 from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
-from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 
 
 def _load_sccnn(name: str) -> SCCNN:

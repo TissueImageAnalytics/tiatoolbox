@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
+
 from tiatoolbox import logger
 from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
@@ -20,7 +21,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Unpack, Tuple
+    from typing import Unpack
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -306,7 +307,7 @@ class NucleusDetector(SemanticSegmentor):
     @staticmethod
     def _centroid_maps_to_detection_records(
         block: np.ndarray, block_info: dict | None = None
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Convert a block of centroid maps to detection records.
 
         Each block is a NumPy array of shape (h, w, C) containing detection probabilities
@@ -349,9 +350,9 @@ class NucleusDetector(SemanticSegmentor):
 
     @staticmethod
     def _write_detection_records_to_store(
-        recs: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        recs: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
         store: SQLiteStore,
-        scale_factor: Tuple[float, float],
+        scale_factor: tuple[float, float],
         class_dict: dict[int, str | int] | None,
         batch_size: int = 5000,
     ) -> int:

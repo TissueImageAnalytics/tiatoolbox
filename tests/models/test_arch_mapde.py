@@ -8,10 +8,10 @@ import torch
 
 from tiatoolbox.models import MapDe
 from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
-from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 
 ON_GPU = toolbox_env.has_gpu()
 
