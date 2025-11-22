@@ -96,11 +96,11 @@ class NucleusDetector(SemanticSegmentor):
 
     def post_process_patches(
         self: NucleusDetector,
-        raw_predictions: da.Array,
+        raw_predictions: list[da.Array],
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> list[pd.DataFrame]:
+    ) -> list[np.ndarray]:
         """Define how to post-process patch predictions.
 
         Args:
@@ -117,7 +117,7 @@ class NucleusDetector(SemanticSegmentor):
         _ = prediction_dtype
 
         batch_predictions = []
-        for i in range(raw_predictions.shape[0]):
+        for i in range(len(raw_predictions)):
             batch_predictions.append(self.model.postproc_func(raw_predictions[i]))
         return batch_predictions
 
@@ -233,13 +233,15 @@ class NucleusDetector(SemanticSegmentor):
         if self.patch_mode:
             save_paths = []
             for i, predictions in enumerate(processed_predictions["predictions"]):
+                predictions_da = da.from_array(predictions, chunks=predictions.shape)
+
                 if isinstance(self.images[i], Path):
                     output_path = save_path.parent / (self.images[i].stem + ".db")
                 else:
                     output_path = save_path.parent / (str(i) + ".db")
 
                 out_file = self.write_centroids_to_store(
-                    predictions,
+                    predictions_da,
                     scale_factor=scale_factor,
                     class_dict=class_dict,
                     save_path=output_path,

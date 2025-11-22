@@ -329,34 +329,44 @@ class SCCNN(ModelABC):
     def postproc(
         self: SCCNN,
         block: np.ndarray,
-        block_info: dict,
-        depth_h: int,
-        depth_w: int,
+        block_info: dict | None = None,
+        depth_h: int = 0,
+        depth_w: int = 0,
     ) -> np.ndarray:
-        """Runs inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C).
+        """ SCCNN post-processing function.
 
-        Builds a processed mask per channel, runs peak_local_max then
-        writes 1.0 at centroid pixels.
-        Keeps only centroids whose (row,col) lie in the interior window:
+        Builds a processed mask per input channel, runs peak_local_max then
+        writes 1.0 at peak pixels.
+
+        Can be called inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C)
+        to process large prediction maps in chunks. Keeps only centroids whose (row,col) 
+        lie in the interior window:
             rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
-        Returns same spatial shape as input block: (h_pad, w_pad, C), float32.
+
+        Returns same spatial shape as the input block
 
         Args:
-            block: NumPy array (H, W, C) with padded block data.
-            block_info: Dask block info dict.
-            depth_h: Halo size in pixels for height (rows).
-            depth_w: Halo size in pixels for width (cols).
+            block: NumPy array (H, W, C).
+            block_info: Dask block info dict. Only used when called inside dask.array.map_overlap.
+            depth_h: Halo size in pixels for height (rows). 
+                Only used when it's called inside dask.array.map_overlap.
+            depth_w: Halo size in pixels for width (cols). 
+                Only used when it's called inside dask.array.map_overlap.
 
         Returns:
-            out: NumPy array (H, W, C) with 1 at centroids, 0 elsewhere.
+            out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
         """
         block_height, block_width, block_channels = block.shape
 
         # --- derive core (pre-overlap) size for THIS block ---
-        info = block_info[0]
-        locs = info["array-location"]  # a list of (start, stop) coordinates per axis
-        core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
-        core_w = int(locs[1][1] - locs[1][0])
+        if block_info is None:
+            core_h = block_height - 2 * depth_h
+            core_w = block_width - 2 * depth_w
+        else:
+            info = block_info[0]
+            locs = info["array-location"]  # a list of (start, stop) coordinates per axis
+            core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
+            core_w = int(locs[1][1] - locs[1][0])
 
         rmin, rmax = depth_h, depth_h + core_h
         cmin, cmax = depth_w, depth_w + core_w

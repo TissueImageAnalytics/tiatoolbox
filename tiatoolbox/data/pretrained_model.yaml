@@ -867,7 +867,6 @@ sccnn-crchisto:
                 - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.25 }
-            tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
@@ -891,7 +890,6 @@ sccnn-conic:
                 - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.25 }
-            tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
