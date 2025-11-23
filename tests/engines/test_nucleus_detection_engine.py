@@ -29,7 +29,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
 
     pretrained_model = "mapde-conic"
 
-    save_dir = tmp_path 
+    save_dir = tmp_path
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     _ = nucleus_detector.run(
