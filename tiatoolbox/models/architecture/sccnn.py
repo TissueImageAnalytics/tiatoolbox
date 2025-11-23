@@ -340,16 +340,17 @@ class SCCNN(ModelABC):
         Builds a processed mask per input channel, runs peak_local_max then
         writes 1.0 at peak pixels.
 
-        Can be called inside Dask.da.map_overlap on a padded NumPy block: (h_pad, w_pad, C)
-        to process large prediction maps in chunks. Keeps only centroids whose (row,col)
-        lie in the interior window:
-            rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
+        Can be called inside Dask.da.map_overlap on a padded NumPy block:
+        (h_pad, w_pad, C) to process large prediction maps in chunks.
+        Keeps only centroids whose (row,col) lie in the interior window:
+        rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
 
         Returns same spatial shape as the input block
 
         Args:
             block: NumPy array (H, W, C).
-            block_info: Dask block info dict. Only used when called inside dask.array.map_overlap.
+            block_info: Dask block info dict. Only used when called inside
+                dask.array.map_overlap.
             depth_h: Halo size in pixels for height (rows).
                 Only used when it's called inside dask.array.map_overlap.
             depth_w: Halo size in pixels for width (cols).
