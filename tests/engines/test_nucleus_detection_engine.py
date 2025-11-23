@@ -20,10 +20,7 @@ def _rm_dir(path: pathlib.Path) -> None:
 def check_output(path: pathlib.Path) -> None:
     """Check NucleusDetector output."""
     store = SQLiteStore.open(path)
-    for item in store.values():
-        geometry = item.geometry
-        print(geometry.centroid)
-        break
+    assert len(store.values()) == 281
 
 
 def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
@@ -31,6 +28,8 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
     pretrained_model = "mapde-conic"
+
+    save_dir = tmp_path 
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     _ = nucleus_detector.run(
@@ -40,9 +39,10 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         auto_get_mask=True,
         memory_threshold=50,
         images=[mini_wsi_svs],
-        save_dir=tmp_path / "output",
+        save_dir=save_dir,
+        overwrite=True,
     )
 
-    check_output(tmp_path / "output" / "wsi4_512_512_svs.db")
+    check_output(save_dir / "wsi4_512_512.db")
 
-    _rm_dir(tmp_path / "output")
+    _rm_dir(save_dir)
