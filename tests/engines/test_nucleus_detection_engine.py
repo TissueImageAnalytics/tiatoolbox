@@ -11,6 +11,9 @@ from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.utils.misc import imwrite
+import numpy as np
+import dask.array as da
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -169,4 +172,54 @@ def test_nucleus_detector_patch(
     assert len(store_2.values()) == 52
     store_2.close()
 
+    imwrite(save_dir / "patch_0.png", patch_1)
+    imwrite(save_dir / "patch_1.png", patch_2)
+    _ = nucleus_detector.run(
+        patch_mode=True,
+        device=device,
+        output_type="zarr",
+        memory_threshold=50,
+        images=[save_dir / "patch_0.png", save_dir / "patch_1.png"],
+        save_dir=save_dir,
+        overwrite=True,
+    )
+
+    store_1 = SQLiteStore.open(save_dir / "patch_0.db")
+    assert len(store_1.values()) == 270
+    store_1.close()
+
+    store_2 = SQLiteStore.open(save_dir / "patch_1.db")
+    assert len(store_2.values()) == 52
+    store_2.close()
+
     _rm_dir(save_dir)
+
+
+def test_nucleus_detector_write_centroid_maps(tmp_path: pathlib.Path)->None:
+    """Test for _write_centroid_maps function."""
+
+    detection_maps = np.zeros((20, 20, 1), dtype=np.uint8)
+    detection_maps = da.from_array(detection_maps, chunks=(20, 20, 1))
+
+    store = NucleusDetector.write_centroid_maps_to_store(
+        detection_maps=detection_maps,
+    )
+    assert len(store.values()) == 0
+    store.close()
+
+    detection_maps = np.zeros((20, 20, 1), dtype=np.uint8)
+    detection_maps[10, 10, 0] = 1
+    detection_maps = da.from_array(detection_maps, chunks=(20, 20, 1))
+    _ = NucleusDetector.write_centroid_maps_to_store(
+        detection_maps=detection_maps,
+        save_path=tmp_path / "test.db",
+        class_dict={0: "nucleus"},
+    )
+    store = SQLiteStore.open(tmp_path / "test.db")
+    assert len(store.values()) == 1
+    annotation = next(iter(store.values()))
+    print(annotation)
+    assert annotation.properties["type"] == "nucleus"
+    assert annotation.geometry.centroid.x == 10.0
+    assert annotation.geometry.centroid.y == 10.0
+    store.close()
