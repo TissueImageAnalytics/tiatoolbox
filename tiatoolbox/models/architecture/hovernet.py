@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import math
 from collections import OrderedDict
-import dask
+
 import cv2
+import dask
+import dask.array as da
+import dask.dataframe as dd
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
 from scipy import ndimage
@@ -21,6 +25,8 @@ from tiatoolbox.models.architecture.utils import (
 )
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import get_bounding_box
+
+dask.config.set({"dataframe.convert-string": False})
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -782,7 +788,28 @@ class HoVerNet(ModelABC):
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
-        return pred_inst, nuc_inst_info_dict
+        if not nuc_inst_info_dict:
+            nuc_inst_info_dict = {  # inst_id should start at 1
+                "box": da.empty(shape=0),
+                "centroid": da.empty(shape=0),
+                "contour": da.empty(shape=0),
+                "prob": da.empty(shape=0),
+                "type": da.empty(shape=0),
+            }
+            return pred_inst, nuc_inst_info_dict
+
+        # dask dataframe does not support transpose
+        nuc_inst_info_df = pd.DataFrame(nuc_inst_info_dict).transpose()
+
+        # create dask dataframe
+        nuc_inst_info_dd = dd.from_pandas(nuc_inst_info_df)
+
+        # reinitialize nuc_inst_info_dict
+        nuc_inst_info_dict_ = {}
+        for key in nuc_inst_info_df.columns:
+            nuc_inst_info_dict_[key] = nuc_inst_info_dd[key].to_dask_array(lengths=True)
+
+        return pred_inst, nuc_inst_info_dict_
 
     @staticmethod
     def infer_batch(  # skipcq: PYL-W0221

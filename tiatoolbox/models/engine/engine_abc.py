@@ -46,6 +46,7 @@ import torch
 import zarr
 from dask import compute
 from dask.diagnostics import ProgressBar
+from numcodecs import Pickle
 from torch import nn
 from typing_extensions import Unpack
 
@@ -70,6 +71,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
+
+dask.config.set({"dataframe.convert-string": False})
 
 
 class EngineABCRunParams(TypedDict, total=False):
@@ -645,13 +648,29 @@ class EngineABC(ABC):  # noqa: B024
                 keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
             write_tasks = []
             for key in keys_to_compute:
-                dask_array = processed_predictions[key].rechunk("auto")
-                task = dask_array.to_zarr(
-                    url=save_path,
-                    component=key,
-                    compute=False,
-                )
-                write_tasks.append(task)
+                dask_output = processed_predictions[key]
+                if isinstance(dask_output, da.Array):
+                    dask_output = dask_output.rechunk("auto")
+                    task = dask_output.to_zarr(
+                        url=save_path, component=key, compute=False, object_codec=None
+                    )
+                    write_tasks.append(task)
+
+                if isinstance(dask_output, list) and all(
+                    isinstance(dask_array, da.Array) for dask_array in dask_output
+                ):
+                    for i, dask_array in enumerate(dask_output):
+                        object_codec = (
+                            Pickle() if dask_array.dtype == "object" else None
+                        )
+                        task = dask_array.to_zarr(
+                            url=save_path,
+                            component=f"{key}/{i}",
+                            compute=False,
+                            object_codec=object_codec,
+                        )
+                        write_tasks.append(task)
+
             msg = f"Saving output to {save_path}."
             logger.info(msg=msg)
             with ProgressBar():

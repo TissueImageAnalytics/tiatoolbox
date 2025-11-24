@@ -8,12 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import dask.array as da
-import dask.dataframe as dd
 
 # replace with the sql database once the PR in place
 import joblib
 import numpy as np
-import pandas as pd
 import torch
 import tqdm
 from shapely.geometry import box as shapely_box
@@ -601,15 +599,15 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         """
         probabilities = raw_predictions["probabilities"]
         predictions = [[] for _ in range(probabilities[0].shape[0])]
-        inst_dict = [[] for _ in range(probabilities[0].shape[0])]
+        inst_dict = [[{}] for _ in range(probabilities[0].shape[0])]
         for idx in range(probabilities[0].shape[0]):
             predictions[idx], inst_dict[idx] = self.model.postproc_func(
                 [probabilities[0][idx], probabilities[1][idx], probabilities[2][idx]]
             )
-            inst_dict[idx] = dd.from_pandas(pd.DataFrame(inst_dict[idx]))
 
         raw_predictions["predictions"] = da.stack(predictions, axis=0)
-        raw_predictions["inst_dict"] = inst_dict
+        for key in inst_dict[0]:
+            raw_predictions[key] = [d[key] for d in inst_dict]
 
         return raw_predictions
 
@@ -621,21 +619,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> dict | AnnotationStore | Path:
         """Save semantic segmentation predictions to disk or return them in memory."""
-        # Conversion to annotationstore uses a different function for SemanticSegmentor
-        inst_dict: list[dd.DataFrame] | None = processed_predictions.pop(
-            "inst_dict", None
-        )
-        out = super().save_predictions(
+        return super().save_predictions(
             processed_predictions, output_type, save_path=save_path, **kwargs
         )
-
-        if isinstance(out, dict):
-            out["inst_dict"] = [[] for _ in range(len(inst_dict))]
-            for idx in range(len(inst_dict)):
-                out["inst_dict"][idx] = inst_dict[idx].compute()
-            return out
-
-        return out
 
     @staticmethod
     def _get_tile_info(
