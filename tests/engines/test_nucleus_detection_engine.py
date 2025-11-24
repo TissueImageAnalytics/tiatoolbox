@@ -4,16 +4,16 @@ import pathlib
 import shutil
 from collections.abc import Callable
 
+import dask.array as da
+import numpy as np
 import pandas as pd
 import pytest
 
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.wsicore.wsireader import WSIReader
 from tiatoolbox.utils.misc import imwrite
-import numpy as np
-import dask.array as da
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
@@ -195,9 +195,8 @@ def test_nucleus_detector_patch(
     _rm_dir(save_dir)
 
 
-def test_nucleus_detector_write_centroid_maps(tmp_path: pathlib.Path)->None:
+def test_nucleus_detector_write_centroid_maps(tmp_path: pathlib.Path) -> None:
     """Test for _write_centroid_maps function."""
-
     detection_maps = np.zeros((20, 20, 1), dtype=np.uint8)
     detection_maps = da.from_array(detection_maps, chunks=(20, 20, 1))
 
