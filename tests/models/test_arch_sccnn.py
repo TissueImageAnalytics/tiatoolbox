@@ -60,7 +60,31 @@ def test_functionality(remote_sample: Callable) -> None:
         batch,
         device=select_device(on_gpu=env_detection.has_gpu()),
     )
-    output = model.postproc(output[0])
+    block_info = {
+        0: {
+            "array-location": [[0, 31], [0, 31]],
+        }
+    }
+    output = model.postproc(output[0], block_info=block_info)
     xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
     np.testing.assert_array_equal(xs, np.array([7]))
     np.testing.assert_array_equal(ys, np.array([8]))
+
+    model = _load_sccnn(name="sccnn-conic")
+    output = model.infer_batch(
+        model,
+        batch,
+        device=select_device(on_gpu=env_detection.has_gpu()),
+    )
+    block_info = {
+        0: {
+            "array-location": [
+                [0, 1],
+                [0, 1],
+            ],  # dummy block to test no valid detections
+        }
+    }
+    output = model.postproc(output[0], block_info=block_info)
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+    np.testing.assert_array_equal(xs, np.array([]))
+    np.testing.assert_array_equal(ys, np.array([]))

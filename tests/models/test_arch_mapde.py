@@ -53,6 +53,31 @@ def test_functionality(remote_sample: Callable) -> None:
 
     np.testing.assert_array_equal(xs[0:2], np.array([242, 192]))
     np.testing.assert_array_equal(ys[0:2], np.array([10, 13]))
+
+    patch = reader.read_bounds(
+        (0, 0, 252, 252),
+        resolution=0.50,
+        units="mpp",
+        coord_space="resolution",
+    )
+
+    model, weights_path = _load_mapde(name="mapde-conic")
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
+    block_info = {
+        0: {
+            "array-location": [
+                [0, 1],
+                [0, 1],
+            ],  # dummy block to test no valid detections
+        }
+    }
+    output = model.postproc(output[0], block_info=block_info)
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+    np.testing.assert_array_equal(xs, np.array([]))
+    np.testing.assert_array_equal(ys, np.array([]))
+
     Path(weights_path).unlink()
 
 
