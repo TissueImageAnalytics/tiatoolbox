@@ -565,8 +565,9 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             **kwargs,
         )
 
-        msg = f"Output file saved at {out}."
-        logger.info(msg=msg)
+        if save_path:
+            msg = f"Output file saved at {out}."
+            logger.info(msg=msg)
         return out
 
     def post_process_patches(  # skipcq: PYL-R0201
