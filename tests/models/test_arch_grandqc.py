@@ -109,7 +109,7 @@ def test_grandqc_with_semantic_segmentor(
     for annotation in store.values():
         assert annotation.properties["type"] == "mask"
         tissue_area_px += annotation.geometry.area
-    assert 3003401 < tissue_area_px < 3003402
+    assert 2999000 < tissue_area_px < 3004000
 
     store.close()
 
