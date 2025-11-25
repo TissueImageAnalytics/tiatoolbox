@@ -1,4 +1,52 @@
-"""Defines EfficientNet encoder using timm library."""
+"""EfficientNet Encoder Implementation using timm.
+
+This module provides an implementation of EfficientNet-based encoders for use in
+semantic segmentation and other computer vision tasks. It leverages the `timm`
+library for model components and adds encoder-specific functionality such as
+custom input channels, dilation support, and configurable scaling parameters.
+
+Key Components:
+---------------
+- patch_first_conv:
+    Utility to modify the first convolution layer for arbitrary input channels.
+- replace_strides_with_dilation:
+    Utility to convert strides into dilations for atrous convolutions.
+- EncoderMixin:
+    Mixin class adding encoder-specific features like output channels and stride.
+- EfficientNetBaseEncoder:
+    Base encoder combining EfficientNet backbone with encoder functionality.
+- EfficientNetEncoder:
+    Configurable EfficientNet encoder supporting depth and channel scaling.
+- timm_efficientnet_encoders:
+    Dictionary of available EfficientNet encoder configurations and pretrained settings.
+
+Features:
+---------
+- Supports arbitrary input channels (e.g., grayscale or multi-channel images).
+- Allows conversion to dilated versions for semantic segmentation.
+- Provides pretrained weights from multiple sources (ImageNet, AdvProp, Noisy Student).
+- Implements scaling rules for EfficientNet architecture.
+
+Example:
+    >>> from tiatoolbox.models.architecture.timm_efficientnet import EfficientNetEncoder
+    >>> encoder = EfficientNetEncoder(
+    ...     stage_idxs=[2, 3, 5],
+    ...     out_channels=[3, 32, 24, 40, 112, 320],
+    ...     channel_multiplier=1.0,
+    ...     depth_multiplier=1.0,
+    ...     drop_rate=0.2
+    ... )
+    >>> x = torch.randn(1, 3, 224, 224)
+    >>> features = encoder(x)
+    >>> [f.shape for f in features]
+    [torch.Size([1, 3, 224, 224]), torch.Size([1, 32, 112, 112]), ...]
+
+References:
+    - Tan, Mingxing, and Quoc V. Le. "EfficientNet: Rethinking Model Scaling for
+      Convolutional Neural Networks." arXiv preprint arXiv:1905.11946 (2019).
+      URL: https://arxiv.org/abs/1905.11946
+
+"""
 
 from __future__ import annotations
 
@@ -26,18 +74,29 @@ def patch_first_conv(
     *,
     pretrained: bool = True,
 ) -> None:
-    """Change first convolution layer input channels.
+    """Update the first convolution layer for a new input channel size.
+
+    This function updates the first convolutional layer of a model to handle
+    arbitrary input channels. It optionally reuses pretrained weights or
+    initializes weights randomly.
 
     Args:
-        model: The neural network model to patch.
-        new_in_channels: Number of input channels for the new first layer.
-        default_in_channels: Original number of input channels. Defaults to 3.
-        pretrained: Whether to reuse pretrained weights. Defaults to True.
+        model (nn.Module):
+            The neural network model whose first convolution layer will be patched.
+        new_in_channels (int):
+            Number of input channels for the new first layer.
+        default_in_channels (int):
+            Original number of input channels. Defaults to 3.
+        pretrained (bool):
+            Whether to reuse pretrained weights. Defaults to True.
 
-    Note:
-        In case:
-        - in_channels == 1 or in_channels == 2 -> reuse original weights
-        - in_channels > 3 -> make random kaiming normal initialization
+    Notes:
+        - If `new_in_channels` == 1 or 2 → reuse original weights.
+        - If `new_in_channels` > 3 → initialize weights using Kaiming normal.
+
+    Example:
+        >>> patch_first_conv(model, new_in_channels=1, pretrained=True)
+
     """
     # get first conv
     conv_module: nn.Conv2d | None = None
@@ -81,11 +140,20 @@ def patch_first_conv(
 
 
 def replace_strides_with_dilation(module: nn.Module, dilation_rate: int) -> None:
-    """Patch Conv2d modules replacing strides with dilation.
+    """Replace strides with dilation in Conv2d layers.
+
+    Converts convolutional layers to use dilation instead of stride, enabling
+    atrous convolutions for semantic segmentation tasks.
 
     Args:
-        module: The module containing Conv2d layers to patch.
-        dilation_rate: The dilation rate to apply.
+        module (nn.Module):
+            Module containing Conv2d layers to patch.
+        dilation_rate (int):
+            Dilation rate to apply to all Conv2d layers.
+
+    Example:
+        >>> replace_strides_with_dilation(model, dilation_rate=2)
+
     """
     for mod in module.modules():
         if isinstance(mod, nn.Conv2d):
@@ -100,11 +168,27 @@ def replace_strides_with_dilation(module: nn.Module, dilation_rate: int) -> None
 
 
 class EncoderMixin:
-    """Add encoder functionality.
+    """Mixin class adding encoder-specific functionality.
 
-    Such as:
-    - output channels specification of feature tensors (produced by encoder)
-    - patching first convolution for arbitrary input channels
+    Provides methods for:
+    - Managing output channels for encoder feature maps.
+    - Patching the first convolution for arbitrary input channels.
+    - Converting encoder to dilated version for segmentation tasks.
+
+    Attributes:
+        _depth (int):
+            Encoder depth (number of stages).
+        _in_channels (int):
+            Number of input channels.
+        _output_stride (int):
+            Output stride of the encoder.
+        _out_channels (list[int]):
+            List of output channel dimensions for each depth level.
+
+    Example:
+        >>> encoder = EncoderMixin()
+        >>> encoder.set_in_channels(1)
+
     """
 
     _is_torch_scriptable = True
@@ -112,7 +196,12 @@ class EncoderMixin:
     _is_torch_compilable = True
 
     def __init__(self) -> None:
-        """Initialize EncoderMixin with default parameters."""
+        """Initialize EncoderMixin with default parameters.
+
+        Sets default values for encoder depth, input channels, output stride,
+        and output channel list.
+
+        """
         self._depth = 5
         self._in_channels = 3
         self._output_stride = 32
@@ -120,28 +209,48 @@ class EncoderMixin:
 
     @property
     def out_channels(self) -> list[int]:
-        """Return channels dimensions for each tensor of forward output of encoder.
+        """Return output channel dimensions for encoder feature maps.
 
         Returns:
-            List of output channel dimensions for each depth level.
+            list[int]:
+                List of output channel dimensions for each depth level.
+
+        Example:
+            >>> encoder.out_channels
+            ... [3, 32, 64, 128, 256, 512]
+
         """
         return self._out_channels[: self._depth + 1]
 
     @property
     def output_stride(self) -> int:
-        """Return the output stride of the encoder.
+        """Return the effective output stride of the encoder.
+
+        The output stride is the minimum of the configured stride and 2^depth.
 
         Returns:
-            The minimum of configured output stride and 2^depth.
+            int:
+                Effective output stride.
+
+        Example:
+            >>> encoder.output_stride
+            ... 32
+
         """
         return min(self._output_stride, 2**self._depth)
 
     def set_in_channels(self, in_channels: int, *, pretrained: bool = True) -> None:
-        """Change first convolution channels.
+        """Update the encoder to accept a different number of input channels.
 
         Args:
-            in_channels: Number of input channels.
-            pretrained: Whether to use pretrained weights. Defaults to True.
+            in_channels (int):
+                Number of input channels.
+            pretrained (bool):
+                Whether to use pretrained weights. Defaults to True.
+
+        Example:
+            >>> encoder.set_in_channels(1, pretrained=False)
+
         """
         if in_channels == DEFAULT_IN_CHANNELS:
             return
@@ -154,26 +263,39 @@ class EncoderMixin:
         patch_first_conv(model=self, new_in_channels=in_channels, pretrained=pretrained)  # type: ignore[arg-type]
 
     def get_stages(self) -> dict[int, Sequence[torch.nn.Module]]:
-        """Get stages for dilation modification.
+        """Return encoder stages for dilation modification.
 
-        Override this method in your implementation.
+        This method should be overridden by subclasses to provide stage mappings
+        for converting strides to dilations.
 
         Returns:
-            Dictionary with keys as output stride and values as list of modules.
+            dict[int, Sequence[torch.nn.Module]]:
+                Dictionary mapping output stride to corresponding module sequences.
 
         Raises:
-            NotImplementedError: This method must be implemented by subclasses.
+            NotImplementedError:
+                If the method is not implemented by the subclass.
+
+        Example:
+            >>> stages = encoder.get_stages()
+
         """
         raise NotImplementedError
 
     def make_dilated(self, output_stride: int) -> None:
-        """Convert encoder to dilated version.
+        """Convert encoder to a dilated version for segmentation.
 
         Args:
-            output_stride: Target output stride (8 or 16).
+            output_stride (int):
+                Target output stride (must be 8 or 16).
 
         Raises:
-            ValueError: If output_stride is not 8 or 16.
+            ValueError:
+                If `output_stride` is not 8 or 16.
+
+        Example:
+            >>> encoder.make_dilated(output_stride=16)
+
         """
         if output_stride not in [8, 16]:
             msg = f"Output stride should be 16 or 8, got {output_stride}."
@@ -194,12 +316,21 @@ def get_efficientnet_kwargs(
     depth_multiplier: float = 1.0,
     drop_rate: float = 0.2,
 ) -> dict[str, Any]:
-    """Create EfficientNet model kwargs.
+    """Generate configuration parameters for EfficientNet.
+
+    Args:
+        channel_multiplier (float):
+            Multiplier for number of channels per layer. Defaults to 1.0.
+        depth_multiplier (float):
+            Multiplier for number of repeats per stage. Defaults to 1.0.
+        drop_rate (float):
+            Dropout rate. Defaults to 0.2.
 
     Reference implementation:
-    https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py
+        https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py
 
-    Paper: https://arxiv.org/abs/1905.11946
+    Paper:
+        https://arxiv.org/abs/1905.11946
 
     EfficientNet parameters:
     - 'efficientnet-b0': (1.0, 1.0, 224, 0.2)
@@ -218,8 +349,17 @@ def get_efficientnet_kwargs(
         depth_multiplier: Multiplier to number of repeats per stage. Defaults to 1.0.
         drop_rate: Dropout rate. Defaults to 0.2.
 
+
     Returns:
-        Dictionary containing model configuration parameters.
+        dict[str, Any]:
+            Dictionary containing EfficientNet configuration parameters
+
+    Example:
+        >>> kwargs = get_efficientnet_kwargs(
+        ...  channel_multiplier=1.2,
+        ...  depth_multiplier=1.4,
+        ... )
+
     """
     arch_def = [
         ["ds_r1_k3_s1_e1_c16_se0.25"],
@@ -242,9 +382,44 @@ def get_efficientnet_kwargs(
 
 
 class EfficientNetBaseEncoder(EfficientNet, EncoderMixin):
-    """EfficientNet encoder base class.
+    """Base class for EfficientNet encoder.
 
-    Combines EfficientNet architecture with encoder functionality.
+    Combines EfficientNet backbone from `timm` with encoder-specific functionality
+    for feature extraction in segmentation and classification tasks.
+
+    Features:
+        - Supports configurable depth and output stride.
+        - Provides intermediate feature maps for multi-scale processing.
+        - Removes classifier for encoder-only usage.
+
+    Args:
+        stage_idxs (list[int]):
+            Indices of stages for feature extraction.
+        out_channels (list[int]):
+            Output channels for each depth level.
+        depth (int):
+            Encoder depth (1-5). Defaults to 5.
+        output_stride (int):
+            Output stride of encoder. Defaults to 32.
+        **kwargs (dict[str, Any]):
+            Additional keyword arguments for EfficientNet initialization.
+
+    Raises:
+        ValueError:
+            If `depth` is not in range [1, 5].
+
+    Example:
+        >>> encoder = EfficientNetBaseEncoder(
+        ...     stage_idxs=[2, 3, 5],
+        ...     out_channels=[3, 32, 24, 40, 112, 320],
+        ...     depth=5,
+        ...     output_stride=32
+        ... )
+        >>> x = torch.randn(1, 3, 224, 224)
+        >>> features = encoder(x)
+        >>> [f.shape for f in features]
+        ... [torch.Size([1, 3, 224, 224]), torch.Size([1, 32, 112, 112]), ...]
+
     """
 
     def __init__(
@@ -258,14 +433,21 @@ class EfficientNetBaseEncoder(EfficientNet, EncoderMixin):
         """Initialize EfficientNetBaseEncoder.
 
         Args:
-            stage_idxs: Indices of stages for feature extraction.
-            out_channels: Output channels for each depth level.
-            depth: Encoder depth (1-5). Defaults to 5.
-            output_stride: Output stride of encoder. Defaults to 32.
-            **kwargs: Additional keyword arguments for EfficientNet.
+            stage_idxs (list[int]):
+                Indices of stages for feature extraction.
+            out_channels (list[int]):
+                Output channels for each depth level.
+            depth (int):
+                Encoder depth (1-5). Defaults to 5.
+            output_stride (int):
+                Output stride of encoder. Defaults to 32.
+            **kwargs (dict[str, Any]):
+                Additional keyword arguments for EfficientNet initialization.
 
         Raises:
-            ValueError: If depth is not in range [1, 5].
+            ValueError:
+                If `depth` is not in range [1, 5].
+
         """
         if depth > MAX_DEPTH or depth < MIN_DEPTH:
             msg = f"{self.__class__.__name__} depth should be in range \
@@ -282,24 +464,46 @@ class EfficientNetBaseEncoder(EfficientNet, EncoderMixin):
         del self.classifier
 
     def get_stages(self) -> dict[int, Sequence[torch.nn.Module]]:
-        """Get stages for dilation modification.
+        """Return encoder stages for dilation modification.
+
+        Provides mapping of output strides to corresponding module sequences,
+        enabling conversion to dilated versions for segmentation tasks.
 
         Returns:
-            Dictionary mapping output strides to corresponding module sequences.
+            dict[int, Sequence[torch.nn.Module]]:
+                Dictionary mapping output stride to module sequences.
+
+        Example:
+            >>> stages = encoder.get_stages()
+            >>> print(stages.keys())
+            ... dict_keys([16, 32])
+
         """
         return {
             16: [self.blocks[self._stage_idxs[1] : self._stage_idxs[2]]],  # type: ignore[attr-defined]
             32: [self.blocks[self._stage_idxs[2] :]],  # type: ignore[attr-defined]
         }
 
-    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:  # type: ignore[override]
-        """Forward pass through encoder.
+    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+        """Forward pass through EfficientNet encoder.
+
+        Extracts feature maps from multiple stages of the encoder for use in
+        decoder networks or multi-scale processing.
 
         Args:
-            x: Input tensor.
+            x (torch.Tensor):
+                Input tensor of shape (N, C, H, W).
 
         Returns:
-            List of feature tensors from different encoder depths.
+            list[torch.Tensor]:
+                List of feature maps from different encoder depths.
+
+        Example:
+            >>> x = torch.randn(1, 3, 224, 224)
+            >>> features = encoder(x)
+            >>> len(features)
+            ... 6
+
         """
         features = [x]
 
@@ -330,16 +534,28 @@ class EfficientNetBaseEncoder(EfficientNet, EncoderMixin):
         return features
 
     def load_state_dict(
-        self, state_dict: Mapping[str, Any], **kwargs: bool
+        self,
+        state_dict: Mapping[str, Any],
+        **kwargs: bool,
     ) -> torch.nn.modules.module._IncompatibleKeys:
         """Load state dictionary, excluding classifier weights.
 
+        Removes classifier weights from the state dictionary before loading,
+        as the encoder does not include a classification head.
+
         Args:
-            state_dict: State dictionary to load.
-            **kwargs: Additional keyword arguments for load_state_dict.
+            state_dict (Mapping[str, Any]):
+                State dictionary to load.
+            **kwargs (bool):
+                Additional keyword arguments for `load_state_dict`.
 
         Returns:
-            Result of parent class load_state_dict method.
+            torch.nn.modules.module._IncompatibleKeys:
+                Result of parent class `load_state_dict` method.
+
+        Example:
+            >>> encoder.load_state_dict(torch.load("efficientnet_weights.pth"))
+
         """
         # Create a mutable copy of the state dict to modify
         state_dict_copy = dict(state_dict)
@@ -351,8 +567,44 @@ class EfficientNetBaseEncoder(EfficientNet, EncoderMixin):
 class EfficientNetEncoder(EfficientNetBaseEncoder):
     """EfficientNet encoder with configurable scaling parameters.
 
-    Provides a configurable EfficientNet encoder that can be scaled
-    in terms of depth and channel multipliers.
+    This class extends `EfficientNetBaseEncoder` to provide scaling options
+    for depth and channel multipliers, enabling flexible encoder configurations
+    for segmentation and classification tasks.
+
+    Features:
+        - Supports depth and channel scaling.
+        - Provides pretrained weights for multiple variants.
+        - Outputs multi-scale feature maps for downstream tasks.
+
+    Args:
+        stage_idxs (list[int]):
+            Indices of stages for feature extraction.
+        out_channels (list[int]):
+            Output channels for each depth level.
+        depth (int):
+            Encoder depth (1-5). Defaults to 5.
+        channel_multiplier (float):
+            Channel scaling factor. Defaults to 1.0.
+        depth_multiplier (float):
+            Depth scaling factor. Defaults to 1.0.
+        drop_rate (float):
+            Dropout rate. Defaults to 0.2.
+        output_stride (int):
+            Output stride of encoder. Defaults to 32.
+
+    Example:
+        >>> encoder = EfficientNetEncoder(
+        ...     stage_idxs=[2, 3, 5],
+        ...     out_channels=[3, 32, 24, 40, 112, 320],
+        ...     channel_multiplier=1.0,
+        ...     depth_multiplier=1.0,
+        ...     drop_rate=0.2
+        ... )
+        >>> x = torch.randn(1, 3, 224, 224)
+        >>> features = encoder(x)
+        >>> [f.shape for f in features]
+        ... [torch.Size([1, 3, 224, 224]), torch.Size([1, 32, 112, 112]), ...]
+
     """
 
     def __init__(
@@ -367,14 +619,25 @@ class EfficientNetEncoder(EfficientNetBaseEncoder):
     ) -> None:
         """Initialize EfficientNetEncoder.
 
+        Creates an EfficientNet encoder with configurable scaling parameters
+        for depth and channel multipliers.
+
         Args:
-            stage_idxs: Indices of stages for feature extraction.
-            out_channels: Output channels for each depth level.
-            depth: Encoder depth (1-5). Defaults to 5.
-            channel_multiplier: Channel scaling factor. Defaults to 1.0.
-            depth_multiplier: Depth scaling factor. Defaults to 1.0.
-            drop_rate: Dropout rate. Defaults to 0.2.
-            output_stride: Output stride of encoder. Defaults to 32.
+            stage_idxs (list[int]):
+                Indices of stages for feature extraction.
+            out_channels (list[int]):
+                Output channels for each depth level.
+            depth (int):
+                Encoder depth (1-5). Defaults to 5.
+            channel_multiplier (float):
+                Channel scaling factor. Defaults to 1.0.
+            depth_multiplier (float):
+                Depth scaling factor. Defaults to 1.0.
+            drop_rate (float):
+                Dropout rate. Defaults to 0.2.
+            output_stride (int):
+                Output stride of encoder. Defaults to 32.
+
         """
         kwargs = get_efficientnet_kwargs(
             channel_multiplier, depth_multiplier, drop_rate

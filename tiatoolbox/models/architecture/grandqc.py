@@ -1,4 +1,50 @@
-"""Define GrandQC Tissue Detection Model architecture."""
+"""GrandQC Tissue Detection Model Architecture.
+
+This module defines the GrandQC model for tissue detection in digital pathology.
+It implements a UNet++ architecture with an EfficientNet encoder and a segmentation
+head for high-resolution tissue segmentation. The model is designed to identify
+tissue regions and background areas for quality control in whole slide images (WSIs).
+
+Key Components:
+---------------
+- SegmentationHead:
+    Final layer for segmentation output.
+- Conv2dReLU:
+    Convolutional block with BatchNorm and ReLU activation.
+- DecoderBlock:
+    Decoder block with skip connections for feature fusion.
+- CenterBlock:
+    Bottleneck block for deep feature processing.
+- UnetPlusPlusDecoder:
+    Decoder with dense skip connections for UNet++ architecture.
+- GrandQCModel:
+    Main model class implementing encoder-decoder architecture for tissue detection.
+
+Features:
+---------
+- JPEG compression and ImageNet normalization during preprocessing.
+- Argmin-based postprocessing for generating tissue masks.
+- Efficient inference pipeline for batch processing.
+
+Example:
+    >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+    >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection_mpp10")
+    >>> results = segmentor.run(
+    ...     ["/example_wsi.svs"],
+    ...     masks=None,
+    ...     auto_get_mask=False,
+    ...     patch_mode=False,
+    ...     save_dir=Path("/tissue_mask/"),
+    ...     output_type="annotationstore",
+    ... )
+
+References:
+    Weng, Zhilong et al. "GrandQC: A comprehensive solution to quality control
+    problem in digital pathology." Nature Communications, 2024.
+    DOI: 10.1038/s41467-024-54769-y
+    URL: https://doi.org/10.1038/s41467-024-54769-y
+
+"""
 
 from __future__ import annotations
 
@@ -17,7 +63,40 @@ from tiatoolbox.models.models_abc import ModelABC
 
 
 class SegmentationHead(nn.Sequential):
-    """Segmentation head for UNet++ model."""
+    """Segmentation head for UNet++ architecture.
+
+    This class defines the final segmentation layer for the UNet++ model.
+    It applies a convolution followed by optional upsampling and activation
+    to produce the segmentation output.
+
+    Args:
+        in_channels (int):
+            Number of input channels to the segmentation head.
+        out_channels (int):
+            Number of output channels (typically number of classes).
+        kernel_size (int):
+            Size of the convolution kernel. Defaults to 3.
+        activation (nn.Module | None):
+            Activation function applied after convolution. Defaults to None.
+        upsampling (int):
+            Upsampling factor applied to the output. Defaults to 1.
+
+    Attributes:
+        conv2d (nn.Conv2d):
+            Convolutional layer for feature transformation.
+        upsampling_layer (nn.Module):
+            Upsampling layer (bilinear interpolation or identity).
+        activation (nn.Module):
+            Activation function applied after upsampling.
+
+    Example:
+        >>> head = SegmentationHead(in_channels=64, out_channels=2)
+        >>> x = torch.randn(1, 64, 128, 128)
+        >>> output = head(x)
+        >>> output.shape
+        ... torch.Size([1, 2, 128, 128])
+
+    """
 
     def __init__(
         self: SegmentationHead,
@@ -27,14 +106,28 @@ class SegmentationHead(nn.Sequential):
         activation: nn.Module | None = None,
         upsampling: int = 1,
     ) -> None:
-        """Initialize SegmentationHead.
+        """Initialize the SegmentationHead module.
+
+        This method sets up the segmentation head by creating a convolutional layer,
+        an optional upsampling layer, and an activation function. It is typically
+        used as the final stage in UNet++ architectures for semantic segmentation.
 
         Args:
-            in_channels: Number of input channels.
-            out_channels: Number of output channels.
-            kernel_size: Convolution kernel size. Defaults to 3.
-            activation: Activation function. Defaults to None.
-            upsampling: Upsampling factor. Defaults to 1.
+            in_channels (int):
+                Number of input channels to the segmentation head.
+            out_channels (int):
+                Number of output channels (usually equal to the number of classes).
+            kernel_size (int):
+                Size of the convolution kernel. Defaults to 3.
+            activation (nn.Module | None):
+                Activation function applied after convolution. Defaults to None.
+            upsampling (int):
+                Upsampling factor applied to the output. Defaults to 1.
+
+        Raises:
+            ValueError:
+                If `kernel_size` or `upsampling` is not a positive integer.
+
         """
         conv2d = nn.Conv2d(
             in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
@@ -50,7 +143,42 @@ class SegmentationHead(nn.Sequential):
 
 
 class Conv2dReLU(nn.Sequential):
-    """Conv2d + BatchNorm + ReLU block."""
+    """Conv2d + BatchNorm + ReLU block.
+
+    This class implements a common convolutional block used in encoder-decoder
+    architectures. It consists of a 2D convolution followed by batch normalization
+    and a ReLU activation function.
+
+    Args:
+        in_channels (int):
+            Number of input channels.
+        out_channels (int):
+            Number of output channels.
+        kernel_size (int):
+            Size of the convolution kernel.
+        padding (int):
+            Padding applied to the input. Defaults to 0.
+        stride (int):
+            Stride of the convolution. Defaults to 1.
+
+    Attributes:
+        conv (nn.Conv2d):
+            Convolutional layer for feature extraction.
+        norm (nn.BatchNorm2d):
+            Batch normalization layer for stabilizing training.
+        activation (nn.ReLU):
+            ReLU activation function applied after normalization.
+
+    Example:
+        >>> block = Conv2dReLU(
+        ... in_channels=32, out_channels=64, kernel_size=3, padding=1
+        ...)
+        >>> x = torch.randn(1, 32, 128, 128)
+        >>> output = block(x)
+        >>> output.shape
+        ... torch.Size([1, 64, 128, 128])
+
+    """
 
     def __init__(
         self: Conv2dReLU,
@@ -62,12 +190,22 @@ class Conv2dReLU(nn.Sequential):
     ) -> None:
         """Initialize Conv2dReLU block.
 
+        Creates a convolutional layer followed by batch normalization and a ReLU
+        activation function. This block is commonly used in UNet++ and similar
+        architectures for feature extraction.
+
         Args:
-            in_channels: Number of input channels.
-            out_channels: Number of output channels.
-            kernel_size: Convolution kernel size.
-            padding: Padding size. Defaults to 0.
-            stride: Stride size. Defaults to 1.
+            in_channels (int):
+                Number of input channels.
+            out_channels (int):
+                Number of output channels.
+            kernel_size (int):
+                Size of the convolution kernel.
+            padding (int):
+                Padding applied to the input. Defaults to 0.
+            stride (int):
+                Stride of the convolution. Defaults to 1.
+
         """
         norm = nn.BatchNorm2d(out_channels)
 
@@ -87,7 +225,42 @@ class Conv2dReLU(nn.Sequential):
 
 
 class DecoderBlock(nn.Module):
-    """Decoder block for UNet++ architecture."""
+    """Decoder block for UNet++ architecture.
+
+    This block performs upsampling and feature fusion using skip connections
+    from the encoder. It consists of two convolutional layers with ReLU activation
+    and optional attention mechanisms.
+
+    Args:
+        in_channels (int):
+            Number of input channels from the previous decoder layer.
+        skip_channels (int):
+            Number of channels from the skip connection.
+        out_channels (int):
+            Number of output channels for this block.
+
+    Attributes:
+        conv1 (Conv2dReLU):
+            First convolutional block applied after concatenating input
+            and skip features.
+        conv2 (Conv2dReLU):
+            Second convolutional block for further refinement.
+        attention1 (nn.Module):
+            Attention mechanism applied before the first convolution
+            (currently Identity).
+        attention2 (nn.Module):
+            Attention mechanism applied after the second convolution
+            (currently Identity).
+
+    Example:
+        >>> block = DecoderBlock(in_channels=128, skip_channels=64, out_channels=64)
+        >>> x = torch.randn(1, 128, 64, 64)
+        >>> skip = torch.randn(1, 64, 128, 128)
+        >>> output = block(x, skip)
+        >>> output.shape
+        ... torch.Size([1, 64, 128, 128])
+
+    """
 
     def __init__(
         self: DecoderBlock,
@@ -97,10 +270,17 @@ class DecoderBlock(nn.Module):
     ) -> None:
         """Initialize DecoderBlock.
 
+        Creates two convolutional layers and optional attention modules for
+        feature refinement during decoding.
+
         Args:
-            in_channels: Number of input channels.
-            skip_channels: Number of skip connection channels.
-            out_channels: Number of output channels.
+            in_channels (int):
+                Number of input channels from the previous decoder layer.
+            skip_channels (int):
+                Number of channels from the skip connection.
+            out_channels (int):
+                Number of output channels for this block.
+
         """
         super().__init__()
         self.conv1 = Conv2dReLU(
@@ -119,16 +299,25 @@ class DecoderBlock(nn.Module):
         self.attention2 = nn.Identity()
 
     def forward(
-        self, x: torch.Tensor, skip: torch.Tensor | None = None
+        self: DecoderBlock,
+        x: torch.Tensor,
+        skip: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        """Forward pass through decoder block.
+        """Forward pass through the decoder block.
+
+        Upsamples the input tensor, concatenates it with the skip connection
+        (if provided), and applies two convolutional layers with attention.
 
         Args:
-            x: Input tensor.
-            skip: Skip connection tensor. Defaults to None.
+            x (torch.Tensor):
+                Input tensor from the previous decoder layer.
+            skip (torch.Tensor | None):
+                Skip connection tensor from the encoder. Defaults to None.
 
         Returns:
-            torch.Tensor: Output tensor after decoding.
+            torch.Tensor:
+                Output tensor after decoding and feature refinement.
+
         """
         x = torch.nn.functional.interpolate(x, scale_factor=2.0, mode="nearest")
         if skip is not None:
@@ -140,7 +329,32 @@ class DecoderBlock(nn.Module):
 
 
 class CenterBlock(nn.Sequential):
-    """Center block for UNet++ architecture."""
+    """Center block for UNet++ architecture.
+
+    This block is placed at the bottleneck of the UNet++ architecture.
+    It consists of two convolutional layers with ReLU activation, used
+    to process the deepest feature maps before decoding begins.
+
+    Args:
+        in_channels (int):
+            Number of input channels from the encoder.
+        out_channels (int):
+            Number of output channels for the center block.
+
+    Attributes:
+        conv1 (Conv2dReLU):
+            First convolutional block for feature transformation.
+        conv2 (Conv2dReLU):
+            Second convolutional block for further refinement.
+
+    Example:
+        >>> center = CenterBlock(in_channels=256, out_channels=512)
+        >>> x = torch.randn(1, 256, 32, 32)
+        >>> output = center(x)
+        >>> output.shape
+        ... torch.Size([1, 512, 32, 32])
+
+    """
 
     def __init__(
         self: CenterBlock,
@@ -149,9 +363,18 @@ class CenterBlock(nn.Sequential):
     ) -> None:
         """Initialize CenterBlock.
 
+        Creates two convolutional layers with batch normalization and ReLU
+        activation for processing the deepest encoder features.
+
         Args:
-            in_channels: Number of input channels.
-            out_channels: Number of output channels.
+            in_channels (int):
+                Number of input channels from the encoder.
+            out_channels (int):
+                Number of output channels for the center block.
+
+        Example:
+            >>> center = CenterBlock(in_channels=256, out_channels=512)
+
         """
         conv1 = Conv2dReLU(
             in_channels,
@@ -169,7 +392,49 @@ class CenterBlock(nn.Sequential):
 
 
 class UnetPlusPlusDecoder(nn.Module):
-    """UNet++ decoder with dense connections."""
+    """UNet++ decoder with dense skip connections.
+
+    This class implements the decoder portion of the UNet++ architecture.
+    It reconstructs high-resolution feature maps from encoder outputs using
+    multiple decoder blocks and dense connections between intermediate layers.
+
+    Args:
+        encoder_channels (Sequence[int]):
+            List of channel sizes from the encoder stages.
+        decoder_channels (Sequence[int]):
+            List of channel sizes for each decoder block.
+        n_blocks (int):
+            Number of decoder blocks. Defaults to 5.
+
+    Raises:
+        ValueError:
+            If the number of decoder blocks does not match the length of
+            `decoder_channels`.
+
+    Attributes:
+        blocks (nn.ModuleDict):
+            Dictionary of decoder blocks organized by depth and layer index.
+        center (nn.Module):
+            Center block (currently Identity).
+        depth (int):
+            Depth of the decoder network.
+
+    Example:
+        >>> decoder = UnetPlusPlusDecoder(
+        ...     encoder_channels=[3, 32, 64, 128, 256, 512],
+        ...     decoder_channels=[256, 128, 64, 32, 16],
+        ...     n_blocks=5
+        ... )
+        >>> # Generate dummy feature maps for testing
+        >>> features = [
+        ...     torch.randn(1, c, 64 // (2**i), 64 // (2**i))
+        ...     for i, c in enumerate([3, 32, 64, 128, 256, 512])
+        ... ]
+        >>> output = decoder(features)
+        >>> output.shape
+        ... torch.Size([1, 16, 64, 64])
+
+    """
 
     def __init__(
         self,
@@ -179,13 +444,20 @@ class UnetPlusPlusDecoder(nn.Module):
     ) -> None:
         """Initialize UnetPlusPlusDecoder.
 
+        Sets up the decoder blocks and dense connections for UNet++ architecture.
+
         Args:
-            encoder_channels: List of encoder output channels.
-            decoder_channels: List of decoder output channels.
-            n_blocks: Number of decoder blocks. Defaults to 5.
+            encoder_channels (Sequence[int]):
+                List of channel sizes from the encoder stages.
+            decoder_channels (Sequence[int]):
+                List of channel sizes for each decoder block.
+            n_blocks (int):
+                Number of decoder blocks. Defaults to 5.
 
         Raises:
-            ValueError: If model depth doesn't match decoder_channels length.
+            ValueError:
+                If `n_blocks` does not match the length of `decoder_channels`.
+
         """
         super().__init__()
 
@@ -232,11 +504,17 @@ class UnetPlusPlusDecoder(nn.Module):
     def forward(self, features: list[torch.Tensor]) -> torch.Tensor:
         """Forward pass through UNet++ decoder.
 
+        Reconstructs high-resolution feature maps from encoder outputs using
+        dense skip connections and multiple decoder blocks.
+
         Args:
-            features: List of encoder feature maps.
+            features (list[torch.Tensor]):
+                List of feature maps from the encoder, ordered from shallow to deep.
 
         Returns:
-            torch.Tensor: Decoded output tensor.
+            torch.Tensor:
+                Decoded output tensor with spatial resolution restored.
+
         """
         features = features[1:]  # remove first skip with same spatial resolution
         features = features[::-1]  # reverse channels to start from head of encoder
@@ -269,14 +547,21 @@ class UnetPlusPlusDecoder(nn.Module):
 
 
 class GrandQCModel(ModelABC):
-    """GrandQC Tissue Detection Model [1].
+    """GrandQC Tissue Detection Model.
+
+    This model implements a UNet++ architecture with an EfficientNet encoder
+    for tissue detection in whole slide images (WSIs). It is designed to
+    identify tissue regions and background areas for quality control in
+    digital pathology workflows.
+
+    The model uses JPEG compression and ImageNet normalization during
+    preprocessing and applies argmin-based postprocessing to generate
+    tissue masks.
 
     Example:
         >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
-        >>> semantic_segmentor = SemanticSegmentor(
-        ...     model="grandqc_tissue_detection_mpp10",
-        ... )
-        >>> results = semantic_segmentor.run(
+        >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection_mpp10")
+        >>> results = segmentor.run(
         ...     ["/example_wsi.svs"],
         ...     masks=None,
         ...     auto_get_mask=False,
@@ -286,17 +571,26 @@ class GrandQCModel(ModelABC):
         ... )
 
     References:
-        [1] Weng Z. et al. "GrandQC: a comprehensive solution to quality control problem
-        in digital pathology".
-        Nature Communications 2024
+        [1] Weng, Zhilong et al. "GrandQC: A comprehensive solution to quality control
+            problem in digital pathology." Nature Communications, 2024.
+            DOI: 10.1038/s41467-024-54769-y
+            URL: https://doi.org/10.1038/s41467-024-54769-y
 
     """
 
     def __init__(self: GrandQCModel, num_output_channels: int = 2) -> None:
-        """Initialize GrandQC model.
+        """Initialize GrandQCModel.
+
+        Sets up the UNet++ decoder, EfficientNet encoder, and segmentation head
+        for tissue detection.
 
         Args:
-            num_output_channels: Number of output classes. Defaults to 2.
+            num_output_channels (int):
+                Number of output classes. Defaults to 2 (Tissue and Background).
+
+        Example:
+            >>> model = GrandQCModel(num_output_channels=2)
+
         """
         super().__init__()
         self.num_output_channels = num_output_channels
@@ -323,21 +617,29 @@ class GrandQCModel(ModelABC):
 
         self.name = "unetplusplus-efficientnetb0"
 
-    def forward(
+    def forward(  # skipcq: PYL-W0613
         self: GrandQCModel,
         x: torch.Tensor,
-        *args: tuple[Any, ...],  # skipcq: PYL-W0613  # noqa: ARG002
-        **kwargs: dict,  # skipcq: PYL-W0613  # noqa: ARG002
+        *args: tuple[Any, ...],  # noqa: ARG002
+        **kwargs: dict,  # noqa: ARG002
     ) -> torch.Tensor:
-        """Sequentially pass `x` through model's encoder, decoder and heads.
+        """Forward pass through the GrandQC model.
+
+        Sequentially processes the input tensor through the encoder, decoder,
+        and segmentation head to produce tissue segmentation predictions.
 
         Args:
-            x: Input tensor.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
+            x (torch.Tensor):
+                Input tensor of shape (N, C, H, W).
+            *args (tuple):
+                Additional positional arguments (unused).
+            **kwargs (dict):
+                Additional keyword arguments (unused).
 
         Returns:
-            torch.Tensor: Segmentation output.
+            torch.Tensor:
+                Segmentation output tensor of shape (N, num_classes, H, W).
+
         """
         features = self.encoder(x)
         decoder_output = self.decoder(features)
@@ -346,15 +648,23 @@ class GrandQCModel(ModelABC):
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
-        """Apply JPEG compression and ImageNet normalization to the input image.
+        """Preprocess input image for inference.
+
+        Applies JPEG compression and ImageNet normalization to the input image.
 
         Args:
             image (np.ndarray):
-                Input image as a NumPy array (H, W, C) in uint8 format.
+                Input image as a NumPy array of shape (H, W, C) in uint8 format.
 
         Returns:
             np.ndarray:
-                The preprocessed image.
+                Preprocessed image normalized to ImageNet statistics.
+
+        Example:
+            >>> img = np.random.randint(0, 255, (256, 256, 3), dtype=np.uint8)
+            >>> processed = GrandQCModel.preproc(img)
+            >>> processed.shape
+            ... (256, 256, 3)
 
         """
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
@@ -367,18 +677,23 @@ class GrandQCModel(ModelABC):
 
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:
-        """Define post-processing for this model.
+        """Postprocess model output to generate tissue mask.
 
-        This simply applies argmin to obtain tissue class.
-        (Tissue = 0, Background = 1)
+        Applies argmin across channels to classify pixels as tissue or background.
 
         Args:
             image (np.ndarray):
-                Input probability map as a NumPy array (H, W, C).
+                Input probability map as a NumPy array of shape (H, W, C).
 
         Returns:
             np.ndarray:
-                Tissue mask
+                Binary tissue mask where 0 = Tissue and 1 = Background.
+
+        Example:
+            >>> probs = np.random.rand(256, 256, 2)
+            >>> mask = GrandQCModel.postproc(probs)
+            >>> mask.shape
+            ... (256, 256)
 
         """
         return image.argmin(axis=-1)
@@ -390,22 +705,28 @@ class GrandQCModel(ModelABC):
         *,
         device: str,
     ) -> np.ndarray:
-        """Run inference on an input batch.
+        """Run inference on a batch of images.
 
-        This contains logic for forward operation as well as i/o
+        Transfers the model and input batch to the specified device, performs
+        forward pass, and returns softmax probabilities.
 
         Args:
-            model (nn.Module):
-                PyTorch defined model.
-            batch_data (:class:`torch.Tensor`):
-                A batch of data generated by
-                `torch.utils.data.DataLoader`.
+            model (torch.nn.Module):
+                PyTorch model instance.
+            batch_data (torch.Tensor):
+                Batch of input images in NHWC format.
             device (str):
-                Transfers model to the specified device. Default is "cpu".
+                Device for inference (e.g., "cpu" or "cuda").
 
         Returns:
             np.ndarray:
-                The inference results as a numpy array.
+                Inference results as a NumPy array of shape (N, H, W, C).
+
+        Example:
+            >>> batch = torch.randn(4, 256, 256, 3)
+            >>> probs = GrandQCModel.infer_batch(model, batch, device="cpu")
+            >>> probs.shape
+            (4, 256, 256, 2)
 
         """
         model.eval()
