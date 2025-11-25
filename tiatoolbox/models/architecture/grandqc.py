@@ -172,7 +172,7 @@ class Conv2dReLU(nn.Sequential):
     Example:
         >>> block = Conv2dReLU(
         ... in_channels=32, out_channels=64, kernel_size=3, padding=1
-        ...)
+        ... )
         >>> x = torch.randn(1, 32, 128, 128)
         >>> output = block(x)
         >>> output.shape
