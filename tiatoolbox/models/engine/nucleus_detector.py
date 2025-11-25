@@ -132,9 +132,9 @@ class NucleusDetector(SemanticSegmentor):
 
         """
         logger.info("Post processing WSI predictions in NucleusDetector")
-        logger.info(f"Raw probabilities shape: {prediction_shape}")
-        logger.info(f"Raw probabilities dtype: {prediction_dtype}")
-        logger.info(f"Raw chunk size: {raw_predictions.chunks}")
+        logger.info("Raw probabilities shape: %s", prediction_shape)
+        logger.info("Raw probabilities dtype %s", prediction_dtype)
+        logger.info("Raw chunk size: %s", raw_predictions.chunks)
 
         # Add halo (overlap) around each block for post-processing
         depth_h = self.model.min_distance
@@ -194,8 +194,9 @@ class NucleusDetector(SemanticSegmentor):
         # Only "annotationstore" output type is supported for NucleusDetector
         if output_type != "annotationstore":
             logger.warning(
-                f"Output type '{output_type}' is not supported by NucleusDetector. "
-                "Defaulting to 'annotationstore'."
+                "Output type %s is not supported by NucleusDetector. "
+                "Defaulting to 'annotationstore'.",
+                output_type,
             )
             output_type = "annotationstore"
 
@@ -262,7 +263,7 @@ class NucleusDetector(SemanticSegmentor):
         if radius <= 0:
             msg = "radius must be > 0"
             raise ValueError(msg)
-        if not (overlap_min < overlap_threshold <= overlap_max):
+        if not overlap_min < overlap_threshold <= overlap_max:
             msg = f"overlap_threshold must be in (0.0, 1.0], got {overlap_threshold}"
             raise ValueError(msg)
 
@@ -396,6 +397,7 @@ class NucleusDetector(SemanticSegmentor):
         labels = np.array([class_dict.get(int(k), int(k)) for k in t], dtype=object)
 
         def make_points(xb: np.ndarray, yb: np.ndarray) -> list[Point]:
+            """Create Shapely Point geometries from coordinate arrays."""
             return [Point(int(xx), int(yy)) for xx, yy in zip(xb, yb, strict=True)]
 
         written = 0
@@ -461,7 +463,7 @@ class NucleusDetector(SemanticSegmentor):
         # IMPORTANT: SQLite is single-writer; run sequentially
         with ProgressBar():
             total = dask.compute(*writes, scheduler="single-threaded")
-        logger.info(f"Total detections written to store: {sum(total)}")
+        logger.info("Total detections written to store: %s", sum(total))
 
         # if a save directory is provided, then dump store into a file
         if save_path:
