@@ -1,9 +1,13 @@
 """Unit test package for GrandQC Tissue Model."""
 
+from collections.abc import Callable
+from pathlib import Path
+
 import numpy as np
 import torch
 from torch import nn
 
+from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
@@ -15,16 +19,17 @@ from tiatoolbox.models.architecture.grandqc import (
     UnetPlusPlusDecoder,
 )
 from tiatoolbox.models.engine.io_config import IOSegmentorConfig
-from tiatoolbox.utils.misc import select_device
+from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
-ON_GPU = False
+device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
 def test_functional_grandqc() -> None:
     """Test for GrandQC model."""
     # test fetch pretrained weights
-    pretrained_weights = fetch_pretrained_weights("grandqc_tissue_detection_mpp10")
+    pretrained_weights = fetch_pretrained_weights("grandqc_tissue_detection")
     assert pretrained_weights is not None
 
     # test creation
@@ -36,7 +41,7 @@ def test_functional_grandqc() -> None:
     model.load_state_dict(pretrained)
 
     # test get pretrained model
-    model, ioconfig = get_pretrained_model("grandqc_tissue_detection_mpp10")
+    model, ioconfig = get_pretrained_model("grandqc_tissue_detection")
     assert isinstance(model, GrandQCModel)
     assert isinstance(ioconfig, IOSegmentorConfig)
     assert model.num_output_channels == 2
@@ -54,7 +59,7 @@ def test_functional_grandqc() -> None:
         ],
     )
     batch = torch.from_numpy(batch)
-    output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
+    output = model.infer_batch(model, batch, device=device)
     assert output.shape == (2, 512, 512, 2)
 
 
@@ -74,6 +79,39 @@ def test_grandqc_preproc_postproc() -> None:
     postproc_image = model.postproc(dummy_output)
     assert postproc_image.shape == (512, 512)
     assert postproc_image.dtype == np.int64
+
+
+def test_grandqc_with_semantic_segmentor(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
+    """Test GrandQC tissue mask generation."""
+    segmentor = SemanticSegmentor(model="grandqc_tissue_detection")
+
+    sample_image = remote_sample("svs-1-small")
+    inputs = [str(sample_image)]
+
+    output = segmentor.run(
+        images=inputs,
+        device=device,
+        patch_mode=False,
+        output_type="annotationstore",
+        save_dir=track_tmp_path / "grandqc_test_outputs",
+        overwrite=True,
+    )
+
+    assert len(output) == 1
+    assert Path(output[sample_image]).exists()
+
+    store = SQLiteStore.open(output[sample_image])
+    assert len(store) == 3
+
+    tissue_area_px = 0.0
+    for annotation in store.values():
+        assert annotation.properties["type"] == "mask"
+        tissue_area_px += annotation.geometry.area
+    assert 3003401 < tissue_area_px < 3003402
+
+    store.close()
 
 
 def test_segmentation_head_behaviour() -> None:

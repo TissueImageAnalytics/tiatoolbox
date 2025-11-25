@@ -1,7 +1,7 @@
 """GrandQC Tissue Detection Model Architecture.
 
 This module defines the GrandQC model for tissue detection in digital pathology.
-It implements a UNet++ architecture with an EfficientNet encoder and a segmentation
+It implements a UNet++ architecture with an EfficientNetB0 encoder and a segmentation
 head for high-resolution tissue segmentation. The model is designed to identify
 tissue regions and background areas for quality control in whole slide images (WSIs).
 
@@ -205,7 +205,7 @@ class DecoderBlock(nn.Module):
 
     This block performs upsampling and feature fusion using skip connections
     from the encoder. It consists of two convolutional layers with ReLU activation
-    and optional attention mechanisms.
+    and optional attention mechanisms (not implemented).
 
     Attributes:
         conv1 (Conv2dReLU):
@@ -222,9 +222,9 @@ class DecoderBlock(nn.Module):
 
     Example:
         >>> block = DecoderBlock(in_channels=128, skip_channels=64, out_channels=64)
-        >>> x = torch.randn(1, 128, 64, 64)
+        >>> input_tensor = torch.randn(1, 128, 64, 64)
         >>> skip = torch.randn(1, 64, 128, 128)
-        >>> output = block(x, skip)
+        >>> output = block(input_tensor, skip)
         >>> output.shape
         ... torch.Size([1, 64, 128, 128])
 
@@ -268,7 +268,7 @@ class DecoderBlock(nn.Module):
 
     def forward(
         self: DecoderBlock,
-        x: torch.Tensor,
+        input_tensor: torch.Tensor,
         skip: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Forward pass through the decoder block.
@@ -277,29 +277,33 @@ class DecoderBlock(nn.Module):
         (if provided), and applies two convolutional layers with attention.
 
         Args:
-            x (torch.Tensor):
-                Input tensor from the previous decoder layer.
+            input_tensor (torch.Tensor):
+                (B, C_in, H, W). Input tensor from the previous decoder layer.
             skip (torch.Tensor | None):
+                (B, C_skip, H*2, W*2).
                 Skip connection tensor from the encoder. Defaults to None.
 
         Returns:
             torch.Tensor:
+                (B, C_out, H*2, W*2).
                 Output tensor after decoding and feature refinement.
 
         """
-        x = torch.nn.functional.interpolate(x, scale_factor=2.0, mode="nearest")
+        input_tensor = torch.nn.functional.interpolate(
+            input_tensor, scale_factor=2.0, mode="nearest"
+        )
         if skip is not None:
-            x = torch.cat([x, skip], dim=1)
-            x = self.attention1(x)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        return self.attention2(x)
+            input_tensor = torch.cat([input_tensor, skip], dim=1)
+            input_tensor = self.attention1(input_tensor)
+        input_tensor = self.conv1(input_tensor)
+        input_tensor = self.conv2(input_tensor)
+        return self.attention2(input_tensor)
 
 
 class CenterBlock(nn.Sequential):
     """Center block for UNet++ architecture.
 
-    This block is placed at the bottleneck of the UNet++ architecture.
+    This block can be placed at the bottleneck of the UNet++ architecture.
     It consists of two convolutional layers with ReLU activation, used
     to process the deepest feature maps before decoding begins.
 
@@ -311,8 +315,8 @@ class CenterBlock(nn.Sequential):
 
     Example:
         >>> center = CenterBlock(in_channels=256, out_channels=512)
-        >>> x = torch.randn(1, 256, 32, 32)
-        >>> output = center(x)
+        >>> input_tensor = torch.randn(1, 256, 32, 32)
+        >>> output = center(input_tensor)
         >>> output.shape
         ... torch.Size([1, 512, 32, 32])
 

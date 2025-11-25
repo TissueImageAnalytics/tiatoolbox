@@ -935,7 +935,7 @@ nuclick_light-pannuke:
             patch_output_shape: [128, 128]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
-grandqc_tissue_detection_mpp10:
+grandqc_tissue_detection:
     hf_repo_id: TIACentre/GrandQC_Tissue_Detection
     architecture:
         class: grandqc.GrandQCModel
