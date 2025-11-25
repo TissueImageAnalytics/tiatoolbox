@@ -392,18 +392,6 @@ class EfficientNetBaseEncoder(EfficientNet, EncoderMixin):
         - Provides intermediate feature maps for multi-scale processing.
         - Removes classifier for encoder-only usage.
 
-    Args:
-        stage_idxs (list[int]):
-            Indices of stages for feature extraction.
-        out_channels (list[int]):
-            Output channels for each depth level.
-        depth (int):
-            Encoder depth (1-5). Defaults to 5.
-        output_stride (int):
-            Output stride of encoder. Defaults to 32.
-        **kwargs (dict[str, Any]):
-            Additional keyword arguments for EfficientNet initialization.
-
     Raises:
         ValueError:
             If `depth` is not in range [1, 5].
@@ -575,22 +563,6 @@ class EfficientNetEncoder(EfficientNetBaseEncoder):
         - Supports depth and channel scaling.
         - Provides pretrained weights for multiple variants.
         - Outputs multi-scale feature maps for downstream tasks.
-
-    Args:
-        stage_idxs (list[int]):
-            Indices of stages for feature extraction.
-        out_channels (list[int]):
-            Output channels for each depth level.
-        depth (int):
-            Encoder depth (1-5). Defaults to 5.
-        channel_multiplier (float):
-            Channel scaling factor. Defaults to 1.0.
-        depth_multiplier (float):
-            Depth scaling factor. Defaults to 1.0.
-        drop_rate (float):
-            Dropout rate. Defaults to 0.2.
-        output_stride (int):
-            Output stride of encoder. Defaults to 32.
 
     Example:
         >>> encoder = EfficientNetEncoder(

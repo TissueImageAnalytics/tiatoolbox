@@ -69,18 +69,6 @@ class SegmentationHead(nn.Sequential):
     It applies a convolution followed by optional upsampling and activation
     to produce the segmentation output.
 
-    Args:
-        in_channels (int):
-            Number of input channels to the segmentation head.
-        out_channels (int):
-            Number of output channels (typically number of classes).
-        kernel_size (int):
-            Size of the convolution kernel. Defaults to 3.
-        activation (nn.Module | None):
-            Activation function applied after convolution. Defaults to None.
-        upsampling (int):
-            Upsampling factor applied to the output. Defaults to 1.
-
     Attributes:
         conv2d (nn.Conv2d):
             Convolutional layer for feature transformation.
@@ -148,18 +136,6 @@ class Conv2dReLU(nn.Sequential):
     This class implements a common convolutional block used in encoder-decoder
     architectures. It consists of a 2D convolution followed by batch normalization
     and a ReLU activation function.
-
-    Args:
-        in_channels (int):
-            Number of input channels.
-        out_channels (int):
-            Number of output channels.
-        kernel_size (int):
-            Size of the convolution kernel.
-        padding (int):
-            Padding applied to the input. Defaults to 0.
-        stride (int):
-            Stride of the convolution. Defaults to 1.
 
     Attributes:
         conv (nn.Conv2d):
@@ -230,14 +206,6 @@ class DecoderBlock(nn.Module):
     This block performs upsampling and feature fusion using skip connections
     from the encoder. It consists of two convolutional layers with ReLU activation
     and optional attention mechanisms.
-
-    Args:
-        in_channels (int):
-            Number of input channels from the previous decoder layer.
-        skip_channels (int):
-            Number of channels from the skip connection.
-        out_channels (int):
-            Number of output channels for this block.
 
     Attributes:
         conv1 (Conv2dReLU):
@@ -335,12 +303,6 @@ class CenterBlock(nn.Sequential):
     It consists of two convolutional layers with ReLU activation, used
     to process the deepest feature maps before decoding begins.
 
-    Args:
-        in_channels (int):
-            Number of input channels from the encoder.
-        out_channels (int):
-            Number of output channels for the center block.
-
     Attributes:
         conv1 (Conv2dReLU):
             First convolutional block for feature transformation.
@@ -372,9 +334,6 @@ class CenterBlock(nn.Sequential):
             out_channels (int):
                 Number of output channels for the center block.
 
-        Example:
-            >>> center = CenterBlock(in_channels=256, out_channels=512)
-
         """
         conv1 = Conv2dReLU(
             in_channels,
@@ -397,14 +356,6 @@ class UnetPlusPlusDecoder(nn.Module):
     This class implements the decoder portion of the UNet++ architecture.
     It reconstructs high-resolution feature maps from encoder outputs using
     multiple decoder blocks and dense connections between intermediate layers.
-
-    Args:
-        encoder_channels (Sequence[int]):
-            List of channel sizes from the encoder stages.
-        decoder_channels (Sequence[int]):
-            List of channel sizes for each decoder block.
-        n_blocks (int):
-            Number of decoder blocks. Defaults to 5.
 
     Raises:
         ValueError:
@@ -572,9 +523,9 @@ class GrandQCModel(ModelABC):
 
     References:
         [1] Weng, Zhilong et al. "GrandQC: A comprehensive solution to quality control
-            problem in digital pathology." Nature Communications, 2024.
-            DOI: 10.1038/s41467-024-54769-y
-            URL: https://doi.org/10.1038/s41467-024-54769-y
+        problem in digital pathology." Nature Communications, 2024.
+        DOI: 10.1038/s41467-024-54769-y
+        URL: https://doi.org/10.1038/s41467-024-54769-y
 
     """
 
@@ -587,9 +538,6 @@ class GrandQCModel(ModelABC):
         Args:
             num_output_channels (int):
                 Number of output classes. Defaults to 2 (Tissue and Background).
-
-        Example:
-            >>> model = GrandQCModel(num_output_channels=2)
 
         """
         super().__init__()
