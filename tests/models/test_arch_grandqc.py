@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 from torch import nn
 
@@ -37,7 +38,7 @@ def test_functional_grandqc() -> None:
     assert model is not None
 
     # load pretrained weights
-    pretrained = torch.load(pretrained_weights, map_location="cpu")
+    pretrained = torch.load(pretrained_weights, map_location=device)
     model.load_state_dict(pretrained)
 
     # test get pretrained model
@@ -158,3 +159,15 @@ def test_center_block_behavior() -> None:
     x = torch.randn(1, 8, 4, 4)
     out = center_block(x)
     assert out.shape == (1, 8, 4, 4)
+
+
+def test_unetpp_raises_value_error() -> None:
+    """Test UnetPlusPlusDecoder raises ValueError."""
+    with pytest.raises(
+        ValueError, match=r".*depth is 4, but you provide `decoder_channels` for 3.*"
+    ):
+        _ = UnetPlusPlusDecoder(
+            encoder_channels=[1, 2, 4, 8],
+            decoder_channels=[8, 4, 2],
+            n_blocks=4,
+        )

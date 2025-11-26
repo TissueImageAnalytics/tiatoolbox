@@ -417,8 +417,10 @@ class UnetPlusPlusDecoder(nn.Module):
         super().__init__()
 
         if n_blocks != len(decoder_channels):
-            msg = f"Model depth is {n_blocks}, but you provide \
-            `decoder_channels` for {len(decoder_channels)} blocks."
+            msg = (
+                f"Model depth is {n_blocks}, but you provide "
+                f"`decoder_channels` for {len(decoder_channels)} blocks."
+            )
             raise ValueError(msg)
 
         # remove first skip with same spatial resolution
@@ -681,6 +683,7 @@ class GrandQCModel(ModelABC):
             (4, 256, 256, 2)
 
         """
+        model = model.to(device)
         model.eval()
 
         imgs = batch_data
