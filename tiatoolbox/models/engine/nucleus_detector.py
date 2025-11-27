@@ -145,8 +145,8 @@ class NucleusDetector(SemanticSegmentor):
         rechunked_prediction_map = raw_predictions.rechunk(
             (self.model.postproc_tile_shape[0], self.model.postproc_tile_shape[1], -1)
         )
-        logger.info(f"Post-processing tile size: {rechunked_prediction_map.chunks}")
-        logger.info(f"Post-processing tiles overlap: (h={depth_h}, w={depth_w})")
+        logger.info("Post-processing tile size: %s", rechunked_prediction_map.chunks)
+        logger.info("Post-processing tiles overlap: (h=%d, w=%d)", depth_h, depth_w)
 
         return da.map_overlap(
             rechunked_prediction_map,

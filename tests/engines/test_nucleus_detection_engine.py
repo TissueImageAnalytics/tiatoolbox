@@ -162,6 +162,7 @@ def test_nucleus_detector_patch(
         images=[patch_1, patch_2],
         save_dir=save_dir,
         overwrite=True,
+        class_dict=None,
     )
 
     store_1 = SQLiteStore.open(save_dir / "0.db")
@@ -201,7 +202,7 @@ def test_nucleus_detector_write_centroid_maps(tmp_path: pathlib.Path) -> None:
     detection_maps = da.from_array(detection_maps, chunks=(20, 20, 1))
 
     store = NucleusDetector.write_centroid_maps_to_store(
-        detection_maps=detection_maps,
+        detection_maps=detection_maps, class_dict=None
     )
     assert len(store.values()) == 0
     store.close()

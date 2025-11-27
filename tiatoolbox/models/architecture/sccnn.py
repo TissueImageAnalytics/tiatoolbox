@@ -399,6 +399,7 @@ class SCCNN(ModelABC):
     def infer_batch(
         model: nn.Module,
         batch_data: torch.Tensor,
+        *,
         device: str,
     ) -> np.ndarray:
         """Run inference on an input batch.
