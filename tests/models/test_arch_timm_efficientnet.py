@@ -221,3 +221,23 @@ def test_efficientnet_encoder_depth_validation_and_forward() -> None:
     assert features[1].shape[1] == 32
     assert features[2].shape[1] == 24
     assert features[3].shape[1] == 40
+
+
+def test_efficientnet_encoder_load_state_dict_drops_classifier_keys() -> None:
+    """Loading state dict with classifier keys should drop them silently."""
+    # ensure classifier keys are dropped before loading into the model
+    encoder = EfficientNetEncoder(
+        stage_idxs=[2, 3, 5],
+        out_channels=[3, 32, 24, 40, 112, 320],
+        depth=3,
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+    )
+    extended_state = dict(encoder.state_dict())
+    extended_state["classifier.bias"] = torch.tensor([1.0])
+    extended_state["classifier.weight"] = torch.tensor([[1.0]])
+    load_result = encoder.load_state_dict(extended_state, strict=True)
+    assert not load_result.missing_keys
+    assert not load_result.unexpected_keys
+    assert "classifier.bias" not in encoder.state_dict()
+    assert "classifier.weight" not in encoder.state_dict()

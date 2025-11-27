@@ -258,7 +258,6 @@ class EncoderMixin:
         self._in_channels = in_channels
         if self._out_channels[0] == DEFAULT_IN_CHANNELS:
             self._out_channels = [in_channels, *self._out_channels[1:]]
-
         # Type ignore needed because self is a mixin that will be used with nn.Module
         patch_first_conv(model=self, new_in_channels=in_channels, pretrained=pretrained)  # type: ignore[arg-type]
 
