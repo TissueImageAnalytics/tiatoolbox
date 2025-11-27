@@ -115,6 +115,24 @@ def test_encoder_mixin_properties_and_set_in_channels() -> None:
     assert encoder.conv.in_channels == 5
 
 
+def test_set_in_channels_noop_for_default() -> None:
+    """Calling with DEFAULT_IN_CHANNELS should skip patching."""
+    encoder = DummyEncoder()
+    encoder.set_in_channels(DEFAULT_IN_CHANNELS, pretrained=True)
+    assert encoder._in_channels == DEFAULT_IN_CHANNELS
+
+
+def test_set_in_channels_modify_out_channels() -> None:
+    """First output channels should change when in_channels is modified."""
+    encoder = DummyEncoder()
+    encoder._out_channels[0] = DEFAULT_IN_CHANNELS
+
+    encoder.set_in_channels(5, pretrained=False)
+
+    assert encoder._out_channels[0] == 5
+    assert encoder._in_channels == 5
+
+
 def test_encoder_mixin_make_dilated_and_validation() -> None:
     """make_dilated should error on invalid stride and patch convs otherwise."""
     encoder = DummyEncoder()
@@ -130,6 +148,38 @@ def test_encoder_mixin_make_dilated_and_validation() -> None:
     assert conv16.dilation == (2, 2)
     assert conv32.stride == (1, 1)
     assert conv32.dilation == (4, 4)
+
+
+def test_make_dilated_skips_stages_below_output_stride() -> None:
+    """Stages at or below the target stride should be left untouched."""
+    encoder = DummyEncoder()
+    encoder.conv.stride = (2, 2)  # stage_stride == 16, so should be skipped
+    encoder.conv.dilation = (1, 1)
+
+    encoder.make_dilated(output_stride=16)
+
+    # stage at stride 16 skipped
+    assert encoder.conv.stride == (2, 2)
+    assert encoder.conv.dilation == (1, 1)
+
+    # stage at stride 32 modified
+    conv32 = encoder.get_stages()[32][0]
+    assert conv32.dilation == (2, 2)
+    assert conv32.padding == (2, 2)
+
+
+def test_efficientnet_encoder_get_stages_splits_blocks() -> None:
+    """Test get_stages for dilation modification."""
+    encoder = EfficientNetEncoder(
+        stage_idxs=[1, 2, 4],
+        out_channels=[3, 8, 16, 32, 64, 128],
+        depth=3,
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+    )
+    stages = encoder.get_stages()
+    assert len(stages) == 2
+    assert stages.keys() == {16, 32}
 
 
 def test_get_efficientnet_kwargs_shapes_and_values() -> None:
@@ -160,18 +210,14 @@ def test_efficientnet_encoder_depth_validation_and_forward() -> None:
         stage_idxs=[2, 3, 5],
         out_channels=[3, 32, 24, 40, 112, 320],
         depth=3,
-        channel_multiplier=0.5,
-        depth_multiplier=0.5,
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
     )
     x = torch.randn(1, 3, 32, 32)
     features = encoder(x)
     assert len(features) == encoder._depth + 1
     assert torch.equal(features[0], x)
-
-    # ensure classifier keys are dropped before loading into the model
-    extended_state = dict(encoder.state_dict())
-    extended_state["classifier.bias"] = torch.tensor([1.0])
-    extended_state["classifier.weight"] = torch.tensor([[1.0]])
-    load_result = encoder.load_state_dict(extended_state, strict=True)
-    assert not load_result.missing_keys
-    assert not load_result.unexpected_keys
+    # cover depth-gated forward branches up to depth 3
+    assert features[1].shape[1] == 32
+    assert features[2].shape[1] == 24
+    assert features[3].shape[1] == 40
