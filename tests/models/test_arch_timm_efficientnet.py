@@ -133,6 +133,18 @@ def test_set_in_channels_modify_out_channels() -> None:
     assert encoder._in_channels == 5
 
 
+def test_set_in_channels_preserves_custom_out_channels() -> None:
+    """When first out_channels is customized, set_in_channels should not override."""
+    encoder = DummyEncoder()
+    encoder._out_channels[0] = 7
+
+    encoder.set_in_channels(5, pretrained=False)
+
+    assert encoder._out_channels[0] == 7
+    assert encoder._in_channels == 5
+    assert encoder.conv.in_channels == 5
+
+
 def test_encoder_mixin_make_dilated_and_validation() -> None:
     """make_dilated should error on invalid stride and patch convs otherwise."""
     encoder = DummyEncoder()
@@ -221,6 +233,33 @@ def test_efficientnet_encoder_depth_validation_and_forward() -> None:
     assert features[1].shape[1] == 32
     assert features[2].shape[1] == 24
     assert features[3].shape[1] == 40
+
+    encoder = EfficientNetEncoder(
+        stage_idxs=[2, 3, 5],
+        out_channels=[3, 32, 24, 40, 112, 320],
+        depth=1,
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+    )
+    x = torch.randn(1, 3, 32, 32)
+    features = encoder(x)
+    assert len(features) == encoder._depth + 1
+    assert torch.equal(features[0], x)
+    assert features[1].shape[1] == 32
+
+    encoder = EfficientNetEncoder(
+        stage_idxs=[2, 3, 5],
+        out_channels=[3, 32, 24, 40, 112, 320],
+        depth=2,
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+    )
+    x = torch.randn(1, 3, 32, 32)
+    features = encoder(x)
+    assert len(features) == encoder._depth + 1
+    assert torch.equal(features[0], x)
+    assert features[1].shape[1] == 32
+    assert features[2].shape[1] == 24
 
 
 def test_efficientnet_encoder_load_state_dict_drops_classifier_keys() -> None:

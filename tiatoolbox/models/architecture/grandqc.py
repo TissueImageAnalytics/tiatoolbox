@@ -4,6 +4,7 @@ This module defines the GrandQC model for tissue detection in digital pathology.
 It implements a UNet++ architecture with an EfficientNetB0 encoder and a segmentation
 head for high-resolution tissue segmentation. The model is designed to identify
 tissue regions and background areas for quality control in whole slide images (WSIs).
+Please cite the paper [1], if you use this model.
 
 Key Components:
 ---------------
@@ -39,7 +40,7 @@ Example:
     ... )
 
 References:
-    Weng, Zhilong et al. "GrandQC: A comprehensive solution to quality control
+    [1] Weng, Zhilong et al. "GrandQC: A comprehensive solution to quality control
     problem in digital pathology." Nature Communications, 2024.
     DOI: 10.1038/s41467-024-54769-y
     URL: https://doi.org/10.1038/s41467-024-54769-y
