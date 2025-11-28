@@ -135,6 +135,38 @@ def test_incorrect_output_type() -> NoReturn:
         )
 
 
+def test_incorrect_output_type_save_dir() -> NoReturn:
+    """Test EngineABC for None output_type and output type zarr/annotationstore."""
+    pretrained_model = "alexnet-kather100k"
+
+    # Test engine run without ioconfig
+    eng = TestEngineABC(model=pretrained_model)
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Please provide save_dir for output_type=zarr*",
+    ):
+        _ = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            on_gpu=False,
+            patch_mode=True,
+            ioconfig=None,
+            output_type="zarr",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Please provide save_dir for output_type=annotationstore*",
+    ):
+        _ = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            on_gpu=False,
+            patch_mode=True,
+            ioconfig=None,
+            output_type="annotationstore",
+        )
+
+
 def test_pretrained_ioconfig() -> NoReturn:
     """Test EngineABC initialization with pretrained model name in the toolbox."""
     pretrained_model = "alexnet-kather100k"

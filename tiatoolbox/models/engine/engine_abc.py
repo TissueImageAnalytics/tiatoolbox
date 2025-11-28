@@ -1025,6 +1025,9 @@ class EngineABC(ABC):  # noqa: B024
                 If an unsupported output_type is provided.
             ValueError:
                 If required configuration or input parameters are missing.
+            ValueError:
+                If save_dir is not provided and output_type is "zarr"
+                or "annotationstore".
 
         """
         for key in kwargs:
@@ -1058,6 +1061,10 @@ class EngineABC(ABC):  # noqa: B024
                 f"Remove `save_dir` input to return the output as a `dict`."
             )
             logger.info(msg)
+
+        if save_dir is None and output_type.lower() in ["zarr", "annotationstore"]:
+            msg = f"Please provide save_dir for output_type={output_type}"
+            raise ValueError(msg)
 
         self.images = self._validate_images_masks(images=images)
 
