@@ -720,6 +720,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         Raises:
             ValueError:
                 If `output_type` is not "zarr" or "dict".
+
         """
         # return_probabilities is always True for FeatureExtractor.
         kwargs["return_probabilities"] = True
