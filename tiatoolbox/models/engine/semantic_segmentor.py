@@ -102,6 +102,8 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Device to run the model on (e.g., "cpu", "cuda").
         input_resolutions (list[dict]):
             Resolution used for reading the image. See `WSIReader` for details.
+        ioconfig (IOSegmentorConfig):
+            IO configuration (:class:`IOSegmentorConfig`) for model input/output.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
@@ -128,6 +130,7 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
 
     """
 
+    ioconfig: IOSegmentorConfig
     patch_output_shape: tuple[int, int]
     output_resolutions: Resolution
 
@@ -416,6 +419,9 @@ class SemanticSegmentor(PatchPredictor):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
+                    ioconfig (IOSegmentorConfig):
+                        IO configuration (:class:`IOSegmentorConfig`) for model
+                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -622,6 +628,9 @@ class SemanticSegmentor(PatchPredictor):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
+                    ioconfig (IOSegmentorConfig):
+                        IO configuration (:class:`IOSegmentorConfig`) for model
+                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -773,6 +782,9 @@ class SemanticSegmentor(PatchPredictor):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
+                    ioconfig (IOSegmentorConfig):
+                        IO configuration (:class:`IOSegmentorConfig`) for model
+                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -830,7 +842,6 @@ class SemanticSegmentor(PatchPredictor):
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
-        ioconfig: IOSegmentorConfig | None = None,
         *,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
@@ -852,8 +863,6 @@ class SemanticSegmentor(PatchPredictor):
                 Optional masks for WSI processing. Only used when `patch_mode` is False.
             labels (list | None):
                 Optional labels for input images. Only one label per image is supported.
-            ioconfig (IOSegmentorConfig | None):
-                IO configuration for patch extraction and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`). Default
                 is True.
@@ -879,6 +888,9 @@ class SemanticSegmentor(PatchPredictor):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
+                    ioconfig (IOSegmentorConfig):
+                        IO configuration (:class:`IOSegmentorConfig`) for model
+                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -937,7 +949,6 @@ class SemanticSegmentor(PatchPredictor):
             images=images,
             masks=masks,
             labels=labels,
-            ioconfig=ioconfig,
             patch_mode=patch_mode,
             save_dir=save_dir,
             overwrite=overwrite,

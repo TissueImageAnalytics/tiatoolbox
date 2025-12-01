@@ -633,7 +633,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
-        ioconfig: IOSegmentorConfig | None = None,
         *,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
@@ -660,8 +659,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Optional masks for WSI processing. Only used when `patch_mode` is False.
             labels (list | None):
                 Optional labels for input images. Only one label per image is supported.
-            ioconfig (IOSegmentorConfig | None):
-                IO configuration for patch extraction and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
                 Default is True.
@@ -686,6 +683,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
+                    ioconfig (IOSegmentorConfig):
+                        IO configuration (:class:`IOSegmentorConfig`) for model
+                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -728,7 +728,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
             images=images,
             masks=masks,
             labels=labels,
-            ioconfig=ioconfig,
             patch_mode=patch_mode,
             save_dir=save_dir,
             overwrite=overwrite,
