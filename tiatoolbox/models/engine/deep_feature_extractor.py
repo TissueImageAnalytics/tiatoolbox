@@ -237,10 +237,44 @@ class DeepFeatureExtractor(SemanticSegmentor):
             save_path (Path):
                 Path to save intermediate Zarr output. Used for caching.
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters, including:
-                - return_probabilities (bool): Whether to return feature maps.
-                - memory_threshold (int): Memory usage threshold (%) to trigger
-                  disk caching.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict[str, dask.array.Array]:
@@ -362,7 +396,44 @@ class DeepFeatureExtractor(SemanticSegmentor):
             prediction_dtype (type):
                 Data type of the prediction output.
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dask.array.Array:
@@ -396,10 +467,44 @@ class DeepFeatureExtractor(SemanticSegmentor):
             save_path (Path | None):
                 Path to save the output file. Required for "zarr" format.
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters, including:
-                - output_file (str): Name of the output file.
-                - scale_factor (tuple[float, float]): For coordinate transformation.
-                - class_dict (dict): Optional class index-to-name mapping.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict | Path:
@@ -455,7 +560,44 @@ class DeepFeatureExtractor(SemanticSegmentor):
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             Path | None:
@@ -530,7 +672,44 @@ class DeepFeatureExtractor(SemanticSegmentor):
             output_type (str):
                 Desired output format. Must be "zarr" or "dict".
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters to update engine attributes.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             AnnotationStore | Path | str | dict | list[Path]:

@@ -339,7 +339,41 @@ class PatchPredictor(EngineABC):
             prediction_dtype (type):
                 Data type of the prediction output.
             **kwargs (PredictorRunParams):
-                Additional runtime parameters, including `return_probabilities`.
+                Additional runtime parameters to configure prediction.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dask.array.Array: Post-processed predictions as a Dask array.
@@ -373,7 +407,41 @@ class PatchPredictor(EngineABC):
             prediction_dtype (type):
                 Data type of the prediction output.
             **kwargs (PredictorRunParams):
-                Additional runtime parameters, including `return_probabilities`.
+                Additional runtime parameters to configure prediction.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dask.array.Array: Post-processed predictions as a Dask array.
@@ -423,7 +491,41 @@ class PatchPredictor(EngineABC):
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             **kwargs (PredictorRunParams):
-                Additional runtime parameters.
+                Additional runtime parameters to configure prediction.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             Path | None:
@@ -490,7 +592,41 @@ class PatchPredictor(EngineABC):
                 Desired output format: "dict", "zarr", or "annotationstore".
                 Default value is "zarr".
             **kwargs (PredictorRunParams):
-                Additional runtime parameters.
+                Additional runtime parameters to configure prediction.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    input_resolutions (list[dict]):
+                        Resolution settings for reading the image. See `WSIReader`.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    patch_input_shape (tuple[int, int]):
+                        Shape of input patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             AnnotationStore | Path | str | dict:
