@@ -164,6 +164,8 @@ class Conv2dReLU(nn.Sequential):
         kernel_size: int,
         padding: int = 0,
         stride: int = 1,
+        *,
+        bias: bool = False,
     ) -> None:
         """Initialize Conv2dReLU block.
 
@@ -182,6 +184,8 @@ class Conv2dReLU(nn.Sequential):
                 Padding applied to the input. Defaults to 0.
             stride (int):
                 Stride of the convolution. Defaults to 1.
+            bias (bool):
+                If `True`, adds a learnable bias to the output. Default: `False`
 
         """
         norm = nn.BatchNorm2d(out_channels)
@@ -192,7 +196,7 @@ class Conv2dReLU(nn.Sequential):
             kernel_size,
             stride=stride,
             padding=padding,
-            bias=False,
+            bias=bias,
         )
 
         activation = nn.ReLU(inplace=True)
