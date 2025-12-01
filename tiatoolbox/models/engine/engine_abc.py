@@ -91,8 +91,6 @@ class EngineABCRunParams(TypedDict, total=False):
             Resolution settings for input heads. Supported units are `level`,
             `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
             [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for details.
-        ioconfig (ModelIOConfigABC):
-            IO configuration (:class:`ModelIOConfigABC`) for model input/output.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
@@ -120,7 +118,6 @@ class EngineABCRunParams(TypedDict, total=False):
     class_dict: dict
     device: str
     input_resolutions: list[dict[Units, Resolution]]
-    ioconfig: ModelIOConfigABC
     memory_threshold: int
     num_workers: int
     output_file: str

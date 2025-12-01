@@ -102,8 +102,6 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Device to run the model on (e.g., "cpu", "cuda").
         input_resolutions (list[dict]):
             Resolution used for reading the image. See `WSIReader` for details.
-        ioconfig (ModelIOConfigABC):
-            Input/output configuration for patch extraction and resolution.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
