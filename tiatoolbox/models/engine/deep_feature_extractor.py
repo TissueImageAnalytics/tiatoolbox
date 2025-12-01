@@ -1,7 +1,7 @@
 """Deep Feature Extraction Engine for Digital Pathology.
 
 This module defines the `DeepFeatureExtractor` class, which extends
-`SemanticSegmentor` to extract intermediate CNN feature representations
+`SemanticSegmentor` to extract intermediate feature representations
 from whole slide images (WSIs) or image patches. Unlike segmentation
 or classification engines, this extractor focuses on generating feature
 embeddings for downstream tasks such as clustering, visualization, or
@@ -145,12 +145,13 @@ def save_to_cache(
 
 
 class DeepFeatureExtractor(SemanticSegmentor):
-    r"""Generic CNN-based feature extractor for digital pathology images.
+    r"""Generic deep feature extractor for digital pathology images.
 
     This class extends :class:`SemanticSegmentor` to extract deep features from
-    whole slide images (WSIs) or image patches using a CNN model. It is designed
-    for use cases where the goal is to obtain intermediate feature representations
-    (e.g., embeddings) rather than final classification or segmentation outputs.
+    whole slide images (WSIs) or image patches using a deep learning model.
+    It is designed for use cases where the goal is to obtain intermediate
+    feature representations (e.g., embeddings) rather than final classification
+    or segmentation outputs.
 
     The extracted features are returned or saved in Zarr format for downstream
     analysis, such as clustering, visualization, or training other machine learning
@@ -351,7 +352,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
         This method overrides the base implementation to return raw feature maps
         without applying any additional processing. It is intended for use cases
-        where intermediate CNN features are required as output.
+        where intermediate features are required as output.
 
         Args:
             raw_predictions (dask.array.Array):
