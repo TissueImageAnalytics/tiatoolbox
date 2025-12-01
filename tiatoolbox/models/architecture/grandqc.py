@@ -1,4 +1,4 @@
-"""GrandQC Tissue Detection Model Architecture.
+"""GrandQC Tissue Detection Model Architecture [1].
 
 This module defines the GrandQC model for tissue detection in digital pathology.
 It implements a UNet++ architecture with an EfficientNetB0 encoder and a segmentation
@@ -186,14 +186,13 @@ class Conv2dReLU(nn.Sequential):
         """
         norm = nn.BatchNorm2d(out_channels)
 
-        is_identity = isinstance(norm, nn.Identity)
         conv = nn.Conv2d(
             in_channels,
             out_channels,
             kernel_size,
             stride=stride,
             padding=padding,
-            bias=is_identity,
+            bias=True,
         )
 
         activation = nn.ReLU(inplace=True)
@@ -518,7 +517,7 @@ class GrandQCModel(ModelABC):
 
     Example:
         >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
-        >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection_mpp10")
+        >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection")
         >>> results = segmentor.run(
         ...     ["/example_wsi.svs"],
         ...     masks=None,
