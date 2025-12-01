@@ -91,9 +91,6 @@ class EngineABCRunParams(TypedDict, total=False):
             Resolution settings for input heads. Supported units are `level`,
             `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
             [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for details.
-        ioconfig (ModelIOConfigABC):
-            IO configuration (:class:`ModelIOConfigABC`) for model
-            input/output.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
@@ -123,7 +120,6 @@ class EngineABCRunParams(TypedDict, total=False):
     class_dict: dict
     device: str
     input_resolutions: list[dict[Units, Resolution]]
-    ioconfig: ModelIOConfigABC
     memory_threshold: int
     num_workers: int
     output_file: str
@@ -199,8 +195,7 @@ class EngineABC(ABC):  # noqa: B024
             of weights via the `weights` argument. Argument
             is case-insensitive.
         ioconfig (ModelIOConfigABC):
-            IO configuration (:class:`ModelIOConfigABC`) for model
-            input/output.
+            IO configuration (:class:`ModelIOConfigABC`) for model input/output.
         dataloader (DataLoader):
             Torch DataLoader for inference.
         return_labels (bool):
@@ -612,9 +607,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -685,9 +677,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -818,9 +807,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -897,9 +883,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -1135,6 +1118,7 @@ class EngineABC(ABC):  # noqa: B024
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
         save_dir: os.PathLike | Path | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
         *,
         overwrite: bool = False,
@@ -1183,9 +1167,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -1259,7 +1240,6 @@ class EngineABC(ABC):  # noqa: B024
         self.labels = labels
 
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
-        ioconfig = kwargs.get("ioconfig")
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
         self.model = self.model.to(device=self.device)
         self._ioconfig = self._update_ioconfig(
@@ -1312,9 +1292,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -1472,9 +1449,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -1581,6 +1555,7 @@ class EngineABC(ABC):  # noqa: B024
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
@@ -1605,6 +1580,8 @@ class EngineABC(ABC):  # noqa: B024
                 generated for whole slide images.
             labels (list | None):
                 Optional list of labels for input images.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution settings.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
                 Default is True.
@@ -1634,9 +1611,6 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
-                    ioconfig (ModelIOConfigABC):
-                        IO configuration (:class:`ModelIOConfigABC`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -1692,6 +1666,7 @@ class EngineABC(ABC):  # noqa: B024
             masks=masks,
             labels=labels,
             save_dir=save_dir,
+            ioconfig=ioconfig,
             overwrite=overwrite,
             patch_mode=patch_mode,
             output_type=output_type,

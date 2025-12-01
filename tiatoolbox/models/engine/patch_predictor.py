@@ -36,7 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
-    from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig
+    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.wsicore import WSIReader
 
@@ -59,8 +59,6 @@ class PredictorRunParams(EngineABCRunParams, total=False):
             Device to run the model on (e.g., "cpu", "cuda").
         input_resolutions (list[dict]):
             Resolution used for reading the image. See `WSIReader` for details.
-        ioconfig (IOPatchPredictorConfig):
-            IO configuration (:class:`IOPatchPredictorConfig`) for model input/output.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
@@ -84,7 +82,6 @@ class PredictorRunParams(EngineABCRunParams, total=False):
 
     """
 
-    ioconfig: IOPatchPredictorConfig
     return_probabilities: bool
 
 
@@ -356,9 +353,6 @@ class PatchPredictor(EngineABC):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
-                    ioconfig (IOPatchPredictorConfig):
-                        IO configuration (:class:`IOPatchPredictorConfig`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -427,9 +421,6 @@ class PatchPredictor(EngineABC):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
-                    ioconfig (IOPatchPredictorConfig):
-                        IO configuration (:class:`IOPatchPredictorConfig`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -469,7 +460,7 @@ class PatchPredictor(EngineABC):
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
         save_dir: os.PathLike | Path | None = None,
-        ioconfig: IOPatchPredictorConfig | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
         *,
         overwrite: bool = False,
@@ -514,9 +505,6 @@ class PatchPredictor(EngineABC):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
-                    ioconfig (IOPatchPredictorConfig):
-                        IO configuration (:class:`IOPatchPredictorConfig`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -564,6 +552,7 @@ class PatchPredictor(EngineABC):
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
@@ -591,6 +580,8 @@ class PatchPredictor(EngineABC):
             labels (list | None):
                 Optional labels for input images.
                 Only a single label per image is supported.
+            ioconfig (ModelIOConfigABC | None):
+                IO configuration for patch extraction and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             save_dir (PathLike | None):
@@ -615,9 +606,6 @@ class PatchPredictor(EngineABC):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
-                    ioconfig (IOPatchPredictorConfig):
-                        IO configuration (:class:`IOPatchPredictorConfig`) for model
-                        input/output.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -673,6 +661,7 @@ class PatchPredictor(EngineABC):
             images=images,
             masks=masks,
             labels=labels,
+            ioconfig=ioconfig,
             patch_mode=patch_mode,
             save_dir=save_dir,
             overwrite=overwrite,
