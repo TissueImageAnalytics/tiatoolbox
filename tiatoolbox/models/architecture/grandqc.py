@@ -192,7 +192,7 @@ class Conv2dReLU(nn.Sequential):
             kernel_size,
             stride=stride,
             padding=padding,
-            bias=True,
+            bias=False,
         )
 
         activation = nn.ReLU(inplace=True)
