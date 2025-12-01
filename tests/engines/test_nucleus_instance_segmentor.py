@@ -137,3 +137,44 @@ def test_functionality_patch_mode(
         np.array_equal(a, b)
         for a, b in zip(output["type"][1], output_["type"][1], strict=False)
     )
+
+
+def test_functionality_patch_mode_anns(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
+    """Patch mode functionality test for nuclei instance segmentor."""
+    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi = WSIReader.open(mini_wsi_svs)
+    size = (256, 256)
+    resolution = 0.25
+    units: Final = "mpp"
+    patch1 = mini_wsi.read_rect(
+        location=(0, 0),
+        size=size,
+        resolution=resolution,
+        units=units,
+    )
+    patch2 = mini_wsi.read_rect(
+        location=(512, 512),
+        size=size,
+        resolution=resolution,
+        units=units,
+    )
+
+    # Test dummy input, should result in no output segmentation
+    patch3 = np.zeros_like(patch1)
+
+    patches = np.stack(arrays=[patch1, patch2, patch3], axis=0)
+
+    inst_segmentor = NucleusInstanceSegmentor(
+        batch_size=1,
+        num_workers=0,
+        model="hovernet_fast-pannuke",
+    )
+    _ = inst_segmentor.run(
+        images=patches,
+        patch_mode=True,
+        device=device,
+        output_type="annotationstore",
+        save_dir=track_tmp_path / "patch_output_annotationstore",
+    )
