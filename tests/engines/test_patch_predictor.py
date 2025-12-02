@@ -268,17 +268,14 @@ def test_wsi_predictor_api(
     kwargs = {
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
-        "input_resolutions": [{"units": "baseline", "resolution": 1.0}],
         "save_dir": save_dir,
     }
-    # ! add this test back once the read at `baseline` is fixed
-    # sanity check, both output should be the same with same resolution read args
-    # remove previously generated data
 
     _kwargs = copy.deepcopy(kwargs)
     # test reading of multiple whole-slide images
     output = predictor.run(
         images=[mini_wsi_svs, str(mini_wsi_jpg)],
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         masks=[mini_wsi_msk, mini_wsi_msk],
         patch_mode=False,
         return_probabilities=True,

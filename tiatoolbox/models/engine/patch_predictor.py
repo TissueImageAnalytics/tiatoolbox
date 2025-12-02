@@ -38,6 +38,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
     from tiatoolbox.models.models_abc import ModelABC
+    from tiatoolbox.type_hints import Resolution, Units
     from tiatoolbox.wsicore import WSIReader
 
 
@@ -457,6 +458,7 @@ class PatchPredictor(EngineABC):
     def _update_run_params(
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
@@ -475,6 +477,11 @@ class PatchPredictor(EngineABC):
         Args:
             images (list[PathLike | WSIReader] | np.ndarray):
                 Input images or patches.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
             masks (list[PathLike] | np.ndarray | None):
                 Optional masks for WSI processing.
             save_dir (PathLike | None):
@@ -534,6 +541,7 @@ class PatchPredictor(EngineABC):
             self.drop_keys.append("probabilities")
         return super()._update_run_params(
             images=images,
+            input_resolutions=input_resolutions,
             masks=masks,
             save_dir=save_dir,
             ioconfig=ioconfig,
@@ -546,9 +554,10 @@ class PatchPredictor(EngineABC):
     def run(
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        *,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         ioconfig: ModelIOConfigABC | None = None,
-        *,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
@@ -566,6 +575,11 @@ class PatchPredictor(EngineABC):
                 Input images or patches. When using `patch` mode, the
                 input must be either a list of images, a list of image
                 file paths or a numpy array of an image list.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
             masks (list[PathLike] | np.ndarray | None):
                 Optional masks for WSI processing.
                 Only utilised when patch_mode is False.
@@ -654,6 +668,7 @@ class PatchPredictor(EngineABC):
         """
         return super().run(
             images=images,
+            input_resolutions=input_resolutions,
             masks=masks,
             ioconfig=ioconfig,
             patch_mode=patch_mode,

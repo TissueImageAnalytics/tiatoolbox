@@ -87,10 +87,6 @@ class EngineABCRunParams(TypedDict, total=False):
             Device to run the model on (e.g., "cpu", "cuda").
             See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
             for more details.
-        input_resolutions (list[dict[Units, Resolution]]):
-            Resolution settings for input heads. Supported units are `level`,
-            `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
-            [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for details.
         labels (list):
             Optional labels for input images. Only a single label per image
             is supported.
@@ -122,7 +118,6 @@ class EngineABCRunParams(TypedDict, total=False):
     batch_size: int
     class_dict: dict
     device: str
-    input_resolutions: list[dict[Units, Resolution]]
     labels: list
     memory_threshold: int
     num_workers: int
@@ -1119,6 +1114,7 @@ class EngineABC(ABC):  # noqa: B024
     def _update_run_params(
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
@@ -1136,6 +1132,11 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             images (list[PathLike | Path | WSIReader] | np.ndarray):
                 List of input images or a NumPy array of patches.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
             masks (list[PathLike | Path] | np.ndarray | None):
                 Optional list of masks for WSI processing.
             save_dir (PathLike | Path | None):
@@ -1203,6 +1204,9 @@ class EngineABC(ABC):  # noqa: B024
         """
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
+
+        if input_resolutions:
+            self.input_resolutions = input_resolutions
 
         if self.num_workers > 0:
             dask.config.set(scheduler="threads", num_workers=self.num_workers)
@@ -1552,9 +1556,10 @@ class EngineABC(ABC):  # noqa: B024
     def run(
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        *,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         ioconfig: ModelIOConfigABC | None = None,
-        *,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
@@ -1570,6 +1575,11 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             images (list[PathLike | Path | WSIReader] | np.ndarray):
                 List of input images or a NumPy array of patches.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
             masks (list[PathLike | Path] | np.ndarray | None):
                 Optional list of masks for WSI processing.
                 Only utilised when patch_mode is False.
@@ -1661,6 +1671,7 @@ class EngineABC(ABC):  # noqa: B024
         """
         save_dir = self._update_run_params(
             images=images,
+            input_resolutions=input_resolutions,
             masks=masks,
             save_dir=save_dir,
             ioconfig=ioconfig,
