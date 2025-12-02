@@ -29,7 +29,7 @@ Features:
 Example:
 --------
 >>> from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
->>> extractor = DeepFeatureExtractor(model="efficientnet_b0")
+>>> extractor = DeepFeatureExtractor(model="resnet18")
 >>> wsis = ["slide1.svs", "slide2.svs"]
 >>> output = extractor.run(wsis, patch_mode=False, output_type="zarr")
 >>> print(output)
@@ -50,7 +50,7 @@ from typing_extensions import Unpack
 
 from tiatoolbox.utils.misc import get_tqdm
 
-from .semantic_segmentor import SemanticSegmentor, SemanticSegmentorRunParams
+from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -60,7 +60,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
-    from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+    from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
@@ -145,10 +145,10 @@ def save_to_cache(
     return probabilities_zarr, coordinates_zarr
 
 
-class DeepFeatureExtractor(SemanticSegmentor):
+class DeepFeatureExtractor(PatchPredictor):
     r"""Generic deep feature extractor for digital pathology images.
 
-    This class extends :class:`SemanticSegmentor` to extract deep features from
+    This class extends :class:`PatchPredictor` to extract deep features from
     whole slide images (WSIs) or image patches using a deep learning model.
     It is designed for use cases where the goal is to obtain intermediate
     feature representations (e.g., embeddings) rather than final classification
@@ -222,7 +222,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         self: DeepFeatureExtractor,
         dataloader: DataLoader,
         save_path: Path,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[PredictorRunParams],
     ) -> dict[str, da.Array]:
         """Perform model inference on a whole slide image (WSI).
 
@@ -237,8 +237,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 PyTorch DataLoader configured for WSI processing.
             save_path (Path):
                 Path to save intermediate Zarr output. Used for caching.
-            **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters to configure segmentation.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters to configure prediction.
 
                 Optional Keys:
                     auto_get_mask (bool):
@@ -259,14 +259,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., ".zarr" or ".db").
-                    output_resolutions (Resolution):
-                        Resolution used for writing output predictions.
-                    patch_output_shape (tuple[int, int]):
-                        Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
-                        Whether to return per-class probabilities.
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.
@@ -380,7 +377,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[PredictorRunParams],
     ) -> da.Array:
         """Post-process raw patch predictions from model inference.
 
@@ -395,8 +392,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Expected shape of the prediction output.
             prediction_dtype (type):
                 Data type of the prediction output.
-            **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters to configure segmentation.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters to configure prediction.
 
                 Optional Keys:
                     auto_get_mask (bool):
@@ -417,14 +414,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., ".zarr" or ".db").
-                    output_resolutions (Resolution):
-                        Resolution used for writing output predictions.
-                    patch_output_shape (tuple[int, int]):
-                        Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
-                        Whether to return per-class probabilities.
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.
@@ -450,7 +444,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[PredictorRunParams],
     ) -> dict | Path:
         """Save patch-level feature predictions to disk or return them in memory.
 
@@ -465,8 +459,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Desired output format. Must be "zarr".
             save_path (Path | None):
                 Path to save the output file. Required for "zarr" format.
-            **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters to configure segmentation.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters to configure prediction.
 
                 Optional Keys:
                     auto_get_mask (bool):
@@ -487,14 +481,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., ".zarr" or ".db").
-                    output_resolutions (Resolution):
-                        Resolution used for writing output predictions.
-                    patch_output_shape (tuple[int, int]):
-                        Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
-                        Whether to return per-class probabilities.
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.
@@ -528,12 +519,12 @@ class DeepFeatureExtractor(SemanticSegmentor):
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
         save_dir: os.PathLike | Path | None = None,
-        ioconfig: IOSegmentorConfig | None = None,
+        ioconfig: IOPatchPredictorConfig | None = None,
         output_type: str = "dict",
         *,
         overwrite: bool = False,
         patch_mode: bool,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[PredictorRunParams],
     ) -> Path | None:
         """Update runtime parameters for the DeepFeatureExtractor engine.
 
@@ -556,7 +547,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 resolution. Must be positive.
             save_dir (PathLike | None):
                 Directory to save output files. Required for WSI mode.
-            ioconfig (IOSegmentorConfig | None):
+            ioconfig (IOPatchPredictorConfig | None):
                 IO configuration for patch extraction and resolution.
             output_type (str):
                 Desired output format. Must be "zarr" or "dict".
@@ -564,8 +555,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Whether to overwrite existing output files. Default is False.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
-            **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters to configure segmentation.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters to configure prediction.
 
                 Optional Keys:
                     auto_get_mask (bool):
@@ -586,14 +577,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., ".zarr" or ".db").
-                    output_resolutions (Resolution):
-                        Resolution used for writing output predictions.
-                    patch_output_shape (tuple[int, int]):
-                        Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
-                        Whether to return per-class probabilities.
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.
@@ -640,12 +628,12 @@ class DeepFeatureExtractor(SemanticSegmentor):
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
-        ioconfig: IOSegmentorConfig | None = None,
+        ioconfig: IOPatchPredictorConfig | None = None,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
         output_type: str = "dict",
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[PredictorRunParams],
     ) -> AnnotationStore | Path | str | dict | list[Path]:
         """Run the DeepFeatureExtractor engine on input images.
 
@@ -672,7 +660,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
             patch_input_shape (IntPair | None):
                 Shape of input patches (height, width), requested at read
                 resolution. Must be positive.
-            ioconfig (IOSegmentorConfig | None):
+            ioconfig (IOPatchPredictorConfig | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
@@ -683,8 +671,8 @@ class DeepFeatureExtractor(SemanticSegmentor):
                 Whether to overwrite existing output files. Default is False.
             output_type (str):
                 Desired output format. Must be "zarr" or "dict".
-            **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters to configure segmentation.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters to configure prediction.
 
                 Optional Keys:
                     auto_get_mask (bool):
@@ -705,14 +693,11 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., ".zarr" or ".db").
-                    output_resolutions (Resolution):
-                        Resolution used for writing output predictions.
-                    patch_output_shape (tuple[int, int]):
-                        Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
-                        Whether to return per-class probabilities.
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.

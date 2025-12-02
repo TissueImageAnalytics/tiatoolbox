@@ -9,7 +9,7 @@ import pytest
 import torch
 import zarr
 
-from tiatoolbox.models import IOSegmentorConfig
+from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, TimmBackbone
 from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
 from tiatoolbox.utils import env_detection as toolbox_env
@@ -109,17 +109,12 @@ def test_full_inference(
 
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
 
-    ioconfig = IOSegmentorConfig(
+    ioconfig = IOPatchPredictorConfig(
         input_resolutions=[
             {"units": "mpp", "resolution": 0.25},
         ],
-        output_resolutions=[
-            {"units": "mpp", "resolution": 0.25},
-        ],
         patch_input_shape=[512, 512],
-        patch_output_shape=[512, 512],
         stride_shape=[256, 256],
-        save_resolution={"units": "mpp", "resolution": 8.0},
     )
 
     extractor = DeepFeatureExtractor(batch_size=4, model=model)
@@ -179,11 +174,9 @@ def test_multi_gpu_feature_extraction(
     # Use multiple GPUs
     device = select_device(on_gpu=ON_GPU)
 
-    wsi_ioconfig = IOSegmentorConfig(
+    wsi_ioconfig = IOPatchPredictorConfig(
         input_resolutions=[{"units": "mpp", "resolution": 0.5}],
         patch_input_shape=[224, 224],
-        output_resolutions=[{"units": "mpp", "resolution": 0.5}],
-        patch_output_shape=[224, 224],
         stride_shape=[224, 224],
     )
 
