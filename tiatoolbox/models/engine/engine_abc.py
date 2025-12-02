@@ -96,9 +96,6 @@ class EngineABCRunParams(TypedDict, total=False):
             Number of workers for DataLoader and post-processing.
         output_file (str):
             Filename for saving output (e.g., "zarr" or "annotationstore").
-        patch_input_shape (IntPair):
-            Shape of input patches (height, width), requested at read
-            resolution. Must be positive.
         return_labels (bool):
             Whether to return labels with predictions.
         scale_factor (tuple[float, float]):
@@ -122,7 +119,6 @@ class EngineABCRunParams(TypedDict, total=False):
     memory_threshold: int
     num_workers: int
     output_file: str
-    patch_input_shape: IntPair
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
@@ -1114,8 +1110,9 @@ class EngineABC(ABC):  # noqa: B024
     def _update_run_params(
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
-        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
@@ -1132,13 +1129,16 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             images (list[PathLike | Path | WSIReader] | np.ndarray):
                 List of input images or a NumPy array of patches.
+            masks (list[PathLike | Path] | np.ndarray | None):
+                Optional list of masks for WSI processing.
             input_resolutions (list[dict[Units, Resolution]] | None):
                 Resolution settings for input heads. Supported units are `level`,
                 `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
                 [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
                 details.
-            masks (list[PathLike | Path] | np.ndarray | None):
-                Optional list of masks for WSI processing.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             save_dir (PathLike | Path | None):
                 Directory to save output files. Required for WSI mode.
             ioconfig (ModelIOConfigABC | None):
@@ -1207,6 +1207,9 @@ class EngineABC(ABC):  # noqa: B024
 
         if input_resolutions:
             self.input_resolutions = input_resolutions
+
+        if patch_input_shape is not None:
+            self.patch_input_shape = patch_input_shape
 
         if self.num_workers > 0:
             dask.config.set(scheduler="threads", num_workers=self.num_workers)
@@ -1557,8 +1560,9 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         *,
-        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
@@ -1575,17 +1579,20 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             images (list[PathLike | Path | WSIReader] | np.ndarray):
                 List of input images or a NumPy array of patches.
-            input_resolutions (list[dict[Units, Resolution]] | None):
-                Resolution settings for input heads. Supported units are `level`,
-                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
-                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
-                details.
             masks (list[PathLike | Path] | np.ndarray | None):
                 Optional list of masks for WSI processing.
                 Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             ioconfig (ModelIOConfigABC | None):
                 IO configuration for patch extraction and resolution settings.
             patch_mode (bool):
@@ -1671,8 +1678,9 @@ class EngineABC(ABC):  # noqa: B024
         """
         save_dir = self._update_run_params(
             images=images,
-            input_resolutions=input_resolutions,
             masks=masks,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             save_dir=save_dir,
             ioconfig=ioconfig,
             overwrite=overwrite,

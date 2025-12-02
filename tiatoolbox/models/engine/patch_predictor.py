@@ -38,7 +38,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.type_hints import Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
 
 
@@ -458,8 +458,9 @@ class PatchPredictor(EngineABC):
     def _update_run_params(
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
-        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
@@ -477,13 +478,16 @@ class PatchPredictor(EngineABC):
         Args:
             images (list[PathLike | WSIReader] | np.ndarray):
                 Input images or patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
             input_resolutions (list[dict[Units, Resolution]] | None):
                 Resolution settings for input heads. Supported units are `level`,
                 `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
                 [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
                 details.
-            masks (list[PathLike] | np.ndarray | None):
-                Optional masks for WSI processing.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             save_dir (PathLike | None):
                 Directory to save output files. Required for WSI mode.
             ioconfig (ModelIOConfigABC | None):
@@ -541,8 +545,9 @@ class PatchPredictor(EngineABC):
             self.drop_keys.append("probabilities")
         return super()._update_run_params(
             images=images,
-            input_resolutions=input_resolutions,
             masks=masks,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             save_dir=save_dir,
             ioconfig=ioconfig,
             overwrite=overwrite,
@@ -555,8 +560,9 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         *,
-        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
@@ -575,17 +581,20 @@ class PatchPredictor(EngineABC):
                 Input images or patches. When using `patch` mode, the
                 input must be either a list of images, a list of image
                 file paths or a numpy array of an image list.
-            input_resolutions (list[dict[Units, Resolution]] | None):
-                Resolution settings for input heads. Supported units are `level`,
-                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
-                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
-                details.
             masks (list[PathLike] | np.ndarray | None):
                 Optional masks for WSI processing.
                 Only utilised when patch_mode is False.
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             ioconfig (ModelIOConfigABC | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
@@ -668,8 +677,9 @@ class PatchPredictor(EngineABC):
         """
         return super().run(
             images=images,
-            input_resolutions=input_resolutions,
             masks=masks,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             ioconfig=ioconfig,
             patch_mode=patch_mode,
             save_dir=save_dir,

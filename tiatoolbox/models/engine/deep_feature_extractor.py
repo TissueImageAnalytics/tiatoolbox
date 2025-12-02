@@ -62,7 +62,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.type_hints import Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
 
 
@@ -527,8 +527,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
     def _update_run_params(
         self: DeepFeatureExtractor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
-        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: IOSegmentorConfig | None = None,
         output_type: str = "dict",
@@ -546,13 +547,16 @@ class DeepFeatureExtractor(SemanticSegmentor):
         Args:
             images (list[PathLike | WSIReader] | np.ndarray):
                 Input images or patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing.
             input_resolutions (list[dict[Units, Resolution]] | None):
                 Resolution settings for input heads. Supported units are `level`,
                 `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
                 [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
                 details.
-            masks (list[PathLike] | np.ndarray | None):
-                Optional masks for WSI processing.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             save_dir (PathLike | None):
                 Directory to save output files. Required for WSI mode.
             ioconfig (IOSegmentorConfig | None):
@@ -622,8 +626,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
         return super()._update_run_params(
             images=images,
-            input_resolutions=input_resolutions,
             masks=masks,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             save_dir=save_dir,
             ioconfig=ioconfig,
             overwrite=overwrite,
@@ -636,8 +641,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
         self: DeepFeatureExtractor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         *,
-        input_resolutions: list[dict[Units, Resolution]] | None = None,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
         ioconfig: IOSegmentorConfig | None = None,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
@@ -660,13 +666,16 @@ class DeepFeatureExtractor(SemanticSegmentor):
             images (list[PathLike | WSIReader] | np.ndarray):
                 Input images or patches. Can be a list of file paths, WSIReader objects,
                 or a NumPy array of image patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing. Only used when `patch_mode` is False.
             input_resolutions (list[dict[Units, Resolution]] | None):
                 Resolution settings for input heads. Supported units are `level`,
                 `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
                 [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
                 details.
-            masks (list[PathLike] | np.ndarray | None):
-                Optional masks for WSI processing. Only used when `patch_mode` is False.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             ioconfig (IOSegmentorConfig | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
@@ -736,8 +745,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
 
         return super().run(
             images=images,
-            input_resolutions=input_resolutions,
             masks=masks,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             ioconfig=ioconfig,
             patch_mode=patch_mode,
             save_dir=save_dir,
