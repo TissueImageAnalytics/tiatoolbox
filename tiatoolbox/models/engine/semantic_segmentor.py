@@ -100,8 +100,9 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Optional dictionary mapping classification outputs to class names.
         device (str):
             Device to run the model on (e.g., "cpu", "cuda").
-        input_resolutions (list[dict]):
-            Resolution used for reading the image. See `WSIReader` for details.
+        labels (list):
+            Optional labels for input images. Only a single label per image
+            is supported.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
@@ -110,8 +111,6 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Output file name for saving results (e.g., .zarr or .db).
         output_resolutions (Resolution):
             Resolution used for writing output predictions.
-        patch_input_shape (tuple[int, int]):
-            Shape of input patches (height, width).
         patch_output_shape (tuple[int, int]):
             Shape of output patches (height, width).
         return_labels (bool):
@@ -414,8 +413,9 @@ class SemanticSegmentor(PatchPredictor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -424,8 +424,6 @@ class SemanticSegmentor(PatchPredictor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
@@ -620,8 +618,9 @@ class SemanticSegmentor(PatchPredictor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -630,8 +629,6 @@ class SemanticSegmentor(PatchPredictor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
@@ -778,8 +775,9 @@ class SemanticSegmentor(PatchPredictor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -788,8 +786,6 @@ class SemanticSegmentor(PatchPredictor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
@@ -892,9 +888,7 @@ class SemanticSegmentor(PatchPredictor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
-                    labels (list | None):
+                    labels (list):
                         Optional labels for input images. Only a single label per image
                         is supported.
                     memory_threshold (int):
@@ -905,8 +899,6 @@ class SemanticSegmentor(PatchPredictor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):

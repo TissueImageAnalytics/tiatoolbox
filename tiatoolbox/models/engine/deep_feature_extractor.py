@@ -250,8 +250,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -260,8 +261,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
@@ -409,8 +408,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -419,8 +419,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
@@ -480,8 +478,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -490,8 +489,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
@@ -580,8 +577,9 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -590,8 +588,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
@@ -700,9 +696,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    input_resolutions (list[dict]):
-                        Resolution settings for reading the image. See `WSIReader`.
-                    labels (list | None):
+                    labels (list):
                         Optional labels for input images. Only a single label per image
                         is supported.
                     memory_threshold (int):
@@ -713,8 +707,6 @@ class DeepFeatureExtractor(SemanticSegmentor):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
-                    patch_input_shape (tuple[int, int]):
-                        Shape of input patches (height, width).
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):

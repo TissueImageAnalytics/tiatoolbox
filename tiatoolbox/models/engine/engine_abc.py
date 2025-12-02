@@ -597,20 +597,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution. Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
@@ -667,20 +662,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution.  Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
@@ -797,21 +787,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution.
-                        Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
@@ -873,20 +857,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution. Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
@@ -1164,20 +1143,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution. Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
@@ -1293,20 +1267,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution. Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
@@ -1450,20 +1419,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution. Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
@@ -1619,22 +1583,15 @@ class EngineABC(ABC):  # noqa: B024
                         Device to run the model on (e.g., "cpu", "cuda").
                         See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
                         for more details.
-                    input_resolutions (list[dict[Units, Resolution]]):
-                        Resolution settings for input heads. Supported units are
-                        `level`, `power`, and `mpp`. Keys should be "units" and
-                        "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
-                        See :class:`WSIReader` for details.
                     labels (list):
-                        List of labels for input images.
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    patch_input_shape (IntPair):
-                        Shape of input patches (height, width), requested at read
-                        resolution. Must be positive.
                     return_labels (bool):
                         Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
