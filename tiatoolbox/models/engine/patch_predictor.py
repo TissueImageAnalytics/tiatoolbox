@@ -458,7 +458,6 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
@@ -478,8 +477,6 @@ class PatchPredictor(EngineABC):
                 Input images or patches.
             masks (list[PathLike] | np.ndarray | None):
                 Optional masks for WSI processing.
-            labels (list | None):
-                Optional labels for input images.
             save_dir (PathLike | None):
                 Directory to save output files. Required for WSI mode.
             ioconfig (ModelIOConfigABC | None):
@@ -538,7 +535,6 @@ class PatchPredictor(EngineABC):
         return super()._update_run_params(
             images=images,
             masks=masks,
-            labels=labels,
             save_dir=save_dir,
             ioconfig=ioconfig,
             overwrite=overwrite,
@@ -551,7 +547,6 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
@@ -577,9 +572,6 @@ class PatchPredictor(EngineABC):
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
-            labels (list | None):
-                Optional labels for input images.
-                Only a single label per image is supported.
             ioconfig (ModelIOConfigABC | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
@@ -606,6 +598,9 @@ class PatchPredictor(EngineABC):
                         Device to run the model on (e.g., "cpu", "cuda").
                     input_resolutions (list[dict]):
                         Resolution settings for reading the image. See `WSIReader`.
+                    labels (list | None):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -660,7 +655,6 @@ class PatchPredictor(EngineABC):
         return super().run(
             images=images,
             masks=masks,
-            labels=labels,
             ioconfig=ioconfig,
             patch_mode=patch_mode,
             save_dir=save_dir,

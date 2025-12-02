@@ -91,6 +91,9 @@ class EngineABCRunParams(TypedDict, total=False):
             Resolution settings for input heads. Supported units are `level`,
             `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
             [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for details.
+        labels (list):
+            Optional labels for input images. Only a single label per image
+            is supported.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
@@ -120,6 +123,7 @@ class EngineABCRunParams(TypedDict, total=False):
     class_dict: dict
     device: str
     input_resolutions: list[dict[Units, Resolution]]
+    labels: list
     memory_threshold: int
     num_workers: int
     output_file: str
@@ -1116,7 +1120,6 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
@@ -1135,8 +1138,6 @@ class EngineABC(ABC):  # noqa: B024
                 List of input images or a NumPy array of patches.
             masks (list[PathLike | Path] | np.ndarray | None):
                 Optional list of masks for WSI processing.
-            labels (list | None):
-                Optional list of labels for input images.
             save_dir (PathLike | Path | None):
                 Directory to save output files. Required for WSI mode.
             ioconfig (ModelIOConfigABC | None):
@@ -1213,7 +1214,7 @@ class EngineABC(ABC):  # noqa: B024
 
         self.patch_mode = patch_mode
 
-        self._validate_input_numbers(images=images, masks=masks, labels=labels)
+        self._validate_input_numbers(images=images, masks=masks, labels=self.labels)
         if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
             msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
             raise TypeError(msg)
@@ -1236,8 +1237,6 @@ class EngineABC(ABC):  # noqa: B024
 
         if masks is not None:
             self.masks = self._validate_images_masks(images=masks)
-
-        self.labels = labels
 
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
@@ -1554,7 +1553,6 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
@@ -1578,8 +1576,6 @@ class EngineABC(ABC):  # noqa: B024
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
-            labels (list | None):
-                Optional list of labels for input images.
             ioconfig (ModelIOConfigABC | None):
                 IO configuration for patch extraction and resolution settings.
             patch_mode (bool):
@@ -1611,6 +1607,8 @@ class EngineABC(ABC):  # noqa: B024
                         `level`, `power`, and `mpp`. Keys should be "units" and
                         "resolution", e.g., [{"units": "mpp", "resolution": 0.25}].
                         See :class:`WSIReader` for details.
+                    labels (list):
+                        List of labels for input images.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -1664,7 +1662,6 @@ class EngineABC(ABC):  # noqa: B024
         save_dir = self._update_run_params(
             images=images,
             masks=masks,
-            labels=labels,
             save_dir=save_dir,
             ioconfig=ioconfig,
             overwrite=overwrite,
