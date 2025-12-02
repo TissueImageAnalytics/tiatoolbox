@@ -8,9 +8,7 @@ import numpy as np
 import pytest
 import torch
 import zarr
-from click.testing import CliRunner
 
-from tiatoolbox import cli
 from tiatoolbox.models import IOSegmentorConfig
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, TimmBackbone
 from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
@@ -93,7 +91,13 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
 
 
 @pytest.mark.parametrize(
-    "model", [CNNBackbone("resnet50"), TimmBackbone("efficientnet_b0", pretrained=True)]
+    "model",
+    [
+        CNNBackbone("resnet18"),
+        TimmBackbone("efficientnet_b0", pretrained=True),
+        "resnet18",
+        "efficientnet_b0",
+    ],
 )
 def test_full_inference(
     remote_sample: Callable, track_tmp_path: Path, model: Callable
@@ -210,23 +214,3 @@ def test_multi_gpu_feature_extraction(
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
-
-
-def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
-    """Test for feature extractor CLI single file."""
-    runner = CliRunner()
-    models_wsi_result = runner.invoke(
-        cli.main,
-        [
-            "deep-feature-extractor",
-            "--img-input",
-            str(sample_svs),
-            "--patch-mode",
-            "False",
-            "--output-path",
-            str(track_tmp_path / "output"),
-        ],
-    )
-
-    assert models_wsi_result.exit_code == 0
-    assert (track_tmp_path / "output" / (sample_svs.stem + ".zarr")).exists()

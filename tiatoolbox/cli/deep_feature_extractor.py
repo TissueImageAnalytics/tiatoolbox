@@ -35,7 +35,7 @@ from tiatoolbox.cli.common import (
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
-@cli_model(default="fcn-tissue_mask")
+@cli_model(default="efficientnet_b0")
 @cli_weights()
 @cli_device(default="cpu")
 @cli_batch_size(default=1)

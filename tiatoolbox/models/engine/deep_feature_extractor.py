@@ -29,11 +29,11 @@ Features:
 Example:
 --------
 >>> from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
->>> extractor = DeepFeatureExtractor(model="resnet50-kather100k")
+>>> extractor = DeepFeatureExtractor(model="efficientnet_b0")
 >>> wsis = ["slide1.svs", "slide2.svs"]
 >>> output = extractor.run(wsis, patch_mode=False, output_type="zarr")
 >>> print(output)
-'/path/to/output.zarr'
+... '/path/to/output.zarr'
 
 """
 
@@ -731,6 +731,7 @@ class DeepFeatureExtractor(SemanticSegmentor):
         Raises:
             ValueError:
                 If `output_type` is not "zarr" or "dict".
+
         """
         # return_probabilities is always True for FeatureExtractor.
         kwargs["return_probabilities"] = True
