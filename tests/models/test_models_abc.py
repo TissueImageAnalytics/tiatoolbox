@@ -174,5 +174,5 @@ def test_get_pretrained_model_not_str() -> None:
 
 def test_get_pretrained_model_not_in_info() -> None:
     """Test ValueError is raised if input is not in info."""
-    with pytest.raises(ValueError, match=r"Pretrained model `alexnet` does not exist."):
-        _ = get_pretrained_model("alexnet")
+    with pytest.raises(ValueError, match=r"Pretrained model `random` does not exist."):
+        _ = get_pretrained_model("random")
