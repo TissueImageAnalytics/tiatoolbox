@@ -3,6 +3,7 @@
 import json
 
 import click
+import pytest
 from click.testing import CliRunner
 
 from tiatoolbox.cli.common import (
@@ -128,3 +129,17 @@ def test_cli_output_resolutions() -> None:
     output = result.output.strip()
     assert "'units': 'mpp'" in output
     assert "'resolution': 0.5" in output
+
+
+@pytest.mark.parametrize("option", ["--input-resolutions", "--output-resolutions"])
+def test_cli_resolutions_not_list(option: str) -> None:
+    """Test that non-list JSON raises BadParameter."""
+    runner = CliRunner()
+    # Pass a dict instead of a list (valid JSON, wrong type)
+    bad_value = '{"units": "mpp", "resolution": 0.25}'
+    result = runner.invoke(
+        predictor_specific_inputs,
+        [option, bad_value],
+    )
+    assert result.exit_code != 0
+    assert "Must be a JSON list of dictionaries" in result.output

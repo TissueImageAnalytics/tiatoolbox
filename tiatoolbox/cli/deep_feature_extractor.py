@@ -2,21 +2,29 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from tiatoolbox.cli.common import (
     cli_auto_get_mask,
     cli_batch_size,
+    cli_class_dict,
     cli_device,
     cli_file_type,
     cli_img_input,
+    cli_input_resolutions,
     cli_masks,
     cli_memory_threshold,
     cli_model,
     cli_num_workers,
+    cli_output_file,
     cli_output_path,
     cli_output_type,
+    cli_overwrite,
+    cli_patch_input_shape,
     cli_patch_mode,
-    cli_return_labels,
     cli_return_probabilities,
+    cli_scale_factor,
+    cli_stride_shape,
     cli_verbose,
     cli_weights,
     cli_yaml_config_path,
@@ -25,17 +33,23 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.type_hints import IntPair
+
 
 @tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
-    usage_help="Output directory where model features will be saved.",
-    default="deep_feature_extractor",
+    usage_help="Output directory where model predictions will be saved.",
+    default="patch_prediction",
 )
+@cli_output_file(default=None)
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
-@cli_model(default="efficientnet_b0")
+@cli_input_resolutions(default=None)
+@cli_class_dict(default=None)
+@cli_model(default="resnet18")
 @cli_weights()
 @cli_device(default="cpu")
 @cli_batch_size(default=1)
@@ -46,36 +60,47 @@ from tiatoolbox.cli.common import (
     default="zarr",
 )
 @cli_memory_threshold(default=80)
+@cli_patch_input_shape(default=None)
+@cli_stride_shape(default=None)
+@cli_scale_factor(default=None)
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
-@cli_return_labels(default=False)
 @cli_auto_get_mask(default=True)
+@cli_overwrite(default=False)
 @cli_verbose(default=True)
 def deep_feature_extractor(
     model: str,
     weights: str,
     img_input: str,
     file_types: str,
+    class_dict: list[tuple[int, str]],
+    input_resolutions: list[dict],
     masks: str | None,
     output_path: str,
+    patch_input_shape: IntPair | None,
+    stride_shape: IntPair | None,
+    scale_factor: tuple[float, float] | None,
     batch_size: int,
     yaml_config_path: str,
     num_workers: int,
     device: str,
     output_type: str,
     memory_threshold: int,
+    output_file: str | None,
     *,
     patch_mode: bool,
     return_probabilities: bool,
-    return_labels: bool,
     auto_get_mask: bool,
     verbose: bool,
+    overwrite: bool,
 ) -> None:
     """Process a set of input images with a deep feature extractor engine."""
     from tiatoolbox.models import (  # noqa: PLC0415
         DeepFeatureExtractor,
-        IOSegmentorConfig,
+        IOPatchPredictorConfig,
     )
+
+    class_dict = dict(class_dict) if class_dict else None
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
@@ -85,7 +110,7 @@ def deep_feature_extractor(
     )
 
     ioconfig = prepare_ioconfig(
-        IOSegmentorConfig,
+        IOPatchPredictorConfig,
         pretrained_weights=weights,
         yaml_config_path=yaml_config_path,
     )
@@ -101,13 +126,22 @@ def deep_feature_extractor(
     _ = extractor.run(
         images=files_all,
         masks=masks_all,
+        class_dict=class_dict,
         patch_mode=patch_mode,
+        patch_input_shape=patch_input_shape,
+        input_resolutions=input_resolutions,
+        batch_size=batch_size,
         ioconfig=ioconfig,
         device=device,
         save_dir=output_path,
         output_type=output_type,
         return_probabilities=return_probabilities,
-        return_labels=return_labels,
         auto_get_mask=auto_get_mask,
         memory_threshold=memory_threshold,
+        num_workers=num_workers,
+        output_file=output_file,
+        scale_factor=scale_factor,
+        stride_shape=stride_shape,
+        overwrite=overwrite,
+        verbose=verbose,
     )

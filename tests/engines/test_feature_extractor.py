@@ -8,7 +8,9 @@ import numpy as np
 import pytest
 import torch
 import zarr
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, TimmBackbone
 from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
@@ -207,3 +209,38 @@ def test_multi_gpu_feature_extraction(
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
+
+
+def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
+    """Test for feature extractor CLI single file."""
+    runner = CliRunner()
+
+    models_wsi_result = runner.invoke(
+        cli.main,
+        [
+            "deep-feature-extractor",
+            "--img-input",
+            str(sample_svs),
+            "--model",
+            "resnet18",
+            "--patch-mode",
+            "False",
+            "--output-path",
+            str(track_tmp_path / "output"),
+            "--patch-input-shape",
+            "224",
+            "224",
+            "--input-resolutions",
+            '[{"units": "mpp", "resolution": 0.25}]',
+        ],
+    )
+
+    assert models_wsi_result.exit_code == 0
+    assert (track_tmp_path / "output" / (sample_svs.stem + ".zarr")).exists()
+
+    output = zarr.open(
+        track_tmp_path / "output" / (sample_svs.stem + ".zarr"), mode="r"
+    )
+
+    # Output shape should be # of patches x feature size
+    assert output["features"].shape == (255, 512)
