@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import click
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable
-
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
     from tiatoolbox.type_hints import IntPair
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def add_default_to_usage_help(
@@ -123,6 +124,46 @@ def cli_class_dict(
 
     return click.option(
         "--class-dict",
+        help=usage_help,
+        callback=_parse_json,
+        default=default,
+    )
+
+
+def cli_input_resolutions(
+    usage_help: str = (
+        "Resolution settings for input heads. "
+        'Example: --input-resolutions \'[{"units": "mpp", "resolution": 0.25}]\''
+    ),
+    default: list[dict[str, Any]] | None = None,
+) -> Callable[[F], F]:
+    """Click option for --input-resolutions.
+
+    Parses a JSON list of dictionaries specifying resolution settings for input heads.
+    Supported units are 'level', 'power', and 'mpp'.
+    Example: --input-resolutions '[{"units": "mpp", "resolution": 0.25}]'
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context,
+        _param: click.Parameter,
+        value: str | None,
+    ) -> list[dict[str, Any]] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                msg = "Must be a JSON list of dictionaries"
+                raise click.BadParameter(msg)
+            return parsed  # noqa: TRY300
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--input-resolutions",
         help=usage_help,
         callback=_parse_json,
         default=default,

@@ -11,6 +11,7 @@ from tiatoolbox.cli.common import (
     cli_device,
     cli_file_type,
     cli_img_input,
+    cli_input_resolutions,
     cli_masks,
     cli_memory_threshold,
     cli_model,
@@ -45,6 +46,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
+@cli_input_resolutions(default=None)
 @cli_class_dict(default=None)
 @cli_model(default="resnet18-kather100k")
 @cli_weights()
@@ -70,6 +72,7 @@ def patch_predictor(
     img_input: str,
     file_types: str,
     class_dict: list[tuple[int, str]],
+    input_resolutions: list[dict],
     masks: str | None,
     output_path: str,
     patch_input_shape: IntPair | None,
