@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from tiatoolbox.cli.common import (
     cli_auto_get_mask,
     cli_batch_size,
+    cli_class_dict,
     cli_device,
     cli_file_type,
     cli_img_input,
@@ -44,6 +45,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
+@cli_class_dict(default=None)
 @cli_model(default="resnet18-kather100k")
 @cli_weights()
 @cli_device(default="cpu")
@@ -67,6 +69,7 @@ def patch_predictor(
     weights: str,
     img_input: str,
     file_types: str,
+    class_dict: list[tuple[int, str]],
     masks: str | None,
     output_path: str,
     patch_input_shape: IntPair | None,
@@ -91,6 +94,8 @@ def patch_predictor(
         IOPatchPredictorConfig,
     )
     from tiatoolbox.models.engine.patch_predictor import PatchPredictor  # noqa: PLC0415
+
+    class_dict = dict(class_dict) if class_dict else None
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,

@@ -92,6 +92,22 @@ def cli_output_file(
     )
 
 
+def cli_class_dict(
+    usage_help: str = "Mapping of classification outputs to class names."
+    "--class-dict 1 tumor --class-dict 2 normal",
+    default: str | None = None,
+    input_type: tuple[int, str] | None = None,
+) -> Callable:
+    """Enables --class-dict option for cli."""
+    return click.option(
+        "--class-dict",
+        help=add_default_to_usage_help(usage_help, default=default),
+        type=input_type,
+        default=default,
+        multiple=True,
+    )
+
+
 def cli_file_type(
     usage_help: str = "File types to capture from directory.",
     default: str = "*.ndpi, *.svs, *.mrxs, *.jp2",
