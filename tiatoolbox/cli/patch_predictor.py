@@ -19,6 +19,7 @@ from tiatoolbox.cli.common import (
     cli_output_file,
     cli_output_path,
     cli_output_type,
+    cli_overwrite,
     cli_patch_input_shape,
     cli_patch_mode,
     cli_return_probabilities,
@@ -65,6 +66,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
 @cli_auto_get_mask(default=True)
+@cli_overwrite(default=False)
 @cli_verbose(default=True)
 def patch_predictor(
     model: str,
