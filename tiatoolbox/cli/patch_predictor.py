@@ -14,6 +14,7 @@ from tiatoolbox.cli.common import (
     cli_memory_threshold,
     cli_model,
     cli_num_workers,
+    cli_output_file,
     cli_output_path,
     cli_output_type,
     cli_patch_input_shape,
@@ -39,6 +40,7 @@ if TYPE_CHECKING:  # pragma: no cover
     usage_help="Output directory where model predictions will be saved.",
     default="patch_prediction",
 )
+@cli_output_file(default=None)
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
@@ -76,6 +78,7 @@ def patch_predictor(
     device: str,
     output_type: str,
     memory_threshold: int,
+    output_file: str | None,
     *,
     patch_mode: bool,
     return_probabilities: bool,

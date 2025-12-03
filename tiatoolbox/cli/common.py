@@ -79,6 +79,19 @@ def cli_output_path(
     )
 
 
+def cli_output_file(
+    usage_help: str = "Filename for saving output (e.g., '.zarr' or '.db').",
+    default: str | None = None,
+) -> Callable:
+    """Enables --output-file option for cli."""
+    return click.option(
+        "--output-file",
+        help=add_default_to_usage_help(usage_help, default=default),
+        type=str,
+        default=default,
+    )
+
+
 def cli_file_type(
     usage_help: str = "File types to capture from directory.",
     default: str = "*.ndpi, *.svs, *.mrxs, *.jp2",
