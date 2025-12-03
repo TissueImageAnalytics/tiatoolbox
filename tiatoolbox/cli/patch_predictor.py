@@ -1,6 +1,7 @@
 """Command line interface for patch_predictor."""
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from tiatoolbox.cli.common import (
@@ -18,6 +19,7 @@ from tiatoolbox.cli.common import (
     cli_patch_input_shape,
     cli_patch_mode,
     cli_return_probabilities,
+    cli_scale_factor,
     cli_stride_shape,
     cli_verbose,
     cli_weights,
@@ -53,6 +55,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_memory_threshold(default=80)
 @cli_patch_input_shape(default=None)
 @cli_stride_shape(default=None)
+@cli_scale_factor(default=None)
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
 @cli_auto_get_mask(default=True)
@@ -66,6 +69,7 @@ def patch_predictor(
     output_path: str,
     patch_input_shape: IntPair | None,
     stride_shape: IntPair | None,
+    scale_factor: tuple[float, float] | None,
     batch_size: int,
     yaml_config_path: str,
     num_workers: int,

@@ -189,6 +189,21 @@ def cli_stride_shape(
     )
 
 
+def cli_scale_factor(
+    usage_help: str = "Scale factor for annotations (model_mpp / slide_mpp)."
+    "Used to convert coordinates to baseline resolution.",
+    default: tuple[float, float] | None = None,
+) -> Callable:
+    """Enables --scale-factor option for cli."""
+    return click.option(
+        "--scale-factor",
+        type=float,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
 def cli_units(
     usage_help: str = "Image resolution units to read the image.",
     default: str = "level",
