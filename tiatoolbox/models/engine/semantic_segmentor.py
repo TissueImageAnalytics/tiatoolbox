@@ -128,7 +128,7 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
     """
 
     patch_output_shape: tuple[int, int]
-    output_resolutions: Resolution
+    output_resolutions: list[dict[Units, Resolution]]
 
 
 class SemanticSegmentor(PatchPredictor):

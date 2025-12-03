@@ -170,6 +170,46 @@ def cli_input_resolutions(
     )
 
 
+def cli_output_resolutions(
+    usage_help: str = (
+        "Resolution used for writing output predictions. "
+        'Example: --output-resolutions \'[{"units": "mpp", "resolution": 0.25}]\''
+    ),
+    default: list[dict[str, Any]] | None = None,
+) -> Callable[[F], F]:
+    """Click option for --output-resolutions.
+
+    Parses a JSON list of dictionaries specifying resolution settings for input heads.
+    Supported units are 'level', 'power', and 'mpp'.
+    Example: --output-resolutions '[{"units": "mpp", "resolution": 0.25}]'
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context,
+        _param: click.Parameter,
+        value: str | None,
+    ) -> list[dict[str, Any]] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                msg = "Must be a JSON list of dictionaries"
+                raise click.BadParameter(msg)
+            return parsed  # noqa: TRY300
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--output-resolutions",
+        help=usage_help,
+        callback=_parse_json,
+        default=default,
+    )
+
+
 def cli_file_type(
     usage_help: str = "File types to capture from directory.",
     default: str = "*.ndpi, *.svs, *.mrxs, *.jp2",
@@ -255,6 +295,20 @@ def cli_patch_input_shape(
     """Enables --patch-input-shape option for cli."""
     return click.option(
         "--patch-input-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_patch_output_shape(
+    usage_help: str = "Shape of output patches (height, width). default=None",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --patch-output-shape option for cli."""
+    return click.option(
+        "--patch-output-shape",
         type=int,
         default=default,
         nargs=2,
