@@ -36,7 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
-    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+    from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
@@ -217,7 +217,7 @@ class PatchPredictor(EngineABC):
             Whether input is treated as patches (`True`) or WSIs (`False`).
         model (ModelABC):
             Loaded PyTorch model.
-        ioconfig (ModelIOConfigABC):
+        ioconfig (IOPatchPredictorConfig):
             IO configuration for patch extraction and resolution.
         return_labels (bool):
             Whether to include labels in the output.
@@ -459,7 +459,7 @@ class PatchPredictor(EngineABC):
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
         save_dir: os.PathLike | Path | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
+        ioconfig: IOPatchPredictorConfig | None = None,
         output_type: str = "dict",
         *,
         overwrite: bool = False,
@@ -487,7 +487,7 @@ class PatchPredictor(EngineABC):
                 resolution. Must be positive.
             save_dir (PathLike | None):
                 Directory to save output files. Required for WSI mode.
-            ioconfig (ModelIOConfigABC | None):
+            ioconfig (IOPatchPredictorConfig | None):
                 IO configuration for patch extraction and resolution.
             output_type (str):
                 Desired output format: "dict", "zarr", or "annotationstore".
@@ -559,7 +559,7 @@ class PatchPredictor(EngineABC):
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
+        ioconfig: IOPatchPredictorConfig | None = None,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
@@ -591,7 +591,7 @@ class PatchPredictor(EngineABC):
             patch_input_shape (IntPair | None):
                 Shape of input patches (height, width), requested at read
                 resolution. Must be positive.
-            ioconfig (ModelIOConfigABC | None):
+            ioconfig (IOPatchPredictorConfig | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).

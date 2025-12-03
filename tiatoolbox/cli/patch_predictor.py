@@ -15,7 +15,6 @@ from tiatoolbox.cli.common import (
     cli_output_path,
     cli_output_type,
     cli_patch_mode,
-    cli_return_labels,
     cli_return_probabilities,
     cli_verbose,
     cli_weights,
@@ -48,7 +47,6 @@ from tiatoolbox.cli.common import (
 @cli_memory_threshold(default=80)
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
-@cli_return_labels(default=False)
 @cli_auto_get_mask(default=True)
 @cli_verbose(default=True)
 def patch_predictor(
@@ -67,7 +65,6 @@ def patch_predictor(
     *,
     patch_mode: bool,
     return_probabilities: bool,
-    return_labels: bool,
     auto_get_mask: bool,
     verbose: bool,
 ) -> None:
@@ -101,13 +98,22 @@ def patch_predictor(
     _ = predictor.run(
         images=files_all,
         masks=masks_all,
+        class_dict=class_dict,
         patch_mode=patch_mode,
+        patch_input_shape=patch_input_shape,
+        input_resolutions=input_resolutions,
+        batch_size=batch_size,
         ioconfig=ioconfig,
         device=device,
         save_dir=output_path,
         output_type=output_type,
         return_probabilities=return_probabilities,
-        return_labels=return_labels,
         auto_get_mask=auto_get_mask,
         memory_threshold=memory_threshold,
+        num_workers=num_workers,
+        output_file=output_file,
+        scale_factor=scale_factor,
+        stride_shape=stride_shape,
+        overwrite=overwrite,
+        verbose=verbose,
     )
