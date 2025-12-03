@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -93,18 +94,38 @@ def cli_output_file(
 
 
 def cli_class_dict(
-    usage_help: str = "Mapping of classification outputs to class names."
-    "--class-dict 1 tumor --class-dict 2 normal",
-    default: str | None = None,
-    input_type: tuple[int, str] | None = None,
+    usage_help: str = (
+        "Mapping of classification outputs to class names. "
+        'Example: --class-dict \'{"1": "tumour", "2": "normal"}\''
+    ),
+    default: dict | None = None,
 ) -> Callable:
-    """Enables --class-dict option for cli."""
+    """Enables --class-dict option for CLI.
+
+    The functions parse JSON into a dict with int keys if possible.
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context, _param: click.Parameter, value: str | None
+    ) -> dict[int | str, Any] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            return {
+                int(k) if isinstance(k, str) and k.isdigit() else k: v
+                for k, v in parsed.items()
+            }
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
     return click.option(
         "--class-dict",
-        help=add_default_to_usage_help(usage_help, default=default),
-        type=input_type,
+        help=usage_help,
+        callback=_parse_json,
         default=default,
-        multiple=True,
     )
 
 
