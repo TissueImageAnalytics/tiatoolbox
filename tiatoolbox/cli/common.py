@@ -11,6 +11,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
 
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+    from tiatoolbox.type_hints import IntPair
 
 
 def add_default_to_usage_help(
@@ -150,6 +151,22 @@ def cli_region(
         "--region",
         type=int,
         nargs=4,
+        help=usage_help,
+    )
+
+
+def cli_patch_input_shape(
+    usage_help: str = "Shape of input patches (height, width). Patches are at "
+    "requested read resolution, not with respect to level 0,"
+    "and must be positive. default=None",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --region option for cli."""
+    return click.option(
+        "--patch-input-shape",
+        type=int,
+        default=default,
+        nargs=2,
         help=usage_help,
     )
 

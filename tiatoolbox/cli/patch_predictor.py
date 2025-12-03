@@ -14,6 +14,7 @@ from tiatoolbox.cli.common import (
     cli_num_workers,
     cli_output_path,
     cli_output_type,
+    cli_patch_input_shape,
     cli_patch_mode,
     cli_return_probabilities,
     cli_verbose,
@@ -23,6 +24,7 @@ from tiatoolbox.cli.common import (
     prepare_model_cli,
     tiatoolbox_cli,
 )
+from tiatoolbox.type_hints import IntPair
 
 
 @tiatoolbox_cli.command()
@@ -45,6 +47,7 @@ from tiatoolbox.cli.common import (
     default="AnnotationStore",
 )
 @cli_memory_threshold(default=80)
+@cli_patch_input_shape(default=None)
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
 @cli_auto_get_mask(default=True)
@@ -56,6 +59,7 @@ def patch_predictor(
     file_types: str,
     masks: str | None,
     output_path: str,
+    patch_input_shape: IntPair | None,
     batch_size: int,
     yaml_config_path: str,
     num_workers: int,
