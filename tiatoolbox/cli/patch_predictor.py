@@ -1,6 +1,7 @@
 """Command line interface for patch_predictor."""
 
 from __future__ import annotations
+from typing import TYPE_CHECKING
 
 from tiatoolbox.cli.common import (
     cli_auto_get_mask,
@@ -17,6 +18,7 @@ from tiatoolbox.cli.common import (
     cli_patch_input_shape,
     cli_patch_mode,
     cli_return_probabilities,
+    cli_stride_shape,
     cli_verbose,
     cli_weights,
     cli_yaml_config_path,
@@ -24,7 +26,9 @@ from tiatoolbox.cli.common import (
     prepare_model_cli,
     tiatoolbox_cli,
 )
-from tiatoolbox.type_hints import IntPair
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.type_hints import IntPair
 
 
 @tiatoolbox_cli.command()
@@ -48,6 +52,7 @@ from tiatoolbox.type_hints import IntPair
 )
 @cli_memory_threshold(default=80)
 @cli_patch_input_shape(default=None)
+@cli_stride_shape(default=None)
 @cli_patch_mode(default=False)
 @cli_return_probabilities(default=True)
 @cli_auto_get_mask(default=True)
@@ -60,6 +65,7 @@ def patch_predictor(
     masks: str | None,
     output_path: str,
     patch_input_shape: IntPair | None,
+    stride_shape: IntPair | None,
     batch_size: int,
     yaml_config_path: str,
     num_workers: int,
@@ -71,6 +77,7 @@ def patch_predictor(
     return_probabilities: bool,
     auto_get_mask: bool,
     verbose: bool,
+    overwrite: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification engine."""
     from tiatoolbox.models.engine.io_config import (  # noqa: PLC0415

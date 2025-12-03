@@ -161,9 +161,27 @@ def cli_patch_input_shape(
     "and must be positive. default=None",
     default: IntPair | None = None,
 ) -> Callable:
-    """Enables --region option for cli."""
+    """Enables --patch-input-shape option for cli."""
     return click.option(
         "--patch-input-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_stride_shape(
+    usage_help: str = "Stride used during patch extraction. Stride is"
+    "at requested read resolution, not with respect to"
+    "level 0, and must be positive. If stride_shape is None"
+    "patch_input_shape is used for stride. If not provided,"
+    "`stride_shape=None`",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --stride-shape option for cli."""
+    return click.option(
+        "--stride-shape",
         type=int,
         default=default,
         nargs=2,
@@ -470,6 +488,20 @@ def cli_verbose(
     """Enables --verbose option for cli."""
     return click.option(
         "--verbose",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, default=str(default)),
+        default=default,
+    )
+
+
+def cli_overwrite(
+    usage_help: str = "Whether to overwrite existing output files. Default is False.",
+    *,
+    default: bool = False,
+) -> Callable:
+    """Enables --overwrite option for cli."""
+    return click.option(
+        "--overwrite",
         type=bool,
         help=add_default_to_usage_help(usage_help, default=str(default)),
         default=default,
