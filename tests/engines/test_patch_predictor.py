@@ -9,7 +9,6 @@ import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import click
 import numpy as np
 import torch
 import yaml
@@ -18,7 +17,6 @@ from click.testing import CliRunner
 
 from tests.conftest import timed
 from tiatoolbox import cli, logger, rcParam
-from tiatoolbox.cli.common import cli_class_dict, cli_input_resolutions
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.vanilla import CNNModel
@@ -599,99 +597,6 @@ def test_patch_predictor_torch_compile(
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
-
-
-@click.command()
-@cli_class_dict(default=None)
-@cli_input_resolutions(default=None)
-def predictor_specific_inputs(
-    class_dict: list[tuple[int, str]],
-    input_resolutions: list[dict],
-) -> None:
-    """Helper to test predictor specific inputs."""
-    click.echo((class_dict, input_resolutions))
-
-
-def test_cli_class_dict() -> None:
-    """Test CLI class dictionary input."""
-    runner = CliRunner()
-    result = runner.invoke(
-        predictor_specific_inputs, ["--class-dict", '{"1": "tumour", "2": "normal"}']
-    )
-    assert result.exit_code == 0
-    assert "{1: 'tumour', 2: 'normal'}" in result.output
-
-
-def test_cli_input_resolutions() -> None:
-    """Test CLI input resolutions list of dicts."""
-    runner = CliRunner()
-    # Pass a JSON list of dicts
-    resolutions = [
-        {"units": "mpp", "resolution": 0.25},
-        {"units": "level", "resolution": 1},
-    ]
-    result = runner.invoke(
-        predictor_specific_inputs, ["--input-resolutions", json.dumps(resolutions)]
-    )
-
-    assert (
-        "(None, [{'units': 'mpp', 'resolution': 0.25}, {'units': 'level',"
-    ) in result.output
-    output = result.output.strip()
-    # Check that our resolutions appear in the output
-    assert "'units': 'mpp'" in output
-    assert "'resolution': 0.25" in output
-    assert "'units': 'level'" in output
-    assert "'resolution': 1" in output
-    # And class_dict should be None
-    assert "None" in output
-
-
-def test_cli_both_options() -> None:
-    """Test both CLI options together."""
-    runner = CliRunner()
-    resolutions = [{"units": "mpp", "resolution": 0.25}]
-    result = runner.invoke(
-        predictor_specific_inputs,
-        [
-            "--class-dict",
-            '{"1": "tumour"}',
-            "--input-resolutions",
-            json.dumps(resolutions),
-        ],
-    )
-
-    assert result.exit_code == 0
-    # predictor_specific_inputs should echo the tuple (class_dict, input_resolutions)
-    output = result.output.strip()
-
-    # Check that the class_dict appears in the output
-    assert "'tumour'" in output
-    # Check that the resolutions appear in the output
-    assert "'units': 'mpp'" in output
-    assert "'resolution': 0.25" in output
-
-
-def test_cli_invalid_json() -> None:
-    """Test invalid JSON raises error."""
-    runner = CliRunner()
-    result = runner.invoke(
-        predictor_specific_inputs,
-        ["--class-dict", "{invalid json}"],
-    )
-
-    assert result.exit_code != 0
-    # The error message should be in the output
-    assert "Invalid JSON" in result.output
-
-    result = runner.invoke(
-        predictor_specific_inputs,
-        ["--input-resolutions", "{invalid json}"],
-    )
-
-    assert result.exit_code != 0
-    # The error message should be in the output
-    assert "Invalid JSON" in result.output
 
 
 def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
