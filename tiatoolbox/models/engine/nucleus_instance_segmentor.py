@@ -21,6 +21,7 @@ from shapely.strtree import STRtree
 from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
@@ -675,15 +676,19 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
                     output_path = save_path.parent / (str(i) + ".db")
 
                 origin = predictions_.pop("coordinates")[:2]
-
-                out_file = dict_to_store(
+                store = SQLiteStore()
+                store = dict_to_store(
+                    store=store,
                     processed_predictions=predictions_,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
                     origin=origin,
                 )
 
-                save_paths.append(out_file)
+                store.commit()
+                store.dump(output_path)
+
+                save_paths.append(output_path)
 
         if return_probabilities:
             msg = (
@@ -1132,11 +1137,12 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
 
 def dict_to_store(
+    store: SQLiteStore,
     processed_predictions: dict,
     class_dict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
     scale_factor: tuple[float, float] = (1, 1),
-) -> list[Annotation]:
+) -> AnnotationStore:
     """Helper function to convert dict to store."""
     contour = processed_predictions.pop("contour")
 
@@ -1147,20 +1153,25 @@ def dict_to_store(
                 feature2geometry(
                     {
                         "type": processed_predictions.get("geom_type", "Polygon"),
-                        "coordinates": scale_factor * np.array(contour_),
+                        "coordinates": scale_factor * np.array([contour_]),
                     },
                 ),
-                origin,
+                tuple(origin),
             ),
             {
                 prop: (
-                    class_dict[processed_predictions[prop]][i]
+                    class_dict[processed_predictions[prop][i]]
                     if prop == "type" and class_dict is not None
-                    else processed_predictions[prop]
+                    # Intention is convert arrays to list
+                    # There might be int or float values which need to be
+                    # converted to arrays first and then apply tolist().
+                    else np.array(processed_predictions[prop][i]).tolist()
                 )
                 for prop in processed_predictions
             },
         )
         ann.append(ann_)
+    logger.info("Added %d annotations.", len(ann))
+    store.append_many(ann)
 
-    return ann
+    return store
