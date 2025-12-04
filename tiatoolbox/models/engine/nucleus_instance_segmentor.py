@@ -14,17 +14,21 @@ import joblib
 import numpy as np
 import torch
 import tqdm
+import zarr
 from shapely.geometry import box as shapely_box
+from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import get_tqdm
+from tiatoolbox.utils.misc import get_tqdm, make_valid_poly
+from tiatoolbox.wsicore.wsireader import is_zarr
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -613,16 +617,84 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
         return raw_predictions
 
     def save_predictions(
-        self: SemanticSegmentor,
+        self: NucleusInstanceSegmentor,
         processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> dict | AnnotationStore | Path:
+    ) -> dict | AnnotationStore | Path | list[Path]:
         """Save semantic segmentation predictions to disk or return them in memory."""
-        return super().save_predictions(
-            processed_predictions, output_type, save_path=save_path, **kwargs
+        # Conversion to annotationstore uses a different function
+        # for NucleusInstanceSegmentor.
+        if output_type.lower() != "annotationstore":
+            return super().save_predictions(
+                processed_predictions, output_type, save_path=save_path, **kwargs
+            )
+
+        return_probabilities = kwargs.get("return_probabilities", False)
+        output_type_ = (
+            "zarr"
+            if is_zarr(save_path.with_suffix(".zarr")) or return_probabilities
+            else "dict"
         )
+
+        # This runs dask.compute and returns numpy arrays
+        # for saving annotationstore output.
+        processed_predictions = super().save_predictions(
+            processed_predictions,
+            output_type=output_type_,
+            save_path=save_path.with_suffix(".zarr"),
+            **kwargs,
+        )
+
+        if isinstance(processed_predictions, Path):
+            processed_predictions = zarr.open(str(processed_predictions), mode="r")
+
+        # scale_factor set from kwargs
+        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+        # class_dict set from kwargs
+        class_dict = kwargs.get("class_dict")
+
+        # Need to add support for zarr conversion.
+        save_paths = []
+
+        logger.info("Saving predictions as AnnotationStore.")
+
+        # Not required for annotationstore
+        processed_predictions.pop("predictions")
+        if self.patch_mode:
+            for i, predictions in enumerate(
+                zip(*processed_predictions.values(), strict=False)
+            ):
+                predictions_ = dict(
+                    zip(processed_predictions.keys(), predictions, strict=False)
+                )
+                if isinstance(self.images[i], Path):
+                    output_path = save_path.parent / (self.images[i].stem + ".db")
+                else:
+                    output_path = save_path.parent / (str(i) + ".db")
+
+                origin = predictions_.pop("coordinates")[:2]
+
+                out_file = dict_to_store(
+                    processed_predictions=predictions_,
+                    class_dict=class_dict,
+                    scale_factor=scale_factor,
+                    origin=origin,
+                )
+
+                save_paths.append(out_file)
+
+        if return_probabilities:
+            msg = (
+                f"Probability maps cannot be saved as AnnotationStore. "
+                f"To visualise heatmaps in TIAToolbox Visualization tool,"
+                f"convert heatmaps in {save_path} to ome.tiff using"
+                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+            )
+            logger.info(msg)
+
+        return save_paths
 
     @staticmethod
     def _get_tile_info(
@@ -1057,3 +1129,38 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
+
+
+def dict_to_store(
+    processed_predictions: dict,
+    class_dict: dict | None = None,
+    origin: tuple[float, float] = (0, 0),
+    scale_factor: tuple[float, float] = (1, 1),
+) -> list[Annotation]:
+    """Helper function to convert dict to store."""
+    contour = processed_predictions.pop("contour")
+
+    ann = []
+    for i, contour_ in enumerate(contour):
+        ann_ = Annotation(
+            make_valid_poly(
+                feature2geometry(
+                    {
+                        "type": processed_predictions.get("geom_type", "Polygon"),
+                        "coordinates": scale_factor * np.array(contour_),
+                    },
+                ),
+                origin,
+            ),
+            {
+                prop: (
+                    class_dict[processed_predictions[prop]][i]
+                    if prop == "type" and class_dict is not None
+                    else processed_predictions[prop]
+                )
+                for prop in processed_predictions
+            },
+        )
+        ann.append(ann_)
+
+    return ann

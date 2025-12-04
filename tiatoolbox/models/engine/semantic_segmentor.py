@@ -558,7 +558,7 @@ class SemanticSegmentor(PatchPredictor):
         output_type: str,
         save_path: Path | None = None,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> dict | AnnotationStore | Path:
+    ) -> dict | AnnotationStore | Path | list[Path]:
         """Save semantic segmentation predictions to disk or return them in memory.
 
         This method saves predictions in one of the supported formats:
@@ -583,11 +583,11 @@ class SemanticSegmentor(PatchPredictor):
                 - return_probabilities (bool): Whether to save probability maps.
 
         Returns:
-            dict | AnnotationStore | Path:
+            dict | AnnotationStore | Path | list[Path]:
                 - If output_type is "dict": returns predictions as a dictionary.
                 - If output_type is "zarr": returns path to saved Zarr file.
                 - If output_type is "annotationstore": returns AnnotationStore
-                  or path to .db file.
+                  or path or list of paths to .db file.
 
         """
         # Conversion to annotationstore uses a different function for SemanticSegmentor
