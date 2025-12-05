@@ -15,7 +15,6 @@ from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, TimmBackbone
 from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 ON_GPU = not toolbox_env.running_on_ci() and toolbox_env.has_gpu()
@@ -172,9 +171,6 @@ def test_multi_gpu_feature_extraction(
     save_dir = track_tmp_path / "output"
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
     shutil.rmtree(save_dir, ignore_errors=True)
-
-    # Use multiple GPUs
-    device = select_device(on_gpu=ON_GPU)
 
     wsi_ioconfig = IOPatchPredictorConfig(
         input_resolutions=[{"units": "mpp", "resolution": 0.5}],
