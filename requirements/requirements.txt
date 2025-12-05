@@ -32,7 +32,7 @@ SimpleITK>=2.2.1
 sphinx>=5.3.0
 tifffile>=2022.10.10, <=2025.5.10
 timm>=1.0.3
-torch>=2.1.0
+torch>=2.5.0
 torchvision>=0.15.0
 tqdm>=4.64.1
 transformers>=4.51.1
