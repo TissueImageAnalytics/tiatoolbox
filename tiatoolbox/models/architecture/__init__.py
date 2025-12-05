@@ -133,7 +133,7 @@ def get_pretrained_model(
     if pretrained_model in torch_cnn_backbone_dict:
         return CNNBackbone(pretrained_model), None
 
-    if pretrained_model in timm.list_models():
+    if pretrained_model in [*timm_arch_dict, *timm.list_models()]:
         return TimmBackbone(pretrained_model, pretrained=True), None
 
     if pretrained_model not in PRETRAINED_INFO:
