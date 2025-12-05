@@ -17,6 +17,96 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
     from torchvision.models import WeightsEnum
 
+torch_cnn_backbone_dict = {
+    "alexnet": torch_models.alexnet,
+    "resnet18": torch_models.resnet18,
+    "resnet34": torch_models.resnet34,
+    "resnet50": torch_models.resnet50,
+    "resnet101": torch_models.resnet101,
+    "resnext50_32x4d": torch_models.resnext50_32x4d,
+    "resnext101_32x8d": torch_models.resnext101_32x8d,
+    "wide_resnet50_2": torch_models.wide_resnet50_2,
+    "wide_resnet101_2": torch_models.wide_resnet101_2,
+    "densenet121": torch_models.densenet121,
+    "densenet161": torch_models.densenet161,
+    "densenet169": torch_models.densenet169,
+    "densenet201": torch_models.densenet201,
+    "inception_v3": torch_models.inception_v3,
+    "googlenet": torch_models.googlenet,
+    "mobilenet_v2": torch_models.mobilenet_v2,
+    "mobilenet_v3_large": torch_models.mobilenet_v3_large,
+    "mobilenet_v3_small": torch_models.mobilenet_v3_small,
+}
+
+timm_arch_dict = {
+    # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
+    "UNI": {
+        "model": "hf-hub:MahmoodLab/UNI",
+        "init_values": 1e-5,
+        "dynamic_img_size": True,
+    },
+    # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
+    "prov-gigapath": {"model": "hf_hub:prov-gigapath/prov-gigapath"},
+    # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
+    "H-optimus-0": {
+        "model": "hf-hub:bioptimus/H-optimus-0",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+    },
+    # H-Optimus-1 tile encoder: https://huggingface.co/bioptimus/H-optimus-1
+    "H-optimus-1": {
+        "model": "hf-hub:bioptimus/H-optimus-1",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+    },
+    # HO-mini tile encoder: https://huggingface.co/bioptimus/H0-mini
+    "H0-mini": {
+        "model": "hf-hub:bioptimus/H0-mini",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+        "mlp_layer": timm.layers.SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # UNI2-h tile encoder: https://huggingface.co/MahmoodLab/UNI2-h
+    "UNI2": {
+        "model": "hf-hub:MahmoodLab/UNI2-h",
+        "img_size": 224,
+        "patch_size": 14,
+        "depth": 24,
+        "num_heads": 24,
+        "init_values": 1e-5,
+        "embed_dim": 1536,
+        "mlp_ratio": 2.66667 * 2,
+        "num_classes": 0,
+        "no_embed_class": True,
+        "mlp_layer": timm.layers.SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+        "reg_tokens": 8,
+        "dynamic_img_size": True,
+    },
+    # Virchow tile encoder: https://huggingface.co/paige-ai/Virchow
+    "Virchow": {
+        "model": "hf_hub:paige-ai/Virchow",
+        "mlp_layer": SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # Virchow2 tile encoder: https://huggingface.co/paige-ai/Virchow2
+    "Virchow2": {
+        "model": "hf_hub:paige-ai/Virchow2",
+        "mlp_layer": SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # Kaiko tile encoder:
+    # https://huggingface.co/1aurent/vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms
+    "kaiko": {
+        "model": (
+            "hf_hub:1aurent/"
+            "vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms"
+        ),
+        "dynamic_img_size": True,
+    },
+}
+
 
 def _get_architecture(
     arch_name: str,
@@ -52,31 +142,11 @@ def _get_architecture(
         >>> print(model)
 
     """
-    backbone_dict = {
-        "alexnet": torch_models.alexnet,
-        "resnet18": torch_models.resnet18,
-        "resnet34": torch_models.resnet34,
-        "resnet50": torch_models.resnet50,
-        "resnet101": torch_models.resnet101,
-        "resnext50_32x4d": torch_models.resnext50_32x4d,
-        "resnext101_32x8d": torch_models.resnext101_32x8d,
-        "wide_resnet50_2": torch_models.wide_resnet50_2,
-        "wide_resnet101_2": torch_models.wide_resnet101_2,
-        "densenet121": torch_models.densenet121,
-        "densenet161": torch_models.densenet161,
-        "densenet169": torch_models.densenet169,
-        "densenet201": torch_models.densenet201,
-        "inception_v3": torch_models.inception_v3,
-        "googlenet": torch_models.googlenet,
-        "mobilenet_v2": torch_models.mobilenet_v2,
-        "mobilenet_v3_large": torch_models.mobilenet_v3_large,
-        "mobilenet_v3_small": torch_models.mobilenet_v3_small,
-    }
-    if arch_name not in backbone_dict:
+    if arch_name not in torch_cnn_backbone_dict:
         msg = f"Backbone `{arch_name}` is not supported."
         raise ValueError(msg)
 
-    creator = backbone_dict[arch_name]
+    creator = torch_cnn_backbone_dict[arch_name]
     if "inception_v3" in arch_name or "googlenet" in arch_name:
         model = creator(weights=weights, aux_logits=False, num_classes=1000)
         return nn.Sequential(*list(model.children())[:-3])
@@ -123,86 +193,17 @@ def _get_timm_architecture(
         >>> print(model)
 
     """
-    if arch_name in [f"efficientnet_b{i}" for i in range(8)]:
-        model = timm.create_model(arch_name, pretrained=pretrained)
-        return nn.Sequential(*list(model.children())[:-1])
-
-    arch_map = {
-        # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
-        "UNI": {
-            "model": "hf-hub:MahmoodLab/UNI",
-            "init_values": 1e-5,
-            "dynamic_img_size": True,
-        },
-        # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
-        "prov-gigapath": {"model": "hf_hub:prov-gigapath/prov-gigapath"},
-        # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
-        "H-optimus-0": {
-            "model": "hf-hub:bioptimus/H-optimus-0",
-            "init_values": 1e-5,
-            "dynamic_img_size": False,
-        },
-        # H-Optimus-1 tile encoder: https://huggingface.co/bioptimus/H-optimus-1
-        "H-optimus-1": {
-            "model": "hf-hub:bioptimus/H-optimus-1",
-            "init_values": 1e-5,
-            "dynamic_img_size": False,
-        },
-        # HO-mini tile encoder: https://huggingface.co/bioptimus/H0-mini
-        "H0-mini": {
-            "model": "hf-hub:bioptimus/H0-mini",
-            "init_values": 1e-5,
-            "dynamic_img_size": False,
-            "mlp_layer": timm.layers.SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-        },
-        # UNI2-h tile encoder: https://huggingface.co/MahmoodLab/UNI2-h
-        "UNI2": {
-            "model": "hf-hub:MahmoodLab/UNI2-h",
-            "img_size": 224,
-            "patch_size": 14,
-            "depth": 24,
-            "num_heads": 24,
-            "init_values": 1e-5,
-            "embed_dim": 1536,
-            "mlp_ratio": 2.66667 * 2,
-            "num_classes": 0,
-            "no_embed_class": True,
-            "mlp_layer": timm.layers.SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-            "reg_tokens": 8,
-            "dynamic_img_size": True,
-        },
-        # Virchow tile encoder: https://huggingface.co/paige-ai/Virchow
-        "Virchow": {
-            "model": "hf_hub:paige-ai/Virchow",
-            "mlp_layer": SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-        },
-        # Virchow2 tile encoder: https://huggingface.co/paige-ai/Virchow2
-        "Virchow2": {
-            "model": "hf_hub:paige-ai/Virchow2",
-            "mlp_layer": SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-        },
-        # Kaiko tile encoder:
-        # https://huggingface.co/1aurent/vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms
-        "kaiko": {
-            "model": (
-                "hf_hub:1aurent/"
-                "vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms"
-            ),
-            "dynamic_img_size": True,
-        },
-    }
-
-    if arch_name in arch_map:  # pragma: no cover
+    if arch_name in timm_arch_dict:  # pragma: no cover
         # Coverage skipped timm API is tested using efficient U-Net.
         return timm.create_model(
-            arch_map[arch_name].pop("model"),
+            timm_arch_dict[arch_name].pop("model"),
             pretrained=pretrained,
-            **arch_map[arch_name],
+            **timm_arch_dict[arch_name],
         )
+
+    if arch_name in timm.list_models():
+        model = timm.create_model(arch_name, pretrained=pretrained)
+        return nn.Sequential(*list(model.children())[:-1])
 
     msg = f"Backbone {arch_name} not supported. "
     raise ValueError(msg)

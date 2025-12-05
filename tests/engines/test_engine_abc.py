@@ -313,6 +313,7 @@ def test_engine_run() -> NoReturn:
             on_gpu=False,
         )
 
+    eng = TestEngineABC(model="alexnet-kather100k")
     with pytest.raises(
         ValueError,
         match=r".*The shape of the numpy array should be NHWC*",

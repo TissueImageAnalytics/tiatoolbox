@@ -80,7 +80,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.type_hints import Resolution
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
 
 
@@ -100,10 +100,9 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Optional dictionary mapping classification outputs to class names.
         device (str):
             Device to run the model on (e.g., "cpu", "cuda").
-        input_resolutions (list[dict]):
-            Resolution used for reading the image. See `WSIReader` for details.
-        ioconfig (ModelIOConfigABC):
-            Input/output configuration for patch extraction and resolution.
+        labels (list):
+            Optional labels for input images. Only a single label per image
+            is supported.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
@@ -112,8 +111,6 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
             Output file name for saving results (e.g., .zarr or .db).
         output_resolutions (Resolution):
             Resolution used for writing output predictions.
-        patch_input_shape (tuple[int, int]):
-            Shape of input patches (height, width).
         patch_output_shape (tuple[int, int]):
             Shape of output patches (height, width).
         return_labels (bool):
@@ -131,7 +128,7 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
     """
 
     patch_output_shape: tuple[int, int]
-    output_resolutions: Resolution
+    output_resolutions: list[dict[Units, Resolution]]
 
 
 class SemanticSegmentor(PatchPredictor):
@@ -315,7 +312,7 @@ class SemanticSegmentor(PatchPredictor):
         images: str | Path | list[str | Path] | np.ndarray,
         masks: Path | None = None,
         labels: list | None = None,
-        ioconfig: SemanticSegmentorRunParams | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
         *,
         patch_mode: bool = True,
         auto_get_mask: bool = True,
@@ -336,7 +333,7 @@ class SemanticSegmentor(PatchPredictor):
                 `patch_mode` is False.
             labels (list | None):
                 Optional labels for input images. Only one label per image is supported.
-            ioconfig (SemanticSegmentorRunParams | None):
+            ioconfig (IOSegmentorConfig | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
@@ -404,11 +401,43 @@ class SemanticSegmentor(PatchPredictor):
                 Path to save the intermediate output. The intermediate output
                 is saved in a Zarr file.
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters, including:
-                - return_probabilities (bool): Whether to return probability maps.
-                - return_labels (bool): Whether to include labels in the output.
-                - memory_threshold (int): Memory usage threshold to trigger disk
-                  caching.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict[str, dask.array.Array]:
@@ -577,10 +606,43 @@ class SemanticSegmentor(PatchPredictor):
             save_path (Path | None):
                 Path to save the output file. Required for "zarr" and "annotationstore".
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters including:
-                - scale_factor (tuple[float, float]): For coordinate transformation.
-                - class_dict (dict): Mapping of class indices to names.
-                - return_probabilities (bool): Whether to save probability maps.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict | AnnotationStore | Path:
@@ -661,7 +723,8 @@ class SemanticSegmentor(PatchPredictor):
         self: SemanticSegmentor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: tuple[int, int] | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: IOSegmentorConfig | None = None,
         output_type: str = "dict",
@@ -670,7 +733,7 @@ class SemanticSegmentor(PatchPredictor):
         patch_mode: bool,
         **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> Path | None:
-        """Update runtime parameters for the PatchPredictor engine.
+        """Update runtime parameters for the SemanticSegmentor engine.
 
         This method sets internal attributes such as caching, batch size,
         IO configuration, and output format based on user input and keyword arguments.
@@ -681,8 +744,14 @@ class SemanticSegmentor(PatchPredictor):
                 Input images or patches.
             masks (list[PathLike] | np.ndarray | None):
                 Optional masks for WSI processing.
-            labels (list | None):
-                Optional labels for input images.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             save_dir (PathLike | None):
                 Directory to save output files. Required for WSI mode.
             ioconfig (ModelIOConfigABC | None):
@@ -694,7 +763,43 @@ class SemanticSegmentor(PatchPredictor):
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             Path | None:
@@ -714,7 +819,8 @@ class SemanticSegmentor(PatchPredictor):
         return super()._update_run_params(
             images=images,
             masks=masks,
-            labels=labels,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             save_dir=save_dir,
             ioconfig=ioconfig,
             overwrite=overwrite,
@@ -726,10 +832,11 @@ class SemanticSegmentor(PatchPredictor):
     def run(
         self: SemanticSegmentor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
-        masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
-        ioconfig: IOSegmentorConfig | None = None,
         *,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
@@ -748,8 +855,14 @@ class SemanticSegmentor(PatchPredictor):
                 or a NumPy array of image patches.
             masks (list[PathLike] | np.ndarray | None):
                 Optional masks for WSI processing. Only used when `patch_mode` is False.
-            labels (list | None):
-                Optional labels for input images. Only one label per image is supported.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             ioconfig (IOSegmentorConfig | None):
                 IO configuration for patch extraction and resolution.
             patch_mode (bool):
@@ -763,7 +876,43 @@ class SemanticSegmentor(PatchPredictor):
                 Desired output format: "dict", "zarr", or "annotationstore". Default
                 is "dict".
             **kwargs (SemanticSegmentorRunParams):
-                Additional runtime parameters to update engine attributes.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             AnnotationStore | Path | str | dict | list[Path]:
@@ -797,7 +946,8 @@ class SemanticSegmentor(PatchPredictor):
         return super().run(
             images=images,
             masks=masks,
-            labels=labels,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             ioconfig=ioconfig,
             patch_mode=patch_mode,
             save_dir=save_dir,

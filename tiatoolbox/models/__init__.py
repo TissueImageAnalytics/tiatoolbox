@@ -11,6 +11,7 @@ from .architecture.micronet import MicroNet
 from .architecture.nuclick import NuClick
 from .architecture.sccnn import SCCNN
 from .dataset import PatchDataset, WSIPatchDataset, WSIStreamDataset
+from .engine.deep_feature_extractor import DeepFeatureExtractor
 from .engine.io_config import (
     IOInstanceSegmentorConfig,
     IOPatchPredictorConfig,
@@ -24,6 +25,7 @@ from .engine.semantic_segmentor import SemanticSegmentor
 
 __all__ = [
     "SCCNN",
+    "DeepFeatureExtractor",
     "HoVerNet",
     "HoVerNetPlus",
     "IDaRS",
