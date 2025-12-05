@@ -22,6 +22,7 @@ openslide-bin>=4.0.0.2
 openslide-python>=1.4.0
 pandas>=2.0.0
 pillow>=9.3.0
+pyarrow>=22.0.0
 pydicom>=2.3.1 # Used by wsidicom
 pyyaml>=6.0
 requests>=2.28.1
