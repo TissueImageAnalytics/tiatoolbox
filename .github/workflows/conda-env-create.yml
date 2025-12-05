@@ -48,3 +48,4 @@ jobs:
         run: |
           micromamba info
           micromamba list
+          python -c "import torch, numpy; print(torch.__version__, numpy.__version__)"
