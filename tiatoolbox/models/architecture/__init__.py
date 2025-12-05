@@ -6,11 +6,14 @@ from pathlib import Path
 from pydoc import locate
 from typing import TYPE_CHECKING
 
+import timm
 from huggingface_hub import hf_hub_download
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.models.models_abc import load_torch_model
+
+from .vanilla import CNNBackbone, TimmBackbone, timm_arch_dict, torch_cnn_backbone_dict
 
 if TYPE_CHECKING:  # pragma: no cover
     import torch
@@ -69,7 +72,7 @@ def get_pretrained_model(
     pretrained_weights: str | Path | None = None,
     *,
     overwrite: bool = False,
-) -> tuple[torch.nn.Module, ModelIOConfigABC]:
+) -> tuple[torch.nn.Module, ModelIOConfigABC | None]:
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
@@ -126,6 +129,12 @@ def get_pretrained_model(
     if not isinstance(pretrained_model, str):
         msg = "pretrained_model must be a string."
         raise TypeError(msg)
+
+    if pretrained_model in torch_cnn_backbone_dict:
+        return CNNBackbone(pretrained_model), None
+
+    if pretrained_model in [*timm_arch_dict, *timm.list_models()]:
+        return TimmBackbone(pretrained_model, pretrained=True), None
 
     if pretrained_model not in PRETRAINED_INFO:
         msg = f"Pretrained model `{pretrained_model}` does not exist."

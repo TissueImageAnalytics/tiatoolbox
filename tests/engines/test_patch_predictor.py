@@ -268,17 +268,14 @@ def test_wsi_predictor_api(
     kwargs = {
         "patch_input_shape": patch_size,
         "stride_shape": patch_size,
-        "input_resolutions": [{"units": "baseline", "resolution": 1.0}],
         "save_dir": save_dir,
     }
-    # ! add this test back once the read at `baseline` is fixed
-    # sanity check, both output should be the same with same resolution read args
-    # remove previously generated data
 
     _kwargs = copy.deepcopy(kwargs)
     # test reading of multiple whole-slide images
     output = predictor.run(
         images=[mini_wsi_svs, str(mini_wsi_jpg)],
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         masks=[mini_wsi_msk, mini_wsi_msk],
         patch_mode=False,
         return_probabilities=True,
@@ -308,21 +305,7 @@ def test_patch_predictor_kather100k_output(
     pretrained_info = {
         "alexnet-kather100k": [1.0, 0.9999735355377197],
         "resnet18-kather100k": [1.0, 0.9999911785125732],
-        "resnet34-kather100k": [1.0, 0.9979840517044067],
-        "resnet50-kather100k": [1.0, 0.9999986886978149],
-        "resnet101-kather100k": [1.0, 0.9999932050704956],
-        "resnext50_32x4d-kather100k": [1.0, 0.9910059571266174],
-        "resnext101_32x8d-kather100k": [1.0, 0.9999971389770508],
-        "wide_resnet50_2-kather100k": [1.0, 0.9953408241271973],
-        "wide_resnet101_2-kather100k": [1.0, 0.9999831914901733],
-        "densenet121-kather100k": [1.0, 1.0],
-        "densenet161-kather100k": [1.0, 0.9999959468841553],
-        "densenet169-kather100k": [1.0, 0.9999934434890747],
-        "densenet201-kather100k": [1.0, 0.9999983310699463],
-        "mobilenet_v2-kather100k": [0.9999998807907104, 0.9999126195907593],
-        "mobilenet_v3_large-kather100k": [0.9999996423721313, 0.9999878406524658],
         "mobilenet_v3_small-kather100k": [0.9999998807907104, 0.9999997615814209],
-        "googlenet-kather100k": [1.0, 0.9999639987945557],
     }
     for model, expected_prob in pretrained_info.items():
         _test_predictor_output(

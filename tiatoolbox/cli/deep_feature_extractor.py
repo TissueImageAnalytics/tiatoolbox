@@ -1,4 +1,4 @@
-"""Command line interface for semantic segmentation."""
+"""Command line interface for deep feature extractor."""
 
 from __future__ import annotations
 
@@ -18,12 +18,10 @@ from tiatoolbox.cli.common import (
     cli_num_workers,
     cli_output_file,
     cli_output_path,
-    cli_output_resolutions,
     cli_output_type,
     cli_overwrite,
     cli_patch_input_shape,
     cli_patch_mode,
-    cli_patch_output_shape,
     cli_return_probabilities,
     cli_scale_factor,
     cli_stride_shape,
@@ -42,17 +40,16 @@ if TYPE_CHECKING:  # pragma: no cover
 @tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
-    usage_help="Output directory where model segmentation will be saved.",
-    default="semantic_segmentation",
+    usage_help="Output directory where model predictions will be saved.",
+    default="patch_prediction",
 )
 @cli_output_file(default=None)
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
 @cli_input_resolutions(default=None)
-@cli_output_resolutions(default=None)
 @cli_class_dict(default=None)
-@cli_model(default="fcn-tissue_mask")
+@cli_model(default="resnet18")
 @cli_weights()
 @cli_device(default="cpu")
 @cli_batch_size(default=1)
@@ -60,11 +57,10 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_masks(default=None)
 @cli_num_workers(default=0)
 @cli_output_type(
-    default="AnnotationStore",
+    default="zarr",
 )
 @cli_memory_threshold(default=80)
 @cli_patch_input_shape(default=None)
-@cli_patch_output_shape(default=None)
 @cli_stride_shape(default=None)
 @cli_scale_factor(default=None)
 @cli_patch_mode(default=False)
@@ -72,18 +68,16 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_auto_get_mask(default=True)
 @cli_overwrite(default=False)
 @cli_verbose(default=True)
-def semantic_segmentor(
+def deep_feature_extractor(
     model: str,
     weights: str,
     img_input: str,
     file_types: str,
     class_dict: list[tuple[int, str]],
     input_resolutions: list[dict],
-    output_resolutions: list[dict],
     masks: str | None,
     output_path: str,
     patch_input_shape: IntPair | None,
-    patch_output_shape: tuple[int, int] | None,
     stride_shape: IntPair | None,
     scale_factor: tuple[float, float] | None,
     batch_size: int,
@@ -100,8 +94,11 @@ def semantic_segmentor(
     verbose: bool,
     overwrite: bool,
 ) -> None:
-    """Process a set of input images with a semantic segmentation engine."""
-    from tiatoolbox.models import IOSegmentorConfig, SemanticSegmentor  # noqa: PLC0415
+    """Process a set of input images with a deep feature extractor engine."""
+    from tiatoolbox.models import (  # noqa: PLC0415
+        DeepFeatureExtractor,
+        IOPatchPredictorConfig,
+    )
 
     class_dict = dict(class_dict) if class_dict else None
 
@@ -113,12 +110,12 @@ def semantic_segmentor(
     )
 
     ioconfig = prepare_ioconfig(
-        IOSegmentorConfig,
+        IOPatchPredictorConfig,
         pretrained_weights=weights,
         yaml_config_path=yaml_config_path,
     )
 
-    segmentor = SemanticSegmentor(
+    extractor = DeepFeatureExtractor(
         model=model,
         weights=weights,
         batch_size=batch_size,
@@ -126,15 +123,13 @@ def semantic_segmentor(
         verbose=verbose,
     )
 
-    _ = segmentor.run(
+    _ = extractor.run(
         images=files_all,
         masks=masks_all,
         class_dict=class_dict,
         patch_mode=patch_mode,
         patch_input_shape=patch_input_shape,
-        patch_output_shape=patch_output_shape,
         input_resolutions=input_resolutions,
-        output_resolutions=output_resolutions,
         batch_size=batch_size,
         ioconfig=ioconfig,
         device=device,
