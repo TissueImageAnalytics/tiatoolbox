@@ -182,9 +182,8 @@ def test_multi_gpu_feature_extraction(
         stride_shape=[224, 224],
     )
 
-    model = TimmBackbone(backbone="UNI", pretrained=True)
     extractor = DeepFeatureExtractor(
-        model=model,
+        model="UNI",
         batch_size=32,
         num_workers=4,
     )
